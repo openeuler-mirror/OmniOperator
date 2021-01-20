@@ -10,7 +10,7 @@ public class IntVec
 {
     public IntVec(int size)
     {
-        super(size * Integer.BYTES);
+        super(1024 * Integer.BYTES);
         this.size = size;
     }
 

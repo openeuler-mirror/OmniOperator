@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 jni = "0.18.0"
 bytebuffer = "0.2.1"
-weld = "0.4.0"
 
 [lib]
 crate_type = ["cdylib"]

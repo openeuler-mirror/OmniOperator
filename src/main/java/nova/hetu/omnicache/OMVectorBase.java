@@ -25,8 +25,8 @@ public class OMVectorBase
     public OMVectorBase() {}
 
     static {
-        System.loadLibrary("omnicache");
-        //System.loadLibrary("omvector");
+        //System.loadLibrary("omnicache");
+        System.loadLibrary("omvector");
     }
 
     /**
@@ -50,8 +50,17 @@ public class OMVectorBase
 
     /**
      * Allocate the off-heap native byte buffer
-     * @param size number of bytes, each specific type fo vector need to multiply it by the element size of the type
+     * @param data_type the type of the data
      * @return
      */
-    public static native ByteBuffer allocate(int size);
+    public static native ByteBuffer allocate(int data_type);
+
+    /**
+     * Free the memory allocate via {@link OMVectorBase#allocate(int)}
+     * @param buffer
+     * @return
+     */
+    public static native void free(ByteBuffer buffer);
+
+    public static native void invoke(String func_id, int[] d_types, ByteBuffer[] args);
 }

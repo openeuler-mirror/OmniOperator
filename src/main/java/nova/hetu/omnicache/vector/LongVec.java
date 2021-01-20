@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 
 public class LongVec
         extends Vec<Long>
+    implements AutoCloseable
 {
 
     public LongVec(int size) {
@@ -60,5 +61,13 @@ public class LongVec
     public Vec join(Vec other)
     {
         return null;
+    }
+
+    @Override
+    public void close()
+            throws Exception
+    {
+        OMVectorBase.free(data);
+        data=null;
     }
 }

@@ -25,6 +25,7 @@ public class DoubleVec extends Vec<Double>{
     @Override
     public Vec mul(Double other)
     {
+        base.mul(OMVectorBase.LONG_DATA_TYPE, data, other.intValue());
         return null;
     }
 

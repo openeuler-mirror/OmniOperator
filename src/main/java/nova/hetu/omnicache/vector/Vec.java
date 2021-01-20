@@ -20,11 +20,11 @@ public abstract class Vec<T>
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
 
-    public Vec(int buffer_size) {
-        data = OMVectorBase.allocate(buffer_size).order(ByteOrder.LITTLE_ENDIAN);
+    public Vec(int raw_size) {
+        data = OMVectorBase.allocate(raw_size).order(ByteOrder.LITTLE_ENDIAN);
     }
 
-    protected int size;
+    protected int size = 0;
 
     public abstract void set(int idx, T value);
 
