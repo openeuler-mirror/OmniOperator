@@ -1,6 +1,9 @@
 package nova.hetu.omnicache.vector;
 
+import nova.hetu.omnicache.OMVectorBase;
+
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * wrapper of the off-heap values to be used by blocks, this is also the place to implement vectorized operations.
@@ -14,6 +17,15 @@ import java.nio.ByteBuffer;
  */
 public abstract class Vec<T>
 {
+    protected ByteBuffer data;
+    protected OMVectorBase base = new OMVectorBase();
+
+    public Vec(int buffer_size) {
+        data = OMVectorBase.allocate(buffer_size).order(ByteOrder.LITTLE_ENDIAN);
+    }
+
+    protected int size;
+
     public abstract void set(int idx, T value);
 
     public abstract T get(int idx);
@@ -31,7 +43,14 @@ public abstract class Vec<T>
      * @param other
      * @return
      */
-    public abstract Vec mul(Vec<T> other);
+    public abstract Vec mul(T other);
+
+    /**
+     * Another potential SIMD in-situ operation
+     * @param other
+     * @return
+     */
+    public abstract Vec mmul(Vec<T> other);
 
     /**
      * Another potential SIMD in-situ operation
@@ -50,4 +69,9 @@ public abstract class Vec<T>
      * @return
      */
     public abstract Vec join(Vec other /** how to pass in the join conditions? might require many other columns*/);
+
+    public int size()
+    {
+        return size;
+    }
 }

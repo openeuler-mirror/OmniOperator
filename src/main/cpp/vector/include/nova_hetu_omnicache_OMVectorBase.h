@@ -7,37 +7,35 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * Class:     nova_hetu_omnicache_OMVectorBase
- * Method:    get
- * Signature: ()[J
- */
-JNIEXPORT jlongArray JNICALL Java_nova_hetu_omnicache_OMVectorBase_get
-  (JNIEnv *, jobject);
-
+#undef nova_hetu_omnicache_OMVectorBase_INT_DATA_TYPE
+#define nova_hetu_omnicache_OMVectorBase_INT_DATA_TYPE 1L
+#undef nova_hetu_omnicache_OMVectorBase_LONG_DATA_TYPE
+#define nova_hetu_omnicache_OMVectorBase_LONG_DATA_TYPE 2L
+#undef nova_hetu_omnicache_OMVectorBase_Double_DATA_TYPE
+#define nova_hetu_omnicache_OMVectorBase_Double_DATA_TYPE 3L
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    mul
- * Signature: (Ljava/nio/ByteBuffer;I)V
+ * Signature: (ILjava/nio/ByteBuffer;I)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_OMVectorBase_mul
-  (JNIEnv *, jclass, jobject, jint);
+  (JNIEnv *, jobject, jint, jobject, jint);
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    mmul
- * Signature: (Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)V
+ * Signature: (ILjava/nio/ByteBuffer;)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_OMVectorBase_mmul
-  (JNIEnv *, jclass, jobject, jobject);
+  (JNIEnv *, jobject, jint, jobject);
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    agg
- * Signature: (Ljava/nio/ByteBuffer;)J
+ * Signature: (ILjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_OMVectorBase_agg
-  (JNIEnv *, jclass, jobject);
+  (JNIEnv *, jobject, jint, jstring);
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase

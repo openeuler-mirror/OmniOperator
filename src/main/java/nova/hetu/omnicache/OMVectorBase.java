@@ -16,30 +16,42 @@ import java.nio.ByteOrder;
  */
 public class OMVectorBase
 {
+    public static final int INT_DATA_TYPE = 1;
+    public static final int LONG_DATA_TYPE = 2;
+    public static final int Double_DATA_TYPE = 3;
+
     ByteBuffer data;
 
-    public OMVectorBase() {
-        data = allocate(10).order(ByteOrder.LITTLE_ENDIAN);
-    }
+    public OMVectorBase() {}
+
     static {
-        System.load("/opt/kkrazy/hetu-core/omni-cache/src/main/java/omnicache.so");
+        System.loadLibrary("omnicache");
+        //System.loadLibrary("omvector");
     }
 
     /**
-     * return an array of size 3: [start offset, unit size, count]
-     * @return
-     */
-    public native long[] get();
-
-    /**
-     * multiplies the content of the vecotr at the address vec_addr by m
+     * multiplies the content of the vector at the address vec_addr by a scalar value m
      * @param m
      */
-    public static native void mul(ByteBuffer data, int m);
+    public native void mul(int datatype, ByteBuffer data, int m);
 
-    public static native void mmul(ByteBuffer data1, ByteBuffer data2);
+    /**
+     * pair wise multiply the content of the curernt vector with the parameter vector, the size of the two vectors must match
+     * @param data2
+     */
+    public native void mmul(int datatype, ByteBuffer data2);
 
-    public static native long agg(ByteBuffer data);
+    /**
+     * aggreate the result after applying the filter
+     * @param filter
+     * @return
+     */
+    public native long agg(int datatype, String filter);
 
+    /**
+     * Allocate the off-heap native byte buffer
+     * @param size number of bytes, each specific type fo vector need to multiply it by the element size of the type
+     * @return
+     */
     public static native ByteBuffer allocate(int size);
 }

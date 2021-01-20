@@ -3,27 +3,27 @@ package nova.hetu.omnicache.vector;
 import nova.hetu.omnicache.OMVectorBase;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-public class IntVector
+public class IntVec
         extends Vec<Integer>
 {
-    private ByteBuffer data;
-
-    public IntVector(int size)
+    public IntVec(int size)
     {
-        data = OMVectorBase.allocate(size * Integer.BYTES);
+        super(size * Integer.BYTES);
+        this.size = size;
     }
 
     @Override
     public void set(int idx, Integer value)
     {
-
+        data.putInt(idx * Integer.BYTES, value);
     }
 
     @Override
     public Integer get(int idx)
     {
-        return null;
+        return data.getInt(idx * Integer.BYTES);
     }
 
     @Override
@@ -33,7 +33,14 @@ public class IntVector
     }
 
     @Override
-    public Vec mul(Vec<Integer> other)
+    public Vec mul(Integer other)
+    {
+        base.mul(OMVectorBase.INT_DATA_TYPE, data, other.intValue());
+        return this;
+    }
+
+    @Override
+    public Vec mmul(Vec<Integer> other)
     {
         return null;
     }

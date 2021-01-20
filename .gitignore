@@ -1,0 +1,4 @@
+src/main/rust/omvector/target
+*.class
+src/main/cpp/vector/target/
+target

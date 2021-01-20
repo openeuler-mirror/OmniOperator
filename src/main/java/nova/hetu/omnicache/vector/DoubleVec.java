@@ -9,31 +9,11 @@ import java.nio.ByteBuffer;
  */
 public class DoubleVec extends Vec<Double>{
 
-    private ByteBuffer data;
+    private OMVectorBase base = new OMVectorBase();
+
     public DoubleVec(int size) {
-        data = OMVectorBase.allocate(size * Double.BYTES);
-    }
-
-
-    /**
-     * Sample use the vector
-     * @param args
-     */
-    public static void main(String[] args) {
-        DoubleVec vector1 = new DoubleVec(10);
-        DoubleVec vector2 = new DoubleVec(10);
-
-        System.out.println("return: " + vector1.get(0) + ", " + vector1.get(8) + ", " + vector1.get(16));
-
-        vector1.mul(vector2);
-
-        System.out.println("return: " + vector1.get(0) + ", " + vector1.get(8) + ", " + vector1.get(16));
-
-        vector1.set(8, 100.0);
-        vector1.mul(vector2);
-
-        System.out.println("return: " + vector1.get(0) + ", " + vector1.get(8) + ", " + vector1.get(16));
-
+        super(size * Double.BYTES);
+        this.size = size;
     }
 
     @Override
@@ -43,7 +23,13 @@ public class DoubleVec extends Vec<Double>{
     }
 
     @Override
-    public Vec mul(Vec<Double> other)
+    public Vec mul(Double other)
+    {
+        return null;
+    }
+
+    @Override
+    public Vec mmul(Vec<Double> other)
     {
         return null;
     }

@@ -7,10 +7,10 @@ import java.nio.ByteBuffer;
 public class LongVec
         extends Vec<Long>
 {
-    private ByteBuffer data;
 
     public LongVec(int size) {
-        data = OMVectorBase.allocate(size * Double.BYTES);
+        super(size * Long.BYTES);
+        this.size = size;
     }
 
     @Override
@@ -20,7 +20,14 @@ public class LongVec
     }
 
     @Override
-    public Vec mul(Vec<Long> other)
+    public Vec mul(Long other)
+    {
+        base.mul(OMVectorBase.LONG_DATA_TYPE, data, other.intValue());
+        return null;
+    }
+
+    @Override
+    public Vec mmul(Vec<Long> other)
     {
         return null;
     }
@@ -34,13 +41,13 @@ public class LongVec
     @Override
     public void set(int idx, Long value)
     {
-
+        data.putLong(idx * Long.BYTES, value);
     }
 
     @Override
     public Long get(int idx)
     {
-        return null;
+        return data.getLong(idx * Long.BYTES);
     }
 
     @Override
