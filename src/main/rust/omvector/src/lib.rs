@@ -36,12 +36,12 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul
             }
             //ensure the memeory referenced by vec is not released
             mem::forget(vec);
-        } else if d_type == 2 { //double
+        } else if d_type == 3 { //double
             let mut vec = into::<f64>(buffer);
             for i in 0..vec.len() {
                 vec[i] *= multiplier as f64;
             }
-            println!("double multiply result: {:?}", vec);
+            // println!("double multiply result: {:?}", vec);
             //ensure the memeory referenced by vec is not released
             mem::forget(vec);
         }
