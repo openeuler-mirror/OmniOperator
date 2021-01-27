@@ -11,8 +11,8 @@ extern "C" {
 #define nova_hetu_omnicache_OMVectorBase_INT_DATA_TYPE 1L
 #undef nova_hetu_omnicache_OMVectorBase_LONG_DATA_TYPE
 #define nova_hetu_omnicache_OMVectorBase_LONG_DATA_TYPE 2L
-#undef nova_hetu_omnicache_OMVectorBase_Double_DATA_TYPE
-#define nova_hetu_omnicache_OMVectorBase_Double_DATA_TYPE 3L
+#undef nova_hetu_omnicache_OMVectorBase_DOUBLE_DATA_TYPE
+#define nova_hetu_omnicache_OMVectorBase_DOUBLE_DATA_TYPE 3L
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    mul

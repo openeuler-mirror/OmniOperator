@@ -18,7 +18,7 @@ public class OMVectorBase
 {
     public static final int INT_DATA_TYPE = 1;
     public static final int LONG_DATA_TYPE = 2;
-    public static final int Double_DATA_TYPE = 3;
+    public static final int DOUBLE_DATA_TYPE = 3;
 
     ByteBuffer data;
 
