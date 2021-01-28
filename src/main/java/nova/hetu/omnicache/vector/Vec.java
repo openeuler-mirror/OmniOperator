@@ -1,3 +1,17 @@
+/*
+ * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package nova.hetu.omnicache.vector;
 
 import nova.hetu.omnicache.OMVectorBase;
@@ -27,6 +41,16 @@ public abstract class Vec<T>
     protected int size = 0;
 
     public abstract void set(int idx, T value);
+
+    /**
+     * Creates a vector from a slice of the underlying buffer.
+     * @param startIdx
+     * @param endIdx
+     * @return
+     */
+    public abstract Vec<T> slice(int startIdx, int endIdx);
+
+    public abstract void addValues(T[] values);
 
     public abstract T get(int idx);
 
@@ -73,5 +97,14 @@ public abstract class Vec<T>
     public int size()
     {
         return size;
+    }
+
+    public int capacity()
+    {
+        return data.capacity();
+    }
+    public int remaining()
+    {
+        return data.remaining();
     }
 }
