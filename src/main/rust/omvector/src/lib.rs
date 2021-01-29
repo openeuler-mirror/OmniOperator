@@ -1,12 +1,34 @@
+/*
+ * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+mod nova;
 use core::mem;
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JByteBuffer, JValue, GlobalRef};
-use jni::sys::{jclass, jint, jlong, jobject, jobjectArray, jstring, jvalue};
+use jni::objects::{JClass, JByteBuffer, JValue, GlobalRef, JString, JObject};
+use jni::sys::{jclass, jint, jlong, jobject, jobjectArray, jstring, jvalue, jintArray, _jobject};
 use std::fmt::Debug;
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
 use std::borrow::{Borrow, BorrowMut};
+use nova::hetu::omnicache::runtime::codegen::OmniCodeGen;
+use nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_data, free_weld_vec_mem, get_output_data};
+use crate::nova::hetu::omnicache::utils::wrapper::VecType::{INT32,DOUBLE,INT64};
+use weld::data::WeldVec;
+use weld::WeldValue;
+use std::ptr::null;
+use std::ffi::c_void;
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
@@ -78,6 +100,176 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_free
     }
 }
 
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    compile
+ * Signature: (Ljava/lang/String;)Ljava/lang/String;
+ */
+#[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_compile
+(env: JNIEnv, this_obj:jobject, j_code: JString) -> jstring {
+    let code:String = env.get_string(j_code).expect("couldn't get code from java.").into();
+    let neid = OmniCodeGen::compile(&code);
+    let j_neid = env.new_string(neid).expect("");
+    j_neid.into_inner()
+}
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    execute
+ * Signature: (Ljava/lang/String;[Ljava/nio/ByteBuffer;[IJ[I)Lnova/hetu/omnicache/runtime/OMResult;
+ */
+#[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
+(env: JNIEnv, this_obj: jobject, j_neid: JString, j_input_datas: jobjectArray, j_input_types: jintArray,
+ j_row_num: jlong, j_output_types: jintArray) -> jobject {
+
+    let input_type_size = get_type_number(env, j_input_types);
+    let input_types = get_int_array_elements(env, j_input_types, input_type_size);
+
+    let output_type_size = get_type_number(env, j_output_types);
+    let output_types = get_int_array_elements(env, j_output_types, output_type_size);
+
+    let output_len;
+    let mut j_result = env.new_object_array(output_type_size,"java/nio/ByteBuffer", std::ptr::null_mut())
+        .expect("create output buffer failed.");
+
+    unsafe {
+        // transform input data to weld input data
+        let c_number = get_column_number(env, j_input_datas);
+        let neid = get_neid(env, j_neid);
+        let mut input_data = build_input_data(env,j_input_datas, c_number, j_row_num as usize, &input_types);
+
+        // execute weld ir
+        let result = OmniCodeGen::execute(neid, &(*input_data)).expect("OmniCache Native execute failed!");
+        // release the mem for build input data
+        free_weld_vec_mem(input_data);
+
+        // handle the weld result
+        output_len = build_output_data(env, output_type_size, &output_types,&result, j_result);
+        mem::forget(input_data);
+        mem::forget(result);
+        mem::forget(j_result);
+    }
+    build_om_result(env, j_result, output_len).into_inner()
+}
+
+fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32) -> JObject {
+    // todo need cache the jni info
+    let om_result_cls = env.find_class("nova/hetu/omnicache/runtime/OMResult").expect("find the class failed.");
+    let j_om_result_obj = env.new_object(om_result_cls, "()V", &[]).expect("create failed.");
+    env.call_method(j_om_result_obj,"setBuffers", "([Ljava/nio/ByteBuffer;)V", &[JValue::from(buf_array)]);
+    env.call_method(j_om_result_obj,"setLength", "(I)V", &[JValue::from(output_len)]);
+    j_om_result_obj
+}
+
+fn get_int_array_elements(env: JNIEnv, array: jobjectArray, size: i32) -> Vec<i32> {
+    let mut buf = vec![-1;size as usize];
+    env.get_int_array_region(array,0, buf.as_mut());
+    buf
+}
+
+unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_result: &WeldValue, output:*mut _jobject) -> i32 {
+    let mut output_len = 0;
+    for c_index in 0..columns {
+        let current_len;
+        let d_type = data_type[c_index as usize];
+        if d_type == INT32 as i32 {
+            let result_i32 = get_output_data(w_result, c_index as isize, INT32);
+            let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
+            current_len = vec_i32.len();
+            add_buf_to_output(env,vec_i32.as_mut(), output, c_index);
+            mem::forget(vec_i32);
+        } else if d_type == INT64 as i32 {
+            let result_i64 = get_output_data(w_result, c_index as isize, INT64);
+            let mut vec_i64 = transform_weld_to_vec::<i64>(result_i64.0, result_i64.1);
+            current_len = vec_i64.len();
+            add_buf_to_output(env,vec_i64.as_mut(), output, c_index);
+            mem::forget(vec_i64);
+        } else if d_type == DOUBLE as i32 {
+            let result_f64 = get_output_data(w_result, c_index as isize, DOUBLE);
+            let mut vec_f64 = transform_weld_to_vec::<f64>(result_f64.0, result_f64.1);
+            current_len = vec_f64.len();
+            add_buf_to_output(env,vec_f64.as_mut(), output, c_index);
+            mem::forget(vec_f64);
+        } else {
+            panic!("don't support the date type:{}", d_type);
+        }
+
+        // check output rows
+        if output_len != 0 && output_len != current_len {
+            panic!("the number of rows in multiple columns is different:{},{}", output_len, current_len);
+        } else {
+            output_len = current_len;
+        }
+    }
+    output_len as i32
+}
+
+unsafe fn add_buf_to_output<T:Clone>(env:JNIEnv, original: &mut Vec<T>, output: *mut _jobject, index: i32) {
+    let mut res = into_u8(original.as_mut());
+    let buf = env.new_direct_byte_buffer(res.as_mut()).expect("create direct buffer failed.");
+    mem::forget(res);
+    env.set_object_array_element(output, index, buf);
+    mem::forget(buf);
+}
+
+fn get_neid(env: JNIEnv,j_neid: JString) -> String {
+    env.get_string(j_neid).expect("couldn't get code from java.").into()
+}
+
+fn get_column_number(env:JNIEnv, j_buf:jobjectArray) -> i32 {
+    env.get_array_length(j_buf).expect("get the column number failed.")
+}
+
+fn get_type_number(env:JNIEnv, j_types:jobjectArray) -> i32 {
+    env.get_array_length(j_types).expect("get the type number failed")
+}
+
+unsafe fn transform_weld_to_vec<T>(result:*mut c_void, len: i64) -> Vec<T> {
+    let result_ptr = result as *mut T;
+    mem::forget(result);
+    Vec::from_raw_parts(result_ptr, len as usize, len as usize)
+}
+
+unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usize, data_type:& [i32]) -> *mut c_void {
+    //1 init mem address
+    //2 traverse the buf and build the data vec
+    let mut address =  weld_vec_mem_alloc(columns as usize);
+    for c_index in 0..columns {
+        let buf = env.get_object_array_element(bufs, c_index).expect("couldn't get buffer");
+        let buf_addr = env.get_direct_buffer_address(JByteBuffer::from(buf))
+            .expect("couldn't get the address of buffer");
+        let d_type = data_type[c_index as usize];
+        if d_type == INT32 as i32 {
+            let vec_i32 = transform_buf_to_vec::<i32>(rows,buf_addr);
+            transform_input_data(&vec_i32, address, c_index as isize);
+            mem::forget(vec_i32);
+        } else if d_type == INT64 as i32 {
+            let vec_i64 = transform_buf_to_vec::<i64>(rows,buf_addr);
+            transform_input_data(&vec_i64, address, c_index as isize);
+            mem::forget(vec_i64);
+        } else if d_type == DOUBLE as i32 {
+            let vec_f64 = transform_buf_to_vec::<f64>(rows,buf_addr);
+            transform_input_data(&vec_f64, address, c_index as isize);
+            mem::forget(vec_f64);
+        } else {
+            panic!("don't support the date type:{}", d_type);
+        }
+    }
+    address
+}
+
+unsafe fn transform_buf_to_vec<T: Clone>(rows: usize, buf: &mut [u8]) -> Vec<T> {
+    if buf.len() % mem::size_of::<T>() != 0 {
+        panic!("Misaligned vector size, cannot convert vector of size {} to vector with element size {}", buf.len(), mem::size_of::<T>());
+    }
+
+    let result = buf.as_mut_ptr() as *mut T;
+    mem::forget(buf);
+    Vec::from_raw_parts(result, rows, rows)
+}
+
 /// Allocates an vector holds 1024 items of T
 unsafe fn allocate_vec<T: Clone + Debug>(init: T) -> Vec<u8> {
     let mut vec = vec![init; 1024];
@@ -103,7 +295,6 @@ unsafe fn into<T: Clone>(original: &mut [u8]) -> Vec<T> {
 }
 
 unsafe fn into_u8<U: Clone>(original: &mut Vec<U>) -> Vec<u8> {
-    println!("converting back to u8");
     let length = original.len() * mem::size_of::<U>();
     let capacity = original.capacity() * mem::size_of::<U>();
     let result = original.as_mut_ptr() as * mut u8;

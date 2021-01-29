@@ -9,6 +9,12 @@ edition = "2018"
 [dependencies]
 jni = "0.18.0"
 bytebuffer = "0.2.1"
-
+rand = "0.8.2"
+cached = "0.23.0"
+lazy_static = "1.4.0"
+chashmap = "2.2.2"
+weld = "0.4.0"
+time = "0.1.44"
+libc = "0.2"
 [lib]
 crate_type = ["cdylib"]

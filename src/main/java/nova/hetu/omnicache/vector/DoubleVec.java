@@ -30,6 +30,11 @@ public class DoubleVec extends Vec<Double>{
         this.size = size;
     }
 
+    public DoubleVec(ByteBuffer buffer, int size)
+    {
+        super(buffer, size);
+    }
+
     @Override
     public Vec hash()
     {
@@ -96,5 +101,11 @@ public class DoubleVec extends Vec<Double>{
     public Vec join(Vec other)
     {
         return null;
+    }
+
+    @Override
+    public VecType getType()
+    {
+        return VecType.DOUBLE;
     }
 }
