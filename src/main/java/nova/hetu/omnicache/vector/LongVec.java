@@ -29,6 +29,11 @@ public class LongVec
         this.size = size;
     }
 
+    public LongVec(ByteBuffer buffer, int size)
+    {
+        super(buffer, size);
+    }
+
     @Override
     public Vec hash()
     {
@@ -103,5 +108,11 @@ public class LongVec
     {
         OMVectorBase.free(data);
         data=null;
+    }
+
+    @Override
+    public VecType getType()
+    {
+        return VecType.LONG;
     }
 }

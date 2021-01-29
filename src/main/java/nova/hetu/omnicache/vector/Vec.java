@@ -38,6 +38,11 @@ public abstract class Vec<T>
         data = OMVectorBase.allocate(raw_size).order(ByteOrder.LITTLE_ENDIAN);
     }
 
+    public Vec(ByteBuffer data, int length) {
+        this.data = data;
+        this.size = length;
+    }
+
     protected int size = 0;
 
     public abstract void set(int idx, T value);
@@ -106,5 +111,12 @@ public abstract class Vec<T>
     public int remaining()
     {
         return data.remaining();
+    }
+
+    public abstract VecType getType();
+
+    public ByteBuffer getData()
+    {
+        return this.data;
     }
 }

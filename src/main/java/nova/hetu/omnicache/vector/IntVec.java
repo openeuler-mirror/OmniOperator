@@ -29,6 +29,11 @@ public class IntVec
         this.size = size;
     }
 
+    public IntVec(ByteBuffer buffer, int length)
+    {
+        super(buffer, length);
+    }
+
     @Override
     public void set(int idx, Integer value)
     {
@@ -95,5 +100,11 @@ public class IntVec
     public Vec join(Vec other)
     {
         return null;
+    }
+
+    @Override
+    public VecType getType()
+    {
+        return VecType.INT;
     }
 }
