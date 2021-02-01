@@ -107,4 +107,12 @@ public class IntVec
     {
         return VecType.INT;
     }
+
+    @Override
+    public Vec concat(Vec other)
+    {
+        ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Integer.BYTES, other.size * Integer.BYTES);
+        newBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        return new IntVec(newBuffer, this.size + other.size);
+    }
 }

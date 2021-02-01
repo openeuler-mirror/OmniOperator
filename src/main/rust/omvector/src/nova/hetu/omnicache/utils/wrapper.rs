@@ -41,6 +41,17 @@ pub unsafe fn transform_input_data<T>(v_ref:&Vec<T>, addr:*mut c_void, offset:is
     mem::forget(weld_vec);
 }
 
+pub unsafe fn transform_vec_in_vec_data<T>(v_ref: &Vec<Vec<T>>, addr:*mut c_void, offset:isize) {
+    let mut vec_of_vec = vec![];
+    let v_count = v_ref.len();
+
+    for i in 0..v_count {
+        vec_of_vec.push(WeldVec::from(&v_ref[i]));
+    }
+    transform_input_data(&vec_of_vec, addr, offset);
+    mem::forget(vec_of_vec);
+}
+
 pub unsafe fn get_output_data(result: &WeldValue, offset: isize, vec_type: VecType) -> (*mut c_void, i64){
     match vec_type {
         VecType::INT64=> {

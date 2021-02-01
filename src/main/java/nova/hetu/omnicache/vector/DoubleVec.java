@@ -17,6 +17,7 @@ package nova.hetu.omnicache.vector;
 import nova.hetu.omnicache.OMVectorBase;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Representing a floating point number
@@ -107,5 +108,13 @@ public class DoubleVec extends Vec<Double>{
     public VecType getType()
     {
         return VecType.DOUBLE;
+    }
+
+    @Override
+    public Vec concat(Vec other)
+    {
+        ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Double.BYTES, other.size * Double.BYTES);
+        newBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        return new DoubleVec(newBuffer, this.size + other.size);
     }
 }

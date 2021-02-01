@@ -16,7 +16,7 @@ use crate::nova::hetu::omnicache::runtime::codegen::OmniCodeGen;
 use weld::data::WeldVec;
 use rand::Rng;
 use time::now;
-use crate::nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_data, free_weld_vec_mem, get_output_data};
+use crate::nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_data, free_weld_vec_mem, get_output_data, transform_vec_in_vec_data};
 use crate::nova::hetu::omnicache::utils::wrapper::VecType::{INT32, INT64, DOUBLE};
 use std::mem;
 
@@ -277,6 +277,145 @@ fn sum_avg_group_by_two_columns_test() {
         mem::forget(res1);
         mem::forget(res2);
         mem::forget(res3);
+    }
+}
+
+#[test]
+fn sum_avg_group_by_vec_in_vec_test() {
+    let sum_avg_group_by_two_columns = "|v0 :vec[vec[i64]], v1: vec[vec[i64]], v2: vec[vec[f64]], v3: vec[vec[f64]]|\
+                          let sum_dict_2 = for(zip(v0, v1, v2), dictmerger[{i64,i64}, f64,+], |b,i,n| \
+                                                for(zip(n.$0, n.$1, n.$2), b, |b_, i_, m|\
+                                                    merge(b, {{m.$0, m.$1}, m.$2})));\
+                          let dict_0_1 = tovec(result(sum_dict_2));\
+                          let k0 = result(for(dict_0_1, appender[i64], |b, i, n| merge(b, n.$0.$0)));\
+                          let k1 = result(for(dict_0_1, appender[i64], |b, i, n| merge(b, n.$0.$1)));\
+                          let sum_2 = result(for(dict_0_1, appender[f64], |b, i, n| merge(b, n.$1)));\
+                          let avg_sum_3 = for(zip(v0, v1, v3), dictmerger[{i64,i64}, {f64, f64}, +], |b,i,n| \
+                                                for(zip(n.$0, n.$1, n.$2), b, |b_, i_, m|\
+                                                    merge(b, {{m.$0, m.$1}, {m.$2, 1.0}})));\
+                          let avg_3 = result(for(tovec(result(avg_sum_3)), appender[f64], |b, i, n| merge(b, n.$1.$0 / n.$1.$1)));\
+                          {k0, k1, sum_2, avg_3}";
+    let mod_id = OmniCodeGen::compile(sum_avg_group_by_two_columns);
+    // let v0: Vec<Vec<i64>> = vec![(0..1000000).collect(); 100];
+    let v0: Vec<Vec<i64>> = vec![vec![1,2,3,4]; 3];
+    let v1: Vec<Vec<i64>> = vec![vec![50, 51, 52, 53], vec![50, 55, 56, 57], vec![58, 59, 60, 61]];
+    let v2: Vec<Vec<f64>> = vec![vec![1.2, 1.2,1.2, 1.2], vec![2.4,2.4,2.4,2.4], vec![2.4,2.4,2.4,2.4]];
+    let v3: Vec<Vec<f64>> = vec![vec![1.2, 1.2,1.2, 1.2], vec![2.4,2.4,2.4,2.4], vec![2.4,2.4,2.4,2.4]];
+
+    let input_addr;
+    unsafe {
+        input_addr = weld_vec_mem_alloc(4);
+        transform_vec_in_vec_data(&v0, input_addr, 0);
+        transform_vec_in_vec_data(&v1, input_addr, 1);
+        transform_vec_in_vec_data(&v2, input_addr, 2);
+        transform_vec_in_vec_data(&v3, input_addr, 3);
+    }
+
+    let result;
+    unsafe {
+        result = OmniCodeGen::execute(mod_id,&*input_addr).expect("OmniCache Native execute failed!");
+        free_weld_vec_mem(input_addr);
+    }
+    let result_v0;
+    let result_v1;
+    let result_v2;
+    let result_v3;
+    let res0;
+    let res1;
+    let res2;
+    let res3;
+    unsafe {
+        result_v0 = get_output_data(&result, 0, INT64);
+        res0 = Vec::from_raw_parts(result_v0.0 as *mut i64, result_v0.1 as usize,
+                                   result_v0.1 as usize);
+        result_v1 = get_output_data(&result, 1, INT64);
+        res1 = Vec::from_raw_parts(result_v1.0 as *mut i64, result_v1.1 as usize,
+                                   result_v1.1 as usize);
+        result_v2 = get_output_data(&result, 2, DOUBLE);
+        res2 = Vec::from_raw_parts(result_v2.0 as *mut f64, result_v2.1 as usize,
+                                   result_v2.1 as usize);
+        result_v3 = get_output_data(&result, 3, DOUBLE);
+        res3 = Vec::from_raw_parts(result_v3.0 as *mut f64, result_v1.1 as usize,
+                                   result_v1.1 as usize);
+        assert_eq!(11, res0.len());
+        mem::forget(res0);
+        mem::forget(res1);
+        mem::forget(res2);
+        mem::forget(res3);
+    }
+}
+
+#[test]
+fn sum_group_by_vec_in_vec_perf_test() {
+    let sum_avg_group_by_two_columns = "|v0 :vec[vec[i64]], v1: vec[vec[f64]]|\
+                          let sum_ = for(zip(v0, v1), dictmerger[i64, f64,+], |b,i,n| \
+                                                for(zip(n.$0, n.$1), b, |b_, i_, m|\
+                                                    merge(b, {m.$0, m.$1})));\
+                          let dict_ = tovec(result(sum_));\
+                          let k = result(for(dict_, appender[i64], |b, i, n| merge(b, n.$0)));\
+                          let val = result(for(dict_, appender[f64], |b, i, n| merge(b, n.$1)));\
+                          {k, val}";
+
+    let v0: Vec<Vec<i64>> = vec![(0..1_000_000).collect(); 100];
+    let v1: Vec<Vec<f64>> = vec![vec![1.2; 1_000_000]; 100];
+    let start = now();
+    let mod_id = OmniCodeGen::compile(sum_avg_group_by_two_columns);
+
+    let input_addr;
+    unsafe {
+        input_addr = weld_vec_mem_alloc(2);
+        transform_vec_in_vec_data(&v0, input_addr, 0);
+        transform_vec_in_vec_data(&v1, input_addr, 1);
+    }
+    let result;
+    unsafe {
+        result = OmniCodeGen::execute(mod_id,&*input_addr).expect("OmniCache Native execute failed!");
+        free_weld_vec_mem(input_addr);
+    }
+    println!("Vec in Vec case executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
+
+    let sum_avg_group_by_two_columns = "|v0: vec[i64], v1: vec[f64]|\
+                          let sum_ = for(zip(v0, v1), dictmerger[i64, f64, +], |b, i, n| merge(b, {n.$0, n.$1}));\
+                          let dict_ = tovec(result(sum_));\
+                          let k = result(for(dict_, appender[i64], |b, i, n| merge(b, n.$0)));\
+                          let val = result(for(dict_, appender[f64], |b, i, n| merge(b, n.$1)));\
+                          {k, val}";
+
+    let mut v0: Vec<i64> = vec![];
+    for i in 0..100_000_000 {
+        v0.push(i % 1_000_000 as i64);
+    }
+    let v1: Vec<f64> = vec![1.2; 100_000_000];
+    let start = now();
+    let mod_id = OmniCodeGen::compile(sum_avg_group_by_two_columns);
+
+    let input_addr_;
+    unsafe {
+        input_addr_ = weld_vec_mem_alloc(2);
+        transform_input_data(&v0, input_addr_, 0);
+        transform_input_data(&v1, input_addr_, 1);
+    }
+    let result;
+    unsafe {
+        result = OmniCodeGen::execute(mod_id,&*input_addr_).expect("OmniCache Native execute failed!");
+        free_weld_vec_mem(input_addr_);
+    }
+    println!("Flatten Vec executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
+
+    let result_v0;
+    let result_v1;
+    let res0;
+    let res1;
+    unsafe {
+        result_v0 = get_output_data(&result, 0, INT64);
+        res0 = Vec::from_raw_parts(result_v0.0 as *mut i64, result_v0.1 as usize,
+                                   result_v0.1 as usize);
+        result_v1 = get_output_data(&result, 1, DOUBLE);
+        res1 = Vec::from_raw_parts(result_v1.0 as *mut i64, result_v1.1 as usize,
+                                   result_v1.1 as usize);
+        assert_eq!(1_000_000, res0.len());
+        mem::forget(res0);
+        mem::forget(res1);
     }
 }
 

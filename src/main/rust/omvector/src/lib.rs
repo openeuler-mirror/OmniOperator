@@ -88,6 +88,32 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_allocate
     }
 }
 
+/*
+ * Class:     nova_hetu_omnicache_OMVectorBase
+ * Method:    concat
+ * Signature: (I)Ljava/nio/ByteBuffer;
+ */
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_concat
+(env: JNIEnv, this_class: JClass, buffer1: JByteBuffer, buffer2: JByteBuffer, size1: jint, size2: jint) -> jobject {
+    // 1. allocate new memory
+    let mut vec8 = vec![0u8; (size1 + size2) as usize];
+    let result = env.new_direct_byte_buffer(vec8.as_mut()).expect("Error allocating direct byte buffer").into_inner();
+
+    // 2. copy two buffers as one
+    let buf1_address = env.get_direct_buffer_address(buffer1).expect("");
+    let buf2_address = env.get_direct_buffer_address(buffer2).expect("");
+    unsafe {
+        let new_buff_address = vec8.as_mut_ptr() as *mut c_void;
+        libc::memmove(new_buff_address, buf1_address as *const _ as *const c_void, size1 as usize);
+        libc::memmove(new_buff_address.offset(size1 as isize), buf2_address as *const _ as *const c_void, size2 as usize);
+        mem::forget(vec8);
+        mem::forget(new_buff_address);
+        result
+    }
+}
+
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_free
@@ -232,7 +258,7 @@ unsafe fn transform_weld_to_vec<T>(result:*mut c_void, len: i64) -> Vec<T> {
     Vec::from_raw_parts(result_ptr, len as usize, len as usize)
 }
 
-unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usize, data_type:& [i32]) -> *mut c_void {
+unsafe fn  build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usize, data_type:& [i32]) -> *mut c_void {
     //1 init mem address
     //2 traverse the buf and build the data vec
     let mut address =  weld_vec_mem_alloc(columns as usize);

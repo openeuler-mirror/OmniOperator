@@ -3,6 +3,8 @@ package nova.hetu.omnicache.vector;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.nio.ByteBuffer;
+
 public class VectorTest
 {
 
@@ -144,4 +146,29 @@ public class VectorTest
         }
     }
 
+    @Test
+    public void testConcat()
+            throws Exception
+    {
+        LongVec vec1 = new LongVec(1024);
+        LongVec vec2 = new LongVec(1024);
+        for (int i = 0; i < vec1.size; i++) {
+            Assert.assertEquals(vec1.get(i).longValue(), 0, "invalid initialize value at item: " + i);
+            vec1.set(i, (long)i);
+            vec2.set(i, (long)i * 2);
+        }
+        LongVec newVec = (LongVec) vec1.concat(vec2);
+        Assert.assertEquals(newVec.size(), 2048L, "Error length after concat");
+
+        long[] comp = new long[2048];
+        for (int i = 0; i < 1024; ++i) {
+            comp[i] = i;
+        }
+        for (int i = 0; i < 1024; ++i) {
+            comp[i + 1024] = i * 2;
+        }
+        for (int i = 0; i < newVec.size; i++) {
+            Assert.assertEquals(newVec.get(i).longValue(), comp[i], "Error item value at: " + i);
+        }
+    }
 }

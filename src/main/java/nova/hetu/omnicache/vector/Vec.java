@@ -99,6 +99,14 @@ public abstract class Vec<T>
      */
     public abstract Vec join(Vec other /** how to pass in the join conditions? might require many other columns*/);
 
+    /**
+     * Another potential SIMD in-situ operation
+     *
+     * @param other
+     * @return
+     */
+    public abstract Vec concat(Vec other);
+
     public int size()
     {
         return size;

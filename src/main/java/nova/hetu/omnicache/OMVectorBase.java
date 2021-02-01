@@ -75,6 +75,15 @@ public class OMVectorBase
      * @return
      */
     public static native void free(ByteBuffer buffer);
+    
+    /**
+     * Concatenate two arrays of memory via {@link OMVectorBase#concat(ByteBuffer,ByteBuffer,int,int)}
+     *
+     * @param buffer1
+     * @param buffer2
+     * @return
+     */
+    public static native ByteBuffer concat(ByteBuffer buffer1, ByteBuffer buffer2, int size1, int size2);
 
     public static native void invoke(String func_id, int[] d_types, ByteBuffer[] args);
 }

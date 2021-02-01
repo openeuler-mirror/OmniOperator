@@ -17,6 +17,7 @@ package nova.hetu.omnicache.vector;
 import nova.hetu.omnicache.OMVectorBase;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
 public class LongVec
@@ -100,6 +101,14 @@ public class LongVec
     public Vec join(Vec other)
     {
         return null;
+    }
+
+    @Override
+    public Vec concat(Vec other)
+    {
+        ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Long.BYTES, other.size * Long.BYTES);
+        newBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        return new LongVec(newBuffer, this.size + other.size);
     }
 
     @Override
