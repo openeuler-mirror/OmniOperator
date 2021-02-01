@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class JniWrapperTest {
 
     JniWrapper wrapper;
+    private final static String key = "UNKNOW";
 
     @BeforeClass
     public void setUp() {
@@ -40,11 +41,11 @@ public class JniWrapperTest {
     public void testUseLenFunction() {
         ByteBuffer[] buffers = new ByteBuffer[1];
         IntVec veclen = new IntVec(10);
-        veclen.set(0,2);
-        veclen.set(1,3);
-        veclen.set(2,4);
-        veclen.set(3,2);
-        veclen.set(4,1);
+        veclen.set(0, 2);
+        veclen.set(1, 3);
+        veclen.set(2, 4);
+        veclen.set(3, 2);
+        veclen.set(4, 1);
         buffers[0] = veclen.getData();
 
         int[] types = {1};
@@ -53,49 +54,49 @@ public class JniWrapperTest {
         String code = "|x:vec[i32]| len(x)";
         String moduleId = wrapper.compile(code);
         // current not support the result
-        wrapper.execute(moduleId, buffers, types, rowNum, types);
+        wrapper.execute(moduleId, key, buffers, types, rowNum, types, OmniOpStep.FINAL.getState());
     }
 
     @Test
     public void testTwoColumn() {
         JniWrapper jniWrapper = new JniWrapper();
-        int[] value0 = {1,2,3,4,1,2,3,4,1,2,3,4};
-        int[] value1 = {1,1,1,1,1,1,1,1,1,1,1,1};
+        int[] value0 = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
+        int[] value1 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
         ByteBuffer[] buffers = new ByteBuffer[2];
         IntVec v0 = new IntVec(20);
-        for (int i = 0;i < value0.length;i++) {
+        for (int i = 0; i < value0.length; i++) {
             v0.set(i, value0[i]);
         }
         IntVec v1 = new IntVec(20);
-        for (int i = 0;i < value1.length;i++) {
+        for (int i = 0; i < value1.length; i++) {
             v1.set(i, value1[i]);
         }
         buffers[0] = v0.getData();
         buffers[1] = v1.getData();
-        int[] types = {1,1};
-        int[] outputTypes = {1,1};
+        int[] types = {1, 1};
+        int[] outputTypes = {1, 1};
         int rowNum = 12;
 
         String code = "|v0 :vec[i32], v1: vec[i32]|" +
-        "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| merge(b, {n.$0, n.$1}))));" +
-        "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
-        "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
-        "{k,v}";
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| merge(b, {n.$0, n.$1}))));" +
+                "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
+                "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
+                "{k,v}";
         String moduleId = jniWrapper.compile(code);
-        OMResult omResults = jniWrapper.execute(moduleId, buffers, types, rowNum, outputTypes);
-        ByteBuffer[] results = omResults.getBuffers();
+        OMResult OMResults = jniWrapper.execute(moduleId, key, buffers, types, rowNum, outputTypes, OmniOpStep.FINAL.getState());
+        ByteBuffer[] results = OMResults.getBuffers();
         int[] expected1 = {1, 3, 2, 4};
         int[] expected2 = {3, 3, 3, 3};
-        int[] actual1 = new int[omResults.getLength()];
-        int[] actual2 = new int[omResults.getLength()];
+        int[] actual1 = new int[OMResults.getLength()];
+        int[] actual2 = new int[OMResults.getLength()];
         results[0].order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0;i < omResults.getLength();i++) {
+        for (int i = 0; i < OMResults.getLength(); i++) {
             actual1[i] = results[0].getInt(i * Integer.BYTES);
         }
 
         results[1].order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0;i < omResults.getLength();i++) {
+        for (int i = 0; i < OMResults.getLength(); i++) {
             actual2[i] = results[1].getInt(i * Integer.BYTES);
         }
 
@@ -111,7 +112,7 @@ public class JniWrapperTest {
         int rowNum = 1000;
         IntVec datas = buildVec(rowNum);
         int[] dataInt = new int[rowNum];
-        for (int i = 0;i < rowNum;i++) {
+        for (int i = 0; i < rowNum; i++) {
             dataInt[i] = datas.get(i);
         }
         // in java
@@ -131,7 +132,7 @@ public class JniWrapperTest {
         long compileEnd = System.currentTimeMillis();
         System.out.println("compile total time is:" + (compileEnd - compileStart) + " ms");
         int[] outputTypes = {1};
-        omniNativeRuntime.execute(executeId, bufs, types, rowNum, outputTypes);
+        omniNativeRuntime.execute(executeId, key, bufs, types, rowNum, outputTypes, OmniOpStep.FINAL.getState());
         long executeEnd = System.currentTimeMillis();
         System.out.println("execute total time is:" + (executeEnd - compileEnd) + " ms");
         System.out.println("code gen total time is:" + (executeEnd - compileStart) + " ms");
@@ -149,7 +150,7 @@ public class JniWrapperTest {
         long start = System.currentTimeMillis();
         Map<Integer, Integer> result = groupByList
                 .stream()
-                .collect(Collectors.groupingBy(obj->obj.key, Collectors.summingInt(obj->obj.value)));
+                .collect(Collectors.groupingBy(obj -> obj.key, Collectors.summingInt(obj -> obj.value)));
         System.out.println("group by sum:" + result.size());
         long end = System.currentTimeMillis();
         System.out.println("compute data length:" + groupByList.size());
@@ -158,7 +159,7 @@ public class JniWrapperTest {
         // build vec data
         IntVec v1 = new IntVec(rowNum);
         IntVec v2 = new IntVec(rowNum);
-        for (int i = 0;i < groupByList.size();i++) {
+        for (int i = 0; i < groupByList.size(); i++) {
             TestGroupBy kv = groupByList.get(i);
             v1.set(i, kv.key);
             v2.set(i, kv.value);
@@ -169,22 +170,22 @@ public class JniWrapperTest {
         inputData[1] = v2.getData();
         int[] inputTypes = {1, 1};
         int[] outTypes = {1, 1};
-        String code = "|k:vec[i32],v:vec[i32]|"+
-        "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
-        "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
-        "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
-        "{k,v}";
+        String code = "|k:vec[i32],v:vec[i32]|" +
+                "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
+                "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
+                "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
+                "{k,v}";
 
         // weld IR code gen
         long compileStart = System.currentTimeMillis();
         String executeId = wrapper.compile(code);
         long compileEnd = System.currentTimeMillis();
         System.out.println("compile total time is:" + (compileEnd - compileStart) + " ms");
-        OMResult omResult = wrapper.execute(executeId, inputData, inputTypes, rowNum, outTypes);
+        OMResult OMResult = wrapper.execute(executeId, key, inputData, inputTypes, rowNum, outTypes, OmniOpStep.FINAL.getState());
         long executeEnd = System.currentTimeMillis();
         System.out.println("execute total time is:" + (executeEnd - compileEnd) + " ms");
         System.out.println("code gen total time is:" + (executeEnd - compileStart) + " ms");
-        System.out.println("columns:"+ omResult.getBuffers().length + ",rowNum:" + omResult.getLength());
+        System.out.println("columns:" + OMResult.getBuffers().length + ",rowNum:" + OMResult.getLength());
     }
 
     @Test
@@ -202,30 +203,30 @@ public class JniWrapperTest {
         inputData[1] = v2.getData();
         int[] inputTypes = {1, 1};
         int[] outTypes = {1, 1};
-        String code = "|k:vec[i32],v:vec[i32]|"+
+        String code = "|k:vec[i32],v:vec[i32]|" +
                 "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
                 "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
                 "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
                 "{k,v}";
 
         String executeId = wrapper.compile(code);
-        OMResult omResult = wrapper.execute(executeId, inputData, inputTypes, rowNum, outTypes);
+        OMResult OMResult = wrapper.execute(executeId, key, inputData, inputTypes, rowNum, outTypes, OmniOpStep.FINAL.getState());
         int[] expectKeys = {1, 0, 2};
         int[] expectValues = {12, 18, 15};
 
-        Assert.assertEquals(omResult.getBuffers().length, 2);
-        Assert.assertEquals(omResult.getLength(), 3);
+        Assert.assertEquals(OMResult.getBuffers().length, 2);
+        Assert.assertEquals(OMResult.getLength(), 3);
 
-        ByteBuffer[] results = omResult.getBuffers();
+        ByteBuffer[] results = OMResult.getBuffers();
         results[0].order(ByteOrder.LITTLE_ENDIAN);
-        int[] actualKey = new int[omResult.getLength()];
-        for (int i = 0;i < omResult.getLength();i++) {
+        int[] actualKey = new int[OMResult.getLength()];
+        for (int i = 0; i < OMResult.getLength(); i++) {
             actualKey[i] = results[0].getInt(i * Integer.BYTES);
         }
 
         results[1].order(ByteOrder.LITTLE_ENDIAN);
-        int[] actualValue = new int[omResult.getLength()];
-        for (int i = 0;i < omResult.getLength();i++) {
+        int[] actualValue = new int[OMResult.getLength()];
+        for (int i = 0; i < OMResult.getLength(); i++) {
             actualValue[i] = results[1].getInt(i * Integer.BYTES);
         }
 
@@ -233,10 +234,11 @@ public class JniWrapperTest {
         Assert.assertEquals(expectValues, actualValue);
 
     }
+
     private List<TestGroupBy> buildKeyAndValue(int rowNum, int distinctCount) {
         List<TestGroupBy> values = new ArrayList<>();
         Random random = new Random();
-        for (int i = 0;i < rowNum;i++) {
+        for (int i = 0; i < rowNum; i++) {
 //            int key = random.nextInt(objNum);
 //            int value = random.nextInt(row);
             TestGroupBy groupBy = new TestGroupBy(i % distinctCount, i);
@@ -247,7 +249,7 @@ public class JniWrapperTest {
 
     private int[] buildType(int columnNum) {
         int[] types = new int[columnNum];
-        for (int i = 0;i < columnNum;i++) {
+        for (int i = 0; i < columnNum; i++) {
             types[i] = 1;
         }
         return types;
@@ -256,7 +258,7 @@ public class JniWrapperTest {
     private IntVec buildVec(int rowNum) {
         IntVec vec = new IntVec(rowNum);
         Random random = new Random();
-        for (int i = 0;i < rowNum;i++) {
+        for (int i = 0; i < rowNum; i++) {
             int score = random.nextInt(2000000);
             vec.set(i, score);
         }
@@ -266,7 +268,7 @@ public class JniWrapperTest {
 
     private int sumOnHeap(int rowNum, int[] datas) {
         int sum = 0;
-        for (int i = 0;i < rowNum;i++) {
+        for (int i = 0; i < rowNum; i++) {
             sum += datas[i];
         }
         return sum;
@@ -275,7 +277,7 @@ public class JniWrapperTest {
     private int sumOffHeap(int rowNum, IntVec vec) {
         int sum = 0;
         long time = 0;
-        for (int i = 0;i < rowNum;i++) {
+        for (int i = 0; i < rowNum; i++) {
             sum += vec.get(i);
         }
         System.out.println("get value total time from off_head:" + time);
@@ -308,6 +310,7 @@ public class JniWrapperTest {
     static class TestGroupBy {
         int key;
         int value;
+
         public TestGroupBy(int key, int value) {
             this.key = key;
             this.value = value;

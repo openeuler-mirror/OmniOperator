@@ -17,12 +17,11 @@ package nova.hetu.omnicache.runtime;
 import java.nio.ByteBuffer;
 
 class JniWrapper {
-    static
-    {
+    static {
         System.loadLibrary("omvector");
     }
 
     public native String compile(String code);
 
-    public native OMResult execute(String neid, ByteBuffer[] columns, int[] inpuTypes, long rowNum, int[] outputTypes);
+    public native OMResult execute(String neid, String key, ByteBuffer[] columns, int[] inpuTypes, long rowNum, int[] outputTypes, int step);
 }
