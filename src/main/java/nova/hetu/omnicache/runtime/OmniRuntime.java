@@ -38,13 +38,24 @@ public class OmniRuntime {
         return jniWrapper.compile(code);
     }
 
-    public Vec<?>[] execute(String nativeExecId, Vec<?>[] inputs, int inputRowLength, VecType[] outputTypes)
-    {
+    /**
+     * Core OmniRuntime Api, use high-performance Vectorized Execution to computing intermediate and final vectors;
+     *
+     * @param neid         compile Api result neid
+     * @param key          stateful operator execution key
+     * @param inputs       input Vectors data
+     * @param inputRowSize input vectors row size
+     * @param outputTypes  result output vectors data type
+     * @param step         For stateful operator, represent op step,currently support only two type
+     * @return if step = {@link OmniOpStep#INTERMEDIATE} , omni runtime execute while result native execute id,result type is {@link String};
+     * if step ={@link OmniOpStep#FINAL} omni runtime while result final execution data,result type is {@link Vec<?>[]}
+     */
+    public Object execute(String neid, String key, Vec<?>[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step) {
         requireNonNull(inputs, "inputs is null");
         checkArgument(inputs.length > 0, "input vector length must >0");
         ByteBuffer[] buffers = new ByteBuffer[inputs.length];
         int[] inputTypes = new int[inputs.length];
-        long rowSize = inputRowLength;
+        long rowSize = inputRowSize;
 
         for (int idx = 0; idx < buffers.length; idx++) {
             buffers[idx] = inputs[idx].getData();
@@ -54,12 +65,18 @@ public class OmniRuntime {
         for (int idx = 0; idx < outputTypes.length; idx++) {
             outputTypeArr[idx] = outputTypes[idx].getValue();
         }
-        OMResult result = jniWrapper.execute(nativeExecId, buffers, inputTypes, rowSize, outputTypeArr);
-        return generateOMVec(result, outputTypes);
+        OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr, step.getState());
+        switch (step) {
+            case INTERMEDIATE:
+                return result.getKey();
+            case FINAL:
+                return generateOMVec(result, outputTypes);
+            default:
+                throw new IllegalArgumentException(format("Not Support OmniOpState %s", step));
+        }
     }
 
-    private Vec<?>[] generateOMVec(OMResult result, VecType[] outputTypes)
-    {
+    private Vec<?>[] generateOMVec(OMResult result, VecType[] outputTypes) {
         Vec<?>[] output = new Vec[outputTypes.length];
         int length = result.getLength();
         for (int idx = 0; idx < outputTypes.length; idx++) {

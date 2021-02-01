@@ -21,8 +21,7 @@ import nova.hetu.omnicache.vector.VecType;
 import java.nio.ByteBuffer;
 
 public class Demo {
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         int[] value0 = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
         int[] value1 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         ByteBuffer[] buffers = new ByteBuffer[2];
@@ -47,8 +46,8 @@ public class Demo {
         OmniRuntime omniRuntime = new OmniRuntime();
         String neid = omniRuntime.compile(code);
         Vec[] vecs = {v0, v1};
-        Vec[] resultVecs = omniRuntime.execute(neid, vecs, rowNum, outputTypes);
-        for(int i=0;i<resultVecs[0].size();i++) {
+        Vec[] resultVecs = (Vec[]) omniRuntime.execute(neid, "UNKNOW", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
+        for (int i = 0; i < resultVecs[0].size(); i++) {
             StringBuilder sb = new StringBuilder();
             for (int idx = 0; idx < resultVecs.length; idx++) {
                 sb.append(((IntVec) resultVecs[idx]).get(i)).append("\t");

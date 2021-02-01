@@ -16,27 +16,32 @@ package nova.hetu.omnicache.runtime;
 
 import java.nio.ByteBuffer;
 
-public class OMResult {
+class OMResult {
     private ByteBuffer[] buffers;
     private int length;
+    private String key;
 
-    public ByteBuffer[] getBuffers()
-    {
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public ByteBuffer[] getBuffers() {
         return buffers;
     }
 
-    public void setBuffers(ByteBuffer[] buffers)
-    {
+    public void setBuffers(ByteBuffer[] buffers) {
         this.buffers = buffers;
     }
 
-    public int getLength()
-    {
+    public int getLength() {
         return length;
     }
 
-    public void setLength(int length)
-    {
+    public void setLength(int length) {
         this.length = length;
     }
 }
