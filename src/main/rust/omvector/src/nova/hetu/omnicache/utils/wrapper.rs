@@ -31,6 +31,11 @@ pub enum VecType {
     DOUBLE = 3
 }
 
+pub enum OmniOpStep {
+    INTERMEDIATE = 0,
+    FINAL = 1
+}
+
 pub unsafe fn weld_vec_mem_alloc(size: usize) -> *mut c_void {
     libc::malloc(size * *WELD_VEC_WIDTH)
 }

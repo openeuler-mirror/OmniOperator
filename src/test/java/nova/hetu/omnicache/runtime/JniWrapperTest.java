@@ -235,6 +235,59 @@ public class JniWrapperTest {
         Assert.assertEquals(key, omResult.getKey());
     }
 
+    @Test
+    public void testGroupByAndSumWihMultiStep() {
+        int rowNum = 10;
+        IntVec v1 = new IntVec(rowNum);
+        IntVec v2 = new IntVec(rowNum);
+        for (int idx = 0; idx < rowNum; idx++) {
+            v1.set(idx, idx % 3);
+            v2.set(idx, idx);
+        }
+
+        ByteBuffer[] inputData = new ByteBuffer[2];
+        inputData[0] = v1.getData();
+        inputData[1] = v2.getData();
+        int[] inputTypes = {1, 1};
+        int[] outTypes = {1, 1};
+        String code = "|k:vec[i32],v:vec[i32]|" +
+                "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
+                "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
+                "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
+                "{k,v}";
+
+        String key1 = "123";
+        String executeId = wrapper.compile(code);
+        //intermediate
+        OMResult omResult1 = wrapper.execute(executeId, key1, inputData, inputTypes, rowNum, outTypes, OmniOpStep.INTERMEDIATE.getState());
+
+        // final
+        OMResult omResult2 = wrapper.execute(executeId, key1, null, null, 0, outTypes, OmniOpStep.FINAL.getState());
+
+        int[] expectKeys = {1, 0, 2};
+        int[] expectValues = {12, 18, 15};
+
+        Assert.assertEquals(omResult2.getBuffers().length, 2);
+        Assert.assertEquals(omResult2.getLength(), 3);
+
+        ByteBuffer[] results = omResult2.getBuffers();
+        results[0].order(ByteOrder.LITTLE_ENDIAN);
+        int[] actualKey = new int[omResult2.getLength()];
+        for (int i = 0; i < omResult2.getLength(); i++) {
+            actualKey[i] = results[0].getInt(i * Integer.BYTES);
+        }
+
+        results[1].order(ByteOrder.LITTLE_ENDIAN);
+        int[] actualValue = new int[omResult2.getLength()];
+        for (int i = 0; i < omResult2.getLength(); i++) {
+            actualValue[i] = results[1].getInt(i * Integer.BYTES);
+        }
+
+        Assert.assertEquals(expectKeys, actualKey);
+        Assert.assertEquals(expectValues, actualValue);
+        Assert.assertEquals(key1, omResult1.getKey());
+    }
+
     private List<TestGroupBy> buildKeyAndValue(int rowNum, int distinctCount) {
         List<TestGroupBy> values = new ArrayList<>();
         Random random = new Random();

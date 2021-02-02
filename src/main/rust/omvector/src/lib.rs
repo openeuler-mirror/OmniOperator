@@ -27,10 +27,11 @@ use nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_
 use crate::nova::hetu::omnicache::utils::wrapper::VecType::{INT32,DOUBLE,INT64};
 use weld::data::WeldVec;
 use weld::WeldValue;
-use std::ptr::null;
+use std::ptr::{null, null_mut};
 use std::ffi::c_void;
 use crate::nova::hetu::omnicache::utils::wrapper::transform_vec_in_vec_data;
 use nova::hetu::omnicache::runtime::cache::IntermediateState;
+use crate::nova::hetu::omnicache::utils::wrapper::OmniOpStep::{INTERMEDIATE, FINAL};
 use nova::hetu::omnicache::runtime::cache::INTERMEDIATE_CACHE;
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
@@ -161,30 +162,36 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
     let output_len;
     let mut j_result = env.new_object_array(output_type_size,"java/nio/ByteBuffer", std::ptr::null_mut())
         .expect("create output buffer failed.");
+    let omni_key  = get_str(env, j_key);
 
     unsafe {
-        // transform input data to weld input data
-        let c_number = get_column_number(env, j_input_datas);
-        let neid = get_str(env, j_neid);
-
-        // todo build Vec<Vec<T>>(2) for intermediate result and current vector storage
-        let ref tmp_res_key = get_str(env,j_key);
-        let mut input_data = build_input_data(env,j_input_datas, c_number,
-                                              j_row_num as usize, &input_types, tmp_res_key as &str);
-
-        // execute weld ir
-        let result = OmniCodeGen::execute(neid, &(*input_data)).expect("OmniCache Native execute failed!");
-        // release the mem for build input data
-        free_weld_vec_mem(input_data);
+        let mut weld_result;
+        if !j_input_datas.is_null() {
+            // transform input data to weld input data
+            let c_number = get_column_number(env, j_input_datas);
+            let neid = get_str(env, j_neid);
+            // todo build Vec<Vec<T>>(2) for intermediate result and current vector storage
+            let ref tmp_res_key = get_str(env,j_key);
+            let mut input_data = build_input_data(env,j_input_datas, c_number,
+                                                  j_row_num as usize, &input_types, tmp_res_key as &str);
+            // execute weld ir
+            weld_result = OmniCodeGen::execute(neid, &(*input_data)).expect("OmniCache Native execute failed!");
+            // release the mem for build input data
+            free_weld_vec_mem(input_data);
+            mem::forget(input_data);
+            // todo:transform weld_result
+            // todo:put into cache
+            //cache.put(j_key, weld_result);
+        } else {
+            // todo:get data from cache
+           // cache.get(j_key);
+        }
 
         // handle the weld result
-        output_len = build_output_data(env, output_type_size, &output_types,&result, j_result);
-        mem::forget(input_data);
-        mem::forget(result);
+        output_len = build_output_data(env, output_type_size, &output_types,&weld_result, j_result);
         mem::forget(j_result);
     }
-    let key  = get_str(env, j_key);
-    build_om_result(env, j_result, output_len, key).into_inner()
+    build_om_result(env, j_result, output_len, omni_key).into_inner()
 }
 
 fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: String) -> JObject {
@@ -200,18 +207,23 @@ fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: 
 
 fn get_int_array_elements(env: JNIEnv, array: jobjectArray, size: i32) -> Vec<i32> {
     let mut buf = vec![-1;size as usize];
-    env.get_int_array_region(array,0, buf.as_mut());
+    if array != null_mut() {
+        env.get_int_array_region(array,0, buf.as_mut());
+    }
     buf
 }
 
-unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_result: &WeldValue, output:*mut _jobject) -> i32 {
+unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_result: &WeldValue,
+                            output:*mut _jobject) -> i32 {
     let mut output_len = 0;
+
     for c_index in 0..columns {
         let current_len;
         let d_type = data_type[c_index as usize];
         if d_type == INT32 as i32 {
             let result_i32 = get_output_data(w_result, c_index as isize, INT32);
             let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
+            let addr1 = vec_i32.as_mut() as usize;
             current_len = vec_i32.len();
             add_buf_to_output(env,vec_i32.as_mut(), output, c_index);
             mem::forget(vec_i32);
@@ -254,11 +266,19 @@ fn get_str(env: JNIEnv,j_str: JString) -> String {
 }
 
 fn get_column_number(env:JNIEnv, j_buf:jobjectArray) -> i32 {
-    env.get_array_length(j_buf).expect("get the column number failed.")
+    let mut len = 0;
+    if !j_buf.is_null() {
+        len = env.get_array_length(j_buf).expect("get the column number failed.");
+    }
+    len
 }
 
-fn get_type_number(env:JNIEnv, j_types:jobjectArray) -> i32 {
-    env.get_array_length(j_types).expect("get the type number failed")
+fn get_type_number(env:JNIEnv, j_types:jintArray) -> i32 {
+    let mut len = 0;
+    if !j_types.is_null() {
+        len = env.get_array_length(j_types).expect("get the type number failed");
+    }
+    len
 }
 
 unsafe fn transform_weld_to_vec<T>(result:*mut c_void, len: i64) -> Vec<T> {
