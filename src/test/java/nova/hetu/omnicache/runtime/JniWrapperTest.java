@@ -84,25 +84,25 @@ public class JniWrapperTest {
                 "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
         String moduleId = jniWrapper.compile(code);
-        OMResult OMResults = jniWrapper.execute(moduleId, key, buffers, types, rowNum, outputTypes, OmniOpStep.FINAL.getState());
-        ByteBuffer[] results = OMResults.getBuffers();
+        OMResult omResults = jniWrapper.execute(moduleId, key, buffers, types, rowNum, outputTypes, OmniOpStep.FINAL.getState());
+        ByteBuffer[] results = omResults.getBuffers();
         int[] expected1 = {1, 3, 2, 4};
         int[] expected2 = {3, 3, 3, 3};
-        int[] actual1 = new int[OMResults.getLength()];
-        int[] actual2 = new int[OMResults.getLength()];
+        int[] actual1 = new int[omResults.getLength()];
+        int[] actual2 = new int[omResults.getLength()];
         results[0].order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < OMResults.getLength(); i++) {
+        for (int i = 0; i < omResults.getLength(); i++) {
             actual1[i] = results[0].getInt(i * Integer.BYTES);
         }
 
         results[1].order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < OMResults.getLength(); i++) {
+        for (int i = 0; i < omResults.getLength(); i++) {
             actual2[i] = results[1].getInt(i * Integer.BYTES);
         }
 
         Assert.assertEquals(expected1, actual1);
         Assert.assertEquals(expected2, actual2);
-
+        Assert.assertEquals(key, omResults.getKey());
     }
 
     @Test
@@ -210,29 +210,29 @@ public class JniWrapperTest {
                 "{k,v}";
 
         String executeId = wrapper.compile(code);
-        OMResult OMResult = wrapper.execute(executeId, key, inputData, inputTypes, rowNum, outTypes, OmniOpStep.FINAL.getState());
+        OMResult omResult = wrapper.execute(executeId, key, inputData, inputTypes, rowNum, outTypes, OmniOpStep.FINAL.getState());
         int[] expectKeys = {1, 0, 2};
         int[] expectValues = {12, 18, 15};
 
-        Assert.assertEquals(OMResult.getBuffers().length, 2);
-        Assert.assertEquals(OMResult.getLength(), 3);
+        Assert.assertEquals(omResult.getBuffers().length, 2);
+        Assert.assertEquals(omResult.getLength(), 3);
 
-        ByteBuffer[] results = OMResult.getBuffers();
+        ByteBuffer[] results = omResult.getBuffers();
         results[0].order(ByteOrder.LITTLE_ENDIAN);
-        int[] actualKey = new int[OMResult.getLength()];
-        for (int i = 0; i < OMResult.getLength(); i++) {
+        int[] actualKey = new int[omResult.getLength()];
+        for (int i = 0; i < omResult.getLength(); i++) {
             actualKey[i] = results[0].getInt(i * Integer.BYTES);
         }
 
         results[1].order(ByteOrder.LITTLE_ENDIAN);
-        int[] actualValue = new int[OMResult.getLength()];
-        for (int i = 0; i < OMResult.getLength(); i++) {
+        int[] actualValue = new int[omResult.getLength()];
+        for (int i = 0; i < omResult.getLength(); i++) {
             actualValue[i] = results[1].getInt(i * Integer.BYTES);
         }
 
         Assert.assertEquals(expectKeys, actualKey);
         Assert.assertEquals(expectValues, actualValue);
-
+        Assert.assertEquals(key, omResult.getKey());
     }
 
     private List<TestGroupBy> buildKeyAndValue(int rowNum, int distinctCount) {

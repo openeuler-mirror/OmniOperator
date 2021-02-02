@@ -147,8 +147,8 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_compile
  */
 #[no_mangle]
 pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
-(env: JNIEnv, this_obj: jobject, j_neid: JString, j_input_datas: jobjectArray, j_input_types: jintArray,
- j_row_num: jlong, j_output_types: jintArray) -> jobject {
+(env: JNIEnv, this_obj: jobject, j_neid: JString, j_key: JString, j_input_datas: jobjectArray, j_input_types: jintArray,
+ j_row_num: jlong, j_output_types: jintArray, step: jint) -> jobject {
 
     let input_type_size = get_type_number(env, j_input_types);
     let input_types = get_int_array_elements(env, j_input_types, input_type_size);
@@ -177,15 +177,18 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
         mem::forget(result);
         mem::forget(j_result);
     }
-    build_om_result(env, j_result, output_len).into_inner()
+    let key  = get_key(env, j_key);
+    build_om_result(env, j_result, output_len, key).into_inner()
 }
 
-fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32) -> JObject {
+fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: String) -> JObject {
     // todo need cache the jni info
     let om_result_cls = env.find_class("nova/hetu/omnicache/runtime/OMResult").expect("find the class failed.");
     let j_om_result_obj = env.new_object(om_result_cls, "()V", &[]).expect("create failed.");
     env.call_method(j_om_result_obj,"setBuffers", "([Ljava/nio/ByteBuffer;)V", &[JValue::from(buf_array)]);
     env.call_method(j_om_result_obj,"setLength", "(I)V", &[JValue::from(output_len)]);
+    let j_key = env.new_string(key).expect("get the key failed.");
+    env.call_method(j_om_result_obj, "setKey", "(Ljava/lang/String;)V", &[JValue::from(j_key.into_inner())]);
     j_om_result_obj
 }
 
@@ -238,6 +241,10 @@ unsafe fn add_buf_to_output<T:Clone>(env:JNIEnv, original: &mut Vec<T>, output: 
     mem::forget(res);
     env.set_object_array_element(output, index, buf);
     mem::forget(buf);
+}
+
+fn get_key(env: JNIEnv, j_key: JString) -> String {
+    env.get_string(j_key).expect("get the key failed.").into()
 }
 
 fn get_neid(env: JNIEnv,j_neid: JString) -> String {

@@ -18,10 +18,10 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_compile
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    execute
- * Signature: (Ljava/lang/String;[Ljava/nio/ByteBuffer;[IJ[I)Lnova/hetu/omnicache/runtime/OMResult;
+ * Signature: (Ljava/lang/String;Ljava/lang/String;[Ljava/nio/ByteBuffer;[IJ[II)Lnova/hetu/omnicache/runtime/OMResult;
  */
 JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_execute
-  (JNIEnv *, jobject, jstring, jobjectArray, jintArray, jlong, jintArray);
+  (JNIEnv *, jobject, jstring, jstring, jobjectArray, jintArray, jlong, jintArray, jint);
 
 #ifdef __cplusplus
 }
