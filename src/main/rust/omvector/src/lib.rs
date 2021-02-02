@@ -30,18 +30,14 @@ use weld::WeldValue;
 use std::ptr::null;
 use std::ffi::c_void;
 use crate::nova::hetu::omnicache::utils::wrapper::transform_vec_in_vec_data;
-use std::collections::HashMap;
-use lazy_static::lazy_static;
 use nova::hetu::omnicache::runtime::cache::IntermediateState;
+use nova::hetu::omnicache::runtime::cache::INTERMEDIATE_CACHE;
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    mul
  * Signature: (ILjava/nio/ByteBuffer;I)V
  */
 
-lazy_static! {
-     static ref INTERMEDIATE_CACHE: HashMap<String, IntermediateState<'static>> = Default::default();
-}
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul

@@ -12,6 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use chashmap::CHashMap;
+use once_cell::sync::Lazy;
+use weld::WeldModule;
+
+// static INTERMEDIATE_CACHE: CHashMap<String, IntermediateState<'static>> = Default::default();
+
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -20,3 +26,5 @@ pub struct IntermediateState<'a> {
     pub len: usize,
 }
 
+pub static INTERMEDIATE_CACHE: Lazy<CHashMap<String, IntermediateState<'static>>> = Lazy::new(|| Default::default());
+pub static CACHE: Lazy<CHashMap<String, WeldModule>> = Lazy::new(|| Default::default());
