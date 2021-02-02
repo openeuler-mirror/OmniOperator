@@ -51,20 +51,24 @@ public class OmniRuntime {
      * if step ={@link OmniOpStep#FINAL} omni runtime while result final execution data,result type is {@link Vec<?>[]}
      */
     public Object execute(String neid, String key, Vec<?>[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step) {
-        requireNonNull(inputs, "inputs is null");
-        checkArgument(inputs.length > 0, "input vector length must >0");
-        ByteBuffer[] buffers = new ByteBuffer[inputs.length];
-        int[] inputTypes = new int[inputs.length];
+        ByteBuffer[] buffers = null;
+        int[] inputTypes = null;
         long rowSize = inputRowSize;
 
-        for (int idx = 0; idx < buffers.length; idx++) {
-            buffers[idx] = inputs[idx].getData();
-            inputTypes[idx] = inputs[idx].getType().getValue();
+        if (inputs != null) {
+            buffers = new ByteBuffer[inputs.length];
+            inputTypes = new int[inputs.length];
+            for (int idx = 0; idx < buffers.length; idx++) {
+                buffers[idx] = inputs[idx].getData();
+                inputTypes[idx] = inputs[idx].getType().getValue();
+            }
         }
+
         int[] outputTypeArr = new int[outputTypes.length];
         for (int idx = 0; idx < outputTypes.length; idx++) {
             outputTypeArr[idx] = outputTypes[idx].getValue();
         }
+
         OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr, step.getState());
         switch (step) {
             case INTERMEDIATE:
