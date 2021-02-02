@@ -435,4 +435,6 @@ fn weldvec_to_rustvec() {
     for idx in 0..rawData.len() {
         assert_eq!(rawData.get(idx), transferedVec.get(idx));
     }
+
+    mem::forget(rawData);
 }
