@@ -29,12 +29,19 @@ use weld::data::WeldVec;
 use weld::WeldValue;
 use std::ptr::null;
 use std::ffi::c_void;
-
+use crate::nova::hetu::omnicache::utils::wrapper::transform_vec_in_vec_data;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+use nova::hetu::omnicache::runtime::cache::IntermediateState;
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    mul
  * Signature: (ILjava/nio/ByteBuffer;I)V
  */
+
+lazy_static! {
+     static ref INTERMEDIATE_CACHE: HashMap<String, IntermediateState<'static>> = Default::default();
+}
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul
@@ -149,7 +156,6 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_compile
 pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
 (env: JNIEnv, this_obj: jobject, j_neid: JString, j_key: JString, j_input_datas: jobjectArray, j_input_types: jintArray,
  j_row_num: jlong, j_output_types: jintArray, step: jint) -> jobject {
-
     let input_type_size = get_type_number(env, j_input_types);
     let input_types = get_int_array_elements(env, j_input_types, input_type_size);
 
@@ -163,8 +169,12 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
     unsafe {
         // transform input data to weld input data
         let c_number = get_column_number(env, j_input_datas);
-        let neid = get_neid(env, j_neid);
-        let mut input_data = build_input_data(env,j_input_datas, c_number, j_row_num as usize, &input_types);
+        let neid = get_str(env, j_neid);
+
+        // todo build Vec<Vec<T>>(2) for intermediate result and current vector storage
+        let ref tmp_res_key = get_str(env,j_key);
+        let mut input_data = build_input_data(env,j_input_datas, c_number,
+                                              j_row_num as usize, &input_types, tmp_res_key as &str);
 
         // execute weld ir
         let result = OmniCodeGen::execute(neid, &(*input_data)).expect("OmniCache Native execute failed!");
@@ -177,7 +187,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
         mem::forget(result);
         mem::forget(j_result);
     }
-    let key  = get_key(env, j_key);
+    let key  = get_str(env, j_key);
     build_om_result(env, j_result, output_len, key).into_inner()
 }
 
@@ -243,12 +253,8 @@ unsafe fn add_buf_to_output<T:Clone>(env:JNIEnv, original: &mut Vec<T>, output: 
     mem::forget(buf);
 }
 
-fn get_key(env: JNIEnv, j_key: JString) -> String {
-    env.get_string(j_key).expect("get the key failed.").into()
-}
-
-fn get_neid(env: JNIEnv,j_neid: JString) -> String {
-    env.get_string(j_neid).expect("couldn't get code from java.").into()
+fn get_str(env: JNIEnv,j_str: JString) -> String {
+    env.get_string(j_str).expect("couldn't get code from java.").into()
 }
 
 fn get_column_number(env:JNIEnv, j_buf:jobjectArray) -> i32 {
@@ -265,9 +271,10 @@ unsafe fn transform_weld_to_vec<T>(result:*mut c_void, len: i64) -> Vec<T> {
     Vec::from_raw_parts(result_ptr, len as usize, len as usize)
 }
 
-unsafe fn  build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usize, data_type:& [i32]) -> *mut c_void {
+unsafe fn  build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usize, data_type:& [i32], tmp_res_key: &str) -> *mut c_void {
     //1 init mem address
     //2 traverse the buf and build the data vec
+    let tmp_res= INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalidated temp result.");
     let mut address =  weld_vec_mem_alloc(columns as usize);
     for c_index in 0..columns {
         let buf = env.get_object_array_element(bufs, c_index).expect("couldn't get buffer");
@@ -275,17 +282,29 @@ unsafe fn  build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: us
             .expect("couldn't get the address of buffer");
         let d_type = data_type[c_index as usize];
         if d_type == INT32 as i32 {
+            let mut input_vectors = vec![];
+            let vec_i32_tmp = transform_buf_to_vec::<i32>(tmp_res.len,tmp_res.addr);
             let vec_i32 = transform_buf_to_vec::<i32>(rows,buf_addr);
-            transform_input_data(&vec_i32, address, c_index as isize);
-            mem::forget(vec_i32);
+            input_vectors.push(vec_i32);
+            input_vectors.push(vec_i32_tmp);
+            transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
+            mem::forget(input_vectors);
         } else if d_type == INT64 as i32 {
+            let mut input_vectors = vec![];
+            let vec_i64_tmp = transform_buf_to_vec::<i64>(tmp_res.len,tmp_res.addr);
             let vec_i64 = transform_buf_to_vec::<i64>(rows,buf_addr);
-            transform_input_data(&vec_i64, address, c_index as isize);
-            mem::forget(vec_i64);
+            input_vectors.push(vec_i64);
+            input_vectors.push(vec_i64_tmp);
+            transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
+            mem::forget(input_vectors);
         } else if d_type == DOUBLE as i32 {
+            let mut input_vectors = vec![];
+            let vec_f64_tmp = transform_buf_to_vec::<f64>(tmp_res.len,tmp_res.addr);
             let vec_f64 = transform_buf_to_vec::<f64>(rows,buf_addr);
-            transform_input_data(&vec_f64, address, c_index as isize);
-            mem::forget(vec_f64);
+            input_vectors.push(vec_f64);
+            input_vectors.push(vec_f64_tmp);
+            transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
+            mem::forget(input_vectors);
         } else {
             panic!("don't support the date type:{}", d_type);
         }
@@ -293,12 +312,12 @@ unsafe fn  build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: us
     address
 }
 
-unsafe fn transform_buf_to_vec<T: Clone>(rows: usize, buf: &mut [u8]) -> Vec<T> {
+unsafe fn transform_buf_to_vec<T: Clone>(rows: usize, buf: &[u8]) -> Vec<T> {
     if buf.len() % mem::size_of::<T>() != 0 {
         panic!("Misaligned vector size, cannot convert vector of size {} to vector with element size {}", buf.len(), mem::size_of::<T>());
     }
 
-    let result = buf.as_mut_ptr() as *mut T;
+    let result = buf.as_ptr() as *mut T;
     mem::forget(buf);
     Vec::from_raw_parts(result, rows, rows)
 }

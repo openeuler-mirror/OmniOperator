@@ -12,6 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pub mod codegen;
-pub mod omniruntime;
-pub mod cache;
+
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct IntermediateState<'a> {
+    pub addr: &'a [u8],
+    pub len: usize,
+}
+
