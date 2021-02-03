@@ -15,16 +15,17 @@
 use chashmap::CHashMap;
 use once_cell::sync::Lazy;
 use weld::WeldModule;
+use std::collections::HashMap;
 
 // static INTERMEDIATE_CACHE: CHashMap<String, IntermediateState<'static>> = Default::default();
 
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct IntermediateState<'a> {
-    pub addr: &'a [u8],
+pub struct IntermediateState {
+    pub addr: *const u8,
     pub len: usize,
 }
 
-pub static INTERMEDIATE_CACHE: Lazy<CHashMap<String, IntermediateState<'static>>> = Lazy::new(|| Default::default());
+pub static mut INTERMEDIATE_CACHE: Lazy<HashMap<String, IntermediateState>> = Lazy::new(|| Default::default());
 pub static CACHE: Lazy<CHashMap<String, WeldModule>> = Lazy::new(|| Default::default());

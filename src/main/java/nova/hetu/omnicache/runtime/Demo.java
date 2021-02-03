@@ -38,8 +38,8 @@ public class Demo {
         VecType[] outputTypes = {VecType.INT, VecType.INT};
         int rowNum = 12;
         System.out.println("....." + v0.size());
-        String code = "|v0 :vec[i32], v1: vec[i32]|" +
-                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| merge(b, {n.$0, n.$1}))));" +
+        String code = "|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| " + "merge(b, {m.$0, m.$1})))));" +
                 "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
                 "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
