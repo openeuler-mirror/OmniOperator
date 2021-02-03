@@ -46,11 +46,37 @@ public class Demo {
         OmniRuntime omniRuntime = new OmniRuntime();
         String neid = omniRuntime.compile(code);
         Vec[] vecs = {v0, v1};
-        Vec[] resultVecs = (Vec[]) omniRuntime.execute(neid, "UNKNOW", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
+        Vec[] resultVecs = (Vec[]) omniRuntime.execute(neid, "TMP", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
+
         for (int i = 0; i < resultVecs[0].size(); i++) {
             StringBuilder sb = new StringBuilder();
             for (int idx = 0; idx < resultVecs.length; idx++) {
                 sb.append(((IntVec) resultVecs[idx]).get(i)).append("\t");
+            }
+            System.out.println(sb.toString());
+        }
+
+        int[] value0_ = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
+        int[] value1_ = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        ByteBuffer[] buffers_ = new ByteBuffer[2];
+        IntVec v0_ = new IntVec(20);
+        for (int i = 0; i < value0_.length; i++) {
+            v0_.set(i, value0[i]);
+        }
+        IntVec v1_ = new IntVec(20);
+        for (int i = 0; i < value1_.length; i++) {
+            v1_.set(i, value1[i]);
+        }
+        buffers_[0] = v0.getData();
+        buffers_[1] = v1.getData();
+        String neid_ = omniRuntime.compile(code);
+        Vec[] vecs_ = {v0_, v1_};
+        Vec[] resultVecs_ = (Vec[]) omniRuntime.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
+
+        for (int i = 0; i < resultVecs_[0].size(); i++) {
+            StringBuilder sb = new StringBuilder();
+            for (int idx = 0; idx < resultVecs_.length; idx++) {
+                sb.append(((IntVec) resultVecs_[idx]).get(i)).append("\t");
             }
             System.out.println(sb.toString());
         }

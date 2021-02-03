@@ -301,6 +301,7 @@ unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usi
     //2 traverse the buf and build the data vec
 
     let has_tmp = !INTERMEDIATE_CACHE.get(tmp_res_key).is_none();
+    println!("has_tmp is :{}", has_tmp);
 
     let mut address =  weld_vec_mem_alloc(columns as usize);
     for c_index in 0..columns {
@@ -312,9 +313,11 @@ unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usi
             let mut input_vectors = vec![];
             if has_tmp {
                 let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!");
-                let vec_i32_tmp = transform_buf_to_vec::<i32>(tmp_res.len,
-                                                              slice::from_raw_parts_mut(tmp_res.addr as *mut u8,
-                                                                                        (tmp_res.len * mem::size_of::<i32>()) as usize));
+                println!("tmp_res is :{:?}", tmp_res);
+                let weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
+                let result_i32 = get_output_data(&weld_value, c_index as isize, INT32);
+                let vec_i32_tmp = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
+                println!("vec_i32_tmp is :{:?}", vec_i32_tmp);
                 input_vectors.push(vec_i32_tmp);
             }
             let vec_i32 = transform_buf_to_vec::<i32>(rows,buf_addr);
@@ -326,9 +329,11 @@ unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usi
             let mut input_vectors = vec![];
             if has_tmp {
                 let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!");
-                let vec_i64_tmp = transform_buf_to_vec::<i64>(tmp_res.len,
-                                                              slice::from_raw_parts_mut(tmp_res.addr as *mut u8,
-                                                                                        (tmp_res.len * mem::size_of::<i64>()) as usize));
+                println!("tmp_res is :{:?}", tmp_res);
+                let weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
+                let result_i64 = get_output_data(&weld_value, c_index as isize, INT64);
+                let vec_i64_tmp = transform_weld_to_vec::<i64>(result_i64.0, result_i64.1);
+                println!("vec_i64_tmp is :{:?}", vec_i64_tmp);
                 input_vectors.push(vec_i64_tmp);
             }
             let vec_i64 = transform_buf_to_vec::<i64>(rows,buf_addr);
@@ -340,9 +345,11 @@ unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usi
             let mut input_vectors = vec![];
             if has_tmp {
                 let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!");
-                let vec_f64_tmp = transform_buf_to_vec::<f64>(tmp_res.len,
-                                                              slice::from_raw_parts_mut(tmp_res.addr as *mut u8,
-                                                                                        (tmp_res.len * mem::size_of::<f64>()) as usize));
+                println!("tmp_res is :{:?}", tmp_res);
+                let weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
+                let result_f64 = get_output_data(&weld_value, c_index as isize, DOUBLE);
+                let vec_f64_tmp = transform_weld_to_vec::<f64>(result_f64.0, result_f64.1);
+                println!("vec_i64_tmp is :{:?}", vec_f64_tmp);
                 input_vectors.push(vec_f64_tmp);
             }
             let vec_f64 = transform_buf_to_vec::<f64>(rows,buf_addr);
