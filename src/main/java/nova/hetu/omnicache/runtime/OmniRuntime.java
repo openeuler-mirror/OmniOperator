@@ -14,6 +14,7 @@
  */
 package nova.hetu.omnicache.runtime;
 
+import nova.hetu.omnicache.OMVectorBase;
 import nova.hetu.omnicache.vector.DoubleVec;
 import nova.hetu.omnicache.vector.IntVec;
 import nova.hetu.omnicache.vector.LongVec;
@@ -70,6 +71,12 @@ public class OmniRuntime {
         }
 
         OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr, step.getState());
+        // free inputs
+        if (inputs != null) {
+            for (int idx = 0; idx < inputs.length; ++idx) {
+                OMVectorBase.free(inputs[idx].getData());
+            }
+        }
         switch (step) {
             case INTERMEDIATE:
                 return result.getKey();

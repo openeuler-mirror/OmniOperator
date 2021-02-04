@@ -14,7 +14,8 @@
  */
 package nova.hetu.omnicache.runtime;
 
-import nova.hetu.omnicache.vector.IntVec;
+import nova.hetu.omnicache.OMVectorBase;
+import nova.hetu.omnicache.vector.*;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -286,6 +287,57 @@ public class JniWrapperTest {
         Assert.assertEquals(expectKeys, actualKey);
         Assert.assertEquals(expectValues, actualValue);
         Assert.assertEquals(key1, omResult1.getKey());
+    }
+
+    @Test
+    public void testFreeMem() {
+        int[] value0 = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
+        int[] value1 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        ByteBuffer[] buffers = new ByteBuffer[2];
+        IntVec v0 = new IntVec(20);
+        for (int i = 0; i < value0.length; i++) {
+            v0.set(i, value0[i]);
+        }
+        IntVec v1 = new IntVec(20);
+        for (int i = 0; i < value1.length; i++) {
+            v1.set(i, value1[i]);
+        }
+        buffers[0] = v0.getData();
+        buffers[1] = v1.getData();
+        VecType[] outputTypes = {VecType.INT, VecType.INT};
+        int rowNum = 12;
+        System.out.println("....." + v0.size());
+        String code = "|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| " + "merge(b, {m.$0, m.$1})))));" +
+                "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
+                "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
+                "{k,v}";
+        OmniRuntime omniRuntime = new OmniRuntime();
+        String neid = omniRuntime.compile(code);
+        Vec[] vecs = {v0, v1};
+        omniRuntime.execute(neid, "TMP", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
+
+
+        int[] value0_ = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
+        int[] value1_ = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        ByteBuffer[] buffers_ = new ByteBuffer[2];
+        IntVec v0_ = new IntVec(20);
+        for (int i = 0; i < value0_.length; i++) {
+            v0_.set(i, value0_[i]);
+        }
+        IntVec v1_ = new IntVec(20);
+        for (int i = 0; i < value1_.length; i++) {
+            v1_.set(i, value1_[i]);
+        }
+        buffers_[0] = v0_.getData();
+        buffers_[1] = v1_.getData();
+        System.out.println(v0_.getData().limit());
+        String neid_ = omniRuntime.compile(code);
+        Vec[] vecs_ = {v0_, v1_};
+
+        Assert.assertEquals(1, (int)v0_.get(0));
+        omniRuntime.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
+        Assert.assertEquals(0, (int)v0_.get(0));
     }
 
     private List<TestGroupBy> buildKeyAndValue(int rowNum, int distinctCount) {
