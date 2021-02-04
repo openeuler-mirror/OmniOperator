@@ -27,5 +27,5 @@ pub struct IntermediateState {
     pub len: usize,
 }
 
-pub static mut INTERMEDIATE_CACHE: Lazy<HashMap<String, IntermediateState>> = Lazy::new(|| Default::default());
+pub static mut INTERMEDIATE_CACHE: Lazy<HashMap<String, *const u8>> = Lazy::new(|| Default::default());
 pub static CACHE: Lazy<CHashMap<String, WeldModule>> = Lazy::new(|| Default::default());

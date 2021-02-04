@@ -16,24 +16,20 @@ mod nova;
 use core::mem;
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JByteBuffer, JValue, GlobalRef, JString, JObject};
-use jni::sys::{jclass, jint, jlong, jobject, jobjectArray, jstring, jvalue, jintArray, _jobject};
+use jni::objects::{JClass, JByteBuffer, JValue, JString, JObject};
+use jni::sys::{jint, jlong, jobject, jobjectArray, jstring, jintArray, _jobject};
 use std::fmt::Debug;
-use std::mem::ManuallyDrop;
 use std::ops::Deref;
-use std::borrow::{Borrow, BorrowMut};
 use nova::hetu::omnicache::runtime::codegen::OmniCodeGen;
-use nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_data, free_weld_vec_mem, get_output_data};
+use nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, free_weld_vec_mem, get_output_data};
 use crate::nova::hetu::omnicache::utils::wrapper::VecType::{INT32,DOUBLE,INT64};
-use weld::data::WeldVec;
 use weld::{WeldValue, Data};
-use std::ptr::{null, null_mut};
+use std::ptr::null_mut;
 use std::ffi::c_void;
-use crate::nova::hetu::omnicache::utils::wrapper::transform_vec_in_vec_data;
+use crate::nova::hetu::omnicache::utils::wrapper::{transform_vec_in_vec_data, VecType};
 use nova::hetu::omnicache::runtime::cache::IntermediateState;
-use crate::nova::hetu::omnicache::utils::wrapper::OmniOpStep::{INTERMEDIATE, FINAL};
 use nova::hetu::omnicache::runtime::cache::INTERMEDIATE_CACHE;
-use std::slice;
+use std::convert::TryInto;
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
  * Method:    mul
@@ -167,6 +163,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
 
     unsafe {
         let tmp_res_key = get_str(env,j_key);
+        let weld_result;
         if !j_input_datas.is_null() {
             // transform input data to weld input data
             let c_number = get_column_number(env, j_input_datas);
@@ -175,27 +172,21 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute
             let mut input_data = build_input_data(env,j_input_datas, c_number,
                                                   j_row_num as usize, &input_types, &tmp_res_key as &str);
             // execute weld ir
-            let weld_result = OmniCodeGen::execute(neid, &(*input_data)).expect("OmniCache Native execute failed!");
+            weld_result = OmniCodeGen::execute(neid, &(*input_data)).expect("OmniCache Native execute failed!");
             // release the mem for build input data
             free_weld_vec_mem(input_data);
 
-            output_len = build_output_data(env, output_type_size, &output_types,&weld_result, j_result);
-            let intermediate_state = IntermediateState {
-                addr: weld_result.data() as *const u8,
-                len: output_len as usize
-            };
-            INTERMEDIATE_CACHE.insert(tmp_res_key, intermediate_state);
-            mem::forget(weld_result);
+            INTERMEDIATE_CACHE.insert(tmp_res_key, weld_result.data() as *const u8);
             mem::forget(j_result);
             mem::forget(input_data);
         } else {
             let tmp_res = INTERMEDIATE_CACHE.get(&tmp_res_key).expect("invalid value").deref().clone();
-            let intermediate_weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
-            output_len = build_output_data(env, output_type_size, &output_types,&intermediate_weld_value, j_result);
+            weld_result = WeldValue::new_from_data(tmp_res as Data);
             mem::forget(tmp_res);
-            mem::forget(intermediate_weld_value);
             mem::forget(j_result);
         }
+        output_len = build_output_data(env, output_type_size, &output_types,&weld_result, j_result);
+        mem::forget(weld_result);
     }
     // handle the weld result
     build_om_result(env, j_result, output_len, omni_key).into_inner()
@@ -227,31 +218,33 @@ unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_resu
     for c_index in 0..columns {
         let current_len;
         let d_type = data_type[c_index as usize];
-        if d_type == INT32 as i32 {
-            let result_i32 = get_output_data(w_result, c_index as isize, INT32);
-            let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
-            println!("{:?}", vec_i32);
-            current_len = vec_i32.len();
-            add_buf_to_output(env,vec_i32.as_mut(), output, c_index);
-            mem::forget(vec_i32);
-        } else if d_type == INT64 as i32 {
-            let result_i64 = get_output_data(w_result, c_index as isize, INT64);
-            let mut vec_i64 = transform_weld_to_vec::<i64>(result_i64.0, result_i64.1);
-            println!("{:?}", vec_i64);
-            current_len = vec_i64.len();
-            add_buf_to_output(env,vec_i64.as_mut(), output, c_index);
-            mem::forget(vec_i64);
-        } else if d_type == DOUBLE as i32 {
-            let result_f64 = get_output_data(w_result, c_index as isize, DOUBLE);
-            let mut vec_f64 = transform_weld_to_vec::<f64>(result_f64.0, result_f64.1);
-            println!("{:?}", vec_f64);
-            current_len = vec_f64.len();
-            add_buf_to_output(env,vec_f64.as_mut(), output, c_index);
-            mem::forget(vec_f64);
-        } else {
-            panic!("don't support the date type:{}", d_type);
+        match d_type.try_into() {
+            Ok(INT32) => {
+                let result_i32 = get_output_data(w_result, c_index as isize, INT32);
+                let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
+                println!("{:?}", vec_i32);
+                current_len = vec_i32.len();
+                add_buf_to_output(env,vec_i32.as_mut(), output, c_index);
+                mem::forget(vec_i32);
+            },
+            Ok(INT64) => {
+                let result_i64 = get_output_data(w_result, c_index as isize, INT64);
+                let mut vec_i64 = transform_weld_to_vec::<i64>(result_i64.0, result_i64.1);
+                println!("{:?}", vec_i64);
+                current_len = vec_i64.len();
+                add_buf_to_output(env,vec_i64.as_mut(), output, c_index);
+                mem::forget(vec_i64);
+            },
+            Ok(DOUBLE) => {
+                let result_f64 = get_output_data(w_result, c_index as isize, DOUBLE);
+                let mut vec_f64 = transform_weld_to_vec::<f64>(result_f64.0, result_f64.1);
+                println!("{:?}", vec_f64);
+                current_len = vec_f64.len();
+                add_buf_to_output(env,vec_f64.as_mut(), output, c_index);
+                mem::forget(vec_f64);
+            },
+            _ => panic!("don't support the date type:{}", d_type)
         }
-
         // check output rows
         if output_len != 0 && output_len != current_len {
             panic!("the number of rows in multiple columns is different:{},{}", output_len, current_len);
@@ -296,69 +289,59 @@ unsafe fn transform_weld_to_vec<T>(result:*mut c_void, len: i64) -> Vec<T> {
     Vec::from_raw_parts(result_ptr, len as usize, len as usize)
 }
 
+unsafe fn get_intermediate_vec<T>(tmp_res_key: &str, c_index: i32, vec_type: VecType) -> Vec<T> {
+    let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!").deref().clone();
+    println!("tmp_res is :{:?}", tmp_res);
+    let weld_value = WeldValue::new_from_data(tmp_res as Data);
+    let result_ = get_output_data(&weld_value, c_index as isize, vec_type);
+    let vec_tmp = transform_weld_to_vec::<T>(result_.0, result_.1);
+    vec_tmp
+}
+
 unsafe fn build_input_data(env:JNIEnv, bufs:jobjectArray, columns:i32, rows: usize, data_type:& [i32], tmp_res_key: &str) -> *mut c_void {
-    //1 init mem address
-    //2 traverse the buf and build the data vec
-
     let has_tmp = !INTERMEDIATE_CACHE.get(tmp_res_key).is_none();
-    println!("has_tmp is :{}", has_tmp);
-
     let mut address =  weld_vec_mem_alloc(columns as usize);
+
     for c_index in 0..columns {
         let buf = env.get_object_array_element(bufs, c_index).expect("couldn't get buffer");
         let buf_addr = env.get_direct_buffer_address(JByteBuffer::from(buf))
             .expect("couldn't get the address of buffer");
         let d_type = data_type[c_index as usize];
-        if d_type == INT32 as i32 {
-            let mut input_vectors = vec![];
-            if has_tmp {
-                let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!");
-                println!("tmp_res is :{:?}", tmp_res);
-                let weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
-                let result_i32 = get_output_data(&weld_value, c_index as isize, INT32);
-                let vec_i32_tmp = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
-                println!("vec_i32_tmp is :{:?}", vec_i32_tmp);
-                input_vectors.push(vec_i32_tmp);
-            }
-            let vec_i32 = transform_buf_to_vec::<i32>(rows,buf_addr);
-            input_vectors.push(vec_i32);
-            transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
-            println!("input {:?}", input_vectors);
-            mem::forget(input_vectors);
-        } else if d_type == INT64 as i32 {
-            let mut input_vectors = vec![];
-            if has_tmp {
-                let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!");
-                println!("tmp_res is :{:?}", tmp_res);
-                let weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
-                let result_i64 = get_output_data(&weld_value, c_index as isize, INT64);
-                let vec_i64_tmp = transform_weld_to_vec::<i64>(result_i64.0, result_i64.1);
-                println!("vec_i64_tmp is :{:?}", vec_i64_tmp);
-                input_vectors.push(vec_i64_tmp);
-            }
-            let vec_i64 = transform_buf_to_vec::<i64>(rows,buf_addr);
-            input_vectors.push(vec_i64);
-            transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
-            println!("input {:?}", input_vectors);
-            mem::forget(input_vectors);
-        } else if d_type == DOUBLE as i32 {
-            let mut input_vectors = vec![];
-            if has_tmp {
-                let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!");
-                println!("tmp_res is :{:?}", tmp_res);
-                let weld_value = WeldValue::new_from_data(tmp_res.addr as Data);
-                let result_f64 = get_output_data(&weld_value, c_index as isize, DOUBLE);
-                let vec_f64_tmp = transform_weld_to_vec::<f64>(result_f64.0, result_f64.1);
-                println!("vec_i64_tmp is :{:?}", vec_f64_tmp);
-                input_vectors.push(vec_f64_tmp);
-            }
-            let vec_f64 = transform_buf_to_vec::<f64>(rows,buf_addr);
-            input_vectors.push(vec_f64);
-            transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
-            println!("input {:?}", input_vectors);
-            mem::forget(input_vectors);
-        } else {
-            panic!("don't support the date type:{}", d_type);
+        match d_type.try_into() {
+            Ok(INT32) => {
+                let mut input_vectors = vec![];
+                if has_tmp {
+                    let vec_i32_tmp = get_intermediate_vec::<i32>(tmp_res_key, c_index, INT32);
+                    input_vectors.push(vec_i32_tmp);
+                }
+                let vec_i32 = transform_buf_to_vec::<i32>(rows,buf_addr);
+                input_vectors.push(vec_i32);
+                transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
+                mem::forget(input_vectors);
+            },
+            Ok(INT64) => {
+                let mut input_vectors = vec![];
+                if has_tmp {
+                    let vec_i64_tmp = get_intermediate_vec::<i64>(tmp_res_key, c_index, INT64);
+                    input_vectors.push(vec_i64_tmp);
+                }
+                let vec_i64 = transform_buf_to_vec::<i64>(rows,buf_addr);
+                input_vectors.push(vec_i64);
+                transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
+                mem::forget(input_vectors);
+            },
+            Ok(DOUBLE) => {
+                let mut input_vectors = vec![];
+                if has_tmp {
+                    let vec_f64_tmp = get_intermediate_vec::<f64>(tmp_res_key, c_index, DOUBLE);
+                    input_vectors.push(vec_f64_tmp);
+                }
+                let vec_f64 = transform_buf_to_vec::<f64>(rows,buf_addr);
+                input_vectors.push(vec_f64);
+                transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
+                mem::forget(input_vectors);
+            },
+            Err(_) => panic!("don't support the date type:{}", d_type)
         }
     }
     address

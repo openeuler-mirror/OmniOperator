@@ -15,9 +15,7 @@
 use weld::{WeldModule, WeldConf, WeldContext, WeldValue, Data, WeldResult};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use weld::data::WeldVec;
 use std::os::raw::c_void;
-use std::borrow::Borrow;
 use crate::nova::hetu::omnicache::runtime::cache::CACHE;
 use std::collections::HashMap;
 

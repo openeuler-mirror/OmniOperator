@@ -14,11 +14,11 @@
  */
 use weld::data::WeldVec;
 use std::os::raw::c_void;
-use std::mem::size_of_val;
 use libc::free;
 use std::mem;
 use lazy_static::*;
 use weld::WeldValue;
+use std::convert::TryFrom;
 
 lazy_static! {
      static ref WELD_VEC_WIDTH: usize = 16;
@@ -29,6 +29,19 @@ pub enum VecType {
     INT32 = 1,
     INT64 = 2,
     DOUBLE = 3
+}
+
+impl TryFrom<i32> for VecType {
+    type Error = ();
+
+    fn try_from(v: i32) -> Result<Self, Self::Error> {
+        match v {
+            x if x == VecType::INT32 as i32 => Ok(VecType::INT32),
+            x if x == VecType::INT64 as i32 => Ok(VecType::INT64),
+            x if x == VecType::DOUBLE as i32 => Ok(VecType::DOUBLE),
+            _ => Err(()),
+        }
+    }
 }
 
 pub enum OmniOpStep {
@@ -83,7 +96,6 @@ pub unsafe fn get_output_data(result: &WeldValue, offset: isize, vec_type: VecTy
             mem::forget(v);
             result
         },
-        _ => panic!()
     }
 }
 

@@ -12,24 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-
 use chashmap::CHashMap;
 use lazy_static::lazy_static;
-use weld::{WeldConf, WeldModule, WeldValue};
+use weld::WeldModule;
 
 use nova::hetu::omnicache::runtime::codegen::OmniCodeGen;
-use weld::data::WeldVec;
-use core::{fmt};
-use std::fmt::Formatter;
 use std::mem;
 use std::ptr;
-use std::borrow::Borrow;
-use libc;
-use std::os::raw::c_void;
 use crate::nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_data, free_weld_vec_mem, get_output_data};
-use crate::nova::hetu::omnicache::utils::wrapper::VecType::{INT32,DOUBLE,INT64};
+use crate::nova::hetu::omnicache::utils::wrapper::VecType::{DOUBLE,INT64};
 use std::collections::HashMap;
 
 mod nova;
