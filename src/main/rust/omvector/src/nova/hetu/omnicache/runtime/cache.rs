@@ -30,7 +30,6 @@ pub struct IntermediateState {
 }
 
 pub static mut INTERMEDIATE_CACHE: Lazy<HashMap<String, *const u8>> = Lazy::new(|| Default::default());
-<<<<<<< HEAD
 
 // module cache
 cached_key! {
@@ -52,6 +51,3 @@ pub fn get_module_cache_hits () -> u64 {
     let cache = MODULE_CACHE.lock().unwrap();
     cache.cache_hits().unwrap()
 }
-=======
-pub static CACHE: Lazy<CHashMap<String, WeldModule>> = Lazy::new(|| Default::default());
->>>>>>> Refactorized some internal functions.
