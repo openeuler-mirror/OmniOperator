@@ -12,6 +12,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#[macro_use]
+extern crate cached;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 use chashmap::CHashMap;
 use lazy_static::lazy_static;
 use weld::WeldModule;
