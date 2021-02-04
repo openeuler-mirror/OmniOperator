@@ -36,7 +36,7 @@ cached_key! {
     MODULE_CACHE:TimedSizedCache<String, Arc<WeldModule>> = TimedSizedCache::with_size_and_lifespan(100,300);
     Key = {format!("{}", neid)};
     fn module_cache(neid: &str, code: &str, conf: &WeldConf) -> Arc<WeldModule> = {
-    println!("create new weld module:{},{}", neid, code);
+    //println!("create new weld module:{},{}", neid, code);
     let mut module = WeldModule::compile(code, &conf).expect("OmniCache code gen failed!");
     Arc::new(module)
     }

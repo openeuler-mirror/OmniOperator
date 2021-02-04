@@ -29,7 +29,7 @@ impl OmniCodeGen {
         let key = s.finish().to_string();
         let ref conf = WeldConf::new();
         module_cache(key.as_str(), code, conf);
-        println!("compile hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
+        //println!("compile hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
         key
     }
     pub fn compile_with_confs(code: &str, confs: &WeldConf) -> String {
@@ -43,7 +43,7 @@ impl OmniCodeGen {
         let ref conf = WeldConf::new();
         // todo:maybe we only need code, no need to maintain native_exec_id
         let module = module_cache(native_exec_id.as_str(), "execute", conf);
-        println!("execute hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
+        //println!("execute hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
         let ref input_value= WeldValue::new_from_data(ptr as *const _ as Data);
 
         let ref mut context = WeldContext::new(&conf).unwrap();

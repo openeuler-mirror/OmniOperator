@@ -179,12 +179,12 @@ fn benchmark_column_base_group_by_sum() {
         value.push(idx);
     }
     unsafe {
-        println!("start execution ....");
+        //println!("start execution ....");
         for i in 0..5 {
             let start = now();
             let neid = OmniCodeGen::compile(column_base_group_by_sum_code);
             let end = now();
-            println!("Compiling time {:?}", (end - start).num_milliseconds());
+            //println!("Compiling time {:?}", (end - start).num_milliseconds());
             let ref data = TupleData2 {
                 v1: WeldVec::from(&key),
                 v2: WeldVec::from(&value),
@@ -194,7 +194,7 @@ fn benchmark_column_base_group_by_sum() {
             let data = result.data() as *const TupleData2<i32, i32>;
             let result = unsafe { (*data).clone() };
             let elapsed_millis = end-start;
-            println!("column base group_by_sum exec data length:{},used time:{:?} ms", key.len(), elapsed_millis.num_milliseconds());
+            //println!("column base group_by_sum exec data length:{},used time:{:?} ms", key.len(), elapsed_millis.num_milliseconds());
         }
     }
 }
@@ -206,7 +206,7 @@ fn benchmark_row_base_group_by_sum() {
         kv.push((idx % 1000000, idx));
     }
     unsafe {
-        println!("start execution ....");
+        //println!("start execution ....");
         let start = now();
         let neid = OmniCodeGen::compile(row_base_group_by_sum_code);
         let ref data = TupleData1 {
@@ -216,7 +216,7 @@ fn benchmark_row_base_group_by_sum() {
         let end = now();
         let data = result.data() as *const TupleData1<(i32, i32)>;
         let result = unsafe { (*data).clone() };
-        println!("row base group_by_sum exec data length:{},used time:{:?}", kv.len(), end - start);
+        //println!("row base group_by_sum exec data length:{},used time:{:?}", kv.len(), end - start);
     }
 }
 
@@ -372,7 +372,7 @@ fn sum_group_by_vec_in_vec_perf_test() {
         result = OmniCodeGen::execute(mod_id,&*input_addr).expect("OmniCache Native execute failed!");
         free_weld_vec_mem(input_addr);
     }
-    println!("Vec in Vec case executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
+    //println!("Vec in Vec case executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
 
     let sum_avg_group_by_two_columns = "|v0: vec[i64], v1: vec[f64]|\
                           let sum_ = for(zip(v0, v1), dictmerger[i64, f64, +], |b, i, n| merge(b, {n.$0, n.$1}));\
@@ -400,7 +400,7 @@ fn sum_group_by_vec_in_vec_perf_test() {
         result = OmniCodeGen::execute(mod_id,&*input_addr_).expect("OmniCache Native execute failed!");
         free_weld_vec_mem(input_addr_);
     }
-    println!("Flatten Vec executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
+    //println!("Flatten Vec executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
 
     let result_v0;
     let result_v1;

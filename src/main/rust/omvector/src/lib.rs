@@ -42,7 +42,7 @@ use std::convert::TryInto;
 #[allow(non_snake_case)]
 pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul
 (env: JNIEnv, calling_object: jobject, d_type: jint, data: JByteBuffer, multiplier: jint) {
-    println!("multiple {} {}", d_type, multiplier);
+    //println!("multiple {} {}", d_type, multiplier);
 
     let buffer_ptr = env.get_direct_buffer_address(data);
     let buffer = buffer_ptr.expect("error getting buffer pointer");
@@ -66,7 +66,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul
             for i in 0..vec.len() {
                 vec[i] *= multiplier as f64;
             }
-            // println!("double multiply result: {:?}", vec);
+            // //println!("double multiply result: {:?}", vec);
             //ensure the memeory referenced by vec is not released
             mem::forget(vec);
         }
@@ -224,7 +224,7 @@ unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_resu
             Ok(INT32) => {
                 let result_i32 = get_output_data(w_result, c_index as isize, INT32);
                 let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
-                println!("{:?}", vec_i32);
+                // //println!("{:?}", vec_i32);
                 current_len = vec_i32.len();
                 add_buf_to_output(env,vec_i32.as_mut(), output, c_index);
                 mem::forget(vec_i32);
@@ -232,7 +232,7 @@ unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_resu
             Ok(INT64) => {
                 let result_i64 = get_output_data(w_result, c_index as isize, INT64);
                 let mut vec_i64 = transform_weld_to_vec::<i64>(result_i64.0, result_i64.1);
-                println!("{:?}", vec_i64);
+                // //println!("{:?}", vec_i64);
                 current_len = vec_i64.len();
                 add_buf_to_output(env,vec_i64.as_mut(), output, c_index);
                 mem::forget(vec_i64);
@@ -240,7 +240,7 @@ unsafe fn build_output_data(env: JNIEnv, columns: i32, data_type: &[i32], w_resu
             Ok(DOUBLE) => {
                 let result_f64 = get_output_data(w_result, c_index as isize, DOUBLE);
                 let mut vec_f64 = transform_weld_to_vec::<f64>(result_f64.0, result_f64.1);
-                println!("{:?}", vec_f64);
+                // //println!("{:?}", vec_f64);
                 current_len = vec_f64.len();
                 add_buf_to_output(env,vec_f64.as_mut(), output, c_index);
                 mem::forget(vec_f64);
@@ -293,7 +293,7 @@ unsafe fn transform_weld_to_vec<T>(result:*mut c_void, len: i64) -> Vec<T> {
 
 unsafe fn get_intermediate_vec<T>(tmp_res_key: &str, c_index: i32, vec_type: VecType) -> Vec<T> {
     let tmp_res = INTERMEDIATE_CACHE.get(tmp_res_key).expect("Invalid tmp result!").deref().clone();
-    println!("tmp_res is :{:?}", tmp_res);
+    // //println!("tmp_res is :{:?}", tmp_res);
     let weld_value = WeldValue::new_from_data(tmp_res as Data);
     let result_ = get_output_data(&weld_value, c_index as isize, vec_type);
     let vec_tmp = transform_weld_to_vec::<T>(result_.0, result_.1);
@@ -432,7 +432,7 @@ mod tests {
                         for i in 0..1000000 {
                             verify_2_vec_alloc();
                         }
-                        println!("finished: {}", i);
+                        //println!("finished: {}", i);
                     }));
             }
 
@@ -474,7 +474,7 @@ fn test_long_multiple_allocate() {
         mem::forget(raw2);
 
         for i in 0..vec_1.len() {
-            println!("initial value: {:?}", vec_1);
+            //println!("initial value: {:?}", vec_1);
         }
         for i in 0..vec_1.len() {
             vec_1[i] = i as i64;
