@@ -22,54 +22,46 @@ import java.nio.ByteOrder;
 /**
  * Representing a floating point number
  */
-public class DoubleVec extends Vec<Double>{
+public class DoubleVec extends Vec<Double> {
 
     private OMVectorBase base = new OMVectorBase();
 
     public DoubleVec(int size) {
-        super(size * Double.BYTES);
-        this.size = size;
+        super(size, size * Double.BYTES);
     }
 
-    public DoubleVec(ByteBuffer buffer, int size)
-    {
+    public DoubleVec(ByteBuffer buffer, int size) {
         super(buffer, size);
     }
 
     @Override
-    public Vec hash()
-    {
+    public Vec hash() {
         return null;
     }
 
     @Override
-    public Vec mul(Double other)
-    {
+    public Vec mul(Double other) {
         base.mul(OMVectorBase.DOUBLE_DATA_TYPE, data, other.intValue());
         return null;
     }
 
     @Override
-    public Vec mmul(Vec<Double> other)
-    {
+    public Vec mmul(Vec<Double> other) {
         return null;
     }
 
     @Override
-    public Vec filter()
-    {
+    public Vec filter() {
         return null;
     }
 
     @Override
-    public void set(int idx, Double value)
-    {
+    public void set(int idx, Double value) {
         data.putDouble(idx * Double.BYTES, value);
     }
 
     @Override
-    public DoubleVec slice(int startIdx, int endIdx)
-    {
+    public DoubleVec slice(int startIdx, int endIdx) {
         byte[] regionData = new byte[(endIdx - startIdx) * Double.BYTES];
         DoubleVec newVec = new DoubleVec(regionData.length);
         data.reset();
@@ -79,40 +71,34 @@ public class DoubleVec extends Vec<Double>{
     }
 
     @Override
-    public void addValues(Double[] values)
-    {
+    public void addValues(Double[] values) {
         for (Double val : values) {
             data.putDouble(val);
         }
     }
 
     @Override
-    public Double get(int idx)
-    {
+    public Double get(int idx) {
         return data.getDouble(idx * Double.BYTES);
     }
 
     @Override
-    public Vec groupby()
-    {
+    public Vec groupby() {
         return null;
     }
 
     @Override
-    public Vec join(Vec other)
-    {
+    public Vec join(Vec other) {
         return null;
     }
 
     @Override
-    public VecType getType()
-    {
+    public VecType getType() {
         return VecType.DOUBLE;
     }
 
     @Override
-    public Vec concat(Vec other)
-    {
+    public Vec concat(Vec other) {
         ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Double.BYTES, other.size * Double.BYTES);
         newBuffer.order(ByteOrder.LITTLE_ENDIAN);
         return new DoubleVec(newBuffer, this.size + other.size);

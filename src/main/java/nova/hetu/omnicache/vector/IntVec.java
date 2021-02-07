@@ -25,8 +25,7 @@ public class IntVec
 {
     public IntVec(int size)
     {
-        super(size * Integer.BYTES);
-        this.size = size;
+        super(size,size * Integer.BYTES);
     }
 
     public IntVec(ByteBuffer buffer, int length)

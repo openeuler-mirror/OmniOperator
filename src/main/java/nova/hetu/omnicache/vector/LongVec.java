@@ -26,8 +26,7 @@ public class LongVec
 {
 
     public LongVec(int size) {
-        super(size * Long.BYTES);
-        this.size = size;
+        super(size,size * Long.BYTES);
     }
 
     public LongVec(ByteBuffer buffer, int size)
@@ -115,6 +114,7 @@ public class LongVec
     public void close()
             throws Exception
     {
+
         OMVectorBase.free(data);
         data=null;
     }

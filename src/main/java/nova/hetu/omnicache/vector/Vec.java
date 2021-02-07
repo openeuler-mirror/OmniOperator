@@ -18,37 +18,57 @@ import nova.hetu.omnicache.OMVectorBase;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * wrapper of the off-heap values to be used by blocks, this is also the place to implement vectorized operations.
  * each subclass implements its own vectorized operation as appropriate
- *
+ * <p>
  * The design purpose is to enable:
  * 1. SIMD
  * 2. method fusion (e.g. function invocation is merged into 1 single function
- *
+ * <p>
  * Each supported data type will subclass this class to create the type specific operations
  */
-public abstract class Vec<T>
-{
+public abstract class Vec<T> {
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
+    private AtomicInteger referenceCount = new AtomicInteger(0);
+    protected int size = 0;
 
-    public Vec(int raw_size) {
-        data = OMVectorBase.allocate(raw_size).order(ByteOrder.LITTLE_ENDIAN);
+    public Vec(int rowSize, int alloc_size) {
+        this(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN), rowSize);
     }
 
     public Vec(ByteBuffer data, int length) {
         this.data = data;
         this.size = length;
+        this.incrRefCount();
     }
 
-    protected int size = 0;
+    public void incrRefCount() {
+        this.incrRefCount(1);
+    }
+
+    public void incrRefCount(int increment) {
+        this.referenceCount.addAndGet(increment);
+    }
+
+    public void release() {
+        this.release(1);
+    }
+
+    public void release(int decrement) {
+        if (referenceCount.addAndGet(-decrement) == 0) {
+            OMVectorBase.free(data);
+        }
+    }
 
     public abstract void set(int idx, T value);
 
     /**
      * Creates a vector from a slice of the underlying buffer.
+     *
      * @param startIdx
      * @param endIdx
      * @return
@@ -62,13 +82,14 @@ public abstract class Vec<T>
     /**
      * returns the hash of all elements in the vec
      * This is an example of in-situ operations that can be implemented enabling SIMD
-     * @return
      *
+     * @return
      */
     public abstract Vec hash();
 
     /**
      * Another potential SIMD in-situ operation
+     *
      * @param other
      * @return
      */
@@ -76,6 +97,7 @@ public abstract class Vec<T>
 
     /**
      * Another potential SIMD in-situ operation
+     *
      * @param other
      * @return
      */
@@ -83,6 +105,7 @@ public abstract class Vec<T>
 
     /**
      * Another potential SIMD in-situ operation
+     *
      * @return
      */
     public abstract Vec filter();
@@ -94,6 +117,7 @@ public abstract class Vec<T>
 
     /**
      * Another potential SIMD in-situ operation
+     *
      * @param other
      * @return
      */
@@ -107,24 +131,21 @@ public abstract class Vec<T>
      */
     public abstract Vec concat(Vec other);
 
-    public int size()
-    {
+    public int size() {
         return size;
     }
 
-    public int capacity()
-    {
+    public int capacity() {
         return data.capacity();
     }
-    public int remaining()
-    {
+
+    public int remaining() {
         return data.remaining();
     }
 
     public abstract VecType getType();
 
-    public ByteBuffer getData()
-    {
+    public ByteBuffer getData() {
         return this.data;
     }
 }

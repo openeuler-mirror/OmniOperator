@@ -74,7 +74,7 @@ public class OmniRuntime {
         // free inputs
         if (inputs != null) {
             for (int idx = 0; idx < inputs.length; ++idx) {
-                OMVectorBase.free(inputs[idx].getData());
+                inputs[idx].release();
             }
         }
         switch (step) {
