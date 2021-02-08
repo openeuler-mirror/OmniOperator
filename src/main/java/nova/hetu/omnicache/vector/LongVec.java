@@ -111,15 +111,6 @@ public class LongVec
     }
 
     @Override
-    public void close()
-            throws Exception
-    {
-
-        OMVectorBase.free(data);
-        data=null;
-    }
-
-    @Override
     public VecType getType()
     {
         return VecType.LONG;

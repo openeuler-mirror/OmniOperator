@@ -30,35 +30,42 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Each supported data type will subclass this class to create the type specific operations
  */
-public abstract class Vec<T> {
+public abstract class Vec<T>
+{
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
     private AtomicInteger referenceCount = new AtomicInteger(0);
     protected int size = 0;
 
-    public Vec(int rowSize, int alloc_size) {
+    public Vec(int rowSize, int alloc_size)
+    {
         this(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN), rowSize);
     }
 
-    public Vec(ByteBuffer data, int length) {
+    public Vec(ByteBuffer data, int length)
+    {
         this.data = data;
         this.size = length;
         this.incrRefCount();
     }
 
-    public void incrRefCount() {
+    public void incrRefCount()
+    {
         this.incrRefCount(1);
     }
 
-    public void incrRefCount(int increment) {
+    public void incrRefCount(int increment)
+    {
         this.referenceCount.addAndGet(increment);
     }
 
-    public void release() {
+    public void release()
+    {
         this.release(1);
     }
 
-    public void release(int decrement) {
+    public void release(int decrement)
+    {
         if (referenceCount.addAndGet(-decrement) == 0) {
             OMVectorBase.free(data);
         }
@@ -131,21 +138,38 @@ public abstract class Vec<T> {
      */
     public abstract Vec concat(Vec other);
 
-    public int size() {
+    public int size()
+    {
         return size;
     }
 
-    public int capacity() {
+    public int capacity()
+    {
         return data.capacity();
     }
 
-    public int remaining() {
+    public int remaining()
+    {
         return data.remaining();
     }
 
     public abstract VecType getType();
 
-    public ByteBuffer getData() {
+    public ByteBuffer getData()
+    {
         return this.data;
+    }
+
+    public void close()
+    {
+        OMVectorBase.free(data);
+        data = null;
+    }
+
+    // TODO: Handle memory properly when we add OmniCacheManager
+    @Override
+    protected void finalize()
+    {
+        close();
     }
 }

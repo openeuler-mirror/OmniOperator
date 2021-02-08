@@ -122,7 +122,12 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_concat
 pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_free
 (env: JNIEnv, this_class: JClass, buffer: JByteBuffer) {
     let buf_addr_result = env.get_direct_buffer_address(buffer);
-    let buf_addr = buf_addr_result.expect("");
+
+    let buf_addr = match buf_addr_result {
+        Ok(buf_addr) => buf_addr,
+        Err(error) => panic!("Can't free buffer: {:?}", error),
+    };
+    // let buf_addr = buf_addr_result.expect("");
     unsafe {
         //taking the ownership of the buffer which will be released once out of scope
         Box::from_raw(buf_addr);
