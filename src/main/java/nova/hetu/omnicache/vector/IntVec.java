@@ -18,14 +18,13 @@ import nova.hetu.omnicache.OMVectorBase;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.IntBuffer;
 
 public class IntVec
-        extends Vec<Integer>
+        extends Vec
 {
     public IntVec(int size)
     {
-        super(size,size * Integer.BYTES);
+        super(size, size * Integer.BYTES);
     }
 
     public IntVec(ByteBuffer buffer, int length)
@@ -33,8 +32,7 @@ public class IntVec
         super(buffer, length);
     }
 
-    @Override
-    public void set(int idx, Integer value)
+    public void set(int idx, int value)
     {
         data.putInt(idx * Integer.BYTES, value);
     }
@@ -50,16 +48,7 @@ public class IntVec
         return newVec;
     }
 
-    @Override
-    public void addValues(Integer[] values)
-    {
-        for (Integer val : values) {
-            data.putInt(val);
-        }
-    }
-
-    @Override
-    public Integer get(int idx)
+    public int get(int idx)
     {
         return data.getInt(idx * Integer.BYTES);
     }
@@ -71,14 +60,14 @@ public class IntVec
     }
 
     @Override
-    public Vec mul(Integer other)
+    public Vec mul(int other)
     {
-        base.mul(OMVectorBase.INT_DATA_TYPE, data, other.intValue());
+        base.mul(OMVectorBase.INT_DATA_TYPE, data, other);
         return this;
     }
 
     @Override
-    public Vec mmul(Vec<Integer> other)
+    public Vec mmul(Vec other)
     {
         return null;
     }

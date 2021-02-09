@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Each supported data type will subclass this class to create the type specific operations
  */
-public abstract class Vec<T>
+public abstract class Vec
 {
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
@@ -71,8 +71,6 @@ public abstract class Vec<T>
         }
     }
 
-    public abstract void set(int idx, T value);
-
     /**
      * Creates a vector from a slice of the underlying buffer.
      *
@@ -80,11 +78,7 @@ public abstract class Vec<T>
      * @param endIdx
      * @return
      */
-    public abstract Vec<T> slice(int startIdx, int endIdx);
-
-    public abstract void addValues(T[] values);
-
-    public abstract T get(int idx);
+    public abstract Vec slice(int startIdx, int endIdx);
 
     /**
      * returns the hash of all elements in the vec
@@ -100,7 +94,7 @@ public abstract class Vec<T>
      * @param other
      * @return
      */
-    public abstract Vec mul(T other);
+    public abstract Vec mul(int other);
 
     /**
      * Another potential SIMD in-situ operation
@@ -108,7 +102,7 @@ public abstract class Vec<T>
      * @param other
      * @return
      */
-    public abstract Vec mmul(Vec<T> other);
+    public abstract Vec mmul(Vec other);
 
     /**
      * Another potential SIMD in-situ operation
@@ -162,8 +156,10 @@ public abstract class Vec<T>
 
     public void close()
     {
-        OMVectorBase.free(data);
-        data = null;
+        if (data != null) {
+            OMVectorBase.free(data);
+            data = null;
+        }
     }
 
     // TODO: Handle memory properly when we add OmniCacheManager

@@ -33,25 +33,24 @@ public class BenchmarkVector
     public static final int ROWS = 10000;
 
     @Benchmark
-    public Vec createLongVec(BenchmarkData benchmarkData)
+    public void createLongVec(BenchmarkData benchmarkData)
     {
         long[] values = benchmarkData.getLongValues();
         LongVec longVec = new LongVec(values.length);
         for (int i = 0; i < values.length; i++) {
             longVec.set(i, values[i]);
         }
-        return longVec;
+        longVec.close();
     }
 
     @Benchmark
-    public ByteBuffer createLongVecDirect(BenchmarkData benchmarkData)
+    public void createLongVecDirect(BenchmarkData benchmarkData)
     {
         long[] values = benchmarkData.getLongValues();
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(8 * values.length);
-        for (int i = 0; i < values.length; i++) {
-            byteBuffer.putLong(8 * values[i]);
+        for (long value : values) {
+            byteBuffer.putLong(8 * value);
         }
-        return byteBuffer;
     }
 
     @Benchmark
@@ -61,14 +60,6 @@ public class BenchmarkVector
         for (int i = 0; i < longVec.size(); i++) {
             longVec.get(i);
         }
-//        ByteBuffer longVec = benchmarkData.getLongVec().getData();
-//        for (int i = 0; i < longVec.capacity()/8; i++) {
-//            longVec.getLong(i*8);
-//        }
-//        DirectLongVec longVec = benchmarkData.getDirectLongVec();
-//        for (int i = 0; i < longVec.size(); i++) {
-//            longVec.get(i);
-//        }
     }
 
     @Benchmark
@@ -87,7 +78,6 @@ public class BenchmarkVector
         long[] longValues;
         LongVec longVec;
         ByteBuffer byteBuffer;
-        DirectLongVec directLongVec;
 
         public BenchmarkData()
         {
@@ -100,12 +90,8 @@ public class BenchmarkVector
                 longVec.set(i, longValues[i]);
             }
             byteBuffer = ByteBuffer.allocateDirect(8 * longValues.length);
-            for (int i = 0; i < longValues.length; i++) {
-                byteBuffer.putLong(longValues[i]);
-            }
-            directLongVec = new DirectLongVec(longValues.length);
-            for (int i = 0; i < longValues.length; i++) {
-                directLongVec.set(i, longValues[i]);
+            for (long longValue : longValues) {
+                byteBuffer.putLong(longValue);
             }
         }
 
@@ -117,11 +103,6 @@ public class BenchmarkVector
         public LongVec getLongVec()
         {
             return longVec;
-        }
-
-        public DirectLongVec getDirectLongVec()
-        {
-            return directLongVec;
         }
 
         public ByteBuffer getLongDirectVec()

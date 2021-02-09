@@ -18,15 +18,15 @@ import nova.hetu.omnicache.OMVectorBase;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.IntBuffer;
 
 public class LongVec
-        extends Vec<Long>
-    implements AutoCloseable
+        extends Vec
+        implements AutoCloseable
 {
 
-    public LongVec(int size) {
-        super(size,size * Long.BYTES);
+    public LongVec(int size)
+    {
+        super(size, size * Long.BYTES);
     }
 
     public LongVec(ByteBuffer buffer, int size)
@@ -41,14 +41,14 @@ public class LongVec
     }
 
     @Override
-    public Vec mul(Long other)
+    public Vec mul(int other)
     {
-        base.mul(OMVectorBase.LONG_DATA_TYPE, data, other.intValue());
+        base.mul(OMVectorBase.LONG_DATA_TYPE, data, other);
         return null;
     }
 
     @Override
-    public Vec mmul(Vec<Long> other)
+    public Vec mmul(Vec other)
     {
         return null;
     }
@@ -59,8 +59,7 @@ public class LongVec
         return null;
     }
 
-    @Override
-    public void set(int idx, Long value)
+    public void set(int idx, long value)
     {
         data.putLong(idx * Long.BYTES, value);
     }
@@ -76,16 +75,7 @@ public class LongVec
         return newVec;
     }
 
-    @Override
-    public void addValues(Long[] values)
-    {
-        for (Long value: values) {
-            data.putLong(value);
-        }
-    }
-
-    @Override
-    public Long get(int idx)
+    public long get(int idx)
     {
         return data.getLong(idx * Long.BYTES);
     }

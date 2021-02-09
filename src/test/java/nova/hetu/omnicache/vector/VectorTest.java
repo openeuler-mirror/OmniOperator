@@ -17,7 +17,7 @@ public class VectorTest
         vec1.mul(10);
 
         for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(vec1.get(i).intValue(), i * 10);
+            Assert.assertEquals(vec1.get(i), i * 10);
         }
     }
 
@@ -30,10 +30,10 @@ public class VectorTest
             Assert.assertEquals(vec1.get(i), i / 10.0);
         }
 
-        vec1.mul(10.0);
+        vec1.mul(10);
 
         for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(vec1.get(i).doubleValue(), (double) i);
+            Assert.assertEquals(vec1.get(i), (double) i);
         }
     }
 
@@ -45,17 +45,17 @@ public class VectorTest
         LongVec vec2 = new LongVec(1024);
 
         for (int i = 0; i < vec1.size; i++) {
-            Assert.assertEquals(vec1.get(i).longValue(), 0, "invalid initialize value at item: " + i);
+            Assert.assertEquals(vec1.get(i), 0, "invalid initialize value at item: " + i);
             vec1.set(i, (long) i);
             vec2.set(i, (long) i * 2);
         }
 
-        vec1.mul((long) 10);
-        vec2.mul((long) 20);
+        vec1.mul(10);
+        vec2.mul(20);
 
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(vec1.get(i).longValue(), i * 10);
-            Assert.assertEquals(vec2.get(i).longValue(), i * 2 * 20);
+            Assert.assertEquals(vec1.get(i), i * 10);
+            Assert.assertEquals(vec2.get(i), i * 2 * 20);
         }
 
         vec1.close();
@@ -70,17 +70,17 @@ public class VectorTest
         LongVec vec2 = new LongVec(1024 * 1024 * 128);
 
         for (int i = 0; i < vec1.size; i++) {
-            Assert.assertEquals(vec1.get(i).longValue(), 0, "invalid initialize value at item: " + i);
+            Assert.assertEquals(vec1.get(i), 0, "invalid initialize value at item: " + i);
             vec1.set(i, (long) i);
             vec2.set(i, (long) i * 2);
         }
 
-        vec1.mul((long) 10);
-        vec2.mul((long) 20);
+        vec1.mul(10);
+        vec2.mul(20);
 
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(vec1.get(i).longValue(), i * 10);
-            Assert.assertEquals(vec2.get(i).longValue(), i * 2 * 20);
+            Assert.assertEquals(vec1.get(i), i * 10);
+            Assert.assertEquals(vec2.get(i), i * 2 * 20);
         }
 
         vec1.close();
@@ -97,7 +97,7 @@ public class VectorTest
         }
 
         for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(i, vec1.get(i).intValue());
+            Assert.assertEquals(i, vec1.get(i));
         }
     }
 
@@ -112,7 +112,7 @@ public class VectorTest
         }
 
         for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(i, vec1.get(i).longValue());
+            Assert.assertEquals(i, vec1.get(i));
         }
 
         vec1.close();
@@ -124,7 +124,7 @@ public class VectorTest
         }
 
         for (int i = 0; i < vec2.size(); i++) {
-            Assert.assertEquals(i * 2, vec2.get(i).longValue());
+            Assert.assertEquals(i * 2, vec2.get(i));
         }
 
         vec2.close();
@@ -151,7 +151,7 @@ public class VectorTest
         LongVec vec1 = new LongVec(1024);
         LongVec vec2 = new LongVec(1024);
         for (int i = 0; i < vec1.size; i++) {
-            Assert.assertEquals(vec1.get(i).longValue(), 0, "invalid initialize value at item: " + i);
+            Assert.assertEquals(vec1.get(i), 0, "invalid initialize value at item: " + i);
             vec1.set(i, (long) i);
             vec2.set(i, (long) i * 2);
         }
@@ -166,7 +166,7 @@ public class VectorTest
             comp[i + 1024] = i * 2;
         }
         for (int i = 0; i < newVec.size; i++) {
-            Assert.assertEquals(newVec.get(i).longValue(), comp[i], "Error item value at: " + i);
+            Assert.assertEquals(newVec.get(i), comp[i], "Error item value at: " + i);
         }
     }
 }

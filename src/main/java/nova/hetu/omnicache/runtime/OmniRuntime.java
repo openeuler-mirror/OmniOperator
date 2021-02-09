@@ -51,7 +51,7 @@ public class OmniRuntime {
      * @return if step = {@link OmniOpStep#INTERMEDIATE} , omni runtime execute while result native execute id,result type is {@link String};
      * if step ={@link OmniOpStep#FINAL} omni runtime while result final execution data,result type is {@link Vec<?>[]}
      */
-    public Object execute(String neid, String key, Vec<?>[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step) {
+    public Object execute(String neid, String key, Vec[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step) {
         ByteBuffer[] buffers = null;
         int[] inputTypes = null;
         long rowSize = inputRowSize;
@@ -87,8 +87,8 @@ public class OmniRuntime {
         }
     }
 
-    private Vec<?>[] generateOMVec(OMResult result, VecType[] outputTypes) {
-        Vec<?>[] output = new Vec[outputTypes.length];
+    private Vec[] generateOMVec(OMResult result, VecType[] outputTypes) {
+        Vec[] output = new Vec[outputTypes.length];
         int length = result.getLength();
         for (int idx = 0; idx < outputTypes.length; idx++) {
             ByteBuffer vecData = result.getBuffers()[idx];
