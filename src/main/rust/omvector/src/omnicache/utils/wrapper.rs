@@ -26,6 +26,7 @@ lazy_static! {
 
 #[derive(Debug)]
 pub enum VecType {
+    //TODO: use the column types from Joy
     INT32 = 1,
     INT64 = 2,
     DOUBLE = 3

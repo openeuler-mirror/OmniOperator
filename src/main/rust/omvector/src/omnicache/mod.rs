@@ -12,13 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use crate::nova::hetu::omnicache::runtime::codegen::OmniCodeGen;
-use weld::data::WeldVec;
 use rand::Rng;
-use time::now;
-use crate::nova::hetu::omnicache::utils::wrapper::{weld_vec_mem_alloc, transform_input_data, free_weld_vec_mem, get_output_data, transform_vec_in_vec_data};
-use crate::nova::hetu::omnicache::utils::wrapper::VecType::{INT32, INT64, DOUBLE};
+use runtime::codegen::OmniCodeGen;
 use std::mem;
+use time::now;
+use utils::wrapper::VecType::{DOUBLE, INT32, INT64};
+use utils::wrapper::{
+    free_weld_vec_mem, get_output_data, transform_input_data, transform_vec_in_vec_data,
+    weld_vec_mem_alloc,
+};
+use weld::data::WeldVec;
 
 pub mod data;
 pub mod runtime;
@@ -30,7 +33,8 @@ static column_base_group_by_sum_code: &str = "|k:vec[i32],v:vec[i32]| \
         let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));\
         {k,v}";
 
-static row_base_group_by_sum_code: &str = "|v:vec[{i32,i32}]| tovec(result(for(v,dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))))";
+static row_base_group_by_sum_code: &str =
+    "|v:vec[{i32,i32}]| tovec(result(for(v,dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))))";
 static code: &str = "|v0 :vec[i32], v1: vec[i64]|\
                           let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i64,+], |b,i,n| merge(b, {n.$0, n.$1}))));\
                           let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));
@@ -72,10 +76,17 @@ fn column_base_group_by_sum_multi_type_input() {
     let result_values;
     unsafe {
         result_v0 = get_output_data(&result, 0, INT32);
-        result_keys = Vec::from_raw_parts(result_v0.0 as *mut i32, result_v0.1 as usize,
-                                          result_v0.1 as usize);
+        result_keys = Vec::from_raw_parts(
+            result_v0.0 as *mut i32,
+            result_v0.1 as usize,
+            result_v0.1 as usize,
+        );
         result_v1 = get_output_data(&result, 1, INT64);
-        result_values = Vec::from_raw_parts(result_v1.0 as *mut i64, result_v1.1 as usize, result_v1.1 as usize);
+        result_values = Vec::from_raw_parts(
+            result_v1.0 as *mut i64,
+            result_v1.1 as usize,
+            result_v1.1 as usize,
+        );
 
         let expect_keys = vec![1, 2, 3, 4];
         let expect_vals = vec![300, 300, 300, 300];
@@ -193,7 +204,7 @@ fn benchmark_column_base_group_by_sum() {
             let end = now();
             let data = result.data() as *const TupleData2<i32, i32>;
             let result = unsafe { (*data).clone() };
-            let elapsed_millis = end-start;
+            let elapsed_millis = end - start;
             //println!("column base group_by_sum exec data length:{},used time:{:?} ms", key.len(), elapsed_millis.num_milliseconds());
         }
     }
@@ -232,10 +243,10 @@ fn sum_avg_group_by_two_columns_test() {
                           let avg_3 = result(for(tovec(result(avg_sum_3)), appender[f64], |b, i, n| merge(b, n.$1.$0 / n.$1.$1)));\
                           {k0, k1, sum_2, avg_3}";
     let mod_id = OmniCodeGen::compile(sum_avg_group_by_two_columns);
-    let v0: Vec<i64> = vec![1,2,3,4,1,2,3,4,1,2,3,4];
+    let v0: Vec<i64> = vec![1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4];
     let v1: Vec<i64> = vec![50, 51, 52, 53, 50, 55, 56, 57, 58, 59, 60, 61];
     let v2: Vec<f64> = vec![1.2f64; 12];
-    let v3: Vec<f64> = vec![1.2, 1.2,1.2, 1.2,2.4,2.4,2.4,2.4,2.4,2.4,2.4,2.4];
+    let v3: Vec<f64> = vec![1.2, 1.2, 1.2, 1.2, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4];
 
     let a;
     unsafe {
@@ -248,7 +259,7 @@ fn sum_avg_group_by_two_columns_test() {
 
     let result;
     unsafe {
-        result = OmniCodeGen::execute(mod_id,&*a).expect("OmniCache Native execute failed!");
+        result = OmniCodeGen::execute(mod_id, &*a).expect("OmniCache Native execute failed!");
         free_weld_vec_mem(a);
     }
     let result_v0;
@@ -261,17 +272,29 @@ fn sum_avg_group_by_two_columns_test() {
     let res3;
     unsafe {
         result_v0 = get_output_data(&result, 0, INT64);
-        res0 = Vec::from_raw_parts(result_v0.0 as *mut i64, result_v0.1 as usize,
-                                   result_v0.1 as usize);
+        res0 = Vec::from_raw_parts(
+            result_v0.0 as *mut i64,
+            result_v0.1 as usize,
+            result_v0.1 as usize,
+        );
         result_v1 = get_output_data(&result, 1, INT64);
-        res1 = Vec::from_raw_parts(result_v1.0 as *mut i64, result_v1.1 as usize,
-                                   result_v1.1 as usize);
+        res1 = Vec::from_raw_parts(
+            result_v1.0 as *mut i64,
+            result_v1.1 as usize,
+            result_v1.1 as usize,
+        );
         result_v2 = get_output_data(&result, 2, DOUBLE);
-        res2 = Vec::from_raw_parts(result_v2.0 as *mut f64, result_v2.1 as usize,
-                                   result_v2.1 as usize);
+        res2 = Vec::from_raw_parts(
+            result_v2.0 as *mut f64,
+            result_v2.1 as usize,
+            result_v2.1 as usize,
+        );
         result_v3 = get_output_data(&result, 3, DOUBLE);
-        res3 = Vec::from_raw_parts(result_v3.0 as *mut f64, result_v1.1 as usize,
-                                   result_v1.1 as usize);
+        res3 = Vec::from_raw_parts(
+            result_v3.0 as *mut f64,
+            result_v1.1 as usize,
+            result_v1.1 as usize,
+        );
         assert_eq!(11, res0.len());
         mem::forget(res0);
         mem::forget(res1);
@@ -297,10 +320,22 @@ fn sum_avg_group_by_vec_in_vec_test() {
                           {k0, k1, sum_2, avg_3}";
     let mod_id = OmniCodeGen::compile(sum_avg_group_by_two_columns);
     // let v0: Vec<Vec<i64>> = vec![(0..1000000).collect(); 100];
-    let v0: Vec<Vec<i64>> = vec![vec![1,2,3,4]; 3];
-    let v1: Vec<Vec<i64>> = vec![vec![50, 51, 52, 53], vec![50, 55, 56, 57], vec![58, 59, 60, 61]];
-    let v2: Vec<Vec<f64>> = vec![vec![1.2, 1.2,1.2, 1.2], vec![2.4,2.4,2.4,2.4], vec![2.4,2.4,2.4,2.4]];
-    let v3: Vec<Vec<f64>> = vec![vec![1.2, 1.2,1.2, 1.2], vec![2.4,2.4,2.4,2.4], vec![2.4,2.4,2.4,2.4]];
+    let v0: Vec<Vec<i64>> = vec![vec![1, 2, 3, 4]; 3];
+    let v1: Vec<Vec<i64>> = vec![
+        vec![50, 51, 52, 53],
+        vec![50, 55, 56, 57],
+        vec![58, 59, 60, 61],
+    ];
+    let v2: Vec<Vec<f64>> = vec![
+        vec![1.2, 1.2, 1.2, 1.2],
+        vec![2.4, 2.4, 2.4, 2.4],
+        vec![2.4, 2.4, 2.4, 2.4],
+    ];
+    let v3: Vec<Vec<f64>> = vec![
+        vec![1.2, 1.2, 1.2, 1.2],
+        vec![2.4, 2.4, 2.4, 2.4],
+        vec![2.4, 2.4, 2.4, 2.4],
+    ];
 
     let input_addr;
     unsafe {
@@ -313,7 +348,8 @@ fn sum_avg_group_by_vec_in_vec_test() {
 
     let result;
     unsafe {
-        result = OmniCodeGen::execute(mod_id,&*input_addr).expect("OmniCache Native execute failed!");
+        result =
+            OmniCodeGen::execute(mod_id, &*input_addr).expect("OmniCache Native execute failed!");
         free_weld_vec_mem(input_addr);
     }
     let result_v0;
@@ -326,17 +362,29 @@ fn sum_avg_group_by_vec_in_vec_test() {
     let res3;
     unsafe {
         result_v0 = get_output_data(&result, 0, INT64);
-        res0 = Vec::from_raw_parts(result_v0.0 as *mut i64, result_v0.1 as usize,
-                                   result_v0.1 as usize);
+        res0 = Vec::from_raw_parts(
+            result_v0.0 as *mut i64,
+            result_v0.1 as usize,
+            result_v0.1 as usize,
+        );
         result_v1 = get_output_data(&result, 1, INT64);
-        res1 = Vec::from_raw_parts(result_v1.0 as *mut i64, result_v1.1 as usize,
-                                   result_v1.1 as usize);
+        res1 = Vec::from_raw_parts(
+            result_v1.0 as *mut i64,
+            result_v1.1 as usize,
+            result_v1.1 as usize,
+        );
         result_v2 = get_output_data(&result, 2, DOUBLE);
-        res2 = Vec::from_raw_parts(result_v2.0 as *mut f64, result_v2.1 as usize,
-                                   result_v2.1 as usize);
+        res2 = Vec::from_raw_parts(
+            result_v2.0 as *mut f64,
+            result_v2.1 as usize,
+            result_v2.1 as usize,
+        );
         result_v3 = get_output_data(&result, 3, DOUBLE);
-        res3 = Vec::from_raw_parts(result_v3.0 as *mut f64, result_v1.1 as usize,
-                                   result_v1.1 as usize);
+        res3 = Vec::from_raw_parts(
+            result_v3.0 as *mut f64,
+            result_v1.1 as usize,
+            result_v1.1 as usize,
+        );
         assert_eq!(11, res0.len());
         mem::forget(res0);
         mem::forget(res1);
@@ -369,7 +417,8 @@ fn sum_group_by_vec_in_vec_perf_test() {
     }
     let result;
     unsafe {
-        result = OmniCodeGen::execute(mod_id,&*input_addr).expect("OmniCache Native execute failed!");
+        result =
+            OmniCodeGen::execute(mod_id, &*input_addr).expect("OmniCache Native execute failed!");
         free_weld_vec_mem(input_addr);
     }
     //println!("Vec in Vec case executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
@@ -397,7 +446,8 @@ fn sum_group_by_vec_in_vec_perf_test() {
     }
     let result;
     unsafe {
-        result = OmniCodeGen::execute(mod_id,&*input_addr_).expect("OmniCache Native execute failed!");
+        result =
+            OmniCodeGen::execute(mod_id, &*input_addr_).expect("OmniCache Native execute failed!");
         free_weld_vec_mem(input_addr_);
     }
     //println!("Flatten Vec executed with 100 million rows consumed : {}ms", (now() - start).num_milliseconds());
@@ -408,11 +458,17 @@ fn sum_group_by_vec_in_vec_perf_test() {
     let res1;
     unsafe {
         result_v0 = get_output_data(&result, 0, INT64);
-        res0 = Vec::from_raw_parts(result_v0.0 as *mut i64, result_v0.1 as usize,
-                                   result_v0.1 as usize);
+        res0 = Vec::from_raw_parts(
+            result_v0.0 as *mut i64,
+            result_v0.1 as usize,
+            result_v0.1 as usize,
+        );
         result_v1 = get_output_data(&result, 1, DOUBLE);
-        res1 = Vec::from_raw_parts(result_v1.0 as *mut i64, result_v1.1 as usize,
-                                   result_v1.1 as usize);
+        res1 = Vec::from_raw_parts(
+            result_v1.0 as *mut i64,
+            result_v1.1 as usize,
+            result_v1.1 as usize,
+        );
         assert_eq!(1_000_000, res0.len());
         mem::forget(res0);
         mem::forget(res1);
@@ -429,7 +485,11 @@ fn weldvec_to_rustvec() {
     let weldVec = WeldVec::from(&rawData);
 
     let transferedVec = unsafe {
-        let v = Vec::from_raw_parts(weldVec.data as *mut i32, weldVec.len as usize, weldVec.len as usize);
+        let v = Vec::from_raw_parts(
+            weldVec.data as *mut i32,
+            weldVec.len as usize,
+            weldVec.len as usize,
+        );
         v
     };
     for idx in 0..rawData.len() {

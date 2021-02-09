@@ -12,15 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use weld::{WeldModule, WeldConf, WeldContext, WeldValue, Data, WeldResult};
+use crate::omnicache::runtime::cache::module_cache;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::os::raw::c_void;
-use std::collections::HashMap;
-use crate::nova::hetu::omnicache::runtime::cache::{module_cache, get_module_cache_misses, get_module_cache_hits};
+use weld::{Data, WeldConf, WeldContext, WeldModule, WeldResult, WeldValue};
 
 pub struct OmniCodeGen;
-
 
 impl OmniCodeGen {
     pub fn compile(code: &str) -> String {
@@ -35,7 +34,7 @@ impl OmniCodeGen {
     pub fn compile_with_confs(code: &str, confs: &WeldConf) -> String {
         let mut s = DefaultHasher::new();
         code.hash(&mut s);
-        let key:String = s.finish().to_string();
+        let key: String = s.finish().to_string();
         module_cache(key.as_str(), code, confs);
         key
     }
@@ -44,23 +43,27 @@ impl OmniCodeGen {
         // todo:maybe we only need code, no need to maintain native_exec_id
         let module = module_cache(native_exec_id.as_str(), "execute", conf);
         //println!("execute hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
-        let ref input_value= WeldValue::new_from_data(ptr as *const _ as Data);
+        let ref input_value = WeldValue::new_from_data(ptr as *const _ as Data);
 
         let ref mut context = WeldContext::new(&conf).unwrap();
-        module.run(context,input_value)
+        module.run(context, input_value)
     }
-    pub unsafe fn execute_with_confs<IN>(native_exec_id: String, ptr: &IN, confs: &WeldConf) -> WeldResult<WeldValue> {
+    pub unsafe fn execute_with_confs<IN>(
+        native_exec_id: String,
+        ptr: &IN,
+        confs: &WeldConf,
+    ) -> WeldResult<WeldValue> {
         let module = module_cache(native_exec_id.as_str(), "execute", confs);
-        let ref input_value= WeldValue::new_from_data(ptr as *const _ as Data);
+        let ref input_value = WeldValue::new_from_data(ptr as *const _ as Data);
         let ref mut context = WeldContext::new(confs).unwrap();
-        module.run(context,input_value)
+        module.run(context, input_value)
     }
     pub unsafe fn execute_(native_exec_id: String, ptr: *const c_void) -> WeldResult<WeldValue> {
         let ref conf = WeldConf::new();
         let module = module_cache(native_exec_id.as_str(), "execute", conf);
-        let ref input_value= WeldValue::new_from_data(ptr as *const _  as Data);
+        let ref input_value = WeldValue::new_from_data(ptr as *const _ as Data);
         let ref mut context = WeldContext::new(&conf).unwrap();
-        module.run(context,input_value)
+        module.run(context, input_value)
     }
     pub fn set_configurations(confs: &HashMap<&str, &str>) -> WeldConf {
         let mut conf = WeldConf::new();
