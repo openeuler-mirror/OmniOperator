@@ -25,6 +25,7 @@ use std::ptr::null_mut;
 use jni::objects::{JByteBuffer, JClass, JObject, JString, JValue};
 use jni::sys::{_jobject, jint, jintArray, jlong, jobject, jobjectArray, jstring};
 use jni::JNIEnv;
+use log::{debug, info, trace};
 use weld::{Data, WeldValue};
 
 use omnicache::runtime::cache::IntermediateState;
@@ -192,6 +193,44 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_compile(
     j_neid.into_inner()
 }
 
+#[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_getFinalResult(
+    env: JNIEnv,
+    this_obj: jobject,
+    j_key: JString,
+    j_output_types: jintArray,
+) -> jobject {
+    let output_types = get_int_array_elements(env, j_output_types);
+    let mut output_row_count = 0;
+    let mut j_result = env
+        .new_object_array(
+            output_types.len() as i32,
+            "java/nio/ByteBuffer",
+            std::ptr::null_mut(),
+        )
+        .expect("create output buffer failed.");
+    let omni_key = get_str(env, j_key);
+    unsafe {
+        let tmp_res_key = get_str(env, j_key);
+        let weld_result;
+        let tmp_res = INTERMEDIATE_CACHE
+            .get(&tmp_res_key)
+            .expect("invalid value")
+            .deref()
+            .clone();
+        weld_result = WeldValue::new_from_data(tmp_res as Data);
+        mem::forget(tmp_res);
+        mem::forget(j_result);
+        output_row_count = build_output_data(env, &output_types, &weld_result, j_result);
+        mem::forget(weld_result);
+        let result = build_om_result(env, j_result, output_row_count, omni_key).into_inner();
+        let remove = INTERMEDIATE_CACHE
+            .remove(&tmp_res_key)
+            .expect("error removing intermediate result");
+        result
+    }
+}
+
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    execute
@@ -207,59 +246,52 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
     j_input_types: jintArray,
     j_row_num: jlong,
     j_output_types: jintArray,
-    step: jint,
 ) -> jobject {
+    dbg!(j_input_types);
     let input_types = get_int_array_elements(env, j_input_types);
     let output_types = get_int_array_elements(env, j_output_types);
+    let mut output_row_count = 0;
+    dbg!(output_types.len());
 
+    // new java.nio.ByteBuffer[output_types.len()]
     let mut j_result = env
         .new_object_array(
             output_types.len() as i32,
-            "java/nio/ByteBuffer",
+            env.find_class("java/nio/ByteBuffer")
+                .expect("error getting class"),
             std::ptr::null_mut(),
         )
         .expect("create output buffer failed.");
+    dbg!(j_result);
     let omni_key = get_str(env, j_key);
+    let tmp_res_key = get_str(env, j_key);
+    let weld_result;
+    // transform input data to weld input data
+    let function = get_str(env, j_func);
 
     unsafe {
-        let tmp_res_key = get_str(env, j_key);
-        let weld_result;
-        if !j_input_data.is_null() {
-            // transform input data to weld input data
-            let function = get_str(env, j_func);
+        let input_data = into_weld_vec(
+            env,
+            j_input_data,
+            j_row_num as usize,
+            &input_types,
+            &tmp_res_key as &str,
+        );
+        // execute weld ir
+        weld_result = OmniCodeGen::execute(function, &(*input_data))
+            .expect("OmniCache Native execute failed!");
+        // release the mem for build input data
+        dbg!(&weld_result);
+        free_weld_vec_mem(input_data);
 
-            let input_data = into_weld_vec(
-                env,
-                j_input_data,
-                j_row_num as usize,
-                &input_types,
-                &tmp_res_key as &str,
-            );
-
-            // execute weld ir
-            weld_result = OmniCodeGen::execute(function, &(*input_data))
-                .expect("OmniCache Native execute failed!");
-            // release the mem for build input data
-            free_weld_vec_mem(input_data);
-
-            INTERMEDIATE_CACHE.insert(tmp_res_key, weld_result.data() as *const u8);
-            mem::forget(j_result);
-            mem::forget(input_data);
-        } else {
-            let tmp_res = INTERMEDIATE_CACHE
-                .get(&tmp_res_key)
-                .expect("invalid value")
-                .deref()
-                .clone();
-            weld_result = WeldValue::new_from_data(tmp_res as Data);
-            mem::forget(tmp_res);
-            mem::forget(j_result);
-        }
-        build_output_data(env, &output_types, &weld_result, j_result);
+        INTERMEDIATE_CACHE.insert(tmp_res_key, weld_result.data() as *const u8);
+        mem::forget(j_result);
+        mem::forget(input_data);
+        output_row_count = build_output_data(env, &output_types, &weld_result, j_result);
         mem::forget(weld_result);
     }
     // handle the weld result
-    build_om_result(env, j_result, output_types.len() as i32, omni_key).into_inner()
+    build_om_result(env, j_result, output_row_count, omni_key).into_inner()
 }
 
 fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: String) -> JObject {
@@ -293,15 +325,17 @@ fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: 
 }
 
 fn get_int_array_elements(env: JNIEnv, array: jobjectArray) -> Vec<i32> {
-    if !array.is_null() {
-        let len = env
-            .get_array_length(array)
-            .expect("get the type number failed");
-        let mut buf = vec![-1; len as usize];
-        env.get_int_array_region(array, 0, buf.as_mut());
-        buf;
+    dbg!(array);
+    if array.is_null() {
+        panic!("input data cannot be null or empty");
     }
-    panic!("input data cannot be null or empty");
+    let len = env
+        .get_array_length(array)
+        .expect("get the type number failed");
+    dbg!(len);
+    let mut buf = vec![-1; len as usize];
+    let _ = env.get_int_array_region(array, 0, buf.as_mut());
+    buf
 }
 
 unsafe fn build_output_data(
@@ -319,6 +353,7 @@ unsafe fn build_output_data(
         match d_type.try_into() {
             Ok(INT32) => {
                 let result_i32 = get_output_data(w_result, col_idx as isize, INT32);
+                dbg!(result_i32);
                 let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
                 // //println!("{:?}", vec_i32);
                 current_len = vec_i32.len();
@@ -341,17 +376,17 @@ unsafe fn build_output_data(
                 add_buf_to_output(env, vec_f64.as_mut(), output, col_idx);
                 mem::forget(vec_f64);
             }
-            _ => panic!("don't support the date type:{}", d_type),
+            _ => panic!("Unsupported date type:{}", d_type),
         }
         // check output rows
         if output_len != 0 && output_len != current_len {
             panic!(
-                "the number of rows in multiple columns is different:{},{}",
+                "Columns unaligned with different number of rows:{},{}",
                 output_len, current_len
             );
-        } else {
-            output_len = current_len;
         }
+        output_len = current_len;
+        dbg!(output_len);
     }
     output_len as i32
 }

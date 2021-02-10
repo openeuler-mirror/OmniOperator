@@ -77,9 +77,9 @@ fn main() {
 
     let mod_id = OmniCodeGen::compile_with_confs(code, &confs);
     let v0: Vec<i64> = vec![1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4];
-    let v1: Vec<i64> = vec![50, 51, 52, 53, 50, 55, 56, 57, 58, 59, 60, 61];
-    let v2: Vec<f64> = vec![1.2f64; 12];
-    let v3: Vec<f64> = vec![1.2, 1.2, 1.2, 1.2, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4];
+    let v1: Vec<i64> = vec![1, 2, 2, 2, 1, 1, 2, 2, 1, 1, 1, 2];
+    let v2: Vec<f64> = vec![1.0f64; 12];
+    let v3: Vec<f64> = vec![1.0f64; 12];
 
     let a;
     unsafe {

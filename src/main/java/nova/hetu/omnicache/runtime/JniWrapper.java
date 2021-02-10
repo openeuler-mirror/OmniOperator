@@ -23,5 +23,7 @@ class JniWrapper {
 
     public native String compile(String code);
 
-    public native OMResult execute(String neid, String key, ByteBuffer[] columns, int[] inpuTypes, long rowNum, int[] outputTypes, int step);
+    public native OMResult execute(String function, String key, ByteBuffer[] columns, int[] inpuTypes, long rowNum, int[] outputTypes);
+
+    public native OMResult getFinalResult(String key, int[] outputTypes);
 }

@@ -462,6 +462,7 @@ dependencies = [
  "jni",
  "lazy_static",
  "libc",
+ "log 0.3.9",
  "once_cell",
  "rand 0.8.3",
  "time",

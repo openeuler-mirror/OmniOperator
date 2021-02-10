@@ -24,9 +24,7 @@ import nova.hetu.omnicache.vector.VecType;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 public class OmniRuntime {
     private JniWrapper jniWrapper;
@@ -70,7 +68,7 @@ public class OmniRuntime {
             outputTypeArr[idx] = outputTypes[idx].getValue();
         }
 
-        OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr, step.getState());
+        OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr);
         // free inputs
         if (inputs != null) {
             for (int idx = 0; idx < inputs.length; ++idx) {

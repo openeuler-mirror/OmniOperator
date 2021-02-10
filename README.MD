@@ -1,9 +1,11 @@
 #### How to compile
 
-1. run the src/main/cpp/vector/build.sh, which will generate the c header and compiles the c/c++ code into a .so
-2. copy the .so into the right location, this location should be the same as the `System.load("/opt/kkrazy/hetu-core/omni-cache/src/main/java/omnicache.so");` 
-3. run the sample code in `DoubleVec`
+1. `mvn clean install`
+2. change `build.sh` to `cargo test` to include the tests
 
+#### Workspace Setup
+Add env var `LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/kkrazy/omni-cache/src/main/rust/omvector/target/debug;RUST_BACKTRACE=1` to 
+the default template to run tests which includes the shared lib automatically.
 
 #### Overview
 The OmniCache is designed to
