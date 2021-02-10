@@ -14,7 +14,6 @@
  */
 package nova.hetu.omnicache.runtime;
 
-import nova.hetu.omnicache.OMVectorBase;
 import nova.hetu.omnicache.vector.*;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -22,10 +21,7 @@ import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class JniWrapperTest {
@@ -52,10 +48,14 @@ public class JniWrapperTest {
         int[] types = {1};
 
         int rowNum = 5;
-        String code = "|x:vec[i32]| len(x)";
+        String code = "|x:vec[i32]| " +
+                "let l=len(x);" +
+                "let res = appender[i64];" +
+                "result(merge(res,l))";
         String moduleId = wrapper.compile(code);
         // current not support the result
-        wrapper.execute(moduleId, key, buffers, types, rowNum, types, OmniOpStep.FINAL.getState());
+        OMResult res = wrapper.execute(moduleId, UUID.randomUUID().toString(), buffers, types, rowNum, types, OmniOpStep.FINAL.getState());
+        Assert.assertEquals(1,res.getLength());
     }
 
     @Test
@@ -79,8 +79,8 @@ public class JniWrapperTest {
         int[] outputTypes = {1, 1};
         int rowNum = 12;
 
-        String code = "|v0 :vec[i32], v1: vec[i32]|" +
-                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| merge(b, {n.$0, n.$1}))));" +
+        String code = "|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| merge(b, {m.$0, m.$1})))));" +
                 "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
                 "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
@@ -171,10 +171,10 @@ public class JniWrapperTest {
         inputData[1] = v2.getData();
         int[] inputTypes = {1, 1};
         int[] outTypes = {1, 1};
-        String code = "|k:vec[i32],v:vec[i32]|" +
-                "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
-                "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
-                "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
+        String code = "|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| merge(b, {m.$0, m.$1})))));" +
+                "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
+                "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
 
         // weld IR code gen
@@ -204,10 +204,10 @@ public class JniWrapperTest {
         inputData[1] = v2.getData();
         int[] inputTypes = {1, 1};
         int[] outTypes = {1, 1};
-        String code = "|k:vec[i32],v:vec[i32]|" +
-                "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
-                "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
-                "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
+        String code = "|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| merge(b, {m.$0, m.$1})))));" +
+                "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
+                "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
 
         String executeId = wrapper.compile(code);
@@ -251,10 +251,10 @@ public class JniWrapperTest {
         inputData[1] = v2.getData();
         int[] inputTypes = {1, 1};
         int[] outTypes = {1, 1};
-        String code = "|k:vec[i32],v:vec[i32]|" +
-                "let rs = tovec(result(for(zip(k,v),dictmerger[i32,i32,+],|b,i,n| merge(b,{n.$0,n.$1}))));" +
-                "let k = result(for(rs,appender[i32],|b,i,n| merge(b,n.$0)));" +
-                "let v = result(for(rs,appender[i32],|b,i,n| merge(b,n.$1)));" +
+        String code = "|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
+                "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| merge(b, {m.$0, m.$1})))));" +
+                "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
+                "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
 
         String key1 = "123";
@@ -335,9 +335,10 @@ public class JniWrapperTest {
         String neid_ = omniRuntime.compile(code);
         Vec[] vecs_ = {v0_, v1_};
 
-        Assert.assertEquals(1, (int)v0_.get(0));
+        Assert.assertEquals(1, (int) v0_.get(0));
         omniRuntime.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
-        Assert.assertEquals(0, (int)v0_.get(0));
+        //if vector memory free ,get idx value maybe not equal default value
+        Assert.assertNotEquals(1, (int) v0_.get(0));
     }
 
     private List<TestGroupBy> buildKeyAndValue(int rowNum, int distinctCount) {
