@@ -12,10 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nova.hetu.omnicache;
+package nova.hetu.omnicache.vector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * 1. representing a vector
@@ -28,7 +27,7 @@ import java.nio.ByteOrder;
  * the only way to pass data between on-heap and off-heap is via byte buffer
  *
  */
-public class OMVectorBase
+class OMVectorBase
 {
     public static final int INT_DATA_TYPE = 1;
     public static final int LONG_DATA_TYPE = 2;
@@ -74,7 +73,7 @@ public class OMVectorBase
      * @param buffer
      * @return
      */
-    public static native void free(ByteBuffer buffer);
+    static native void free(ByteBuffer buffer);
     
     /**
      * Concatenate two arrays of memory via {@link OMVectorBase#concat(ByteBuffer,ByteBuffer,int,int)}

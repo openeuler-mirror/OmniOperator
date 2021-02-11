@@ -14,7 +14,6 @@
  */
 package nova.hetu.omnicache.runtime;
 
-import nova.hetu.omnicache.OMVectorBase;
 import nova.hetu.omnicache.vector.DoubleVec;
 import nova.hetu.omnicache.vector.IntVec;
 import nova.hetu.omnicache.vector.LongVec;

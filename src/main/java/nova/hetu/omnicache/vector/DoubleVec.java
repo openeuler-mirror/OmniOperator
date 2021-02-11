@@ -14,8 +14,6 @@
  */
 package nova.hetu.omnicache.vector;
 
-import nova.hetu.omnicache.OMVectorBase;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 

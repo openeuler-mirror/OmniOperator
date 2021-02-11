@@ -27,8 +27,10 @@ use omnicache::utils::wrapper::{
     free_weld_vec_mem, get_output_data, transform_input_data, weld_vec_mem_alloc,
 };
 use std::collections::HashMap;
-use std::mem;
+use std::ops::Deref;
 use std::ptr;
+use std::thread::Thread;
+use std::{mem, thread};
 
 mod omnicache;
 
@@ -43,6 +45,17 @@ unsafe fn append_weldvec<T>(src_ptr: *const T, dst_ptr: *mut T, elts: usize) {
 }
 
 fn main() {
+    let mut threads = Vec::new();
+    let count = 1000;
+    for i in 0..count {
+        threads.push(thread::spawn(|| exec()));
+    }
+    for thread in threads {
+        thread.join();
+    }
+}
+
+fn exec() {
     let code = "|v0 :vec[i64], v1: vec[i64], v2: vec[f64], v3: vec[f64]|\
                           # generate combined key first
                           # 1. calculate distinct value in group by columns
@@ -76,10 +89,26 @@ fn main() {
     let confs = OmniCodeGen::set_configurations(&configurations);
 
     let mod_id = OmniCodeGen::compile_with_confs(code, &confs);
-    let v0: Vec<i64> = vec![1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4];
-    let v1: Vec<i64> = vec![1, 2, 2, 2, 1, 1, 2, 2, 1, 1, 1, 2];
-    let v2: Vec<f64> = vec![1.0f64; 12];
-    let v3: Vec<f64> = vec![1.0f64; 12];
+    let mut v0_0: Vec<i64> = vec![1; 1024];
+    let mut v0: Vec<i64> = vec![2; 1024];
+    v0.append(&mut v0_0);
+    let mut v1: Vec<i64> = vec![1; 256];
+    let mut v1_1: Vec<i64> = vec![2; 256];
+    let mut v1_2: Vec<i64> = vec![1; 256];
+    let mut v1_3: Vec<i64> = vec![2; 256];
+    let mut v1_4: Vec<i64> = vec![1; 256];
+    let mut v1_5: Vec<i64> = vec![2; 256];
+    let mut v1_6: Vec<i64> = vec![1; 256];
+    let mut v1_7: Vec<i64> = vec![2; 256];
+    v1.append(&mut v1_1);
+    v1.append(&mut v1_2);
+    v1.append(&mut v1_3);
+    v1.append(&mut v1_4);
+    v1.append(&mut v1_5);
+    v1.append(&mut v1_6);
+    v1.append(&mut v1_7);
+    let v2: Vec<f64> = vec![1.0f64; 2048];
+    let v3: Vec<f64> = vec![1.0f64; 2048];
 
     let a;
     unsafe {
@@ -131,10 +160,22 @@ fn main() {
             result_v1.1 as usize,
         );
     }
-    println!("key0-----{:?}", res0);
-    println!("key1-----{:?}", res1);
-    println!("val0-----{:?}", res2);
-    println!("val1-----{:?}", res3);
+
+    assert_eq!(*res2.get(0).expect("error"), 512.0f64);
+    assert_eq!(*res2.get(1).expect("error"), 512.0f64);
+    assert_eq!(*res2.get(2).expect("error"), 512.0f64);
+    assert_eq!(*res2.get(3).expect("error"), 512.0f64);
+    assert_eq!(*res3.get(0).expect("error"), 1.0f64);
+    assert_eq!(*res3.get(1).expect("error"), 1.0f64);
+    assert_eq!(*res3.get(2).expect("error"), 1.0f64);
+    assert_eq!(*res3.get(3).expect("error"), 1.0f64);
+    // assert_eq!(*res2.get(4).expect("error"), 3.0f64);
+    // assert_eq!(*res2.get(5).expect("error"), 2.0f64);
+
+    // println!("key0-----{:?}", res0);
+    // println!("key1-----{:?}", res1);
+    // println!("val0-----{:?}", res2);
+    // println!("val1-----{:?}", res3);
     mem::forget(res0);
     mem::forget(res1);
     mem::forget(res2);

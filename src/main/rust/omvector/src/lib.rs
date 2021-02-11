@@ -46,7 +46,7 @@ mod omnicache;
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul(
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_mul(
     env: JNIEnv,
     calling_object: jobject,
     d_type: jint,
@@ -94,7 +94,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_mul(
  */
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_allocate(
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_allocate(
     env: JNIEnv,
     _clazz: JClass,
     size: jint,
@@ -117,7 +117,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_allocate(
  */
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_concat(
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_concat(
     env: JNIEnv,
     this_class: JClass,
     buffer1: JByteBuffer,
@@ -155,7 +155,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_concat(
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "system" fn Java_nova_hetu_omnicache_OMVectorBase_free(
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_free(
     env: JNIEnv,
     this_class: JClass,
     buffer: JByteBuffer,
