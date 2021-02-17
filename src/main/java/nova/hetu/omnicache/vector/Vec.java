@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class Vec {
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
-    private AtomicInteger referenceCount = new AtomicInteger(0);
+    private final AtomicInteger referenceCount = new AtomicInteger(0);
     protected int size = 0;
 
     public Vec(int rowSize, int alloc_size) {
@@ -45,21 +45,21 @@ public abstract class Vec {
     }
 
     public void incrRefCount() {
-        //this.incrRefCount(1);
+        this.incrRefCount(1);
     }
 
     public void incrRefCount(int increment) {
-        //this.referenceCount.addAndGet(increment);
+        this.referenceCount.addAndGet(increment);
     }
 
     public void release() {
-        //this.release(1);
+        this.release(1);
     }
 
     public void release(int decrement) {
-//        if (referenceCount.addAndGet(-decrement) == 0) {
-//            OMVectorBase.free(data);
-//        }
+        if (referenceCount.addAndGet(-decrement) == 0) {
+            close();
+        }
     }
 
     /**
@@ -141,12 +141,10 @@ public abstract class Vec {
         return this.data;
     }
 
-    public void close() {
-        synchronized (data) {
-            if (data != null) {
-                OMVectorBase.free(data);
-                data = null;
-            }
+    public synchronized void close() {
+        if (data != null) {
+            OMVectorBase.free(data);
+            data = null;
         }
     }
 
