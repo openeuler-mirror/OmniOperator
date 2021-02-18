@@ -26,7 +26,7 @@ import java.nio.ByteOrder;
 import static java.lang.String.format;
 
 public class OmniRuntime {
-    private JniWrapper jniWrapper;
+    private final JniWrapper jniWrapper;
 
     public OmniRuntime() {
         jniWrapper = new JniWrapper();
@@ -46,7 +46,7 @@ public class OmniRuntime {
      * @param outputTypes  result output vectors data type
      * @param step         For stateful operator, represent op step,currently support only two type
      * @return if step = {@link OmniOpStep#INTERMEDIATE} , omni runtime execute while result native execute id,result type is {@link String};
-     * if step ={@link OmniOpStep#FINAL} omni runtime while result final execution data,result type is {@link Vec<?>[]}
+     * if step ={@link OmniOpStep#FINAL} omni runtime while result final execution data,result type is {@link Vec[]}
      */
     public Object execute(String neid, String key, Vec[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step) {
         ByteBuffer[] buffers = null;
@@ -70,8 +70,8 @@ public class OmniRuntime {
         OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr);
         // free inputs
         if (inputs != null) {
-            for (int idx = 0; idx < inputs.length; ++idx) {
-                inputs[idx].release();
+            for (Vec input : inputs) {
+                input.release();
             }
         }
         switch (step) {
@@ -82,6 +82,24 @@ public class OmniRuntime {
             default:
                 throw new IllegalArgumentException(format("Not Support OmniOpState %s", step));
         }
+    }
+
+    /**
+     * Get omni runtime processed results
+     *
+     * @param key stateful operator execution key
+     * @param outputTypes result output vectors data type
+     * @return omni runtime processed result,result type is {@link Vec[]}
+     */
+    public Object getResults(String key, VecType[] outputTypes) {
+        int[] outputTypeArr = new int[outputTypes.length];
+        for (int idx = 0; idx < outputTypes.length; idx++) {
+            outputTypeArr[idx] = outputTypes[idx].getValue();
+        }
+
+        OMResult result = jniWrapper.getFinalResult(key, outputTypeArr);
+
+        return generateOMVec(result, outputTypes);
     }
 
     private Vec[] generateOMVec(OMResult result, VecType[] outputTypes) {
