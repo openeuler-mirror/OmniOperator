@@ -32,7 +32,6 @@ public abstract class VarVec<T>
         this.buffer = buffer;
     }
 
-
     public void incrRefCount() {
         this.incrRefCount(1);
     }
@@ -58,7 +57,7 @@ public abstract class VarVec<T>
      * @param endIdx
      * @return
      */
-    public abstract Vec slice(int startIdx, int endIdx);
+    public abstract VarVec slice(int startIdx, int endIdx);
 
     /**
      * returns the hash of all elements in the vec
