@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 public class VarcharVec extends VarVec
 {
     private static final int BUFFER_MAX_SIZE = 300*1024;
-    public VarcharVec(long capacity, int elements)
+    public VarcharVec(int capacity, int elements)
     {
         super(capacity, elements);
     }
@@ -29,9 +29,7 @@ public class VarcharVec extends VarVec
 
     public void setData(byte[] data)
     {
-        for (int i=0; i<this.buffers.length; i++) {
-            this.buffers[i].put(data, i* MAX_BUFFER_SIZE, MAX_BUFFER_SIZE);
-        }
+        this.buffer.put(data, 0, data.length);
     }
 
     public ByteBuffer getData(int idx)
@@ -42,10 +40,8 @@ public class VarcharVec extends VarVec
             byte[] output = new byte[lengths[idx]];
             int length = lengths[idx];
             int offset = offsets[idx];
-            int bufferPosition = offset / MAX_BUFFER_SIZE;
-            int bufferOffset = offset % MAX_BUFFER_SIZE;
-            this.buffers[bufferPosition].position(bufferOffset);
-            return this.buffers[bufferPosition].get(output, 0, length);
+            this.buffer.position(offset);
+            return this.buffer.get(output, 0, length);
         }
     }
 

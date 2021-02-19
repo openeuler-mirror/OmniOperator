@@ -14,27 +14,22 @@ public abstract class VarVec<T>
     protected int[] lengths;
     int lastOffsetPosition;
     private final AtomicInteger referenceCount = new AtomicInteger(0);
-    protected ByteBuffer[] buffers;
+    protected ByteBuffer buffer;
     int used;
     int capacity;
 
-    public VarVec(long capcity, int elements)
+    public VarVec(int capcity, int elements)
     {
         offsets = new int[elements];
         lengths = new int[elements];
-        int numberOfBuffers = capacity / MAX_BUFFER_SIZE + 1;
-        buffers = new ByteBuffer[numberOfBuffers];
-        for (int i=0; i < numberOfBuffers; i++) {
-            ByteBuffer buffer = OMVectorBase.allocate(MAX_BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
-            buffers[i] = buffer;
-        }
+        this.buffer = OMVectorBase.allocate(capcity).order(ByteOrder.LITTLE_ENDIAN);
+        this.capacity = capcity;
         lastOffsetPosition = -1;
     }
 
     public VarVec(ByteBuffer buffer)
     {
-        this.buffers = new ByteBuffer[1];
-        this.buffers[0] = buffer;
+        this.buffer = buffer;
     }
 
 
