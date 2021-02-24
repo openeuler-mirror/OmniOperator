@@ -1,35 +1,46 @@
+/*
+ * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package nova.hetu.omnicache.vector;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class VarVec<T>
+public abstract class VariableWidthVec<T>
 {
     protected int MAX_BUFFER_SIZE = 5*1024*1024;
     protected int[] offsets;
     protected int[] lengths;
     int lastOffsetPosition;
     private final AtomicInteger referenceCount = new AtomicInteger(0);
-    protected ByteBuffer buffer;
+    protected ByteBuffer data;
     int used;
     int capacity;
 
-    public VarVec(int capcity, int elements)
+    public VariableWidthVec(int capcity, int elements)
     {
         offsets = new int[elements];
         lengths = new int[elements];
-        this.buffer = OMVectorBase.allocate(capcity).order(ByteOrder.LITTLE_ENDIAN);
+        this.data = OMVectorBase.allocate(capcity).order(ByteOrder.LITTLE_ENDIAN);
         this.capacity = capcity;
         lastOffsetPosition = -1;
     }
 
-    public VarVec(ByteBuffer buffer)
+    public VariableWidthVec(ByteBuffer buffer)
     {
-        this.buffer = buffer;
+        this.data = buffer;
     }
 
     public void incrRefCount() {
@@ -57,7 +68,7 @@ public abstract class VarVec<T>
      * @param endIdx
      * @return
      */
-    public abstract VarVec slice(int startIdx, int endIdx);
+    public abstract VariableWidthVec slice(int startIdx, int endIdx);
 
     /**
      * returns the hash of all elements in the vec
@@ -128,7 +139,10 @@ public abstract class VarVec<T>
     public abstract ByteBuffer getData();
 
     public synchronized void close() {
-
+        if (data != null) {
+            OMVectorBase.free(data);
+            data = null;
+        }
     }
 
     // TODO: Handle memory properly when we add OmniCacheManager

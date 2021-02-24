@@ -1,23 +1,39 @@
+/*
+ * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package nova.hetu.omnicache.vector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-public class VarcharVec extends VarVec
+public class VarcharVec extends VariableWidthVec
 {
-    private static final int BUFFER_MAX_SIZE = 300*1024;
     public VarcharVec(int capacity, int elements)
     {
         super(capacity, elements);
     }
 
-    public VarcharVec(ByteBuffer buffer)
+    public VarcharVec(ByteBuffer buffer, int[] offsets, int[] lengths)
     {
         super(buffer);
+        this.offsets = offsets;
+        this.lengths = lengths;
+        this.capacity = buffer.capacity();
     }
 
     @Override
-    public VarVec slice(int startPosition, int endPosition)
+    public VariableWidthVec slice(int startPosition, int endPosition)
     {
         int startIdx = Arrays.binarySearch(offsets, startPosition);
         int elementCount = 0;
@@ -36,9 +52,9 @@ public class VarcharVec extends VarVec
             lengths[i] = lengths[startIdx + i];
         }
         VarcharVec newVec = new VarcharVec((endPosition - startPosition), elementCount);
-        this.buffer.position(startIdx);
+        this.data.position(startIdx);
         byte[] region = new byte[totalLength];
-        this.buffer.get(region, 0, totalLength);
+        this.data.get(region, 0, totalLength);
         newVec.setData(region);
         newVec.set(newOffsets, lengths);
         return newVec;
@@ -74,13 +90,13 @@ public class VarcharVec extends VarVec
 
     public void setData(byte[] data)
     {
-        this.buffer.put(data, 0, data.length);
+        this.data.put(data, 0, data.length);
     }
 
     public void setData(int position, byte[] data)
     {
-        this.buffer.position(position);
-        this.buffer.put(data, 0, data.length);
+        this.data.position(position);
+        this.data.put(data, 0, data.length);
     }
 
     public byte[] getData(int idx)
@@ -91,8 +107,8 @@ public class VarcharVec extends VarVec
             byte[] output = new byte[lengths[idx]];
             int length = lengths[idx];
             int offset = offsets[idx];
-            this.buffer.position(offset);
-            this.buffer.get(output, 0, length);
+            this.data.position(offset);
+            this.data.get(output, 0, length);
             return output;
         }
     }
@@ -103,8 +119,8 @@ public class VarcharVec extends VarVec
         byte[] output = new byte[lengths[idx]];
         int length = lengths[idx];
         int offset = offsets[idx];
-        this.buffer.position(offset);
-        this.buffer.get(output, 0, length);
+        this.data.position(offset);
+        this.data.get(output, 0, length);
         return output;
     }
 
@@ -112,8 +128,8 @@ public class VarcharVec extends VarVec
     {
         byte[] output = new byte[length];
         int offset = offsets[idx];
-        this.buffer.position(offset);
-        this.buffer.get(output, 0, length);
+        this.data.position(offset);
+        this.data.get(output, 0, length);
         return output;
     }
 
