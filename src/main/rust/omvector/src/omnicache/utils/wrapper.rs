@@ -80,13 +80,13 @@ pub unsafe fn get_output_data(
     offset: isize,
     vec_type: VecType,
 ) -> (*mut c_void, i64) {
-    dbg!(&vec_type);
+    //dbg!(&vec_type);
     match vec_type {
         VecType::INT64 => {
             let data =
                 result.data().offset(offset * *WELD_VEC_WIDTH as isize) as *const WeldVec<i64>;
 
-            dbg!("i64", result.data());
+            //dbg!("i64", result.data());
 
             let out = (*data).clone();
             let v = into_vec(out.data, out.len);
@@ -98,7 +98,7 @@ pub unsafe fn get_output_data(
             let data =
                 result.data().offset(offset * *WELD_VEC_WIDTH as isize) as *const WeldVec<i32>;
 
-            dbg!("i32", result.data());
+            //dbg!("i32", result.data());
 
             let out = (*data).clone();
             let v = into_vec(out.data, out.len);
@@ -110,7 +110,7 @@ pub unsafe fn get_output_data(
             let data =
                 result.data().offset(offset * *WELD_VEC_WIDTH as isize) as *const WeldVec<f64>;
 
-            dbg!("f64", result.data());
+            //dbg!("f64", result.data());
 
             let out = (*data).clone();
             let v = into_vec(out.data, out.len);

@@ -74,14 +74,15 @@ public class OmniRuntime {
                 input.release();
             }
         }
-        switch (step) {
-            case INTERMEDIATE:
-                return result.getKey();
-            case FINAL:
-                return generateOMVec(result, outputTypes);
-            default:
-                throw new IllegalArgumentException(format("Not Support OmniOpState %s", step));
-        }
+        return generateOMVec(result,outputTypes);
+//        switch (step) {
+//            case INTERMEDIATE:
+//                return result.getKey();
+//            case FINAL:
+//                return generateOMVec(result, outputTypes);
+//            default:
+//                throw new IllegalArgumentException(format("Not Support OmniOpState %s", step));
+//        }
     }
 
     /**
