@@ -247,11 +247,11 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
     j_row_num: jlong,
     j_output_types: jintArray,
 ) -> jobject {
-    dbg!(j_input_types);
+    //dbg!(j_input_types);
     let input_types = get_int_array_elements(env, j_input_types);
     let output_types = get_int_array_elements(env, j_output_types);
     let mut output_row_count = 0;
-    dbg!(output_types.len());
+    //dbg!(output_types.len());
 
     // new java.nio.ByteBuffer[output_types.len()]
     let mut j_result = env
@@ -262,7 +262,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
             std::ptr::null_mut(),
         )
         .expect("create output buffer failed.");
-    dbg!(j_result);
+    //dbg!(j_result);
     let omni_key = get_str(env, j_key);
     let tmp_res_key = get_str(env, j_key);
     let weld_result;
@@ -281,7 +281,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
         weld_result = OmniCodeGen::execute(function, &(*input_data))
             .expect("OmniCache Native execute failed!");
         // release the mem for build input data
-        dbg!(&weld_result);
+        //dbg!(&weld_result);
         free_weld_vec_mem(input_data);
 
         INTERMEDIATE_CACHE.insert(tmp_res_key, weld_result.data() as *const u8);
@@ -325,14 +325,14 @@ fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: 
 }
 
 fn get_int_array_elements(env: JNIEnv, array: jobjectArray) -> Vec<i32> {
-    dbg!(array);
+    //dbg!(array);
     if array.is_null() {
         panic!("input data cannot be null or empty");
     }
     let len = env
         .get_array_length(array)
         .expect("get the type number failed");
-    dbg!(len);
+    //dbg!(len);
     let mut buf = vec![-1; len as usize];
     let _ = env.get_int_array_region(array, 0, buf.as_mut());
     buf
@@ -353,7 +353,7 @@ unsafe fn build_output_data(
         match d_type.try_into() {
             Ok(INT32) => {
                 let result_i32 = get_output_data(w_result, col_idx as isize, INT32);
-                dbg!(result_i32);
+                //dbg!(result_i32);
                 let mut vec_i32 = transform_weld_to_vec::<i32>(result_i32.0, result_i32.1);
                 // //println!("{:?}", vec_i32);
                 current_len = vec_i32.len();
@@ -386,7 +386,7 @@ unsafe fn build_output_data(
             );
         }
         output_len = current_len;
-        dbg!(output_len);
+        //dbg!(output_len);
     }
     output_len as i32
 }
