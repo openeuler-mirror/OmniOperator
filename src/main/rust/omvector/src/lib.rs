@@ -22,21 +22,44 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::ptr::null_mut;
 
+use jni::JNIEnv;
 use jni::objects::{JByteBuffer, JClass, JObject, JString, JValue};
 use jni::sys::{_jobject, jint, jintArray, jlong, jobject, jobjectArray, jstring};
-use jni::JNIEnv;
 use log::{debug, info, trace};
 use weld::{Data, WeldValue};
 
-use omnicache::runtime::cache::IntermediateState;
 use omnicache::runtime::cache::INTERMEDIATE_CACHE;
+use omnicache::runtime::cache::IntermediateState;
 use omnicache::runtime::codegen::OmniCodeGen;
 use omnicache::utils::wrapper::{free_weld_vec_mem, get_output_data, weld_vec_mem_alloc};
 
-use crate::omnicache::utils::wrapper::VecType::{DOUBLE, INT32, INT64};
 use crate::omnicache::utils::wrapper::{transform_vec_in_vec_data, VecType};
+use crate::omnicache::utils::wrapper::VecType::{DOUBLE, INT32, INT64};
+use std::os::raw::{c_long, c_int};
 
 mod omnicache;
+
+#[no_mangle]
+pub unsafe extern "C" fn toRust(addr:*const c_long,len:*const c_int)->*const c_void {
+    let longV = Vec::from_raw_parts(addr as *mut i64, len as usize, len as usize);
+    println!("{:?}", longV);
+    return longV.as_ptr() as _;
+}
+
+#[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_runtime_demo_UnsafeVec_toRust(
+    env: JNIEnv,
+    _jobject: jobject,
+    address: jlong,
+    length: jint,
+) ->jlong{
+    unsafe {
+        let ref longv = Vec::from_raw_parts(address as *mut i64, length as usize, length as usize);
+        println!("{:?}",longv);
+        mem::forget(longv);
+        return 100;
+    }
+}
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
@@ -285,6 +308,9 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
         free_weld_vec_mem(input_data);
 
         INTERMEDIATE_CACHE.insert(tmp_res_key, weld_result.data() as *const u8);
+        // if old_inter_result.is_some(){
+        //     Box::from_raw(old_inter_result.unwrap() as *mut _)
+        // }
         mem::forget(j_result);
         mem::forget(input_data);
         output_row_count = build_output_data(env, &output_types, &weld_result, j_result);

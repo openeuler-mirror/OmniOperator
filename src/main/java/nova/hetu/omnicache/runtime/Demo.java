@@ -15,6 +15,7 @@
 package nova.hetu.omnicache.runtime;
 
 import nova.hetu.omnicache.vector.IntVec;
+import nova.hetu.omnicache.vector.LongVec;
 import nova.hetu.omnicache.vector.Vec;
 import nova.hetu.omnicache.vector.VecType;
 
@@ -22,27 +23,35 @@ import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
-public class Demo {
-    public static class ExecutionHandler {
+public class Demo
+{
+    public static class ExecutionHandler
+    {
         final String neid;
         final String omniCacheKey;
         final OmniRuntime omniRuntime;
         boolean isConsole = false;
 
-        public ExecutionHandler(OmniRuntime omniRuntime) {
-            this.neid = omniRuntime.compile("|v0 :vec[vec[i32]], v1: vec[vec[i32]]|" +
-                    "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i32,i32,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| " + "merge(b, {m.$0, m.$1})))));" +
-                    "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
-                    "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
+        public ExecutionHandler(OmniRuntime omniRuntime)
+        {
+            this.neid = omniRuntime.compile("|v0 :vec[vec[i64]], v1: vec[vec[i64]]|" +
+                    "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i64,i64,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| " + "merge(b, {m.$0, m.$1})))));" +
+                    "let k = result(for(pairs, appender[i64], |b,i,n| merge(b, n.$0)));" +
+                    "let v = result(for(pairs, appender[i64], |b,i,n| merge(b, n.$1)));" +
                     "{k,v}");
             this.omniCacheKey = UUID.randomUUID().toString();
             this.omniRuntime = omniRuntime;
         }
 
-        public void compute(int expectedValue) {
-            Vec[] res = (Vec[]) omniRuntime.execute(neid, omniCacheKey, builderRawData(), 1, new VecType[]{VecType.INT, VecType.INT}, OmniOpStep.INTERMEDIATE);
-            IntVec interValue = (IntVec) res[1];
-            IntVec interKey = (IntVec) res[0];
+        public void compute(int expectedValue)
+        {
+            Vec[] input = builderRawData();
+            Vec[] res = (Vec[]) omniRuntime.execute(neid, omniCacheKey, input, 1, new VecType[] {VecType.LONG, VecType.LONG}, OmniOpStep.INTERMEDIATE);
+            for (Vec v : input) {
+                v.close();
+            }
+            LongVec interValue = (LongVec) res[1];
+            LongVec interKey = (LongVec) res[0];
             if (!isConsole && (interKey.get(0) != 1 || interValue.get(0) != expectedValue)) {
                 String msg = Thread.currentThread().getName() + ",Key=" + interKey.get(0) + ",value=" + interValue.get(0) + ",expected:" + expectedValue;
                 System.out.println(msg);
@@ -50,27 +59,35 @@ public class Demo {
             }
         }
 
-        public void getFinalResult(int expectedValue) {
-            Vec[] res = (Vec[]) omniRuntime.getResults(omniCacheKey, new VecType[]{VecType.INT, VecType.INT});
-            IntVec interValue = (IntVec) res[1];
-            IntVec interKey = (IntVec) res[0];
+        public void getFinalResult(int expectedValue)
+        {
+            Vec[] res = (Vec[]) omniRuntime.getResults(omniCacheKey, new VecType[] {VecType.LONG, VecType.LONG});
+            LongVec interValue = (LongVec) res[1];
+            LongVec interKey = (LongVec) res[0];
             System.out.println("result:" + Thread.currentThread().getName() + ",Key=" + interKey.get(0) + ",value=" + interValue.get(0) + ",expected:" + expectedValue);
         }
     }
 
     private static final OmniRuntime omniRuntime = new OmniRuntime();
 
-    public static void multiThreadExecution() {
+    public static void multiThreadExecution()
+    {
         int threadCount = 100;
-        int totalPageCount = 10000;
+        int totalPageCount = 100000;
         CountDownLatch downLatch = new CountDownLatch(threadCount);
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
-            Thread thread = new Thread(new Runnable() {
+            Thread thread = new Thread(new Runnable()
+            {
                 @Override
-                public void run() {
-                    ExecutionHandler executionHandler = new ExecutionHandler(omniRuntime);
-                    singleThreadExecution(executionHandler, totalPageCount);
-                    downLatch.countDown();
+                public void run()
+                {
+                    try {
+                        ExecutionHandler executionHandler = new ExecutionHandler(omniRuntime);
+                        singleThreadExecution(executionHandler, totalPageCount);
+                    }
+                    finally {
+                        downLatch.countDown();
+                    }
                 }
             });
             thread.setName("thread-" + tIdx);
@@ -78,31 +95,114 @@ public class Demo {
         }
         try {
             downLatch.await();
-        } catch (InterruptedException ex) {
+        }
+        catch (InterruptedException ex) {
             ex.printStackTrace();
         }
     }
 
-    public static void singleThreadExecution(ExecutionHandler executionHandler, int totalPageCount) {
+    public static void singleThreadExecution(ExecutionHandler executionHandler, int totalPageCount)
+    {
         for (int i = 1; i <= totalPageCount; i++) {
             executionHandler.compute(i);
         }
         executionHandler.getFinalResult(totalPageCount);
     }
 
-    public static Vec[] builderRawData() {
-        IntVec key = new IntVec(1);
-        IntVec value = new IntVec(1);
+    public static Vec[] builderRawData()
+    {
+        LongVec key = new LongVec(1);
+        LongVec value = new LongVec(1);
         key.set(0, 1);
         value.set(0, 1);
         Vec[] rawData = {key, value};
         return rawData;
     }
 
-    public static void main(String[] args) {
-        multiThreadExecution();
+    public static UnsafeLongVec[] builderUnSafeVec()
+    {
+        UnsafeLongVec key = new UnsafeLongVec(1);
+        UnsafeLongVec value = new UnsafeLongVec(1);
+        return new UnsafeLongVec[] {key, value};
     }
-    public final static void demoShow(){
+
+    public static void main(String[] args)
+            throws InterruptedException
+    {
+//        multiThreadExecution();
+//        UnsafeLongVec longVec = new UnsafeLongVec(1);
+//        longVec.set(10,10L);
+//        System.out.println(longVec.get(10));
+//        int threadCount = 100;
+//        int pageCount = 1000000;
+//        multiThreadUnsafeVecBuilderAndFree(threadCount, pageCount);
+//        multiThreadVecBuilderAndFree(threadCount, pageCount);
+        multiThreadExecution();
+        Thread.sleep(1000000);
+    }
+
+    public static void multiThreadUnsafeVecBuilderAndFree(int threadCount, int pageCount)
+    {
+        long startTime = System.currentTimeMillis();
+        CountDownLatch downLatch = new CountDownLatch(threadCount);
+        for (int tIdx = 0; tIdx < threadCount; tIdx++) {
+            Thread thread = new Thread(() -> {
+                try {
+                    for (int i = 0; i < pageCount; i++) {
+                        UnsafeLongVec[] input = builderUnSafeVec();
+                        for (UnsafeLongVec v : input) {
+                            v.release();
+                        }
+                    }
+                }
+                finally {
+                    downLatch.countDown();
+                }
+            });
+            thread.start();
+        }
+        try {
+            downLatch.await();
+            ;
+            System.out.println("[Unsafe]All task finished! total used time:" + (System.currentTimeMillis() - startTime) / 1000.0 + "s");
+            System.gc();
+        }
+        catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void multiThreadVecBuilderAndFree(int threadCount, int pageCount)
+    {
+        long startTime = System.currentTimeMillis();
+        CountDownLatch downLatch = new CountDownLatch(threadCount);
+        for (int tIdx = 0; tIdx < threadCount; tIdx++) {
+            Thread thread = new Thread(() -> {
+                try {
+                    for (int i = 0; i < pageCount; i++) {
+                        Vec[] input = builderRawData();
+                        for (Vec v : input) {
+                            v.close();
+                        }
+                    }
+                }
+                finally {
+                    downLatch.countDown();
+                }
+            });
+            thread.start();
+        }
+        try {
+            downLatch.await();
+            System.out.println("[Vec]All task finished! total used time:" + (System.currentTimeMillis() - startTime) / 1000.0 + "s");
+        }
+        catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public final static void demoShow()
+    {
         int[] value0 = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
         int[] value1 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         ByteBuffer[] buffers = new ByteBuffer[2];
