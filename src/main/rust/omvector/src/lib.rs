@@ -236,18 +236,19 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_getFinalResul
     unsafe {
         let tmp_res_key = get_str(env, j_key);
         let weld_result;
-        let tmp_res = INTERMEDIATE_CACHE
+        let tmp_res = INTERMEDIATE_CACHE.clone().lock().unwrap()
             .get(&tmp_res_key)
             .expect("invalid value")
             .deref()
             .clone();
+
         weld_result = WeldValue::new_from_data(tmp_res as Data);
         mem::forget(tmp_res);
         mem::forget(j_result);
         output_row_count = build_output_data(env, &output_types, &weld_result, j_result);
         mem::forget(weld_result);
         let result = build_om_result(env, j_result, output_row_count, omni_key).into_inner();
-        let remove = INTERMEDIATE_CACHE
+        let remove = INTERMEDIATE_CACHE.clone().lock().unwrap()
             .remove(&tmp_res_key)
             .expect("error removing intermediate result");
         result
@@ -307,7 +308,8 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
         //dbg!(&weld_result);
         free_weld_vec_mem(input_data);
 
-        INTERMEDIATE_CACHE.insert(tmp_res_key, weld_result.data() as *const u8);
+        INTERMEDIATE_CACHE.clone().lock().unwrap()
+            .insert(tmp_res_key, weld_result.data() as *const u8);
         // if old_inter_result.is_some(){
         //     Box::from_raw(old_inter_result.unwrap() as *mut _)
         // }
@@ -445,7 +447,7 @@ unsafe fn transform_weld_to_vec<T>(result: *mut c_void, len: i64) -> Vec<T> {
 }
 
 unsafe fn get_intermediate_vec<T>(tmp_res_key: &str, c_index: i32, vec_type: VecType) -> Vec<T> {
-    let tmp_res = INTERMEDIATE_CACHE
+    let tmp_res = INTERMEDIATE_CACHE.clone().lock().unwrap()
         .get(tmp_res_key)
         .expect("Invalid tmp result!")
         .deref()
@@ -475,7 +477,8 @@ unsafe fn into_weld_vec(
         );
     }
 
-    let has_tmp = !INTERMEDIATE_CACHE.get(tmp_res_key).is_none();
+    let has_tmp = !INTERMEDIATE_CACHE.clone().lock().unwrap()
+        .get(tmp_res_key).is_none();
     let mut address = weld_vec_mem_alloc(col_count as usize);
 
     for c_index in 0..col_count {

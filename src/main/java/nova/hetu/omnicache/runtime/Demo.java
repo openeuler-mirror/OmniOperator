@@ -72,8 +72,8 @@ public class Demo
 
     public static void multiThreadExecution()
     {
-        int threadCount = 100;
-        int totalPageCount = 100000;
+        int threadCount = 1000;
+        int totalPageCount = 1000;
         CountDownLatch downLatch = new CountDownLatch(threadCount);
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(new Runnable()
@@ -129,7 +129,7 @@ public class Demo
     public static void main(String[] args)
             throws InterruptedException
     {
-//        multiThreadExecution();
+        multiThreadExecution();
 //        UnsafeLongVec longVec = new UnsafeLongVec(1);
 //        longVec.set(10,10L);
 //        System.out.println(longVec.get(10));
@@ -137,8 +137,8 @@ public class Demo
 //        int pageCount = 1000000;
 //        multiThreadUnsafeVecBuilderAndFree(threadCount, pageCount);
 //        multiThreadVecBuilderAndFree(threadCount, pageCount);
-        multiThreadExecution();
-        Thread.sleep(1000000);
+//        multiThreadExecution();
+//        Thread.sleep(1000000);
     }
 
     public static void multiThreadUnsafeVecBuilderAndFree(int threadCount, int pageCount)
