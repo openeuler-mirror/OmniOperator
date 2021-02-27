@@ -73,7 +73,7 @@ public class Demo
     public static void multiThreadExecution()
     {
         int threadCount = 1000;
-        int totalPageCount = 100;
+        int totalPageCount = 1000;
         CountDownLatch downLatch = new CountDownLatch(threadCount);
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(new Runnable()

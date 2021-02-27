@@ -142,10 +142,10 @@ public abstract class Vec {
     }
 
     public synchronized void close() {
-        if (data != null) {
-            OMVectorBase.free(data);
-            data = null;
-        }
+//        if (data != null) {
+//            OMVectorBase.free(data);
+//            data = null;
+//        }
     }
 
     // TODO: Handle memory properly when we add OmniCacheManager

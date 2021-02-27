@@ -42,6 +42,7 @@ public class OmniRuntime
     }
 
     private static int count = 0;
+
     /**
      * Core OmniRuntime Api, use high-performance Vectorized Execution to computing intermediate and final vectors;
      *

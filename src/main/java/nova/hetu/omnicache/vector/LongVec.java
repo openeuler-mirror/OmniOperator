@@ -19,7 +19,6 @@ import java.nio.ByteOrder;
 
 public class LongVec
         extends Vec
-        implements AutoCloseable
 {
 
     public LongVec(int size)
