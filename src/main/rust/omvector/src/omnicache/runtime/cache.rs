@@ -16,7 +16,7 @@ use chashmap::CHashMap;
 use once_cell::sync::Lazy;
 use weld::{WeldModule, WeldConf};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use cached::{TimedSizedCache, Cached};
 
 // static INTERMEDIATE_CACHE: CHashMap<String, IntermediateState<'static>> = Default::default();
@@ -29,8 +29,7 @@ pub struct IntermediateState {
     pub len: usize,
 }
 
-pub static mut INTERMEDIATE_CACHE: Lazy<CHashMap<String,*const u8>>=Lazy::new(||Default::default());
-
+pub static mut INTERMEDIATE_CACHE: Lazy<Arc<Mutex<HashMap<String,*const u8>>>> = Lazy::new(||Default::default());
 // module cache
 cached_key! {
     MODULE_CACHE:TimedSizedCache<String, Arc<WeldModule>> = TimedSizedCache::with_size_and_lifespan(100,300);

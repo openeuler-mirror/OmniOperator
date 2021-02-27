@@ -26,6 +26,7 @@ use omnicache::utils::wrapper::VecType::{DOUBLE, INT64};
 use omnicache::utils::wrapper::{
     free_weld_vec_mem, get_output_data, transform_input_data, weld_vec_mem_alloc,
 };
+
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::ptr;
