@@ -20,6 +20,7 @@ use std::convert::TryInto;
 use std::ffi::c_void;
 use std::fmt::Debug;
 use std::ops::Deref;
+use std::os::raw::{c_int, c_long};
 use std::ptr::null_mut;
 
 use jni::JNIEnv;
@@ -35,12 +36,11 @@ use omnicache::utils::wrapper::{free_weld_vec_mem, get_output_data, weld_vec_mem
 
 use crate::omnicache::utils::wrapper::{transform_vec_in_vec_data, VecType};
 use crate::omnicache::utils::wrapper::VecType::{DOUBLE, INT32, INT64};
-use std::os::raw::{c_long, c_int};
 
 mod omnicache;
 
 #[no_mangle]
-pub unsafe extern "C" fn toRust(addr:*const c_long,len:*const c_int)->*const c_void {
+pub unsafe extern "C" fn toRust(addr: *const c_long, len: *const c_int) -> *const c_void {
     let longV = Vec::from_raw_parts(addr as *mut i64, len as usize, len as usize);
     println!("{:?}", longV);
     return longV.as_ptr() as _;
@@ -52,10 +52,10 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_demo_UnsafeVec_toRust(
     _jobject: jobject,
     address: jlong,
     length: jint,
-) ->jlong{
+) -> jlong {
     unsafe {
         let ref longv = Vec::from_raw_parts(address as *mut i64, length as usize, length as usize);
-        println!("{:?}",longv);
+        println!("{:?}", longv);
         mem::forget(longv);
         return 100;
     }
@@ -261,14 +261,16 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_getFinalResul
  * Signature: (Ljava/lang/String;[Ljava/nio/ByteBuffer;[IJ[I)Lnova/hetu/omnicache/runtime/OMResult;
  */
 #[no_mangle]
-pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
+pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_executeV1(
     env: JNIEnv,
     this_obj: jobject,
     j_func: JString,
     j_key: JString,
     j_input_data: jobjectArray,
+    j_input_row_num: jlong,
+    j_state_data: jobjectArray,
+    j_stat_row_num: jlong,
     j_input_types: jintArray,
-    j_row_num: jlong,
     j_output_types: jintArray,
 ) -> jobject {
     //dbg!(j_input_types);
@@ -297,7 +299,9 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_execute(
         let input_data = into_weld_vec(
             env,
             j_input_data,
-            j_row_num as usize,
+            j_input_row_num as usize,
+            j_state_data,
+            j_stat_row_num as usize,
             &input_types,
             &tmp_res_key as &str,
         );
@@ -459,10 +463,22 @@ unsafe fn get_intermediate_vec<T>(tmp_res_key: &str, c_index: i32, vec_type: Vec
     vec_tmp
 }
 
+// fn get_bytebuffer_address(env: JNIEnv, bufs: jobjectArray, idx: i32) -> &mut [u8] {
+//     let buf = env
+//         .get_object_array_element(bufs, idx)
+//         .expect("couldn't get buffer");
+//     let addr = env
+//         .get_direct_buffer_address(JByteBuffer::from(buf))
+//         .expect("couldn't get the address of buffer");
+//     return addr;
+// }
+
 unsafe fn into_weld_vec(
     env: JNIEnv,
     bufs: jobjectArray,
     rows: usize,
+    state_bufs: jobjectArray,
+    statRowSize: usize,
     data_type: &[i32],
     tmp_res_key: &str,
 ) -> *mut c_void {
@@ -476,24 +492,36 @@ unsafe fn into_weld_vec(
             data_type.len()
         );
     }
-
-    let has_tmp = !INTERMEDIATE_CACHE.clone().lock().unwrap()
-        .get(tmp_res_key).is_none();
+    let has_tmp = !state_bufs.is_null();
+    // let has_tmp = !INTERMEDIATE_CACHE.clone().lock().unwrap()
+    //     .get(tmp_res_key).is_none();
     let mut address = weld_vec_mem_alloc(col_count as usize);
 
     for c_index in 0..col_count {
         let buf = env
             .get_object_array_element(bufs, c_index)
-            .expect("couldn't get buffer");
+            .expect("couldn't get input buffer");
         let buf_addr = env
             .get_direct_buffer_address(JByteBuffer::from(buf))
-            .expect("couldn't get the address of buffer");
+            .expect("couldn't get the address of input data buffer");
+
+
+
+        // let buf_addr = get_bytebuffer_address(env,bufs, c_index);
+        // let stat_addr = get_bytebuffer_address(env,state_bufs, c_index);
+
         let d_type = data_type[c_index as usize];
         match d_type.try_into() {
             Ok(INT32) => {
                 let mut input_vectors = vec![];
                 if has_tmp {
-                    let vec_i32_tmp = get_intermediate_vec::<i32>(tmp_res_key, c_index, INT32);
+                    let stat = env
+                        .get_object_array_element(state_bufs, c_index)
+                        .expect("couldn't get stats buffer");
+                    let stat_addr = env
+                        .get_direct_buffer_address(JByteBuffer::from(stat))
+                        .expect("couldn't get the address of stats data buffer");
+                    let vec_i32_tmp = transform_buf_to_vec::<i32>(statRowSize, stat_addr);//get_intermediate_vec::<i32>(tmp_res_key, c_index, INT32);
                     input_vectors.push(vec_i32_tmp);
                 }
                 let vec_i32 = transform_buf_to_vec::<i32>(rows, buf_addr);
@@ -504,18 +532,31 @@ unsafe fn into_weld_vec(
             Ok(INT64) => {
                 let mut input_vectors = vec![];
                 if has_tmp {
-                    let vec_i64_tmp = get_intermediate_vec::<i64>(tmp_res_key, c_index, INT64);
+                    let stat = env
+                        .get_object_array_element(state_bufs, c_index)
+                        .expect("couldn't get stats buffer");
+                    let stat_addr = env
+                        .get_direct_buffer_address(JByteBuffer::from(stat))
+                        .expect("couldn't get the address of stats data buffer");
+                    let vec_i64_tmp = transform_buf_to_vec::<i64>(statRowSize, stat_addr);
                     input_vectors.push(vec_i64_tmp);
                 }
                 let vec_i64 = transform_buf_to_vec::<i64>(rows, buf_addr);
                 input_vectors.push(vec_i64);
+                // println!("{:?}",input_vectors);
                 transform_vec_in_vec_data(&input_vectors, address, c_index as isize);
                 mem::forget(input_vectors);
             }
             Ok(DOUBLE) => {
                 let mut input_vectors = vec![];
                 if has_tmp {
-                    let vec_f64_tmp = get_intermediate_vec::<f64>(tmp_res_key, c_index, DOUBLE);
+                    let stat = env
+                        .get_object_array_element(state_bufs, c_index)
+                        .expect("couldn't get stats buffer");
+                    let stat_addr = env
+                        .get_direct_buffer_address(JByteBuffer::from(stat))
+                        .expect("couldn't get the address of stats data buffer");
+                    let vec_f64_tmp = transform_buf_to_vec::<f64>(statRowSize, stat_addr);
                     input_vectors.push(vec_f64_tmp);
                 }
                 let vec_f64 = transform_buf_to_vec::<f64>(rows, buf_addr);
