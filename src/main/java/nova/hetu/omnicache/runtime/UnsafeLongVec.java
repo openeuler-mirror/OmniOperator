@@ -15,9 +15,12 @@ package nova.hetu.omnicache.runtime;
 
 import sun.misc.Unsafe;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 //Java_nova_hetu_omnicache_runtime_demo_UnsafeVec_toRust
 public class UnsafeLongVec
 {
+    public static ConcurrentHashMap<Long,Integer> addressReUsed = new ConcurrentHashMap<>();
     private final long address;
     private final int capacity;
 
@@ -26,6 +29,8 @@ public class UnsafeLongVec
         this(JvmUtils.unsafe.allocateMemory(Long.BYTES * capacity),capacity);
     }
     public UnsafeLongVec(long address , int capacity){
+
+        addressReUsed.put(address,addressReUsed.getOrDefault(address,0)+1);
         this.address = address;
         this.capacity = capacity;
     }
