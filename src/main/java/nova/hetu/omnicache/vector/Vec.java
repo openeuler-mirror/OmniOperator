@@ -156,7 +156,7 @@ public abstract class Vec
 
     public synchronized void close()
     {
-        if (isClose.get() && data != null) {
+        if ( data != null) {
             OMVectorBase.free(data);
             data = null;
         }
@@ -166,6 +166,8 @@ public abstract class Vec
     @Override
     protected void finalize()
     {
-        close();
+        if(isClose.get()){
+            close();
+        }
     }
 }

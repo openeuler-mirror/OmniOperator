@@ -29,18 +29,18 @@ public class Demo
     {
         final String neid;
         final String omniCacheKey;
-        final OmniRuntime omniRuntime;
+        final OmniCodeGen omniCodeGen;
         boolean isConsole = false;
 
-        public ExecutionHandler(OmniRuntime omniRuntime)
+        public ExecutionHandler(OmniCodeGen omniCodeGen)
         {
-            this.neid = omniRuntime.compile("|v0 :vec[vec[i64]], v1: vec[vec[i64]]|" +
+            this.neid = omniCodeGen.compile("|v0 :vec[vec[i64]], v1: vec[vec[i64]]|" +
                     "let pairs = tovec(result(for(zip(v0, v1), dictmerger[i64,i64,+], |b,i,n| for(zip(n.$0, n.$1), b, |b_, i_, m| " + "merge(b, {m.$0, m.$1})))));" +
                     "let k = result(for(pairs, appender[i64], |b,i,n| merge(b, n.$0)));" +
                     "let v = result(for(pairs, appender[i64], |b,i,n| merge(b, n.$1)));" +
                     "{k,v}");
             this.omniCacheKey = UUID.randomUUID().toString();
-            this.omniRuntime = omniRuntime;
+            this.omniCodeGen = omniCodeGen;
         }
         public Vec[] builderRawData()
         {
@@ -54,10 +54,10 @@ public class Demo
         public void compute(int expectedValue)
         {
             Vec[] input = builderRawData();
-            Vec[] res = (Vec[]) omniRuntime.execute(neid, omniCacheKey, input, 1, new VecType[] {VecType.LONG, VecType.LONG}, OmniOpStep.INTERMEDIATE);
-            for (Vec v : input) {
-                v.close();
-            }
+            Vec[] res = (Vec[]) omniCodeGen.execute(neid, omniCacheKey, input, 1, new VecType[] {VecType.LONG, VecType.LONG}, OmniOpStep.INTERMEDIATE);
+//            for (Vec v : input) {
+//                v.close();
+//            }
             LongVec interValue = (LongVec) res[1];
             LongVec interKey = (LongVec) res[0];
             if (!isConsole && (interKey.get(0) != 1 || interValue.get(0) != expectedValue)) {
@@ -69,7 +69,7 @@ public class Demo
 
         public void getFinalResult(int expectedValue)
         {
-            Vec[] res = (Vec[]) omniRuntime.getResults(omniCacheKey, new VecType[] {VecType.LONG, VecType.LONG});
+            Vec[] res = (Vec[]) omniCodeGen.getResults(omniCacheKey, new VecType[] {VecType.LONG, VecType.LONG});
             LongVec interValue = (LongVec) res[1];
             LongVec interKey = (LongVec) res[0];
             if(interKey.get(0) != 1 || interValue.get(0)!=expectedValue){
@@ -81,7 +81,7 @@ public class Demo
     }
 
 
-    private static final OmniRuntime omniRuntime = new OmniRuntime();
+    private static final OmniCodeGen OMNI_CODE_GEN = new OmniCodeGen();
 
     public static void multiThreadExecution()
     {
@@ -95,7 +95,7 @@ public class Demo
                 public void run()
                 {
                     try {
-                        ExecutionHandler executionHandler = new ExecutionHandler(omniRuntime);
+                        ExecutionHandler executionHandler = new ExecutionHandler(OMNI_CODE_GEN);
                         singleThreadExecution(executionHandler, totalPageCount);
                     }
                     finally {
@@ -185,10 +185,18 @@ public class Demo
             handle.execute();
         }
     }
+    public static class R4 implements AutoCloseable{
+
+        @Override
+        public void close()
+                throws Exception
+        {
+            System.out.println("Auto close call");
+        }
+    }
     public static void main(String[] args)
             throws InterruptedException
     {
-        System.out.println(Boolean.parseBoolean("true"));
         String tag = "2";
         if (args != null && args.length > 0) {
             tag = args[0];
@@ -394,10 +402,10 @@ public class Demo
                 "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
                 "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
-        OmniRuntime omniRuntime = new OmniRuntime();
-        String neid = omniRuntime.compile(code);
+        OmniCodeGen omniCodeGen = new OmniCodeGen();
+        String neid = omniCodeGen.compile(code);
         Vec[] vecs = {v0, v1};
-        Vec[] resultVecs = (Vec[]) omniRuntime.execute(neid, "TMP", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
+        Vec[] resultVecs = (Vec[]) omniCodeGen.execute(neid, "TMP", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
 
         for (int i = 0; i < resultVecs[0].size(); i++) {
             StringBuilder sb = new StringBuilder();
@@ -420,9 +428,9 @@ public class Demo
         }
         buffers_[0] = v0.getData();
         buffers_[1] = v1.getData();
-        String neid_ = omniRuntime.compile(code);
+        String neid_ = omniCodeGen.compile(code);
         Vec[] vecs_ = {v0_, v1_};
-        Vec[] resultVecs_ = (Vec[]) omniRuntime.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
+        Vec[] resultVecs_ = (Vec[]) omniCodeGen.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
 
         for (int i = 0; i < resultVecs_[0].size(); i++) {
             StringBuilder sb = new StringBuilder();

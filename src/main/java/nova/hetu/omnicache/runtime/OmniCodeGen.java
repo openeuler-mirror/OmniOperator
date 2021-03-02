@@ -26,12 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
 
-public class OmniRuntime
+public class OmniCodeGen
 {
     private final JniWrapper jniWrapper;
     private final ConcurrentHashMap<String, OMResult> CACHE_STATS = new ConcurrentHashMap<>();
 
-    public OmniRuntime()
+    public OmniCodeGen()
     {
         jniWrapper = new JniWrapper();
     }
