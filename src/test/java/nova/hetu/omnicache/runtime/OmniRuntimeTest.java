@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static java.lang.String.format;
 
-public class OmniCodeGenTest
+public class OmniRuntimeTest
 {
     private Vec[] builder4LongColumnRawData()
     {
@@ -53,7 +53,7 @@ public class OmniCodeGenTest
                 "let sum_1 = result( for (dict_0_1, appender[i64], |b, i, n | merge(b, n.$1.$0)));" +
                 "let sum_2 = result( for (dict_0_1, appender[i64], |b, i, n | merge(b, n.$1.$1)));" +
                 "{k0, k1, sum_1, sum_2}";
-        final OmniCodeGen omniCodeGen = new OmniCodeGen();
+        final OmniRuntime omniRuntime = new OmniRuntime();
         final VecType[] inputDataTypes = new VecType[] {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         final int inputPageSize = 1;
         int threadCount = 1000;
@@ -65,14 +65,14 @@ public class OmniCodeGenTest
             final int aIdx = tidx;
             Thread worker = new Thread(() -> {
                 try {
-                    String nativeExecId = omniCodeGen.compile(long_2c_group_and_2c_sum_weld_ir_code);
+                    String nativeExecId = omniRuntime.compile(long_2c_group_and_2c_sum_weld_ir_code);
                     String omniKey = UUID.randomUUID().toString();
                     for (int pidx = 1; pidx <= pageCount; pidx++) {
                         Vec[] input = builder4LongColumnRawData();
-                        Vec[] intermediateResult = (Vec[]) omniCodeGen.execute(nativeExecId, omniKey, input, inputPageSize, inputDataTypes, OmniOpStep.INTERMEDIATE);
+                        Vec[] intermediateResult = (Vec[]) omniRuntime.execute(nativeExecId, omniKey, input, inputPageSize, inputDataTypes, OmniOpStep.INTERMEDIATE);
                         checkGroupBy2CAndSum3CDataValid(intermediateResult, pidx);
                     }
-                    Vec[] result = (Vec[]) omniCodeGen.getResults(omniKey, inputDataTypes);
+                    Vec[] result = (Vec[]) omniRuntime.getResults(omniKey, inputDataTypes);
                     checkGroupBy2CAndSum3CDataValid(result, pageCount);
                     if (4 == result.length &&
                             1 == ((LongVec) result[0]).get(0) &&
@@ -118,7 +118,7 @@ public class OmniCodeGenTest
                 "let k = result(for(pairs, appender[i64], |b,i,n| merge(b, n.$0)));" +
                 "let v = result(for(pairs, appender[i64], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
-        final OmniCodeGen omniCodeGen = new OmniCodeGen();
+        final OmniRuntime omniRuntime = new OmniRuntime();
         final VecType[] inputDataTypes = new VecType[] {VecType.LONG, VecType.LONG};
         final int inputPageSize = 1;
         int threadCount = 1000;
@@ -130,14 +130,14 @@ public class OmniCodeGenTest
             final int aIdx = tidx;
             Thread worker = new Thread(() -> {
                 try {
-                    String nativeExecId = omniCodeGen.compile(long_1c_group_and_1c_sum_weld_ir_code);
+                    String nativeExecId = omniRuntime.compile(long_1c_group_and_1c_sum_weld_ir_code);
                     String omniKey = UUID.randomUUID().toString();
 
                     for (int pidx = 1; pidx <= pageCount; pidx++) {
                         Vec[] input = builder2LongColumnRawData();
-                        Vec[] intermediateResult = (Vec[]) omniCodeGen.execute(nativeExecId, omniKey, input, inputPageSize, inputDataTypes, OmniOpStep.INTERMEDIATE);
+                        Vec[] intermediateResult = (Vec[]) omniRuntime.execute(nativeExecId, omniKey, input, inputPageSize, inputDataTypes, OmniOpStep.INTERMEDIATE);
                     }
-                    Vec[] result = (Vec[]) omniCodeGen.getResults(omniKey, inputDataTypes);
+                    Vec[] result = (Vec[]) omniRuntime.getResults(omniKey, inputDataTypes);
                     if (2 == result.length &&
                             1 == ((LongVec) result[0]).get(0) &&
                             pageCount == ((LongVec) result[1]).get(0)) {

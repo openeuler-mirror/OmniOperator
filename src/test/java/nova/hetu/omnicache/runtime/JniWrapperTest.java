@@ -373,10 +373,10 @@ public class JniWrapperTest
                 "let k = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$0)));" +
                 "let v = result(for(pairs, appender[i32], |b,i,n| merge(b, n.$1)));" +
                 "{k,v}";
-        OmniCodeGen omniCodeGen = new OmniCodeGen();
-        String neid = omniCodeGen.compile(code);
+        OmniRuntime omniRuntime = new OmniRuntime();
+        String neid = omniRuntime.compile(code);
         Vec[] vecs = {v0, v1};
-        omniCodeGen.execute(neid, "TMP", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
+        omniRuntime.execute(neid, "TMP", vecs, rowNum, outputTypes, OmniOpStep.FINAL);
 
 
         int[] value0_ = {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4};
@@ -393,11 +393,11 @@ public class JniWrapperTest
         buffers_[0] = v0_.getData();
         buffers_[1] = v1_.getData();
         System.out.println(v0_.getData().limit());
-        String neid_ = omniCodeGen.compile(code);
+        String neid_ = omniRuntime.compile(code);
         Vec[] vecs_ = {v0_, v1_};
 
         Assert.assertEquals(1, (int) v0_.get(0));
-        omniCodeGen.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
+        omniRuntime.execute(neid_, "TMP", vecs_, rowNum, outputTypes, OmniOpStep.FINAL);
         //if vector memory free ,get idx value maybe not equal default value
         Assert.assertNotEquals(1, (int) v0_.get(0));
     }

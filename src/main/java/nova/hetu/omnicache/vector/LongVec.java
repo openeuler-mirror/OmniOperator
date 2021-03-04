@@ -65,9 +65,9 @@ public class LongVec
     @Override
     public LongVec slice(int startIdx, int endIdx)
     {
-        byte[] regionData = new byte[(endIdx - startIdx) * Long.BYTES];
-        LongVec newVec = new LongVec((endIdx - startIdx));
-        data.reset();
+        byte[] regionData = new byte[(endIdx - startIdx+1) * Long.BYTES];
+        LongVec newVec = new LongVec((endIdx - startIdx+1));
+        data.position(startIdx*Long.BYTES);
         data.get(regionData, 0, regionData.length);
         newVec.data.put(regionData);
         return newVec;
