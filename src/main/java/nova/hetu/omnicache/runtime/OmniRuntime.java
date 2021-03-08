@@ -22,36 +22,43 @@ import nova.hetu.omnicache.vector.VecType;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
 
-public class OmniRuntime {
+public class OmniRuntime
+{
     private final JniWrapper jniWrapper;
+    private final ConcurrentHashMap<String, OMResult> CACHE_STATS = new ConcurrentHashMap<>();
 
-    public OmniRuntime() {
+    public OmniRuntime()
+    {
         jniWrapper = new JniWrapper();
     }
 
-    public String compile(String code) {
+    public String compile(String code)
+    {
         return jniWrapper.compile(code);
     }
+
+    private static int count = 0;
 
     /**
      * Core OmniRuntime Api, use high-performance Vectorized Execution to computing intermediate and final vectors;
      *
-     * @param neid         compile Api result neid
-     * @param key          stateful operator execution key
-     * @param inputs       input Vectors data
+     * @param neid compile Api result neid
+     * @param key stateful operator execution key
+     * @param inputs input Vectors data
      * @param inputRowSize input vectors row size
-     * @param outputTypes  result output vectors data type
-     * @param step         For stateful operator, represent op step,currently support only two type
+     * @param outputTypes result output vectors data type
+     * @param step For stateful operator, represent op step,currently support only two type
      * @return if step = {@link OmniOpStep#INTERMEDIATE} , omni runtime execute while result native execute id,result type is {@link String};
      * if step ={@link OmniOpStep#FINAL} omni runtime while result final execution data,result type is {@link Vec[]}
      */
-    public Object execute(String neid, String key, Vec[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step) {
+    public Object execute(String neid, String key, Vec[] inputs, int inputRowSize, VecType[] outputTypes, OmniOpStep step)
+    {
         ByteBuffer[] buffers = null;
         int[] inputTypes = null;
-        long rowSize = inputRowSize;
 
         if (inputs != null) {
             buffers = new ByteBuffer[inputs.length];
@@ -62,19 +69,32 @@ public class OmniRuntime {
             }
         }
 
+
         int[] outputTypeArr = new int[outputTypes.length];
         for (int idx = 0; idx < outputTypes.length; idx++) {
             outputTypeArr[idx] = outputTypes[idx].getValue();
         }
+        OMResult stats = CACHE_STATS.get(key);
 
-        OMResult result = jniWrapper.execute(neid, key, buffers, inputTypes, rowSize, outputTypeArr);
-        // free inputs
-        if (inputs != null) {
-            for (Vec input : inputs) {
-                input.release();
-            }
+        ByteBuffer[] statBufs = null;
+        int statRowSize = 0;
+        if (stats != null) {
+            statBufs = stats.getBuffers();
+            statRowSize = stats.getLength();
+
         }
-        return generateOMVec(result,outputTypes);
+        OMResult result = jniWrapper.executeV1(neid, key, buffers, inputRowSize, statBufs, statRowSize, inputTypes, outputTypeArr);
+        // free inputs
+//        if (inputs != null) {
+//            for (Vec input : inputs) {
+//                input.release();
+//            }
+//        }
+        CACHE_STATS.put(key, result);
+
+        Vec[] res = generateOMVec(result, outputTypes);
+//        printStats(res);
+        return res;
 //        switch (step) {
 //            case INTERMEDIATE:
 //                return result.getKey();
@@ -84,6 +104,11 @@ public class OmniRuntime {
 //                throw new IllegalArgumentException(format("Not Support OmniOpState %s", step));
 //        }
     }
+    private static void printStats(Vec[] result){
+        long key=((LongVec)result[0]).get(0);
+        long value=((LongVec)result[1]).get(0);
+        System.out.println(key+" "+value);
+    }
 
     /**
      * Get omni runtime processed results
@@ -92,18 +117,20 @@ public class OmniRuntime {
      * @param outputTypes result output vectors data type
      * @return omni runtime processed result,result type is {@link Vec[]}
      */
-    public Object getResults(String key, VecType[] outputTypes) {
+    public Object getResults(String key, VecType[] outputTypes)
+    {
         int[] outputTypeArr = new int[outputTypes.length];
         for (int idx = 0; idx < outputTypes.length; idx++) {
             outputTypeArr[idx] = outputTypes[idx].getValue();
         }
 
-        OMResult result = jniWrapper.getFinalResult(key, outputTypeArr);
+//        OMResult result = jniWrapper.getFinalResult(key, outputTypeArr);
 
-        return generateOMVec(result, outputTypes);
+        return generateOMVec(CACHE_STATS.get(key), outputTypes);
     }
 
-    private Vec[] generateOMVec(OMResult result, VecType[] outputTypes) {
+    private Vec[] generateOMVec(OMResult result, VecType[] outputTypes)
+    {
         Vec[] output = new Vec[outputTypes.length];
         int length = result.getLength();
         for (int idx = 0; idx < outputTypes.length; idx++) {

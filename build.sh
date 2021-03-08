@@ -1,2 +1,2 @@
 cd src/main/rust/omvector/
-cargo build
+cargo build --release

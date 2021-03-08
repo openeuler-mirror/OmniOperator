@@ -24,7 +24,8 @@ import java.nio.ByteOrder;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class JniWrapperTest {
+public class JniWrapperTest
+{
 
     JniWrapper wrapper;
 
