@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class Vec
 {
-    public static AtomicBoolean isClose = new AtomicBoolean(true);
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
     private final AtomicInteger referenceCount = new AtomicInteger(0);
@@ -166,8 +165,5 @@ public abstract class Vec
     @Override
     protected void finalize()
     {
-        if(isClose.get()){
-            close();
-        }
     }
 }
