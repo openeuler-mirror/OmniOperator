@@ -39,8 +39,8 @@ public class IntVec
     public IntVec slice(int startIdx, int endIdx)
     {
         byte[] regionData = new byte[(endIdx - startIdx) * Integer.BYTES];
-        IntVec newVec = new IntVec((endIdx - startIdx));
-        data.position(startIdx*Integer.BYTES);
+        IntVec newVec = new IntVec(endIdx - startIdx);
+        data.position(startIdx * Integer.BYTES);
         data.get(regionData, 0, regionData.length);
         newVec.data.put(regionData);
         return newVec;

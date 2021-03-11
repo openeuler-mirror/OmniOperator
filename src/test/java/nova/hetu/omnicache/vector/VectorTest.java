@@ -1,172 +1,21 @@
 package nova.hetu.omnicache.vector;
 
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class VectorTest
 {
-
     @Test
-    public void testIntMul()
+    public void testClose()
     {
-        IntVec vec1 = new IntVec(1024);
-        for (int i = 0; i < vec1.size(); i++) {
-            vec1.set(i, i);
-        }
-
-        vec1.mul(10);
-
-        for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(vec1.get(i), i * 10);
-        }
-    }
-
-    @Test
-    public void testDoubleMul()
-    {
-        DoubleVec vec1 = new DoubleVec(1024);
-        for (int i = 0; i < vec1.size(); i++) {
-            vec1.set(i, (double) i / 10);
-            Assert.assertEquals(vec1.get(i), i / 10.0);
-        }
-
-        vec1.mul(10);
-
-        for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(vec1.get(i), (double) i);
-        }
-    }
-
-    @Test
-    public void testLongMul()
-            throws Exception
-    {
-        LongVec vec1 = new LongVec(1024);
-        LongVec vec2 = new LongVec(1024);
-
-        for (int i = 0; i < vec1.size; i++) {
-            Assert.assertEquals(vec1.get(i), 0, "invalid initialize value at item: " + i);
-            vec1.set(i, (long) i);
-            vec2.set(i, (long) i * 2);
-        }
-
-        vec1.mul(10);
-        vec2.mul(20);
-
-        for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(vec1.get(i), i * 10);
-            Assert.assertEquals(vec2.get(i), i * 2 * 20);
-        }
-
-        vec1.close();
-        vec2.close();
-    }
-
-    @Test
-    public void testLongMul_BigVector()
-            throws Exception
-    {
-        LongVec vec1 = new LongVec(1024 * 1024 * 128);
-        LongVec vec2 = new LongVec(1024 * 1024 * 128);
-
-        for (int i = 0; i < vec1.size; i++) {
-            Assert.assertEquals(vec1.get(i), 0, "invalid initialize value at item: " + i);
-            vec1.set(i, (long) i);
-            vec2.set(i, (long) i * 2);
-        }
-
-        vec1.mul(10);
-        vec2.mul(20);
-
-        for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(vec1.get(i), i * 10);
-            Assert.assertEquals(vec2.get(i), i * 2 * 20);
-        }
-
-        vec1.close();
-        vec2.close();
-    }
-
-    @Test
-    public void testSingleInt()
-            throws Exception
-    {
-        IntVec vec1 = new IntVec(1024);
-        for (int i = 0; i < vec1.size(); i++) {
-            vec1.set(i, i);
-        }
-
-        for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(i, vec1.get(i));
-        }
-    }
-
-    @Test
-    public void testSingleLong()
-            throws Exception
-    {
-        LongVec vec1 = new LongVec(1024);
-        Assert.assertEquals(vec1.size(), 1024, "Size is expected to be 1024");
-        for (int i = 0; i < vec1.size(); i++) {
-            vec1.set(i, (long) i);
-        }
-
-        for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(i, vec1.get(i));
-        }
-
-        vec1.close();
-
-        LongVec vec2 = new LongVec(1024);
-        Assert.assertEquals(vec2.size(), 1024, "Size is expected to be 1024");
-        for (int i = 0; i < vec2.size(); i++) {
-            vec2.set(i, (long) i * 2);
-        }
-
-        for (int i = 0; i < vec2.size(); i++) {
-            Assert.assertEquals(i * 2, vec2.get(i));
-        }
-
-        vec2.close();
-    }
-
-    @Test
-    public void testFree()
-            throws Exception
-    {
+        int rowSize = 1000;
+        int allocSize = rowSize * 10;;
         for (int j = 0; j < 10; j++) {
-            for (int i = 0; i < 1000000; i++) {
-                //ByteBuffer.allocateDirect(8192);
-                new LongVec(1024).close();
+            for (int i = 0; i < 10000; i++) {
+                Vec vec = new TestVec(rowSize, allocSize);
+                vec.close();
             }
             System.gc();
             System.out.println("finish round: " + j);
-        }
-    }
-
-    @Test
-    public void testConcat()
-            throws Exception
-    {
-        LongVec vec1 = new LongVec(1024);
-        LongVec vec2 = new LongVec(1024);
-        for (int i = 0; i < vec1.size; i++) {
-            Assert.assertEquals(vec1.get(i), 0, "invalid initialize value at item: " + i);
-            vec1.set(i, (long) i);
-            vec2.set(i, (long) i * 2);
-        }
-        LongVec newVec = (LongVec) vec1.concat(vec2);
-        Assert.assertEquals(newVec.size(), 2048L, "Error length after concat");
-
-        long[] comp = new long[2048];
-        for (int i = 0; i < 1024; ++i) {
-            comp[i] = i;
-        }
-        for (int i = 0; i < 1024; ++i) {
-            comp[i + 1024] = i * 2;
-        }
-        for (int i = 0; i < newVec.size; i++) {
-            Assert.assertEquals(newVec.get(i), comp[i], "Error item value at: " + i);
         }
     }
 }

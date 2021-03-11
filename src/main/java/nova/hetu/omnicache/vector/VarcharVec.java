@@ -35,23 +35,44 @@ public class VarcharVec extends VariableWidthVec
     @Override
     public VariableWidthVec slice(int startPosition, int endPosition)
     {
-        int startIdx = Arrays.binarySearch(offsets, startPosition);
+        int elementCount = endPosition - startPosition;
+        int capacity = 0;
+        int[] newOffsets = new int[elementCount];
+        int[] newLengths = new int[elementCount];
+        for (int i=0; i<elementCount; i++) {
+            newOffsets[i] = offsets[i + startPosition] - offsets[startPosition];
+            newLengths[i] = lengths[i + startPosition];
+            capacity = capacity + lengths[i + startPosition];
+        }
+        VarcharVec newVec = new VarcharVec(capacity, elementCount);
+        this.data.position(offsets[startPosition]);
+        byte[] region = new byte[capacity];
+        this.data.get(region, 0, capacity);
+        newVec.setData(region);
+        newVec.set(newOffsets, newLengths);
+        return newVec;
+    }
+
+
+    public VariableWidthVec sliceByOffset(int startOff, int endOff)
+    {
+        int startIdx = Arrays.binarySearch(offsets, startOff); // has to start at the beginning of an element
+        int curIdx = startIdx;
         int elementCount = 0;
-        int currentPosition = startPosition;
-        int totalLength = endPosition - startPosition;
-        while (currentPosition <= endPosition) {
-            currentPosition = currentPosition + lengths[startIdx + 1];
+        int currentPosition = startOff;
+        int totalLength = endOff - startOff;
+        while (currentPosition <= endOff) {
+            currentPosition = currentPosition + lengths[curIdx];
             elementCount ++;
-            startIdx ++;
+            curIdx ++;
         }
         int[] newOffsets = new int[elementCount];
         int[] lengths = new int[elementCount];
-        startIdx = Arrays.binarySearch(offsets, startPosition);
         for (int i=0; i< elementCount; i++) {
-            newOffsets[i] = offsets[startIdx + i] - startPosition;
+            newOffsets[i] = offsets[startIdx + i] - startOff;
             lengths[i] = lengths[startIdx + i];
         }
-        VarcharVec newVec = new VarcharVec((endPosition - startPosition), elementCount);
+        VarcharVec newVec = new VarcharVec(totalLength, elementCount);
         this.data.position(startIdx);
         byte[] region = new byte[totalLength];
         this.data.get(region, 0, totalLength);
