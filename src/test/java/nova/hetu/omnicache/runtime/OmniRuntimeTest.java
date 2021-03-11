@@ -13,12 +13,15 @@
  */
 package nova.hetu.omnicache.runtime;
 
+import nova.hetu.omnicache.vector.AggType;
 import nova.hetu.omnicache.vector.LongVec;
 import nova.hetu.omnicache.vector.Vec;
 import nova.hetu.omnicache.vector.VecType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
@@ -169,5 +172,175 @@ public class OmniRuntimeTest
         key1.set(0, 1);
         value1.set(0, 1);
         return new Vec[] {key1, value1};
+    }
+
+    @Test
+    public void testExecuteAggOnePage() {
+        String operatorId = "execute_agg_one_page";
+        int totalChannel = 2;
+        int[] groupByChanel = {0};
+        VecType[] groupByTypes = {VecType.LONG};
+        int[] aggChannels = {1};
+        VecType[] aggTypes = {VecType.LONG};
+        AggType[] aggFunctionTypes = {AggType.SUM};
+        VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG};
+        OmniRuntime omniRuntime = new OmniRuntime();
+        omniRuntime.prepareAgg(
+                operatorId,
+                totalChannel,
+                groupByChanel,
+                groupByTypes,
+                aggChannels,
+                aggTypes,
+                aggFunctionTypes,
+                aggOutputTypes);
+
+        int rowNum = 10;
+        Vec[] inputData = build2Columns(rowNum);
+        VecType[] inputTypes = {VecType.LONG, VecType.LONG};
+        omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+
+        Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
+        Assert.assertEquals(result.length, 2);
+        Assert.assertEquals(((LongVec)result[0]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[1]).get(0), rowNum);
+    }
+
+    @Test
+    public void testExecuteAggMultiplePage() {
+        String operatorId = "execute_agg_multi_page";
+        int totalChannel = 4;
+        int[] groupByChanel = {0, 1};
+        VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
+        int[] aggChannels = {2, 3};
+        VecType[] aggTypes = {VecType.LONG, VecType.LONG};
+        AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
+        VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+        OmniRuntime omniRuntime = new OmniRuntime();
+        omniRuntime.prepareAgg(
+                operatorId,
+                totalChannel,
+                groupByChanel,
+                groupByTypes,
+                aggChannels,
+                aggTypes,
+                aggFunctionTypes,
+                aggOutputTypes);
+        VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+        int rowNum = 100;
+        int pageCount = 10;
+
+        Vec[] inputData = build4Columns(rowNum);
+        for (int i = 0; i < pageCount;i++) {
+            omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+        }
+        Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
+        Assert.assertEquals(result.length, 4);
+        Assert.assertEquals(((LongVec)result[0]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[1]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[2]).get(0), rowNum * pageCount);
+        Assert.assertEquals(((LongVec)result[3]).get(0), rowNum * pageCount);
+    }
+
+    @Test
+    public void testExecuteAggMultipleThread() {
+        int pageCount = 10;
+        int threadCount = 10;
+        int rowNum = 100;
+        multiThreadExecution(threadCount,rowNum, pageCount);
+    }
+
+    private void multiThreadExecution( int threadCount, int rowNum, int pageCount)
+    {
+        CountDownLatch downLatch = new CountDownLatch(threadCount);
+        for (int tIdx = 0; tIdx < threadCount; tIdx++) {
+            Thread thread = new Thread(() -> {
+                try {
+                    String operatorId = UUID.randomUUID().toString();
+                    int totalChannel = 4;
+                    int[] groupByChanel = {0, 1};
+                    VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
+                    int[] aggChannels = {2, 3};
+                    VecType[] aggTypes = {VecType.LONG, VecType.LONG};
+                    AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
+                    VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+                    OmniRuntime omniRuntime = new OmniRuntime();
+                    omniRuntime.prepareAgg(
+                            operatorId,
+                            totalChannel,
+                            groupByChanel,
+                            groupByTypes,
+                            aggChannels,
+                            aggTypes,
+                            aggFunctionTypes,
+                            aggOutputTypes);
+                    VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+
+                    Vec[] inputData = build4Columns(rowNum);
+                    for (int i = 0; i < pageCount;i++) {
+                        omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+                    }
+                    Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
+                    Assert.assertEquals(result.length, 4);
+                    Assert.assertEquals(((LongVec)result[0]).get(0), 0);
+                    Assert.assertEquals(((LongVec)result[1]).get(0), 0);
+                    Assert.assertEquals(((LongVec)result[2]).get(0), rowNum * pageCount);
+                    Assert.assertEquals(((LongVec)result[3]).get(0), rowNum * pageCount);
+                }
+                finally {
+                    downLatch.countDown();
+                }
+            });
+            thread.setName("thread-" + tIdx);
+            thread.start();
+        }
+        try {
+            downLatch.await();
+        }
+        catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private Vec[] build4Columns(int rowNum) {
+        List<LongVec> columns = new ArrayList<>();
+
+        LongVec c1 = new LongVec(rowNum);
+        LongVec c2 = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            c1.set(i, 0);
+            c2.set(i, 0);
+        }
+        columns.add(c1);
+        columns.add(c2);
+
+        LongVec c3 = new LongVec(rowNum);
+        LongVec c4 = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            c3.set(i, 1);
+            c4.set(i, 1);
+        }
+        columns.add(c3);
+        columns.add(c4);
+
+        return columns.toArray(new Vec[0]);
+    }
+
+    private Vec[] build2Columns(int rowNum) {
+        List<LongVec> columns = new ArrayList<>();
+
+        LongVec c1 = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            c1.set(i, 0);
+        }
+        columns.add(c1);
+
+        LongVec c2 = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            c2.set(i, 1);
+        }
+        columns.add(c2);
+
+        return columns.toArray(new Vec[0]);
     }
 }

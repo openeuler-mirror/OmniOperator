@@ -14,6 +14,7 @@
  */
 package nova.hetu.omnicache.runtime;
 
+import nova.hetu.omnicache.vector.AggType;
 import nova.hetu.omnicache.vector.DoubleVec;
 import nova.hetu.omnicache.vector.IntVec;
 import nova.hetu.omnicache.vector.LongVec;
@@ -152,5 +153,63 @@ public class OmniRuntime
             }
         }
         return output;
+    }
+
+    public void prepareAgg(String operatorId, int totalChannel, int[] groupByChannels, VecType[] groupByTypes,
+            int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes, VecType[] returnType) {
+        int[] groupByTypeValues = transformVecType(groupByTypes);
+        int[] aggTypeValues = transformVecType(aggregationTypes);
+        int[] aggFunctionTypeValues = transformAggType(aggregationFunctionTypes);
+        int[] outputTypeValues = transformVecType(returnType);
+        jniWrapper.prepareAgg(
+                operatorId,
+                totalChannel,
+                groupByChannels,
+                groupByTypeValues,
+                aggregationChannels,
+                aggTypeValues,
+                aggFunctionTypeValues,
+                outputTypeValues);
+    }
+
+    public void executeAggIntermediate(String operatorId, Vec[] inputData, VecType[] dataTypes ,int inputRowSize) {
+        ByteBuffer[] datas = transformVecToBuffer(inputData);
+        int[] inputTypes = transformVecType(dataTypes);
+        if (datas.length != inputTypes.length) {
+            throw new IllegalArgumentException(format("input data error data len is:%s,type len is:%", datas.length, inputTypes.length));
+        }
+        jniWrapper.executeAggIntermediate(operatorId, datas, inputTypes, inputRowSize);
+    }
+
+    public Vec[] executeAggFinal(String operatorId, VecType[] outputTypes) {
+        OMResult result = jniWrapper.executeAggFinal(operatorId);
+        return generateOMVec(result, outputTypes);
+    }
+
+    private ByteBuffer[] transformVecToBuffer(Vec[] inputs) {
+        ByteBuffer[] bufs = null;
+        if (inputs != null) {
+            bufs = new ByteBuffer[inputs.length];
+            for (int idx = 0; idx < bufs.length; idx++) {
+                bufs[idx] = inputs[idx].getData();
+            }
+        }
+        return bufs;
+    }
+
+    private int[] transformVecType(VecType[] vecTypes) {
+        int[] vecTypeValue = new int[vecTypes.length];
+        for (int idx = 0; idx < vecTypes.length; idx++) {
+            vecTypeValue[idx] = vecTypes[idx].getValue();
+        }
+        return vecTypeValue;
+    }
+
+    private int[] transformAggType(AggType[] aggTypes) {
+        int[] aggTypeValue = new int[aggTypes.length];
+        for (int idx = 0; idx < aggTypes.length; idx++) {
+            aggTypeValue[idx] = aggTypes[idx].getValue();
+        }
+        return aggTypeValue;
     }
 }

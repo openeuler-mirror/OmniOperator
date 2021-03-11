@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 class JniWrapper
 {
     static {
+        System.loadLibrary("joy");
         System.loadLibrary("omvector");
     }
 
@@ -29,4 +30,11 @@ class JniWrapper
     public native OMResult execute(String function, String key, ByteBuffer[] inputs, int[] inpuTypes, long rowNum, int[] outputTypes);
 
     public native OMResult getFinalResult(String key, int[] outputTypes);
+
+    public native void prepareAgg(String operatorId,int totalChannel, int[] groupByChanel, int[] groupByTypes,
+            int[] aggregationChannels, int[] aggregationTypes, int[] aggregationFunctionTypes, int[] outputTypes);
+
+    public native void executeAggIntermediate(String operatorId, ByteBuffer[] inputData, int[] inputTypes, long rowNum);
+
+    public native OMResult executeAggFinal(String operatorId);
 }
