@@ -31,6 +31,7 @@ public class RingBuffer
     public RingBuffer(int initSize)
     {
         this.bufferSize = initSize;
+
         this.bufferPool = new ByteBuffer[bufferSize];
     }
 
