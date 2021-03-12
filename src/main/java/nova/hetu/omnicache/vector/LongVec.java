@@ -19,9 +19,7 @@ import java.nio.ByteOrder;
 
 public class LongVec
         extends Vec
-//        implements AutoCloseable
 {
-
     public LongVec(int size)
     {
         super(size, size * Long.BYTES);
@@ -67,7 +65,7 @@ public class LongVec
     {
         byte[] regionData = new byte[(endIdx - startIdx) * Long.BYTES];
         LongVec newVec = new LongVec((endIdx - startIdx));
-        data.position(startIdx*Long.BYTES);
+        data.position(startIdx * Long.BYTES);
         data.get(regionData, 0, regionData.length);
         newVec.data.put(regionData);
         return newVec;
