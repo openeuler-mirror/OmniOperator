@@ -15,8 +15,6 @@
 package nova.hetu.omnicache.vector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -34,11 +32,13 @@ public abstract class Vec
     protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
     private final AtomicInteger referenceCount = new AtomicInteger(0);
-    protected int size = 0;
+    protected int size;
 
     public Vec(int rowSize, int alloc_size)
     {
-        this(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN), rowSize);
+        this.data = OMVectorBase.alloc(alloc_size);
+
+        this.size = rowSize;
     }
 
     public Vec(ByteBuffer data, int length)
@@ -155,15 +155,15 @@ public abstract class Vec
 
     public synchronized void close()
     {
-        if ( data != null) {
-            OMVectorBase.free(data);
+        if (data != null) {
+            OMVectorBase.release(data);
             data = null;
         }
     }
 
-    // TODO: Handle memory properly when we add OmniCacheManager
     @Override
     protected void finalize()
     {
+//        close();
     }
 }

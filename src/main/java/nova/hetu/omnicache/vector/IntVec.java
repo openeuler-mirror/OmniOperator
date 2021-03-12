@@ -40,7 +40,7 @@ public class IntVec
     {
         byte[] regionData = new byte[(endIdx - startIdx) * Integer.BYTES];
         IntVec newVec = new IntVec((endIdx - startIdx));
-        data.reset();
+        data.position(startIdx*Integer.BYTES);
         data.get(regionData, 0, regionData.length);
         newVec.data.put(regionData);
         return newVec;
