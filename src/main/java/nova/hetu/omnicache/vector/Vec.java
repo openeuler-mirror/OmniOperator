@@ -164,6 +164,7 @@ public abstract class Vec
     @Override
     protected void finalize()
     {
-//        close();
+        //if operator not call close use gc to release
+        close();
     }
 }
