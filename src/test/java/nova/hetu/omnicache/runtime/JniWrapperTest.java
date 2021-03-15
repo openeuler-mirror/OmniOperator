@@ -58,8 +58,8 @@ public class JniWrapperTest
         int[][] nulls = {{0, 0, 0, 0, 0, 0, 0, 0}};
 
         wrapper.addTable(sortAddress, inputs, nulls, 1, 8);
-        wrapper.sort(sortAddress);
-        OMResult result = wrapper.getResult(sortAddress);
+        long addressesAddr = wrapper.sort(sortAddress);
+        OMResult result = wrapper.getResult(sortAddress, addressesAddr);
 
         ByteBuffer[] output = result.getBuffers();
         int len = result.getLength();
