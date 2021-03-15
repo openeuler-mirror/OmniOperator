@@ -15,6 +15,7 @@
 package nova.hetu.omnicache.vector;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -36,7 +37,8 @@ public abstract class Vec
 
     public Vec(int rowSize, int alloc_size)
     {
-        this.data = OMVectorBase.alloc(alloc_size);
+        this.data = OMVectorBase.allocateV2(alloc_size).order(ByteOrder.LITTLE_ENDIAN);
+//        this.data = OMVectorBase.alloc(alloc_size);
 
         this.size = rowSize;
     }
@@ -156,7 +158,7 @@ public abstract class Vec
     public void close()
     {
         if (data != null) {
-            OMVectorBase.release(data);
+            OMVectorBase.releaseV2(data);
             data = null;
         }
     }

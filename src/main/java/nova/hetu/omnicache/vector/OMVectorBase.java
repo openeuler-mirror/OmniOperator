@@ -52,13 +52,14 @@ public class OMVectorBase
     private static ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     static {
+        System.loadLibrary("joy");
         System.loadLibrary("omvector");
-        for (int i = 0; i < DEFAULT_POOL_SIZE; i++) {
-            BUFFERPOOL.add(allocate(DEFAULT_VEC_CAPACITY).order(ByteOrder.LITTLE_ENDIAN));
-        }
-        executorService.scheduleAtFixedRate(() -> {
-            System.out.println("Use Ring Buffer: Total alloc count:" + ALL_ALLOC_COUNT.get() + ",From pool alloc count: " + FromPoolCount.get() + ",Direct alloc count:" + FromAllocCount.get() + ",Release to pool count:" + ReleaseCount.get());
-        }, 0, 5, TimeUnit.SECONDS);
+//        for (int i = 0; i < DEFAULT_POOL_SIZE; i++) {
+//            BUFFERPOOL.add(allocate(DEFAULT_VEC_CAPACITY).order(ByteOrder.LITTLE_ENDIAN));
+//        }
+//        executorService.scheduleAtFixedRate(() -> {
+//            System.out.println("Use Ring Buffer: Total alloc count:" + ALL_ALLOC_COUNT.get() + ",From pool alloc count: " + FromPoolCount.get() + ",Direct alloc count:" + FromAllocCount.get() + ",Release to pool count:" + ReleaseCount.get());
+//        }, 0, 5, TimeUnit.SECONDS);
     }
 
     public OMVectorBase() {}
@@ -106,6 +107,8 @@ public class OMVectorBase
     }
 
     public static native ByteBuffer allocate(int data_type);
+    public static native ByteBuffer allocateV2(int size);
+    public static native void releaseV2(ByteBuffer buffer);
 
     /**
      * Free the memory allocate via {@link OMVectorBase#alloc(int)}
