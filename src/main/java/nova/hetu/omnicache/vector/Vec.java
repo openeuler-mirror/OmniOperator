@@ -153,7 +153,7 @@ public abstract class Vec
         return this.data;
     }
 
-    public synchronized void close()
+    public void close()
     {
         if (data != null) {
             OMVectorBase.release(data);
