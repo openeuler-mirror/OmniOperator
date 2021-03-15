@@ -16,7 +16,7 @@ package nova.hetu.omnicache.runtime;
 
 import java.nio.ByteBuffer;
 
-class JniWrapper
+public class JniWrapper
 {
     static {
         System.loadLibrary("joy");
@@ -37,4 +37,12 @@ class JniWrapper
     public native void executeAggIntermediate(String operatorId, ByteBuffer[] inputData, int[] inputTypes, long rowNum);
 
     public native OMResult executeAggFinal(String operatorId);
+
+    public native long allocAndInitSort(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
+
+    public native void addTable(long sortAddress, ByteBuffer[] inputs, int[][] nulls, int columnNum, long rowNum);
+
+    public native void sort(long sortAddress);
+
+    public native OMResult getResult(long sortAddress);
 }
