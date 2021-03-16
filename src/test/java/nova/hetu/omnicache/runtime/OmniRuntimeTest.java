@@ -175,6 +175,16 @@ public class OmniRuntimeTest
     }
 
     @Test
+    public void testMemoryFee() {
+        LongVec v1 = new LongVec(1024);
+        v1.set(0, 1000);
+        int count = 10;
+        for (int i = 0;i < count;i++) {
+            v1.close();
+        }
+    }
+
+    @Test
     public void testExecuteAggOnePage() {
         String operatorId = "execute_agg_one_page";
         int totalChannel = 2;
@@ -199,11 +209,15 @@ public class OmniRuntimeTest
         Vec[] inputData = build2Columns(rowNum);
         VecType[] inputTypes = {VecType.LONG, VecType.LONG};
         omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+        // release input data memory
+        releaseVecMemory(inputData);
 
         Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
         Assert.assertEquals(result.length, 2);
         Assert.assertEquals(((LongVec)result[0]).get(0), 0);
         Assert.assertEquals(((LongVec)result[1]).get(0), rowNum);
+        // release result memory
+        releaseVecMemory(result);
     }
 
     @Test
@@ -234,12 +248,25 @@ public class OmniRuntimeTest
         for (int i = 0; i < pageCount;i++) {
             omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
         }
-        Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
-        Assert.assertEquals(result.length, 4);
-        Assert.assertEquals(((LongVec)result[0]).get(0), 0);
-        Assert.assertEquals(((LongVec)result[1]).get(0), 0);
-        Assert.assertEquals(((LongVec)result[2]).get(0), rowNum * pageCount);
-        Assert.assertEquals(((LongVec)result[3]).get(0), rowNum * pageCount);
+
+        // release input data memory
+        releaseVecMemory(inputData);
+
+        Vec[] results  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
+        Assert.assertEquals(results.length, 4);
+        Assert.assertEquals(((LongVec)results[0]).get(0), 0);
+        Assert.assertEquals(((LongVec)results[1]).get(0), 0);
+        Assert.assertEquals(((LongVec)results[2]).get(0), rowNum * pageCount);
+        Assert.assertEquals(((LongVec)results[3]).get(0), rowNum * pageCount);
+
+        // release result memory
+        releaseVecMemory(results);
+    }
+
+    private void releaseVecMemory(Vec[] vecs) {
+        for (Vec vec: vecs) {
+            vec.close();
+        }
     }
 
     @Test
@@ -280,12 +307,19 @@ public class OmniRuntimeTest
                     for (int i = 0; i < pageCount;i++) {
                         omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
                     }
+
+                    // release input data memory
+                    releaseVecMemory(inputData);
+
                     Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
                     Assert.assertEquals(result.length, 4);
                     Assert.assertEquals(((LongVec)result[0]).get(0), 0);
                     Assert.assertEquals(((LongVec)result[1]).get(0), 0);
                     Assert.assertEquals(((LongVec)result[2]).get(0), rowNum * pageCount);
                     Assert.assertEquals(((LongVec)result[3]).get(0), rowNum * pageCount);
+
+                    // release result memory
+                    releaseVecMemory(result);
                 }
                 finally {
                     downLatch.countDown();

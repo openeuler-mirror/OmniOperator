@@ -115,23 +115,23 @@ pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_mul(
  * Method:    allocate
  * Signature: (I)Ljava/nio/ByteBuffer;
  */
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_allocate(
-    env: JNIEnv,
-    _clazz: JClass,
-    size: jint,
-) -> jobject {
-    unsafe {
-        let mut vec8 = vec![0u8; size as usize];
-        let buffer = env.new_direct_byte_buffer(vec8.as_mut());
-        let result = buffer
-            .expect("Error allocating direct byte buffer")
-            .into_inner();
-        mem::forget(vec8);
-        result
-    }
-}
+// #[no_mangle]
+// #[allow(non_snake_case)]
+// pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_allocate(
+//     env: JNIEnv,
+//     _clazz: JClass,
+//     size: jint,
+// ) -> jobject {
+//     unsafe {
+//         let mut vec8 = vec![0u8; size as usize];
+//         let buffer = env.new_direct_byte_buffer(vec8.as_mut());
+//         let result = buffer
+//             .expect("Error allocating direct byte buffer")
+//             .into_inner();
+//         mem::forget(vec8);
+//         result
+//     }
+// }
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
