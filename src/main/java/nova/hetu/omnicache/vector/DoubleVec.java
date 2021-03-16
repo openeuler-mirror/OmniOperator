@@ -23,7 +23,6 @@ import java.nio.ByteOrder;
 public class DoubleVec
         extends Vec
 {
-    private OMVectorBase base = new OMVectorBase();
 
     public DoubleVec(int size)
     {
@@ -69,9 +68,9 @@ public class DoubleVec
     public DoubleVec slice(int startIdx, int endIdx)
     {
         byte[] regionData = new byte[(endIdx - startIdx) * Double.BYTES];
-        DoubleVec newVec = new DoubleVec(regionData.length);
-        data.reset();
-        data.get(regionData, 0, regionData.length);
+        DoubleVec newVec = new DoubleVec(endIdx - startIdx);
+        data.position(startIdx * Double.BYTES);
+        data.get(regionData,0, regionData.length);
         newVec.data.put(regionData);
         return newVec;
     }
