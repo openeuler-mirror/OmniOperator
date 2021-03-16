@@ -38,8 +38,6 @@ public abstract class Vec
     public Vec(int rowSize, int alloc_size)
     {
         this.data = OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN);
-//        this.data = OMVectorBase.alloc(alloc_size);
-
         this.size = rowSize;
     }
 
@@ -47,29 +45,6 @@ public abstract class Vec
     {
         this.data = data;
         this.size = length;
-        this.incrRefCount();
-    }
-
-    public void incrRefCount()
-    {
-        this.incrRefCount(1);
-    }
-
-    public void incrRefCount(int increment)
-    {
-        this.referenceCount.addAndGet(increment);
-    }
-
-    public void release()
-    {
-        this.release(1);
-    }
-
-    public void release(int decrement)
-    {
-        if (referenceCount.addAndGet(-decrement) == 0) {
-            close();
-        }
     }
 
     /**
@@ -157,16 +132,21 @@ public abstract class Vec
 
     public void close()
     {
+        if (referenceCount.incrementAndGet() > 1) {
+            String message = "[" + this.hashCode() + "]Vec is Free More Time. release count = " + referenceCount.get();
+            System.out.println(message);
+            throw new RuntimeException(message);
+        }
         if (data != null) {
             OMVectorBase.release(data);
             data = null;
         }
     }
 
-    @Override
-    protected void finalize()
-    {
-        //if operator not call close use gc to release
-        close();
-    }
+//    @Override
+//    protected void finalize()
+//    {
+//        //if operator not call close use gc to release
+//        close();
+//    }
 }
