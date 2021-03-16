@@ -26,7 +26,7 @@ public class MemoryTest {
         }
 
         for (DoubleVec vec : list){
-            vec.finalize();
+            vec.close();
         }
     }
 
@@ -45,7 +45,7 @@ public class MemoryTest {
         }
 
         for (IntVec vec : list){
-            vec.finalize();
+            vec.close();
         }
     }
 
@@ -64,7 +64,7 @@ public class MemoryTest {
         }
 
         for (LongVec vec : list){
-            vec.finalize();
+            vec.close();
         }
     }
 

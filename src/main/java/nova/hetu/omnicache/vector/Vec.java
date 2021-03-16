@@ -37,7 +37,7 @@ public abstract class Vec
 
     public Vec(int rowSize, int alloc_size)
     {
-        this.data = OMVectorBase.allocateV2(alloc_size).order(ByteOrder.LITTLE_ENDIAN);
+        this.data = OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN);
 //        this.data = OMVectorBase.alloc(alloc_size);
 
         this.size = rowSize;
@@ -158,7 +158,7 @@ public abstract class Vec
     public void close()
     {
         if (data != null) {
-            OMVectorBase.releaseV2(data);
+            OMVectorBase.release(data);
             data = null;
         }
     }

@@ -17,12 +17,6 @@ package nova.hetu.omnicache.vector;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 1. representing a vector
@@ -41,25 +35,9 @@ public class OMVectorBase
     public static final int LONG_DATA_TYPE = 2;
     public static final int DOUBLE_DATA_TYPE = 3;
 
-    public static AtomicLong FromPoolCount = new AtomicLong(0);
-    public static AtomicLong FromAllocCount = new AtomicLong(0);
-    public static AtomicLong ReleaseCount = new AtomicLong(0);
-    public static AtomicLong ALL_ALLOC_COUNT = new AtomicLong(0);
-    private static int DEFAULT_POOL_SIZE = 1 << 20;
-    public static ConcurrentLinkedQueue<ByteBuffer> BUFFERPOOL = new ConcurrentLinkedQueue();
-
-    private static int DEFAULT_VEC_CAPACITY = 2048 * Long.BYTES;
-    private static ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-
     static {
         System.loadLibrary("joy");
         System.loadLibrary("omvector");
-//        for (int i = 0; i < DEFAULT_POOL_SIZE; i++) {
-//            BUFFERPOOL.add(allocate(DEFAULT_VEC_CAPACITY).order(ByteOrder.LITTLE_ENDIAN));
-//        }
-//        executorService.scheduleAtFixedRate(() -> {
-//            System.out.println("Use Ring Buffer: Total alloc count:" + ALL_ALLOC_COUNT.get() + ",From pool alloc count: " + FromPoolCount.get() + ",Direct alloc count:" + FromAllocCount.get() + ",Release to pool count:" + ReleaseCount.get());
-//        }, 0, 5, TimeUnit.SECONDS);
     }
 
     public OMVectorBase() {}
@@ -87,48 +65,19 @@ public class OMVectorBase
     public native long agg(int datatype, String filter);
 
     /**
-     * Allocate the off-heap native byte buffer
+     * use jemalloc for memory allocate
      *
-     * @param capacity the type of the data
+     * @param size
      * @return
      */
-    public static ByteBuffer alloc(int capacity)
-    {
-        ALL_ALLOC_COUNT.incrementAndGet();
-        if (capacity > 128 && capacity < DEFAULT_VEC_CAPACITY) {
-            ByteBuffer buffer = BUFFERPOOL.poll();
-            if (buffer != null) {
-                FromPoolCount.incrementAndGet();
-                return buffer;
-            }
-        }
-        FromAllocCount.incrementAndGet();
-        return allocate(capacity).order(ByteOrder.LITTLE_ENDIAN);
-    }
-
-    public static native ByteBuffer allocate(int data_type);
-    public static native ByteBuffer allocateV2(int size);
-    public static native void releaseV2(ByteBuffer buffer);
+    public static native ByteBuffer allocate(int size);
 
     /**
-     * Free the memory allocate via {@link OMVectorBase#alloc(int)}
+     * release vec memory to jemalloc
      *
      * @param buffer
-     * @return
      */
-    public static void release(ByteBuffer buffer)
-    {
-        if (buffer != null) {
-            if (buffer.capacity() == DEFAULT_VEC_CAPACITY && !BUFFERPOOL.add(buffer)) {
-                free(buffer);
-            }
-            else {
-                ReleaseCount.incrementAndGet();
-            }
-        }
-    }
-
-    public static native void free(ByteBuffer buffer);
+    public static native void release(ByteBuffer buffer);
 
     /**
      * Concatenate two arrays of memory via {@link OMVectorBase#concat(ByteBuffer, ByteBuffer, int, int)}

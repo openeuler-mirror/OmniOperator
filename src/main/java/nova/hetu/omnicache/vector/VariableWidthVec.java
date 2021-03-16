@@ -140,7 +140,7 @@ public abstract class VariableWidthVec<T>
 
     public synchronized void close() {
         if (data != null) {
-            OMVectorBase.free(data);
+            OMVectorBase.release(data);
             data = null;
         }
     }
