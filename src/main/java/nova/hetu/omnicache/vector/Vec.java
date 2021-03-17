@@ -132,21 +132,9 @@ public abstract class Vec
 
     public void close()
     {
-        if (referenceCount.incrementAndGet() > 1) {
-            String message = "[" + this.hashCode() + "]Vec is Free More Time. release count = " + referenceCount.get();
-            System.out.println(message);
-            throw new RuntimeException(message);
-        }
         if (data != null) {
             OMVectorBase.release(data);
             data = null;
         }
     }
-
-//    @Override
-//    protected void finalize()
-//    {
-//        //if operator not call close use gc to release
-//        close();
-//    }
 }
