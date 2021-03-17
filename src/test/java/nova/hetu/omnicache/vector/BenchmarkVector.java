@@ -1,6 +1,5 @@
 package nova.hetu.omnicache.vector;
 
-import joptsimple.internal.Rows;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -27,7 +26,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @Fork(1)
 @Warmup(iterations = 1, time = 500, timeUnit = MILLISECONDS)
-@Measurement(iterations = 15, time = 500, timeUnit = MILLISECONDS)
+@Measurement(iterations = 10, time = 500, timeUnit = MILLISECONDS)
 @BenchmarkMode(Mode.AverageTime)
 @OperationsPerInvocation(BenchmarkVector.ROWS)
 public class BenchmarkVector
@@ -35,7 +34,8 @@ public class BenchmarkVector
     public static final int ROWS = 8192;
     private static final int getLoopCount = 1000;
     private static final int setLoopCount = 1000;
-    private static final int singleThreadSetCount = 1000000;
+    private static final int singleThreadSetCount = 1000;
+
     @Benchmark
     public void createLongVec(BenchmarkData benchmarkData)
     {
@@ -49,94 +49,86 @@ public class BenchmarkVector
 
     @Benchmark
     @Threads(32)
-    public void test_heapvec_set_032(BenchmarkData benchmarkData){
+    public void test_heapvec_set_032(BenchmarkData benchmarkData)
+    {
         long[] sampleData = benchmarkData.sampleData;
         long[] heapvec = benchmarkData.longValues;
         for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
-                heapvec[idx]=sampleData[idx];
-            }
-        }
-    }
-    @Benchmark
-    @Threads(32)
-    public void test_omnivec_set_032(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                omnivec.set(idx,sampleData[idx]);
-            }
-        }
-    }
-    @Benchmark
-    @Threads(64)
-    public void test_heapvec_set_064(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                heapvec[idx]=sampleData[idx];
-            }
-        }
-    }
-    @Benchmark
-    @Threads(64)
-    public void test_omnivec_set_064(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                omnivec.set(idx,sampleData[idx]);
-            }
-        }
-    }
-    @Benchmark
-    @Threads(128)
-    public void test_heapvec_set_128(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                heapvec[idx]=sampleData[idx];
-            }
-        }
-    }
-    @Benchmark
-    @Threads(128)
-    public void test_omnivec_set_128(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                omnivec.set(idx,sampleData[idx]);
+                heapvec[idx] = sampleData[idx];
             }
         }
     }
 
     @Benchmark
     @Threads(32)
-    public void test_heapvec_get_032(BenchmarkData benchmarkData){
-        long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+    public void test_omnivec_set_032(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
-                long value = heapvec[idx];
+                omnivec.set(idx, sampleData[idx]);
             }
         }
     }
+
+    @Benchmark
+    @Threads(64)
+    public void test_heapvec_set_064(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(64)
+    public void test_omnivec_set_064(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(128)
+    public void test_heapvec_set_128(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(128)
+    public void test_omnivec_set_128(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
     @Benchmark
     @Threads(32)
-    public void test_omnivec_get_032(BenchmarkData benchmarkData){
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                long value = omnivec.get(idx);
-            }
-        }
-    }
-    @Benchmark
-    @Threads(64)
-    public void test_heapvec_get_064(BenchmarkData benchmarkData){
+    public void test_heapvec_get_032(BenchmarkData benchmarkData)
+    {
         long[] heapvec = benchmarkData.longValues;
         for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
@@ -144,9 +136,11 @@ public class BenchmarkVector
             }
         }
     }
+
     @Benchmark
-    @Threads(64)
-    public void test_omnivec_get_064(BenchmarkData benchmarkData){
+    @Threads(32)
+    public void test_omnivec_get_032(BenchmarkData benchmarkData)
+    {
         LongVec omnivec = benchmarkData.longVec;
         for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
@@ -155,10 +149,10 @@ public class BenchmarkVector
         }
     }
 
-
     @Benchmark
-    @Threads(128)
-    public void test_heapvec_get_128(BenchmarkData benchmarkData){
+    @Threads(64)
+    public void test_heapvec_get_064(BenchmarkData benchmarkData)
+    {
         long[] heapvec = benchmarkData.longValues;
         for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
@@ -166,9 +160,11 @@ public class BenchmarkVector
             }
         }
     }
+
     @Benchmark
-    @Threads(128)
-    public void test_omnivec_get_128(BenchmarkData benchmarkData){
+    @Threads(64)
+    public void test_omnivec_get_064(BenchmarkData benchmarkData)
+    {
         LongVec omnivec = benchmarkData.longVec;
         for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
@@ -176,100 +172,348 @@ public class BenchmarkVector
             }
         }
     }
+
     @Benchmark
-    @Threads(1)
-    public void test_heapvec_set_syscopy_001(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
+    @Threads(128)
+    public void test_heapvec_get_128(BenchmarkData benchmarkData)
+    {
         long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
-            System.arraycopy(sampleData,0,heapvec,0,heapvec.length);
-        }
-    }
-    @Benchmark
-    @Threads(1)
-    public void test_omnivec_set_directcopy_001(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
-            omnivec.getData().asLongBuffer().put(sampleData,0,sampleData.length);
-        }
-    }
-    @Benchmark
-    @Threads(1)
-    public void test_heapvec_set_001(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
-                heapvec[idx]=sampleData[idx];
-            }
-        }
-    }
-    @Benchmark
-    @Threads(1)
-    public void test_omnivec_set_001(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
-            for (int idx = 0; idx < ROWS; idx++) {
-                omnivec.set(idx,sampleData[idx]);
+                long value = heapvec[idx];
             }
         }
     }
 
     @Benchmark
-    @Threads(32)
-    public void test_heapvec_set_syscopy_032(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
-            System.arraycopy(sampleData,0,heapvec,0,heapvec.length);
-        }
-    }
-    @Benchmark
-    @Threads(64)
-    public void test_heapvec_set_syscopy_064(BenchmarkData benchmarkData){
-        long[] sampleData = benchmarkData.sampleData;
-        long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
-            System.arraycopy(sampleData,0,heapvec,0,heapvec.length);
-        }
-    }
-    @Benchmark
     @Threads(128)
-    public void test_heapvec_set_syscopy_128(BenchmarkData benchmarkData){
+    public void test_omnivec_get_128(BenchmarkData benchmarkData)
+    {
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                long value = omnivec.get(idx);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(2)
+    public void test_heapvec_set_002(BenchmarkData benchmarkData)
+    {
         long[] sampleData = benchmarkData.sampleData;
         long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
-            System.arraycopy(sampleData,0,heapvec,0,heapvec.length);
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(2)
+    public void test_omnivec_set_002(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(2)
+    public void test_omnivec_set_directcopy_002(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(2)
+    public void test_heapvec_set_syscopy_002(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
+        }
+    }
+
+
+
+
+
+    @Benchmark
+    @Threads(4)
+    public void test_heapvec_set_004(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(4)
+    public void test_omnivec_set_004(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(4)
+    public void test_omnivec_set_directcopy_004(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(4)
+    public void test_heapvec_set_syscopy_004(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
+        }
+    }
+
+
+    @Benchmark
+    @Threads(8)
+    public void test_heapvec_set_008(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(8)
+    public void test_omnivec_set_008(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(8)
+    public void test_omnivec_set_directcopy_008(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(8)
+    public void test_heapvec_set_syscopy_008(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
+        }
+    }
+
+
+
+
+
+    @Benchmark
+    @Threads(16)
+    public void test_heapvec_set_016(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(16)
+    public void test_omnivec_set_016(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(16)
+    public void test_omnivec_set_directcopy_016(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(16)
+    public void test_heapvec_set_syscopy_016(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < singleThreadSetCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
+        }
+    }
+
+
+
+
+
+
+    @Benchmark
+    @Threads(1)
+    public void test_heapvec_set_001(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                heapvec[idx] = sampleData[idx];
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(1)
+    public void test_omnivec_set_001(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int idx = 0; idx < ROWS; idx++) {
+                omnivec.set(idx, sampleData[idx]);
+            }
+        }
+    }
+
+    @Benchmark
+    @Threads(1)
+    public void test_omnivec_set_directcopy_001(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(1)
+    public void test_heapvec_set_syscopy_001(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
         }
     }
 
     @Benchmark
     @Threads(32)
-    public void test_omnivec_set_directcopy_032(BenchmarkData benchmarkData){
+    public void test_heapvec_set_syscopy_032(BenchmarkData benchmarkData)
+    {
         long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            omnivec.getData().asLongBuffer().put(sampleData,0,sampleData.length);
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
         }
     }
+
     @Benchmark
     @Threads(64)
-    public void test_omnivec_set_directcopy_064(BenchmarkData benchmarkData){
+    public void test_heapvec_set_syscopy_064(BenchmarkData benchmarkData)
+    {
         long[] sampleData = benchmarkData.sampleData;
-        LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            omnivec.getData().asLongBuffer().put(sampleData,0,sampleData.length);
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
         }
     }
+
     @Benchmark
     @Threads(128)
-    public void test_omnivec_set_directcopy_128(BenchmarkData benchmarkData){
+    public void test_heapvec_set_syscopy_128(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        long[] heapvec = benchmarkData.longValues;
+        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+            System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(32)
+    public void test_omnivec_set_directcopy_032(BenchmarkData benchmarkData)
+    {
         long[] sampleData = benchmarkData.sampleData;
         LongVec omnivec = benchmarkData.longVec;
         for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-            omnivec.getData().asLongBuffer().put(sampleData,0,sampleData.length);
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(64)
+    public void test_omnivec_set_directcopy_064(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+        }
+    }
+
+    @Benchmark
+    @Threads(128)
+    public void test_omnivec_set_directcopy_128(BenchmarkData benchmarkData)
+    {
+        long[] sampleData = benchmarkData.sampleData;
+        LongVec omnivec = benchmarkData.longVec;
+        for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
         }
     }
 
@@ -318,7 +562,7 @@ public class BenchmarkVector
             }
             sampleData = new long[ROWS];
             for (int i = 0; i < sampleData.length; i++) {
-                sampleData[i]=random.nextLong();
+                sampleData[i] = random.nextLong();
             }
 
             longVec = new LongVec(longValues.length);
@@ -352,7 +596,7 @@ public class BenchmarkVector
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkVector.class.getSimpleName() + ".*test_.*_set_.*")
+                .include(".*" + BenchmarkVector.class.getSimpleName() + ".*001")
                 .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g")
                 .build();
 
