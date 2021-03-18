@@ -62,8 +62,8 @@ public class JniWrapperTest
         long[] inputAddr = {addr};
 
         wrapper.addTable(sortAddress, inputAddr, ((DirectBuffer)nullBuffer).address(), 1, 8);
-        long addressesAddr = wrapper.sort(sortAddress);
-        OMResult result = wrapper.getResult(sortAddress, addressesAddr);
+        wrapper.sort(sortAddress);
+        OMResult result = wrapper.getResult(sortAddress);
 
         ByteBuffer[] output = result.getBuffers();
         int len = result.getLength();
@@ -117,12 +117,12 @@ public class JniWrapperTest
         System.out.println("TOTAL addTable elapsed time " + (elapsed / 10) + " ms");
 
         start = System.currentTimeMillis();
-        long addressesAddr = wrapper.sort(sortAddress);
+       wrapper.sort(sortAddress);
         elapsed = System.currentTimeMillis() - start;
         System.out.println("sort elapsed time : " + elapsed + " ms");
 
         start = System.currentTimeMillis();
-        OMResult result = wrapper.getResult(sortAddress, addressesAddr);
+        OMResult result = wrapper.getResult(sortAddress);
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
 

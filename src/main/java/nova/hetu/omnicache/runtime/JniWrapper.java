@@ -42,7 +42,7 @@ public class JniWrapper
 
     public native void addTable(long sortAddress, long[] inputAddrs, long nulls, int columnNum, long rowNum);
 
-    public native long sort(long sortAddress);
+    public native void sort(long sortAddress);
 
-    public native OMResult getResult(long sortAddress, long addressesAddr);
+    public native OMResult getResult(long sortAddress);
 }

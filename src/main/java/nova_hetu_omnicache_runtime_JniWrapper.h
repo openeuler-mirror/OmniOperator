@@ -82,18 +82,18 @@ JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_addTable
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    sort
- * Signature: (J)J
+ * Signature: (J)V
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sort
+JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sort
   (JNIEnv *, jobject, jlong);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    getResult
- * Signature: (JJ)Lnova/hetu/omnicache/runtime/OMResult;
+ * Signature: (J)Lnova/hetu/omnicache/runtime/OMResult;
  */
 JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getResult
-  (JNIEnv *, jobject, jlong, jlong);
+  (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus
 }
