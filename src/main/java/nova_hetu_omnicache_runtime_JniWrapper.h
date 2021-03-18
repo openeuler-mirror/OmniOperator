@@ -74,10 +74,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_allocAndInit
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    addTable
- * Signature: (J[Ljava/nio/ByteBuffer;[[IIJ)V
+ * Signature: (J[JJIJ)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_addTable
-  (JNIEnv *, jobject, jlong, jobjectArray, jobjectArray, jint, jlong);
+  (JNIEnv *, jobject, jlong, jlongArray, jlong, jint, jlong);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper

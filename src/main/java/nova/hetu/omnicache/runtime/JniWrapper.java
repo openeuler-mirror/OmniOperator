@@ -40,7 +40,7 @@ public class JniWrapper
 
     public native long allocAndInitSort(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
 
-    public native void addTable(long sortAddress, ByteBuffer[] inputs, int[][] nulls, int columnNum, long rowNum);
+    public native void addTable(long sortAddress, long[] inputAddrs, long nulls, int columnNum, long rowNum);
 
     public native long sort(long sortAddress);
 
