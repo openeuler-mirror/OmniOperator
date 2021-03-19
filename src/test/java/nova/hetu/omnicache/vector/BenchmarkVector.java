@@ -29,7 +29,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 @OutputTimeUnit(MILLISECONDS)
 @Fork(1)
 @Warmup(iterations = 1, time = 500, timeUnit = MILLISECONDS)
-@Measurement(iterations = 10, time = 500, timeUnit = MILLISECONDS)
+@Measurement(iterations = 50, time = 500, timeUnit = MILLISECONDS)
 @BenchmarkMode(Mode.AverageTime)
 public class BenchmarkVector
 {
@@ -510,35 +510,12 @@ public class BenchmarkVector
     public static void main(String[] args)
             throws Throwable
     {
-//        Options options = new OptionsBuilder()
-//                .verbosity(VerboseMode.NORMAL)
-//                .include(".*" + BenchmarkVector.class.getSimpleName() + ".*128")
-//                .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g")
-//                .build();
-//
-//        new Runner(options).run();
-        Thread.sleep(20000);
-        BenchmarkData data = new BenchmarkData();
-        BenchmarkVector benchmarkVector = new BenchmarkVector();
-        for (int loopIdx = 0; loopIdx < 10; loopIdx++) {
-            multiThreadExecutor(benchmarkVector::test_omnivec_set,128,data);
-        }
-        Thread.sleep(10000);
-    }
-    public static void multiThreadExecutor(AffinityExecutorFunction fn,int threadCount,BenchmarkData benchmarkData){
-        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
-        for (int tidx = 0; tidx < threadCount; tidx++) {
-            Thread thread = new Thread(()->{
-                fn.executor(benchmarkData);
-                countDownLatch.countDown();
-            });
-            thread.start();
-        }
-        try {
-            countDownLatch.await();
-        }
-        catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(".*" + BenchmarkVector.class.getSimpleName() + ".*")
+                .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g")
+                .build();
+
+        new Runner(options).run();
     }
 }
