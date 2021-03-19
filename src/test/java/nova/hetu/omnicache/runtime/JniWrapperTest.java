@@ -38,7 +38,7 @@ public class JniWrapperTest
     @Test
     public void testOrderByOneColumn()
     {
-        int[] sourceTypes = {0};
+        int[] sourceTypes = {1};
         int[] outputCols = {0};
         int[] sortCols = {0};
         int[] ascendings = {1};
@@ -79,7 +79,7 @@ public class JniWrapperTest
     @Test
     public void testOrderByPerformance()
     {
-        int[] sourceTypes = {0, 0};
+        int[] sourceTypes = {1, 1};
         int[] outputCols = {0, 1};
         int[] sortCols = {0};
         int[] ascendings = {1};
