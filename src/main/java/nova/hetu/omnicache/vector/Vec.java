@@ -14,6 +14,8 @@
  */
 package nova.hetu.omnicache.vector;
 
+import sun.nio.ch.DirectBuffer;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -128,6 +130,10 @@ public abstract class Vec
     public ByteBuffer getData()
     {
         return this.data;
+    }
+
+    public long getAddress() {
+        return ((DirectBuffer)data).address();
     }
 
     public void close()

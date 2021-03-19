@@ -186,7 +186,7 @@ public class OmniRuntimeTest
 
     @Test
     public void testExecuteAggOnePage() {
-        String operatorId = "execute_agg_one_page";
+        long operatorId = UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE;
         int totalChannel = 2;
         int[] groupByChanel = {0};
         VecType[] groupByTypes = {VecType.LONG};
@@ -194,7 +194,9 @@ public class OmniRuntimeTest
         VecType[] aggTypes = {VecType.LONG};
         AggType[] aggFunctionTypes = {AggType.SUM};
         VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG};
+        VecType[] inputTypes = {VecType.LONG, VecType.LONG};
         OmniRuntime omniRuntime = new OmniRuntime();
+
         omniRuntime.prepareAgg(
                 operatorId,
                 totalChannel,
@@ -203,14 +205,15 @@ public class OmniRuntimeTest
                 aggChannels,
                 aggTypes,
                 aggFunctionTypes,
-                aggOutputTypes);
+                aggOutputTypes,
+                inputTypes);
 
         int rowNum = 10;
-        Vec[] inputData = build2Columns(rowNum);
-        VecType[] inputTypes = {VecType.LONG, VecType.LONG};
-        omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+        List<Vec> inputData = build2Columns(rowNum);
+
+        omniRuntime.executeAggIntermediate(operatorId, inputData, 2);
         // release input data memory
-        releaseVecMemory(inputData);
+        releaseVecMemory(inputData.toArray(new Vec[0]));
 
         Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
         Assert.assertEquals(result.length, 2);
@@ -222,7 +225,7 @@ public class OmniRuntimeTest
 
     @Test
     public void testExecuteAggMultiplePage() {
-        String operatorId = "execute_agg_multi_page";
+        long operatorId = UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE;
         int totalChannel = 4;
         int[] groupByChanel = {0, 1};
         VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
@@ -231,6 +234,7 @@ public class OmniRuntimeTest
         AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
         VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         OmniRuntime omniRuntime = new OmniRuntime();
+        VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         omniRuntime.prepareAgg(
                 operatorId,
                 totalChannel,
@@ -239,18 +243,20 @@ public class OmniRuntimeTest
                 aggChannels,
                 aggTypes,
                 aggFunctionTypes,
-                aggOutputTypes);
-        VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+                aggOutputTypes,
+                inputTypes);
         int rowNum = 100;
         int pageCount = 10;
 
-        Vec[] inputData = build4Columns(rowNum);
+        List<Vec> inputData = new ArrayList<>();
         for (int i = 0; i < pageCount;i++) {
-            omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+            inputData.addAll(build4Columns(rowNum));
         }
 
+        omniRuntime.executeAggIntermediate(operatorId, inputData, 4);
+
         // release input data memory
-        releaseVecMemory(inputData);
+        releaseVecMemory(inputData.toArray(new Vec[0]));
 
         Vec[] results  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
         Assert.assertEquals(results.length, 4);
@@ -283,7 +289,7 @@ public class OmniRuntimeTest
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    String operatorId = UUID.randomUUID().toString();
+                    long operatorId = UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE;
                     int totalChannel = 4;
                     int[] groupByChanel = {0, 1};
                     VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
@@ -291,6 +297,8 @@ public class OmniRuntimeTest
                     VecType[] aggTypes = {VecType.LONG, VecType.LONG};
                     AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
                     VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+                    VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+
                     OmniRuntime omniRuntime = new OmniRuntime();
                     omniRuntime.prepareAgg(
                             operatorId,
@@ -300,16 +308,18 @@ public class OmniRuntimeTest
                             aggChannels,
                             aggTypes,
                             aggFunctionTypes,
-                            aggOutputTypes);
-                    VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+                            aggOutputTypes,
+                            inputTypes);
 
-                    Vec[] inputData = build4Columns(rowNum);
+                    List<Vec> inputData = new ArrayList<>();
                     for (int i = 0; i < pageCount;i++) {
-                        omniRuntime.executeAggIntermediate(operatorId, inputData, inputTypes, rowNum);
+                        inputData.addAll(build4Columns(rowNum));
                     }
 
+                    omniRuntime.executeAggIntermediate(operatorId, inputData, 4);
+
                     // release input data memory
-                    releaseVecMemory(inputData);
+                    releaseVecMemory(inputData.toArray(new Vec[0]));
 
                     Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
                     Assert.assertEquals(result.length, 4);
@@ -336,8 +346,8 @@ public class OmniRuntimeTest
         }
     }
 
-    private Vec[] build4Columns(int rowNum) {
-        List<LongVec> columns = new ArrayList<>();
+    private List<Vec> build4Columns(int rowNum) {
+        List<Vec> columns = new ArrayList<>();
 
         LongVec c1 = new LongVec(rowNum);
         LongVec c2 = new LongVec(rowNum);
@@ -357,11 +367,11 @@ public class OmniRuntimeTest
         columns.add(c3);
         columns.add(c4);
 
-        return columns.toArray(new Vec[0]);
+        return columns;
     }
 
-    private Vec[] build2Columns(int rowNum) {
-        List<LongVec> columns = new ArrayList<>();
+    private List<Vec> build2Columns(int rowNum) {
+        List<Vec> columns = new ArrayList<>();
 
         LongVec c1 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
@@ -375,6 +385,6 @@ public class OmniRuntimeTest
         }
         columns.add(c2);
 
-        return columns.toArray(new Vec[0]);
+        return columns;
     }
 }

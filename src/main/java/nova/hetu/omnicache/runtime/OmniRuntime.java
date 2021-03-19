@@ -23,6 +23,7 @@ import nova.hetu.omnicache.vector.VecType;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
@@ -155,46 +156,115 @@ public class OmniRuntime
         return output;
     }
 
-    public void prepareAgg(String operatorId, int totalChannel, int[] groupByChannels, VecType[] groupByTypes,
-            int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes, VecType[] returnType) {
+    public void prepareAgg(long operatorId, int totalChannel, int[] groupByChannels, VecType[] groupByTypes,
+            int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes,
+                           VecType[] returnType, VecType[] inputTypes) {
         int[] groupByTypeValues = transformVecType(groupByTypes);
         int[] aggTypeValues = transformVecType(aggregationTypes);
         int[] aggFunctionTypeValues = transformAggType(aggregationFunctionTypes);
         int[] outputTypeValues = transformVecType(returnType);
-        jniWrapper.prepareAgg(
-                operatorId,
-                totalChannel,
-                groupByChannels,
-                groupByTypeValues,
-                aggregationChannels,
-                aggTypeValues,
-                aggFunctionTypeValues,
-                outputTypeValues);
-    }
+        int[] inputTypeValues = transformVecType(inputTypes);
 
-    public void executeAggIntermediate(String operatorId, Vec[] inputData, VecType[] dataTypes ,int inputRowSize) {
-        ByteBuffer[] datas = transformVecToBuffer(inputData);
-        int[] inputTypes = transformVecType(dataTypes);
-        if (datas.length != inputTypes.length) {
-            throw new IllegalArgumentException(format("input data error data len is:%s,type len is:%", datas.length, inputTypes.length));
+        int groupByLen = groupByChannels.length;
+        int groupByTypeLen = groupByTypeValues.length;
+        int aggChannelLen = aggregationChannels.length;
+        int aggTypeLen = aggTypeValues.length;
+        int aggFunctionTypeLen = aggFunctionTypeValues.length;
+        int outputTypeLen = outputTypeValues.length;
+        int inputTypeLen = inputTypeValues.length;
+
+        int size = groupByLen + groupByTypeLen + aggChannelLen + aggTypeLen + aggFunctionTypeLen + outputTypeLen + inputTypeLen;
+        IntVec prepareInfo = new IntVec(size);
+        int offset = 0;
+        offset = transformPrepareInfoToVec(prepareInfo, groupByChannels, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, groupByTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, aggregationChannels, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, aggTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, aggFunctionTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, outputTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, inputTypeValues, offset);
+
+        if (offset != size) {
+            throw new IllegalArgumentException(format("agg prepare input info is error: %s,%s", size, offset));
         }
-        jniWrapper.executeAggIntermediate(operatorId, datas, inputTypes, inputRowSize);
+
+        try {
+            jniWrapper.prepareAgg(
+                    operatorId,
+                    size,
+                    prepareInfo.getAddress(),
+                    groupByLen,
+                    groupByTypeLen,
+                    aggChannelLen,
+                    aggTypeLen,
+                    aggFunctionTypeLen,
+                    outputTypeLen,
+                    inputTypeLen);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("execute prepare agg failed", e);
+        } finally {
+            prepareInfo.close();
+        }
     }
 
-    public Vec[] executeAggFinal(String operatorId, VecType[] outputTypes) {
+    public int transformPrepareInfoToVec(IntVec prepareInfo, int[] values, int offset) {
+        for (int value : values) {
+            prepareInfo.set(offset++, value);
+        }
+        return offset;
+    }
+
+    public void executeAggIntermediate(long operatorId, List<Vec> inputData, int columnCount) {
+        LongVec inputDataAddr = null;
+        IntVec inputRowSize = null;
+
+        try {
+            inputDataAddr = transformVecAddress(inputData);
+            inputRowSize = getRowNumbers(inputData, columnCount);
+            jniWrapper.executeAggIntermediate(
+                    operatorId,
+                    inputDataAddr.getAddress(),
+                    inputDataAddr.size(),
+                    columnCount,
+                    inputRowSize.getAddress(),
+                    inputRowSize.size());
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("execute agg intermediate failed.", e);
+        } finally {
+            if (inputDataAddr != null) {
+                inputDataAddr.close();
+            }
+            if (inputRowSize != null) {
+                inputRowSize.close();
+            }
+        }
+    }
+
+    public Vec[] executeAggFinal(long operatorId, VecType[] outputTypes) {
         OMResult result = jniWrapper.executeAggFinal(operatorId);
         return generateOMVec(result, outputTypes);
     }
 
-    private ByteBuffer[] transformVecToBuffer(Vec[] inputs) {
-        ByteBuffer[] bufs = null;
-        if (inputs != null) {
-            bufs = new ByteBuffer[inputs.length];
-            for (int idx = 0; idx < bufs.length; idx++) {
-                bufs[idx] = inputs[idx].getData();
-            }
+    private IntVec getRowNumbers(List<Vec> inputs, int columnCount) {
+        int totalColumn = inputs.size();
+        if (totalColumn % columnCount != 0) {
+            throw new IllegalArgumentException(format("input vec error: %s,%s", totalColumn, columnCount));
         }
-        return bufs;
+
+        int pageNum = totalColumn / columnCount;
+        IntVec rowNums = new IntVec(pageNum);
+        for (int idx = 0; idx < pageNum; idx++) {
+            rowNums.set(idx, inputs.get(idx * columnCount).size());
+        }
+        return rowNums;
+    }
+
+    private LongVec transformVecAddress(List<Vec> inputs) {
+        LongVec address = new LongVec(inputs.size());
+        for (int idx = 0; idx < inputs.size(); idx++) {
+            address.set(idx, inputs.get(idx).getAddress());
+        }
+        return address;
     }
 
     private int[] transformVecType(VecType[] vecTypes) {

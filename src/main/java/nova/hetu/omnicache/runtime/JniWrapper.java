@@ -31,12 +31,13 @@ public class JniWrapper
 
     public native OMResult getFinalResult(String key, int[] outputTypes);
 
-    public native void prepareAgg(String operatorId,int totalChannel, int[] groupByChanel, int[] groupByTypes,
-            int[] aggregationChannels, int[] aggregationTypes, int[] aggregationFunctionTypes, int[] outputTypes);
+    public native void prepareAgg(long operatorId, int size, long prepareInfoAddress, int groupByLen,
+                                  int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
+                                  int aggregationFunctionTypeLen, int outputTypeLen, int inputTypeLen);
 
-    public native void executeAggIntermediate(String operatorId, ByteBuffer[] inputData, int[] inputTypes, long rowNum);
+    public native void executeAggIntermediate(long operatorId, long dataAddress,long totalColumn, int columnCount, long rowAddress, int rowNum);
 
-    public native OMResult executeAggFinal(String operatorId);
+    public native OMResult executeAggFinal(long operatorId);
 
     public native long allocAndInitSort(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
 
