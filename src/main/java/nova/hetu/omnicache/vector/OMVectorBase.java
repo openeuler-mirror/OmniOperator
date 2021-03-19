@@ -41,6 +41,9 @@ public class OMVectorBase
     }
 
     public OMVectorBase() {}
+    public static void fff(){
+
+    }
 
     /**
      * multiplies the content of the vector at the address vec_addr by a scalar value m
@@ -71,6 +74,10 @@ public class OMVectorBase
      * @return
      */
     public static native ByteBuffer allocate(int size);
+
+    public static native ByteBuffer allocate1(int size);
+
+    public static native void release1(ByteBuffer buffer);
 
     /**
      * release vec memory to jemalloc

@@ -38,6 +38,8 @@ use crate::omnicache::utils::wrapper::{transform_vec_in_vec_data, VecType};
 use crate::omnicache::utils::wrapper::VecType::{DOUBLE, INT32, INT64};
 
 mod omnicache;
+#[global_allocator]
+static DEFAULT_ALLOCATOR:jemallocator::Jemalloc=jemallocator::Jemalloc;
 
 #[no_mangle]
 pub unsafe extern "C" fn toRust(addr: *const c_long, len: *const c_int) -> *const c_void {
@@ -115,23 +117,23 @@ pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_mul(
  * Method:    allocate
  * Signature: (I)Ljava/nio/ByteBuffer;
  */
-// #[no_mangle]
-// #[allow(non_snake_case)]
-// pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_allocate(
-//     env: JNIEnv,
-//     _clazz: JClass,
-//     size: jint,
-// ) -> jobject {
-//     unsafe {
-//         let mut vec8 = vec![0u8; size as usize];
-//         let buffer = env.new_direct_byte_buffer(vec8.as_mut());
-//         let result = buffer
-//             .expect("Error allocating direct byte buffer")
-//             .into_inner();
-//         mem::forget(vec8);
-//         result
-//     }
-// }
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_allocate1(
+    env: JNIEnv,
+    _clazz: JClass,
+    size: jint,
+) -> jobject {
+    unsafe {
+        let mut vec8 = vec![0u8; size as usize];
+        let buffer = env.new_direct_byte_buffer(vec8.as_mut());
+        let result = buffer
+            .expect("Error allocating direct byte buffer")
+            .into_inner();
+        mem::forget(vec8);
+        result
+    }
+}
 
 /*
  * Class:     nova_hetu_omnicache_OMVectorBase
@@ -178,7 +180,7 @@ pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_concat(
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_free(
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_release1(
     env: JNIEnv,
     this_class: JClass,
     buffer: JByteBuffer,
