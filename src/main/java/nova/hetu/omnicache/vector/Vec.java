@@ -139,7 +139,8 @@ public abstract class Vec
     public void close()
     {
         if (data != null) {
-            OMVectorBase.release(data);
+            long address = ((DirectBuffer) data).address();
+            OMVectorBase.release(address);
             data = null;
         }
     }

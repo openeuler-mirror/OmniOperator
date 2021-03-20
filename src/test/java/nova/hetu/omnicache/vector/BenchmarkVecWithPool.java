@@ -28,6 +28,7 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
+import sun.nio.ch.DirectBuffer;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -125,8 +126,6 @@ public class BenchmarkVecWithPool
             dataGenerator.release(vecs);
         }
     }
-
-
 
     @Benchmark
     @Threads(64)
@@ -556,7 +555,7 @@ public class BenchmarkVecWithPool
 
         public void close()
         {
-            OMVectorBase.release(buffer);
+            OMVectorBase.release(((DirectBuffer) buffer).address());
         }
     }
 }

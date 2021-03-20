@@ -18,12 +18,10 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 @State(Scope.Thread)
 @OutputTimeUnit(MILLISECONDS)
@@ -468,7 +466,6 @@ public class BenchmarkVector
         boolean cpuAffinity = false;
         AtomicInteger cpuUsed = new AtomicInteger(0);
         AtomicLong totalUsedTime = new AtomicLong(0);
-
 
         public BenchmarkData()
         {
