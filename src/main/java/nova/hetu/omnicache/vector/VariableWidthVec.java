@@ -14,13 +14,15 @@
  */
 package nova.hetu.omnicache.vector;
 
+import sun.nio.ch.DirectBuffer;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class VariableWidthVec<T>
 {
-    protected int MAX_BUFFER_SIZE = 5*1024*1024;
+    protected int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
     protected int[] offsets;
     protected int[] lengths;
     int lastOffsetPosition;
@@ -43,19 +45,23 @@ public abstract class VariableWidthVec<T>
         this.data = buffer;
     }
 
-    public void incrRefCount() {
+    public void incrRefCount()
+    {
         this.incrRefCount(1);
     }
 
-    public void incrRefCount(int increment) {
+    public void incrRefCount(int increment)
+    {
         this.referenceCount.addAndGet(increment);
     }
 
-    public void release() {
+    public void release()
+    {
         this.release(1);
     }
 
-    public void release(int decrement) {
+    public void release(int decrement)
+    {
         if (referenceCount.addAndGet(-decrement) == 0) {
             close();
         }
@@ -122,15 +128,18 @@ public abstract class VariableWidthVec<T>
      */
     public abstract Vec concat(Vec other);
 
-    public int size() {
+    public int size()
+    {
         return offsets.length;
     }
 
-    public int capacity() {
+    public int capacity()
+    {
         return capacity;
     }
 
-    public int remaining() {
+    public int remaining()
+    {
         return capacity - used;
     }
 
@@ -138,16 +147,12 @@ public abstract class VariableWidthVec<T>
 
     public abstract ByteBuffer getData();
 
-    public synchronized void close() {
+    public synchronized void close()
+    {
         if (data != null) {
-            OMVectorBase.release(data);
+            long address = ((DirectBuffer) data).address();
+            OMVectorBase.release(address);
             data = null;
         }
-    }
-
-    // TODO: Handle memory properly when we add OmniCacheManager
-    @Override
-    protected void finalize() {
-        close();
     }
 }

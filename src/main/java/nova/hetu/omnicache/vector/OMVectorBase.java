@@ -15,6 +15,7 @@
 package nova.hetu.omnicache.vector;
 
 import com.google.common.annotations.VisibleForTesting;
+import sun.nio.ch.DirectBuffer;
 
 import java.nio.ByteBuffer;
 
@@ -41,9 +42,6 @@ public class OMVectorBase
     }
 
     public OMVectorBase() {}
-    public static void fff(){
-
-    }
 
     /**
      * multiplies the content of the vector at the address vec_addr by a scalar value m
@@ -75,16 +73,12 @@ public class OMVectorBase
      */
     public static native ByteBuffer allocate(int size);
 
-    public static native ByteBuffer allocate1(int size);
-
-    public static native void release1(ByteBuffer buffer);
-
     /**
      * release vec memory to jemalloc
      *
-     * @param buffer
+     * @param address vec address
      */
-    public static native void release(ByteBuffer buffer);
+    public static native void release(long address);
 
     /**
      * Concatenate two arrays of memory via {@link OMVectorBase#concat(ByteBuffer, ByteBuffer, int, int)}
@@ -93,7 +87,14 @@ public class OMVectorBase
      * @param buffer2
      * @return
      */
-    public static native ByteBuffer concat(ByteBuffer buffer1, ByteBuffer buffer2, int size1, int size2);
+    public static ByteBuffer concat(ByteBuffer buffer1, ByteBuffer buffer2, int size1, int size2)
+    {
+        long leftAddr = ((DirectBuffer) buffer1).address();
+        long rightAddr = ((DirectBuffer) buffer2).address();
+        return concat(leftAddr, rightAddr, size1, size2);
+    }
+
+    private static native ByteBuffer concat(long leftAddr, long rightAddr, int leftSize, int rightSize);
 
     public static native void invoke(String func_id, int[] d_types, ByteBuffer[] args);
 }
