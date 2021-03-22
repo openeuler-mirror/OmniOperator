@@ -186,7 +186,8 @@ public class OmniRuntimeTest
 
     @Test
     public void testExecuteAggOnePage() {
-        long operatorId = UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE;
+        long operatorId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+        long stageId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
         int totalChannel = 2;
         int[] groupByChanel = {0};
         VecType[] groupByTypes = {VecType.LONG};
@@ -198,6 +199,7 @@ public class OmniRuntimeTest
         OmniRuntime omniRuntime = new OmniRuntime();
 
         omniRuntime.prepareAgg(
+                stageId,
                 operatorId,
                 totalChannel,
                 groupByChanel,
@@ -211,7 +213,7 @@ public class OmniRuntimeTest
         int rowNum = 10;
         List<Vec> inputData = build2Columns(rowNum);
 
-        omniRuntime.executeAggIntermediate(operatorId, inputData, 2);
+        omniRuntime.executeAggIntermediate(stageId, operatorId, inputData, 2);
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
 
@@ -225,7 +227,8 @@ public class OmniRuntimeTest
 
     @Test
     public void testExecuteAggMultiplePage() {
-        long operatorId = UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE;
+        long stageId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+        long operatorId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
         int totalChannel = 4;
         int[] groupByChanel = {0, 1};
         VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
@@ -236,6 +239,7 @@ public class OmniRuntimeTest
         OmniRuntime omniRuntime = new OmniRuntime();
         VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         omniRuntime.prepareAgg(
+                stageId,
                 operatorId,
                 totalChannel,
                 groupByChanel,
@@ -253,7 +257,7 @@ public class OmniRuntimeTest
             inputData.addAll(build4Columns(rowNum));
         }
 
-        omniRuntime.executeAggIntermediate(operatorId, inputData, 4);
+        omniRuntime.executeAggIntermediate(stageId, operatorId, inputData, 4);
 
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
@@ -289,7 +293,8 @@ public class OmniRuntimeTest
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    long operatorId = UUID.randomUUID().getMostSignificantBits()&Long.MAX_VALUE;
+                    long stageId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
+                    long operatorId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
                     int totalChannel = 4;
                     int[] groupByChanel = {0, 1};
                     VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
@@ -301,6 +306,7 @@ public class OmniRuntimeTest
 
                     OmniRuntime omniRuntime = new OmniRuntime();
                     omniRuntime.prepareAgg(
+                            stageId,
                             operatorId,
                             totalChannel,
                             groupByChanel,
@@ -316,7 +322,7 @@ public class OmniRuntimeTest
                         inputData.addAll(build4Columns(rowNum));
                     }
 
-                    omniRuntime.executeAggIntermediate(operatorId, inputData, 4);
+                    omniRuntime.executeAggIntermediate(stageId, operatorId, inputData, 4);
 
                     // release input data memory
                     releaseVecMemory(inputData.toArray(new Vec[0]));

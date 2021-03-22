@@ -156,9 +156,10 @@ public class OmniRuntime
         return output;
     }
 
-    public void prepareAgg(long operatorId, int totalChannel, int[] groupByChannels, VecType[] groupByTypes,
+    public void prepareAgg(long stageId, long operatorId, int totalChannel, int[] groupByChannels, VecType[] groupByTypes,
             int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes,
-                           VecType[] returnType, VecType[] inputTypes) {
+            VecType[] returnType, VecType[] inputTypes)
+    {
         int[] groupByTypeValues = transformVecType(groupByTypes);
         int[] aggTypeValues = transformVecType(aggregationTypes);
         int[] aggFunctionTypeValues = transformAggType(aggregationFunctionTypes);
@@ -190,6 +191,7 @@ public class OmniRuntime
 
         try {
             jniWrapper.prepareAgg(
+                    stageId,
                     operatorId,
                     size,
                     prepareInfo.getAddress(),
@@ -214,7 +216,8 @@ public class OmniRuntime
         return offset;
     }
 
-    public void executeAggIntermediate(long operatorId, List<Vec> inputData, int columnCount) {
+    public void executeAggIntermediate(long stageId, long operatorId, List<Vec> inputData, int columnCount)
+    {
         LongVec inputDataAddr = null;
         IntVec inputRowSize = null;
 
@@ -222,6 +225,7 @@ public class OmniRuntime
             inputDataAddr = transformVecAddress(inputData);
             inputRowSize = getRowNumbers(inputData, columnCount);
             jniWrapper.executeAggIntermediate(
+                    stageId,
                     operatorId,
                     inputDataAddr.getAddress(),
                     inputDataAddr.size(),
