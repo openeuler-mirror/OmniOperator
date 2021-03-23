@@ -38,6 +38,11 @@ public class OmniRuntime
         jniWrapper = new JniWrapper();
     }
 
+    protected JniWrapper getJniWrapper()
+    {
+        return jniWrapper;
+    }
+
     public String compile(String code)
     {
         return jniWrapper.compile(code);

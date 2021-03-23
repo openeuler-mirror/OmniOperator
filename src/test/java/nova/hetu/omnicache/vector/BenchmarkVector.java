@@ -18,6 +18,7 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
