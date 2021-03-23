@@ -39,11 +39,11 @@ public class JniWrapper
 
     public native OMResult executeAggFinal(long operatorId);
 
-    public native long allocAndInitSort(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
+    public native long allocAndInitSort(long stageId, int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
 
     public native void addTable(long sortAddress, long[] inputAddrs, long[] nulls, long rowNum);
 
-    public native void sort(long sortAddress);
+    public native void sort(long sortAddress, long stageId);
 
     public native OMResult getResult(long sortAddress);
 
