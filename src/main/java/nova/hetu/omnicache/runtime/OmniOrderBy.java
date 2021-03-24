@@ -5,9 +5,9 @@ import nova.hetu.omnicache.vector.Vec;
 public class OmniOrderBy
         extends OmniRuntime
 {
-    public long allocAndInitSort(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount)
+    public long allocAndInitSort(long stageId, int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount)
     {
-        long sortAddress = getJniWrapper().allocAndInitSort(sourceTypes, typeCount, outputCols, outputColCount, sortCols, ascendings, nullFirsts, sortColCount);
+        long sortAddress = getJniWrapper().allocAndInitSort(stageId, sourceTypes, typeCount, outputCols, outputColCount, sortCols, ascendings, nullFirsts, sortColCount);
         return sortAddress;
     }
 
@@ -26,9 +26,9 @@ public class OmniOrderBy
         getJniWrapper().addTable(sortAddress, dataAddrs, nullAddrs, rowCount);
     }
 
-    public void sort(long sortAddress)
+    public void sort(long sortAddress, long stageId)
     {
-        getJniWrapper().sort(sortAddress);
+        getJniWrapper().sort(sortAddress, stageId);
     }
 
     public OMResult getResult(long sortAddress)

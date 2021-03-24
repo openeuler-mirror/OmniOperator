@@ -42,18 +42,18 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getFinalRe
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    prepareAgg
- * Signature: (JIJIIIIIII)V
+ * Signature: (JJIJIIIIIII)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_prepareAgg
-  (JNIEnv *, jobject, jlong, jint, jlong, jint, jint, jint, jint, jint, jint, jint);
+  (JNIEnv *, jobject, jlong, jlong, jint, jlong, jint, jint, jint, jint, jint, jint, jint);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    executeAggIntermediate
- * Signature: (JJJIJI)V
+ * Signature: (JJJJIJI)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIntermediate
-  (JNIEnv *, jobject, jlong, jlong, jlong, jint, jlong, jint);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jlong, jint, jlong, jint);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
@@ -66,10 +66,10 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAgg
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    allocAndInitSort
- * Signature: ([II[II[I[I[II)J
+ * Signature: (J[II[II[I[I[II)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_allocAndInitSort
-  (JNIEnv *, jobject, jintArray, jint, jintArray, jint, jintArray, jintArray, jintArray, jint);
+  (JNIEnv *, jobject, jlong, jintArray, jint, jintArray, jint, jintArray, jintArray, jintArray, jint);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
@@ -82,10 +82,10 @@ JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_addTable
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    sort
- * Signature: (J)V
+ * Signature: (JJ)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sort
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jobject, jlong, jlong);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
@@ -94,6 +94,30 @@ JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sort
  */
 JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getResult
   (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    filterCompile
+ * Signature: (Ljava/lang/String;JI)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterCompile
+  (JNIEnv *, jobject, jstring, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    filterExecute
+ * Signature: (Ljava/lang/String;JJIJI)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
+  (JNIEnv *, jobject, jstring, jlong, jlong, jint, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    filterFinished
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinished
+  (JNIEnv *, jobject, jstring);
 
 #ifdef __cplusplus
 }

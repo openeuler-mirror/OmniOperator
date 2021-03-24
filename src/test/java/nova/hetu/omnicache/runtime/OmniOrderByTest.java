@@ -39,9 +39,9 @@ public class OmniOrderByTest
         int[] ascendings = {1};
         int[] nullFirsts = {0};
 
-        long sortAddress = orderBy.allocAndInitSort(sourceTypes, 1, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
+        long sortAddress = orderBy.allocAndInitSort(0, sourceTypes, 1, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
         orderBy.addTable(sortAddress, datas, nulls);
-        orderBy.sort(sortAddress);
+        orderBy.sort(sortAddress, 0);
         OMResult result = orderBy.getResult(sortAddress);
 
         ByteBuffer[] output = result.getBuffers();
@@ -64,7 +64,7 @@ public class OmniOrderByTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         long start = System.currentTimeMillis();
-        long sortAddress = orderBy.allocAndInitSort(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+        long sortAddress = orderBy.allocAndInitSort(1, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
         long elapsed = System.currentTimeMillis() - start;
         System.out.println("allocAndInitSort elapsed time : " + elapsed + "ms");
 
@@ -89,7 +89,7 @@ public class OmniOrderByTest
         System.out.println("TOTAL addTable elapsed time " + (elapsed / 10) + " ms");
 
         start = System.currentTimeMillis();
-        orderBy.sort(sortAddress);
+        orderBy.sort(sortAddress, 1);
         elapsed = System.currentTimeMillis() - start;
         System.out.println("sort elapsed time : " + elapsed + " ms");
 
