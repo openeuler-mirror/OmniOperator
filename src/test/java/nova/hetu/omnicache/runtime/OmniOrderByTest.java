@@ -38,11 +38,12 @@ public class OmniOrderByTest
         int[] sortCols = {0};
         int[] ascendings = {1};
         int[] nullFirsts = {0};
+        long stageId = 0;
 
-        long sortAddress = orderBy.allocAndInitSort(0, sourceTypes, 1, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
+        long sortAddress = orderBy.allocAndInitSort(stageId, sourceTypes, 1, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
         orderBy.addTable(sortAddress, datas, nulls);
-        orderBy.sort(sortAddress, 0);
-        OMResult result = orderBy.getResult(sortAddress);
+        orderBy.sort(sortAddress, stageId);
+        OMResult result = orderBy.getResult(sortAddress, stageId);
 
         ByteBuffer[] output = result.getBuffers();
         int len = result.getLength();
@@ -58,43 +59,33 @@ public class OmniOrderByTest
     @Test
     public void testOrderByPerformance()
     {
+        long start = System.currentTimeMillis();
+        Vec[][] vecs = buildVecs();
+        long elapsed = System.currentTimeMillis() - start;
+        System.out.println("buildVecs elapsed time : " + elapsed + " ms");
+
         int[] sourceTypes = {1, 1};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        long start = System.currentTimeMillis();
-        long sortAddress = orderBy.allocAndInitSort(1, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-        long elapsed = System.currentTimeMillis() - start;
-        System.out.println("allocAndInitSort elapsed time : " + elapsed + "ms");
+        long stageId = 1;
 
         start = System.currentTimeMillis();
-        Vec[][] vecs = buildVecs();
-        elapsed = System.currentTimeMillis() - start;
-        System.out.println("buildVecs elapsed time : " + elapsed + " ms");
+        long sortAddress = orderBy.allocAndInitSort(stageId, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
-        start = System.currentTimeMillis();
         int rowNum = vecs[0][0].size();
         for (int i = 0; i < vecs.length; i++) {
             IntVec nullVec1 = new IntVec(rowNum);
             IntVec nullVec2 = new IntVec(rowNum);
             Vec[] nulls = {nullVec1, nullVec2};
 
-            long instart = System.currentTimeMillis();
             orderBy.addTable(sortAddress, vecs[i], nulls);
-            long inelapsed = System.currentTimeMillis() - instart;
-            System.out.println("OMNIRUNTIME addTable elapsed time " + inelapsed + " ms");
         }
-        elapsed = System.currentTimeMillis() - start;
-        System.out.println("TOTAL addTable elapsed time " + (elapsed / 10) + " ms");
 
-        start = System.currentTimeMillis();
-        orderBy.sort(sortAddress, 1);
-        elapsed = System.currentTimeMillis() - start;
-        System.out.println("sort elapsed time : " + elapsed + " ms");
+        orderBy.sort(sortAddress, stageId);
 
-        start = System.currentTimeMillis();
-        OMResult result = orderBy.getResult(sortAddress);
+        OMResult result = orderBy.getResult(sortAddress, stageId);
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
 
@@ -106,7 +97,7 @@ public class OmniOrderByTest
     {
         int totalPageCount = 10;
         int pageDistinctCount = 4;
-        int pageDistinctValueRepeatCount = 250000;
+        int pageDistinctValueRepeatCount = 2500000;
 
         Vec[][] vecs = new Vec[totalPageCount][2];
         for (int i = 0; i < totalPageCount; i++) {

@@ -45,7 +45,7 @@ public class JniWrapper
 
     public native void sort(long sortAddress, long stageId);
 
-    public native OMResult getResult(long sortAddress);
+    public native OMResult getResult(long sortAddress, long stageId);
 
     public native String filterCompile(String expression, long clsTypeAddress, int inputVecCount);
 

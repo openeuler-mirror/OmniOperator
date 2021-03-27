@@ -90,10 +90,10 @@ JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sort
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    getResult
- * Signature: (J)Lnova/hetu/omnicache/runtime/OMResult;
+ * Signature: (JJ)Lnova/hetu/omnicache/runtime/OMResult;
  */
 JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getResult
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jobject, jlong, jlong);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper

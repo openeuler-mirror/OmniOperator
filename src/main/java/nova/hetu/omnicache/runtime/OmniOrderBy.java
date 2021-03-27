@@ -31,9 +31,9 @@ public class OmniOrderBy
         getJniWrapper().sort(sortAddress, stageId);
     }
 
-    public OMResult getResult(long sortAddress)
+    public OMResult getResult(long sortAddress, long stageId)
     {
-        OMResult result = getJniWrapper().getResult(sortAddress);
+        OMResult result = getJniWrapper().getResult(sortAddress, stageId);
         return result;
     }
 }
