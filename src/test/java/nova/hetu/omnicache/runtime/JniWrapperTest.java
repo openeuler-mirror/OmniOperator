@@ -14,14 +14,20 @@
  */
 package nova.hetu.omnicache.runtime;
 
-import nova.hetu.omnicache.vector.*;
+import nova.hetu.omnicache.vector.IntVec;
+import nova.hetu.omnicache.vector.Vec;
+import nova.hetu.omnicache.vector.VecType;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class JniWrapperTest
@@ -30,12 +36,27 @@ public class JniWrapperTest
     JniWrapper wrapper;
 
     @BeforeClass
-    public void setUp() {
+    public void setUp()
+    {
         wrapper = new JniWrapper();
     }
 
+    @Test
+    public void testFilterCompile()
+    {
+        JniWrapper jniWrapper = new JniWrapper();
+        int columCount = 3;
+        IntVec type = new IntVec(columCount);
+        type.set(0, 1);
+        type.set(1, 2);
+        type.set(2, 3);
+        String expression = "add";
+        jniWrapper.filterCompile(expression, type.getAddress(), columCount);
+    }
+
     //@Test
-    public void testUseLenFunction() {
+    public void testUseLenFunction()
+    {
         ByteBuffer[] buffers = new ByteBuffer[1];
         IntVec veclen = new IntVec(10);
         veclen.set(0, 2);

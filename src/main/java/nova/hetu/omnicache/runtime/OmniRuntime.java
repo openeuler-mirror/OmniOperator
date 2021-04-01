@@ -161,15 +161,13 @@ public class OmniRuntime
         return output;
     }
 
-    public void prepareAgg(long stageId, long operatorId, int totalChannel, int[] groupByChannels, VecType[] groupByTypes,
-            int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes,
-            VecType[] returnType, VecType[] inputTypes)
-    {
+    public long createOperator(long moduleId, int[] groupByChannels, VecType[] groupByTypes,
+                               int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes,
+                               VecType[] returnType) {
         int[] groupByTypeValues = transformVecType(groupByTypes);
         int[] aggTypeValues = transformVecType(aggregationTypes);
         int[] aggFunctionTypeValues = transformAggType(aggregationFunctionTypes);
         int[] outputTypeValues = transformVecType(returnType);
-        int[] inputTypeValues = transformVecType(inputTypes);
 
         int groupByLen = groupByChannels.length;
         int groupByTypeLen = groupByTypeValues.length;
@@ -177,9 +175,8 @@ public class OmniRuntime
         int aggTypeLen = aggTypeValues.length;
         int aggFunctionTypeLen = aggFunctionTypeValues.length;
         int outputTypeLen = outputTypeValues.length;
-        int inputTypeLen = inputTypeValues.length;
 
-        int size = groupByLen + groupByTypeLen + aggChannelLen + aggTypeLen + aggFunctionTypeLen + outputTypeLen + inputTypeLen;
+        int size = groupByLen + groupByTypeLen + aggChannelLen + aggTypeLen + aggFunctionTypeLen + outputTypeLen;
         IntVec prepareInfo = new IntVec(size);
         int offset = 0;
         offset = transformPrepareInfoToVec(prepareInfo, groupByChannels, offset);
@@ -188,16 +185,14 @@ public class OmniRuntime
         offset = transformPrepareInfoToVec(prepareInfo, aggTypeValues, offset);
         offset = transformPrepareInfoToVec(prepareInfo, aggFunctionTypeValues, offset);
         offset = transformPrepareInfoToVec(prepareInfo, outputTypeValues, offset);
-        offset = transformPrepareInfoToVec(prepareInfo, inputTypeValues, offset);
 
         if (offset != size) {
             throw new IllegalArgumentException(format("agg prepare input info is error: %s,%s", size, offset));
         }
 
         try {
-            jniWrapper.prepareAgg(
-                    stageId,
-                    operatorId,
+            return jniWrapper.createOperator(
+                    moduleId,
                     size,
                     prepareInfo.getAddress(),
                     groupByLen,
@@ -205,8 +200,7 @@ public class OmniRuntime
                     aggChannelLen,
                     aggTypeLen,
                     aggFunctionTypeLen,
-                    outputTypeLen,
-                    inputTypeLen);
+                    outputTypeLen);
         } catch (RuntimeException e) {
             throw new IllegalArgumentException("execute prepare agg failed", e);
         } finally {
@@ -214,29 +208,81 @@ public class OmniRuntime
         }
     }
 
-    public int transformPrepareInfoToVec(IntVec prepareInfo, int[] values, int offset) {
+    public long prepareAgg(int[] groupByChannels, VecType[] groupByTypes,
+            int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes,
+            VecType[] returnType)
+    {
+        int[] groupByTypeValues = transformVecType(groupByTypes);
+        int[] aggTypeValues = transformVecType(aggregationTypes);
+        int[] aggFunctionTypeValues = transformAggType(aggregationFunctionTypes);
+        int[] outputTypeValues = transformVecType(returnType);
+
+        int groupByLen = groupByChannels.length;
+        int groupByTypeLen = groupByTypeValues.length;
+        int aggChannelLen = aggregationChannels.length;
+        int aggTypeLen = aggTypeValues.length;
+        int aggFunctionTypeLen = aggFunctionTypeValues.length;
+        int outputTypeLen = outputTypeValues.length;
+
+        int size = groupByLen + groupByTypeLen + aggChannelLen + aggTypeLen + aggFunctionTypeLen + outputTypeLen;
+        IntVec prepareInfo = new IntVec(size);
+        int offset = 0;
+        offset = transformPrepareInfoToVec(prepareInfo, groupByChannels, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, groupByTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, aggregationChannels, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, aggTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, aggFunctionTypeValues, offset);
+        offset = transformPrepareInfoToVec(prepareInfo, outputTypeValues, offset);
+
+        if (offset != size) {
+            throw new IllegalArgumentException(format("agg prepare input info is error: %s,%s", size, offset));
+        }
+
+        try {
+            return jniWrapper.prepareAgg(
+                    prepareInfo.getAddress(),
+                    groupByLen,
+                    groupByTypeLen,
+                    aggChannelLen,
+                    aggTypeLen,
+                    aggFunctionTypeLen,
+                    outputTypeLen);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("execute prepare agg failed", e);
+        } finally {
+            prepareInfo.close();
+        }
+    }
+
+    public int transformPrepareInfoToVec(IntVec prepareInfo, int[] values, int offset)
+    {
         for (int value : values) {
             prepareInfo.set(offset++, value);
         }
         return offset;
     }
 
-    public void executeAggIntermediate(long stageId, long operatorId, List<Vec> inputData, int columnCount)
+    public long executeAggIntermediate(long operatorId, List<Vec> inputData, int columnCount, VecType[] vecTypes)
     {
         LongVec inputDataAddr = null;
         IntVec inputRowSize = null;
-
+        IntVec inputVecTypes = null;
         try {
             inputDataAddr = transformVecAddress(inputData);
             inputRowSize = getRowNumbers(inputData, columnCount);
-            jniWrapper.executeAggIntermediate(
-                    stageId,
+            int[] inputTypes = transformVecType(vecTypes);
+            inputVecTypes = new IntVec(inputTypes.length);
+            transformPrepareInfoToVec(inputVecTypes, inputTypes, 0);
+
+            long opId = jniWrapper.executeAggIntermediate(
                     operatorId,
                     inputDataAddr.getAddress(),
                     inputDataAddr.size(),
                     columnCount,
                     inputRowSize.getAddress(),
-                    inputRowSize.size());
+                    inputRowSize.size(),
+                    inputVecTypes.getAddress());
+            return opId;
         } catch (RuntimeException e) {
             throw new IllegalArgumentException("execute agg intermediate failed.", e);
         } finally {
@@ -246,18 +292,26 @@ public class OmniRuntime
             if (inputRowSize != null) {
                 inputRowSize.close();
             }
+            if (inputVecTypes != null) {
+                inputVecTypes.close();
+            }
         }
     }
 
-    public Vec[] executeAggFinal(long operatorId, VecType[] outputTypes) {
+    public Vec[] executeAggFinal(long operatorId, VecType[] outputTypes)
+    {
         OMResult result = jniWrapper.executeAggFinal(operatorId);
+        if (result.getBuffers().length != outputTypes.length) {
+            throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", result.getBuffers().length, outputTypes.length, result.getLength()));
+        }
+
         return generateOMVec(result, outputTypes);
     }
 
     private IntVec getRowNumbers(List<Vec> inputs, int columnCount) {
         int totalColumn = inputs.size();
         if (totalColumn % columnCount != 0) {
-            throw new IllegalArgumentException(format("input vec error: %s,%s", totalColumn, columnCount));
+            throw new IllegalArgumentException(format("input vec error:total colum: %s,column count: %s", totalColumn, columnCount));
         }
 
         int pageNum = totalColumn / columnCount;

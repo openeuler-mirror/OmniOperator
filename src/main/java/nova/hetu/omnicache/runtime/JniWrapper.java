@@ -31,11 +31,14 @@ public class JniWrapper
 
     public native OMResult getFinalResult(String key, int[] outputTypes);
 
-    public native void prepareAgg(long stageId, long operatorId, int size, long prepareInfoAddress, int groupByLen,
-            int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
-            int aggregationFunctionTypeLen, int outputTypeLen, int inputTypeLen);
+    public native long prepareAgg(long prepareInfoAddress, int groupByLen, int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
+            int aggregationFunctionTypeLen, int outputTypeLen);
 
-    public native void executeAggIntermediate(long stageId, long operatorId, long dataAddress, long totalColumn, int columnCount, long rowAddress, int rowNum);
+    public native long createOperator(long moduleId, int size, long prepareInfoAddress, int groupByLen,
+                                  int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
+                                  int aggregationFunctionTypeLen, int outputTypeLen);
+
+    public native long executeAggIntermediate(long operatorId, long dataAddress, long totalColumn, int columnCount, long rowAddress, int rowNum, long inputTypeAdress);
 
     public native OMResult executeAggFinal(long operatorId);
 
