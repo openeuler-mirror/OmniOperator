@@ -14,6 +14,8 @@
  */
 package nova.hetu.omnicache.runtime;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import nova.hetu.omnicache.vector.AggType;
 import nova.hetu.omnicache.vector.DoubleVec;
 import nova.hetu.omnicache.vector.IntVec;
@@ -23,7 +25,9 @@ import nova.hetu.omnicache.vector.VecType;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
@@ -32,6 +36,11 @@ public class OmniRuntime
 {
     private final JniWrapper jniWrapper;
     private final ConcurrentHashMap<String, OMResult> CACHE_STATS = new ConcurrentHashMap<>();
+
+    static Cache<Integer, Long> omniOptimizationCache = CacheBuilder.newBuilder()
+            .expireAfterAccess(java.time.Duration.ofMillis(36000))
+            .maximumSize(10000)
+            .build();
 
     public OmniRuntime()
     {
@@ -212,6 +221,15 @@ public class OmniRuntime
             int[] aggregationChannels, VecType[] aggregationTypes, AggType[] aggregationFunctionTypes,
             VecType[] returnType)
     {
+        List<VecType> groupByTypsList = Arrays.asList(groupByTypes);
+        List<VecType> aggregationTypeList = Arrays.asList(aggregationTypes);
+        List<AggType> aggFunctionList = Arrays.asList(aggregationFunctionTypes);
+        Integer prepareKey = Objects.hash(groupByTypsList, aggregationTypeList, aggFunctionList);
+        Long stageID = omniOptimizationCache.getIfPresent(prepareKey);
+        if (stageID != null) {
+            return stageID;
+        }
+
         int[] groupByTypeValues = transformVecType(groupByTypes);
         int[] aggTypeValues = transformVecType(aggregationTypes);
         int[] aggFunctionTypeValues = transformAggType(aggregationFunctionTypes);
@@ -239,7 +257,7 @@ public class OmniRuntime
         }
 
         try {
-            return jniWrapper.prepareAgg(
+            stageID = jniWrapper.prepareAgg(
                     prepareInfo.getAddress(),
                     groupByLen,
                     groupByTypeLen,
@@ -247,6 +265,8 @@ public class OmniRuntime
                     aggTypeLen,
                     aggFunctionTypeLen,
                     outputTypeLen);
+            omniOptimizationCache.put(prepareKey, stageID);
+            return stageID;
         } catch (RuntimeException e) {
             throw new IllegalArgumentException("execute prepare agg failed", e);
         } finally {
