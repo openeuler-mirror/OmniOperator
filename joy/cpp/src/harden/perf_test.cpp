@@ -1,0 +1,411 @@
+#include "Hammer.h"
+#include "llvm/IRReader/IRReader.h"
+#include "gtest/gtest.h"
+
+#include "../operator/hash_groupby.h"
+#include "../data/type.h"
+#include "../data/table.h"
+#include "ParamValue.h"
+
+using namespace codegen;
+
+//TEST(hammer, test_perf_harden) {
+//    std::map < std::string, ParamValue * > testParam;
+//
+//    //FIXME: need a better way to prepare the paramters
+//    int count = 10000;
+//    int v1[count]; //value of a column
+//    int v2[count]; //value of a column
+//    int v3[count]; //value of a column
+//
+//    for (int i = 0; i < count; i++) {
+//        v1[i] = i;
+//        v2[i] = i * 2;
+//        v3[i] = i * 3;
+//    }
+//
+//    void *columns[] = {v1, v2, v3};
+//
+//    int column_type[] = {1, 1, 1}; //type of each column, should be 1, or 2 for testing now
+//    int column_count = 3;
+//    int row_count = count;
+//
+//    auto p1 = ParamValue(v1, 5);
+//    auto p2 = ParamValue(v2, 5);
+//    auto p3 = ParamValue(v3, 5);
+//    auto p3_list = std::list<ParamValue>();
+//    p3_list.push_back(p1);
+//    p3_list.push_back(p2);
+//    p3_list.push_back(p3);
+//    auto p4 = ParamValue(&p3_list, 3);
+//
+//    auto p_col_type = ParamValue(column_type, 3);
+//    auto p_col_count = ParamValue(&column_count);
+//    auto p_row_count = ParamValue(&row_count);
+//
+//    //testParam["_Z7processPPvPiii@0"] = &p4;
+//    testParam["_Z7processPPvPiii@1"] = &p_col_type;
+//    testParam["_Z7processPPvPiii@2"] = &p_col_count;
+//    testParam["_Z7processPPvPiii@3"] = &p_row_count;
+//
+//    Hammer hammer("test_data/perf_test.ll", testParam);
+//    hammer.harden();
+//
+//    HammerConfig * conf = HammerConfig::getConf();
+//    std::list<Hammer*> deps;
+//    auto JITTER = hammer.create_jitter(deps,*conf);
+//    auto func = JITTER->lookup("_Z7processPPvPiii");
+//    if (func) {
+//        auto main = (double (*)(void **, int *, int, int)) func->getAddress();
+//
+//        typedef std::chrono::high_resolution_clock Time;
+//        typedef std::chrono::milliseconds ms;
+//        typedef std::chrono::duration<float> fsec;
+//
+//        auto t1 = Time::now();
+//        double result = 0;
+//        for (int i = 0; i < 1000; i++) {
+//            result = main((void **) columns, column_type, column_count, row_count);
+//        }
+//        auto t0 = Time::now();
+//        fsec fs = t0 - t1;
+//        ms d = std::chrono::duration_cast<ms>(fs);
+//        std::cout << " duration time: " << d.count() << "ms\n";
+//        printf("\nresult: %f", result);
+//    }
+//}
+
+Table **buildData(int PAGE_NUM, int DATA_SIZE, int *data_type, int column_count) {
+    Table **input = new Table *[PAGE_NUM];
+    for (int32_t i = 0; i < PAGE_NUM; ++i) {
+        Table *table = new Table(DATA_SIZE, 2);
+
+        for (int j = 0; j < column_count; j++) {
+            if (data_type[j] == 1) //INT32
+            {
+                int32_t *data1 = new int32_t[DATA_SIZE];
+                for (int32_t i = 0; i < DATA_SIZE; ++i) {
+                    data1[i] = i % 3;
+                }
+
+                Column *col1 = new Column(data1, ColumnType::INT32, DATA_SIZE);
+                table->setColumn(col1, ColumnType::INT32);
+            }
+            if (data_type[j] == 2) //INT64
+            {
+                int64_t *data1 = new int64_t[DATA_SIZE];
+                for (int64_t i = 0; i < DATA_SIZE; ++i) {
+                    data1[i] = i % 3;
+                }
+
+                Column *col1 = new Column(data1, ColumnType::INT64, DATA_SIZE);
+                table->setColumn(col1, ColumnType::INT64);
+            }
+        }
+        input[i] = table;
+    }
+    return input;
+}
+
+void test_groupby(bool harden) {
+    std::map < std::string, ParamValue * > testParam;
+    std::list < Hammer * > deps = std::list<Hammer *>();
+
+    int col_type[] = {1, 2};
+    int col_count = 2;
+    int groupByColNum[] = {0, 1};
+    int groupbyNum = 2;
+    int aggColIdx[] = {0, 1};
+    int aggColNum = 2;
+    ParamValue p_col_type = ParamValue(col_type, 2);
+    ParamValue p_col_count = ParamValue(&col_count);
+    ParamValue p_groupByColNum = ParamValue(groupByColNum, 2);
+    ParamValue p_group_num = ParamValue(&groupbyNum);
+    ParamValue p_aggColIdx = ParamValue(aggColIdx, 2);
+    ParamValue p_agg_num = ParamValue(&aggColNum);
+
+    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
+    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
+    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@5"] = &p_groupByColNum;
+
+    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
+    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@7"] = &p_aggColIdx;
+    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
+
+    testParam["_Z13test_group_byiiPii@2"] = &p_col_type;
+    testParam["_Z13test_group_byiiPii@3"] = &p_col_count;
+
+    typedef std::chrono::high_resolution_clock Time;
+    typedef std::chrono::milliseconds ms;
+    typedef std::chrono::duration<float> fsec;
+
+    auto start = Time::now();
+
+    Hammer hammer1("../operator/ir/test_groupby.ll", testParam);
+    Hammer hammer2("../operator/ir/hash_groupby.ll", testParam);
+    Hammer hammer3("../operator/ir/aggregator.ll", testParam);
+    Hammer hammer4("../operator/ir/memory_pool.ll", testParam);
+
+    if (harden) {
+        hammer2.harden();
+        hammer1.harden();
+        hammer3.harden();
+        hammer4.harden();
+    }
+
+    deps.push_back(&hammer3);
+    deps.push_back(&hammer2);
+    deps.push_back(&hammer4);
+
+
+
+    auto opt_conf = HammerConfig::getConf(2, 121);
+    auto JITTER = hammer1.create_jitter(deps,*opt_conf);
+    auto t_created_jitter = Time::now();
+    fsec fs = t_created_jitter - start;
+    ms d = std::chrono::duration_cast<ms>(fs);
+    std::cout << " create_jitter: " << d.count() << "ms\n";
+
+    auto createGroupby_func = JITTER->lookup("_Z13createGroupByv");
+
+    auto t_lookup_func = Time::now();
+    fs = t_lookup_func - t_created_jitter;
+    d = std::chrono::duration_cast<ms>(fs);
+    std::cout << " lookup func: " << d.count() << "ms\n";
+
+    createGroupby_func = JITTER->lookup("_Z13createGroupByv");
+    auto t_lookup_func2 = Time::now();
+    fs = t_lookup_func2 - t_lookup_func;
+    d = std::chrono::duration_cast<ms>(fs);
+    std::cout << " lookup func 2: " << d.count() << "ms\n";
+
+    if (createGroupby_func) {
+        auto PAGE_NUM = 25000;
+        auto DATA_SIZE = 4000;
+        auto createGrouby = (HashGroupBy *(*)()) createGroupby_func->getAddress();
+        auto groupBy = createGrouby();
+        auto input = buildData(PAGE_NUM, DATA_SIZE, col_type, col_count);
+
+        auto t1 = Time::now();
+        int result = 0;
+        for (int32_t i = 0; i < PAGE_NUM; ++i) {
+            groupBy->process(input[i], DATA_SIZE);
+        }
+        auto t0 = Time::now();
+        fs = t0 - t1;
+        d = std::chrono::duration_cast<ms>(fs);
+        std::cout << (harden ? "optimized" : "original") << " agg duration time: " << d.count() << "ms\n";
+        printf("\nresult: %d", result);
+    }
+
+}
+TEST(hammer, test_groupby_primitive_arg) {
+    test_groupby(true);
+}
+
+TEST(hammer, test_groupby_original) {
+    test_groupby(false);
+}
+
+//
+//TEST(hammer, test_sort_original) {
+//    std::map < std::string, ParamValue * > testParam;
+//
+//    //int *sortCols,
+//    int sortCols[] = {0, 1};
+//    auto p_sortCols = ParamValue(sortCols, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@1"] = &p_sortCols;
+//
+//    //int *sortColTypes,
+//    int sortColTypes[] = {1, 1};
+//    auto p_sortColTypes = ParamValue(sortColTypes, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@2"] = &p_sortColTypes;
+//
+//    //int *sortAscendings,
+//    int sortAscendings[] = {1, 1};
+//    auto p_sortAscendings = ParamValue(sortAscendings, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@3"] = &p_sortAscendings;
+//
+//    //int *sortNullFirsts,
+//    int sortNullFirsts[] = {1, 1};
+//    auto p_sortNullFirsts = ParamValue(sortNullFirsts, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@4"] = &p_sortNullFirsts;
+//
+//    //int sortColCount,
+//    int sortColCount = 2;
+//    auto p_sortColCount = ParamValue(&sortColCount);
+//    testParam["_Z9compareTolPiS_S_S_ijj@5"] = &p_sortColCount;
+//
+//    std::list < Hammer * > deps = std::list<Hammer *>();
+//
+//    Hammer hammer1("../operator/ir/test.ll", testParam);
+//    Hammer hammer2("../operator/ir/hash_groupby.ll", testParam);
+//    Hammer hammer3("../operator/ir/aggregator.ll", testParam);
+//    Hammer hammer4("../operator/ir/memory_pool.ll", testParam);
+//    Hammer hammer5("../operator/ir/sort.ll", testParam);
+//    Hammer hammer6("../operator/ir/sort_api.ll", testParam);
+//
+//    hammer5.harden();
+//
+//    deps.push_back(&hammer3);
+//    deps.push_back(&hammer2);
+//    deps.push_back(&hammer4);
+//    deps.push_back(&hammer6);
+//    deps.push_back(&hammer5);
+//
+//    auto opt_conf = HammerConfig::getConf(2, 119);
+//    auto JITTER = hammer1.create_jitter(deps,*opt_conf);
+//
+//    auto sort = JITTER->lookup("_Z9test_sortv");
+//    if (sort) {
+//        auto main = (int (*)()) sort->getAddress();
+//
+//        typedef std::chrono::high_resolution_clock Time;
+//        typedef std::chrono::milliseconds ms;
+//        typedef std::chrono::duration<float> fsec;
+//
+//        auto t1 = Time::now();
+//        int result = 0;
+//        std::cout << "about to call sort \n";
+//
+//        result = main();
+//        auto t0 = Time::now();
+//        fsec fs = t0 - t1;
+//        ms d = std::chrono::duration_cast<ms>(fs);
+//        std::cout << "sort duration time: " << d.count() << "ms\n";
+//        printf("\nresult: %d", result);
+//    }
+//}
+//
+//TEST(hammer, test_sort_harden) {
+//    std::map < std::string, ParamValue * > testParam;
+//
+//    //int *sortCols,
+//    int sortCols[] = {0, 1};
+//    auto p_sortCols = ParamValue(sortCols, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@1"] = &p_sortCols;
+//
+//    //int *sortColTypes,
+//    int sortColTypes[] = {1, 1};
+//    auto p_sortColTypes = ParamValue(sortColTypes, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@2"] = &p_sortColTypes;
+//
+//    //int *sortAscendings,
+//    int sortAscendings[] = {1, 1};
+//    auto p_sortAscendings = ParamValue(sortAscendings, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@3"] = &p_sortAscendings;
+//
+//    //int *sortNullFirsts,
+//    int sortNullFirsts[] = {1, 1};
+//    auto p_sortNullFirsts = ParamValue(sortNullFirsts, 2);
+//    testParam["_Z9compareTolPiS_S_S_ijj@4"] = &p_sortNullFirsts;
+//
+//    //int sortColCount,
+//    int sortColCount = 2;
+//    auto p_sortColCount = ParamValue(&sortColCount);
+//    testParam["_Z9compareTolPiS_S_S_ijj@5"] = &p_sortColCount;
+//
+//    std::list < Hammer * > deps = std::list<Hammer *>();
+//
+//    Hammer hammer1("../operator/ir/test.ll", testParam);
+//    Hammer hammer2("../operator/ir/hash_groupby.ll", testParam);
+//    Hammer hammer3("../operator/ir/aggregator.ll", testParam);
+//    Hammer hammer4("../operator/ir/memory_pool.ll", testParam);
+//    Hammer hammer5("../operator/ir/sort.ll", testParam);
+//    Hammer hammer6("../operator/ir/sort_api.ll", testParam);
+//
+//    hammer5.harden();
+//
+//    deps.push_back(&hammer3);
+//    deps.push_back(&hammer2);
+//    deps.push_back(&hammer4);
+//    deps.push_back(&hammer6);
+//    deps.push_back(&hammer5);
+//
+//    auto opt_conf = HammerConfig::getConf(2, 119);
+//    auto JITTER = hammer1.create_jitter(deps,*opt_conf);
+//
+//    auto sort = JITTER->lookup("_Z9test_sortv");
+//    if (sort) {
+//        auto main = (int (*)()) sort->getAddress();
+//
+//        typedef std::chrono::high_resolution_clock Time;
+//        typedef std::chrono::milliseconds ms;
+//        typedef std::chrono::duration<float> fsec;
+//
+//        auto t1 = Time::now();
+//        int result = 0;
+//        std::cout << "about to call sort \n";
+//
+//        result = main();
+//        auto t0 = Time::now();
+//        fsec fs = t0 - t1;
+//        ms d = std::chrono::duration_cast<ms>(fs);
+//        std::cout << "sort duration time: " << d.count() << "ms\n";
+//        printf("\nresult: %d", result);
+//    }
+//}
+//
+//TEST(hammer, test_perf_no_harden) {
+//    std::map < std::string, ParamValue * > testParam;
+//
+//    int count = 10000;
+//    int v1[count]; //value of a column
+//    int v2[count]; //value of a column
+//    int v3[count]; //value of a column
+//
+//    for (int i = 0; i < count; i++) {
+//        v1[i] = i;
+//        v2[i] = i * 2;
+//        v3[i] = i * 3;
+//    }
+//
+//    void *columns[] = {v1, v2, v3};
+//
+//    int column_type[] = {1, 1, 1}; //type of each column, should be 1, or 2 for testing now
+//    int column_count = 3;
+//    int row_count = count;
+//
+//    auto p1 = ParamValue(v1, 5);
+//    auto p2 = ParamValue(v2, 5);
+//    auto p3 = ParamValue(v3, 5);
+//    auto p3_list = std::list<ParamValue>();
+//    p3_list.push_back(p1);
+//    p3_list.push_back(p2);
+//    p3_list.push_back(p3);
+//    auto p4 = ParamValue(&p3_list, 3);
+//
+//    auto p_col_type = ParamValue(column_type, 3);
+//    auto p_col_count = ParamValue(&column_count);
+//    auto p_row_count = ParamValue(&row_count);
+//
+//    //testParam["_Z7processPPvPiii@0"] = &p4;
+//    testParam["_Z7processPPvPiii@1"] = &p_col_type;
+//    testParam["_Z7processPPvPiii@2"] = &p_col_count;
+//    testParam["_Z7processPPvPiii@3"] = &p_row_count;
+//
+//    Hammer hammer("test_data/func_w_2darray_param.ll", testParam);
+//
+//    HammerConfig * conf = HammerConfig::getConf();
+//    std::list<Hammer*> deps;
+//    auto JITTER = hammer.create_jitter(deps,*conf);
+//    auto func = JITTER->lookup("_Z7processPPvPiii");
+//    if (func) {
+//        auto main = (double (*)(void **, int *, int, int)) func->getAddress();
+//
+//        typedef std::chrono::high_resolution_clock Time;
+//        typedef std::chrono::milliseconds ms;
+//        typedef std::chrono::duration<float> fsec;
+//
+//        auto t1 = Time::now();
+//        double result = 0;
+//        for (int i = 0; i < 1000; i++) {
+//            result = main((void **) columns, column_type, column_count, row_count);
+//        }
+//        auto t0 = Time::now();
+//        fsec fs = t0 - t1;
+//        ms d = std::chrono::duration_cast<ms>(fs);
+//        std::cout << " duration time: " << d.count() << "ms\n";
+//        printf("\nresult: %f", result);
+//    }
+//}

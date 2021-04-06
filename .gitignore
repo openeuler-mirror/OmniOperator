@@ -29,3 +29,16 @@ node_modules
 */.gitignore
 */dependency-reduced-pom.xml
 *.lock
+
+.vscode
+/target
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+cpp/build
+cpp/bin
+cpp/lib
+cpp/inc
+

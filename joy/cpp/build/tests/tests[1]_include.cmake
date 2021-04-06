@@ -1,0 +1,5 @@
+if(EXISTS "/usr/code/olk_dev/omni_joy/joy/cpp/build/tests/tests[1]_tests.cmake")
+  include("/usr/code/olk_dev/omni_joy/joy/cpp/build/tests/tests[1]_tests.cmake")
+else()
+  add_test(tests_NOT_BUILT tests_NOT_BUILT)
+endif()
