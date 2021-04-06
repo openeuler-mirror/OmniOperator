@@ -14,8 +14,10 @@
  */
 package nova.hetu.omnicache.vector;
 
+import nova.hetu.omnicache.utils.OmniErrorType;
+import nova.hetu.omnicache.utils.OmniRuntimeException;
+
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 public class LongVec
         extends Vec
@@ -30,70 +32,30 @@ public class LongVec
         super(buffer, size);
     }
 
-    @Override
-    public Vec hash()
+    private LongVec(OMChunk buf, int offset, int size)
     {
-        return null;
-    }
-
-    @Override
-    public Vec mul(int other)
-    {
-        base.mul(OMVectorBase.LONG_DATA_TYPE, data, other);
-        return null;
-    }
-
-    @Override
-    public Vec mmul(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public Vec filter()
-    {
-        return null;
+        super(buf, offset, size);
     }
 
     public void set(int idx, long value)
     {
-        data.putLong(idx * Long.BYTES, value);
+        if (isWritable) {
+            this.getData().putLong(idx * Long.BYTES + offset, value);
+        }
+        else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
+        }
     }
 
     @Override
     public LongVec slice(int startIdx, int endIdx)
     {
-        byte[] regionData = new byte[(endIdx - startIdx) * Long.BYTES];
-        LongVec newVec = new LongVec((endIdx - startIdx));
-        data.position(startIdx * Long.BYTES);
-        data.get(regionData, 0, regionData.length);
-        newVec.data.put(regionData);
-        return newVec;
+        return new LongVec(this.omniChunk, startIdx * Long.BYTES + offset, endIdx - startIdx);
     }
 
     public long get(int idx)
     {
-        return data.getLong(idx * Long.BYTES);
-    }
-
-    @Override
-    public Vec groupby()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec join(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public Vec concat(Vec other)
-    {
-        ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Long.BYTES, other.size * Long.BYTES);
-        newBuffer.order(ByteOrder.LITTLE_ENDIAN);
-        return new LongVec(newBuffer, this.size + other.size);
+        return this.getData().getLong(idx * Long.BYTES + offset);
     }
 
     @Override

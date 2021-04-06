@@ -14,11 +14,11 @@
  */
 package nova.hetu.omnicache.vector;
 
-import sun.nio.ch.DirectBuffer;
+import nova.hetu.omnicache.utils.OmniErrorType;
+import nova.hetu.omnicache.utils.OmniRuntimeException;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * wrapper of the off-heap values to be used by blocks, this is also the place to implement vectorized operations.
@@ -32,21 +32,48 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class Vec
 {
-    protected ByteBuffer data;
     protected OMVectorBase base = new OMVectorBase();
-    private final AtomicInteger referenceCount = new AtomicInteger(0);
+    //default memory offset is zero
+    protected int offset = 0;
+    protected OMChunk omniChunk;
     protected int size;
+
+    protected boolean isWritable = true;
 
     public Vec(int rowSize, int alloc_size)
     {
-        this.data = OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN);
+        this.omniChunk = new OMChunk(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN));
         this.size = rowSize;
     }
 
+    /**
+     * For native execute result return to java ByteBuffer data.
+     *
+     * @param data
+     * @param length
+     */
     public Vec(ByteBuffer data, int length)
     {
-        this.data = data;
+        this.omniChunk = new OMChunk(data);
         this.size = length;
+    }
+
+    public Vec(OMChunk buf, int offset, int length)
+    {
+        this.omniChunk = new OMChunk(buf);
+        this.size = length;
+        this.offset = offset;
+        this.isWritable = false;
+    }
+
+    public boolean isWritable()
+    {
+        return isWritable;
+    }
+
+    public void setWritable(boolean writable)
+    {
+        isWritable = writable;
     }
 
     /**
@@ -56,7 +83,9 @@ public abstract class Vec
      * @param endIdx
      * @return
      */
-    public abstract Vec slice(int startIdx, int endIdx);
+    public Vec slice(int startIdx, int endIdx){
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default slice()");
+    }
 
     /**
      * returns the hash of all elements in the vec
@@ -64,7 +93,10 @@ public abstract class Vec
      *
      * @return
      */
-    public abstract Vec hash();
+    public Vec hash()
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default hash()");
+    }
 
     /**
      * Another potential SIMD in-situ operation
@@ -72,7 +104,10 @@ public abstract class Vec
      * @param other
      * @return
      */
-    public abstract Vec mul(int other);
+    public Vec mul(int other)
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default mul()");
+    }
 
     /**
      * Another potential SIMD in-situ operation
@@ -80,19 +115,28 @@ public abstract class Vec
      * @param other
      * @return
      */
-    public abstract Vec mmul(Vec other);
+    public Vec mmul(Vec other)
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default mmul()");
+    }
 
     /**
      * Another potential SIMD in-situ operation
      *
      * @return
      */
-    public abstract Vec filter();
+    public Vec filter()
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default filter()");
+    }
 
     /**
      * Another potential SIMD in-situ operation
      */
-    public abstract Vec groupby(/** how to pass in group by parameters? the columns to be used for group by */);
+    public Vec groupby(/** how to pass in group by parameters? the columns to be used for group by */)
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default groupby()");
+    }
 
     /**
      * Another potential SIMD in-situ operation
@@ -100,7 +144,10 @@ public abstract class Vec
      * @param other
      * @return
      */
-    public abstract Vec join(Vec other /** how to pass in the join conditions? might require many other columns*/);
+    public Vec join(Vec other /** how to pass in the join conditions? might require many other columns*/)
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default join()");
+    }
 
     /**
      * Another potential SIMD in-situ operation
@@ -108,7 +155,10 @@ public abstract class Vec
      * @param other
      * @return
      */
-    public abstract Vec concat(Vec other);
+    public Vec concat(Vec other)
+    {
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default concat()");
+    }
 
     public int size()
     {
@@ -117,31 +167,28 @@ public abstract class Vec
 
     public int capacity()
     {
-        return data.capacity();
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default capacity()");
     }
 
     public int remaining()
     {
-        return data.remaining();
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default remaining()");
     }
 
     public abstract VecType getType();
 
     public ByteBuffer getData()
     {
-        return this.data;
+        return this.omniChunk.getData();
     }
 
-    public long getAddress() {
-        return ((DirectBuffer)data).address();
-    }
-
-    public void close()
+    public long getAddress()
     {
-        if (data != null) {
-            long address = ((DirectBuffer) data).address();
-            OMVectorBase.release(address);
-            data = null;
-        }
+        return this.omniChunk.getAddress() + offset;
+    }
+
+    public boolean close()
+    {
+        return this.omniChunk.release();
     }
 }
