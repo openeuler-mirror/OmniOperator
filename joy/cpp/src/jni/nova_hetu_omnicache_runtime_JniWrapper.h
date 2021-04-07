@@ -42,30 +42,32 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getFinalRe
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    prepareAgg
- * Signature: (JJIJIIIIIII)V
+ * Signature: (JIIIIII)J
  */
-// JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_prepareAgg
-//   (JNIEnv *, jobject, jlong, jlong, jint, jlong, jint, jint, jint, jint, jint, jint, jint);
-
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_prepareAgg
-(JNIEnv *env, jobject jObj, jlong jStageId, jlong jOperatorId, jint jSize, jlong jPrepareInfo, jint jGroupByChannelLen,jint jGroupByTypeLen,
-jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen);
+  (JNIEnv *, jobject, jlong, jint, jint, jint, jint, jint, jint);
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    createOperator
+ * Signature: (JIJIIIIII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createOperator
+  (JNIEnv *, jobject, jlong, jint, jlong, jint, jint, jint, jint, jint, jint);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    executeAggIntermediate
- * Signature: (JJJJIJI)V
+ * Signature: (JJJIJIJ)J
  */
-// JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIntermediate
-//   (JNIEnv *, jobject, jlong, jlong, jlong, jlong, jint, jlong, jint);
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIntermediate
-(JNIEnv * env, jobject jObj, jlong jStageId,jlong jOperatorId, jlong jInputDataAddress, jlong jTotalColumn, jint
-jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jint, jlong, jint, jlong);
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    executeAggFinal
  * Signature: (J)Lnova/hetu/omnicache/runtime/OMResult;
  */
+
 JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
   (JNIEnv *, jobject, jlong);
 

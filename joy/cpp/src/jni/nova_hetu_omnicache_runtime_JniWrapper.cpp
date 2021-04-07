@@ -89,13 +89,10 @@ void transformValueFromPrepareInfo(uint32_t* prepareInfo, uint32_t* target, int 
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_prepareAgg
-(JNIEnv *env, jobject jObj, jlong jStageId, jlong jOperatorId, jint jSize, jlong jPrepareInfo, jint jGroupByChannelLen,jint jGroupByTypeLen,
+(JNIEnv *env, jobject jObj, jlong jPrepareInfo, jint jGroupByChannelLen,jint jGroupByTypeLen,
 jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
 {
   int totalLen = jGroupByChannelLen + jGroupByTypeLen + jAggChannelLen + jAggTypeLen + jAggFuncTypeLen + jOutPutTyeLen;
-  if (totalLen != jSize) {
-    std::cerr << "mismatch the input prepare info" << totalLen << "," << jSize;
-    }
     // groupby channel and type
     size_t groupByChannelLen = (size_t)jGroupByChannelLen;
     uint32_t* prepareInfo = (uint32_t*)jPrepareInfo;
@@ -128,16 +125,6 @@ jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
     transformValueFromPrepareInfo(prepareInfo, outPutTypes, outPutTypeLen, &index);
     PrepareContext outPutTypeContext = {outPutTypes, outPutTypeLen};
 
-
-    // size_t inputTypeLen = (size_t)jInputTypeLen;
-    // uint32_t* inputTypes = new uint32_t[inputTypeLen];
-    // transformValueFromPrepareInfo(prepareInfo, inputTypes, inputTypeLen, &index);
-
-    // hash<string> hasher;
-    // int64_t stageId =reinterpret_cast<int64_t>(jStageId);
-    // int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
-    // g_typeCache.put(opId, inputTypes);
-
 #ifdef OPTIMIZE_BY_ASYNC
 #ifdef DEBUG_LEVEL_LOW
     DebugPrint("StageId:%ld, OpId:%ld Async codegen optimizing.", stageId, opId);
@@ -149,11 +136,54 @@ jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
 #endif
 }
 
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createOperator
+(JNIEnv *env, jobject jObj, jlong jModuleId, jint jSize, jlong jPrepareInfo, jint jGroupByChannelLen, jint jGroupByTypeLen,
+ jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
+  {
+      int totalLen = jGroupByChannelLen + jGroupByTypeLen + jAggChannelLen + jAggTypeLen + jAggFuncTypeLen + jOutPutTyeLen;
+  // if (totalLen != jSize) {
+  //   std::cerr << "mismatch the input prepare info" << totalLen << "," << jSize;
+  //   }
+    // groupby channel and type
+    size_t groupByChannelLen = (size_t)jGroupByChannelLen;
+    uint32_t* prepareInfo = (uint32_t*)jPrepareInfo;
+    uint32_t* groupByChannels =  new uint32_t[groupByChannelLen];
+    int index = 0;
+    transformValueFromPrepareInfo(prepareInfo, groupByChannels, jGroupByChannelLen, &index);
+    PrepareContext groupByColContext = {groupByChannels, groupByChannelLen};
+    size_t groupByTypeLen = (size_t)jGroupByTypeLen;
+    uint32_t* groupByTypes = new uint32_t[groupByTypeLen];
+    transformValueFromPrepareInfo(prepareInfo, groupByTypes, groupByTypeLen, &index);
+    PrepareContext groupByTypeContext = {groupByTypes, groupByTypeLen};
+
+    // agg channel and type
+    size_t aggChannelLen = (size_t)jAggChannelLen;
+    uint32_t* aggChannels = new uint32_t[aggChannelLen];
+    transformValueFromPrepareInfo(prepareInfo, aggChannels, aggChannelLen, &index);
+    PrepareContext aggColContext = {aggChannels, aggChannelLen};
+    size_t aggTypeLen = (size_t)jAggTypeLen;
+    uint32_t* aggTypes = new uint32_t[aggTypeLen];
+    transformValueFromPrepareInfo(prepareInfo, aggTypes, aggTypeLen, &index);
+    PrepareContext aggTypeContext = {aggTypes, aggTypeLen};
+
+    // agg function type
+    size_t aggFuncTypeLen = (size_t)jAggFuncTypeLen;
+    uint32_t* aggFuncTypes = new uint32_t[aggFuncTypeLen];
+    transformValueFromPrepareInfo(prepareInfo, aggFuncTypes, aggFuncTypeLen, &index);
+    PrepareContext aggFuncTypeContext = {aggFuncTypes, aggFuncTypeLen};
+    size_t outPutTypeLen = (size_t)jOutPutTyeLen;
+    uint32_t* outPutTypes= new uint32_t[outPutTypeLen];
+    transformValueFromPrepareInfo(prepareInfo, outPutTypes, outPutTypeLen, &index);
+    PrepareContext outPutTypeContext = {outPutTypes, outPutTypeLen};
+
+    return createOperator(jModuleId, groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
+  }
+
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIntermediate
-(JNIEnv * env, jobject jObj, jlong jStageId,jlong jOperatorId, jlong jInputDataAddress, jlong jTotalColumn, jint
+(JNIEnv * env, jobject jObj, jlong jOperatorId, jlong jInputDataAddress, jlong jTotalColumn, jint
 jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
 {
-    int64_t stageId =reinterpret_cast<int64_t>(jStageId);
     int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
     size_t totalColumnCount = (size_t)jTotalColumn;
     int64_t* address = reinterpret_cast<int64_t*>(jInputDataAddress);

@@ -52,10 +52,10 @@ JitContext* optimizeByLlvm( PrepareContext groupByCols,
     testParam["processAgg@4"] =  &p_col_type;
     testParam["processAgg@5"] =  &p_aggColIdx;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    Hammer hammer1("/usr/code/olk_dev/omni_joy/joy/cpp/src/operator/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/usr/code/olk_dev/omni_joy/joy/cpp/src/operator/ir/hash_groupby.ll", testParam);
-    Hammer hammer3("/usr/code/olk_dev/omni_joy/joy/cpp/src/operator/ir/aggregator.ll", testParam);
-    Hammer hammer4("/usr/code/olk_dev/omni_joy/joy/cpp/src/operator/ir/memory_pool.ll", testParam);
+    Hammer hammer1("/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/memory_pool.ll", testParam);
+    Hammer hammer2("/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/hash_groupby.ll", testParam);
+    Hammer hammer3("/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/aggregator.ll", testParam);
+    Hammer hammer4("/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/memory_pool.ll", testParam);
     hammer1.harden();
     hammer2.harden();
     hammer3.harden();
