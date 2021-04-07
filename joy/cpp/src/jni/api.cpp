@@ -41,16 +41,13 @@ JitContext* optimizeByLlvm( PrepareContext groupByCols,
 
     testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
     testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
-    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@5"] = &p_groupByColIdx;
     testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
-    testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@7"] = &p_aggColIdx;
     testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
     testParam["_ZN11HashGroupBy6inloopEPPcjPiiS2_iS2_iS2_@9"] = &p_agg_types;
     
     testParam["processAgg@2"] =  &p_agg_types;
     testParam["processAgg@3"] =  &p_agg_num;
     testParam["processAgg@4"] =  &p_col_type;
-    testParam["processAgg@5"] =  &p_aggColIdx;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     Hammer hammer1("/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/memory_pool.ll", testParam);
     Hammer hammer2("/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/hash_groupby.ll", testParam);

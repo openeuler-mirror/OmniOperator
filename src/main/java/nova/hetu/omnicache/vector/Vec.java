@@ -42,6 +42,10 @@ public abstract class Vec
 
     public Vec(int rowSize, int alloc_size)
     {
+        if (rowSize == 0 && alloc_size == 0) {
+            this.omniChunk = null;
+            this.size = 0;
+        }
         this.omniChunk = new OMChunk(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN));
         this.size = rowSize;
     }
@@ -83,7 +87,8 @@ public abstract class Vec
      * @param endIdx
      * @return
      */
-    public Vec slice(int startIdx, int endIdx){
+    public Vec slice(int startIdx, int endIdx)
+    {
         throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default slice()");
     }
 
@@ -167,7 +172,9 @@ public abstract class Vec
 
     public int capacity()
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default capacity()");
+        //Todo:now since we use the reference count a ByteBuffer,so this may not accuracy of calculate the capacity.
+        return getData().capacity();
+//        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default capacity()");
     }
 
     public int remaining()
