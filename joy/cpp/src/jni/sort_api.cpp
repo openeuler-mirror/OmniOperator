@@ -57,8 +57,8 @@ void createJitSortContext(long stageId, int *sourceTypes, int typeCount, int *ou
 
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     
-    Hammer hammer1("/home/joy/cpp/src/operator/ir/sort.ll", testParam);
-    Hammer hammer2("/home/joy/cpp/src/operator/ir/memory_pool.ll", testParam);
+    Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
   
     hammer1.harden();
    
