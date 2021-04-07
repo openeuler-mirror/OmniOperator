@@ -14,8 +14,10 @@
  */
 package nova.hetu.omnicache.vector;
 
+import nova.hetu.omnicache.utils.OmniErrorType;
+import nova.hetu.omnicache.utils.OmniRuntimeException;
+
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * Representing a floating point number
@@ -23,86 +25,43 @@ import java.nio.ByteOrder;
 public class DoubleVec
         extends Vec
 {
-
     public DoubleVec(int size)
     {
         super(size, size * Double.BYTES);
     }
 
-    public DoubleVec(ByteBuffer buffer, int size)
+    private DoubleVec(OMChunk buf, int offset, int size)
     {
-        super(buffer, size);
+        super(buf, offset, size);
     }
 
-    @Override
-    public Vec hash()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec mul(int other)
-    {
-        base.mul(OMVectorBase.DOUBLE_DATA_TYPE, data, other);
-        return null;
-    }
-
-    @Override
-    public Vec mmul(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public Vec filter()
-    {
-        return null;
-    }
-
-    public void set(int idx, double value)
-    {
-        data.putDouble(idx * Double.BYTES, value);
-    }
+    public DoubleVec(ByteBuffer buffer, int length) {super(buffer, length);}
 
     @Override
     public DoubleVec slice(int startIdx, int endIdx)
     {
-        byte[] regionData = new byte[(endIdx - startIdx) * Double.BYTES];
-        DoubleVec newVec = new DoubleVec(endIdx - startIdx);
-        data.position(startIdx * Double.BYTES);
-        data.get(regionData,0, regionData.length);
-        newVec.data.put(regionData);
-        return newVec;
+
+        return new DoubleVec(this.omniChunk, startIdx * Double.BYTES + offset, endIdx);
     }
 
     public double get(int idx)
     {
-        return data.getDouble(idx * Double.BYTES);
+        return this.getData().getDouble(idx * Double.BYTES + offset);
     }
 
-    @Override
-    public Vec groupby()
+    public void set(int idx, double value)
     {
-        return null;
-    }
-
-    @Override
-    public Vec join(Vec other)
-    {
-        return null;
+        if (isWritable) {
+            this.getData().putDouble(idx * Double.BYTES + offset, value);
+        }
+        else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
+        }
     }
 
     @Override
     public VecType getType()
     {
         return VecType.DOUBLE;
-    }
-
-    @Override
-    public Vec concat(Vec other)
-    {
-        ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Double.BYTES, other.size * Double.BYTES);
-        newBuffer.order(ByteOrder.LITTLE_ENDIAN);
-        return new DoubleVec(newBuffer, this.size + other.size);
     }
 }

@@ -14,8 +14,10 @@
  */
 package nova.hetu.omnicache.vector;
 
+import nova.hetu.omnicache.utils.OmniErrorType;
+import nova.hetu.omnicache.utils.OmniRuntimeException;
+
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 public class IntVec
         extends Vec
@@ -30,75 +32,34 @@ public class IntVec
         super(buffer, length);
     }
 
+    private IntVec(OMChunk buf, int offset, int size)
+    {
+        super(buf, offset, size);
+    }
+
     public void set(int idx, int value)
     {
-        data.putInt(idx * Integer.BYTES, value);
+        if(isWritable) {
+            this.getData().putInt(idx * Integer.BYTES + offset, value);
+        }else{
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,"Not support set api");
+        }
     }
 
     @Override
     public IntVec slice(int startIdx, int endIdx)
     {
-        byte[] regionData = new byte[(endIdx - startIdx) * Integer.BYTES];
-        IntVec newVec = new IntVec(endIdx - startIdx);
-        data.position(startIdx * Integer.BYTES);
-        data.get(regionData, 0, regionData.length);
-        newVec.data.put(regionData);
-        return newVec;
+        return new IntVec(this.omniChunk, startIdx * Integer.BYTES + offset, endIdx - startIdx);
     }
 
     public int get(int idx)
     {
-        return data.getInt(idx * Integer.BYTES);
-    }
-
-    @Override
-    public Vec hash()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec mul(int other)
-    {
-        base.mul(OMVectorBase.INT_DATA_TYPE, data, other);
-        return this;
-    }
-
-    @Override
-    public Vec mmul(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public Vec filter()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec groupby()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec join(Vec other)
-    {
-        return null;
+        return this.getData().getInt(idx * Integer.BYTES + offset);
     }
 
     @Override
     public VecType getType()
     {
         return VecType.INT;
-    }
-
-    @Override
-    public Vec concat(Vec other)
-    {
-        ByteBuffer newBuffer = OMVectorBase.concat(this.data, other.data, this.size * Integer.BYTES, other.size * Integer.BYTES);
-        newBuffer.order(ByteOrder.LITTLE_ENDIAN);
-        return new IntVec(newBuffer, this.size + other.size);
     }
 }

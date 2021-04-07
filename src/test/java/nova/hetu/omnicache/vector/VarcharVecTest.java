@@ -3,8 +3,6 @@ package nova.hetu.omnicache.vector;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.nio.ByteBuffer;
-
 public class VarcharVecTest
 {
     private final String first = "Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu";
@@ -15,7 +13,8 @@ public class VarcharVecTest
     private final byte[] element3 = third.getBytes();
 
     @Test
-    public void testHappy() {
+    public void testHappy()
+    {
         byte[] data = new byte[element1.length + element2.length + element3.length];
         VarcharVec vec = new VarcharVec(data.length, 3);
         int[] offsets = {0, element1.length, element1.length + element2.length};
@@ -33,7 +32,8 @@ public class VarcharVecTest
     }
 
     @Test
-    public void TestSlice() {
+    public void TestSlice()
+    {
         // initialize varchar vector
         byte[] data = new byte[element1.length + element2.length + element3.length];
         VarcharVec vec = new VarcharVec(data.length, 3);
@@ -53,7 +53,8 @@ public class VarcharVecTest
     }
 
     @Test
-    public void TestZeroLengthVector() {
+    public void TestZeroLengthVector()
+    {
         // initialize varchar vector
         VarcharVec vec = new VarcharVec(2, 2);
         int[] offsets = {0, 1};
@@ -70,5 +71,4 @@ public class VarcharVecTest
         VarcharVec slice = (VarcharVec) vec.slice(0, 1);
         Assert.assertEquals(new byte[1], slice.getData(0, 1));
     }
-
 }
