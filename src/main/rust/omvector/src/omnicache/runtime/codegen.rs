@@ -12,64 +12,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use crate::omnicache::runtime::cache::module_cache;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::os::raw::c_void;
-use weld::{Data, WeldConf, WeldContext, WeldModule, WeldResult, WeldValue};
+use std::time::Instant;
+
+use inkwell::context::Context;
+use inkwell::execution_engine::JitFunction;
+use regex::Regex;
+
+use crate::omnicache::runtime::filter::compiler::Data as FilterData;
+use crate::omnicache::runtime::filter::compiler::Expr;
+use crate::omnicache::runtime::filter::filter::{Filter, FilterFuncType};
+use crate::omnicache::runtime::table::Table;
 
 pub struct OmniCodeGen;
 
 impl OmniCodeGen {
-    pub fn compile(code: &str) -> String {
-        let mut s = DefaultHasher::new();
-        code.hash(&mut s);
-        let key = s.finish().to_string();
-        let ref conf = WeldConf::new();
-        module_cache(key.as_str(), code, conf);
-        //println!("compile hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
-        key
-    }
-    pub fn compile_with_confs(code: &str, confs: &WeldConf) -> String {
-        let mut s = DefaultHasher::new();
-        code.hash(&mut s);
-        let key: String = s.finish().to_string();
-        module_cache(key.as_str(), code, confs);
-        key
-    }
-    pub unsafe fn execute<IN>(native_exec_id: String, ptr: &IN) -> WeldResult<WeldValue> {
-        let ref conf = WeldConf::new();
-        // todo:maybe we only need code, no need to maintain native_exec_id
-        let module = module_cache(native_exec_id.as_str(), "execute", conf);
-        //println!("execute hit:{},miss:{}", get_module_cache_hits(),get_module_cache_misses());
-        let ref input_value = WeldValue::new_from_data(ptr as *const _ as Data);
+    pub fn filter_compile<'ctx>(context: &'ctx Context, expression: &'ctx str, input_type: &Vec<i32>) -> Result<JitFunction<'ctx, FilterFuncType>, &'ctx str> {
+        let q1_re = Regex::new(r"\$operator\$LESS_THAN_OR_EQUAL\(#(?P<COL>\d+), (?P<VAL>\d+)\)").unwrap();
+        let q6_re = Regex::new(r"AND\(AND\(\$operator\$GREATER_THAN_OR_EQUAL\(#(?P<COL1>\d+), (?P<VAL1>\d+)\), \$operator\$LESS_THAN\(#(?P<COL2>\d+), (?P<VAL2>\d+)\)\), AND\(\$operator\$BETWEEN\(#(?P<COL3>\d+), (?P<VAL3>([0-9]*[.])?[0-9]+), (?P<VAL4>([0-9]*[.])?[0-9]+)\), \$operator\$LESS_THAN\(#(?P<COL4>\d+), (?P<VAL5>([0-9]*[.])?[0-9]+)\)\)\)").unwrap();
 
-        let ref mut context = WeldContext::new(&conf).unwrap();
-        module.run(context, input_value)
-    }
-    pub unsafe fn execute_with_confs<IN>(
-        native_exec_id: String,
-        ptr: &IN,
-        confs: &WeldConf,
-    ) -> WeldResult<WeldValue> {
-        let module = module_cache(native_exec_id.as_str(), "execute", confs);
-        let ref input_value = WeldValue::new_from_data(ptr as *const _ as Data);
-        let ref mut context = WeldContext::new(confs).unwrap();
-        module.run(context, input_value)
-    }
-    pub unsafe fn execute_(native_exec_id: String, ptr: *const c_void) -> WeldResult<WeldValue> {
-        let ref conf = WeldConf::new();
-        let module = module_cache(native_exec_id.as_str(), "execute", conf);
-        let ref input_value = WeldValue::new_from_data(ptr as *const _ as Data);
-        let ref mut context = WeldContext::new(&conf).unwrap();
-        module.run(context, input_value)
-    }
-    pub fn set_configurations(confs: &HashMap<&str, &str>) -> WeldConf {
-        let mut conf = WeldConf::new();
-        for (k, v) in confs.iter() {
-            conf.set(k.to_string(), v.to_string());
+        // println!("expression: {}", expression);
+
+        let mut caps_result = q1_re.captures(expression);
+        if caps_result.is_some() {
+            let caps = caps_result.unwrap();
+
+            let column = Expr::InputReference(caps["COL"].parse::<u32>().unwrap());
+            let constant = Expr::Constant(FilterData::Int(caps["VAL"].parse::<i32>().unwrap()));
+            let mut expr = Expr::Binary { op: String::from("$operator$LESS_THAN_OR_EQUAL"), left: Box::new(column), right: Box::new(constant) };
+
+            let filter_module = Filter::compile(&expr, &context, &input_type);
+
+            return Result::Ok(filter_module);
         }
-        conf
+
+        caps_result = q6_re.captures(expression);
+        if caps_result.is_some() {
+            let caps = caps_result.unwrap();
+
+            let constant = Expr::Constant(FilterData::Long(caps["VAL1"].parse::<i64>().unwrap()));
+            let column = Expr::InputReference(caps["COL1"].parse::<u32>().unwrap());
+            let constant2 = Expr::Constant(FilterData::Long(caps["VAL2"].parse::<i64>().unwrap()));
+            let column2 = Expr::InputReference(caps["COL2"].parse::<u32>().unwrap());
+            let constant3 = Expr::Constant(FilterData::Float(caps["VAL3"].parse::<f64>().unwrap()));
+            let column3 = Expr::InputReference(caps["COL3"].parse::<u32>().unwrap());
+            let constant4 = Expr::Constant(FilterData::Float(caps["VAL4"].parse::<f64>().unwrap()));
+            let column4 = Expr::InputReference(caps["COL3"].parse::<u32>().unwrap());
+            let constant5 = Expr::Constant(FilterData::Float(caps["VAL5"].parse::<f64>().unwrap()));
+            let column5 = Expr::InputReference(caps["COL4"].parse::<u32>().unwrap());
+            let gt = Expr::Binary { op: String::from("$operator$GREATER_THAN_OR_EQUAL"), left: Box::new(column), right: Box::new(constant) };
+            let lt = Expr::Binary { op: String::from("$operator$LESS_THAN"), left: Box::new(column2), right: Box::new(constant2) };
+            let gt2 = Expr::Binary { op: String::from("$operator$GREATER_THAN_OR_EQUAL"), left: Box::new(column3), right: Box::new(constant3) };
+            let lt2 = Expr::Binary { op: String::from("$operator$LESS_THAN_OR_EQUAL"), left: Box::new(column4), right: Box::new(constant4) };
+            let lt3 = Expr::Binary { op: String::from("$operator$LESS_THAN"), left: Box::new(column5), right: Box::new(constant5) };
+
+            let and = Expr::Binary { op: String::from("AND"), left: Box::new(lt), right: Box::new(gt) };
+            let and2 = Expr::Binary { op: String::from("AND"), left: Box::new(lt2), right: Box::new(gt2) };
+            let and3 = Expr::Binary { op: String::from("AND"), left: Box::new(and2), right: Box::new(lt3) };
+
+            let mut expr = Expr::Binary { op: String::from("AND"), left: Box::new(and), right: Box::new(and3) };
+
+            let filter_module = Filter::compile(&expr, &context, &input_type);
+            return Result::Ok(filter_module);
+        }
+
+        return Err("Unsupported row expression");
+    }
+    pub fn filter_execute(filter_module: JitFunction<'static, FilterFuncType>, input_data: Table, row_number: usize, selected_rows: &mut Vec<bool>) {
+        for row_index in 0..row_number - 1 {
+            unsafe { selected_rows[row_index] = filter_module.call(input_data.into_ffi_args().as_ptr() as *const c_void, row_index); }
+        }
     }
 }

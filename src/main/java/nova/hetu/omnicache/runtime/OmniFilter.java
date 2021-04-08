@@ -14,7 +14,6 @@
 package nova.hetu.omnicache.runtime;
 
 import nova.hetu.omnicache.vector.IntVec;
-import nova.hetu.omnicache.vector.LongVec;
 import nova.hetu.omnicache.vector.Vec;
 
 public class OmniFilter
@@ -26,21 +25,30 @@ public class OmniFilter
         FilterContext filterContext = new FilterContext();
         filterContext.setInputVecTypes(columnTypes);
 
-        String filterId = jniWrapper.filterCompile(filterExpr, filterContext.getInputVecTypes().getAddress(), columnTypes.length);
-        filterContext.setFilterId(filterId);
+        long filterAddr = jniWrapper.filterCompile(filterExpr, filterContext.getInputVecTypes().getAddress(), columnTypes.length);
+
+        if (filterAddr == 0) {
+            filterContext.setFilterSupported(false);
+            return filterContext;
+        }
+
+        filterContext.setFilterSupported(true);
+        filterContext.setFilterId(filterAddr);
         return filterContext;
     }
 
-    public IntVec execute(FilterContext filterContext, Vec[] inputs, int rowCount)
+    public int[] execute(FilterContext filterContext, Vec[] inputs, int rowCount)
     {
-        LongVec inputRawAddressArr = transformVecToVecArray(inputs);
+        long[] inputRawAddressArr = transformVecToAddresses(inputs);
         IntVec selectedPosition = new IntVec(rowCount);
 
-        jniWrapper.filterExecute(filterContext.getFilterId(), inputRawAddressArr.getAddress(), filterContext.getInputVecTypes().getAddress(), inputRawAddressArr.size(), selectedPosition.getAddress(), rowCount);
+        int selectCount = jniWrapper.filterExecute(filterContext.getFilterId(), inputRawAddressArr, filterContext.getInputVecTypes().getAddress(), inputs.length, selectedPosition.getAddress(), rowCount);
 
-        //release input Raw Address Array Vector
-        inputRawAddressArr.close();
-        return selectedPosition;
+        int[] positions = new int[selectCount];
+        selectedPosition.getData().asIntBuffer().get(positions);
+        selectedPosition.close();
+
+        return positions;
     }
 
     public void finished(FilterContext filterContext)
@@ -50,14 +58,14 @@ public class OmniFilter
         filterContext.finished();
     }
 
-    private LongVec transformVecToVecArray(Vec[] inputs)
+    private long[] transformVecToAddresses(Vec[] inputs)
     {
         if (inputs != null) {
-            LongVec inputVecAddrs = new LongVec(inputs.length);
+            long[] addresses = new long[inputs.length];
             for (int idx = 0; idx < inputs.length; idx++) {
-                inputVecAddrs.set(idx, inputs[idx].getAddress());
+                addresses[idx] = inputs[idx].getAddress();
             }
-            return inputVecAddrs;
+            return addresses;
         }
         return null;
     }

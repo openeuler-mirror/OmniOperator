@@ -50,9 +50,9 @@ public class JniWrapper
 
     public native OMResult getResult(long sortAddress, long stageId);
 
-    public native String filterCompile(String expression, long clsTypeAddress, int inputVecCount);
+    public native long filterCompile(String expression, long clsTypeAddress, int inputVecCount);
 
-    public native void filterExecute(String filterId, long inputVecArrayAddress, long clsTypeAddress, int inputVecCount, long selectedPositionsAddress, int inputRowSize);
+    public native int filterExecute(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, long selectedPositionsAddress, int inputRowSize);
 
-    public native void filterFinished(String filterId);
+    public native void filterFinished(long handle);
 }

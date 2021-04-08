@@ -17,17 +17,18 @@ import nova.hetu.omnicache.vector.IntVec;
 
 public class FilterContext
 {
-    private String filterId;
+    private long filterModuleHandle;
     private IntVec inputVecTypes;
+    private boolean isFilterSupported;
 
-    public String getFilterId()
+    public long getFilterId()
     {
-        return filterId;
+        return filterModuleHandle;
     }
 
-    public void setFilterId(String filterId)
+    public void setFilterId(long filterModuleHandle)
     {
-        this.filterId = filterId;
+        this.filterModuleHandle = filterModuleHandle;
     }
 
     public IntVec getInputVecTypes()
@@ -40,7 +41,19 @@ public class FilterContext
         this.inputVecTypes = new IntVec(columnTypes.length);
         inputVecTypes.getData().asIntBuffer().put(columnTypes);
     }
-    public void finished(){
+
+    public boolean isFilterSupported()
+    {
+        return isFilterSupported;
+    }
+
+    public void setFilterSupported(boolean isFilterSupported)
+    {
+        this.isFilterSupported = isFilterSupported;
+    }
+
+    public void finished()
+    {
         this.getInputVecTypes().close();
     }
 }
