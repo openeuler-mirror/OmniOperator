@@ -143,39 +143,78 @@ void vectorSwap(long *valueAddresses, uint32_t from, uint32_t l, uint32_t s)
 }
 
 // function implements for class PagesIndex
-PagesIndex::PagesIndex(int *types, int typeCount)
+PagesIndex::PagesIndex(int *sourceTypes, int typesCount)
 {
-    this->types = types;
-    this->typeCount = typeCount;
-    for (uint32_t i = 0; i < typeCount; i++) {
-        vector<Column *> column;
-        this->columns.push_back(column);
-    }
-    this->positionCount = 0;
-    this->valueAddresses.reserve(100000000);
+    this->types = sourceTypes;
+    this->typesCount = typesCount;
 }
 
-void PagesIndex::addTable(Table *table, int32_t colCount, uint32_t positionCount)
+void PagesIndex::addTables(long *datas, long *nulls, int pageCount, long *rowCounts, long totalRowCount)
 {
-    if (positionCount == 0)
-    {
-        return;
+    Column *column;
+    ColumnType type;
+    void *data;
+    int *null;
+    uint32_t rowNum;
+    int start;
+    int columnIdx;
+    long valueAddrIdx = 0;
+    long valueAddress = 0;
+
+    this->tableCount = pageCount;
+    this->positionCount = totalRowCount;
+
+    valueAddresses = (long *)malloc(totalRowCount * sizeof(long));
+    columns = (Column ***)malloc(sizeof(Column **));
+    for (int colIdx = 0; colIdx < typesCount; colIdx++) {
+        columns[colIdx] = (Column **)malloc(sizeof(Column *) * tableCount);
     }
 
-    this->positionCount += positionCount;
-    int tableIndex = (colCount > 0) ? this->columns[0].size() : 0;
-    for (uint32_t i = 0; i < colCount; i++)
-    {
-        Column *column = table->getColumn(i);
-        columns[i].push_back(column);
-    }
+    for (int tableIdx = 0; tableIdx < pageCount; tableIdx++) {
+        rowNum = (uint32_t)(rowCounts[tableIdx]);
+        start = tableIdx * typesCount;
 
-    long sliceAddress = 0;
-    for (uint32_t position = 0; position < positionCount; position++)
-    {
-        sliceAddress = encodeSyntheticAddress(tableIndex, position);
-        valueAddresses.push_back(sliceAddress);
+        for (int colIdx = 0; colIdx < typesCount; colIdx++) {
+            columnIdx = start + colIdx;
+            type = getColumnType(types[colIdx]);
+            data = (void *)(datas[columnIdx]);
+            null = (int *)(nulls[columnIdx]);
+            column = new Column(data, type, rowNum, null);
+            columns[colIdx][tableIdx] = column;
+        }
+
+        for (int rowIdx = 0; rowIdx < rowNum; rowIdx++) {
+            valueAddress = encodeSyntheticAddress(tableIdx, rowIdx);
+            valueAddresses[valueAddrIdx] = valueAddress;
+            valueAddrIdx++;
+        }
     }
+}
+
+PagesIndex::~PagesIndex()
+{
+    for (int colIdx = 0; colIdx < typesCount; colIdx++) {
+        for (int tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+            delete columns[colIdx][tableIdx];
+        }
+        free(columns[colIdx]);
+    }
+    free(columns);
+    free(valueAddresses);
+}
+
+long createSort(
+    int *sourceTypes,
+    int typeCount,
+    int *outputCols,
+    int outputColCount,
+    int *sortCols,
+    int *sortAscendings,
+    int *sortNullFirsts,
+    int sortColCount)
+{
+    Sort *sort = new Sort(sourceTypes, typeCount, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts, sortColCount);
+    return (long)sort;
 }
 
 // return 0 when left and right both are nulls
@@ -198,9 +237,9 @@ int compareNull(int *leftNulls, uint32_t leftPosition, int *rightNulls, uint32_t
     return 2;
 }
 
-int compareIntValue(int32_t *leftData, uint32_t leftPosition, int32_t *rightData, uint32_t rightPosition) 
+int compareIntValue(int32_t *leftData, uint32_t leftPosition, int32_t *rightData, uint32_t rightPosition)
 {
-    return leftData[leftPosition] - rightData[rightPosition];        
+    return leftData[leftPosition] - rightData[rightPosition];
 }
 
 int compareInt64Value(int64_t *leftData, uint32_t leftPosition, int64_t *rightData, uint32_t rightPosition)
@@ -237,16 +276,16 @@ int compareDoubleValue(double *leftData, uint32_t leftPosition, double *rightDat
 int compareTo(
     long pagesIndexAddr,
     int *sortCols,
-    int *sortColTypes, 
-    int *sortAscendings, 
-    int *sortNullFirsts, 
-    int sortColCount, 
-    uint32_t leftPosition, 
+    int *sortColTypes,
+    int *sortAscendings,
+    int *sortNullFirsts,
+    int sortColCount,
+    uint32_t leftPosition,
     uint32_t rightPosition)
 {
     PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
-    vector<long>& valueAddresses = pagesIndex->getValueAddresses();
-    vector<vector<Column *>>& columns = pagesIndex->getColumns();
+    long *valueAddresses = pagesIndex->getValueAddresses();
+    Column *** columns = pagesIndex->getColumns();
 
     uint64_t leftValueAddress = valueAddresses[leftPosition];
     uint32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
@@ -315,15 +354,15 @@ int compareTo(
     return compare;
 }
 
-uint32_t median3( 
+uint32_t median3(
     long pagesIndexAddr,
     int *sortCols,
-    int *sortColTypes, 
-    int *sortAscendings, 
-    int *sortNullFirsts, 
-    int sortColCount, 
-    uint32_t a, 
-    uint32_t b, 
+    int *sortColTypes,
+    int *sortAscendings,
+    int *sortNullFirsts,
+    int sortColCount,
+    uint32_t a,
+    uint32_t b,
     uint32_t c)
 {
     int ab = compareTo(pagesIndexAddr, sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, a, b);
@@ -337,15 +376,15 @@ uint32_t median3(
 
 void quickSort(long pagesIndexAddr,
                int *sortCols,
-               int *sortColTypes, 
-               int *sortAscendings, 
-               int *sortNullFirsts, 
-               int sortColCount, 
-               uint32_t from, 
+               int *sortColTypes,
+               int *sortAscendings,
+               int *sortNullFirsts,
+               int sortColCount,
+               uint32_t from,
                uint32_t to)
 {
     PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
-    vector<long>& valueAddresses = pagesIndex->getValueAddresses();
+    long *valueAddresses = pagesIndex->getValueAddresses();
     uint32_t len = to - from;
     if (len < 7)
     {
@@ -446,7 +485,7 @@ void quickSort(long pagesIndexAddr,
     }
 }
 
-void setIntColumnValues(long *valueAddresses, uint32_t positionCount, vector<Column*>& inputTable, int *outputData) {
+void setIntColumnValues(long *valueAddresses, uint32_t positionCount, Column **inputTable, int *outputData) {
     int preTableIndex = -1;
     long valueAddress = 0;
     Column *inputColumn = NULL;
@@ -468,7 +507,7 @@ void setIntColumnValues(long *valueAddresses, uint32_t positionCount, vector<Col
     }
 }
 
-void setInt64ColumnValues(long *valueAddresses, uint32_t positionCount, vector<Column*>& inputTable, int64_t *outputData) {
+void setInt64ColumnValues(long *valueAddresses, uint32_t positionCount, Column **inputTable, int64_t *outputData) {
     int preTableIndex = -1;
     long valueAddress = 0;
     Column *inputColumn = NULL;
@@ -490,7 +529,7 @@ void setInt64ColumnValues(long *valueAddresses, uint32_t positionCount, vector<C
     }
 }
 
-void setDoubleColumnValues(long *valueAddresses, uint32_t positionCount, vector<Column*>& inputTable, double *outputData) {
+void setDoubleColumnValues(long *valueAddresses, uint32_t positionCount, Column **inputTable, double *outputData) {
     int preTableIndex = -1;
     long valueAddress = 0;
     Column *inputColumn = NULL;
@@ -515,9 +554,9 @@ void setDoubleColumnValues(long *valueAddresses, uint32_t positionCount, vector<
 void getResult(long pagesIndexAddr, int *outputCols, int outputColsCount, long outputTableAddr, int *sourceTypes, uint32_t positionCount)
 {
     PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
-    vector<vector<Column *>>& inputTables = pagesIndex->getColumns();
+    Column ***inputTables = pagesIndex->getColumns();
     Table *outputTable = (Table *)outputTableAddr;
-    vector<long>& valueAddresses = pagesIndex->getValueAddresses();
+    long *valueAddresses = pagesIndex->getValueAddresses();
 
     Column *outputColumn = NULL;
     int outputCol = 0;
@@ -529,7 +568,7 @@ void getResult(long pagesIndexAddr, int *outputCols, int outputColsCount, long o
         outputCol = outputCols[j];
         outputData = outputColumn->getData();
         colType = sourceTypes[outputCol];
-        vector<Column *>& inputTable = inputTables[outputCol];
+        Column **inputTable = inputTables[outputCol];
 
         switch (colType)
         {

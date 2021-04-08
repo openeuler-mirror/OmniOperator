@@ -28,37 +28,41 @@ private:
 class PagesIndex
 {
 public:
-    PagesIndex(int *types, int typeCount);
-    ~PagesIndex() {}
-    void addTable(Table *table, int colNum, uint32_t positionCount);
-    void sort(int *sortCols, int *sortAscendings, int *sortNullFirsts, int sortColCount);
-    int *getColumnType()
+    PagesIndex(int *sourceTypes, int typesCount);
+    ~PagesIndex();
+    void addTables(long *datas, long *nulls, int pageCount, long *rowCounts, long totalRowCount);
+
+    int *getColumnTypes()
     {
         return types;
     };
     int getTypeCount() {
-        return typeCount;
+        return typesCount;
     };
-    vector<long>& getValueAddresses()
+    long *getValueAddresses()
     {
         return this->valueAddresses;
-    };
-    vector<vector<Column *>>& getColumns()
-    {
-        return this->columns;
-    };
-
-    uint32_t getPositionCount()
+    }
+    long getPositionCount()
     {
         return this->positionCount;
     };
+    Column ***getColumns()
+    {
+        return this->columns;
+    }
+    int getTableCount()
+    {
+        return this->tableCount;
+    }
 
 private:
     int *types;
-    int typeCount;
-    vector<long> valueAddresses;
-    vector<vector<Column *>> columns;
-    uint32_t positionCount;
+    int typesCount;
+    long *valueAddresses;
+    long positionCount;
+    Column ***columns; // columns *[colCount][tableCount]
+    int tableCount;
 };
 
 class SimplePagesIndexComparator
@@ -92,6 +96,7 @@ public:
     void postloop(Table *table);
     void process(Table *table, uint32_t rowIdx);
     Table *getResult() {};
+    void createPagesIndex(int *sourceTypes, int typesCount, long *datas, long *nulls, int pageCount, long *rowCounts, long totalRowCount);
 
     int *getSourceTypes() { return sourceTypes; }
     int getTypescount() { return typesCount; }
@@ -115,15 +120,22 @@ private:
     PagesIndex *pagesIndex;
 };
 
-PagesIndex *getPagesIndex(long sortAddress);
-void putPagesIndex(long sortAddress, PagesIndex *pagesIndex);
-void removePagesIndex(long sortAddress);
-void allocColumns(long outputTableAddr, int *sourceTypes, int *outputCols, int outputColCount, uint32_t positionCount);
+long createSort(
+    int *sourceTypes,
+    int typeCount,
+    int *outputCols,
+    int outputColCount,
+    int *sortCols,
+    int *sortAscendings,
+    int *sortNullFirsts,
+    int sortColCount);
+
 void quickSort(long pagesIndexAddr, int *sortCols, int *sortColTypes, int *sortAscendings, int *sortNullFirsts, int sortColCount, uint32_t from, uint32_t to);
 ColumnType getColumnType(int colTypeIdx);
+void allocColumns(long outputTableAddr, int *sourceTypes, int *outputCols, int outputColCount, uint32_t positionCount);
 void getResult(long pagesIndexAddr, int *outputCols, int outputColsCount, long outputTableAddr, int *sourceTypes, uint32_t positionCount);
 
-#ifdef DEBUG
+#ifdef DEBUG_JNI
 #define PRINT_JNI(format, ...) printf("[%s][%s][%d]:" format, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
 #define PRINT_JNI(format, ...)

@@ -113,16 +113,11 @@ int test_sort() {
     int sortCols[2] = {0, 1};
     int ascendings[2] = {true, true};
     int nullFirsts[2] = {true, true};
-    long stageId = 1024;
 
-    printf("about to allocate sort\n");
-    long sortAddress = allocAndInitSort(stageId, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    printf("finished allocate sort\n");
+    long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     int32_t *data1 = new int32_t[DATA_SIZE];
-    // for (int32_t i = DATA_SIZE - 1; i >= 0; --i) {
-    //     data1[DATA_SIZE - i] = i % (DATA_SIZE/100);
-    // }
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
         data1[i] = i;
     }
@@ -138,16 +133,14 @@ int test_sort() {
 
     long datas[2] = {(long)data1, (long)data2};
     long nulls[2] = {(long)nulls1, (long)nulls2};
-    // order by
-    addTable(sortAddress, datas, nulls, DATA_SIZE);
-    //cout<<"ADD TABLE FINISH:"<<endl;
+    long rowCounts[1] = {DATA_SIZE};
+
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
     clock_t start = clock();
-    sort(sortAddress, stageId);
+    sortExecute(contextAddress, sortAddress);
     std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
 
-    // construct output
-    Table *output = getResult(sortAddress, stageId);
-
+    Table * output = sortGetOutput(contextAddress, sortAddress);
 
     // free memory
     delete output;
@@ -159,21 +152,21 @@ int test_sort() {
     return 1235;
 }
 
-void buildSortData(int tableCount, int distinctValueCount, int repeatCount, long **datas, long **nulls) 
+void buildSortData(int tableCount, int distinctValueCount, int repeatCount, long *datas, long *nulls)
 {
     uint32_t positionCount = distinctValueCount * repeatCount;
-    int *data1;
-    int *data2;
-    int *null1;
-    int *null2;
-    uint32_t size = positionCount * sizeof(int);
+    long *data1;
+    long *data2;
+    long *null1;
+    long *null2;
+    uint32_t size = positionCount * sizeof(long);
     uint32_t idx = 0;
 
     for (int i = 0; i < tableCount; i++) {
-        data1 = (int *)malloc(size);
-        null1 = (int *)malloc(size);
-        data2 = (int *)malloc(size);
-        null2 = (int *)malloc(size);      
+        data1 = (long *)malloc(size);
+        null1 = (long *)malloc(size);
+        data2 = (long *)malloc(size);
+        null2 = (long *)malloc(size);
 
         idx = 0;
         for (int j = 0; j < distinctValueCount; j++) {
@@ -186,10 +179,10 @@ void buildSortData(int tableCount, int distinctValueCount, int repeatCount, long
             }
         }
 
-        datas[i][0] = (long)data1;
-        datas[i][1] = (long)data2;
-        nulls[i][0] = (long)null1;
-        nulls[i][1] = (long)null2;  
+        datas[i * 2 + 0] = (long)data1;
+        datas[i * 2 + 1] = (long)data2;
+        nulls[i * 2 + 0] = (long)null1;
+        nulls[i * 2 + 1] = (long)null2;
     }
 }
 
@@ -201,33 +194,31 @@ int test_sort_one()
     int distinctValue = 4;
     int repeatCount = 250000;
     uint32_t rowNum = distinctValue * repeatCount;
-    long *datas[tableCount];
-    long *nulls[tableCount];
 
-    for (int i = 0; i < tableCount; i++) {
-        datas[i] = (long *)malloc(2 * sizeof(long));
-        nulls[i] = (long *)malloc(2 * sizeof(long));
-    }
-
+    long *datas = (long *)malloc(tableCount * 2 * sizeof(long));
+    long *nulls = (long *)malloc(tableCount * 2 * sizeof(long));
     buildSortData(tableCount, distinctValue, repeatCount, datas, nulls);
     std::cout<<"finish build sort data" << endl;
+
+    long rowCounts[tableCount];
+    for (int i = 0; i < tableCount; i++) {
+        rowCounts[i] = rowNum;
+    }
     
     int sourceTypes[] = {1, 1};
     int outputCols[] = {0, 1};
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    long stageId = 1026;
-    
-    long sortAddress = allocAndInitSort(stageId, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    for (int i = 0; i < tableCount; i++) {
-        addTable(sortAddress, datas[i], nulls[i], rowNum);
-    }
+
+    long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddInput(contextAddress, sortAddress, datas, nulls, tableCount, rowCounts, tableCount * rowNum);
 
     clock_t start = clock();
-    sort(sortAddress, stageId);
+    sortExecute(contextAddress, sortAddress);
     std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
 
-    Table * output = getResult(sortAddress, stageId);
+    Table * output = sortGetOutput(contextAddress, sortAddress);
     return 1236;
 }

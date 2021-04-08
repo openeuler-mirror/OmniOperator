@@ -1,24 +1,35 @@
 #ifndef __SORT_API_H__
 #define __SORT_API_H__
 
-#include "../harden/Hammer.h"
 #include "../operator/sort.h"
-#include "../util/op_template_cache.h"
 
-long allocAndInitSort(long stageId,
-    int32_t sourceTypes[],
-    int32_t typeCount,
-    int32_t outputCols[],
-    int32_t outputColCount, 
-    int32_t sortCols[], 
-    int32_t ascendings[], 
-    int32_t nullFirsts[],
-    int32_t sortColCount);
+// return the jit context address
+long sortPrepare(
+    int *sourceTypes,
+    int typeCount,
+    int *outputCols,
+    int outputColCount,
+    int *sortCols,
+    int *sortAscendings,
+    int *sortNullFirsts,
+    int sortColCount);
 
-void addTable(long sortAddress, long *datas, long *nulls, uint32_t rowNum);
+// return the sort operator address
+long sortCreateOperator(
+    long contextAddress,
+    int *sourceTypes,
+    int typeCount,
+    int *outputCols,
+    int outputColCount,
+    int *sortCols,
+    int *sortAscendings,
+    int *sortNullFirsts,
+    int sortColCount);
 
-void sort(long sortAddress, long stageId);
+void sortAddInput(long contextAddress, long sortAddress, long *datas, long *nulls, int pageCount, long *rowCounts, long totalRowCount);
 
-Table *getResult(long sortAddress, long stageId);
+void sortExecute(long contextAddress, long sortAddress);
+
+Table *sortGetOutput(long contextAddress, long sortAddress);
 
 #endif

@@ -2,38 +2,55 @@ package nova.hetu.omnicache.runtime;
 
 import nova.hetu.omnicache.vector.Vec;
 
+import java.util.List;
+
 public class OmniOrderBy
         extends OmniRuntime
 {
-    public long allocAndInitSort(long stageId, int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount)
+    public long prepare(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount)
     {
-        long sortAddress = getJniWrapper().allocAndInitSort(stageId, sourceTypes, typeCount, outputCols, outputColCount, sortCols, ascendings, nullFirsts, sortColCount);
+        long contextAddress = getJniWrapper().sortPrepare(sourceTypes, typeCount, outputCols, outputColCount, sortCols, ascendings, nullFirsts, sortColCount);
+        return contextAddress;
+    }
+
+    public long createOperator(long contextAddress, int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount)
+    {
+        long sortAddress = getJniWrapper().sortCreateOperator(contextAddress, sourceTypes, typeCount, outputCols, outputColCount, sortCols, ascendings, nullFirsts, sortColCount);
         return sortAddress;
     }
 
-    public void addTable(long sortAddress, Vec[] datas, Vec[] nulls)
+    public void addInput(long contextAddress, long sortAddress, List<Vec> datas, List<Vec> nulls, int pageCount, int colCount)
     {
-        int colCount = datas.length;
-        int rowCount = datas[0].size();
-        long[] dataAddrs = new long[colCount];
-        long[] nullAddrs = new long[colCount];
+        int vecCount = datas.size();
+        long[] dataAddrs = new long[vecCount];
+        long[] nullAddrs = new long[vecCount];
+        long[] positionCounts = new long[pageCount];  // positionCount for every page
+        long totalRowNum = 0;
 
-        for (int i = 0; i < colCount; i++) {
-            dataAddrs[i] = datas[i].getAddress();
-            nullAddrs[i] = nulls[i].getAddress();
+        int idx = 0;
+        for (int i = 0; i < vecCount; i++) {
+            Vec dataVec = datas.get(i);
+            dataAddrs[i] = dataVec.getAddress();
+            nullAddrs[i] = nulls.get(i).getAddress();
+
+            if (i % colCount == 0) {
+                int rowNum = dataVec.size();
+                positionCounts[idx++] = rowNum;
+                totalRowNum += rowNum;
+            }
         }
 
-        getJniWrapper().addTable(sortAddress, dataAddrs, nullAddrs, rowCount);
+        getJniWrapper().sortAddInput(contextAddress, sortAddress, dataAddrs, nullAddrs, pageCount, positionCounts, totalRowNum);
     }
 
-    public void sort(long sortAddress, long stageId)
+    public void execute(long contextAddress, long sortAddress)
     {
-        getJniWrapper().sort(sortAddress, stageId);
+        getJniWrapper().sortExecute(contextAddress, sortAddress);
     }
 
-    public OMResult getResult(long sortAddress, long stageId)
+    public OMResult getOutput(long contextAddress, long sortAddress)
     {
-        OMResult result = getJniWrapper().getResult(sortAddress, stageId);
+        OMResult result = getJniWrapper().sortGetOutput(contextAddress, sortAddress);
         return result;
     }
 }

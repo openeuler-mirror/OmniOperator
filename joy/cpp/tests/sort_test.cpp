@@ -8,57 +8,54 @@ bool tableMatch(Table *actualTable, Table *expectTable);
 bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, uint32_t columnNumber);
 bool columnMatch(Column *actualColumn, Column *expectColumn);
 
-TEST (OrderByTest, TestSortByPerformance)
-{
-    // construct input data
-    const int32_t DATA_SIZE = 100000;
-    int sourceTypes[2] = {1, 1};
-    int outputCols[2] = {0, 1};
-    int sortCols[2] = {0, 1};
-    int ascendings[2] = {true, true};
-    int nullFirsts[2] = {true, true};
-    long stageId = 1011;
+// TEST (OrderByTest, TestSortByPerformance)
+// {
+//     // construct input data
+//     const int32_t DATA_SIZE = 100000;
+//     int sourceTypes[2] = {1, 1};
+//     int outputCols[2] = {0, 1};
+//     int sortCols[2] = {0, 1};
+//     int ascendings[2] = {true, true};
+//     int nullFirsts[2] = {true, true};
 
-    long sortAddress = allocAndInitSort(stageId, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+//     long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+//     long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
-    int32_t *data1 = new int32_t[DATA_SIZE];
-    // for (int32_t i = DATA_SIZE - 1; i >= 0; --i) {
-    //     data1[DATA_SIZE - i] = i % (DATA_SIZE/100);
-    // }
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data1[i] = i;
-    }
-    int *nulls1 = new int[DATA_SIZE];
-    memset(nulls1, false, DATA_SIZE);
+//     int32_t *data1 = new int32_t[DATA_SIZE];
+//     for (int32_t i = 0; i < DATA_SIZE; ++i) {
+//         data1[i] = i;
+//     }
+//     int *nulls1 = new int[DATA_SIZE];
+//     memset(nulls1, false, DATA_SIZE);
 
-    int32_t *data2 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data2[i] = i;
-    }
-    int *nulls2 = new int[DATA_SIZE];
-    memset(nulls2, false, DATA_SIZE);
-    
-    long datas[2] = {(long)data1, (long)data2};
-    long nulls[2] = {(long)nulls1, (long)nulls2};
+//     int32_t *data2 = new int32_t[DATA_SIZE];
+//     for (int32_t i = 0; i < DATA_SIZE; ++i) {
+//         data2[i] = i;
+//     }
+//     int *nulls2 = new int[DATA_SIZE];
+//     memset(nulls2, false, DATA_SIZE);
 
-    // order by
-    addTable(sortAddress, datas, nulls, DATA_SIZE);
-    //cout<<"ADD TABLE FINISH:"<<endl;
-    clock_t start = clock();
-    sort(sortAddress, stageId);
-    std::cout << "sort elapsed end time: " << (double)(std::clock() - start) / 1000 << " ms" << std::endl;
+//     long datas[2] = {(long)data1, (long)data2};
+//     long nulls[2] = {(long)nulls1, (long)nulls2};
 
-    // construct output
-    Table *output = getResult(sortAddress, stageId);
-    
+//     // order by
+//     sortAddInput(contextAddress, sortAddress, datas, nulls, DATA_SIZE);
+//     //cout<<"ADD TABLE FINISH:"<<endl;
+//     clock_t start = clock();
+//     sortExecute(contextAddress, sortAddress);
+//     std::cout << "sort elapsed end time: " << (double)(std::clock() - start) / 1000 << " ms" << std::endl;
 
-    // free memory
-    delete output;
-    delete []nulls2;
-    delete []nulls1;
-    delete []data2;
-    delete []data1;
-}
+//     // construct output
+//     Table *output = sortGetOutput(contextAddress, sortAddress);
+
+
+//     // free memory
+//     delete output;
+//     delete []nulls2;
+//     delete []nulls1;
+//     delete []data2;
+//     delete []data1;
+// }
 
 // TEST(SortTest, testOrderByOneColumn)
 // {
@@ -113,10 +110,8 @@ TEST(SortTest, testOrderByDoubleColumn)
     int sortCols[2] = {0, 2};
     int ascendings[2] = {false, true};
     int nullFirsts[2] = {true, true};
-    long stageId = 1012;
 
-    long sortAddress = allocAndInitSort(stageId, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-
+    // prepare data
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int nulls0[DATA_SIZE] = {false, false, false, false, false, false};
 
@@ -128,13 +123,14 @@ TEST(SortTest, testOrderByDoubleColumn)
 
     long datas[3] = {(long)data0, (long)data1, (long)data2};
     long nulls[3] = {(long)nulls0, (long)nulls1, (long)nulls2};
+    long rowCount = DATA_SIZE;
+    long rowCounts[1] = {rowCount};
 
-    // order by
-    addTable(sortAddress, datas, nulls, DATA_SIZE);
-    sort(sortAddress, stageId);
-
-    // construct output
-    Table *actualTable = getResult(sortAddress, stageId);
+    long contextAddress = 0;
+    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
+    sortExecute(contextAddress, sortAddress);
+    Table *actualTable = sortGetOutput(contextAddress, sortAddress);
 
     int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
     Column expectCol1(expectData1, INT64, DATA_SIZE);
@@ -143,15 +139,24 @@ TEST(SortTest, testOrderByDoubleColumn)
     Table* expectTable = new Table(DATA_SIZE, 2);
     expectTable->setColumn(&expectCol1, INT64);
     expectTable->setColumn(&expectCol2, DOUBLE);
-    
-    EXPECT_TRUE(tableMatch(actualTable, expectTable));
 
-    // free memory
-    delete expectTable;
+    actualTable->printTable();
+    expectTable->printTable();
+    EXPECT_TRUE(tableMatch(actualTable, expectTable));
     delete actualTable;
+
+    contextAddress = sortPrepare(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
+    sortExecute(contextAddress, sortAddress);
+    actualTable = sortGetOutput(contextAddress, sortAddress);
+
+    EXPECT_TRUE(tableMatch(actualTable, expectTable));
+    delete actualTable;
+    delete expectTable;
 }
 
-void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, long **datas, long **nulls) 
+void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, long **datas, long **nulls)
 {
     uint32_t positionCount = distinctValueCount * repeatCount;
     int *data1;
@@ -165,7 +170,7 @@ void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, 
         data1 = (int *)malloc(size);
         null1 = (int *)malloc(size);
         data2 = (int *)malloc(size);
-        null2 = (int *)malloc(size);      
+        null2 = (int *)malloc(size);
 
         idx = 0;
         for (int j = 0; j < distinctValueCount; j++) {
@@ -181,7 +186,7 @@ void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, 
         datas[i][0] = (long)data1;
         datas[i][1] = (long)data2;
         nulls[i][0] = (long)null1;
-        nulls[i][1] = (long)null2;  
+        nulls[i][1] = (long)null2;
     }
 }
 
@@ -203,24 +208,29 @@ TEST(SortTest, testOrderByTwoColumnPerf)
 
     buildSortTestData(tableCount, distinctValue, repeatCount, datas, nulls);
     std::cout<<"finish build sort data" << endl;
-    
+    long rowCounts[1] = {rowNum};
     int sourceTypes[] = {1, 1};
     int outputCols[] = {0, 1};
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    long stageId = 1013;
 
-    long sortAddress = allocAndInitSort(stageId, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     for (int i = 0; i < tableCount; i++) {
-        addTable(sortAddress, datas[i], nulls[i], rowNum);
+        sortAddInput(contextAddress, sortAddress, datas[i], nulls[i], 1, rowCounts, rowNum);
     }
 
-    clock_t start = clock();
-    sort(sortAddress, stageId);
-    std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
-
-    Table * output = getResult(sortAddress, stageId);
+    typedef std::chrono::high_resolution_clock Time;
+    typedef std::chrono::milliseconds ms;
+    typedef std::chrono::duration<float> fsec;
+    auto t0 = Time::now();
+    sortExecute(contextAddress, sortAddress);
+    auto t1 = Time::now();
+    fsec fs = t1 - t0;
+    ms d = std::chrono::duration_cast<ms>(fs);
+    std::cout << "sortExecute elapsed time: " << (double)d.count() << "ms" << std::endl;
+    Table *actualTable = sortGetOutput(contextAddress, sortAddress);
 }
 
 bool tableMatch(Table *actualTable, Table *expectTable)
