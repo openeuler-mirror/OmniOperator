@@ -9,10 +9,10 @@
 
 using namespace codegen;
 
-typedef void (*jit_quickSort)(long, int *, int *, int *, int *, int, uint32_t, uint32_t);
-typedef void (*jit_allocColumns)(long, int *, int *, int, uint32_t);
-typedef void (*jit_getResult)(long, int *, int, long, int *, uint32_t);
-typedef long (*jit_createSort)(int *, int, int *, int, int *, int *, int *, int);
+typedef int64_t (*jit_createSort)(int32_t *, int32_t, int32_t *, int32_t, int32_t *, int32_t *, int32_t *, int32_t);
+typedef void (*jit_quickSort)(int64_t, int32_t *, int32_t *, int32_t *, int32_t *, int32_t, int32_t, int32_t);
+typedef void (*jit_allocColumns)(int64_t, int32_t *, int32_t *, int32_t, int32_t);
+typedef void (*jit_getResult)(int64_t, int32_t *, int32_t, int64_t, int32_t *, int32_t);
 
 typedef struct JitSortContext
 {
@@ -23,22 +23,22 @@ typedef struct JitSortContext
     jit_getResult getResultFunc;
 } JitSortContext;
 
-long sortPrepare(
-    int *sourceTypes,
-    int typeCount,
-    int *outputCols,
-    int outputColCount,
-    int *sortCols,
-    int *sortAscendings,
-    int *sortNullFirsts,
-    int sortColCount)
+int64_t sortPrepare(
+    int32_t *sourceTypes,
+    int32_t typeCount,
+    int32_t *outputCols,
+    int32_t outputColCount,
+    int32_t *sortCols,
+    int32_t *sortAscendings,
+    int32_t *sortNullFirsts,
+    int32_t sortColCount)
 {
     auto start = START();
     map<string, ParamValue *> testParam;
     list<Hammer *> deps = std::list<Hammer *>();
     int sortColTypes[sortColCount];
 
-    for (int i = 0; i < sortColCount; ++i) {
+    for (int32_t i = 0; i < sortColCount; ++i) {
         sortColTypes[i] = sourceTypes[sortCols[i]];
     }
 
@@ -62,19 +62,19 @@ long sortPrepare(
     testParam["_Z10createSortPiiS_iS_S_S_i@7"] = &p_sortColCount;
 
 
-    testParam["_Z9compareTolPiS_S_S_ijj@1"] = &p_sortCols;
-    testParam["_Z9compareTolPiS_S_S_ijj@2"] = &p_sortColTypes;
-    testParam["_Z9compareTolPiS_S_S_ijj@3"] = &p_sortAscendings;
-    testParam["_Z9compareTolPiS_S_S_ijj@4"] = &p_sortNullFirsts;
-    testParam["_Z9compareTolPiS_S_S_ijj@5"] = &p_sortColCount;
+    testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
+    testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
+    testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
+    testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
+    testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
 
-    testParam["_Z12allocColumnslPiS_ij@1"] = &p_sourceTypes;
-    testParam["_Z12allocColumnslPiS_ij@2"] = &p_outputCols;
-    testParam["_Z12allocColumnslPiS_ij@3"] = &p_outputColCount;
+    testParam["_Z12allocColumnslPiS_ii@1"] = &p_sourceTypes;
+    testParam["_Z12allocColumnslPiS_ii@2"] = &p_outputCols;
+    testParam["_Z12allocColumnslPiS_ii@3"] = &p_outputColCount;
 
-    testParam["_Z9getResultlPiilS_j@1"] = &p_outputCols;
-    testParam["_Z9getResultlPiilS_j@2"] = &p_outputColCount;
-    testParam["_Z9getResultlPiilS_j@4"] = &p_sourceTypes;
+    testParam["_Z9getResultlPiilS_i@1"] = &p_outputCols;
+    testParam["_Z9getResultlPiilS_i@2"] = &p_outputColCount;
+    testParam["_Z9getResultlPiilS_i@4"] = &p_sourceTypes;
 
 
 
@@ -90,9 +90,9 @@ long sortPrepare(
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
     auto createSortFunc = (jit_createSort)(jitter->lookup("_Z10createSortPiiS_iS_S_S_i")->getAddress());
-    auto sortFunc = (jit_quickSort)(jitter->lookup("_Z9quickSortlPiS_S_S_ijj")->getAddress());
-    auto allocColumnsFunc = (jit_allocColumns)(jitter->lookup("_Z12allocColumnslPiS_ij")->getAddress());
-    auto getResultFunc = (jit_getResult)(jitter->lookup("_Z9getResultlPiilS_j")->getAddress());
+    auto sortFunc = (jit_quickSort)(jitter->lookup("_Z9quickSortlPiS_S_S_iii")->getAddress());
+    auto allocColumnsFunc = (jit_allocColumns)(jitter->lookup("_Z12allocColumnslPiS_ii")->getAddress());
+    auto getResultFunc = (jit_getResult)(jitter->lookup("_Z9getResultlPiilS_i")->getAddress());
 
     JitSortContext *jitSortContext = new JitSortContext;
     jitSortContext->createSortFunc = createSortFunc;
@@ -102,23 +102,23 @@ long sortPrepare(
     jitSortContext->jitter = jitter.release();
 
     PRINT_API("create jit sort context elapsed time: %ld ms\n", END(start));
-    return (long)jitSortContext;
+    return (int64_t)jitSortContext;
 }
 
-long sortCreateOperator(
-    long contextAddress,
-    int *sourceTypes,
-    int typeCount,
-    int *outputCols,
-    int outputColCount,
-    int *sortCols,
-    int *sortAscendings,
-    int *sortNullFirsts,
-    int sortColCount)
+int64_t sortCreateOperator(
+    int64_t contextAddress,
+    int32_t *sourceTypes,
+    int32_t typeCount,
+    int32_t *outputCols,
+    int32_t outputColCount,
+    int32_t *sortCols,
+    int32_t *sortAscendings,
+    int32_t *sortNullFirsts,
+    int32_t sortColCount)
 {
     auto start = START();
     JitSortContext *jitSortContext = (JitSortContext *)contextAddress;
-    long sortAddress;
+    int64_t sortAddress;
     if (jitSortContext != NULL) {
         auto createSortFunc = jitSortContext->createSortFunc;
         sortAddress = createSortFunc(sourceTypes, typeCount, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts, sortColCount);
@@ -130,7 +130,7 @@ long sortCreateOperator(
     return sortAddress;
 }
 
-void sortAddInput(long contextAddress, long sortAddress, long *datas, long *nulls, int pageCount, long *rowCounts, long totalRowCount)
+void sortAddInput(int64_t contextAddress, int64_t sortAddress, int64_t *datas, int64_t *nulls, int32_t pageCount, int32_t *rowCounts, int32_t totalRowCount)
 {
     auto start = START();
     Sort *sort = (Sort *)sortAddress;
@@ -141,19 +141,19 @@ void sortAddInput(long contextAddress, long sortAddress, long *datas, long *null
     PRINT_API("after pagesIndex addTable call elapsed time: %ld ms\n", END(start));
 }
 
-void sortExecute(long contextAddress, long sortAddress)
+void sortExecute(int64_t contextAddress, int64_t sortAddress)
 {
     Sort *sort = (Sort *)sortAddress;
-    int *sourceTypes = sort->getSourceTypes();
-    int *sortCols = sort->getSortCols();
-    int sortColCount = sort->getSortColCount();
+    int32_t *sourceTypes = sort->getSourceTypes();
+    int32_t *sortCols = sort->getSortCols();
+    int32_t sortColCount = sort->getSortColCount();
     PagesIndex *pagesIndex = sort->getPagesIndex();
 
-    uint32_t  positionCount = pagesIndex->getPositionCount();
-    uint32_t from = 0;
-    int sortColTypes[sortColCount];
+    int32_t positionCount = pagesIndex->getPositionCount();
+    int32_t from = 0;
+    int32_t sortColTypes[sortColCount];
 
-    for (int i = 0; i < sortColCount; i++) {
+    for (int32_t i = 0; i < sortColCount; i++) {
         sortColTypes[i] = sourceTypes[sortCols[i]];
     }
 
@@ -161,7 +161,7 @@ void sortExecute(long contextAddress, long sortAddress)
     if (jitSortContext != NULL) {
         auto start = START();
         auto sortFunc = jitSortContext->sortFunc;
-        sortFunc((long)pagesIndex,
+        sortFunc((int64_t)pagesIndex,
             sortCols,
             sortColTypes,
             sort->getSortAscendings(),
@@ -173,7 +173,7 @@ void sortExecute(long contextAddress, long sortAddress)
     }
     else {
         auto start = START();
-        quickSort((long)pagesIndex,
+        quickSort((int64_t)pagesIndex,
             sortCols,
             sortColTypes,
             sort->getSortAscendings(),
@@ -185,15 +185,15 @@ void sortExecute(long contextAddress, long sortAddress)
     }
 }
 
-Table *sortGetOutput(long contextAddress, long sortAddress)
+Table *sortGetOutput(int64_t contextAddress, int64_t sortAddress)
 {
     auto start = START();
     Sort *sort = (Sort *)sortAddress;
     PagesIndex *pagesIndex = sort->getPagesIndex();
-    uint32_t positionCount = pagesIndex->getPositionCount();
-    int outputColsCount = sort->getOutputColsCount();
-    int *outputCols = sort->getOutputCols();
-    int *sourceTypes = sort->getSourceTypes();
+    int32_t positionCount = pagesIndex->getPositionCount();
+    int32_t outputColsCount = sort->getOutputColsCount();
+    int32_t *outputCols = sort->getOutputCols();
+    int32_t *sourceTypes = sort->getSourceTypes();
 
     Table *outputTable = new Table(positionCount, outputColsCount);
 
@@ -201,21 +201,21 @@ Table *sortGetOutput(long contextAddress, long sortAddress)
     if (jitSortContext != NULL) {
         auto start = START();
         auto allocColumnsFunc = jitSortContext->allocColumnsFunc;
-        allocColumnsFunc((long)outputTable, sourceTypes, outputCols, outputColsCount, positionCount);
+        allocColumnsFunc((int64_t)outputTable, sourceTypes, outputCols, outputColsCount, positionCount);
         auto end = START();
         PRINT_API("JIT allocColumns call elapsed time: %ld ms\n", (end - start));
 
         auto getResultFunc = jitSortContext->getResultFunc;
-        getResultFunc((long)pagesIndex, outputCols, outputColsCount, (long)outputTable, sourceTypes, positionCount);
+        getResultFunc((int64_t)pagesIndex, outputCols, outputColsCount, (int64_t)outputTable, sourceTypes, positionCount);
         PRINT_API("JIT getResult call elapsed time: %ld ms\n", END(end));
     }
     else {
         auto start = START();
-        allocColumns((long)outputTable, sourceTypes, outputCols, outputColsCount, positionCount);
+        allocColumns((int64_t)outputTable, sourceTypes, outputCols, outputColsCount, positionCount);
         auto end = START();
         PRINT_API("ORIGINAL allocColumns call elapsed time: %ld ms\n", (end - start));
 
-        getResult((long)pagesIndex, outputCols, outputColsCount, (long)outputTable, sourceTypes, positionCount);
+        getResult((int64_t)pagesIndex, outputCols, outputColsCount, (int64_t)outputTable, sourceTypes, positionCount);
         PRINT_API("ORIGINAL getResult call elapsed time: %ld ms\n", END(end));
     }
 

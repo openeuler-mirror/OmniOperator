@@ -254,7 +254,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortPrepare
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
     PRINT_JNI("before sortPrepare call elapsed time: %ld ms\n", END(start));
-    long contextAddress = sortPrepare(
+    int64_t contextAddress = sortPrepare(
       sourceTypesArr,
       jTypeCount,
       outputColsArr,
@@ -284,7 +284,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortCreateOp
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
     PRINT_JNI("before sortCreateOperator call elapsed time: %ld ms\n", END(start));
-    long sortAddress = sortCreateOperator(
+    int64_t sortAddress = sortCreateOperator(
       jContextAddress,
       sourceTypesArr,
       jTypeCount,
@@ -305,12 +305,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortCreateOp
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortAddInput
   (JNIEnv *env, jobject jObj, jlong jContextAddress, jlong jSortAddress, jlongArray jInputAddr, jlongArray jInputNulls,
-   jint jPageCount, jlongArray jRowCounts, jlong jTotalRowCount)
+   jint jPageCount, jintArray jRowCounts, jint jTotalRowCount)
 {
     auto start = START();
     jlong *inputAddr = env->GetLongArrayElements(jInputAddr, JNI_FALSE);
     jlong *nullAddr = env->GetLongArrayElements(jInputNulls, JNI_FALSE);
-    jlong *rowCounts = env->GetLongArrayElements(jRowCounts, JNI_FALSE);
+    jint *rowCounts = env->GetIntArrayElements(jRowCounts, JNI_FALSE);
 
     PRINT_JNI("before sortAddInput call elapsed time: %ld ms\n", END(start));
     sortAddInput(jContextAddress, jSortAddress, inputAddr, nullAddr, jPageCount, rowCounts, jTotalRowCount);

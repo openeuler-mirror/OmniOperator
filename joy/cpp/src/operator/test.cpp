@@ -133,7 +133,7 @@ int test_sort() {
 
     long datas[2] = {(long)data1, (long)data2};
     long nulls[2] = {(long)nulls1, (long)nulls2};
-    long rowCounts[1] = {DATA_SIZE};
+    int rowCounts[1] = {DATA_SIZE};
 
     sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
     clock_t start = clock();
@@ -200,7 +200,7 @@ int test_sort_one()
     buildSortData(tableCount, distinctValue, repeatCount, datas, nulls);
     std::cout<<"finish build sort data" << endl;
 
-    long rowCounts[tableCount];
+    int rowCounts[tableCount];
     for (int i = 0; i < tableCount; i++) {
         rowCounts[i] = rowNum;
     }

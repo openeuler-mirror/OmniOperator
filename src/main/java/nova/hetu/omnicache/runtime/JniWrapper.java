@@ -46,7 +46,7 @@ public class JniWrapper
 
     public native long sortCreateOperator(long contextAddress, int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
 
-    public native void sortAddInput(long contextAddress, long sortAddress, long[] inputAddrs, long[] nulls, int pageCount, long[] positionCounts, long rowNum);
+    public native void sortAddInput(long contextAddress, long sortAddress, long[] inputAddrs, long[] nulls, int pageCount, int[] positionCounts, int rowNum);
 
     public native void sortExecute(long contextAddress, long sortAddress);
 

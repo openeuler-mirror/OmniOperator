@@ -24,8 +24,8 @@ public class OmniOrderBy
         int vecCount = datas.size();
         long[] dataAddrs = new long[vecCount];
         long[] nullAddrs = new long[vecCount];
-        long[] positionCounts = new long[pageCount];  // positionCount for every page
-        long totalRowNum = 0;
+        int[] positionCounts = new int[pageCount];  // positionCount for every page
+        int totalRowNum = 0;
 
         int idx = 0;
         for (int i = 0; i < vecCount; i++) {

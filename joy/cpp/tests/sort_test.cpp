@@ -3,9 +3,10 @@
 #include <time.h>
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 bool tableMatch(Table *actualTable, Table *expectTable);
-bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, uint32_t columnNumber);
+bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber);
 bool columnMatch(Column *actualColumn, Column *expectColumn);
 
 // TEST (OrderByTest, TestSortByPerformance)
@@ -105,29 +106,29 @@ TEST(SortTest, testOrderByDoubleColumn)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
-    int sourceTypes[3] = {1, 2, 3};
-    int outputCols[2] = {1, 2};
-    int sortCols[2] = {0, 2};
-    int ascendings[2] = {false, true};
-    int nullFirsts[2] = {true, true};
+    int32_t sourceTypes[3] = {1, 2, 3};
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {0, 2};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
 
     // prepare data
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
-    int nulls0[DATA_SIZE] = {false, false, false, false, false, false};
+    int32_t nulls0[DATA_SIZE] = {false, false, false, false, false, false};
 
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
-    int nulls1[DATA_SIZE] = {false, false, false, false, false, false};
+    int32_t nulls1[DATA_SIZE] = {false, false, false, false, false, false};
 
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    int nulls2[DATA_SIZE] = {false, false, false, false, false, false};
+    int32_t nulls2[DATA_SIZE] = {false, false, false, false, false, false};
 
-    long datas[3] = {(long)data0, (long)data1, (long)data2};
-    long nulls[3] = {(long)nulls0, (long)nulls1, (long)nulls2};
-    long rowCount = DATA_SIZE;
-    long rowCounts[1] = {rowCount};
+    int64_t datas[3] = {(int64_t)data0, (int64_t)data1, (int64_t)data2};
+    int64_t nulls[3] = {(int64_t)nulls0, (int64_t)nulls1, (int64_t)nulls2};
+    int32_t rowCount = DATA_SIZE;
+    int32_t rowCounts[1] = {rowCount};
 
-    long contextAddress = 0;
-    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    int64_t contextAddress = 0;
+    int64_t sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
     sortExecute(contextAddress, sortAddress);
     Table *actualTable = sortGetOutput(contextAddress, sortAddress);
@@ -156,25 +157,25 @@ TEST(SortTest, testOrderByDoubleColumn)
     delete expectTable;
 }
 
-void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, long **datas, long **nulls)
+void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t repeatCount, int64_t **datas, int64_t **nulls)
 {
     uint32_t positionCount = distinctValueCount * repeatCount;
-    int *data1;
-    int *data2;
-    int *null1;
-    int *null2;
-    uint32_t size = positionCount * sizeof(int);
+    int32_t *data1;
+    int32_t *data2;
+    int32_t *null1;
+    int32_t *null2;
+    uint32_t size = positionCount * sizeof(int32_t);
     uint32_t idx = 0;
 
-    for (int i = 0; i < tableCount; i++) {
-        data1 = (int *)malloc(size);
-        null1 = (int *)malloc(size);
-        data2 = (int *)malloc(size);
-        null2 = (int *)malloc(size);
+    for (int32_t i = 0; i < tableCount; i++) {
+        data1 = (int32_t *)malloc(size);
+        null1 = (int32_t *)malloc(size);
+        data2 = (int32_t *)malloc(size);
+        null2 = (int32_t *)malloc(size);
 
         idx = 0;
-        for (int j = 0; j < distinctValueCount; j++) {
-            for (int k = 0; k < repeatCount; k++) {
+        for (int32_t j = 0; j < distinctValueCount; j++) {
+            for (int32_t k = 0; k < repeatCount; k++) {
                 data1[idx] = j;
                 data2[idx] = j;
                 null1[idx] = 0;
@@ -183,10 +184,10 @@ void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, 
             }
         }
 
-        datas[i][0] = (long)data1;
-        datas[i][1] = (long)data2;
-        nulls[i][0] = (long)null1;
-        nulls[i][1] = (long)null2;
+        datas[i][0] = (int64_t)data1;
+        datas[i][1] = (int64_t)data2;
+        nulls[i][0] = (int64_t)null1;
+        nulls[i][1] = (int64_t)null2;
     }
 }
 
@@ -197,27 +198,27 @@ TEST(SortTest, testOrderByTwoColumnPerf)
     int tableCount = 10;
     int distinctValue = 4;
     int repeatCount = 250000;
-    uint32_t rowNum = distinctValue * repeatCount;
+    int32_t rowNum = distinctValue * repeatCount;
     long *datas[tableCount];
     long *nulls[tableCount];
 
     for (int i = 0; i < tableCount; i++) {
-        datas[i] = (long *)malloc(2 * sizeof(long));
-        nulls[i] = (long *)malloc(2 * sizeof(long));
+        datas[i] = (int64_t *)malloc(2 * sizeof(int64_t));
+        nulls[i] = (int64_t *)malloc(2 * sizeof(int64_t));
     }
 
     buildSortTestData(tableCount, distinctValue, repeatCount, datas, nulls);
     std::cout<<"finish build sort data" << endl;
-    long rowCounts[1] = {rowNum};
-    int sourceTypes[] = {1, 1};
-    int outputCols[] = {0, 1};
-    int sortCols[] = {0, 1};
-    int ascendings[] = {1, 1};
-    int nullFirsts[] = {0, 0};
+    int32_t rowCounts[1] = {rowNum};
+    int32_t sourceTypes[] = {1, 1};
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {1, 1};
+    int32_t nullFirsts[] = {0, 0};
 
-    long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    for (int i = 0; i < tableCount; i++) {
+    int64_t contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    int64_t sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    for (int32_t i = 0; i < tableCount; i++) {
         sortAddInput(contextAddress, sortAddress, datas[i], nulls[i], 1, rowCounts, rowNum);
     }
 
@@ -239,7 +240,7 @@ bool tableMatch(Table *actualTable, Table *expectTable)
         return false;
     }
 
-    uint32_t columnNumber = actualTable->getColumnNumber();
+    int32_t columnNumber = actualTable->getColumnNumber();
     if (columnNumber != expectTable->getColumnNumber()) {
         return false;
     }
@@ -248,7 +249,7 @@ bool tableMatch(Table *actualTable, Table *expectTable)
         return false;
     }
 
-    for (uint32_t i = 0; i < columnNumber; i++) {
+    for (int32_t i = 0; i < columnNumber; i++) {
         if (!columnMatch(actualTable->getColumn(i), expectTable->getColumn(i))) {
             return false;
         }
@@ -257,9 +258,9 @@ bool tableMatch(Table *actualTable, Table *expectTable)
     return true;
 }
 
-bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, uint32_t columnNumber)
+bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber)
 {
-    for (uint32_t i = 0; i < columnNumber; i++) {
+    for (int32_t i = 0; i < columnNumber; i++) {
         if (actualTypes[i] != expectTypes[i]) {
             return false;
         }
@@ -279,7 +280,7 @@ bool columnMatch(Column *actualColumn, Column *expectColumn)
     }
 
     bool result = true;
-    for (uint32_t i = 0; i < actualColumn->getSize(); i++) {
+    for (int32_t i = 0; i < actualColumn->getSize(); i++) {
         void *actualValue = actualColumn->getValue(i);
         void *expectValue = expectColumn->getValue(i);
         switch (actualColumn->getType()) {

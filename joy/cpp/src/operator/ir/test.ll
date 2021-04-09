@@ -1,5 +1,5 @@
-; ModuleID = '/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/../test.cpp'
-source_filename = "/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/../test.cpp"
+; ModuleID = '/home/omni-cache/joy/cpp/src/operator/ir/../test.cpp'
+source_filename = "/home/omni-cache/joy/cpp/src/operator/ir/../test.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
@@ -66,17 +66,15 @@ $_ZTI6Column = comdat any
 
 @_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1
 @__dso_handle = external hidden global i8
-@_ZN4llvm24DisableABIBreakingChecksE = external dso_local global i32, align 4
-@_ZN4llvm30VerifyDisableABIBreakingChecksE = weak hidden local_unnamed_addr global i32* @_ZN4llvm24DisableABIBreakingChecksE, align 8
 @_ZSt4cout = external dso_local global %"class.std::basic_ostream", align 8
 @.str = private unnamed_addr constant [24 x i8] c" in agg duration time: \00", align 1
 @.str.1 = private unnamed_addr constant [4 x i8] c"ms\0A\00", align 1
 @.str.2 = private unnamed_addr constant [30 x i8] c"finished groupby page count: \00", align 1
 @.str.3 = private unnamed_addr constant [13 x i8] c" page size: \00", align 1
 @.str.4 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
-@.str.8 = private unnamed_addr constant [24 x i8] c"sort elapsed end time: \00", align 1
-@.str.9 = private unnamed_addr constant [4 x i8] c" ms\00", align 1
-@.str.11 = private unnamed_addr constant [23 x i8] c"finish build sort data\00", align 1
+@.str.6 = private unnamed_addr constant [24 x i8] c"sort elapsed end time: \00", align 1
+@.str.7 = private unnamed_addr constant [4 x i8] c" ms\00", align 1
+@.str.9 = private unnamed_addr constant [23 x i8] c"finish build sort data\00", align 1
 @_ZTV5Table = linkonce_odr dso_local unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI5Table to i8*), i8* bitcast (void (%class.Table*)* @_ZN5TableD2Ev to i8*), i8* bitcast (void (%class.Table*)* @_ZN5TableD0Ev to i8*)] }, comdat, align 8
 @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global i8*
 @_ZTS5Table = linkonce_odr dso_local constant [7 x i8] c"5Table\00", comdat, align 1
@@ -86,13 +84,11 @@ $_ZTI6Column = comdat any
 @_ZTI6Column = linkonce_odr dso_local constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @_ZTS6Column, i32 0, i32 0) }, comdat, align 8
 @_ZTV13SumAggregator = external dso_local unnamed_addr constant { [6 x i8*] }, align 8
 @_ZTV11HashGroupBy = external dso_local unnamed_addr constant { [9 x i8*] }, align 8
-@.str.13 = private unnamed_addr constant [6 x i8] c"error\00", align 1
-@.str.14 = private unnamed_addr constant [2 x i8] c" \00", align 1
+@.str.11 = private unnamed_addr constant [6 x i8] c"error\00", align 1
+@.str.12 = private unnamed_addr constant [2 x i8] c" \00", align 1
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_test.cpp, i8* null }]
 @str = private unnamed_addr constant [17 x i8] c"test_sort called\00", align 1
-@str.15 = private unnamed_addr constant [23 x i8] c"about to allocate sort\00", align 1
-@str.16 = private unnamed_addr constant [23 x i8] c"finished allocate sort\00", align 1
-@str.17 = private unnamed_addr constant [21 x i8] c"test_sort_one called\00", align 1
+@str.13 = private unnamed_addr constant [21 x i8] c"test_sort_one called\00", align 1
 
 declare dso_local void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* nonnull dereferenceable(1)) unnamed_addr #0
 
@@ -1242,7 +1238,7 @@ entry:
   br i1 %cmp, label %if.then, label %for.body.lr.ph
 
 if.then:                                          ; preds = %entry
-  %call1.i = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @.str.13, i64 0, i64 0), i64 5)
+  %call1.i = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @.str.11, i64 0, i64 0), i64 5)
   %vtable.i = load i8*, i8** bitcast (%"class.std::basic_ostream"* @_ZSt4cout to i8**), align 8, !tbaa !2
   %vbase.offset.ptr.i = getelementptr i8, i8* %vtable.i, i64 -24
   %1 = bitcast i8* %vbase.offset.ptr.i to i64*
@@ -1368,7 +1364,7 @@ sw.bb14:                                          ; preds = %for.body
 
 for.inc.sink.split:                               ; preds = %sw.bb14, %sw.bb7, %sw.bb
   %call5.sink = phi %"class.std::basic_ostream"* [ %call5, %sw.bb ], [ %call.i42, %sw.bb7 ], [ %call.i45, %sw.bb14 ]
-  %call1.i41 = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) %call5.sink, i8* nonnull getelementptr inbounds ([2 x i8], [2 x i8]* @.str.14, i64 0, i64 0), i64 1)
+  %call1.i41 = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) %call5.sink, i8* nonnull getelementptr inbounds ([2 x i8], [2 x i8]* @.str.12, i64 0, i64 0), i64 1)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.inc.sink.split, %for.body
@@ -1393,6 +1389,7 @@ entry:
   %nullFirsts = alloca i64, align 8
   %datas = alloca [2 x i64], align 16
   %nulls = alloca [2 x i64], align 16
+  %rowCounts = alloca [1 x i32], align 4
   %puts = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @str, i64 0, i64 0))
   %0 = bitcast i64* %sourceTypes to i8*
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #16
@@ -1409,214 +1406,218 @@ entry:
   %4 = bitcast i64* %nullFirsts to i8*
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %4) #16
   store i64 4294967297, i64* %nullFirsts, align 8
-  %puts78 = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([23 x i8], [23 x i8]* @str.15, i64 0, i64 0))
   %arraydecay = bitcast i64* %sourceTypes to i32*
-  %arraydecay2 = bitcast i64* %outputCols to i32*
-  %arraydecay3 = bitcast i64* %sortCols to i32*
-  %arraydecay4 = bitcast i64* %ascendings to i32*
-  %arraydecay5 = bitcast i64* %nullFirsts to i32*
-  %call6 = call i64 @_Z16allocAndInitSortlPiiS_iS_S_S_i(i64 1024, i32* nonnull %arraydecay, i32 2, i32* nonnull %arraydecay2, i32 2, i32* nonnull %arraydecay3, i32* nonnull %arraydecay4, i32* nonnull %arraydecay5, i32 2)
-  %puts79 = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([23 x i8], [23 x i8]* @str.16, i64 0, i64 0))
-  %call8 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
-  %5 = bitcast i8* %call8 to i32*
+  %arraydecay1 = bitcast i64* %outputCols to i32*
+  %arraydecay2 = bitcast i64* %sortCols to i32*
+  %arraydecay3 = bitcast i64* %ascendings to i32*
+  %arraydecay4 = bitcast i64* %nullFirsts to i32*
+  %call5 = call i64 @_Z11sortPreparePiiS_iS_S_S_i(i32* nonnull %arraydecay, i32 2, i32* nonnull %arraydecay1, i32 2, i32* nonnull %arraydecay2, i32* nonnull %arraydecay3, i32* nonnull %arraydecay4, i32 2)
+  %call11 = call i64 @_Z18sortCreateOperatorlPiiS_iS_S_S_i(i64 %call5, i32* nonnull %arraydecay, i32 2, i32* nonnull %arraydecay1, i32 2, i32* nonnull %arraydecay2, i32* nonnull %arraydecay3, i32* nonnull %arraydecay4, i32 2)
+  %call12 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
+  %5 = bitcast i8* %call12 to i32*
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next.4, %vector.body ]
-  %vec.ind98 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %entry ], [ %vec.ind.next101.4, %vector.body ]
+  %vec.ind102 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %entry ], [ %vec.ind.next105.4, %vector.body ]
   %6 = getelementptr inbounds i32, i32* %5, i64 %index
-  %step.add99 = add <4 x i32> %vec.ind98, <i32 4, i32 4, i32 4, i32 4>
+  %step.add103 = add <4 x i32> %vec.ind102, <i32 4, i32 4, i32 4, i32 4>
   %7 = bitcast i32* %6 to <4 x i32>*
-  store <4 x i32> %vec.ind98, <4 x i32>* %7, align 4, !tbaa !18
+  store <4 x i32> %vec.ind102, <4 x i32>* %7, align 4, !tbaa !18
   %8 = getelementptr inbounds i32, i32* %6, i64 4
   %9 = bitcast i32* %8 to <4 x i32>*
-  store <4 x i32> %step.add99, <4 x i32>* %9, align 4, !tbaa !18
+  store <4 x i32> %step.add103, <4 x i32>* %9, align 4, !tbaa !18
   %index.next = add nuw nsw i64 %index, 8
-  %vec.ind.next101 = add <4 x i32> %vec.ind98, <i32 8, i32 8, i32 8, i32 8>
+  %vec.ind.next105 = add <4 x i32> %vec.ind102, <i32 8, i32 8, i32 8, i32 8>
   %10 = getelementptr inbounds i32, i32* %5, i64 %index.next
-  %step.add99.1 = add <4 x i32> %vec.ind98, <i32 12, i32 12, i32 12, i32 12>
+  %step.add103.1 = add <4 x i32> %vec.ind102, <i32 12, i32 12, i32 12, i32 12>
   %11 = bitcast i32* %10 to <4 x i32>*
-  store <4 x i32> %vec.ind.next101, <4 x i32>* %11, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next105, <4 x i32>* %11, align 4, !tbaa !18
   %12 = getelementptr inbounds i32, i32* %10, i64 4
   %13 = bitcast i32* %12 to <4 x i32>*
-  store <4 x i32> %step.add99.1, <4 x i32>* %13, align 4, !tbaa !18
+  store <4 x i32> %step.add103.1, <4 x i32>* %13, align 4, !tbaa !18
   %index.next.1 = add nuw nsw i64 %index, 16
-  %vec.ind.next101.1 = add <4 x i32> %vec.ind98, <i32 16, i32 16, i32 16, i32 16>
+  %vec.ind.next105.1 = add <4 x i32> %vec.ind102, <i32 16, i32 16, i32 16, i32 16>
   %14 = getelementptr inbounds i32, i32* %5, i64 %index.next.1
-  %step.add99.2 = add <4 x i32> %vec.ind98, <i32 20, i32 20, i32 20, i32 20>
+  %step.add103.2 = add <4 x i32> %vec.ind102, <i32 20, i32 20, i32 20, i32 20>
   %15 = bitcast i32* %14 to <4 x i32>*
-  store <4 x i32> %vec.ind.next101.1, <4 x i32>* %15, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next105.1, <4 x i32>* %15, align 4, !tbaa !18
   %16 = getelementptr inbounds i32, i32* %14, i64 4
   %17 = bitcast i32* %16 to <4 x i32>*
-  store <4 x i32> %step.add99.2, <4 x i32>* %17, align 4, !tbaa !18
+  store <4 x i32> %step.add103.2, <4 x i32>* %17, align 4, !tbaa !18
   %index.next.2 = add nuw nsw i64 %index, 24
-  %vec.ind.next101.2 = add <4 x i32> %vec.ind98, <i32 24, i32 24, i32 24, i32 24>
+  %vec.ind.next105.2 = add <4 x i32> %vec.ind102, <i32 24, i32 24, i32 24, i32 24>
   %18 = getelementptr inbounds i32, i32* %5, i64 %index.next.2
-  %step.add99.3 = add <4 x i32> %vec.ind98, <i32 28, i32 28, i32 28, i32 28>
+  %step.add103.3 = add <4 x i32> %vec.ind102, <i32 28, i32 28, i32 28, i32 28>
   %19 = bitcast i32* %18 to <4 x i32>*
-  store <4 x i32> %vec.ind.next101.2, <4 x i32>* %19, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next105.2, <4 x i32>* %19, align 4, !tbaa !18
   %20 = getelementptr inbounds i32, i32* %18, i64 4
   %21 = bitcast i32* %20 to <4 x i32>*
-  store <4 x i32> %step.add99.3, <4 x i32>* %21, align 4, !tbaa !18
+  store <4 x i32> %step.add103.3, <4 x i32>* %21, align 4, !tbaa !18
   %index.next.3 = add nuw nsw i64 %index, 32
-  %vec.ind.next101.3 = add <4 x i32> %vec.ind98, <i32 32, i32 32, i32 32, i32 32>
+  %vec.ind.next105.3 = add <4 x i32> %vec.ind102, <i32 32, i32 32, i32 32, i32 32>
   %22 = getelementptr inbounds i32, i32* %5, i64 %index.next.3
-  %step.add99.4 = add <4 x i32> %vec.ind98, <i32 36, i32 36, i32 36, i32 36>
+  %step.add103.4 = add <4 x i32> %vec.ind102, <i32 36, i32 36, i32 36, i32 36>
   %23 = bitcast i32* %22 to <4 x i32>*
-  store <4 x i32> %vec.ind.next101.3, <4 x i32>* %23, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next105.3, <4 x i32>* %23, align 4, !tbaa !18
   %24 = getelementptr inbounds i32, i32* %22, i64 4
   %25 = bitcast i32* %24 to <4 x i32>*
-  store <4 x i32> %step.add99.4, <4 x i32>* %25, align 4, !tbaa !18
+  store <4 x i32> %step.add103.4, <4 x i32>* %25, align 4, !tbaa !18
   %index.next.4 = add nuw nsw i64 %index, 40
-  %vec.ind.next101.4 = add <4 x i32> %vec.ind98, <i32 40, i32 40, i32 40, i32 40>
+  %vec.ind.next105.4 = add <4 x i32> %vec.ind102, <i32 40, i32 40, i32 40, i32 40>
   %26 = icmp eq i64 %index.next.4, 10000000
   br i1 %26, label %for.cond.cleanup, label %vector.body, !llvm.loop !73
 
 for.cond.cleanup:                                 ; preds = %vector.body
-  %call9 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(10000000) %call9, i8 0, i64 10000000, i1 false)
-  %call10 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
-  %27 = bitcast i8* %call10 to i32*
-  br label %vector.body104
+  %call13 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(10000000) %call13, i8 0, i64 10000000, i1 false)
+  %call14 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
+  %27 = bitcast i8* %call14 to i32*
+  br label %vector.body108
 
-vector.body104:                                   ; preds = %vector.body104, %for.cond.cleanup
-  %index106 = phi i64 [ 0, %for.cond.cleanup ], [ %index.next107.4, %vector.body104 ]
-  %vec.ind114 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %for.cond.cleanup ], [ %vec.ind.next117.4, %vector.body104 ]
-  %28 = getelementptr inbounds i32, i32* %27, i64 %index106
-  %step.add115 = add <4 x i32> %vec.ind114, <i32 4, i32 4, i32 4, i32 4>
+vector.body108:                                   ; preds = %vector.body108, %for.cond.cleanup
+  %index110 = phi i64 [ 0, %for.cond.cleanup ], [ %index.next111.4, %vector.body108 ]
+  %vec.ind118 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %for.cond.cleanup ], [ %vec.ind.next121.4, %vector.body108 ]
+  %28 = getelementptr inbounds i32, i32* %27, i64 %index110
+  %step.add119 = add <4 x i32> %vec.ind118, <i32 4, i32 4, i32 4, i32 4>
   %29 = bitcast i32* %28 to <4 x i32>*
-  store <4 x i32> %vec.ind114, <4 x i32>* %29, align 4, !tbaa !18
+  store <4 x i32> %vec.ind118, <4 x i32>* %29, align 4, !tbaa !18
   %30 = getelementptr inbounds i32, i32* %28, i64 4
   %31 = bitcast i32* %30 to <4 x i32>*
-  store <4 x i32> %step.add115, <4 x i32>* %31, align 4, !tbaa !18
-  %index.next107 = add nuw nsw i64 %index106, 8
-  %vec.ind.next117 = add <4 x i32> %vec.ind114, <i32 8, i32 8, i32 8, i32 8>
-  %32 = getelementptr inbounds i32, i32* %27, i64 %index.next107
-  %step.add115.1 = add <4 x i32> %vec.ind114, <i32 12, i32 12, i32 12, i32 12>
+  store <4 x i32> %step.add119, <4 x i32>* %31, align 4, !tbaa !18
+  %index.next111 = add nuw nsw i64 %index110, 8
+  %vec.ind.next121 = add <4 x i32> %vec.ind118, <i32 8, i32 8, i32 8, i32 8>
+  %32 = getelementptr inbounds i32, i32* %27, i64 %index.next111
+  %step.add119.1 = add <4 x i32> %vec.ind118, <i32 12, i32 12, i32 12, i32 12>
   %33 = bitcast i32* %32 to <4 x i32>*
-  store <4 x i32> %vec.ind.next117, <4 x i32>* %33, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next121, <4 x i32>* %33, align 4, !tbaa !18
   %34 = getelementptr inbounds i32, i32* %32, i64 4
   %35 = bitcast i32* %34 to <4 x i32>*
-  store <4 x i32> %step.add115.1, <4 x i32>* %35, align 4, !tbaa !18
-  %index.next107.1 = add nuw nsw i64 %index106, 16
-  %vec.ind.next117.1 = add <4 x i32> %vec.ind114, <i32 16, i32 16, i32 16, i32 16>
-  %36 = getelementptr inbounds i32, i32* %27, i64 %index.next107.1
-  %step.add115.2 = add <4 x i32> %vec.ind114, <i32 20, i32 20, i32 20, i32 20>
+  store <4 x i32> %step.add119.1, <4 x i32>* %35, align 4, !tbaa !18
+  %index.next111.1 = add nuw nsw i64 %index110, 16
+  %vec.ind.next121.1 = add <4 x i32> %vec.ind118, <i32 16, i32 16, i32 16, i32 16>
+  %36 = getelementptr inbounds i32, i32* %27, i64 %index.next111.1
+  %step.add119.2 = add <4 x i32> %vec.ind118, <i32 20, i32 20, i32 20, i32 20>
   %37 = bitcast i32* %36 to <4 x i32>*
-  store <4 x i32> %vec.ind.next117.1, <4 x i32>* %37, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next121.1, <4 x i32>* %37, align 4, !tbaa !18
   %38 = getelementptr inbounds i32, i32* %36, i64 4
   %39 = bitcast i32* %38 to <4 x i32>*
-  store <4 x i32> %step.add115.2, <4 x i32>* %39, align 4, !tbaa !18
-  %index.next107.2 = add nuw nsw i64 %index106, 24
-  %vec.ind.next117.2 = add <4 x i32> %vec.ind114, <i32 24, i32 24, i32 24, i32 24>
-  %40 = getelementptr inbounds i32, i32* %27, i64 %index.next107.2
-  %step.add115.3 = add <4 x i32> %vec.ind114, <i32 28, i32 28, i32 28, i32 28>
+  store <4 x i32> %step.add119.2, <4 x i32>* %39, align 4, !tbaa !18
+  %index.next111.2 = add nuw nsw i64 %index110, 24
+  %vec.ind.next121.2 = add <4 x i32> %vec.ind118, <i32 24, i32 24, i32 24, i32 24>
+  %40 = getelementptr inbounds i32, i32* %27, i64 %index.next111.2
+  %step.add119.3 = add <4 x i32> %vec.ind118, <i32 28, i32 28, i32 28, i32 28>
   %41 = bitcast i32* %40 to <4 x i32>*
-  store <4 x i32> %vec.ind.next117.2, <4 x i32>* %41, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next121.2, <4 x i32>* %41, align 4, !tbaa !18
   %42 = getelementptr inbounds i32, i32* %40, i64 4
   %43 = bitcast i32* %42 to <4 x i32>*
-  store <4 x i32> %step.add115.3, <4 x i32>* %43, align 4, !tbaa !18
-  %index.next107.3 = add nuw nsw i64 %index106, 32
-  %vec.ind.next117.3 = add <4 x i32> %vec.ind114, <i32 32, i32 32, i32 32, i32 32>
-  %44 = getelementptr inbounds i32, i32* %27, i64 %index.next107.3
-  %step.add115.4 = add <4 x i32> %vec.ind114, <i32 36, i32 36, i32 36, i32 36>
+  store <4 x i32> %step.add119.3, <4 x i32>* %43, align 4, !tbaa !18
+  %index.next111.3 = add nuw nsw i64 %index110, 32
+  %vec.ind.next121.3 = add <4 x i32> %vec.ind118, <i32 32, i32 32, i32 32, i32 32>
+  %44 = getelementptr inbounds i32, i32* %27, i64 %index.next111.3
+  %step.add119.4 = add <4 x i32> %vec.ind118, <i32 36, i32 36, i32 36, i32 36>
   %45 = bitcast i32* %44 to <4 x i32>*
-  store <4 x i32> %vec.ind.next117.3, <4 x i32>* %45, align 4, !tbaa !18
+  store <4 x i32> %vec.ind.next121.3, <4 x i32>* %45, align 4, !tbaa !18
   %46 = getelementptr inbounds i32, i32* %44, i64 4
   %47 = bitcast i32* %46 to <4 x i32>*
-  store <4 x i32> %step.add115.4, <4 x i32>* %47, align 4, !tbaa !18
-  %index.next107.4 = add nuw nsw i64 %index106, 40
-  %vec.ind.next117.4 = add <4 x i32> %vec.ind114, <i32 40, i32 40, i32 40, i32 40>
-  %48 = icmp eq i64 %index.next107.4, 10000000
-  br i1 %48, label %for.cond.cleanup14, label %vector.body104, !llvm.loop !74
+  store <4 x i32> %step.add119.4, <4 x i32>* %47, align 4, !tbaa !18
+  %index.next111.4 = add nuw nsw i64 %index110, 40
+  %vec.ind.next121.4 = add <4 x i32> %vec.ind118, <i32 40, i32 40, i32 40, i32 40>
+  %48 = icmp eq i64 %index.next111.4, 10000000
+  br i1 %48, label %for.cond.cleanup18, label %vector.body108, !llvm.loop !74
 
-for.cond.cleanup14:                               ; preds = %vector.body104
-  %call21 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(10000000) %call21, i8 0, i64 10000000, i1 false)
+for.cond.cleanup18:                               ; preds = %vector.body108
+  %call25 = call noalias nonnull dereferenceable(40000000) i8* @_Znam(i64 40000000) #15
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(10000000) %call25, i8 0, i64 10000000, i1 false)
   %49 = bitcast [2 x i64]* %datas to i8*
   call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %49) #16
   %arrayinit.begin = getelementptr inbounds [2 x i64], [2 x i64]* %datas, i64 0, i64 0
-  %50 = ptrtoint i8* %call8 to i64
+  %50 = ptrtoint i8* %call12 to i64
   store i64 %50, i64* %arrayinit.begin, align 16, !tbaa !35
   %arrayinit.element = getelementptr inbounds [2 x i64], [2 x i64]* %datas, i64 0, i64 1
-  %51 = ptrtoint i8* %call10 to i64
+  %51 = ptrtoint i8* %call14 to i64
   store i64 %51, i64* %arrayinit.element, align 8, !tbaa !35
   %52 = bitcast [2 x i64]* %nulls to i8*
   call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %52) #16
-  %arrayinit.begin22 = getelementptr inbounds [2 x i64], [2 x i64]* %nulls, i64 0, i64 0
-  %53 = ptrtoint i8* %call9 to i64
-  store i64 %53, i64* %arrayinit.begin22, align 16, !tbaa !35
-  %arrayinit.element23 = getelementptr inbounds [2 x i64], [2 x i64]* %nulls, i64 0, i64 1
-  %54 = ptrtoint i8* %call21 to i64
-  store i64 %54, i64* %arrayinit.element23, align 8, !tbaa !35
-  call void @_Z8addTablelPlS_j(i64 %call6, i64* nonnull %arrayinit.begin, i64* nonnull %arrayinit.begin22, i32 10000000)
-  %call26 = call i64 @clock() #16
-  call void @_Z4sortll(i64 %call6, i64 1024)
-  %call1.i = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([24 x i8], [24 x i8]* @.str.8, i64 0, i64 0), i64 23)
-  %call28 = call i64 @clock() #16
-  %sub = sub nsw i64 %call28, %call26
+  %arrayinit.begin26 = getelementptr inbounds [2 x i64], [2 x i64]* %nulls, i64 0, i64 0
+  %53 = ptrtoint i8* %call13 to i64
+  store i64 %53, i64* %arrayinit.begin26, align 16, !tbaa !35
+  %arrayinit.element27 = getelementptr inbounds [2 x i64], [2 x i64]* %nulls, i64 0, i64 1
+  %54 = ptrtoint i8* %call25 to i64
+  store i64 %54, i64* %arrayinit.element27, align 8, !tbaa !35
+  %55 = bitcast [1 x i32]* %rowCounts to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %55) #16
+  %56 = getelementptr inbounds [1 x i32], [1 x i32]* %rowCounts, i64 0, i64 0
+  store i32 10000000, i32* %56, align 4
+  call void @_Z12sortAddInputllPlS_iPii(i64 %call5, i64 %call11, i64* nonnull %arrayinit.begin, i64* nonnull %arrayinit.begin26, i32 1, i32* nonnull %56, i32 10000000)
+  %call31 = call i64 @clock() #16
+  call void @_Z11sortExecutell(i64 %call5, i64 %call11)
+  %call1.i = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([24 x i8], [24 x i8]* @.str.6, i64 0, i64 0), i64 23)
+  %call33 = call i64 @clock() #16
+  %sub = sub nsw i64 %call33, %call31
   %conv = sitofp i64 %sub to double
   %div = fdiv double %conv, 1.000000e+03
   %call.i = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo9_M_insertIdEERSoT_(%"class.std::basic_ostream"* nonnull dereferenceable(8) @_ZSt4cout, double %div)
-  %call1.i81 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) %call.i, i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str.9, i64 0, i64 0), i64 3)
-  %55 = bitcast %"class.std::basic_ostream"* %call.i to i8**
-  %vtable.i = load i8*, i8** %55, align 8, !tbaa !2
+  %call1.i85 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) %call.i, i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str.7, i64 0, i64 0), i64 3)
+  %57 = bitcast %"class.std::basic_ostream"* %call.i to i8**
+  %vtable.i = load i8*, i8** %57, align 8, !tbaa !2
   %vbase.offset.ptr.i = getelementptr i8, i8* %vtable.i, i64 -24
-  %56 = bitcast i8* %vbase.offset.ptr.i to i64*
-  %vbase.offset.i = load i64, i64* %56, align 8
-  %57 = bitcast %"class.std::basic_ostream"* %call.i to i8*
-  %add.ptr.i = getelementptr inbounds i8, i8* %57, i64 %vbase.offset.i
+  %58 = bitcast i8* %vbase.offset.ptr.i to i64*
+  %vbase.offset.i = load i64, i64* %58, align 8
+  %59 = bitcast %"class.std::basic_ostream"* %call.i to i8*
+  %add.ptr.i = getelementptr inbounds i8, i8* %59, i64 %vbase.offset.i
   %_M_ctype.i = getelementptr inbounds i8, i8* %add.ptr.i, i64 240
-  %58 = bitcast i8* %_M_ctype.i to %"class.std::ctype"**
-  %59 = load %"class.std::ctype"*, %"class.std::ctype"** %58, align 8, !tbaa !64
-  %tobool.not.i89 = icmp eq %"class.std::ctype"* %59, null
-  br i1 %tobool.not.i89, label %if.then.i90, label %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit
+  %60 = bitcast i8* %_M_ctype.i to %"class.std::ctype"**
+  %61 = load %"class.std::ctype"*, %"class.std::ctype"** %60, align 8, !tbaa !64
+  %tobool.not.i93 = icmp eq %"class.std::ctype"* %61, null
+  br i1 %tobool.not.i93, label %if.then.i94, label %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit
 
-if.then.i90:                                      ; preds = %for.cond.cleanup14
+if.then.i94:                                      ; preds = %for.cond.cleanup18
   call void @_ZSt16__throw_bad_castv() #19
   unreachable
 
-_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit:    ; preds = %for.cond.cleanup14
-  %_M_widen_ok.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %59, i64 0, i32 8
-  %60 = load i8, i8* %_M_widen_ok.i, align 8, !tbaa !67
-  %tobool.not.i = icmp eq i8 %60, 0
+_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit:    ; preds = %for.cond.cleanup18
+  %_M_widen_ok.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %61, i64 0, i32 8
+  %62 = load i8, i8* %_M_widen_ok.i, align 8, !tbaa !67
+  %tobool.not.i = icmp eq i8 %62, 0
   br i1 %tobool.not.i, label %if.end.i, label %if.then.i
 
 if.then.i:                                        ; preds = %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit
-  %arrayidx.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %59, i64 0, i32 9, i64 10
-  %61 = load i8, i8* %arrayidx.i, align 1, !tbaa !69
+  %arrayidx.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %61, i64 0, i32 9, i64 10
+  %63 = load i8, i8* %arrayidx.i, align 1, !tbaa !69
   br label %_ZNKSt5ctypeIcE5widenEc.exit
 
 if.end.i:                                         ; preds = %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit
-  call void @_ZNKSt5ctypeIcE13_M_widen_initEv(%"class.std::ctype"* nonnull dereferenceable(570) %59)
-  %62 = bitcast %"class.std::ctype"* %59 to i8 (%"class.std::ctype"*, i8)***
-  %vtable.i87 = load i8 (%"class.std::ctype"*, i8)**, i8 (%"class.std::ctype"*, i8)*** %62, align 8, !tbaa !2
-  %vfn.i = getelementptr inbounds i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vtable.i87, i64 6
-  %63 = load i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vfn.i, align 8
-  %call.i88 = call signext i8 %63(%"class.std::ctype"* nonnull dereferenceable(570) %59, i8 signext 10)
+  call void @_ZNKSt5ctypeIcE13_M_widen_initEv(%"class.std::ctype"* nonnull dereferenceable(570) %61)
+  %64 = bitcast %"class.std::ctype"* %61 to i8 (%"class.std::ctype"*, i8)***
+  %vtable.i91 = load i8 (%"class.std::ctype"*, i8)**, i8 (%"class.std::ctype"*, i8)*** %64, align 8, !tbaa !2
+  %vfn.i = getelementptr inbounds i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vtable.i91, i64 6
+  %65 = load i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vfn.i, align 8
+  %call.i92 = call signext i8 %65(%"class.std::ctype"* nonnull dereferenceable(570) %61, i8 signext 10)
   br label %_ZNKSt5ctypeIcE5widenEc.exit
 
 _ZNKSt5ctypeIcE5widenEc.exit:                     ; preds = %if.then.i, %if.end.i
-  %retval.0.i = phi i8 [ %61, %if.then.i ], [ %call.i88, %if.end.i ]
-  %call1.i84 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo3putEc(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call.i, i8 signext %retval.0.i)
-  %call.i85 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo5flushEv(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call1.i84)
-  %call32 = call %class.Table* @_Z9getResultll(i64 %call6, i64 1024)
-  %isnull = icmp eq %class.Table* %call32, null
-  br i1 %isnull, label %delete.notnull34, label %delete.notnull
+  %retval.0.i = phi i8 [ %63, %if.then.i ], [ %call.i92, %if.end.i ]
+  %call1.i88 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo3putEc(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call.i, i8 signext %retval.0.i)
+  %call.i89 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo5flushEv(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call1.i88)
+  %call37 = call %class.Table* @_Z13sortGetOutputll(i64 %call5, i64 %call11)
+  %isnull = icmp eq %class.Table* %call37, null
+  br i1 %isnull, label %delete.notnull39, label %delete.notnull
 
 delete.notnull:                                   ; preds = %_ZNKSt5ctypeIcE5widenEc.exit
-  %64 = bitcast %class.Table* %call32 to void (%class.Table*)***
-  %vtable = load void (%class.Table*)**, void (%class.Table*)*** %64, align 8, !tbaa !2
+  %66 = bitcast %class.Table* %call37 to void (%class.Table*)***
+  %vtable = load void (%class.Table*)**, void (%class.Table*)*** %66, align 8, !tbaa !2
   %vfn = getelementptr inbounds void (%class.Table*)*, void (%class.Table*)** %vtable, i64 1
-  %65 = load void (%class.Table*)*, void (%class.Table*)** %vfn, align 8
-  call void %65(%class.Table* nonnull dereferenceable(60) %call32) #16
-  br label %delete.notnull34
+  %67 = load void (%class.Table*)*, void (%class.Table*)** %vfn, align 8
+  call void %67(%class.Table* nonnull dereferenceable(60) %call37) #16
+  br label %delete.notnull39
 
-delete.notnull34:                                 ; preds = %_ZNKSt5ctypeIcE5widenEc.exit, %delete.notnull
-  call void @_ZdaPv(i8* nonnull %call21) #17
-  call void @_ZdaPv(i8* nonnull %call9) #17
-  call void @_ZdaPv(i8* nonnull %call10) #17
-  call void @_ZdaPv(i8* nonnull %call8) #17
+delete.notnull39:                                 ; preds = %_ZNKSt5ctypeIcE5widenEc.exit, %delete.notnull
+  call void @_ZdaPv(i8* nonnull %call25) #17
+  call void @_ZdaPv(i8* nonnull %call13) #17
+  call void @_ZdaPv(i8* nonnull %call14) #17
+  call void @_ZdaPv(i8* nonnull %call12) #17
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %55) #16
   call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %52) #16
   call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %49) #16
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %4) #16
@@ -1627,160 +1628,168 @@ delete.notnull34:                                 ; preds = %_ZNKSt5ctypeIcE5wid
   ret i32 1235
 }
 
-declare dso_local i64 @_Z16allocAndInitSortlPiiS_iS_S_S_i(i64, i32*, i32, i32*, i32, i32*, i32*, i32*, i32) local_unnamed_addr #0
+declare dso_local i64 @_Z11sortPreparePiiS_iS_S_S_i(i32*, i32, i32*, i32, i32*, i32*, i32*, i32) local_unnamed_addr #0
+
+declare dso_local i64 @_Z18sortCreateOperatorlPiiS_iS_S_S_i(i64, i32*, i32, i32*, i32, i32*, i32*, i32*, i32) local_unnamed_addr #0
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #9
 
-declare dso_local void @_Z8addTablelPlS_j(i64, i64*, i64*, i32) local_unnamed_addr #0
+declare dso_local void @_Z12sortAddInputllPlS_iPii(i64, i64, i64*, i64*, i32, i32*, i32) local_unnamed_addr #0
 
 ; Function Attrs: nounwind
 declare dso_local i64 @clock() local_unnamed_addr #1
 
-declare dso_local void @_Z4sortll(i64, i64) local_unnamed_addr #0
+declare dso_local void @_Z11sortExecutell(i64, i64) local_unnamed_addr #0
 
-declare dso_local %class.Table* @_Z9getResultll(i64, i64) local_unnamed_addr #0
+declare dso_local %class.Table* @_Z13sortGetOutputll(i64, i64) local_unnamed_addr #0
 
 ; Function Attrs: nofree nounwind uwtable mustprogress
-define dso_local void @_Z13buildSortDataiiiPPlS0_(i32 %tableCount, i32 %distinctValueCount, i32 %repeatCount, i64** nocapture readonly %datas, i64** nocapture readonly %nulls) local_unnamed_addr #10 {
+define dso_local void @_Z13buildSortDataiiiPlS_(i32 %tableCount, i32 %distinctValueCount, i32 %repeatCount, i64* nocapture %datas, i64* nocapture %nulls) local_unnamed_addr #10 {
 entry:
-  %cmp84 = icmp sgt i32 %tableCount, 0
-  br i1 %cmp84, label %for.body.lr.ph, label %for.cond.cleanup
+  %cmp89 = icmp sgt i32 %tableCount, 0
+  br i1 %cmp89, label %for.body.lr.ph, label %for.cond.cleanup
 
 for.body.lr.ph:                                   ; preds = %entry
-  %mul = shl i32 %distinctValueCount, 2
+  %mul = shl i32 %distinctValueCount, 3
   %mul1 = mul i32 %mul, %repeatCount
   %conv3 = zext i32 %mul1 to i64
-  %cmp1180 = icmp sgt i32 %distinctValueCount, 0
-  %cmp1577 = icmp sgt i32 %repeatCount, 0
-  %wide.trip.count = zext i32 %tableCount to i64
-  br i1 %cmp1180, label %for.body.us.preheader, label %for.body
+  %cmp1185 = icmp sgt i32 %distinctValueCount, 0
+  %cmp1582 = icmp sgt i32 %repeatCount, 0
+  %wide.trip.count123 = zext i32 %tableCount to i64
+  br i1 %cmp1185, label %for.body.us.preheader, label %for.body
 
 for.body.us.preheader:                            ; preds = %for.body.lr.ph
+  %wide.trip.count = zext i32 %distinctValueCount to i64
   %0 = add i32 %repeatCount, -1
-  %1 = add i32 %repeatCount, -8
-  %2 = lshr i32 %1, 3
+  %1 = add i32 %repeatCount, -4
+  %2 = lshr i32 %1, 2
   %3 = add nuw nsw i32 %2, 1
-  %min.iters.check = icmp ult i32 %repeatCount, 8
-  %n.vec = and i32 %repeatCount, -8
+  %4 = zext i32 %repeatCount to i64
+  %5 = add i32 %repeatCount, -1
+  %min.iters.check = icmp ult i32 %repeatCount, 4
+  %n.vec = and i32 %repeatCount, -4
   %xtraiter = and i32 %3, 1
-  %4 = icmp eq i32 %2, 0
-  %unroll_iter = and i32 %3, 1073741822
+  %6 = icmp eq i32 %2, 0
+  %unroll_iter = and i32 %3, 2147483646
   %lcmp.mod.not = icmp eq i32 %xtraiter, 0
   %cmp.n = icmp eq i32 %n.vec, %repeatCount
   br label %for.body.us
 
 for.body.us:                                      ; preds = %for.body.us.preheader, %for.cond10.for.cond.cleanup12_crit_edge.us
-  %indvars.iv = phi i64 [ 0, %for.body.us.preheader ], [ %indvars.iv.next, %for.cond10.for.cond.cleanup12_crit_edge.us ]
+  %indvars.iv119 = phi i64 [ 0, %for.body.us.preheader ], [ %indvars.iv.next120, %for.cond10.for.cond.cleanup12_crit_edge.us ]
   %call.us = tail call noalias i8* @malloc(i64 %conv3) #16
-  %5 = bitcast i8* %call.us to i32*
+  %7 = bitcast i8* %call.us to i64*
   %call5.us = tail call noalias i8* @malloc(i64 %conv3) #16
-  %6 = bitcast i8* %call5.us to i32*
+  %8 = bitcast i8* %call5.us to i64*
   %call7.us = tail call noalias i8* @malloc(i64 %conv3) #16
-  %7 = bitcast i8* %call7.us to i32*
+  %9 = bitcast i8* %call7.us to i64*
   %call9.us = tail call noalias i8* @malloc(i64 %conv3) #16
-  %8 = bitcast i8* %call9.us to i32*
-  br i1 %cmp1577, label %for.cond14.preheader.us.us, label %for.cond10.for.cond.cleanup12_crit_edge.us
+  %10 = bitcast i8* %call9.us to i64*
+  br i1 %cmp1582, label %for.cond14.preheader.us.us, label %for.cond10.for.cond.cleanup12_crit_edge.us
 
 for.cond10.for.cond.cleanup12_crit_edge.us:       ; preds = %for.cond14.for.cond.cleanup16_crit_edge.us.us, %for.body.us
-  %9 = ptrtoint i8* %call.us to i64
-  %arrayidx29.us = getelementptr inbounds i64*, i64** %datas, i64 %indvars.iv
-  %10 = load i64*, i64** %arrayidx29.us, align 8, !tbaa !15
-  store i64 %9, i64* %10, align 8, !tbaa !35
-  %11 = ptrtoint i8* %call7.us to i64
-  %arrayidx33.us = getelementptr inbounds i64, i64* %10, i64 1
-  store i64 %11, i64* %arrayidx33.us, align 8, !tbaa !35
-  %12 = ptrtoint i8* %call5.us to i64
-  %arrayidx35.us = getelementptr inbounds i64*, i64** %nulls, i64 %indvars.iv
-  %13 = load i64*, i64** %arrayidx35.us, align 8, !tbaa !15
-  store i64 %12, i64* %13, align 8, !tbaa !35
-  %14 = ptrtoint i8* %call9.us to i64
-  %arrayidx39.us = getelementptr inbounds i64, i64* %13, i64 1
-  store i64 %14, i64* %arrayidx39.us, align 8, !tbaa !35
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond113.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond113.not, label %for.cond.cleanup, label %for.body.us, !llvm.loop !75
+  %11 = ptrtoint i8* %call.us to i64
+  %12 = shl nuw nsw i64 %indvars.iv119, 1
+  %arrayidx32.us = getelementptr inbounds i64, i64* %datas, i64 %12
+  store i64 %11, i64* %arrayidx32.us, align 8, !tbaa !35
+  %13 = ptrtoint i8* %call7.us to i64
+  %14 = or i64 %12, 1
+  %arrayidx36.us = getelementptr inbounds i64, i64* %datas, i64 %14
+  store i64 %13, i64* %arrayidx36.us, align 8, !tbaa !35
+  %15 = ptrtoint i8* %call5.us to i64
+  %arrayidx40.us = getelementptr inbounds i64, i64* %nulls, i64 %12
+  store i64 %15, i64* %arrayidx40.us, align 8, !tbaa !35
+  %16 = ptrtoint i8* %call9.us to i64
+  %arrayidx44.us = getelementptr inbounds i64, i64* %nulls, i64 %14
+  store i64 %16, i64* %arrayidx44.us, align 8, !tbaa !35
+  %indvars.iv.next120 = add nuw nsw i64 %indvars.iv119, 1
+  %exitcond124.not = icmp eq i64 %indvars.iv.next120, %wide.trip.count123
+  br i1 %exitcond124.not, label %for.cond.cleanup, label %for.body.us, !llvm.loop !75
 
 for.cond14.preheader.us.us:                       ; preds = %for.body.us, %for.cond14.for.cond.cleanup16_crit_edge.us.us
-  %j.082.us.us = phi i32 [ %inc26.us.us, %for.cond14.for.cond.cleanup16_crit_edge.us.us ], [ 0, %for.body.us ]
-  %idx.081.us.us = phi i32 [ %18, %for.cond14.for.cond.cleanup16_crit_edge.us.us ], [ 0, %for.body.us ]
-  %15 = mul i32 %j.082.us.us, %repeatCount
-  %16 = add i32 %15, %repeatCount
-  %17 = add i32 %0, %15
-  %18 = add i32 %idx.081.us.us, %repeatCount
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.cond14.for.cond.cleanup16_crit_edge.us.us ], [ 0, %for.body.us ]
+  %idx.086.us.us = phi i32 [ %22, %for.cond14.for.cond.cleanup16_crit_edge.us.us ], [ 0, %for.body.us ]
+  %17 = mul i64 %indvars.iv, %4
+  %18 = trunc i64 %17 to i32
+  %19 = add i32 %18, %repeatCount
+  %20 = trunc i64 %17 to i32
+  %21 = add i32 %5, %20
+  %22 = add i32 %idx.086.us.us, %repeatCount
   br i1 %min.iters.check, label %for.body17.us.us.preheader, label %vector.scevcheck
 
 vector.scevcheck:                                 ; preds = %for.cond14.preheader.us.us
-  %19 = mul i32 %j.082.us.us, %repeatCount
-  %20 = xor i32 %19, -1
-  %21 = icmp ugt i32 %0, %20
-  br i1 %21, label %for.body17.us.us.preheader, label %vector.ph
+  %23 = trunc i64 %indvars.iv to i32
+  %24 = mul i32 %23, %repeatCount
+  %25 = xor i32 %24, -1
+  %26 = icmp ugt i32 %0, %25
+  br i1 %26, label %for.body17.us.us.preheader, label %vector.ph
 
 vector.ph:                                        ; preds = %vector.scevcheck
-  %ind.end = add i32 %idx.081.us.us, %n.vec
-  %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %j.082.us.us, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
-  %broadcast.splatinsert121 = insertelement <4 x i32> poison, i32 %j.082.us.us, i32 0
-  %broadcast.splat122 = shufflevector <4 x i32> %broadcast.splatinsert121, <4 x i32> poison, <4 x i32> zeroinitializer
-  br i1 %4, label %middle.block.unr-lcssa, label %vector.body
+  %ind.end = add i32 %idx.086.us.us, %n.vec
+  %broadcast.splatinsert = insertelement <2 x i64> poison, i64 %indvars.iv, i32 0
+  %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
+  %broadcast.splatinsert134 = insertelement <2 x i64> poison, i64 %indvars.iv, i32 0
+  %broadcast.splat135 = shufflevector <2 x i64> %broadcast.splatinsert134, <2 x i64> poison, <2 x i32> zeroinitializer
+  br i1 %6, label %middle.block.unr-lcssa, label %vector.body
 
 vector.body:                                      ; preds = %vector.ph, %vector.body
   %index = phi i32 [ %index.next.1, %vector.body ], [ 0, %vector.ph ]
   %niter = phi i32 [ %niter.nsub.1, %vector.body ], [ %unroll_iter, %vector.ph ]
-  %offset.idx = add i32 %idx.081.us.us, %index
-  %22 = zext i32 %offset.idx to i64
-  %23 = getelementptr inbounds i32, i32* %5, i64 %22
-  %24 = bitcast i32* %23 to <4 x i32>*
-  store <4 x i32> %broadcast.splat, <4 x i32>* %24, align 4, !tbaa !18
-  %25 = getelementptr inbounds i32, i32* %23, i64 4
-  %26 = bitcast i32* %25 to <4 x i32>*
-  store <4 x i32> %broadcast.splat122, <4 x i32>* %26, align 4, !tbaa !18
-  %27 = getelementptr inbounds i32, i32* %7, i64 %22
-  %28 = bitcast i32* %27 to <4 x i32>*
-  store <4 x i32> %broadcast.splat, <4 x i32>* %28, align 4, !tbaa !18
-  %29 = getelementptr inbounds i32, i32* %27, i64 4
-  %30 = bitcast i32* %29 to <4 x i32>*
-  store <4 x i32> %broadcast.splat122, <4 x i32>* %30, align 4, !tbaa !18
-  %31 = getelementptr inbounds i32, i32* %6, i64 %22
-  %32 = bitcast i32* %31 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %32, align 4, !tbaa !18
-  %33 = getelementptr inbounds i32, i32* %31, i64 4
-  %34 = bitcast i32* %33 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %34, align 4, !tbaa !18
-  %35 = getelementptr inbounds i32, i32* %8, i64 %22
-  %36 = bitcast i32* %35 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %36, align 4, !tbaa !18
-  %37 = getelementptr inbounds i32, i32* %35, i64 4
-  %38 = bitcast i32* %37 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %38, align 4, !tbaa !18
-  %index.next = or i32 %index, 8
-  %offset.idx.1 = add i32 %idx.081.us.us, %index.next
-  %39 = zext i32 %offset.idx.1 to i64
-  %40 = getelementptr inbounds i32, i32* %5, i64 %39
-  %41 = bitcast i32* %40 to <4 x i32>*
-  store <4 x i32> %broadcast.splat, <4 x i32>* %41, align 4, !tbaa !18
-  %42 = getelementptr inbounds i32, i32* %40, i64 4
-  %43 = bitcast i32* %42 to <4 x i32>*
-  store <4 x i32> %broadcast.splat122, <4 x i32>* %43, align 4, !tbaa !18
-  %44 = getelementptr inbounds i32, i32* %7, i64 %39
-  %45 = bitcast i32* %44 to <4 x i32>*
-  store <4 x i32> %broadcast.splat, <4 x i32>* %45, align 4, !tbaa !18
-  %46 = getelementptr inbounds i32, i32* %44, i64 4
-  %47 = bitcast i32* %46 to <4 x i32>*
-  store <4 x i32> %broadcast.splat122, <4 x i32>* %47, align 4, !tbaa !18
-  %48 = getelementptr inbounds i32, i32* %6, i64 %39
-  %49 = bitcast i32* %48 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %49, align 4, !tbaa !18
-  %50 = getelementptr inbounds i32, i32* %48, i64 4
-  %51 = bitcast i32* %50 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %51, align 4, !tbaa !18
-  %52 = getelementptr inbounds i32, i32* %8, i64 %39
-  %53 = bitcast i32* %52 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %53, align 4, !tbaa !18
-  %54 = getelementptr inbounds i32, i32* %52, i64 4
-  %55 = bitcast i32* %54 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %55, align 4, !tbaa !18
-  %index.next.1 = add i32 %index, 16
+  %offset.idx = add i32 %idx.086.us.us, %index
+  %27 = zext i32 %offset.idx to i64
+  %28 = getelementptr inbounds i64, i64* %7, i64 %27
+  %29 = bitcast i64* %28 to <2 x i64>*
+  store <2 x i64> %broadcast.splat, <2 x i64>* %29, align 8, !tbaa !35
+  %30 = getelementptr inbounds i64, i64* %28, i64 2
+  %31 = bitcast i64* %30 to <2 x i64>*
+  store <2 x i64> %broadcast.splat135, <2 x i64>* %31, align 8, !tbaa !35
+  %32 = getelementptr inbounds i64, i64* %9, i64 %27
+  %33 = bitcast i64* %32 to <2 x i64>*
+  store <2 x i64> %broadcast.splat, <2 x i64>* %33, align 8, !tbaa !35
+  %34 = getelementptr inbounds i64, i64* %32, i64 2
+  %35 = bitcast i64* %34 to <2 x i64>*
+  store <2 x i64> %broadcast.splat135, <2 x i64>* %35, align 8, !tbaa !35
+  %36 = getelementptr inbounds i64, i64* %8, i64 %27
+  %37 = bitcast i64* %36 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %37, align 8, !tbaa !35
+  %38 = getelementptr inbounds i64, i64* %36, i64 2
+  %39 = bitcast i64* %38 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %39, align 8, !tbaa !35
+  %40 = getelementptr inbounds i64, i64* %10, i64 %27
+  %41 = bitcast i64* %40 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %41, align 8, !tbaa !35
+  %42 = getelementptr inbounds i64, i64* %40, i64 2
+  %43 = bitcast i64* %42 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %43, align 8, !tbaa !35
+  %index.next = or i32 %index, 4
+  %offset.idx.1 = add i32 %idx.086.us.us, %index.next
+  %44 = zext i32 %offset.idx.1 to i64
+  %45 = getelementptr inbounds i64, i64* %7, i64 %44
+  %46 = bitcast i64* %45 to <2 x i64>*
+  store <2 x i64> %broadcast.splat, <2 x i64>* %46, align 8, !tbaa !35
+  %47 = getelementptr inbounds i64, i64* %45, i64 2
+  %48 = bitcast i64* %47 to <2 x i64>*
+  store <2 x i64> %broadcast.splat135, <2 x i64>* %48, align 8, !tbaa !35
+  %49 = getelementptr inbounds i64, i64* %9, i64 %44
+  %50 = bitcast i64* %49 to <2 x i64>*
+  store <2 x i64> %broadcast.splat, <2 x i64>* %50, align 8, !tbaa !35
+  %51 = getelementptr inbounds i64, i64* %49, i64 2
+  %52 = bitcast i64* %51 to <2 x i64>*
+  store <2 x i64> %broadcast.splat135, <2 x i64>* %52, align 8, !tbaa !35
+  %53 = getelementptr inbounds i64, i64* %8, i64 %44
+  %54 = bitcast i64* %53 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %54, align 8, !tbaa !35
+  %55 = getelementptr inbounds i64, i64* %53, i64 2
+  %56 = bitcast i64* %55 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %56, align 8, !tbaa !35
+  %57 = getelementptr inbounds i64, i64* %10, i64 %44
+  %58 = bitcast i64* %57 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %58, align 8, !tbaa !35
+  %59 = getelementptr inbounds i64, i64* %57, i64 2
+  %60 = bitcast i64* %59 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %60, align 8, !tbaa !35
+  %index.next.1 = add i32 %index, 8
   %niter.nsub.1 = add i32 %niter, -2
   %niter.ncmp.1 = icmp eq i32 %niter.nsub.1, 0
   br i1 %niter.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !76
@@ -1790,118 +1799,118 @@ middle.block.unr-lcssa:                           ; preds = %vector.body, %vecto
   br i1 %lcmp.mod.not, label %middle.block, label %vector.body.epil
 
 vector.body.epil:                                 ; preds = %middle.block.unr-lcssa
-  %offset.idx.epil = add i32 %idx.081.us.us, %index.unr
-  %56 = zext i32 %offset.idx.epil to i64
-  %57 = getelementptr inbounds i32, i32* %5, i64 %56
-  %58 = bitcast i32* %57 to <4 x i32>*
-  store <4 x i32> %broadcast.splat, <4 x i32>* %58, align 4, !tbaa !18
-  %59 = getelementptr inbounds i32, i32* %57, i64 4
-  %60 = bitcast i32* %59 to <4 x i32>*
-  store <4 x i32> %broadcast.splat122, <4 x i32>* %60, align 4, !tbaa !18
-  %61 = getelementptr inbounds i32, i32* %7, i64 %56
-  %62 = bitcast i32* %61 to <4 x i32>*
-  store <4 x i32> %broadcast.splat, <4 x i32>* %62, align 4, !tbaa !18
-  %63 = getelementptr inbounds i32, i32* %61, i64 4
-  %64 = bitcast i32* %63 to <4 x i32>*
-  store <4 x i32> %broadcast.splat122, <4 x i32>* %64, align 4, !tbaa !18
-  %65 = getelementptr inbounds i32, i32* %6, i64 %56
-  %66 = bitcast i32* %65 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %66, align 4, !tbaa !18
-  %67 = getelementptr inbounds i32, i32* %65, i64 4
-  %68 = bitcast i32* %67 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %68, align 4, !tbaa !18
-  %69 = getelementptr inbounds i32, i32* %8, i64 %56
-  %70 = bitcast i32* %69 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %70, align 4, !tbaa !18
-  %71 = getelementptr inbounds i32, i32* %69, i64 4
-  %72 = bitcast i32* %71 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %72, align 4, !tbaa !18
+  %offset.idx.epil = add i32 %idx.086.us.us, %index.unr
+  %61 = zext i32 %offset.idx.epil to i64
+  %62 = getelementptr inbounds i64, i64* %7, i64 %61
+  %63 = bitcast i64* %62 to <2 x i64>*
+  store <2 x i64> %broadcast.splat, <2 x i64>* %63, align 8, !tbaa !35
+  %64 = getelementptr inbounds i64, i64* %62, i64 2
+  %65 = bitcast i64* %64 to <2 x i64>*
+  store <2 x i64> %broadcast.splat135, <2 x i64>* %65, align 8, !tbaa !35
+  %66 = getelementptr inbounds i64, i64* %9, i64 %61
+  %67 = bitcast i64* %66 to <2 x i64>*
+  store <2 x i64> %broadcast.splat, <2 x i64>* %67, align 8, !tbaa !35
+  %68 = getelementptr inbounds i64, i64* %66, i64 2
+  %69 = bitcast i64* %68 to <2 x i64>*
+  store <2 x i64> %broadcast.splat135, <2 x i64>* %69, align 8, !tbaa !35
+  %70 = getelementptr inbounds i64, i64* %8, i64 %61
+  %71 = bitcast i64* %70 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %71, align 8, !tbaa !35
+  %72 = getelementptr inbounds i64, i64* %70, i64 2
+  %73 = bitcast i64* %72 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %73, align 8, !tbaa !35
+  %74 = getelementptr inbounds i64, i64* %10, i64 %61
+  %75 = bitcast i64* %74 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %75, align 8, !tbaa !35
+  %76 = getelementptr inbounds i64, i64* %74, i64 2
+  %77 = bitcast i64* %76 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %77, align 8, !tbaa !35
   br label %middle.block
 
 middle.block:                                     ; preds = %middle.block.unr-lcssa, %vector.body.epil
   br i1 %cmp.n, label %for.cond14.for.cond.cleanup16_crit_edge.us.us, label %for.body17.us.us.preheader
 
 for.body17.us.us.preheader:                       ; preds = %vector.scevcheck, %for.cond14.preheader.us.us, %middle.block
-  %idx.178.us.us.ph = phi i32 [ %idx.081.us.us, %vector.scevcheck ], [ %idx.081.us.us, %for.cond14.preheader.us.us ], [ %ind.end, %middle.block ]
-  %73 = sub i32 %16, %idx.178.us.us.ph
-  %xtraiter124 = and i32 %73, 1
-  %lcmp.mod125.not = icmp eq i32 %xtraiter124, 0
-  br i1 %lcmp.mod125.not, label %for.body17.us.us.prol.loopexit, label %for.body17.us.us.prol
+  %idx.183.us.us.ph = phi i32 [ %idx.086.us.us, %vector.scevcheck ], [ %idx.086.us.us, %for.cond14.preheader.us.us ], [ %ind.end, %middle.block ]
+  %78 = sub i32 %19, %idx.183.us.us.ph
+  %xtraiter137 = and i32 %78, 1
+  %lcmp.mod138.not = icmp eq i32 %xtraiter137, 0
+  br i1 %lcmp.mod138.not, label %for.body17.us.us.prol.loopexit, label %for.body17.us.us.prol
 
 for.body17.us.us.prol:                            ; preds = %for.body17.us.us.preheader
-  %idxprom.us.us.prol = zext i32 %idx.178.us.us.ph to i64
-  %arrayidx.us.us.prol = getelementptr inbounds i32, i32* %5, i64 %idxprom.us.us.prol
-  store i32 %j.082.us.us, i32* %arrayidx.us.us.prol, align 4, !tbaa !18
-  %arrayidx19.us.us.prol = getelementptr inbounds i32, i32* %7, i64 %idxprom.us.us.prol
-  store i32 %j.082.us.us, i32* %arrayidx19.us.us.prol, align 4, !tbaa !18
-  %arrayidx21.us.us.prol = getelementptr inbounds i32, i32* %6, i64 %idxprom.us.us.prol
-  store i32 0, i32* %arrayidx21.us.us.prol, align 4, !tbaa !18
-  %arrayidx23.us.us.prol = getelementptr inbounds i32, i32* %8, i64 %idxprom.us.us.prol
-  store i32 0, i32* %arrayidx23.us.us.prol, align 4, !tbaa !18
-  %inc.us.us.prol = add i32 %idx.178.us.us.ph, 1
+  %idxprom.us.us.prol = zext i32 %idx.183.us.us.ph to i64
+  %arrayidx.us.us.prol = getelementptr inbounds i64, i64* %7, i64 %idxprom.us.us.prol
+  store i64 %indvars.iv, i64* %arrayidx.us.us.prol, align 8, !tbaa !35
+  %arrayidx21.us.us.prol = getelementptr inbounds i64, i64* %9, i64 %idxprom.us.us.prol
+  store i64 %indvars.iv, i64* %arrayidx21.us.us.prol, align 8, !tbaa !35
+  %arrayidx23.us.us.prol = getelementptr inbounds i64, i64* %8, i64 %idxprom.us.us.prol
+  store i64 0, i64* %arrayidx23.us.us.prol, align 8, !tbaa !35
+  %arrayidx25.us.us.prol = getelementptr inbounds i64, i64* %10, i64 %idxprom.us.us.prol
+  store i64 0, i64* %arrayidx25.us.us.prol, align 8, !tbaa !35
+  %inc.us.us.prol = add i32 %idx.183.us.us.ph, 1
   br label %for.body17.us.us.prol.loopexit
 
 for.body17.us.us.prol.loopexit:                   ; preds = %for.body17.us.us.prol, %for.body17.us.us.preheader
-  %idx.178.us.us.unr.ph = phi i32 [ %inc.us.us.prol, %for.body17.us.us.prol ], [ %idx.178.us.us.ph, %for.body17.us.us.preheader ]
-  %74 = icmp eq i32 %17, %idx.178.us.us.ph
-  br i1 %74, label %for.cond14.for.cond.cleanup16_crit_edge.us.us, label %for.body17.us.us
+  %idx.183.us.us.unr.ph = phi i32 [ %inc.us.us.prol, %for.body17.us.us.prol ], [ %idx.183.us.us.ph, %for.body17.us.us.preheader ]
+  %79 = icmp eq i32 %21, %idx.183.us.us.ph
+  br i1 %79, label %for.cond14.for.cond.cleanup16_crit_edge.us.us, label %for.body17.us.us
 
 for.cond14.for.cond.cleanup16_crit_edge.us.us:    ; preds = %for.body17.us.us.prol.loopexit, %for.body17.us.us, %middle.block
-  %inc26.us.us = add nuw nsw i32 %j.082.us.us, 1
-  %exitcond112.not = icmp eq i32 %inc26.us.us, %distinctValueCount
-  br i1 %exitcond112.not, label %for.cond10.for.cond.cleanup12_crit_edge.us, label %for.cond14.preheader.us.us, !llvm.loop !77
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond118.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond118.not, label %for.cond10.for.cond.cleanup12_crit_edge.us, label %for.cond14.preheader.us.us, !llvm.loop !77
 
 for.body17.us.us:                                 ; preds = %for.body17.us.us.prol.loopexit, %for.body17.us.us
-  %idx.178.us.us = phi i32 [ %inc.us.us.1, %for.body17.us.us ], [ %idx.178.us.us.unr.ph, %for.body17.us.us.prol.loopexit ]
-  %idxprom.us.us = zext i32 %idx.178.us.us to i64
-  %arrayidx.us.us = getelementptr inbounds i32, i32* %5, i64 %idxprom.us.us
-  store i32 %j.082.us.us, i32* %arrayidx.us.us, align 4, !tbaa !18
-  %arrayidx19.us.us = getelementptr inbounds i32, i32* %7, i64 %idxprom.us.us
-  store i32 %j.082.us.us, i32* %arrayidx19.us.us, align 4, !tbaa !18
-  %arrayidx21.us.us = getelementptr inbounds i32, i32* %6, i64 %idxprom.us.us
-  store i32 0, i32* %arrayidx21.us.us, align 4, !tbaa !18
-  %arrayidx23.us.us = getelementptr inbounds i32, i32* %8, i64 %idxprom.us.us
-  store i32 0, i32* %arrayidx23.us.us, align 4, !tbaa !18
-  %inc.us.us = add i32 %idx.178.us.us, 1
+  %idx.183.us.us = phi i32 [ %inc.us.us.1, %for.body17.us.us ], [ %idx.183.us.us.unr.ph, %for.body17.us.us.prol.loopexit ]
+  %idxprom.us.us = zext i32 %idx.183.us.us to i64
+  %arrayidx.us.us = getelementptr inbounds i64, i64* %7, i64 %idxprom.us.us
+  store i64 %indvars.iv, i64* %arrayidx.us.us, align 8, !tbaa !35
+  %arrayidx21.us.us = getelementptr inbounds i64, i64* %9, i64 %idxprom.us.us
+  store i64 %indvars.iv, i64* %arrayidx21.us.us, align 8, !tbaa !35
+  %arrayidx23.us.us = getelementptr inbounds i64, i64* %8, i64 %idxprom.us.us
+  store i64 0, i64* %arrayidx23.us.us, align 8, !tbaa !35
+  %arrayidx25.us.us = getelementptr inbounds i64, i64* %10, i64 %idxprom.us.us
+  store i64 0, i64* %arrayidx25.us.us, align 8, !tbaa !35
+  %inc.us.us = add i32 %idx.183.us.us, 1
   %idxprom.us.us.1 = zext i32 %inc.us.us to i64
-  %arrayidx.us.us.1 = getelementptr inbounds i32, i32* %5, i64 %idxprom.us.us.1
-  store i32 %j.082.us.us, i32* %arrayidx.us.us.1, align 4, !tbaa !18
-  %arrayidx19.us.us.1 = getelementptr inbounds i32, i32* %7, i64 %idxprom.us.us.1
-  store i32 %j.082.us.us, i32* %arrayidx19.us.us.1, align 4, !tbaa !18
-  %arrayidx21.us.us.1 = getelementptr inbounds i32, i32* %6, i64 %idxprom.us.us.1
-  store i32 0, i32* %arrayidx21.us.us.1, align 4, !tbaa !18
-  %arrayidx23.us.us.1 = getelementptr inbounds i32, i32* %8, i64 %idxprom.us.us.1
-  store i32 0, i32* %arrayidx23.us.us.1, align 4, !tbaa !18
-  %inc.us.us.1 = add i32 %idx.178.us.us, 2
-  %exitcond.not.1 = icmp eq i32 %inc.us.us.1, %18
+  %arrayidx.us.us.1 = getelementptr inbounds i64, i64* %7, i64 %idxprom.us.us.1
+  store i64 %indvars.iv, i64* %arrayidx.us.us.1, align 8, !tbaa !35
+  %arrayidx21.us.us.1 = getelementptr inbounds i64, i64* %9, i64 %idxprom.us.us.1
+  store i64 %indvars.iv, i64* %arrayidx21.us.us.1, align 8, !tbaa !35
+  %arrayidx23.us.us.1 = getelementptr inbounds i64, i64* %8, i64 %idxprom.us.us.1
+  store i64 0, i64* %arrayidx23.us.us.1, align 8, !tbaa !35
+  %arrayidx25.us.us.1 = getelementptr inbounds i64, i64* %10, i64 %idxprom.us.us.1
+  store i64 0, i64* %arrayidx25.us.us.1, align 8, !tbaa !35
+  %inc.us.us.1 = add i32 %idx.183.us.us, 2
+  %exitcond.not.1 = icmp eq i32 %inc.us.us.1, %22
   br i1 %exitcond.not.1, label %for.cond14.for.cond.cleanup16_crit_edge.us.us, label %for.body17.us.us, !llvm.loop !78
 
 for.cond.cleanup:                                 ; preds = %for.body, %for.cond10.for.cond.cleanup12_crit_edge.us, %entry
   ret void
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %indvars.iv114 = phi i64 [ %indvars.iv.next115, %for.body ], [ 0, %for.body.lr.ph ]
+  %indvars.iv125 = phi i64 [ %indvars.iv.next126, %for.body ], [ 0, %for.body.lr.ph ]
   %call = tail call noalias i8* @malloc(i64 %conv3) #16
   %call5 = tail call noalias i8* @malloc(i64 %conv3) #16
   %call7 = tail call noalias i8* @malloc(i64 %conv3) #16
   %call9 = tail call noalias i8* @malloc(i64 %conv3) #16
-  %75 = ptrtoint i8* %call to i64
-  %arrayidx29 = getelementptr inbounds i64*, i64** %datas, i64 %indvars.iv114
-  %76 = load i64*, i64** %arrayidx29, align 8, !tbaa !15
-  store i64 %75, i64* %76, align 8, !tbaa !35
-  %77 = ptrtoint i8* %call7 to i64
-  %arrayidx33 = getelementptr inbounds i64, i64* %76, i64 1
-  store i64 %77, i64* %arrayidx33, align 8, !tbaa !35
-  %78 = ptrtoint i8* %call5 to i64
-  %arrayidx35 = getelementptr inbounds i64*, i64** %nulls, i64 %indvars.iv114
-  %79 = load i64*, i64** %arrayidx35, align 8, !tbaa !15
-  store i64 %78, i64* %79, align 8, !tbaa !35
-  %80 = ptrtoint i8* %call9 to i64
-  %arrayidx39 = getelementptr inbounds i64, i64* %79, i64 1
-  store i64 %80, i64* %arrayidx39, align 8, !tbaa !35
-  %indvars.iv.next115 = add nuw nsw i64 %indvars.iv114, 1
-  %exitcond117.not = icmp eq i64 %indvars.iv.next115, %wide.trip.count
-  br i1 %exitcond117.not, label %for.cond.cleanup, label %for.body, !llvm.loop !75
+  %80 = ptrtoint i8* %call to i64
+  %81 = shl nuw nsw i64 %indvars.iv125, 1
+  %arrayidx32 = getelementptr inbounds i64, i64* %datas, i64 %81
+  store i64 %80, i64* %arrayidx32, align 8, !tbaa !35
+  %82 = ptrtoint i8* %call7 to i64
+  %83 = or i64 %81, 1
+  %arrayidx36 = getelementptr inbounds i64, i64* %datas, i64 %83
+  store i64 %82, i64* %arrayidx36, align 8, !tbaa !35
+  %84 = ptrtoint i8* %call5 to i64
+  %arrayidx40 = getelementptr inbounds i64, i64* %nulls, i64 %81
+  store i64 %84, i64* %arrayidx40, align 8, !tbaa !35
+  %85 = ptrtoint i8* %call9 to i64
+  %arrayidx44 = getelementptr inbounds i64, i64* %nulls, i64 %83
+  store i64 %85, i64* %arrayidx44, align 8, !tbaa !35
+  %indvars.iv.next126 = add nuw nsw i64 %indvars.iv125, 1
+  %exitcond130.not = icmp eq i64 %indvars.iv.next126, %wide.trip.count123
+  br i1 %exitcond130.not, label %for.cond.cleanup, label %for.body, !llvm.loop !75
 }
 
 ; Function Attrs: inaccessiblememonly nofree nounwind willreturn
@@ -1915,315 +1924,248 @@ entry:
   %sortCols = alloca i64, align 8
   %ascendings = alloca i64, align 8
   %nullFirsts = alloca i64, align 8
-  %puts = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([21 x i8], [21 x i8]* @str.17, i64 0, i64 0))
-  %vla58 = alloca [10 x i64*], align 16
-  %vla159 = alloca [10 x i64*], align 16
-  %call2 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %0 = bitcast [10 x i64*]* %vla58 to i8**
-  store i8* %call2, i8** %0, align 16, !tbaa !15
-  %call3 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %1 = bitcast [10 x i64*]* %vla159 to i8**
-  store i8* %call3, i8** %1, align 16, !tbaa !15
-  %call2.1 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.1 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 1
-  %2 = bitcast i64** %arrayidx.1 to i8**
-  store i8* %call2.1, i8** %2, align 8, !tbaa !15
-  %call3.1 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.1 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 1
-  %3 = bitcast i64** %arrayidx5.1 to i8**
-  store i8* %call3.1, i8** %3, align 8, !tbaa !15
-  %call2.2 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.2 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 2
-  %4 = bitcast i64** %arrayidx.2 to i8**
-  store i8* %call2.2, i8** %4, align 16, !tbaa !15
-  %call3.2 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.2 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 2
-  %5 = bitcast i64** %arrayidx5.2 to i8**
-  store i8* %call3.2, i8** %5, align 16, !tbaa !15
-  %call2.3 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.3 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 3
-  %6 = bitcast i64** %arrayidx.3 to i8**
-  store i8* %call2.3, i8** %6, align 8, !tbaa !15
-  %call3.3 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.3 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 3
-  %7 = bitcast i64** %arrayidx5.3 to i8**
-  store i8* %call3.3, i8** %7, align 8, !tbaa !15
-  %call2.4 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.4 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 4
-  %8 = bitcast i64** %arrayidx.4 to i8**
-  store i8* %call2.4, i8** %8, align 16, !tbaa !15
-  %call3.4 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.4 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 4
-  %9 = bitcast i64** %arrayidx5.4 to i8**
-  store i8* %call3.4, i8** %9, align 16, !tbaa !15
-  %call2.5 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.5 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 5
-  %10 = bitcast i64** %arrayidx.5 to i8**
-  store i8* %call2.5, i8** %10, align 8, !tbaa !15
-  %call3.5 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.5 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 5
-  %11 = bitcast i64** %arrayidx5.5 to i8**
-  store i8* %call3.5, i8** %11, align 8, !tbaa !15
-  %call2.6 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.6 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 6
-  %12 = bitcast i64** %arrayidx.6 to i8**
-  store i8* %call2.6, i8** %12, align 16, !tbaa !15
-  %call3.6 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.6 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 6
-  %13 = bitcast i64** %arrayidx5.6 to i8**
-  store i8* %call3.6, i8** %13, align 16, !tbaa !15
-  %call2.7 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.7 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 7
-  %14 = bitcast i64** %arrayidx.7 to i8**
-  store i8* %call2.7, i8** %14, align 8, !tbaa !15
-  %call3.7 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.7 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 7
-  %15 = bitcast i64** %arrayidx5.7 to i8**
-  store i8* %call3.7, i8** %15, align 8, !tbaa !15
-  %call2.8 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.8 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 8
-  %16 = bitcast i64** %arrayidx.8 to i8**
-  store i8* %call2.8, i8** %16, align 16, !tbaa !15
-  %call3.8 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.8 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 8
-  %17 = bitcast i64** %arrayidx5.8 to i8**
-  store i8* %call3.8, i8** %17, align 16, !tbaa !15
-  %call2.9 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx.9 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 9
-  %18 = bitcast i64** %arrayidx.9 to i8**
-  store i8* %call2.9, i8** %18, align 8, !tbaa !15
-  %call3.9 = tail call noalias dereferenceable_or_null(16) i8* @malloc(i64 16) #16
-  %arrayidx5.9 = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 9
-  %19 = bitcast i64** %arrayidx5.9 to i8**
-  store i8* %call3.9, i8** %19, align 8, !tbaa !15
-  %20 = bitcast i8* %call2 to i64*
-  %21 = bitcast i8* %call3 to i64*
-  %22 = bitcast i8* %call2.1 to i64*
-  %23 = bitcast i8* %call3.1 to i64*
-  %24 = bitcast i8* %call2.2 to i64*
-  %25 = bitcast i8* %call3.2 to i64*
-  %26 = bitcast i8* %call2.3 to i64*
-  %27 = bitcast i8* %call3.3 to i64*
-  %28 = bitcast i8* %call2.4 to i64*
-  %29 = bitcast i8* %call3.4 to i64*
-  %30 = bitcast i8* %call2.5 to i64*
-  %31 = bitcast i8* %call3.5 to i64*
-  %32 = bitcast i8* %call2.6 to i64*
-  %33 = bitcast i8* %call3.6 to i64*
-  %34 = bitcast i8* %call2.7 to i64*
-  %35 = bitcast i8* %call3.7 to i64*
-  %36 = bitcast i8* %call2.8 to i64*
-  %37 = bitcast i8* %call3.8 to i64*
-  %38 = bitcast i8* %call2.9 to i64*
-  %39 = bitcast i8* %call3.9 to i64*
+  %puts = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([21 x i8], [21 x i8]* @str.13, i64 0, i64 0))
+  %call3 = tail call noalias dereferenceable_or_null(160) i8* @malloc(i64 160) #16
+  %0 = bitcast i8* %call3 to i64*
+  %call7 = tail call noalias dereferenceable_or_null(160) i8* @malloc(i64 160) #16
+  %1 = bitcast i8* %call7 to i64*
   br label %for.body.us.i
 
-for.body.us.i:                                    ; preds = %entry, %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3
-  %indvars.iv.i = phi i64 [ %indvars.iv.next.i, %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3 ], [ 0, %entry ]
-  %call.us.i = tail call noalias dereferenceable_or_null(4000000) i8* @malloc(i64 4000000) #16
-  %40 = bitcast i8* %call.us.i to i32*
-  %call5.us.i = tail call noalias dereferenceable_or_null(4000000) i8* @malloc(i64 4000000) #16
-  %call7.us.i = tail call noalias dereferenceable_or_null(4000000) i8* @malloc(i64 4000000) #16
-  %41 = bitcast i8* %call7.us.i to i32*
-  %call9.us.i = tail call noalias dereferenceable_or_null(4000000) i8* @malloc(i64 4000000) #16
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(4000000) %call5.us.i, i8 0, i64 4000000, i1 false)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(4000000) %call9.us.i, i8 0, i64 4000000, i1 false)
-  br label %vector.body116
+for.body.us.i:                                    ; preds = %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3, %entry
+  %indvars.iv119.i = phi i64 [ 0, %entry ], [ %indvars.iv.next120.i, %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3 ]
+  %call.us.i = tail call noalias dereferenceable_or_null(8000000) i8* @malloc(i64 8000000) #16
+  %2 = bitcast i8* %call.us.i to i64*
+  %call5.us.i = tail call noalias dereferenceable_or_null(8000000) i8* @malloc(i64 8000000) #16
+  %call7.us.i = tail call noalias dereferenceable_or_null(8000000) i8* @malloc(i64 8000000) #16
+  %3 = bitcast i8* %call7.us.i to i64*
+  %call9.us.i = tail call noalias dereferenceable_or_null(8000000) i8* @malloc(i64 8000000) #16
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(8000000) %call5.us.i, i8 0, i64 8000000, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(8000000) %call9.us.i, i8 0, i64 8000000, i1 false)
+  br label %vector.body115
 
-vector.body116:                                   ; preds = %vector.body116, %for.body.us.i
-  %index118 = phi i64 [ 0, %for.body.us.i ], [ %index.next119.4, %vector.body116 ]
-  %42 = getelementptr inbounds i32, i32* %40, i64 %index118
-  %43 = bitcast i32* %42 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %43, align 4, !tbaa !18
-  %44 = getelementptr inbounds i32, i32* %42, i64 4
-  %45 = bitcast i32* %44 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %45, align 4, !tbaa !18
-  %46 = getelementptr inbounds i32, i32* %41, i64 %index118
-  %47 = bitcast i32* %46 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %47, align 4, !tbaa !18
-  %48 = getelementptr inbounds i32, i32* %46, i64 4
-  %49 = bitcast i32* %48 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %49, align 4, !tbaa !18
-  %index.next119 = add nuw nsw i64 %index118, 8
-  %50 = getelementptr inbounds i32, i32* %40, i64 %index.next119
-  %51 = bitcast i32* %50 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %51, align 4, !tbaa !18
-  %52 = getelementptr inbounds i32, i32* %50, i64 4
-  %53 = bitcast i32* %52 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %53, align 4, !tbaa !18
-  %54 = getelementptr inbounds i32, i32* %41, i64 %index.next119
-  %55 = bitcast i32* %54 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %55, align 4, !tbaa !18
-  %56 = getelementptr inbounds i32, i32* %54, i64 4
-  %57 = bitcast i32* %56 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %57, align 4, !tbaa !18
-  %index.next119.1 = add nuw nsw i64 %index118, 16
-  %58 = getelementptr inbounds i32, i32* %40, i64 %index.next119.1
-  %59 = bitcast i32* %58 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %59, align 4, !tbaa !18
-  %60 = getelementptr inbounds i32, i32* %58, i64 4
-  %61 = bitcast i32* %60 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %61, align 4, !tbaa !18
-  %62 = getelementptr inbounds i32, i32* %41, i64 %index.next119.1
-  %63 = bitcast i32* %62 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %63, align 4, !tbaa !18
-  %64 = getelementptr inbounds i32, i32* %62, i64 4
-  %65 = bitcast i32* %64 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %65, align 4, !tbaa !18
-  %index.next119.2 = add nuw nsw i64 %index118, 24
-  %66 = getelementptr inbounds i32, i32* %40, i64 %index.next119.2
-  %67 = bitcast i32* %66 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %67, align 4, !tbaa !18
-  %68 = getelementptr inbounds i32, i32* %66, i64 4
-  %69 = bitcast i32* %68 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %69, align 4, !tbaa !18
-  %70 = getelementptr inbounds i32, i32* %41, i64 %index.next119.2
-  %71 = bitcast i32* %70 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %71, align 4, !tbaa !18
-  %72 = getelementptr inbounds i32, i32* %70, i64 4
-  %73 = bitcast i32* %72 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %73, align 4, !tbaa !18
-  %index.next119.3 = add nuw nsw i64 %index118, 32
-  %74 = getelementptr inbounds i32, i32* %40, i64 %index.next119.3
-  %75 = bitcast i32* %74 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %75, align 4, !tbaa !18
-  %76 = getelementptr inbounds i32, i32* %74, i64 4
-  %77 = bitcast i32* %76 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %77, align 4, !tbaa !18
-  %78 = getelementptr inbounds i32, i32* %41, i64 %index.next119.3
-  %79 = bitcast i32* %78 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %79, align 4, !tbaa !18
-  %80 = getelementptr inbounds i32, i32* %78, i64 4
-  %81 = bitcast i32* %80 to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %81, align 4, !tbaa !18
-  %index.next119.4 = add nuw nsw i64 %index118, 40
-  %82 = icmp eq i64 %index.next119.4, 250000
-  br i1 %82, label %vector.body107, label %vector.body116, !llvm.loop !79
+vector.body115:                                   ; preds = %vector.body115, %for.body.us.i
+  %index117 = phi i64 [ 0, %for.body.us.i ], [ %index.next118.4, %vector.body115 ]
+  %4 = getelementptr inbounds i64, i64* %2, i64 %index117
+  %5 = bitcast i64* %4 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %5, align 8, !tbaa !35
+  %6 = getelementptr inbounds i64, i64* %4, i64 2
+  %7 = bitcast i64* %6 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %7, align 8, !tbaa !35
+  %8 = getelementptr inbounds i64, i64* %3, i64 %index117
+  %9 = bitcast i64* %8 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %9, align 8, !tbaa !35
+  %10 = getelementptr inbounds i64, i64* %8, i64 2
+  %11 = bitcast i64* %10 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %11, align 8, !tbaa !35
+  %index.next118 = add nuw nsw i64 %index117, 4
+  %12 = getelementptr inbounds i64, i64* %2, i64 %index.next118
+  %13 = bitcast i64* %12 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %13, align 8, !tbaa !35
+  %14 = getelementptr inbounds i64, i64* %12, i64 2
+  %15 = bitcast i64* %14 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %15, align 8, !tbaa !35
+  %16 = getelementptr inbounds i64, i64* %3, i64 %index.next118
+  %17 = bitcast i64* %16 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %17, align 8, !tbaa !35
+  %18 = getelementptr inbounds i64, i64* %16, i64 2
+  %19 = bitcast i64* %18 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %19, align 8, !tbaa !35
+  %index.next118.1 = add nuw nsw i64 %index117, 8
+  %20 = getelementptr inbounds i64, i64* %2, i64 %index.next118.1
+  %21 = bitcast i64* %20 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %21, align 8, !tbaa !35
+  %22 = getelementptr inbounds i64, i64* %20, i64 2
+  %23 = bitcast i64* %22 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %23, align 8, !tbaa !35
+  %24 = getelementptr inbounds i64, i64* %3, i64 %index.next118.1
+  %25 = bitcast i64* %24 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %25, align 8, !tbaa !35
+  %26 = getelementptr inbounds i64, i64* %24, i64 2
+  %27 = bitcast i64* %26 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %27, align 8, !tbaa !35
+  %index.next118.2 = add nuw nsw i64 %index117, 12
+  %28 = getelementptr inbounds i64, i64* %2, i64 %index.next118.2
+  %29 = bitcast i64* %28 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %29, align 8, !tbaa !35
+  %30 = getelementptr inbounds i64, i64* %28, i64 2
+  %31 = bitcast i64* %30 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %31, align 8, !tbaa !35
+  %32 = getelementptr inbounds i64, i64* %3, i64 %index.next118.2
+  %33 = bitcast i64* %32 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %33, align 8, !tbaa !35
+  %34 = getelementptr inbounds i64, i64* %32, i64 2
+  %35 = bitcast i64* %34 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %35, align 8, !tbaa !35
+  %index.next118.3 = add nuw nsw i64 %index117, 16
+  %36 = getelementptr inbounds i64, i64* %2, i64 %index.next118.3
+  %37 = bitcast i64* %36 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %37, align 8, !tbaa !35
+  %38 = getelementptr inbounds i64, i64* %36, i64 2
+  %39 = bitcast i64* %38 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %39, align 8, !tbaa !35
+  %40 = getelementptr inbounds i64, i64* %3, i64 %index.next118.3
+  %41 = bitcast i64* %40 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %41, align 8, !tbaa !35
+  %42 = getelementptr inbounds i64, i64* %40, i64 2
+  %43 = bitcast i64* %42 to <2 x i64>*
+  store <2 x i64> zeroinitializer, <2 x i64>* %43, align 8, !tbaa !35
+  %index.next118.4 = add nuw nsw i64 %index117, 20
+  %44 = icmp eq i64 %index.next118.4, 250000
+  br i1 %44, label %vector.body106, label %vector.body115, !llvm.loop !79
 
-vector.body107:                                   ; preds = %vector.body116, %vector.body107
-  %index109 = phi i64 [ %index.next110.1, %vector.body107 ], [ 0, %vector.body116 ]
-  %offset.idx113 = add nuw nsw i64 %index109, 250000
-  %83 = getelementptr inbounds i32, i32* %40, i64 %offset.idx113
-  %84 = bitcast i32* %83 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %84, align 4, !tbaa !18
-  %85 = getelementptr inbounds i32, i32* %83, i64 4
-  %86 = bitcast i32* %85 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %86, align 4, !tbaa !18
-  %87 = getelementptr inbounds i32, i32* %41, i64 %offset.idx113
-  %88 = bitcast i32* %87 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %88, align 4, !tbaa !18
-  %89 = getelementptr inbounds i32, i32* %87, i64 4
-  %90 = bitcast i32* %89 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %90, align 4, !tbaa !18
-  %offset.idx113.1 = add nuw nsw i64 %index109, 250008
-  %91 = getelementptr inbounds i32, i32* %40, i64 %offset.idx113.1
-  %92 = bitcast i32* %91 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %92, align 4, !tbaa !18
-  %93 = getelementptr inbounds i32, i32* %91, i64 4
-  %94 = bitcast i32* %93 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %94, align 4, !tbaa !18
-  %95 = getelementptr inbounds i32, i32* %41, i64 %offset.idx113.1
-  %96 = bitcast i32* %95 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %96, align 4, !tbaa !18
-  %97 = getelementptr inbounds i32, i32* %95, i64 4
-  %98 = bitcast i32* %97 to <4 x i32>*
-  store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>* %98, align 4, !tbaa !18
-  %index.next110.1 = add nuw nsw i64 %index109, 16
-  %99 = icmp eq i64 %index.next110.1, 250000
-  br i1 %99, label %vector.body98, label %vector.body107, !llvm.loop !80
+vector.body106:                                   ; preds = %vector.body115, %vector.body106
+  %index108 = phi i64 [ %index.next109.3, %vector.body106 ], [ 0, %vector.body115 ]
+  %offset.idx112 = add nuw nsw i64 %index108, 250000
+  %45 = getelementptr inbounds i64, i64* %2, i64 %offset.idx112
+  %46 = bitcast i64* %45 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %46, align 8, !tbaa !35
+  %47 = getelementptr inbounds i64, i64* %45, i64 2
+  %48 = bitcast i64* %47 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %48, align 8, !tbaa !35
+  %49 = getelementptr inbounds i64, i64* %3, i64 %offset.idx112
+  %50 = bitcast i64* %49 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %50, align 8, !tbaa !35
+  %51 = getelementptr inbounds i64, i64* %49, i64 2
+  %52 = bitcast i64* %51 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %52, align 8, !tbaa !35
+  %offset.idx112.1 = add nuw nsw i64 %index108, 250004
+  %53 = getelementptr inbounds i64, i64* %2, i64 %offset.idx112.1
+  %54 = bitcast i64* %53 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %54, align 8, !tbaa !35
+  %55 = getelementptr inbounds i64, i64* %53, i64 2
+  %56 = bitcast i64* %55 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %56, align 8, !tbaa !35
+  %57 = getelementptr inbounds i64, i64* %3, i64 %offset.idx112.1
+  %58 = bitcast i64* %57 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %58, align 8, !tbaa !35
+  %59 = getelementptr inbounds i64, i64* %57, i64 2
+  %60 = bitcast i64* %59 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %60, align 8, !tbaa !35
+  %offset.idx112.2 = add nuw nsw i64 %index108, 250008
+  %61 = getelementptr inbounds i64, i64* %2, i64 %offset.idx112.2
+  %62 = bitcast i64* %61 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %62, align 8, !tbaa !35
+  %63 = getelementptr inbounds i64, i64* %61, i64 2
+  %64 = bitcast i64* %63 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %64, align 8, !tbaa !35
+  %65 = getelementptr inbounds i64, i64* %3, i64 %offset.idx112.2
+  %66 = bitcast i64* %65 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %66, align 8, !tbaa !35
+  %67 = getelementptr inbounds i64, i64* %65, i64 2
+  %68 = bitcast i64* %67 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %68, align 8, !tbaa !35
+  %offset.idx112.3 = add nuw nsw i64 %index108, 250012
+  %69 = getelementptr inbounds i64, i64* %2, i64 %offset.idx112.3
+  %70 = bitcast i64* %69 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %70, align 8, !tbaa !35
+  %71 = getelementptr inbounds i64, i64* %69, i64 2
+  %72 = bitcast i64* %71 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %72, align 8, !tbaa !35
+  %73 = getelementptr inbounds i64, i64* %3, i64 %offset.idx112.3
+  %74 = bitcast i64* %73 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %74, align 8, !tbaa !35
+  %75 = getelementptr inbounds i64, i64* %73, i64 2
+  %76 = bitcast i64* %75 to <2 x i64>*
+  store <2 x i64> <i64 1, i64 1>, <2 x i64>* %76, align 8, !tbaa !35
+  %index.next109.3 = add nuw nsw i64 %index108, 16
+  %77 = icmp eq i64 %index.next109.3, 250000
+  br i1 %77, label %vector.body97, label %vector.body106, !llvm.loop !80
 
-_Z13buildSortDataiiiPPlS0_.exit:                  ; preds = %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3
-  %call1.i = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([23 x i8], [23 x i8]* @.str.11, i64 0, i64 0), i64 22)
+_Z13buildSortDataiiiPlS_.exit:                    ; preds = %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3
+  %call1.i = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([23 x i8], [23 x i8]* @.str.9, i64 0, i64 0), i64 22)
   %vtable.i = load i8*, i8** bitcast (%"class.std::basic_ostream"* @_ZSt4cout to i8**), align 8, !tbaa !2
   %vbase.offset.ptr.i = getelementptr i8, i8* %vtable.i, i64 -24
-  %100 = bitcast i8* %vbase.offset.ptr.i to i64*
-  %vbase.offset.i = load i64, i64* %100, align 8
+  %78 = bitcast i8* %vbase.offset.ptr.i to i64*
+  %vbase.offset.i = load i64, i64* %78, align 8
   %add.ptr.i = getelementptr inbounds i8, i8* bitcast (%"class.std::basic_ostream"* @_ZSt4cout to i8*), i64 %vbase.offset.i
   %_M_ctype.i.i = getelementptr inbounds i8, i8* %add.ptr.i, i64 240
-  %101 = bitcast i8* %_M_ctype.i.i to %"class.std::ctype"**
-  %102 = load %"class.std::ctype"*, %"class.std::ctype"** %101, align 8, !tbaa !64
-  %tobool.not.i.i.i = icmp eq %"class.std::ctype"* %102, null
+  %79 = bitcast i8* %_M_ctype.i.i to %"class.std::ctype"**
+  %80 = load %"class.std::ctype"*, %"class.std::ctype"** %79, align 8, !tbaa !64
+  %tobool.not.i.i.i = icmp eq %"class.std::ctype"* %80, null
   br i1 %tobool.not.i.i.i, label %if.then.i.i.i, label %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i
 
-if.then.i.i.i:                                    ; preds = %_Z13buildSortDataiiiPPlS0_.exit
+if.then.i.i.i:                                    ; preds = %_Z13buildSortDataiiiPlS_.exit
   tail call void @_ZSt16__throw_bad_castv() #19
   unreachable
 
-_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i: ; preds = %_Z13buildSortDataiiiPPlS0_.exit
-  %_M_widen_ok.i.i.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %102, i64 0, i32 8
-  %103 = load i8, i8* %_M_widen_ok.i.i.i, align 8, !tbaa !67
-  %tobool.not.i3.i.i = icmp eq i8 %103, 0
+_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i: ; preds = %_Z13buildSortDataiiiPlS_.exit
+  %_M_widen_ok.i.i.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %80, i64 0, i32 8
+  %81 = load i8, i8* %_M_widen_ok.i.i.i, align 8, !tbaa !67
+  %tobool.not.i3.i.i = icmp eq i8 %81, 0
   br i1 %tobool.not.i3.i.i, label %if.end.i.i.i, label %if.then.i4.i.i
 
 if.then.i4.i.i:                                   ; preds = %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i
-  %arrayidx.i.i.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %102, i64 0, i32 9, i64 10
-  %104 = load i8, i8* %arrayidx.i.i.i, align 1, !tbaa !69
+  %arrayidx.i.i.i = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %80, i64 0, i32 9, i64 10
+  %82 = load i8, i8* %arrayidx.i.i.i, align 1, !tbaa !69
   br label %_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit
 
 if.end.i.i.i:                                     ; preds = %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i
-  tail call void @_ZNKSt5ctypeIcE13_M_widen_initEv(%"class.std::ctype"* nonnull dereferenceable(570) %102)
-  %105 = bitcast %"class.std::ctype"* %102 to i8 (%"class.std::ctype"*, i8)***
-  %vtable.i.i.i = load i8 (%"class.std::ctype"*, i8)**, i8 (%"class.std::ctype"*, i8)*** %105, align 8, !tbaa !2
+  tail call void @_ZNKSt5ctypeIcE13_M_widen_initEv(%"class.std::ctype"* nonnull dereferenceable(570) %80)
+  %83 = bitcast %"class.std::ctype"* %80 to i8 (%"class.std::ctype"*, i8)***
+  %vtable.i.i.i = load i8 (%"class.std::ctype"*, i8)**, i8 (%"class.std::ctype"*, i8)*** %83, align 8, !tbaa !2
   %vfn.i.i.i = getelementptr inbounds i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vtable.i.i.i, i64 6
-  %106 = load i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vfn.i.i.i, align 8
-  %call.i.i.i = tail call signext i8 %106(%"class.std::ctype"* nonnull dereferenceable(570) %102, i8 signext 10)
+  %84 = load i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vfn.i.i.i, align 8
+  %call.i.i.i = tail call signext i8 %84(%"class.std::ctype"* nonnull dereferenceable(570) %80, i8 signext 10)
   br label %_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit
 
 _ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit: ; preds = %if.then.i4.i.i, %if.end.i.i.i
-  %retval.0.i.i.i = phi i8 [ %104, %if.then.i4.i.i ], [ %call.i.i.i, %if.end.i.i.i ]
+  %retval.0.i.i.i = phi i8 [ %82, %if.then.i4.i.i ], [ %call.i.i.i, %if.end.i.i.i ]
   %call1.i64 = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo3putEc(%"class.std::basic_ostream"* nonnull dereferenceable(8) @_ZSt4cout, i8 signext %retval.0.i.i.i)
   %call.i.i65 = tail call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo5flushEv(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call1.i64)
-  %107 = bitcast i64* %sourceTypes to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %107) #16
+  %vla59 = alloca [10 x i32], align 16
+  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %vla59, i64 0, i64 0
+  %85 = bitcast [10 x i32]* %vla59 to <4 x i32>*
+  store <4 x i32> <i32 1000000, i32 1000000, i32 1000000, i32 1000000>, <4 x i32>* %85, align 16, !tbaa !18
+  %arrayidx.4 = getelementptr inbounds [10 x i32], [10 x i32]* %vla59, i64 0, i64 4
+  %86 = bitcast i32* %arrayidx.4 to <4 x i32>*
+  store <4 x i32> <i32 1000000, i32 1000000, i32 1000000, i32 1000000>, <4 x i32>* %86, align 16, !tbaa !18
+  %arrayidx.8 = getelementptr inbounds [10 x i32], [10 x i32]* %vla59, i64 0, i64 8
+  store i32 1000000, i32* %arrayidx.8, align 16, !tbaa !18
+  %arrayidx.9 = getelementptr inbounds [10 x i32], [10 x i32]* %vla59, i64 0, i64 9
+  store i32 1000000, i32* %arrayidx.9, align 4, !tbaa !18
+  %87 = bitcast i64* %sourceTypes to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %87) #16
   store i64 4294967297, i64* %sourceTypes, align 8
-  %108 = bitcast i64* %outputCols to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %108) #16
+  %88 = bitcast i64* %outputCols to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %88) #16
   store i64 4294967296, i64* %outputCols, align 8
-  %109 = bitcast i64* %sortCols to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %109) #16
+  %89 = bitcast i64* %sortCols to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %89) #16
   store i64 4294967296, i64* %sortCols, align 8
-  %110 = bitcast i64* %ascendings to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %110) #16
+  %90 = bitcast i64* %ascendings to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %90) #16
   store i64 4294967297, i64* %ascendings, align 8
-  %111 = bitcast i64* %nullFirsts to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %111) #16
+  %91 = bitcast i64* %nullFirsts to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %91) #16
   store i64 0, i64* %nullFirsts, align 8
   %arraydecay = bitcast i64* %sourceTypes to i32*
-  %arraydecay8 = bitcast i64* %outputCols to i32*
-  %arraydecay9 = bitcast i64* %sortCols to i32*
-  %arraydecay10 = bitcast i64* %ascendings to i32*
-  %arraydecay11 = bitcast i64* %nullFirsts to i32*
-  %call12 = call i64 @_Z16allocAndInitSortlPiiS_iS_S_S_i(i64 1026, i32* nonnull %arraydecay, i32 2, i32* nonnull %arraydecay8, i32 2, i32* nonnull %arraydecay9, i32* nonnull %arraydecay10, i32* nonnull %arraydecay11, i32 2)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %20, i64* %21, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %22, i64* %23, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %24, i64* %25, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %26, i64* %27, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %28, i64* %29, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %30, i64* %31, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %32, i64* %33, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %34, i64* %35, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %36, i64* %37, i32 1000000)
-  call void @_Z8addTablelPlS_j(i64 %call12, i64* %38, i64* %39, i32 1000000)
-  %call25 = call i64 @clock() #16
-  call void @_Z4sortll(i64 %call12, i64 1026)
-  %call1.i67 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([24 x i8], [24 x i8]* @.str.8, i64 0, i64 0), i64 23)
-  %call27 = call i64 @clock() #16
-  %sub = sub nsw i64 %call27, %call25
-  %conv = sitofp i64 %sub to double
-  %div = fdiv double %conv, 1.000000e+03
+  %arraydecay10 = bitcast i64* %outputCols to i32*
+  %arraydecay11 = bitcast i64* %sortCols to i32*
+  %arraydecay12 = bitcast i64* %ascendings to i32*
+  %arraydecay13 = bitcast i64* %nullFirsts to i32*
+  %call14 = call i64 @_Z11sortPreparePiiS_iS_S_S_i(i32* nonnull %arraydecay, i32 2, i32* nonnull %arraydecay10, i32 2, i32* nonnull %arraydecay11, i32* nonnull %arraydecay12, i32* nonnull %arraydecay13, i32 2)
+  %call20 = call i64 @_Z18sortCreateOperatorlPiiS_iS_S_S_i(i64 %call14, i32* nonnull %arraydecay, i32 2, i32* nonnull %arraydecay10, i32 2, i32* nonnull %arraydecay11, i32* nonnull %arraydecay12, i32* nonnull %arraydecay13, i32 2)
+  call void @_Z12sortAddInputllPlS_iPii(i64 %call14, i64 %call20, i64* nonnull %0, i64* nonnull %1, i32 10, i32* nonnull %arrayidx, i32 10000000)
+  %call22 = call i64 @clock() #16
+  call void @_Z11sortExecutell(i64 %call14, i64 %call20)
+  %call1.i67 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) @_ZSt4cout, i8* nonnull getelementptr inbounds ([24 x i8], [24 x i8]* @.str.6, i64 0, i64 0), i64 23)
+  %call24 = call i64 @clock() #16
+  %sub = sub nsw i64 %call24, %call22
+  %conv25 = sitofp i64 %sub to double
+  %div = fdiv double %conv25, 1.000000e+03
   %call.i = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo9_M_insertIdEERSoT_(%"class.std::basic_ostream"* nonnull dereferenceable(8) @_ZSt4cout, double %div)
-  %call1.i69 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) %call.i, i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str.9, i64 0, i64 0), i64 3)
-  %112 = bitcast %"class.std::basic_ostream"* %call.i to i8**
-  %vtable.i71 = load i8*, i8** %112, align 8, !tbaa !2
+  %call1.i69 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l(%"class.std::basic_ostream"* nonnull align 8 dereferenceable(8) %call.i, i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str.7, i64 0, i64 0), i64 3)
+  %92 = bitcast %"class.std::basic_ostream"* %call.i to i8**
+  %vtable.i71 = load i8*, i8** %92, align 8, !tbaa !2
   %vbase.offset.ptr.i72 = getelementptr i8, i8* %vtable.i71, i64 -24
-  %113 = bitcast i8* %vbase.offset.ptr.i72 to i64*
-  %vbase.offset.i73 = load i64, i64* %113, align 8
-  %114 = bitcast %"class.std::basic_ostream"* %call.i to i8*
-  %add.ptr.i74 = getelementptr inbounds i8, i8* %114, i64 %vbase.offset.i73
+  %93 = bitcast i8* %vbase.offset.ptr.i72 to i64*
+  %vbase.offset.i73 = load i64, i64* %93, align 8
+  %94 = bitcast %"class.std::basic_ostream"* %call.i to i8*
+  %add.ptr.i74 = getelementptr inbounds i8, i8* %94, i64 %vbase.offset.i73
   %_M_ctype.i.i75 = getelementptr inbounds i8, i8* %add.ptr.i74, i64 240
-  %115 = bitcast i8* %_M_ctype.i.i75 to %"class.std::ctype"**
-  %116 = load %"class.std::ctype"*, %"class.std::ctype"** %115, align 8, !tbaa !64
-  %tobool.not.i.i.i76 = icmp eq %"class.std::ctype"* %116, null
+  %95 = bitcast i8* %_M_ctype.i.i75 to %"class.std::ctype"**
+  %96 = load %"class.std::ctype"*, %"class.std::ctype"** %95, align 8, !tbaa !64
+  %tobool.not.i.i.i76 = icmp eq %"class.std::ctype"* %96, null
   br i1 %tobool.not.i.i.i76, label %if.then.i.i.i77, label %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i80
 
 if.then.i.i.i77:                                  ; preds = %_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit
@@ -2231,119 +2173,171 @@ if.then.i.i.i77:                                  ; preds = %_ZSt4endlIcSt11char
   unreachable
 
 _ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i80: ; preds = %_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit
-  %_M_widen_ok.i.i.i78 = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %116, i64 0, i32 8
-  %117 = load i8, i8* %_M_widen_ok.i.i.i78, align 8, !tbaa !67
-  %tobool.not.i3.i.i79 = icmp eq i8 %117, 0
+  %_M_widen_ok.i.i.i78 = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %96, i64 0, i32 8
+  %97 = load i8, i8* %_M_widen_ok.i.i.i78, align 8, !tbaa !67
+  %tobool.not.i3.i.i79 = icmp eq i8 %97, 0
   br i1 %tobool.not.i3.i.i79, label %if.end.i.i.i86, label %if.then.i4.i.i82
 
 if.then.i4.i.i82:                                 ; preds = %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i80
-  %arrayidx.i.i.i81 = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %116, i64 0, i32 9, i64 10
-  %118 = load i8, i8* %arrayidx.i.i.i81, align 1, !tbaa !69
+  %arrayidx.i.i.i81 = getelementptr inbounds %"class.std::ctype", %"class.std::ctype"* %96, i64 0, i32 9, i64 10
+  %98 = load i8, i8* %arrayidx.i.i.i81, align 1, !tbaa !69
   br label %_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit90
 
 if.end.i.i.i86:                                   ; preds = %_ZSt13__check_facetISt5ctypeIcEERKT_PS3_.exit.i.i80
-  call void @_ZNKSt5ctypeIcE13_M_widen_initEv(%"class.std::ctype"* nonnull dereferenceable(570) %116)
-  %119 = bitcast %"class.std::ctype"* %116 to i8 (%"class.std::ctype"*, i8)***
-  %vtable.i.i.i83 = load i8 (%"class.std::ctype"*, i8)**, i8 (%"class.std::ctype"*, i8)*** %119, align 8, !tbaa !2
+  call void @_ZNKSt5ctypeIcE13_M_widen_initEv(%"class.std::ctype"* nonnull dereferenceable(570) %96)
+  %99 = bitcast %"class.std::ctype"* %96 to i8 (%"class.std::ctype"*, i8)***
+  %vtable.i.i.i83 = load i8 (%"class.std::ctype"*, i8)**, i8 (%"class.std::ctype"*, i8)*** %99, align 8, !tbaa !2
   %vfn.i.i.i84 = getelementptr inbounds i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vtable.i.i.i83, i64 6
-  %120 = load i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vfn.i.i.i84, align 8
-  %call.i.i.i85 = call signext i8 %120(%"class.std::ctype"* nonnull dereferenceable(570) %116, i8 signext 10)
+  %100 = load i8 (%"class.std::ctype"*, i8)*, i8 (%"class.std::ctype"*, i8)** %vfn.i.i.i84, align 8
+  %call.i.i.i85 = call signext i8 %100(%"class.std::ctype"* nonnull dereferenceable(570) %96, i8 signext 10)
   br label %_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit90
 
 _ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit90: ; preds = %if.then.i4.i.i82, %if.end.i.i.i86
-  %retval.0.i.i.i87 = phi i8 [ %118, %if.then.i4.i.i82 ], [ %call.i.i.i85, %if.end.i.i.i86 ]
+  %retval.0.i.i.i87 = phi i8 [ %98, %if.then.i4.i.i82 ], [ %call.i.i.i85, %if.end.i.i.i86 ]
   %call1.i88 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo3putEc(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call.i, i8 signext %retval.0.i.i.i87)
   %call.i.i89 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo5flushEv(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call1.i88)
-  %call31 = call %class.Table* @_Z9getResultll(i64 %call12, i64 1026)
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %111) #16
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %110) #16
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %109) #16
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %108) #16
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %107) #16
+  %call29 = call %class.Table* @_Z13sortGetOutputll(i64 %call14, i64 %call20)
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %91) #16
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %90) #16
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %89) #16
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %88) #16
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %87) #16
   ret i32 1236
 
-vector.body98:                                    ; preds = %vector.body107, %vector.body98
-  %index100 = phi i64 [ %index.next101.1, %vector.body98 ], [ 0, %vector.body107 ]
-  %offset.idx104 = add nuw nsw i64 %index100, 500000
-  %121 = getelementptr inbounds i32, i32* %40, i64 %offset.idx104
-  %122 = bitcast i32* %121 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %122, align 4, !tbaa !18
-  %123 = getelementptr inbounds i32, i32* %121, i64 4
-  %124 = bitcast i32* %123 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %124, align 4, !tbaa !18
-  %125 = getelementptr inbounds i32, i32* %41, i64 %offset.idx104
-  %126 = bitcast i32* %125 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %126, align 4, !tbaa !18
-  %127 = getelementptr inbounds i32, i32* %125, i64 4
-  %128 = bitcast i32* %127 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %128, align 4, !tbaa !18
-  %offset.idx104.1 = add nuw nsw i64 %index100, 500008
-  %129 = getelementptr inbounds i32, i32* %40, i64 %offset.idx104.1
-  %130 = bitcast i32* %129 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %130, align 4, !tbaa !18
-  %131 = getelementptr inbounds i32, i32* %129, i64 4
-  %132 = bitcast i32* %131 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %132, align 4, !tbaa !18
-  %133 = getelementptr inbounds i32, i32* %41, i64 %offset.idx104.1
-  %134 = bitcast i32* %133 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %134, align 4, !tbaa !18
-  %135 = getelementptr inbounds i32, i32* %133, i64 4
-  %136 = bitcast i32* %135 to <4 x i32>*
-  store <4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32>* %136, align 4, !tbaa !18
-  %index.next101.1 = add nuw nsw i64 %index100, 16
-  %137 = icmp eq i64 %index.next101.1, 250000
-  br i1 %137, label %vector.body, label %vector.body98, !llvm.loop !81
+vector.body97:                                    ; preds = %vector.body106, %vector.body97
+  %index99 = phi i64 [ %index.next100.3, %vector.body97 ], [ 0, %vector.body106 ]
+  %offset.idx103 = add nuw nsw i64 %index99, 500000
+  %101 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103
+  %102 = bitcast i64* %101 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %102, align 8, !tbaa !35
+  %103 = getelementptr inbounds i64, i64* %101, i64 2
+  %104 = bitcast i64* %103 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %104, align 8, !tbaa !35
+  %105 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103
+  %106 = bitcast i64* %105 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %106, align 8, !tbaa !35
+  %107 = getelementptr inbounds i64, i64* %105, i64 2
+  %108 = bitcast i64* %107 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %108, align 8, !tbaa !35
+  %offset.idx103.1 = add nuw nsw i64 %index99, 500004
+  %109 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.1
+  %110 = bitcast i64* %109 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %110, align 8, !tbaa !35
+  %111 = getelementptr inbounds i64, i64* %109, i64 2
+  %112 = bitcast i64* %111 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %112, align 8, !tbaa !35
+  %113 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.1
+  %114 = bitcast i64* %113 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %114, align 8, !tbaa !35
+  %115 = getelementptr inbounds i64, i64* %113, i64 2
+  %116 = bitcast i64* %115 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %116, align 8, !tbaa !35
+  %offset.idx103.2 = add nuw nsw i64 %index99, 500008
+  %117 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.2
+  %118 = bitcast i64* %117 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %118, align 8, !tbaa !35
+  %119 = getelementptr inbounds i64, i64* %117, i64 2
+  %120 = bitcast i64* %119 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %120, align 8, !tbaa !35
+  %121 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.2
+  %122 = bitcast i64* %121 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %122, align 8, !tbaa !35
+  %123 = getelementptr inbounds i64, i64* %121, i64 2
+  %124 = bitcast i64* %123 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %124, align 8, !tbaa !35
+  %offset.idx103.3 = add nuw nsw i64 %index99, 500012
+  %125 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.3
+  %126 = bitcast i64* %125 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %126, align 8, !tbaa !35
+  %127 = getelementptr inbounds i64, i64* %125, i64 2
+  %128 = bitcast i64* %127 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %128, align 8, !tbaa !35
+  %129 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.3
+  %130 = bitcast i64* %129 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %130, align 8, !tbaa !35
+  %131 = getelementptr inbounds i64, i64* %129, i64 2
+  %132 = bitcast i64* %131 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %132, align 8, !tbaa !35
+  %index.next100.3 = add nuw nsw i64 %index99, 16
+  %133 = icmp eq i64 %index.next100.3, 250000
+  br i1 %133, label %vector.body, label %vector.body97, !llvm.loop !81
 
-vector.body:                                      ; preds = %vector.body98, %vector.body
-  %index = phi i64 [ %index.next.1, %vector.body ], [ 0, %vector.body98 ]
+vector.body:                                      ; preds = %vector.body97, %vector.body
+  %index = phi i64 [ %index.next.3, %vector.body ], [ 0, %vector.body97 ]
   %offset.idx = add nuw nsw i64 %index, 750000
-  %138 = getelementptr inbounds i32, i32* %40, i64 %offset.idx
-  %139 = bitcast i32* %138 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %139, align 4, !tbaa !18
-  %140 = getelementptr inbounds i32, i32* %138, i64 4
-  %141 = bitcast i32* %140 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %141, align 4, !tbaa !18
-  %142 = getelementptr inbounds i32, i32* %41, i64 %offset.idx
-  %143 = bitcast i32* %142 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %143, align 4, !tbaa !18
-  %144 = getelementptr inbounds i32, i32* %142, i64 4
-  %145 = bitcast i32* %144 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %145, align 4, !tbaa !18
-  %offset.idx.1 = add nuw nsw i64 %index, 750008
-  %146 = getelementptr inbounds i32, i32* %40, i64 %offset.idx.1
-  %147 = bitcast i32* %146 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %147, align 4, !tbaa !18
-  %148 = getelementptr inbounds i32, i32* %146, i64 4
-  %149 = bitcast i32* %148 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %149, align 4, !tbaa !18
-  %150 = getelementptr inbounds i32, i32* %41, i64 %offset.idx.1
-  %151 = bitcast i32* %150 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %151, align 4, !tbaa !18
-  %152 = getelementptr inbounds i32, i32* %150, i64 4
-  %153 = bitcast i32* %152 to <4 x i32>*
-  store <4 x i32> <i32 3, i32 3, i32 3, i32 3>, <4 x i32>* %153, align 4, !tbaa !18
-  %index.next.1 = add nuw nsw i64 %index, 16
-  %154 = icmp eq i64 %index.next.1, 250000
-  br i1 %154, label %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3, label %vector.body, !llvm.loop !82
+  %134 = getelementptr inbounds i64, i64* %2, i64 %offset.idx
+  %135 = bitcast i64* %134 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %135, align 8, !tbaa !35
+  %136 = getelementptr inbounds i64, i64* %134, i64 2
+  %137 = bitcast i64* %136 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %137, align 8, !tbaa !35
+  %138 = getelementptr inbounds i64, i64* %3, i64 %offset.idx
+  %139 = bitcast i64* %138 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %139, align 8, !tbaa !35
+  %140 = getelementptr inbounds i64, i64* %138, i64 2
+  %141 = bitcast i64* %140 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %141, align 8, !tbaa !35
+  %offset.idx.1 = add nuw nsw i64 %index, 750004
+  %142 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.1
+  %143 = bitcast i64* %142 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %143, align 8, !tbaa !35
+  %144 = getelementptr inbounds i64, i64* %142, i64 2
+  %145 = bitcast i64* %144 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %145, align 8, !tbaa !35
+  %146 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.1
+  %147 = bitcast i64* %146 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %147, align 8, !tbaa !35
+  %148 = getelementptr inbounds i64, i64* %146, i64 2
+  %149 = bitcast i64* %148 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %149, align 8, !tbaa !35
+  %offset.idx.2 = add nuw nsw i64 %index, 750008
+  %150 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.2
+  %151 = bitcast i64* %150 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %151, align 8, !tbaa !35
+  %152 = getelementptr inbounds i64, i64* %150, i64 2
+  %153 = bitcast i64* %152 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %153, align 8, !tbaa !35
+  %154 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.2
+  %155 = bitcast i64* %154 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %155, align 8, !tbaa !35
+  %156 = getelementptr inbounds i64, i64* %154, i64 2
+  %157 = bitcast i64* %156 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %157, align 8, !tbaa !35
+  %offset.idx.3 = add nuw nsw i64 %index, 750012
+  %158 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.3
+  %159 = bitcast i64* %158 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %159, align 8, !tbaa !35
+  %160 = getelementptr inbounds i64, i64* %158, i64 2
+  %161 = bitcast i64* %160 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %161, align 8, !tbaa !35
+  %162 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.3
+  %163 = bitcast i64* %162 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %163, align 8, !tbaa !35
+  %164 = getelementptr inbounds i64, i64* %162, i64 2
+  %165 = bitcast i64* %164 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %165, align 8, !tbaa !35
+  %index.next.3 = add nuw nsw i64 %index, 16
+  %166 = icmp eq i64 %index.next.3, 250000
+  br i1 %166, label %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3, label %vector.body, !llvm.loop !82
 
 for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3: ; preds = %vector.body
-  %155 = ptrtoint i8* %call.us.i to i64
-  %arrayidx29.us.i = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla58, i64 0, i64 %indvars.iv.i
-  %156 = load i64*, i64** %arrayidx29.us.i, align 8, !tbaa !15
-  store i64 %155, i64* %156, align 8, !tbaa !35
-  %157 = ptrtoint i8* %call7.us.i to i64
-  %arrayidx33.us.i = getelementptr inbounds i64, i64* %156, i64 1
-  store i64 %157, i64* %arrayidx33.us.i, align 8, !tbaa !35
-  %158 = ptrtoint i8* %call5.us.i to i64
-  %arrayidx35.us.i = getelementptr inbounds [10 x i64*], [10 x i64*]* %vla159, i64 0, i64 %indvars.iv.i
-  %159 = load i64*, i64** %arrayidx35.us.i, align 8, !tbaa !15
-  store i64 %158, i64* %159, align 8, !tbaa !35
-  %160 = ptrtoint i8* %call9.us.i to i64
-  %arrayidx39.us.i = getelementptr inbounds i64, i64* %159, i64 1
-  store i64 %160, i64* %arrayidx39.us.i, align 8, !tbaa !35
-  %indvars.iv.next.i = add nuw nsw i64 %indvars.iv.i, 1
-  %exitcond113.not.i = icmp eq i64 %indvars.iv.next.i, 10
-  br i1 %exitcond113.not.i, label %_Z13buildSortDataiiiPPlS0_.exit, label %for.body.us.i, !llvm.loop !75
+  %167 = ptrtoint i8* %call.us.i to i64
+  %168 = shl nuw nsw i64 %indvars.iv119.i, 1
+  %arrayidx32.us.i = getelementptr inbounds i64, i64* %0, i64 %168
+  store i64 %167, i64* %arrayidx32.us.i, align 8, !tbaa !35
+  %169 = ptrtoint i8* %call7.us.i to i64
+  %170 = or i64 %168, 1
+  %arrayidx36.us.i = getelementptr inbounds i64, i64* %0, i64 %170
+  store i64 %169, i64* %arrayidx36.us.i, align 8, !tbaa !35
+  %171 = ptrtoint i8* %call5.us.i to i64
+  %arrayidx40.us.i = getelementptr inbounds i64, i64* %1, i64 %168
+  store i64 %171, i64* %arrayidx40.us.i, align 8, !tbaa !35
+  %172 = ptrtoint i8* %call9.us.i to i64
+  %arrayidx44.us.i = getelementptr inbounds i64, i64* %1, i64 %170
+  store i64 %172, i64* %arrayidx44.us.i, align 8, !tbaa !35
+  %indvars.iv.next120.i = add nuw nsw i64 %indvars.iv119.i, 1
+  %exitcond124.not.i = icmp eq i64 %indvars.iv.next120.i, 10
+  br i1 %exitcond124.not.i, label %_Z13buildSortDataiiiPlS_.exit, label %for.body.us.i, !llvm.loop !75
 }
 
 ; Function Attrs: nounwind uwtable
@@ -2479,7 +2473,7 @@ attributes #19 = { noreturn }
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"Ubuntu clang version 12.0.0-++20210225092633+e0e6b1e39e7e-1~exp1~20210225083352.50"}
+!1 = !{!"Ubuntu clang version 12.0.0-++20210301072539+98f06b16a313-1~exp1~20210301183256.51"}
 !2 = !{!3, !3, i64 0}
 !3 = !{!"vtable pointer", !4, i64 0}
 !4 = !{!"Simple C++ TBAA"}
