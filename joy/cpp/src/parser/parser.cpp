@@ -49,14 +49,15 @@ public:
 
 Expr Parser::parseRowExpression(string input)
     {
+        printf("started parse ");
         int n = input.length();
         BinaryExpr root;
         // declaring character array
         char char_array[n + 1];
         bool shouldBeRight = false;
-
+        cout<<n;
         // copying the contents of the
-        // string to char array
+        // string to char arrayc
         strcpy(char_array, input.c_str());
         stack<BinaryExpr> exprStack;
         printf("inside parser:::");
@@ -64,6 +65,7 @@ Expr Parser::parseRowExpression(string input)
         for (int i = 0; i < n; i++)
         {
             char ch = char_array[i];
+            cout << ch;
             switch (ch)
             {
             case '(':
@@ -181,6 +183,7 @@ Expr Parser::parseRowExpression(string input)
                 break;
             }
         }
+        return root;
     }
 
     ComparisionExpr Parser::generateComparisionExpr(string exprStr, int startIdx, int endIdx)
