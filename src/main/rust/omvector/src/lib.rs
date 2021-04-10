@@ -188,6 +188,66 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinishe
     }
 }
 
+#[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_vector_OMVectorBase_copy(
+    env: JNIEnv,
+    this_obj: jobject,
+    j_type: jint,
+    j_this_address: jlong,
+    j_this_size: jint,
+    j_other_address: jlong,
+    j_elements_to_copy: jintArray,
+    j_offset: jint,
+    j_length: jint,
+    j_this_offset: jint,
+) {
+    unsafe {
+        let length = j_length as usize;
+        let this_offset = j_this_offset as usize;
+
+        let mut elements_to_copy = vec![0i32; length];
+        env.get_int_array_region(j_elements_to_copy, j_offset, elements_to_copy.as_mut());
+
+        // println!("lenght: {}, offset: {}, this_offset: {}, elements_to_copy: {}, this_size: {}", length, j_offset, this_offset, elements_to_copy.len(), j_this_size);
+
+        match j_type {
+            1 => {
+                let mut this_vector = Vec::from_raw_parts((j_this_address) as *mut i32, j_this_size as usize, j_this_size as usize);
+                let mut other_vector = Vec::from_raw_parts((j_other_address) as *mut i32, length, length);
+                for i in 0..length {
+                    let element = elements_to_copy[i] as usize;
+                    other_vector[i] = this_vector[element + this_offset];
+                }
+                mem::forget(this_vector);
+                mem::forget(other_vector);
+            }
+            2 => {
+                let mut this_vector = Vec::from_raw_parts((j_this_address) as *mut i64, j_this_size as usize, j_this_size as usize);
+                let mut other_vector = Vec::from_raw_parts((j_other_address) as *mut i64, length, length);
+                for i in 0..length {
+                    let element = elements_to_copy[i] as usize;
+                    other_vector[i] = this_vector[element + this_offset];
+                }
+                mem::forget(this_vector);
+                mem::forget(other_vector);
+            }
+            3 => {
+                let mut this_vector = Vec::from_raw_parts((j_this_address) as *mut f64, j_this_size as usize, j_this_size as usize);
+                let mut other_vector = Vec::from_raw_parts((j_other_address) as *mut f64, length, length);
+                for i in 0..length {
+                    let element = elements_to_copy[i] as usize;
+                    other_vector[i] = this_vector[element + this_offset];
+                }
+                mem::forget(this_vector);
+                mem::forget(other_vector);
+            }
+            _ => {
+                panic!("Unsupported input type");
+            }
+        }
+    }
+}
+
 fn build_om_result(env: JNIEnv, buf_array: *mut _jobject, output_len: i32, key: String) -> JObject {
     // todo need cache the jni info
     let om_result_cls = env

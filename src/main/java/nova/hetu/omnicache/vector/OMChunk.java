@@ -34,6 +34,7 @@ class OMChunk
     public OMChunk(OMChunk buf)
     {
         this.data = buf.data;
+        this.memAddress = ((DirectBuffer) data).address();
         referenceCount = buf.referenceCount;
         referenceCount.incrementAndGet();
     }

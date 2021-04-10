@@ -64,4 +64,29 @@ public class LongVecTest
             System.out.println("finish round: " + j);
         }
     }
+
+    @Test
+    public void testCopy()
+    {
+        int rowNum = 3000;
+        int[] selectedPositions = new int[rowNum/2];
+        for (int i = 0; i < rowNum/2; i++) {
+            selectedPositions[i] = 2 * i;
+        }
+
+        LongVec originalVec = new LongVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            originalVec.set(i, i);
+        }
+
+        for (int i = 0; i < 10; i++) {
+            long start = System.nanoTime();
+            LongVec newVec = new LongVec(rowNum / 2);
+
+            originalVec.copy(newVec, selectedPositions, 0, rowNum / 2, 0);
+
+            long total = System.nanoTime() - start;
+            System.out.println("total time: " + total);
+        }
+    }
 }

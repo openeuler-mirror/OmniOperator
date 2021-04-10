@@ -183,6 +183,11 @@ public abstract class Vec
         throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default remaining()");
     }
 
+    public void copy(Vec other, int[] elementsToCopy, int offset, int length, int thisOffset)
+    {
+        OMVectorBase.copy(this.getType().getValue(), this.getAddress(), this.size, other.getAddress(), elementsToCopy, offset, length, thisOffset);
+    }
+
     public abstract VecType getType();
 
     public ByteBuffer getData()
