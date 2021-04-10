@@ -428,6 +428,118 @@ public class BenchmarkVector
     }
 
     @Benchmark
+    @Threads(1)
+    public void test_heapvec_filter_copy_001(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(2)
+    public void test_heapvec_filter_copy_002(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(4)
+    public void test_heapvec_filter_copy_004(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(8)
+    public void test_heapvec_filter_copy_008(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(16)
+    public void test_heapvec_filter_copy_016(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(32)
+    public void test_heapvec_filter_copy_032(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(64)
+    public void test_heapvec_filter_copy_064(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(128)
+    public void test_heapvec_filter_copy_128(BenchmarkData benchmarkData)
+    {
+        testHeapCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(1)
+    public void test_omnicopy_filter_copy_001(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(2)
+    public void test_omnicopy_filter_copy_002(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(4)
+    public void test_omnicopy_filter_copy_004(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(8)
+    public void test_omnicopy_filter_copy_008(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(16)
+    public void test_omnicopy_filter_copy_016(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(32)
+    public void test_omnicopy_filter_copy_032(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(64)
+    public void test_omnicopy_filter_copy_064(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
+    @Threads(128)
+    public void test_omnicopy_filter_copy_128(BenchmarkData benchmarkData)
+    {
+        testOmniCopy(benchmarkData);
+    }
+
+    @Benchmark
     public void createLongVecDirect(BenchmarkData benchmarkData)
     {
         long[] values = benchmarkData.getLongValues();
@@ -455,6 +567,34 @@ public class BenchmarkVector
         }
     }
 
+    @Benchmark
+    public void testOmniCopy(BenchmarkData benchmarkData)
+    {
+
+        int[] selectedPositions = benchmarkData.selectedPositions;
+
+        LongVec originalVec = benchmarkData.omniVecFilterCopyData;
+
+        for (int i = 0; i < 10; i++) {
+            LongVec newVec = new LongVec(selectedPositions.length);
+            originalVec.copy(newVec, selectedPositions, 0, selectedPositions.length, 0);
+        }
+    }
+
+    @Benchmark
+    public void testHeapCopy(BenchmarkData benchmarkData)
+    {
+        int[] selectedPositions = benchmarkData.selectedPositions;
+        long[] originalVec = benchmarkData.heapVecFilterCopyData;
+
+        for (int i = 0; i < 10; i++) {
+            long[] newData = new long[selectedPositions.length];
+            for (int j = 0; j < selectedPositions.length; j++) {
+                newData[j] = originalVec[selectedPositions[j]];
+            }
+        }
+    }
+
     @State(Scope.Benchmark)
     public static class BenchmarkData
     {
@@ -466,6 +606,10 @@ public class BenchmarkVector
         boolean cpuAffinity = false;
         AtomicInteger cpuUsed = new AtomicInteger(0);
         AtomicLong totalUsedTime = new AtomicLong(0);
+
+        long[] heapVecFilterCopyData;
+        LongVec omniVecFilterCopyData;
+        int[] selectedPositions;
 
         public BenchmarkData()
         {
@@ -485,6 +629,22 @@ public class BenchmarkVector
             byteBuffer = ByteBuffer.allocateDirect(8 * longValues.length);
             for (long longValue : longValues) {
                 byteBuffer.putLong(longValue);
+            }
+
+            int rowNum = 3000;
+            selectedPositions = new int[rowNum / 2];
+            for (int i = 0; i < rowNum / 2; i++) {
+                selectedPositions[i] = 2 * i;
+            }
+
+            heapVecFilterCopyData = new long[rowNum];
+            for (int i = 0; i < rowNum; i++) {
+                heapVecFilterCopyData[i] = i;
+            }
+
+            omniVecFilterCopyData = new LongVec(rowNum);
+            for (int i = 0; i < rowNum; i++) {
+                omniVecFilterCopyData.set(i, i);
             }
         }
 
@@ -509,7 +669,7 @@ public class BenchmarkVector
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkVector.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkVector.class.getSimpleName() + ".test_.*_filter_copy.*")
                 .jvmArgs("-Xms2g", "-Xmx16g", "-XX:MaxDirectMemorySize=16g")
                 .build();
 
