@@ -49,7 +49,7 @@ public:
 
 Expr Parser::parseRowExpression(string input)
     {
-        printf("started parse ");
+        std::cout << "parseRowExpression" << std::endl;
         int n = input.length();
         BinaryExpr root;
         // declaring character array
@@ -60,17 +60,19 @@ Expr Parser::parseRowExpression(string input)
         // string to char arrayc
         strcpy(char_array, input.c_str());
         stack<BinaryExpr> exprStack;
-        printf("inside parser:::");
+        std::cout << "inside parser:::" << std::endl;
         int lastIdx = 0;
         for (int i = 0; i < n; i++)
         {
             char ch = char_array[i];
-            cout << ch;
+
             switch (ch)
             {
             case '(':
             {
-                string opStr = input.substr(lastIdx, i);
+                int numbOfChars = i - lastIdx;
+                string opStr = input.substr(lastIdx, numbOfChars);
+                std::cout << "opStr:::"<< opStr  << std::endl;
                 if (opStr == "AND")
                 {
                     BinaryExpr expr;
@@ -79,29 +81,32 @@ Expr Parser::parseRowExpression(string input)
                     exprStack.push(expr);
                     lastIdx = i + 1;
                 }
-                else if (opStr.find("operator") == string::npos)
+                else if (opStr.find("operator") > 0)
                 {
                     string op = opStr.substr(10);
+                    std::cout << "op:::"<< op  << std::endl;
                     if (op == "EQ" || op == "LT" || op == "GT" || op == "LTE" || op == "GTE")
                     {
                         i = i + 1;
                         ch = char_array[i];
                         int startIdx = i;
-                        string result;
                         while (ch != ')')
                         {
-                            result = result.append("" + ch);
                             i++;
                             ch = char_array[i];
                         }
-
-                        ComparisionExpr expr = this->generateComparisionExpr(opStr, startIdx, i);
+                        int numbOfChars = i - startIdx;
+                        string result = input.substr(startIdx, numbOfChars);
+                        std::cout << "result="<< result  << std::endl;
+                        ComparisionExpr expr = this->generateComparisionExpr(result, startIdx, i);
                         return expr;
                     }
                 }
                 else
                 {
-                    string opStr = opStr.substr(lastIdx, i);
+                    int numbOfChars = i - lastIdx;
+                    string opStr = opStr.substr(lastIdx, numbOfChars);
+                    std::cout << "opStr:::"<< opStr  << std::endl;
                     exprStack.pop();
                     BinaryExpr parent = (BinaryExpr)exprStack.top();
                     if (opStr == "AND")
@@ -140,8 +145,8 @@ Expr Parser::parseRowExpression(string input)
                                 i++;
                                 ch = char_array[i];
                             }
-
-                            ComparisionExpr cmpExpr = this->generateComparisionExpr(opStr, startIdx, i);
+                            std::cout << "result:::"<< result  << std::endl;
+                            ComparisionExpr cmpExpr = this->generateComparisionExpr(result, startIdx, i);
                             if (shouldBeRight)
                             {
                                 parent.right = cmpExpr;
@@ -188,14 +193,25 @@ Expr Parser::parseRowExpression(string input)
 
     ComparisionExpr Parser::generateComparisionExpr(string exprStr, int startIdx, int endIdx)
     {
-        string cmprStr = exprStr.substr(startIdx, endIdx);
+        std::cout << "exprStr:::"<< exprStr << ":::(" << startIdx << ", " << endIdx<<")"  << std::endl;
+        int numbOfChars = endIdx - startIdx;
+        string cmprStr = exprStr.substr(1);
+        std::cout << "cmprStr:::"<< cmprStr  << std::endl;
         int position = cmprStr.find_first_of(",");
+
         string fieldIdx = cmprStr.substr(0, position);
-        string fieldData = cmprStr.substr(position);
+        string fieldData = cmprStr.substr(position + 1);
         ComparisionExpr expr;
         expr.op = ComparisionOperator::EQ;
         expr.columnIdx = stoi(fieldIdx);
-        expr.columnData = stoi(fieldData);
+        std::cout << "columnIdx:::"<< expr.columnIdx  << std::endl;
+        const auto strBegin = fieldData.find_first_not_of(" ");
+
+        const auto strEnd = fieldData.find_last_not_of(" ");
+        const auto strRange = strEnd - strBegin + 1;
+        string fdata = fieldData.substr(strBegin, strRange);
+        std::cout << "fieldData:::"<< fdata  << std::endl;
+        expr.columnData = stoi(fdata);
         return expr;
     }
 int main()
