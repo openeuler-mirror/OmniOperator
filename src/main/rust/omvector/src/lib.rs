@@ -178,6 +178,105 @@ pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
 }
 
 #[no_mangle]
+pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecuteV1(
+    env: JNIEnv,
+    this_obj: jobject,
+    j_filter_ptr: jlong,
+    j_input_data: jlongArray,
+    j_input_types: jlong,
+    j_input_vec_count: jint,
+    j_input_row_number: jint,
+    j_project_vec_address: jlongArray,
+    j_project_idx: jintArray,
+    j_project_vec_count: jint
+) -> i32 {
+    unsafe {
+        let filter_module = j_filter_ptr as *mut JitFunction<'static, FilterFuncType>;
+        let filter_module = &mut *filter_module;
+
+        let row_number = j_input_row_number as usize;
+        let column_number = j_input_vec_count as usize;
+
+        let input_types = Vec::from_raw_parts((j_input_types) as *mut i32, column_number, column_number);
+        let mut selected_rows = vec![-1i32; row_number];
+
+        let mut vec_addrs = vec![0i64; column_number];
+        env.get_long_array_region(j_input_data, 0, vec_addrs.as_mut());
+
+        let mut columns: Vec<Box<dyn Any>> = Vec::new();
+        for (i, mut addr) in vec_addrs.iter().enumerate() {
+            let vec_type = input_types[i];
+            // println!("input type: {}", vec_type);
+            match vec_type {
+                1 => {
+                    // i32
+                    let vec = Vec::from_raw_parts(*addr as *mut i32, row_number, row_number);
+                    // println!("c1: {}", &vec[0]);
+                    let column = ColumnBuilder::ColumnI32("c1", ManuallyDrop::new(vec));
+                    columns.push(Box::new(column));
+                }
+                2 => {
+                    // i64
+                    let vec = Vec::from_raw_parts(*addr as *mut i64, row_number, row_number);
+                    // println!("c2: {}", &vec[0]);
+                    let column = ColumnBuilder::ColumnI64("c1", ManuallyDrop::new(vec));
+                    columns.push(Box::new(column));
+                }
+                3 => {
+                    // f64
+                    let vec = Vec::from_raw_parts(*addr as *mut f64, row_number, row_number);
+                    // println!("c3: {}", &vec[0]);
+                    let column = ColumnBuilder::ColumnF64("c1", ManuallyDrop::new(vec));
+                    columns.push(Box::new(column));
+                }
+                _ => {
+                    panic!("Unsupported input type");
+                }
+            }
+        }
+        let table = Table::new("test_table", columns);
+        let table_ptr = table.into_ffi_args();
+
+        let mut index = 0;
+        for row_index in 0..row_number {
+            if filter_module.call(table_ptr.as_ptr() as *const c_void, row_index) {
+                selected_rows[index] = row_index as i32;
+                index += 1;
+            }
+        }
+
+        // handle project
+        let mut output_position = 0;
+        let mut project_vec_count = j_project_vec_count as usize;
+        let mut project_vec_addrs = vec![0i64; project_vec_count];
+        env.get_long_array_region(j_project_vec_address, 0, project_vec_addrs.as_mut());
+        let mut project_idx = vec![-1i32;project_vec_count];
+        env.get_int_array_region(j_project_idx, 0, project_idx.as_mut());
+        if index < row_number {
+            for project_index in 0..project_idx.len() {
+                // todo:handle different data type
+                let mut input_vector = Vec::from_raw_parts(vec_addrs[project_idx[project_index as usize] as usize] as *mut i64, row_number, row_number);
+                let mut copy_vector = Vec::from_raw_parts(project_vec_addrs[project_index] as *mut i64, index, index);
+                for selected_index in 0..index {
+                        let element = selected_rows[selected_index] as usize;
+                    copy_vector[selected_index] = input_vector[element];
+                }
+                mem::forget(input_vector);
+                mem::forget(copy_vector);
+            }
+        }
+
+        //forget omni vector,not release by rust lifetime manager
+        //mem::forget(selected_rows);
+        mem::forget(project_vec_addrs);
+        mem::forget(input_types);
+        mem::forget(vec_addrs);
+
+        index as i32
+    }
+}
+
+#[no_mangle]
 pub extern "system" fn Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinished(env: JNIEnv,
                                                                                   this_obj: jobject,
                                                                                   j_filter_ptr: jlong) {

@@ -204,4 +204,9 @@ public abstract class Vec
     {
         return this.omniChunk.release();
     }
+
+    //For OmniFilter result selected row size
+    public void setSize(int size){
+        this.size = size;
+    }
 }

@@ -14,7 +14,11 @@
 package nova.hetu.omnicache.runtime;
 
 import nova.hetu.omnicache.vector.IntVec;
+import nova.hetu.omnicache.vector.LongVec;
 import nova.hetu.omnicache.vector.Vec;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class OmniFilter
 {
@@ -49,6 +53,35 @@ public class OmniFilter
         selectedPosition.close();
 
         return positions;
+    }
+
+    public OMFilterResult executeV1(FilterContext filterContext, Vec[] inputs, int rowCount, int[] projectIdx)
+    {
+        LongVec[] projects = new LongVec[projectIdx.length];
+        for (int i = 0; i < projectIdx.length; i++) {
+            projects[i] = new LongVec(rowCount);
+        }
+        long[] inputRawAddressArr = transformVecToAddresses(inputs);
+        long[] projectAddressArr = transformVecToAddresses(projects);
+
+        int selectedCount = jniWrapper.filterExecuteV1(filterContext.getFilterId(), inputRawAddressArr, filterContext.getInputVecTypes().getAddress(), inputs.length, rowCount, projectAddressArr, projectIdx, projectIdx.length);
+
+        if (selectedCount == rowCount) {
+            for (int i = 0; i < projects.length; i++) {
+                projects[i].close();
+            }
+            List<Vec> result = new ArrayList<>();
+            for (int i = 0; i < projectIdx.length; i++) {
+                result.add(inputs[projectIdx[i]]);
+            }
+            return new OMFilterResult(result.toArray(new Vec[0]), rowCount, true);
+        }
+        else {
+            for (int i = 0; i < projects.length; i++) {
+                projects[i].setSize(selectedCount);
+            }
+            return new OMFilterResult(projects, selectedCount, false);
+        }
     }
 
     public void finished(FilterContext filterContext)
