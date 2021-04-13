@@ -60,6 +60,7 @@ public:
     void postloop(Table* table) override;
     void process(Table*, uint32_t) override;
     void constructColumn(Table* table, uint32_t type, int32_t columnIdx, uint32_t outputColType);
+    void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize);
     Table* getResult() override;
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();

@@ -183,21 +183,24 @@ void HashGroupBy::inloop(char** head,
             {
                 case 1: {
                     int32_t* rowVal = reinterpret_cast<int32_t*>(head[idx]) + combinedHash.offset;
-                    int32_t* copyVal = new int32_t;
+                    // int32_t* copyVal = new int32_t;
+                    int32_t* copyVal = (int32_t*)omni_allocate(sizeof(int32_t));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
                 case 2: {
                     int64_t* rowVal = reinterpret_cast<int64_t*>(head[idx]) + combinedHash.offset;
-                    int64_t* copyVal = new int64_t;
+                    // int64_t* copyVal = new int64_t;
+                    int64_t* copyVal = (int64_t*)omni_allocate(sizeof(int64_t));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
                 case 3: {
                     double* rowVal = reinterpret_cast<double*>(head[idx]) + combinedHash.offset;
-                    double* copyVal = new double;
+                    // double* copyVal = new double;
+                    double* copyVal = (double*)omni_allocate(sizeof(double));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
@@ -270,23 +273,113 @@ extern "C" void JIT_hashGroupByExecute(HashGroupBy* op, Table* table)
     ms d = std::chrono::duration_cast<ms>(g_total_execute_time);
 }
 
-Table* HashGroupBy::getResult() 
+void HashGroupBy::constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize)
 {
-    uint32_t colSize = groupByCols.size() + aggCols.size();
-    Table* result = new Table(groupedRows.size(), colSize);
-    uint32_t groupByColCnt = 0;
-    uint32_t aggColCnt = 0;
-    for (int32_t i = 0; i < colSize; ++i) {
-        if (this->inputColTypes[i] == 0) {
-            constructColumn(result, groupByCols[groupByColCnt].type, groupByColCnt, 0);
-            groupByColCnt++;
-        }else if(this->inputColTypes[i] == 1) {
-            constructColumn(result, aggCols[aggColCnt].type, aggColCnt, 1);
-            aggColCnt++;
-        }else {
-            DebugPrint("Error column type %d", this->inputColTypes[i]);
+    for (int32_t i = 0; i < groupByColSize; ++i) {
+        uint32_t rowCount = this->groupedRows.size();
+        switch (types[i])
+        {
+            case 1: {
+                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowCount * sizeof(int32_t)));
+                int32_t rIdx = 0;
+                for (auto& row : this->groupedRows) {
+                    c[rIdx++] = *TypeUtil<int32_t>::cast(row.second[i].val);
+                }
+                table->setColumn(new Column(c, INT32, rowCount), INT32);
+                break;
+            }
+            case 2: {
+                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowCount * sizeof(int64_t)));
+                int32_t rIdx = 0;
+                for (auto& row : this->groupedRows) {
+                    c[rIdx++] = *TypeUtil<int64_t>::cast(row.second[i].val);
+                }
+                table->setColumn(new Column(c, INT64, rowCount), INT64);
+                break;
+            }
+            case 3: {
+                double* c = reinterpret_cast<double*>(omni_allocate(rowCount * sizeof(double)));
+                int32_t rIdx = 0;
+                for (auto& row : this->groupedRows) {
+                    c[rIdx++] = *TypeUtil<double>::cast(row.second[i].val);
+                }
+                table->setColumn(new Column(c, DOUBLE, rowCount), DOUBLE);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+            
+    
+    for (int32_t i = 0; i < aggColSize; ++i){
+        std::unordered_map<uint64_t, std::vector<GroupByColumn>> rows = this->aggregators[i]->getState();
+        uint32_t rowCount = this->aggregators[i]->getState().size();
+        switch (types[groupByColSize + i])
+        {
+            case 1: {
+                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowCount * sizeof(int32_t)));
+                int32_t rIdx = 0;
+                for (auto& row : rows) {
+                    c[rIdx++] = *TypeUtil<int32_t>::cast(row.second[0].val);
+                }
+                table->setColumn(new Column(c, INT32, rowCount), INT32);
+                break;
+            }
+            case 2: {
+                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowCount * sizeof(int64_t)));
+                int32_t rIdx = 0;
+                for (auto& row : rows) {
+                    c[rIdx++] = *TypeUtil<int64_t>::cast(row.second[0].val);
+                }
+                table->setColumn(new Column(c, INT64, rowCount), INT64);
+                break;
+            }
+            case 3: {
+                double* c = reinterpret_cast<double*>(omni_allocate(rowCount * sizeof(double)));
+                int32_t rIdx = 0;
+                for (auto& row : rows) {
+                    c[rIdx++] = *TypeUtil<double>::cast(row.second[0].val);
+                }
+                table->setColumn(new Column(c, DOUBLE, rowCount), DOUBLE);
+                break;
+            }
+            default:
+                break;
         }
     }    
+}
+
+Table* HashGroupBy::getResult() 
+{
+    uint32_t gbSize = groupByCols.size();
+    uint32_t aggSize =  + aggCols.size();
+    uint32_t colSize = gbSize + aggSize;
+    // Table* result = new Table(groupedRows.size(), colSize);
+    // uint32_t groupByColCnt = 0;
+    // uint32_t aggColCnt = 0;
+    // for (int32_t i = 0; i < colSize; ++i) {
+    //     if (this->inputColTypes[i] == 0) {
+    //         constructColumn(result, groupByCols[groupByColCnt].type, groupByColCnt, 0);
+    //         groupByColCnt++;
+    //     }else if(this->inputColTypes[i] == 1) {
+    //         constructColumn(result, aggCols[aggColCnt].type, aggColCnt, 1);
+    //         aggColCnt++;
+    //     }else {
+    //         DebugPrint("Error column type %d", this->inputColTypes[i]);
+    //     }
+    // }
+    int32_t* types = (int32_t*)omni_allocate(colSize * sizeof(uint32_t));    
+    int32_t idx = 0;
+    for (auto& i : groupByCols) {
+        types[idx++] = i.type;
+    }
+    for (auto& i : aggCols) {
+        types[idx++] = i.type;
+    }
+    Table* result = new Table(groupedRows.size(), colSize);
+    constructColumn(result, types, gbSize, aggSize);
+    omni_release((uint64_t)types);
 #ifdef DEBUG_LEVEL_LOW
     std::stringstream os;
     os << std::this_thread::get_id();
