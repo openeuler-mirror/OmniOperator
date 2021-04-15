@@ -68,8 +68,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIn
  * Method:    executeAggFinal
  * Signature: (J)Lnova/hetu/omnicache/runtime/OMResult;
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
-  (JNIEnv *, jobject, jlong);
+// JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
+//   (JNIEnv *, jobject, jlong);
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
+  (JNIEnv* env, jobject jObj, jlong jOperatorId);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper

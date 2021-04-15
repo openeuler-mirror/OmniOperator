@@ -18,6 +18,7 @@
 #include <thread>
 
 jobject transformTableToResult(JNIEnv *env, Table *outputTable);
+jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result);
 OpTemplateCache<uint32_t *> g_typeCache;
 
 #define CLOCKS_PER_MILLISECOND 1000
@@ -219,7 +220,7 @@ jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
     return opAddr;
   }
 
-JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
   (JNIEnv* env, jobject jObj, jlong jOperatorId)
 {
 #ifdef DEBUG_LEVEL_LOW
@@ -227,14 +228,18 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAgg
 #endif
 	int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
     // execute agg final
-    Table* outputTable = executeAggFinal(opId);
-    jobject omResultObj = transformTableToResult(env, outputTable);    
+    // Table* outputTable = executeAggFinal(opId);
+    std::vector<Table*> result;
+    int32_t pageCount = executeAggFinal(opId, result);
+
+    // jobject omResultObj = transformTableToResult(env, outputTable);    
     // release memory
     // g_typeCache.remove(opId);
 #ifdef DEBUG_LEVEL_LOW
 	DebugFuncExit;
 #endif
-    return omResultObj;
+    // return omResultObj;
+    return tranform(env, result);
 }
 
 /*
@@ -346,6 +351,20 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortGetOut
     delete outputTable;
     return output;
 }
+
+jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result)
+{
+  jobjectArray res = env->NewObjectArray(result.size(), omResultCls, NULL);
+  int32_t idx = 0;
+  for (auto table : result) {
+    table->printTable();
+    std::cout << "===========================================" << std::endl;
+    jobject obj = transformTableToResult(env, table);
+    env->SetObjectArrayElement(res, idx++, obj);
+  }
+  return res;
+}
+
 
 jobject transformTableToResult(JNIEnv *env, Table *outputTable)
 {

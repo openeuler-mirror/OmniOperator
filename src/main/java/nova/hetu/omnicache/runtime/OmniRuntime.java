@@ -148,8 +148,8 @@ public class OmniRuntime
     private Vec[] generateOMVec(OMResult result, VecType[] outputTypes)
     {
         Vec[] output = new Vec[outputTypes.length];
-        int length = result.getLength();
         for (int idx = 0; idx < outputTypes.length; idx++) {
+            int length = result.getLength();
             ByteBuffer vecData = result.getBuffers()[idx];
             //TODO: Need Byte Order Configurable
             vecData.order(ByteOrder.LITTLE_ENDIAN);
@@ -165,6 +165,33 @@ public class OmniRuntime
                     break;
                 default:
                     throw new IllegalArgumentException(format("Not Support Vec Type %s", outputTypes[idx]));
+            }
+        }
+        return output;
+    }
+
+    private Vec[][] generateOMVec(OMResult[] result, VecType[] outputTypes)
+    {
+        Vec[][] output = new Vec[result.length][outputTypes.length];
+        int length = result[0].getLength();
+        for (int i = 0; i < result.length; ++i) {
+            for (int idx = 0; idx < outputTypes.length; idx++) {
+                ByteBuffer vecData = result[i].getBuffers()[idx];
+                //TODO: Need Byte Order Configurable
+                vecData.order(ByteOrder.LITTLE_ENDIAN);
+                switch (outputTypes[idx]) {
+                    case INT:
+                        output[i][idx] = new IntVec(vecData, length);
+                        break;
+                    case LONG:
+                        output[i][idx] = new LongVec(vecData, length);
+                        break;
+                    case DOUBLE:
+                        output[i][idx] = new DoubleVec(vecData, length);
+                        break;
+                    default:
+                        throw new IllegalArgumentException(format("Not Support Vec Type %s", outputTypes[idx]));
+                }
             }
         }
         return output;
@@ -318,11 +345,14 @@ public class OmniRuntime
         }
     }
 
-    public Vec[] executeAggFinal(long operatorId, VecType[] outputTypes)
+    public Vec[][] executeAggFinal(long operatorId, VecType[] outputTypes)
     {
-        OMResult result = jniWrapper.executeAggFinal(operatorId);
-        if (result.getBuffers().length != outputTypes.length) {
-            throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", result.getBuffers().length, outputTypes.length, result.getLength()));
+        OMResult[] result = jniWrapper.executeAggFinal(operatorId);
+        System.out.println("Native result OMResult number: " + result.length);
+        for (int i = 0; i < result.length; ++i) {
+            if (result[i].getBuffers().length != outputTypes.length) {
+                throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", result[i].getBuffers().length, outputTypes.length, result[i].getLength()));
+            }
         }
 
         return generateOMVec(result, outputTypes);

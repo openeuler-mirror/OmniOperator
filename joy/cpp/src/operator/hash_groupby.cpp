@@ -5,6 +5,7 @@
 #include "../memory_pool/memory_pool.h"
 #include <mutex>
 #include <thread>
+#include <math.h>
 
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
 #include <sstream>
@@ -273,87 +274,117 @@ extern "C" void JIT_hashGroupByExecute(HashGroupBy* op, Table* table)
     ms d = std::chrono::duration_cast<ms>(g_total_execute_time);
 }
 
-void HashGroupBy::constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize)
+void HashGroupBy::constructColumn(Table* table, 
+                                    int32_t* types, 
+                                    uint32_t groupByColSize, 
+                                    uint32_t aggColSize, 
+                                    int32_t tableRowSize, 
+                                    HashGroupByIterator& iterator)
 {
+#ifdef DEBUG_LEVEL_HIGH
+    DebugFuncEntry;
+#endif
+    // allocate all column memory first
     for (int32_t i = 0; i < groupByColSize; ++i) {
-        uint32_t rowCount = this->groupedRows.size();
         switch (types[i])
         {
             case 1: {
-                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowCount * sizeof(int32_t)));
-                int32_t rIdx = 0;
-                for (auto& row : this->groupedRows) {
-                    c[rIdx++] = *TypeUtil<int32_t>::cast(row.second[i].val);
-                }
-                table->setColumn(new Column(c, INT32, rowCount), INT32);
+                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(tableRowSize * sizeof(int32_t)));
+                table->setColumn(new Column(c, INT32, tableRowSize), INT32);
                 break;
             }
-            case 2: {
-                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowCount * sizeof(int64_t)));
-                int32_t rIdx = 0;
-                for (auto& row : this->groupedRows) {
-                    c[rIdx++] = *TypeUtil<int64_t>::cast(row.second[i].val);
-                }
-                table->setColumn(new Column(c, INT64, rowCount), INT64);
+           case 2: {
+                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(tableRowSize * sizeof(int64_t)));
+                table->setColumn(new Column(c, INT64, tableRowSize), INT64);
                 break;
             }
             case 3: {
-                double* c = reinterpret_cast<double*>(omni_allocate(rowCount * sizeof(double)));
-                int32_t rIdx = 0;
-                for (auto& row : this->groupedRows) {
-                    c[rIdx++] = *TypeUtil<double>::cast(row.second[i].val);
-                }
-                table->setColumn(new Column(c, DOUBLE, rowCount), DOUBLE);
+                double* c = reinterpret_cast<double*>(omni_allocate(tableRowSize * sizeof(double)));
+                table->setColumn(new Column(c, DOUBLE, tableRowSize), DOUBLE);
                 break;
             }
-            default:
                 break;
         }
     }
-            
+    // set value row by row
+    int32_t rIdx = 0;
+    for (; rIdx < tableRowSize && iterator.groupIterator != groupedRows.end();) {
+        for (int32_t i = 0; i < groupByColSize; ++i) {
+            auto column = table->getColumn(i);
+            switch (column->getType())
+            {
+                case 1: {
+                    int32_t* c = (int32_t*)column->getData();
+                    c[rIdx] = *(int32_t*)(iterator.groupIterator->second[i].val);
+                     /* code */
+                    break;
+                }
+                case 2: {
+                    int64_t* c = (int64_t*)column->getData();
+                    c[rIdx] = *(int64_t*)(iterator.groupIterator->second[i].val);
+                     /* code */
+                    break;
+                }
+                case 3: {
+                    double* c = (double*)column->getData();
+                    c[rIdx] = *(double*)(iterator.groupIterator->second[i].val);
+                     /* code */
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        rIdx++;
+        iterator.groupIterator++;
+    }
     
     for (int32_t i = 0; i < aggColSize; ++i){
-        std::unordered_map<uint64_t, std::vector<GroupByColumn>> rows = this->aggregators[i]->getState();
-        uint32_t rowCount = this->aggregators[i]->getState().size();
         switch (types[groupByColSize + i])
         {
             case 1: {
-                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowCount * sizeof(int32_t)));
+                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(tableRowSize * sizeof(int32_t)));
                 int32_t rIdx = 0;
-                for (auto& row : rows) {
-                    c[rIdx++] = *TypeUtil<int32_t>::cast(row.second[0].val);
+                for (; rIdx < tableRowSize && iterator.aggIterators[i] != aggregators[i]->getState().end(); ) {
+                    c[rIdx++] = *TypeUtil<int32_t>::cast(iterator.aggIterators[i]->second[0].val);
+                    iterator.aggIterators[i]++;
                 }
-                table->setColumn(new Column(c, INT32, rowCount), INT32);
+                table->setColumn(new Column(c, INT32, tableRowSize), INT32);
                 break;
             }
             case 2: {
-                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowCount * sizeof(int64_t)));
+                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(tableRowSize * sizeof(int64_t)));
                 int32_t rIdx = 0;
-                for (auto& row : rows) {
-                    c[rIdx++] = *TypeUtil<int64_t>::cast(row.second[0].val);
+                for (; rIdx < tableRowSize && iterator.aggIterators[i] != aggregators[i]->getState().end(); ) {
+                    c[rIdx++] = *TypeUtil<int64_t>::cast(iterator.aggIterators[i]->second[0].val);
+                    iterator.aggIterators[i]++;
                 }
-                table->setColumn(new Column(c, INT64, rowCount), INT64);
+                table->setColumn(new Column(c, INT64, tableRowSize), INT64);
                 break;
             }
             case 3: {
-                double* c = reinterpret_cast<double*>(omni_allocate(rowCount * sizeof(double)));
+                double* c = reinterpret_cast<double*>(omni_allocate(tableRowSize * sizeof(double)));
                 int32_t rIdx = 0;
-                for (auto& row : rows) {
-                    c[rIdx++] = *TypeUtil<double>::cast(row.second[0].val);
+                for (; rIdx < tableRowSize && iterator.aggIterators[i] != aggregators[i]->getState().end(); ) {
+                    c[rIdx++] = *TypeUtil<double>::cast(iterator.aggIterators[i]->second[0].val);
+                    iterator.aggIterators[i]++;
                 }
-                table->setColumn(new Column(c, DOUBLE, rowCount), DOUBLE);
+                table->setColumn(new Column(c, DOUBLE, tableRowSize), DOUBLE);
                 break;
             }
             default:
                 break;
         }
-    }    
+    }   
+#ifdef DEBUG_LEVEL_HIGH
+    DebugFuncExit;
+#endif 
 }
 
-Table* HashGroupBy::getResult() 
+int32_t HashGroupBy::getResult(std::vector<Table*>& result) 
 {
     uint32_t gbSize = groupByCols.size();
-    uint32_t aggSize =  + aggCols.size();
+    uint32_t aggSize = aggCols.size();
     uint32_t colSize = gbSize + aggSize;
     // Table* result = new Table(groupedRows.size(), colSize);
     // uint32_t groupByColCnt = 0;
@@ -371,21 +402,86 @@ Table* HashGroupBy::getResult()
     // }
     int32_t* types = (int32_t*)omni_allocate(colSize * sizeof(uint32_t));    
     int32_t idx = 0;
+    int32_t rowSize = 0;
+
     for (auto& i : groupByCols) {
         types[idx++] = i.type;
+        
+        switch (i.type)
+        {
+            case INT32: {
+                rowSize += sizeof(int32_t);
+                /* code */
+                break;
+            }
+            case INT64: {
+                rowSize += sizeof(int64_t);
+                /* code */
+                break;
+            }
+            case DOUBLE: {
+                rowSize += sizeof(double);
+                /* code */
+                break;
+            }
+            default:
+                break;
+        }
     }
     for (auto& i : aggCols) {
         types[idx++] = i.type;
+
+        switch (i.type)
+        {
+            case INT32: {
+                rowSize += sizeof(int32_t);
+                /* code */
+                break;
+            }
+            case INT64: {
+                rowSize += sizeof(int64_t);
+                /* code */
+                break;
+            }
+            case DOUBLE: {
+                rowSize += sizeof(double);
+                /* code */
+                break;
+            }
+            default:
+                break;
+        }
     }
-    Table* result = new Table(groupedRows.size(), colSize);
-    constructColumn(result, types, gbSize, aggSize);
+    int32_t maxRowNum = MAX_TABLE_SIZE_IN_BYTES / rowSize;
+    int32_t pageCount = std::ceil((double)this->groupedRows.size() / (double)maxRowNum);
+    int32_t currentPosition = 0;
+    // Table** finalResult = new Table*[pageCount];
+    Iterator iterator;
+    iterator.groupIterator = groupedRows.begin();
+    for (auto& agg : aggregators)
+    {
+        iterator.aggIterators.push_back(agg->getState().begin());
+    } 
+    // std::cout << "group iter col size : " << iterator.groupIterator->second.size() << std::endl;
+    // std::cout << "agg iter col size : " << iterator.aggIterators[0]->second.size() << std::endl;
+    // std::cout << "group iter row size : " << groupedRows.size() << std::endl;
+    // std::cout << "agg iter row size : " << aggregators[0]->getState().size() << std::endl;
+    // std::cout << "pageCount : " << pageCount << std::endl;
+    // std::cout << "maxRowNum : " << maxRowNum << std::endl;
+    for (int32_t i = 0; i < pageCount; ++i) {
+        int32_t tableSize = std::min(maxRowNum, (int32_t)(this->groupedRows.size() - currentPosition));
+        Table* table = new Table(tableSize, colSize);
+        constructColumn(table, types, gbSize, aggSize, tableSize, iterator);
+        result.push_back(table);
+        currentPosition += maxRowNum;
+    }
     omni_release((uint64_t)types);
 #ifdef DEBUG_LEVEL_LOW
     std::stringstream os;
     os << std::this_thread::get_id();
     DebugPrint("Thread %s: end of getResult.", os.str().c_str());
 #endif
-    return result;
+    return pageCount;
 }
 
 void HashGroupBy::constructColumn(Table* table,
@@ -473,7 +569,7 @@ HashGroupBy* createHashGroupBy(std::vector<ColumnIndex>& groupByIndex,
     DebugFuncEntry;
 #endif
 #ifdef DEBUG_LEVEL_HIGH
-        DebugPrint("Creating groupby id: %ld", 1L);
+    DebugPrint("Creating groupby id: %ld", 1L);
 #endif
     HashGroupBy* groupBy = new HashGroupBy(groupByIndex, aggIndex, aggs);
     return groupBy;

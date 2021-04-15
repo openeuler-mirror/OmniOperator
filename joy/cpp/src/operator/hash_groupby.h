@@ -10,6 +10,14 @@
 #include <stdint.h>
 #include <thread>
 
+const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
+
+typedef struct Iterator
+{
+    std::unordered_map<uint64_t, std::vector<GroupByColumn>>::iterator groupIterator;
+    std::vector<std::unordered_map<uint64_t, std::vector<GroupByColumn>>::iterator> aggIterators;
+} HashGroupByIterator;
+
 class HashGroupBy : public OpTemplate {
 public:
     HashGroupBy(std::vector<ColumnIndex> groupByCols, std::vector<ColumnIndex> aggCols, std::vector<Aggregator*> aggregators)
@@ -60,8 +68,10 @@ public:
     void postloop(Table* table) override;
     void process(Table*, uint32_t) override;
     void constructColumn(Table* table, uint32_t type, int32_t columnIdx, uint32_t outputColType);
-    void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize);
-    Table* getResult() override;
+    void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize, int32_t tableRowSize, HashGroupByIterator& iterator);
+    // Table* getResult() override;
+    int32_t getResult(std::vector<Table*>&);
+    Table* getResult() {} 
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();
 private:

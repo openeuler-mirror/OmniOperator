@@ -40,7 +40,9 @@ public class JniWrapper
 
     public native long executeAggIntermediate(long operatorId, long dataAddress, long totalColumn, int columnCount, long rowAddress, int rowNum, long inputTypeAdress);
 
-    public native OMResult executeAggFinal(long operatorId);
+//    public native OMResult executeAggFinal(long operatorId);
+
+    public native OMResult[] executeAggFinal(long operatorId);
 
     public native long sortPrepare(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
 

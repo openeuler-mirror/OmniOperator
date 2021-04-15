@@ -52,4 +52,5 @@ uint64_t executeHashGroupByLlvm(int64_t operatorAddr,
                                 uint32_t rowNum);
 
 Table* executeAggFinal(int64_t opAddr);
+int32_t executeAggFinal(int64_t opAddr, std::vector<Table*>& result); 
 #endif

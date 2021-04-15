@@ -48,6 +48,10 @@ JitContext* optimizeByLlvm( PrepareContext groupByCols,
     testParam["processAgg@2"] =  &p_agg_types;
     testParam["processAgg@3"] =  &p_agg_num;
     testParam["processAgg@4"] =  &p_col_type;
+
+    testParam["_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator@2"] = &p_col_type;
+    testParam["_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
+    testParam["_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
     Hammer hammer2("/opt/lib/ir/hash_groupby.ll", testParam);
@@ -80,9 +84,13 @@ uint64_t prepareHashGroupBy(PrepareContext groupByCols,
                         PrepareContext retTypes) 
 {
 #if DEBUG_LEVEL_LOW
-        std::stringstream os;
-        os << std::this_thread::get_id();
-        DebugPrint("Thread %s is creating module...", os.str().c_str());
+    std::stringstream os;
+    os << std::this_thread::get_id();
+    DebugPrint("Thread %s is creating module...", os.str().c_str());
+    typedef std::chrono::high_resolution_clock Time;
+    typedef std::chrono::milliseconds ms;
+    typedef std::chrono::duration<float> fsec;
+    auto start_time = Time::now();
 #endif
     JitContext* jitContext = optimizeByLlvm(groupByCols, groupByTypes, aggCols, aggTypes, aggFuncTypes);
 #if DEBUG_LEVEL_LOW
@@ -102,11 +110,13 @@ uint64_t createOperator(int64_t moduleAddr,
                         PrepareContext aggFuncTypes,
                         PrepareContext retTypes)
 {
-    #if DEBUG_LEVEL_LOW
+#if DEBUG_LEVEL_LOW
+    std::stringstream os;
+    os << std::this_thread::get_id();
+    DebugPrint("Thread %s is creating operator...", os.str().c_str());
     typedef std::chrono::high_resolution_clock Time;
     typedef std::chrono::milliseconds ms;
     typedef std::chrono::duration<float> fsec;
-
     auto start_time = Time::now();
 #endif
 
@@ -148,13 +158,20 @@ uint64_t createOperator(int64_t moduleAddr,
 
     JitContext* context = reinterpret_cast<JitContext*>(moduleAddr);
     HashGroupBy* groupby = context->func(groupByIndex, aggIndex, aggs);
+#if DEBUG_LEVEL_LOW
+    auto end_time = Time::now();
+    fsec fs = start_time - end_time;
+    ms d = std::chrono::duration_cast<ms>(fs);
+    DebugPrint("Creating operator stage elapsed time: %s ms", std::to_string(d.count()).c_str());
+#endif
     return reinterpret_cast<uint64_t>(groupby);
 }
 
 // temporarily use uint64_t as key. change back to string once llvm optimization supported.
 uint64_t executeHashGroupByLlvm(int64_t operatorAddr, uint32_t* colTypes, uint32_t typeCount, void** t, uint32_t columnCount, uint32_t rowNum)
 {
-#ifdef DEBUG_LEVEL_HIGH 
+#ifdef DEBUG_LEVEL_HIGH
+    DebugFuncEntry;
     typedef std::chrono::high_resolution_clock Time;
     typedef std::chrono::milliseconds ms;
     typedef std::chrono::duration<float> fsec;
@@ -184,7 +201,7 @@ uint64_t executeHashGroupByLlvm(int64_t operatorAddr, uint32_t* colTypes, uint32
 }
 
 
-Table* executeAggFinal(int64_t opAddr) 
+int32_t executeAggFinal(int64_t opAddr, std::vector<Table*>& result) 
 {
 #ifdef DEBUG_LEVEL_LOW
     DebugFuncEntry;
@@ -193,10 +210,12 @@ Table* executeAggFinal(int64_t opAddr)
     if (groupBy == nullptr) {
         DebugError("No operator %ld exists.", 0x11111);
     }
-    Table* result = groupBy->getResult();
+    std::vector<Table*> finalResult;
+    int32_t tableCount = groupBy->getResult(finalResult);
+    result = finalResult;
     delete groupBy;
 #ifdef DEBUG_LEVEL_LOW
     DebugFuncExit;
 #endif
-    return result;
+    return tableCount;
 }

@@ -213,12 +213,14 @@ public class OmniRuntimeTest
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
 
-        Vec[] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
-        Assert.assertEquals(result.length, 2);
-        Assert.assertEquals(((LongVec)result[0]).get(0), 0);
-        Assert.assertEquals(((LongVec)result[1]).get(0), rowNum);
+        Vec[][] result  = omniRuntime.executeAggFinal(operatorId, aggOutputTypes);
+        Assert.assertEquals(result[0].length, 2);
+        Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[1][0]).get(0), rowNum);
         // release result memory
-        releaseVecMemory(result);
+        for (int i = 0; i < result.length; ++i) {
+            releaseVecMemory(result[i]);
+        }
     }
 
     @Test
@@ -238,7 +240,7 @@ public class OmniRuntimeTest
                 aggTypes,
                 aggFunctionTypes,
                 aggOutputTypes);
-        int rowNum = 100;
+        int rowNum = 40000;
         int pageCount = 10;
 
         List<Vec> inputData = new ArrayList<>();
@@ -259,15 +261,17 @@ public class OmniRuntimeTest
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
 
-        Vec[] results = omniRuntime.executeAggFinal(opId, aggOutputTypes);
-        Assert.assertEquals(results.length, 4);
-        Assert.assertEquals(((LongVec)results[0]).get(0), 0);
-        Assert.assertEquals(((LongVec)results[1]).get(0), 0);
-        Assert.assertEquals(((LongVec)results[2]).get(0), rowNum * pageCount);
-        Assert.assertEquals(((LongVec)results[3]).get(0), rowNum * pageCount);
+        Vec[][] result  = omniRuntime.executeAggFinal(opId, aggOutputTypes);
+        Assert.assertEquals(result[0].length, 4);
+        Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[0][1]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[0][2]).get(0), rowNum * pageCount);
+        Assert.assertEquals(((LongVec)result[0][3]).get(0), rowNum * pageCount);
 
         // release result memory
-        releaseVecMemory(results);
+        for (int i = 0; i < result.length; ++i) {
+            releaseVecMemory(result[i]);
+        }
     }
 
     private void releaseVecMemory(Vec[] vecs) {
@@ -327,15 +331,17 @@ public class OmniRuntimeTest
                     // release input data memory
                     releaseVecMemory(inputData.toArray(new Vec[0]));
 
-                    Vec[] result  = omniRuntime.executeAggFinal(opId, aggOutputTypes);
-                    Assert.assertEquals(result.length, 4);
-                    Assert.assertEquals(((LongVec)result[0]).get(0), 0);
-                    Assert.assertEquals(((LongVec)result[1]).get(0), 0);
-                    Assert.assertEquals(((LongVec)result[2]).get(0), rowNum * pageCount);
-                    Assert.assertEquals(((LongVec)result[3]).get(0), rowNum * pageCount);
+                    Vec[][] result  = omniRuntime.executeAggFinal(opId, aggOutputTypes);
+                    Assert.assertEquals(result[0].length, 2);
+                    Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
+                    Assert.assertEquals(((LongVec)result[1][0]).get(0), rowNum);
+                    Assert.assertEquals(((LongVec)result[2][2]).get(0), rowNum * pageCount);
+                    Assert.assertEquals(((LongVec)result[3][3]).get(0), rowNum * pageCount);
 
                     // release result memory
-                    releaseVecMemory(result);
+                    for (int i = 0; i < result.length; ++i) {
+                        releaseVecMemory(result[i]);
+                    }
                 }
                 finally {
                     downLatch.countDown();
@@ -358,11 +364,9 @@ public class OmniRuntimeTest
         LongVec c1 = new LongVec(rowNum);
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
-            c1.set(i, 0);
-            c2.set(i, 0);
+            c1.set(i, i);
+            c2.set(i, i);
         }
-        columns.add(c1);
-        columns.add(c2);
 
         LongVec c3 = new LongVec(rowNum);
         LongVec c4 = new LongVec(rowNum);
@@ -370,6 +374,9 @@ public class OmniRuntimeTest
             c3.set(i, 1);
             c4.set(i, 1);
         }
+
+        columns.add(c1);
+        columns.add(c2);
         columns.add(c3);
         columns.add(c4);
 
