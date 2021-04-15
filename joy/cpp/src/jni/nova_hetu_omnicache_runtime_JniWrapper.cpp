@@ -357,8 +357,6 @@ jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result)
   jobjectArray res = env->NewObjectArray(result.size(), omResultCls, NULL);
   int32_t idx = 0;
   for (auto table : result) {
-    table->printTable();
-    std::cout << "===========================================" << std::endl;
     jobject obj = transformTableToResult(env, table);
     env->SetObjectArrayElement(res, idx++, obj);
   }
