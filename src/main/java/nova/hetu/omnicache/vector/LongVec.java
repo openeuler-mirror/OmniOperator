@@ -18,6 +18,7 @@ import nova.hetu.omnicache.utils.OmniErrorType;
 import nova.hetu.omnicache.utils.OmniRuntimeException;
 
 import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
 
 public class LongVec
         extends Vec
@@ -41,6 +42,18 @@ public class LongVec
     {
         if (isWritable) {
             this.getData().putLong(idx * Long.BYTES + offset, value);
+        }
+        else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
+        }
+    }
+
+    public void put(long[] values, int offset, int start, int length)
+    {
+        if (isWritable) {
+            LongBuffer buffer = getData().asLongBuffer();
+            buffer.position(offset);
+            buffer.put(values, start, length);
         }
         else {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");

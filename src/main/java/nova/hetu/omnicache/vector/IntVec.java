@@ -18,6 +18,7 @@ import nova.hetu.omnicache.utils.OmniErrorType;
 import nova.hetu.omnicache.utils.OmniRuntimeException;
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 public class IntVec
         extends Vec
@@ -39,10 +40,23 @@ public class IntVec
 
     public void set(int idx, int value)
     {
-        if(isWritable) {
+        if (isWritable) {
             this.getData().putInt(idx * Integer.BYTES + offset, value);
-        }else{
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,"Not support set api");
+        }
+        else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
+        }
+    }
+
+    public void put(int[] values, int offset, int start, int length)
+    {
+        if (isWritable) {
+            IntBuffer buffer = getData().asIntBuffer();
+            buffer.position(offset);
+            buffer.put(values, start, length);
+        }
+        else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
         }
     }
 

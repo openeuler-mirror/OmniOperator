@@ -173,6 +173,9 @@ public abstract class Vec
 
     public int capacity()
     {
+        if (omniChunk == null) {
+            return 0;
+        }
         //Todo:now since we use the reference count a ByteBuffer,so this may not accuracy of calculate the capacity.
         return getData().capacity();
 //        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default capacity()");
@@ -192,21 +195,31 @@ public abstract class Vec
 
     public ByteBuffer getData()
     {
+        if (omniChunk == null) {
+            return null;
+        }
         return this.omniChunk.getData();
     }
 
     public long getAddress()
     {
+        if (omniChunk == null) {
+            return 0;
+        }
         return this.omniChunk.getAddress() + offset;
     }
 
     public boolean close()
     {
+        if (omniChunk == null) {
+            return true;
+        }
         return this.omniChunk.release();
     }
 
     //For OmniFilter result selected row size
-    public void setSize(int size){
+    public void setSize(int size)
+    {
         this.size = size;
     }
 }

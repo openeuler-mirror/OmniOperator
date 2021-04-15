@@ -18,6 +18,7 @@ import nova.hetu.omnicache.utils.OmniErrorType;
 import nova.hetu.omnicache.utils.OmniRuntimeException;
 
 import java.nio.ByteBuffer;
+import java.nio.DoubleBuffer;
 
 /**
  * Representing a floating point number
@@ -53,6 +54,18 @@ public class DoubleVec
     {
         if (isWritable) {
             this.getData().putDouble(idx * Double.BYTES + offset, value);
+        }
+        else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
+        }
+    }
+
+    public void put(double[] values, int offset, int start, int length)
+    {
+        if (isWritable) {
+            DoubleBuffer buffer = getData().asDoubleBuffer();
+            buffer.position(offset);
+            buffer.put(values, start, length);
         }
         else {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
