@@ -1390,6 +1390,7 @@ entry:
   %datas = alloca [2 x i64], align 16
   %nulls = alloca [2 x i64], align 16
   %rowCounts = alloca [1 x i32], align 4
+  %pageCount = alloca i32, align 4
   %puts = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @str, i64 0, i64 0))
   %0 = bitcast i64* %sourceTypes to i8*
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #16
@@ -1600,16 +1601,15 @@ _ZNKSt5ctypeIcE5widenEc.exit:                     ; preds = %if.then.i, %if.end.
   %retval.0.i = phi i8 [ %63, %if.then.i ], [ %call.i92, %if.end.i ]
   %call1.i88 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo3putEc(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call.i, i8 signext %retval.0.i)
   %call.i89 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo5flushEv(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call1.i88)
-  %call37 = call %class.Table* @_Z13sortGetOutputll(i64 %call5, i64 %call11)
-  %isnull = icmp eq %class.Table* %call37, null
+  %66 = bitcast i32* %pageCount to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %66) #16
+  %call37 = call %class.Table** @_Z13sortGetOutputllPi(i64 %call5, i64 %call11, i32* nonnull %pageCount)
+  %isnull = icmp eq %class.Table** %call37, null
   br i1 %isnull, label %delete.notnull39, label %delete.notnull
 
 delete.notnull:                                   ; preds = %_ZNKSt5ctypeIcE5widenEc.exit
-  %66 = bitcast %class.Table* %call37 to void (%class.Table*)***
-  %vtable = load void (%class.Table*)**, void (%class.Table*)*** %66, align 8, !tbaa !2
-  %vfn = getelementptr inbounds void (%class.Table*)*, void (%class.Table*)** %vtable, i64 1
-  %67 = load void (%class.Table*)*, void (%class.Table*)** %vfn, align 8
-  call void %67(%class.Table* nonnull dereferenceable(60) %call37) #16
+  %67 = bitcast %class.Table** %call37 to i8*
+  call void @_ZdlPv(i8* %67) #17
   br label %delete.notnull39
 
 delete.notnull39:                                 ; preds = %_ZNKSt5ctypeIcE5widenEc.exit, %delete.notnull
@@ -1617,6 +1617,7 @@ delete.notnull39:                                 ; preds = %_ZNKSt5ctypeIcE5wid
   call void @_ZdaPv(i8* nonnull %call13) #17
   call void @_ZdaPv(i8* nonnull %call14) #17
   call void @_ZdaPv(i8* nonnull %call12) #17
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %66) #16
   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %55) #16
   call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %52) #16
   call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %49) #16
@@ -1642,7 +1643,7 @@ declare dso_local i64 @clock() local_unnamed_addr #1
 
 declare dso_local void @_Z11sortExecutell(i64, i64) local_unnamed_addr #0
 
-declare dso_local %class.Table* @_Z13sortGetOutputll(i64, i64) local_unnamed_addr #0
+declare dso_local %class.Table** @_Z13sortGetOutputllPi(i64, i64, i32*) local_unnamed_addr #0
 
 ; Function Attrs: nofree nounwind uwtable mustprogress
 define dso_local void @_Z13buildSortDataiiiPlS_(i32 %tableCount, i32 %distinctValueCount, i32 %repeatCount, i64* nocapture %datas, i64* nocapture %nulls) local_unnamed_addr #10 {
@@ -1924,6 +1925,7 @@ entry:
   %sortCols = alloca i64, align 8
   %ascendings = alloca i64, align 8
   %nullFirsts = alloca i64, align 8
+  %pageCount = alloca i32, align 4
   %puts = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([21 x i8], [21 x i8]* @str.13, i64 0, i64 0))
   %call3 = tail call noalias dereferenceable_or_null(160) i8* @malloc(i64 160) #16
   %0 = bitcast i8* %call3 to i64*
@@ -2196,7 +2198,10 @@ _ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit90: ; preds = %if
   %retval.0.i.i.i87 = phi i8 [ %98, %if.then.i4.i.i82 ], [ %call.i.i.i85, %if.end.i.i.i86 ]
   %call1.i88 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo3putEc(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call.i, i8 signext %retval.0.i.i.i87)
   %call.i.i89 = call nonnull align 8 dereferenceable(8) %"class.std::basic_ostream"* @_ZNSo5flushEv(%"class.std::basic_ostream"* nonnull dereferenceable(8) %call1.i88)
-  %call29 = call %class.Table* @_Z13sortGetOutputll(i64 %call14, i64 %call20)
+  %101 = bitcast i32* %pageCount to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %101) #16
+  %call29 = call %class.Table** @_Z13sortGetOutputllPi(i64 %call14, i64 %call20, i32* nonnull %pageCount)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %101) #16
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %91) #16
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %90) #16
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %89) #16
@@ -2207,134 +2212,134 @@ _ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_.exit90: ; preds = %if
 vector.body97:                                    ; preds = %vector.body106, %vector.body97
   %index99 = phi i64 [ %index.next100.3, %vector.body97 ], [ 0, %vector.body106 ]
   %offset.idx103 = add nuw nsw i64 %index99, 500000
-  %101 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103
-  %102 = bitcast i64* %101 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %102, align 8, !tbaa !35
-  %103 = getelementptr inbounds i64, i64* %101, i64 2
-  %104 = bitcast i64* %103 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %104, align 8, !tbaa !35
-  %105 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103
-  %106 = bitcast i64* %105 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %106, align 8, !tbaa !35
-  %107 = getelementptr inbounds i64, i64* %105, i64 2
-  %108 = bitcast i64* %107 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %108, align 8, !tbaa !35
+  %102 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103
+  %103 = bitcast i64* %102 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %103, align 8, !tbaa !35
+  %104 = getelementptr inbounds i64, i64* %102, i64 2
+  %105 = bitcast i64* %104 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %105, align 8, !tbaa !35
+  %106 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103
+  %107 = bitcast i64* %106 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %107, align 8, !tbaa !35
+  %108 = getelementptr inbounds i64, i64* %106, i64 2
+  %109 = bitcast i64* %108 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %109, align 8, !tbaa !35
   %offset.idx103.1 = add nuw nsw i64 %index99, 500004
-  %109 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.1
-  %110 = bitcast i64* %109 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %110, align 8, !tbaa !35
-  %111 = getelementptr inbounds i64, i64* %109, i64 2
-  %112 = bitcast i64* %111 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %112, align 8, !tbaa !35
-  %113 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.1
-  %114 = bitcast i64* %113 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %114, align 8, !tbaa !35
-  %115 = getelementptr inbounds i64, i64* %113, i64 2
-  %116 = bitcast i64* %115 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %116, align 8, !tbaa !35
+  %110 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.1
+  %111 = bitcast i64* %110 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %111, align 8, !tbaa !35
+  %112 = getelementptr inbounds i64, i64* %110, i64 2
+  %113 = bitcast i64* %112 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %113, align 8, !tbaa !35
+  %114 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.1
+  %115 = bitcast i64* %114 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %115, align 8, !tbaa !35
+  %116 = getelementptr inbounds i64, i64* %114, i64 2
+  %117 = bitcast i64* %116 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %117, align 8, !tbaa !35
   %offset.idx103.2 = add nuw nsw i64 %index99, 500008
-  %117 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.2
-  %118 = bitcast i64* %117 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %118, align 8, !tbaa !35
-  %119 = getelementptr inbounds i64, i64* %117, i64 2
-  %120 = bitcast i64* %119 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %120, align 8, !tbaa !35
-  %121 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.2
-  %122 = bitcast i64* %121 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %122, align 8, !tbaa !35
-  %123 = getelementptr inbounds i64, i64* %121, i64 2
-  %124 = bitcast i64* %123 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %124, align 8, !tbaa !35
+  %118 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.2
+  %119 = bitcast i64* %118 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %119, align 8, !tbaa !35
+  %120 = getelementptr inbounds i64, i64* %118, i64 2
+  %121 = bitcast i64* %120 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %121, align 8, !tbaa !35
+  %122 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.2
+  %123 = bitcast i64* %122 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %123, align 8, !tbaa !35
+  %124 = getelementptr inbounds i64, i64* %122, i64 2
+  %125 = bitcast i64* %124 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %125, align 8, !tbaa !35
   %offset.idx103.3 = add nuw nsw i64 %index99, 500012
-  %125 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.3
-  %126 = bitcast i64* %125 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %126, align 8, !tbaa !35
-  %127 = getelementptr inbounds i64, i64* %125, i64 2
-  %128 = bitcast i64* %127 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %128, align 8, !tbaa !35
-  %129 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.3
-  %130 = bitcast i64* %129 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %130, align 8, !tbaa !35
-  %131 = getelementptr inbounds i64, i64* %129, i64 2
-  %132 = bitcast i64* %131 to <2 x i64>*
-  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %132, align 8, !tbaa !35
+  %126 = getelementptr inbounds i64, i64* %2, i64 %offset.idx103.3
+  %127 = bitcast i64* %126 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %127, align 8, !tbaa !35
+  %128 = getelementptr inbounds i64, i64* %126, i64 2
+  %129 = bitcast i64* %128 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %129, align 8, !tbaa !35
+  %130 = getelementptr inbounds i64, i64* %3, i64 %offset.idx103.3
+  %131 = bitcast i64* %130 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %131, align 8, !tbaa !35
+  %132 = getelementptr inbounds i64, i64* %130, i64 2
+  %133 = bitcast i64* %132 to <2 x i64>*
+  store <2 x i64> <i64 2, i64 2>, <2 x i64>* %133, align 8, !tbaa !35
   %index.next100.3 = add nuw nsw i64 %index99, 16
-  %133 = icmp eq i64 %index.next100.3, 250000
-  br i1 %133, label %vector.body, label %vector.body97, !llvm.loop !81
+  %134 = icmp eq i64 %index.next100.3, 250000
+  br i1 %134, label %vector.body, label %vector.body97, !llvm.loop !81
 
 vector.body:                                      ; preds = %vector.body97, %vector.body
   %index = phi i64 [ %index.next.3, %vector.body ], [ 0, %vector.body97 ]
   %offset.idx = add nuw nsw i64 %index, 750000
-  %134 = getelementptr inbounds i64, i64* %2, i64 %offset.idx
-  %135 = bitcast i64* %134 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %135, align 8, !tbaa !35
-  %136 = getelementptr inbounds i64, i64* %134, i64 2
-  %137 = bitcast i64* %136 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %137, align 8, !tbaa !35
-  %138 = getelementptr inbounds i64, i64* %3, i64 %offset.idx
-  %139 = bitcast i64* %138 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %139, align 8, !tbaa !35
-  %140 = getelementptr inbounds i64, i64* %138, i64 2
-  %141 = bitcast i64* %140 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %141, align 8, !tbaa !35
+  %135 = getelementptr inbounds i64, i64* %2, i64 %offset.idx
+  %136 = bitcast i64* %135 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %136, align 8, !tbaa !35
+  %137 = getelementptr inbounds i64, i64* %135, i64 2
+  %138 = bitcast i64* %137 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %138, align 8, !tbaa !35
+  %139 = getelementptr inbounds i64, i64* %3, i64 %offset.idx
+  %140 = bitcast i64* %139 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %140, align 8, !tbaa !35
+  %141 = getelementptr inbounds i64, i64* %139, i64 2
+  %142 = bitcast i64* %141 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %142, align 8, !tbaa !35
   %offset.idx.1 = add nuw nsw i64 %index, 750004
-  %142 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.1
-  %143 = bitcast i64* %142 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %143, align 8, !tbaa !35
-  %144 = getelementptr inbounds i64, i64* %142, i64 2
-  %145 = bitcast i64* %144 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %145, align 8, !tbaa !35
-  %146 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.1
-  %147 = bitcast i64* %146 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %147, align 8, !tbaa !35
-  %148 = getelementptr inbounds i64, i64* %146, i64 2
-  %149 = bitcast i64* %148 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %149, align 8, !tbaa !35
+  %143 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.1
+  %144 = bitcast i64* %143 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %144, align 8, !tbaa !35
+  %145 = getelementptr inbounds i64, i64* %143, i64 2
+  %146 = bitcast i64* %145 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %146, align 8, !tbaa !35
+  %147 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.1
+  %148 = bitcast i64* %147 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %148, align 8, !tbaa !35
+  %149 = getelementptr inbounds i64, i64* %147, i64 2
+  %150 = bitcast i64* %149 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %150, align 8, !tbaa !35
   %offset.idx.2 = add nuw nsw i64 %index, 750008
-  %150 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.2
-  %151 = bitcast i64* %150 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %151, align 8, !tbaa !35
-  %152 = getelementptr inbounds i64, i64* %150, i64 2
-  %153 = bitcast i64* %152 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %153, align 8, !tbaa !35
-  %154 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.2
-  %155 = bitcast i64* %154 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %155, align 8, !tbaa !35
-  %156 = getelementptr inbounds i64, i64* %154, i64 2
-  %157 = bitcast i64* %156 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %157, align 8, !tbaa !35
+  %151 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.2
+  %152 = bitcast i64* %151 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %152, align 8, !tbaa !35
+  %153 = getelementptr inbounds i64, i64* %151, i64 2
+  %154 = bitcast i64* %153 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %154, align 8, !tbaa !35
+  %155 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.2
+  %156 = bitcast i64* %155 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %156, align 8, !tbaa !35
+  %157 = getelementptr inbounds i64, i64* %155, i64 2
+  %158 = bitcast i64* %157 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %158, align 8, !tbaa !35
   %offset.idx.3 = add nuw nsw i64 %index, 750012
-  %158 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.3
-  %159 = bitcast i64* %158 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %159, align 8, !tbaa !35
-  %160 = getelementptr inbounds i64, i64* %158, i64 2
-  %161 = bitcast i64* %160 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %161, align 8, !tbaa !35
-  %162 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.3
-  %163 = bitcast i64* %162 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %163, align 8, !tbaa !35
-  %164 = getelementptr inbounds i64, i64* %162, i64 2
-  %165 = bitcast i64* %164 to <2 x i64>*
-  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %165, align 8, !tbaa !35
+  %159 = getelementptr inbounds i64, i64* %2, i64 %offset.idx.3
+  %160 = bitcast i64* %159 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %160, align 8, !tbaa !35
+  %161 = getelementptr inbounds i64, i64* %159, i64 2
+  %162 = bitcast i64* %161 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %162, align 8, !tbaa !35
+  %163 = getelementptr inbounds i64, i64* %3, i64 %offset.idx.3
+  %164 = bitcast i64* %163 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %164, align 8, !tbaa !35
+  %165 = getelementptr inbounds i64, i64* %163, i64 2
+  %166 = bitcast i64* %165 to <2 x i64>*
+  store <2 x i64> <i64 3, i64 3>, <2 x i64>* %166, align 8, !tbaa !35
   %index.next.3 = add nuw nsw i64 %index, 16
-  %166 = icmp eq i64 %index.next.3, 250000
-  br i1 %166, label %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3, label %vector.body, !llvm.loop !82
+  %167 = icmp eq i64 %index.next.3, 250000
+  br i1 %167, label %for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3, label %vector.body, !llvm.loop !82
 
 for.cond14.for.cond.cleanup16_crit_edge.us.us.i.3: ; preds = %vector.body
-  %167 = ptrtoint i8* %call.us.i to i64
-  %168 = shl nuw nsw i64 %indvars.iv119.i, 1
-  %arrayidx32.us.i = getelementptr inbounds i64, i64* %0, i64 %168
-  store i64 %167, i64* %arrayidx32.us.i, align 8, !tbaa !35
-  %169 = ptrtoint i8* %call7.us.i to i64
-  %170 = or i64 %168, 1
-  %arrayidx36.us.i = getelementptr inbounds i64, i64* %0, i64 %170
-  store i64 %169, i64* %arrayidx36.us.i, align 8, !tbaa !35
-  %171 = ptrtoint i8* %call5.us.i to i64
-  %arrayidx40.us.i = getelementptr inbounds i64, i64* %1, i64 %168
-  store i64 %171, i64* %arrayidx40.us.i, align 8, !tbaa !35
-  %172 = ptrtoint i8* %call9.us.i to i64
-  %arrayidx44.us.i = getelementptr inbounds i64, i64* %1, i64 %170
-  store i64 %172, i64* %arrayidx44.us.i, align 8, !tbaa !35
+  %168 = ptrtoint i8* %call.us.i to i64
+  %169 = shl nuw nsw i64 %indvars.iv119.i, 1
+  %arrayidx32.us.i = getelementptr inbounds i64, i64* %0, i64 %169
+  store i64 %168, i64* %arrayidx32.us.i, align 8, !tbaa !35
+  %170 = ptrtoint i8* %call7.us.i to i64
+  %171 = or i64 %169, 1
+  %arrayidx36.us.i = getelementptr inbounds i64, i64* %0, i64 %171
+  store i64 %170, i64* %arrayidx36.us.i, align 8, !tbaa !35
+  %172 = ptrtoint i8* %call5.us.i to i64
+  %arrayidx40.us.i = getelementptr inbounds i64, i64* %1, i64 %169
+  store i64 %172, i64* %arrayidx40.us.i, align 8, !tbaa !35
+  %173 = ptrtoint i8* %call9.us.i to i64
+  %arrayidx44.us.i = getelementptr inbounds i64, i64* %1, i64 %171
+  store i64 %173, i64* %arrayidx44.us.i, align 8, !tbaa !35
   %indvars.iv.next120.i = add nuw nsw i64 %indvars.iv119.i, 1
   %exitcond124.not.i = icmp eq i64 %indvars.iv.next120.i, 10
   br i1 %exitcond124.not.i, label %_Z13buildSortDataiiiPlS_.exit, label %for.body.us.i, !llvm.loop !75

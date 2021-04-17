@@ -30,6 +30,6 @@ void sortAddInput(int64_t contextAddress, int64_t sortAddress, int64_t *datas, i
 
 void sortExecute(int64_t contextAddress, int64_t sortAddress);
 
-Table *sortGetOutput(int64_t contextAddress, int64_t sortAddress);
+Table **sortGetOutput(int64_t contextAddress, int64_t sortAddress, int32_t *tableCountAddr);
 
 #endif

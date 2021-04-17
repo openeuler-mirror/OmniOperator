@@ -9,98 +9,111 @@ bool tableMatch(Table *actualTable, Table *expectTable);
 bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber);
 bool columnMatch(Column *actualColumn, Column *expectColumn);
 
-// TEST (OrderByTest, TestSortByPerformance)
-// {
-//     // construct input data
-//     const int32_t DATA_SIZE = 100000;
-//     int sourceTypes[2] = {1, 1};
-//     int outputCols[2] = {0, 1};
-//     int sortCols[2] = {0, 1};
-//     int ascendings[2] = {true, true};
-//     int nullFirsts[2] = {true, true};
+TEST (OrderByTest, TestSortByPerformance)
+{
+    // construct input data
+    const int32_t DATA_SIZE = 100000;
+    int sourceTypes[2] = {1, 1};
+    int outputCols[2] = {0, 1};
+    int sortCols[2] = {0, 1};
+    int ascendings[2] = {true, true};
+    int nullFirsts[2] = {true, true};
 
-//     long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-//     long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
-//     int32_t *data1 = new int32_t[DATA_SIZE];
-//     for (int32_t i = 0; i < DATA_SIZE; ++i) {
-//         data1[i] = i;
-//     }
-//     int *nulls1 = new int[DATA_SIZE];
-//     memset(nulls1, false, DATA_SIZE);
+    int32_t *data1 = new int32_t[DATA_SIZE];
+    for (int32_t i = 0; i < DATA_SIZE; ++i) {
+        data1[i] = i;
+    }
+    int *nulls1 = new int[DATA_SIZE];
+    memset(nulls1, false, DATA_SIZE);
 
-//     int32_t *data2 = new int32_t[DATA_SIZE];
-//     for (int32_t i = 0; i < DATA_SIZE; ++i) {
-//         data2[i] = i;
-//     }
-//     int *nulls2 = new int[DATA_SIZE];
-//     memset(nulls2, false, DATA_SIZE);
+    int32_t *data2 = new int32_t[DATA_SIZE];
+    for (int32_t i = 0; i < DATA_SIZE; ++i) {
+        data2[i] = i;
+    }
+    int *nulls2 = new int[DATA_SIZE];
+    memset(nulls2, false, DATA_SIZE);
 
-//     long datas[2] = {(long)data1, (long)data2};
-//     long nulls[2] = {(long)nulls1, (long)nulls2};
+    long datas[2] = {(long)data1, (long)data2};
+    long nulls[2] = {(long)nulls1, (long)nulls2};
 
-//     // order by
-//     sortAddInput(contextAddress, sortAddress, datas, nulls, DATA_SIZE);
-//     //cout<<"ADD TABLE FINISH:"<<endl;
-//     clock_t start = clock();
-//     sortExecute(contextAddress, sortAddress);
-//     std::cout << "sort elapsed end time: " << (double)(std::clock() - start) / 1000 << " ms" << std::endl;
+    // order by
+    int32_t rowCounts[1] = {DATA_SIZE};
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
+    //cout<<"ADD TABLE FINISH:"<<endl;
+    clock_t start = clock();
+    sortExecute(contextAddress, sortAddress);
+    std::cout << "sort elapsed end time: " << (double)(std::clock() - start) / 1000 << " ms" << std::endl;
 
-//     // construct output
-//     Table *output = sortGetOutput(contextAddress, sortAddress);
+    // construct output
+    int32_t tableCount = 0;
+    Table **output = sortGetOutput(contextAddress, sortAddress, &tableCount);
 
 
-//     // free memory
-//     delete output;
-//     delete []nulls2;
-//     delete []nulls1;
-//     delete []data2;
-//     delete []data1;
-// }
+    // free memory
+    delete output;
+    delete []nulls2;
+    delete []nulls1;
+    delete []data2;
+    delete []data1;
 
-// TEST(SortTest, testOrderByOneColumn)
-// {
-//     //construct input data
-//     const int32_t DATA_SIZE = 5;
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete output[i];
+    }
+    delete[] output;
+}
 
-//     int sourceTypes[2] = {1, 2};
-//     int outputCols[2] = {0, 1};
-//     int sortCols[1] = {1};
-//     int ascendings[1] = {false};
-//     int nullFirsts[1] = {true};
+TEST(SortTest, testOrderByOneColumn)
+{
+    //construct input data
+    const int32_t DATA_SIZE = 5;
 
-//     long sortAddress = allocAndInitSort(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    int sourceTypes[2] = {1, 2};
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {false};
+    int nullFirsts[1] = {true};
 
-//     int32_t data1[DATA_SIZE] = {4, 3, 2, 1, 0};
-//     int nulls1[DATA_SIZE] = {false, false, false, false, false};
+    long contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+    long sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 
-//     int64_t data2[DATA_SIZE] = {0, 1, 2, 3, 4};
-//     int nulls2[DATA_SIZE] = {false, false, false, false, false};
+    int32_t data1[DATA_SIZE] = {4, 3, 2, 1, 0};
+    int nulls1[DATA_SIZE] = {false, false, false, false, false};
 
-//     long datas[2] = {(long)data1, (long)data2};
-//     long nulls[2] = {(long)nulls1, (long)nulls2};
+    int64_t data2[DATA_SIZE] = {0, 1, 2, 3, 4};
+    int nulls2[DATA_SIZE] = {false, false, false, false, false};
 
-//     // order by
-//     addTable(sortAddress, datas, nulls, DATA_SIZE);
-//     sort(sortAddress);
+    long datas[2] = {(long)data1, (long)data2};
+    long nulls[2] = {(long)nulls1, (long)nulls2};
 
-//     // construct output
-//     Table *actualTable = getResult(sortAddress);
+    // order by
+    int32_t rowCounts[1] = {DATA_SIZE};
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
+    //cout<<"ADD TABLE FINISH:"<<endl;
+    clock_t start = clock();
+    sortExecute(contextAddress, sortAddress);
+    int32_t tableCount = 0;
+    Table **outputTable = sortGetOutput(contextAddress, sortAddress, &tableCount);
 
-//     int32_t expectData1[DATA_SIZE] = {0, 1, 2, 3, 4};
-//     Column expectCol1(expectData1, INT32, DATA_SIZE);
-//     int64_t expectData2[DATA_SIZE] = {4, 3, 2, 1, 0};
-//     Column expectCol2(expectData2, INT64, DATA_SIZE);
-//     Table* expectTable = new Table(DATA_SIZE, 2);
-//     expectTable->setColumn(&expectCol1, INT32);
-//     expectTable->setColumn(&expectCol2, INT64);
+    int32_t expectData1[DATA_SIZE] = {0, 1, 2, 3, 4};
+    Column expectCol1(expectData1, INT32, DATA_SIZE);
+    int64_t expectData2[DATA_SIZE] = {4, 3, 2, 1, 0};
+    Column expectCol2(expectData2, INT64, DATA_SIZE);
+    Table* expectTable = new Table(DATA_SIZE, 2);
+    expectTable->setColumn(&expectCol1, INT32);
+    expectTable->setColumn(&expectCol2, INT64);
 
-//     EXPECT_TRUE(tableMatch(actualTable, expectTable));
+    EXPECT_TRUE(tableMatch(outputTable[0], expectTable));
 
-//     //free memory
-//     delete expectTable;
-//     delete actualTable;
-// }
+    //free memory
+    delete expectTable;
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete outputTable[i];
+    }
+    delete[] outputTable;
+}
 
 TEST(SortTest, testOrderByDoubleColumn)
 {
@@ -131,7 +144,8 @@ TEST(SortTest, testOrderByDoubleColumn)
     int64_t sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
     sortExecute(contextAddress, sortAddress);
-    Table *actualTable = sortGetOutput(contextAddress, sortAddress);
+    int32_t tableCount = 0;
+    Table **actualTable = sortGetOutput(contextAddress, sortAddress, &tableCount);
 
     int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
     Column expectCol1(expectData1, INT64, DATA_SIZE);
@@ -141,41 +155,110 @@ TEST(SortTest, testOrderByDoubleColumn)
     expectTable->setColumn(&expectCol1, INT64);
     expectTable->setColumn(&expectCol2, DOUBLE);
 
-    actualTable->printTable();
+    actualTable[0]->printTable();
     expectTable->printTable();
-    EXPECT_TRUE(tableMatch(actualTable, expectTable));
-    delete actualTable;
+    EXPECT_TRUE(tableMatch(actualTable[0], expectTable));
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete actualTable[i];
+    }
+    delete[] actualTable;
 
     contextAddress = sortPrepare(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
     sortExecute(contextAddress, sortAddress);
-    actualTable = sortGetOutput(contextAddress, sortAddress);
+    actualTable = sortGetOutput(contextAddress, sortAddress, &tableCount);
 
-    EXPECT_TRUE(tableMatch(actualTable, expectTable));
-    delete actualTable;
+    EXPECT_TRUE(tableMatch(actualTable[0], expectTable));
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete actualTable[i];
+    }
+    delete[] actualTable;
     delete expectTable;
 }
 
-void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t repeatCount, int64_t **datas, int64_t **nulls)
+TEST(SortTest, testOrderByDoubleColumnV2)
+{
+    // construct input data
+    const int32_t DATA_SIZE = 6;
+    int32_t sourceTypes[3] = {1, 2, 3};
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {0, 2};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
+
+    // prepare data
+    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int32_t nulls0[DATA_SIZE] = {false, false, false, false, false, false};
+
+    int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
+    int32_t nulls1[DATA_SIZE] = {false, false, false, false, false, false};
+
+    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int32_t nulls2[DATA_SIZE] = {false, false, false, false, false, false};
+
+    int64_t datas[3] = {(int64_t)data0, (int64_t)data1, (int64_t)data2};
+    int64_t nulls[3] = {(int64_t)nulls0, (int64_t)nulls1, (int64_t)nulls2};
+    int32_t rowCount = DATA_SIZE;
+    int32_t rowCounts[1] = {rowCount};
+
+    int64_t contextAddress = 0;
+    int64_t sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
+    sortExecute(contextAddress, sortAddress);
+    int32_t tableCount; 
+    Table **actualTable = sortGetOutput(contextAddress, sortAddress, &tableCount);
+
+    int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
+    Column expectCol1(expectData1, INT64, DATA_SIZE);
+    double expectData2[DATA_SIZE] = {1.1, 4.4, 2.2, 5.5, 3.3, 6.6};
+    Column expectCol2(expectData2, DOUBLE, DATA_SIZE);
+    Table* expectTable = new Table(DATA_SIZE, 2);
+    expectTable->setColumn(&expectCol1, INT64);
+    expectTable->setColumn(&expectCol2, DOUBLE);
+
+    actualTable[0]->printTable();
+    expectTable->printTable();
+    EXPECT_TRUE(tableMatch(actualTable[0], expectTable));
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete actualTable[0];
+    }
+    delete[] actualTable;
+
+    contextAddress = sortPrepare(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddress = sortCreateOperator(contextAddress, sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    sortAddInput(contextAddress, sortAddress, datas, nulls, 1, rowCounts, DATA_SIZE);
+    sortExecute(contextAddress, sortAddress);
+    tableCount; 
+    actualTable = sortGetOutput(contextAddress, sortAddress, &tableCount);
+    EXPECT_TRUE(tableMatch(actualTable[0], expectTable));
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete actualTable[0];
+    }
+    delete[] actualTable;
+
+    delete expectTable;
+}
+
+void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, long *datas, long *nulls)
 {
     uint32_t positionCount = distinctValueCount * repeatCount;
-    int32_t *data1;
-    int32_t *data2;
-    int32_t *null1;
-    int32_t *null2;
-    uint32_t size = positionCount * sizeof(int32_t);
+    long *data1;
+    long *data2;
+    long *null1;
+    long *null2;
+    uint32_t size = positionCount * sizeof(long);
     uint32_t idx = 0;
 
-    for (int32_t i = 0; i < tableCount; i++) {
-        data1 = (int32_t *)malloc(size);
-        null1 = (int32_t *)malloc(size);
-        data2 = (int32_t *)malloc(size);
-        null2 = (int32_t *)malloc(size);
+    for (int i = 0; i < tableCount; i++) {
+        data1 = (long *)malloc(size);
+        null1 = (long *)malloc(size);
+        data2 = (long *)malloc(size);
+        null2 = (long *)malloc(size);
 
         idx = 0;
-        for (int32_t j = 0; j < distinctValueCount; j++) {
-            for (int32_t k = 0; k < repeatCount; k++) {
+        for (int j = 0; j < distinctValueCount; j++) {
+            for (int k = 0; k < repeatCount; k++) {
                 data1[idx] = j;
                 data2[idx] = j;
                 null1[idx] = 0;
@@ -184,10 +267,10 @@ void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t r
             }
         }
 
-        datas[i][0] = (int64_t)data1;
-        datas[i][1] = (int64_t)data2;
-        nulls[i][0] = (int64_t)null1;
-        nulls[i][1] = (int64_t)null2;
+        datas[i * 2 + 0] = (long)data1;
+        datas[i * 2 + 1] = (long)data2;
+        nulls[i * 2 + 0] = (long)null1;
+        nulls[i * 2 + 1] = (long)null2;
     }
 }
 
@@ -199,12 +282,16 @@ TEST(SortTest, testOrderByTwoColumnPerf)
     int distinctValue = 4;
     int repeatCount = 250000;
     int32_t rowNum = distinctValue * repeatCount;
-    long *datas[tableCount];
-    long *nulls[tableCount];
+    long datas[tableCount];
+    long nulls[tableCount];
+    int64_t *data = NULL;
+    int64_t *null = NULL;
 
     for (int i = 0; i < tableCount; i++) {
-        datas[i] = (int64_t *)malloc(2 * sizeof(int64_t));
-        nulls[i] = (int64_t *)malloc(2 * sizeof(int64_t));
+        data = (int64_t *)malloc(2 * sizeof(int64_t));
+        null = (int64_t *)malloc(2 * sizeof(int64_t));
+        datas[i] = (int64_t)data;
+        nulls[i] = (int64_t)null;
     }
 
     buildSortTestData(tableCount, distinctValue, repeatCount, datas, nulls);
@@ -218,9 +305,7 @@ TEST(SortTest, testOrderByTwoColumnPerf)
 
     int64_t contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     int64_t sortAddress = sortCreateOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    for (int32_t i = 0; i < tableCount; i++) {
-        sortAddInput(contextAddress, sortAddress, datas[i], nulls[i], 1, rowCounts, rowNum);
-    }
+    sortAddInput(contextAddress, sortAddress, datas, nulls, tableCount, rowCounts, rowNum);
 
     typedef std::chrono::high_resolution_clock Time;
     typedef std::chrono::milliseconds ms;
@@ -231,7 +316,13 @@ TEST(SortTest, testOrderByTwoColumnPerf)
     fsec fs = t1 - t0;
     ms d = std::chrono::duration_cast<ms>(fs);
     std::cout << "sortExecute elapsed time: " << (double)d.count() << "ms" << std::endl;
-    Table *actualTable = sortGetOutput(contextAddress, sortAddress);
+    tableCount = 0;
+    Table **actualTable = sortGetOutput(contextAddress, sortAddress, &tableCount);
+
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete actualTable[0];
+    }
+    delete[] actualTable;
 }
 
 bool tableMatch(Table *actualTable, Table *expectTable)

@@ -138,10 +138,10 @@ JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinishe
   (JNIEnv *, jobject, jlong);
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_vector_OMVectorBase_allocate
-  (JNIEnv *env, jclass jcls, jlong jsize);
+  (JNIEnv *, jclass, jlong);
 
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_vector_OMVectorBase_release
-  (JNIEnv *env, jclass jcls, jlong jAddress);
+  (JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus
 }

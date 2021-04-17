@@ -19,6 +19,7 @@
 
 jobject transformTableToResult(JNIEnv *env, Table *outputTable);
 jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result);
+jobject transformTableToResultV2(JNIEnv *env, Table **outputTables, int32_t tableCount);
 OpTemplateCache<uint32_t *> g_typeCache;
 
 #define CLOCKS_PER_MILLISECOND 1000
@@ -232,7 +233,7 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_execu
     std::vector<Table*> result;
     int32_t pageCount = executeAggFinal(opId, result);
 
-    // jobject omResultObj = transformTableToResult(env, outputTable);    
+    // jobject omResultObj = transformTableToResult(env, outputTable);
     // release memory
     // g_typeCache.remove(opId);
 #ifdef DEBUG_LEVEL_LOW
@@ -344,9 +345,10 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortGetOut
   (JNIEnv *env, jobject jObj, jlong jContextAddress, jlong jSortAddress)
 {
     auto start = START();
-    Table *outputTable = sortGetOutput(jContextAddress, jSortAddress);
+    int32_t tableCount = 0;
+    Table **outputTable = sortGetOutput(jContextAddress, jSortAddress, &tableCount);
     PRINT_JNI("after sortGetOutput call elapsed time: %ld ms\n", END(start));
-    jobject output = transformTableToResult(env, outputTable);
+    jobject output = transformTableToResultV2(env, outputTable, tableCount);
     PRINT_JNI("after transformTableToResult call elapsed time: %ld ms\n", END(start));
     delete outputTable;
     return output;
@@ -363,6 +365,60 @@ jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result)
   return res;
 }
 
+jobject transformTableToResultV2(JNIEnv *env, Table **outputTables, int32_t tableCount)
+{
+  int32_t columnCount = outputTables[0]->getColumnNumber();
+  int32_t positionCount = 0;
+  Table *outputTable;
+  jobject buf;
+  Column *column;
+  int32_t columnSize = 0;
+  int32_t columnIdx = 0;
+  int32_t tableIdx = 0;
+
+  int32_t bufCount = tableCount * columnCount;
+  jobjectArray bufs = env->NewObjectArray(bufCount, bufCls, NULL);
+  for (int cIndex = 0; cIndex < bufCount; cIndex++) {
+    columnIdx = cIndex % columnCount;
+    if (columnIdx == 0) {
+      tableIdx = cIndex / columnCount;
+      outputTable = outputTables[tableIdx];
+      column = outputTable->getColumn(columnIdx);
+      columnSize = column->getSize();
+      positionCount += columnSize;
+    }
+    else {
+      column = outputTable->getColumn(columnIdx);
+    }
+
+    switch (column->getType())
+    {
+      case INT32: {
+        buf = env->NewDirectByteBuffer(column->getData(), columnSize * sizeof(int32_t));
+        break;
+      }
+      case INT64: {
+          buf = env->NewDirectByteBuffer(column->getData(),  columnSize * sizeof(int64_t));
+          break;
+      }
+      case DOUBLE: {
+        buf = env->NewDirectByteBuffer(column->getData(),  columnSize * sizeof(double));
+        break;
+      }
+      default: {
+        cout << "unsupport the data type:" << column->getType() << endl;
+        break;
+      }
+    }
+    env->SetObjectArrayElement(bufs, cIndex, buf);
+  }
+
+  jobject omResultObj = env->NewObject(omResultCls, methodId);
+  env->CallObjectMethod(omResultObj, setbufMethodId, bufs);
+  env->CallObjectMethod(omResultObj, setLengthMethodId, positionCount);
+
+  return omResultObj;
+}
 
 jobject transformTableToResult(JNIEnv *env, Table *outputTable)
 {

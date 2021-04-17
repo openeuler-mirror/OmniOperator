@@ -2181,171 +2181,185 @@ cleanup:                                          ; preds = %if.end102, %for.con
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
-define dso_local void @_Z18setIntColumnValuesPliPP6ColumnPi(i64* nocapture readonly %valueAddresses, i32 %positionCount, %class.Column** nocapture readonly %inputTable, i32* nocapture %outputData) local_unnamed_addr #11 {
+define dso_local void @_Z20setInt32ColumnValuesPliiPP6ColumnPi(i64* nocapture readonly %valueAddresses, i32 %offset, i32 %length, %class.Column** nocapture readonly %inputTable, i32* nocapture %outputData) local_unnamed_addr #11 {
 entry:
-  %cmp24 = icmp sgt i32 %positionCount, 0
-  br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
+  %cmp29 = icmp sgt i32 %length, 0
+  br i1 %cmp29, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %positionCount to i64
+  %add = add nsw i32 %length, %offset
+  %0 = sext i32 %offset to i64
+  %1 = sext i32 %add to i64
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %if.end, %entry
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
-  %inputData.026 = phi i32* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
-  %preTableIndex.025 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
+  %indvars.iv34 = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next35, %if.end ]
+  %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
+  %preTableIndex.031 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
+  %inputData.030 = phi i32* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %0 = load i64, i64* %arrayidx, align 8, !tbaa !47
-  %1 = lshr i64 %0, 32
-  %conv.i = trunc i64 %1 to i32
-  %cmp2.not = icmp eq i32 %preTableIndex.025, %conv.i
+  %2 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %3 = lshr i64 %2, 32
+  %conv.i = trunc i64 %3 to i32
+  %cmp2.not = icmp eq i32 %preTableIndex.031, %conv.i
   br i1 %cmp2.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %idxprom3 = ashr i64 %0, 32
+  %idxprom3 = ashr i64 %2, 32
   %arrayidx4 = getelementptr inbounds %class.Column*, %class.Column** %inputTable, i64 %idxprom3
-  %2 = load %class.Column*, %class.Column** %arrayidx4, align 8, !tbaa !2
-  %data.i = getelementptr inbounds %class.Column, %class.Column* %2, i64 0, i32 1
-  %3 = bitcast i8** %data.i to i32**
-  %4 = load i32*, i32** %3, align 8, !tbaa !10
+  %4 = load %class.Column*, %class.Column** %arrayidx4, align 8, !tbaa !2
+  %data.i = getelementptr inbounds %class.Column, %class.Column* %4, i64 0, i32 1
+  %5 = bitcast i8** %data.i to i32**
+  %6 = load i32*, i32** %5, align 8, !tbaa !10
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.body
-  %preTableIndex.1 = phi i32 [ %conv.i, %if.then ], [ %preTableIndex.025, %for.body ]
-  %inputData.1 = phi i32* [ %4, %if.then ], [ %inputData.026, %for.body ]
-  %sext = shl i64 %0, 32
+  %inputData.1 = phi i32* [ %6, %if.then ], [ %inputData.030, %for.body ]
+  %preTableIndex.1 = phi i32 [ %conv.i, %if.then ], [ %preTableIndex.031, %for.body ]
+  %sext = shl i64 %2, 32
   %idxprom6 = ashr exact i64 %sext, 32
   %arrayidx7 = getelementptr inbounds i32, i32* %inputData.1, i64 %idxprom6
-  %5 = load i32, i32* %arrayidx7, align 4, !tbaa !6
-  %arrayidx9 = getelementptr inbounds i32, i32* %outputData, i64 %indvars.iv
-  store i32 %5, i32* %arrayidx9, align 4, !tbaa !6
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !87
+  %7 = load i32, i32* %arrayidx7, align 4, !tbaa !6
+  %arrayidx9 = getelementptr inbounds i32, i32* %outputData, i64 %indvars.iv34
+  store i32 %7, i32* %arrayidx9, align 4, !tbaa !6
+  %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %cmp = icmp slt i64 %indvars.iv.next, %1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !87
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
-define dso_local void @_Z20setInt64ColumnValuesPliPP6ColumnS_(i64* nocapture readonly %valueAddresses, i32 %positionCount, %class.Column** nocapture readonly %inputTable, i64* nocapture %outputData) local_unnamed_addr #11 {
+define dso_local void @_Z20setInt64ColumnValuesPliiPP6ColumnS_(i64* nocapture readonly %valueAddresses, i32 %offset, i32 %length, %class.Column** nocapture readonly %inputTable, i64* nocapture %outputData) local_unnamed_addr #11 {
 entry:
-  %cmp24 = icmp sgt i32 %positionCount, 0
-  br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
+  %cmp29 = icmp sgt i32 %length, 0
+  br i1 %cmp29, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %positionCount to i64
+  %add = add nsw i32 %length, %offset
+  %0 = sext i32 %offset to i64
+  %1 = sext i32 %add to i64
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %if.end, %entry
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
-  %inputData.026 = phi i64* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
-  %preTableIndex.025 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
+  %indvars.iv34 = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next35, %if.end ]
+  %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
+  %preTableIndex.031 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
+  %inputData.030 = phi i64* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %0 = load i64, i64* %arrayidx, align 8, !tbaa !47
-  %1 = lshr i64 %0, 32
-  %conv.i = trunc i64 %1 to i32
-  %cmp2.not = icmp eq i32 %preTableIndex.025, %conv.i
+  %2 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %3 = lshr i64 %2, 32
+  %conv.i = trunc i64 %3 to i32
+  %cmp2.not = icmp eq i32 %preTableIndex.031, %conv.i
   br i1 %cmp2.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %idxprom3 = ashr i64 %0, 32
+  %idxprom3 = ashr i64 %2, 32
   %arrayidx4 = getelementptr inbounds %class.Column*, %class.Column** %inputTable, i64 %idxprom3
-  %2 = load %class.Column*, %class.Column** %arrayidx4, align 8, !tbaa !2
-  %data.i = getelementptr inbounds %class.Column, %class.Column* %2, i64 0, i32 1
-  %3 = bitcast i8** %data.i to i64**
-  %4 = load i64*, i64** %3, align 8, !tbaa !10
+  %4 = load %class.Column*, %class.Column** %arrayidx4, align 8, !tbaa !2
+  %data.i = getelementptr inbounds %class.Column, %class.Column* %4, i64 0, i32 1
+  %5 = bitcast i8** %data.i to i64**
+  %6 = load i64*, i64** %5, align 8, !tbaa !10
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.body
-  %preTableIndex.1 = phi i32 [ %conv.i, %if.then ], [ %preTableIndex.025, %for.body ]
-  %inputData.1 = phi i64* [ %4, %if.then ], [ %inputData.026, %for.body ]
-  %sext = shl i64 %0, 32
+  %inputData.1 = phi i64* [ %6, %if.then ], [ %inputData.030, %for.body ]
+  %preTableIndex.1 = phi i32 [ %conv.i, %if.then ], [ %preTableIndex.031, %for.body ]
+  %sext = shl i64 %2, 32
   %idxprom6 = ashr exact i64 %sext, 32
   %arrayidx7 = getelementptr inbounds i64, i64* %inputData.1, i64 %idxprom6
-  %5 = load i64, i64* %arrayidx7, align 8, !tbaa !47
-  %arrayidx9 = getelementptr inbounds i64, i64* %outputData, i64 %indvars.iv
-  store i64 %5, i64* %arrayidx9, align 8, !tbaa !47
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !88
+  %7 = load i64, i64* %arrayidx7, align 8, !tbaa !47
+  %arrayidx9 = getelementptr inbounds i64, i64* %outputData, i64 %indvars.iv34
+  store i64 %7, i64* %arrayidx9, align 8, !tbaa !47
+  %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %cmp = icmp slt i64 %indvars.iv.next, %1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !88
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
-define dso_local void @_Z21setDoubleColumnValuesPliPP6ColumnPd(i64* nocapture readonly %valueAddresses, i32 %positionCount, %class.Column** nocapture readonly %inputTable, double* nocapture %outputData) local_unnamed_addr #11 {
+define dso_local void @_Z21setDoubleColumnValuesPliiPP6ColumnPd(i64* nocapture readonly %valueAddresses, i32 %offset, i32 %length, %class.Column** nocapture readonly %inputTable, double* nocapture %outputData) local_unnamed_addr #11 {
 entry:
-  %cmp24 = icmp sgt i32 %positionCount, 0
-  br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
+  %cmp29 = icmp sgt i32 %length, 0
+  br i1 %cmp29, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %positionCount to i64
+  %add = add nsw i32 %length, %offset
+  %0 = sext i32 %offset to i64
+  %1 = sext i32 %add to i64
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %if.end, %entry
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
-  %inputData.026 = phi double* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
-  %preTableIndex.025 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
+  %indvars.iv34 = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next35, %if.end ]
+  %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
+  %preTableIndex.031 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
+  %inputData.030 = phi double* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %0 = load i64, i64* %arrayidx, align 8, !tbaa !47
-  %1 = lshr i64 %0, 32
-  %conv.i = trunc i64 %1 to i32
-  %cmp2.not = icmp eq i32 %preTableIndex.025, %conv.i
+  %2 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %3 = lshr i64 %2, 32
+  %conv.i = trunc i64 %3 to i32
+  %cmp2.not = icmp eq i32 %preTableIndex.031, %conv.i
   br i1 %cmp2.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %idxprom3 = ashr i64 %0, 32
+  %idxprom3 = ashr i64 %2, 32
   %arrayidx4 = getelementptr inbounds %class.Column*, %class.Column** %inputTable, i64 %idxprom3
-  %2 = load %class.Column*, %class.Column** %arrayidx4, align 8, !tbaa !2
-  %data.i = getelementptr inbounds %class.Column, %class.Column* %2, i64 0, i32 1
-  %3 = bitcast i8** %data.i to double**
-  %4 = load double*, double** %3, align 8, !tbaa !10
+  %4 = load %class.Column*, %class.Column** %arrayidx4, align 8, !tbaa !2
+  %data.i = getelementptr inbounds %class.Column, %class.Column* %4, i64 0, i32 1
+  %5 = bitcast i8** %data.i to double**
+  %6 = load double*, double** %5, align 8, !tbaa !10
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.body
-  %preTableIndex.1 = phi i32 [ %conv.i, %if.then ], [ %preTableIndex.025, %for.body ]
-  %inputData.1 = phi double* [ %4, %if.then ], [ %inputData.026, %for.body ]
-  %sext = shl i64 %0, 32
+  %inputData.1 = phi double* [ %6, %if.then ], [ %inputData.030, %for.body ]
+  %preTableIndex.1 = phi i32 [ %conv.i, %if.then ], [ %preTableIndex.031, %for.body ]
+  %sext = shl i64 %2, 32
   %idxprom6 = ashr exact i64 %sext, 32
   %arrayidx7 = getelementptr inbounds double, double* %inputData.1, i64 %idxprom6
-  %5 = load double, double* %arrayidx7, align 8, !tbaa !66
-  %arrayidx9 = getelementptr inbounds double, double* %outputData, i64 %indvars.iv
-  store double %5, double* %arrayidx9, align 8, !tbaa !66
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !89
+  %7 = load double, double* %arrayidx7, align 8, !tbaa !66
+  %arrayidx9 = getelementptr inbounds double, double* %outputData, i64 %indvars.iv34
+  store double %7, double* %arrayidx9, align 8, !tbaa !66
+  %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+  %cmp = icmp slt i64 %indvars.iv.next, %1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !89
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
-define dso_local void @_Z9getResultlPiilS_i(i64 %pagesIndexAddr, i32* nocapture readonly %outputCols, i32 %outputColsCount, i64 %outputTableAddr, i32* nocapture readonly %sourceTypes, i32 %positionCount) local_unnamed_addr #11 {
+define dso_local void @_Z9getResultlPiilS_ii(i64 %pagesIndexAddr, i32* nocapture readonly %outputCols, i32 %outputColsCount, i64 %outputTableAddr, i32* nocapture readonly %sourceTypes, i32 %offset, i32 %length) local_unnamed_addr #11 {
 entry:
   %0 = inttoptr i64 %pagesIndexAddr to %class.PagesIndex*
   %columns.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 6
   %1 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !43
   %valueAddresses.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 3
   %2 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !46
-  %cmp84 = icmp sgt i32 %outputColsCount, 0
-  br i1 %cmp84, label %for.body.lr.ph, label %for.cond.cleanup
+  %cmp87 = icmp sgt i32 %outputColsCount, 0
+  br i1 %cmp87, label %for.body.lr.ph, label %for.cond.cleanup
 
 for.body.lr.ph:                                   ; preds = %entry
   %3 = inttoptr i64 %outputTableAddr to %class.Table*
   %_M_start.i.i = getelementptr inbounds %class.Table, %class.Table* %3, i64 0, i32 3, i32 0, i32 0, i32 0
   %4 = load %class.Column**, %class.Column*** %_M_start.i.i, align 8, !tbaa !26
-  %cmp24.i = icmp sgt i32 %positionCount, 0
-  %wide.trip.count.i = zext i32 %positionCount to i64
+  %cmp29.i = icmp sgt i32 %length, 0
+  %add.i = add nsw i32 %length, %offset
+  %5 = sext i32 %offset to i64
+  %6 = sext i32 %add.i to i64
   %wide.trip.count = zext i32 %outputColsCount to i64
-  br i1 %cmp24.i, label %for.body.us, label %for.body.preheader
+  br i1 %cmp29.i, label %for.body.us, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %for.body.lr.ph
-  %5 = add nsw i64 %wide.trip.count, -1
+  %7 = add nsw i64 %wide.trip.count, -1
   %xtraiter = and i64 %wide.trip.count, 7
-  %6 = icmp ult i64 %5, 7
-  br i1 %6, label %for.cond.cleanup.loopexit102.unr-lcssa, label %for.body.preheader.new
+  %8 = icmp ult i64 %7, 7
+  br i1 %8, label %for.cond.cleanup.loopexit105.unr-lcssa, label %for.body.preheader.new
 
 for.body.preheader.new:                           ; preds = %for.body.preheader
   %unroll_iter = and i64 %wide.trip.count, 4294967288
@@ -2354,156 +2368,162 @@ for.body.preheader.new:                           ; preds = %for.body.preheader
 for.body.us:                                      ; preds = %for.body.lr.ph, %sw.epilog.us
   %indvars.iv = phi i64 [ %indvars.iv.next, %sw.epilog.us ], [ 0, %for.body.lr.ph ]
   %add.ptr.i.i.us = getelementptr inbounds %class.Column*, %class.Column** %4, i64 %indvars.iv
-  %7 = load %class.Column*, %class.Column** %add.ptr.i.i.us, align 8, !tbaa !2
+  %9 = load %class.Column*, %class.Column** %add.ptr.i.i.us, align 8, !tbaa !2
   %arrayidx.us = getelementptr inbounds i32, i32* %outputCols, i64 %indvars.iv
-  %8 = load i32, i32* %arrayidx.us, align 4, !tbaa !6
-  %data.i.us = getelementptr inbounds %class.Column, %class.Column* %7, i64 0, i32 1
-  %9 = load i8*, i8** %data.i.us, align 8, !tbaa !10
-  %idxprom4.us = sext i32 %8 to i64
+  %10 = load i32, i32* %arrayidx.us, align 4, !tbaa !6
+  %data.i.us = getelementptr inbounds %class.Column, %class.Column* %9, i64 0, i32 1
+  %11 = load i8*, i8** %data.i.us, align 8, !tbaa !10
+  %idxprom4.us = sext i32 %10 to i64
   %arrayidx5.us = getelementptr inbounds i32, i32* %sourceTypes, i64 %idxprom4.us
-  %10 = load i32, i32* %arrayidx5.us, align 4, !tbaa !6
+  %12 = load i32, i32* %arrayidx5.us, align 4, !tbaa !6
   %arrayidx7.us = getelementptr inbounds %class.Column**, %class.Column*** %1, i64 %idxprom4.us
-  %11 = load %class.Column**, %class.Column*** %arrayidx7.us, align 8, !tbaa !2
-  switch i32 %10, label %sw.epilog.us [
-    i32 1, label %for.body.i68.us.preheader
+  %13 = load %class.Column**, %class.Column*** %arrayidx7.us, align 8, !tbaa !2
+  switch i32 %12, label %sw.epilog.us [
+    i32 1, label %for.body.i70.us.preheader
     i32 2, label %for.body.i45.us.preheader
-    i32 3, label %sw.bb11.us
+    i32 3, label %sw.bb9.us
   ]
 
-sw.bb11.us:                                       ; preds = %for.body.us
-  %12 = bitcast i8* %9 to double*
+sw.bb9.us:                                        ; preds = %for.body.us
+  %14 = bitcast i8* %11 to double*
   br label %for.body.i.us
 
-for.body.i.us:                                    ; preds = %if.end.i.us, %sw.bb11.us
-  %indvars.iv.i.us = phi i64 [ 0, %sw.bb11.us ], [ %indvars.iv.next.i.us, %if.end.i.us ]
-  %inputData.026.i.us = phi double* [ null, %sw.bb11.us ], [ %inputData.1.i.us, %if.end.i.us ]
-  %preTableIndex.025.i.us = phi i32 [ -1, %sw.bb11.us ], [ %preTableIndex.1.i.us, %if.end.i.us ]
+for.body.i.us:                                    ; preds = %if.end.i.us, %sw.bb9.us
+  %indvars.iv34.i.us = phi i64 [ 0, %sw.bb9.us ], [ %indvars.iv.next35.i.us, %if.end.i.us ]
+  %indvars.iv.i.us = phi i64 [ %5, %sw.bb9.us ], [ %indvars.iv.next.i.us, %if.end.i.us ]
+  %preTableIndex.031.i.us = phi i32 [ -1, %sw.bb9.us ], [ %preTableIndex.1.i.us, %if.end.i.us ]
+  %inputData.030.i.us = phi double* [ null, %sw.bb9.us ], [ %inputData.1.i.us, %if.end.i.us ]
   %arrayidx.i.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i.us
-  %13 = load i64, i64* %arrayidx.i.us, align 8, !tbaa !47
-  %14 = lshr i64 %13, 32
-  %conv.i.i.us = trunc i64 %14 to i32
-  %cmp2.not.i.us = icmp eq i32 %preTableIndex.025.i.us, %conv.i.i.us
+  %15 = load i64, i64* %arrayidx.i.us, align 8, !tbaa !47
+  %16 = lshr i64 %15, 32
+  %conv.i.i.us = trunc i64 %16 to i32
+  %cmp2.not.i.us = icmp eq i32 %preTableIndex.031.i.us, %conv.i.i.us
   br i1 %cmp2.not.i.us, label %if.end.i.us, label %if.then.i.us
 
 if.then.i.us:                                     ; preds = %for.body.i.us
-  %idxprom3.i.us = ashr i64 %13, 32
-  %arrayidx4.i.us = getelementptr inbounds %class.Column*, %class.Column** %11, i64 %idxprom3.i.us
-  %15 = load %class.Column*, %class.Column** %arrayidx4.i.us, align 8, !tbaa !2
-  %data.i.i.us = getelementptr inbounds %class.Column, %class.Column* %15, i64 0, i32 1
-  %16 = bitcast i8** %data.i.i.us to double**
-  %17 = load double*, double** %16, align 8, !tbaa !10
+  %idxprom3.i.us = ashr i64 %15, 32
+  %arrayidx4.i.us = getelementptr inbounds %class.Column*, %class.Column** %13, i64 %idxprom3.i.us
+  %17 = load %class.Column*, %class.Column** %arrayidx4.i.us, align 8, !tbaa !2
+  %data.i.i.us = getelementptr inbounds %class.Column, %class.Column* %17, i64 0, i32 1
+  %18 = bitcast i8** %data.i.i.us to double**
+  %19 = load double*, double** %18, align 8, !tbaa !10
   br label %if.end.i.us
 
 if.end.i.us:                                      ; preds = %if.then.i.us, %for.body.i.us
-  %preTableIndex.1.i.us = phi i32 [ %conv.i.i.us, %if.then.i.us ], [ %preTableIndex.025.i.us, %for.body.i.us ]
-  %inputData.1.i.us = phi double* [ %17, %if.then.i.us ], [ %inputData.026.i.us, %for.body.i.us ]
-  %sext.i.us = shl i64 %13, 32
+  %inputData.1.i.us = phi double* [ %19, %if.then.i.us ], [ %inputData.030.i.us, %for.body.i.us ]
+  %preTableIndex.1.i.us = phi i32 [ %conv.i.i.us, %if.then.i.us ], [ %preTableIndex.031.i.us, %for.body.i.us ]
+  %sext.i.us = shl i64 %15, 32
   %idxprom6.i.us = ashr exact i64 %sext.i.us, 32
   %arrayidx7.i.us = getelementptr inbounds double, double* %inputData.1.i.us, i64 %idxprom6.i.us
-  %18 = load double, double* %arrayidx7.i.us, align 8, !tbaa !66
-  %arrayidx9.i.us = getelementptr inbounds double, double* %12, i64 %indvars.iv.i.us
-  store double %18, double* %arrayidx9.i.us, align 8, !tbaa !66
-  %indvars.iv.next.i.us = add nuw nsw i64 %indvars.iv.i.us, 1
-  %exitcond.not.i.us = icmp eq i64 %indvars.iv.next.i.us, %wide.trip.count.i
-  br i1 %exitcond.not.i.us, label %sw.epilog.us, label %for.body.i.us, !llvm.loop !89
+  %20 = load double, double* %arrayidx7.i.us, align 8, !tbaa !66
+  %arrayidx9.i.us = getelementptr inbounds double, double* %14, i64 %indvars.iv34.i.us
+  store double %20, double* %arrayidx9.i.us, align 8, !tbaa !66
+  %indvars.iv.next35.i.us = add nuw nsw i64 %indvars.iv34.i.us, 1
+  %indvars.iv.next.i.us = add nsw i64 %indvars.iv.i.us, 1
+  %cmp.i.us = icmp slt i64 %indvars.iv.next.i.us, %6
+  br i1 %cmp.i.us, label %for.body.i.us, label %sw.epilog.us, !llvm.loop !89
 
 for.body.i45.us.preheader:                        ; preds = %for.body.us
-  %19 = bitcast i8* %9 to i64*
+  %21 = bitcast i8* %11 to i64*
   br label %for.body.i45.us
 
-for.body.i45.us:                                  ; preds = %for.body.i45.us.preheader, %if.end.i58.us
-  %indvars.iv.i39.us = phi i64 [ %indvars.iv.next.i56.us, %if.end.i58.us ], [ 0, %for.body.i45.us.preheader ]
-  %inputData.026.i40.us = phi i64* [ %inputData.1.i51.us, %if.end.i58.us ], [ null, %for.body.i45.us.preheader ]
-  %preTableIndex.025.i41.us = phi i32 [ %preTableIndex.1.i50.us, %if.end.i58.us ], [ -1, %for.body.i45.us.preheader ]
+for.body.i45.us:                                  ; preds = %for.body.i45.us.preheader, %if.end.i59.us
+  %indvars.iv34.i38.us = phi i64 [ %indvars.iv.next35.i56.us, %if.end.i59.us ], [ 0, %for.body.i45.us.preheader ]
+  %indvars.iv.i39.us = phi i64 [ %indvars.iv.next.i57.us, %if.end.i59.us ], [ %5, %for.body.i45.us.preheader ]
+  %preTableIndex.031.i40.us = phi i32 [ %preTableIndex.1.i51.us, %if.end.i59.us ], [ -1, %for.body.i45.us.preheader ]
+  %inputData.030.i41.us = phi i64* [ %inputData.1.i50.us, %if.end.i59.us ], [ null, %for.body.i45.us.preheader ]
   %arrayidx.i42.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i39.us
-  %20 = load i64, i64* %arrayidx.i42.us, align 8, !tbaa !47
-  %21 = lshr i64 %20, 32
-  %conv.i.i43.us = trunc i64 %21 to i32
-  %cmp2.not.i44.us = icmp eq i32 %preTableIndex.025.i41.us, %conv.i.i43.us
-  br i1 %cmp2.not.i44.us, label %if.end.i58.us, label %if.then.i49.us
+  %22 = load i64, i64* %arrayidx.i42.us, align 8, !tbaa !47
+  %23 = lshr i64 %22, 32
+  %conv.i.i43.us = trunc i64 %23 to i32
+  %cmp2.not.i44.us = icmp eq i32 %preTableIndex.031.i40.us, %conv.i.i43.us
+  br i1 %cmp2.not.i44.us, label %if.end.i59.us, label %if.then.i49.us
 
 if.then.i49.us:                                   ; preds = %for.body.i45.us
-  %idxprom3.i46.us = ashr i64 %20, 32
-  %arrayidx4.i47.us = getelementptr inbounds %class.Column*, %class.Column** %11, i64 %idxprom3.i46.us
-  %22 = load %class.Column*, %class.Column** %arrayidx4.i47.us, align 8, !tbaa !2
-  %data.i.i48.us = getelementptr inbounds %class.Column, %class.Column* %22, i64 0, i32 1
-  %23 = bitcast i8** %data.i.i48.us to i64**
-  %24 = load i64*, i64** %23, align 8, !tbaa !10
-  br label %if.end.i58.us
+  %idxprom3.i46.us = ashr i64 %22, 32
+  %arrayidx4.i47.us = getelementptr inbounds %class.Column*, %class.Column** %13, i64 %idxprom3.i46.us
+  %24 = load %class.Column*, %class.Column** %arrayidx4.i47.us, align 8, !tbaa !2
+  %data.i.i48.us = getelementptr inbounds %class.Column, %class.Column* %24, i64 0, i32 1
+  %25 = bitcast i8** %data.i.i48.us to i64**
+  %26 = load i64*, i64** %25, align 8, !tbaa !10
+  br label %if.end.i59.us
 
-if.end.i58.us:                                    ; preds = %if.then.i49.us, %for.body.i45.us
-  %preTableIndex.1.i50.us = phi i32 [ %conv.i.i43.us, %if.then.i49.us ], [ %preTableIndex.025.i41.us, %for.body.i45.us ]
-  %inputData.1.i51.us = phi i64* [ %24, %if.then.i49.us ], [ %inputData.026.i40.us, %for.body.i45.us ]
-  %sext.i52.us = shl i64 %20, 32
+if.end.i59.us:                                    ; preds = %if.then.i49.us, %for.body.i45.us
+  %inputData.1.i50.us = phi i64* [ %26, %if.then.i49.us ], [ %inputData.030.i41.us, %for.body.i45.us ]
+  %preTableIndex.1.i51.us = phi i32 [ %conv.i.i43.us, %if.then.i49.us ], [ %preTableIndex.031.i40.us, %for.body.i45.us ]
+  %sext.i52.us = shl i64 %22, 32
   %idxprom6.i53.us = ashr exact i64 %sext.i52.us, 32
-  %arrayidx7.i54.us = getelementptr inbounds i64, i64* %inputData.1.i51.us, i64 %idxprom6.i53.us
-  %25 = load i64, i64* %arrayidx7.i54.us, align 8, !tbaa !47
-  %arrayidx9.i55.us = getelementptr inbounds i64, i64* %19, i64 %indvars.iv.i39.us
-  store i64 %25, i64* %arrayidx9.i55.us, align 8, !tbaa !47
-  %indvars.iv.next.i56.us = add nuw nsw i64 %indvars.iv.i39.us, 1
-  %exitcond.not.i57.us = icmp eq i64 %indvars.iv.next.i56.us, %wide.trip.count.i
-  br i1 %exitcond.not.i57.us, label %sw.epilog.us, label %for.body.i45.us, !llvm.loop !88
+  %arrayidx7.i54.us = getelementptr inbounds i64, i64* %inputData.1.i50.us, i64 %idxprom6.i53.us
+  %27 = load i64, i64* %arrayidx7.i54.us, align 8, !tbaa !47
+  %arrayidx9.i55.us = getelementptr inbounds i64, i64* %21, i64 %indvars.iv34.i38.us
+  store i64 %27, i64* %arrayidx9.i55.us, align 8, !tbaa !47
+  %indvars.iv.next35.i56.us = add nuw nsw i64 %indvars.iv34.i38.us, 1
+  %indvars.iv.next.i57.us = add nsw i64 %indvars.iv.i39.us, 1
+  %cmp.i58.us = icmp slt i64 %indvars.iv.next.i57.us, %6
+  br i1 %cmp.i58.us, label %for.body.i45.us, label %sw.epilog.us, !llvm.loop !88
 
-for.body.i68.us.preheader:                        ; preds = %for.body.us
-  %26 = bitcast i8* %9 to i32*
-  br label %for.body.i68.us
+for.body.i70.us.preheader:                        ; preds = %for.body.us
+  %28 = bitcast i8* %11 to i32*
+  br label %for.body.i70.us
 
-for.body.i68.us:                                  ; preds = %for.body.i68.us.preheader, %if.end.i81.us
-  %indvars.iv.i62.us = phi i64 [ %indvars.iv.next.i79.us, %if.end.i81.us ], [ 0, %for.body.i68.us.preheader ]
-  %inputData.026.i63.us = phi i32* [ %inputData.1.i74.us, %if.end.i81.us ], [ null, %for.body.i68.us.preheader ]
-  %preTableIndex.025.i64.us = phi i32 [ %preTableIndex.1.i73.us, %if.end.i81.us ], [ -1, %for.body.i68.us.preheader ]
-  %arrayidx.i65.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i62.us
-  %27 = load i64, i64* %arrayidx.i65.us, align 8, !tbaa !47
-  %28 = lshr i64 %27, 32
-  %conv.i.i66.us = trunc i64 %28 to i32
-  %cmp2.not.i67.us = icmp eq i32 %preTableIndex.025.i64.us, %conv.i.i66.us
-  br i1 %cmp2.not.i67.us, label %if.end.i81.us, label %if.then.i72.us
+for.body.i70.us:                                  ; preds = %for.body.i70.us.preheader, %if.end.i84.us
+  %indvars.iv34.i63.us = phi i64 [ %indvars.iv.next35.i81.us, %if.end.i84.us ], [ 0, %for.body.i70.us.preheader ]
+  %indvars.iv.i64.us = phi i64 [ %indvars.iv.next.i82.us, %if.end.i84.us ], [ %5, %for.body.i70.us.preheader ]
+  %preTableIndex.031.i65.us = phi i32 [ %preTableIndex.1.i76.us, %if.end.i84.us ], [ -1, %for.body.i70.us.preheader ]
+  %inputData.030.i66.us = phi i32* [ %inputData.1.i75.us, %if.end.i84.us ], [ null, %for.body.i70.us.preheader ]
+  %arrayidx.i67.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i64.us
+  %29 = load i64, i64* %arrayidx.i67.us, align 8, !tbaa !47
+  %30 = lshr i64 %29, 32
+  %conv.i.i68.us = trunc i64 %30 to i32
+  %cmp2.not.i69.us = icmp eq i32 %preTableIndex.031.i65.us, %conv.i.i68.us
+  br i1 %cmp2.not.i69.us, label %if.end.i84.us, label %if.then.i74.us
 
-if.then.i72.us:                                   ; preds = %for.body.i68.us
-  %idxprom3.i69.us = ashr i64 %27, 32
-  %arrayidx4.i70.us = getelementptr inbounds %class.Column*, %class.Column** %11, i64 %idxprom3.i69.us
-  %29 = load %class.Column*, %class.Column** %arrayidx4.i70.us, align 8, !tbaa !2
-  %data.i.i71.us = getelementptr inbounds %class.Column, %class.Column* %29, i64 0, i32 1
-  %30 = bitcast i8** %data.i.i71.us to i32**
-  %31 = load i32*, i32** %30, align 8, !tbaa !10
-  br label %if.end.i81.us
+if.then.i74.us:                                   ; preds = %for.body.i70.us
+  %idxprom3.i71.us = ashr i64 %29, 32
+  %arrayidx4.i72.us = getelementptr inbounds %class.Column*, %class.Column** %13, i64 %idxprom3.i71.us
+  %31 = load %class.Column*, %class.Column** %arrayidx4.i72.us, align 8, !tbaa !2
+  %data.i.i73.us = getelementptr inbounds %class.Column, %class.Column* %31, i64 0, i32 1
+  %32 = bitcast i8** %data.i.i73.us to i32**
+  %33 = load i32*, i32** %32, align 8, !tbaa !10
+  br label %if.end.i84.us
 
-if.end.i81.us:                                    ; preds = %if.then.i72.us, %for.body.i68.us
-  %preTableIndex.1.i73.us = phi i32 [ %conv.i.i66.us, %if.then.i72.us ], [ %preTableIndex.025.i64.us, %for.body.i68.us ]
-  %inputData.1.i74.us = phi i32* [ %31, %if.then.i72.us ], [ %inputData.026.i63.us, %for.body.i68.us ]
-  %sext.i75.us = shl i64 %27, 32
-  %idxprom6.i76.us = ashr exact i64 %sext.i75.us, 32
-  %arrayidx7.i77.us = getelementptr inbounds i32, i32* %inputData.1.i74.us, i64 %idxprom6.i76.us
-  %32 = load i32, i32* %arrayidx7.i77.us, align 4, !tbaa !6
-  %arrayidx9.i78.us = getelementptr inbounds i32, i32* %26, i64 %indvars.iv.i62.us
-  store i32 %32, i32* %arrayidx9.i78.us, align 4, !tbaa !6
-  %indvars.iv.next.i79.us = add nuw nsw i64 %indvars.iv.i62.us, 1
-  %exitcond.not.i80.us = icmp eq i64 %indvars.iv.next.i79.us, %wide.trip.count.i
-  br i1 %exitcond.not.i80.us, label %sw.epilog.us, label %for.body.i68.us, !llvm.loop !87
+if.end.i84.us:                                    ; preds = %if.then.i74.us, %for.body.i70.us
+  %inputData.1.i75.us = phi i32* [ %33, %if.then.i74.us ], [ %inputData.030.i66.us, %for.body.i70.us ]
+  %preTableIndex.1.i76.us = phi i32 [ %conv.i.i68.us, %if.then.i74.us ], [ %preTableIndex.031.i65.us, %for.body.i70.us ]
+  %sext.i77.us = shl i64 %29, 32
+  %idxprom6.i78.us = ashr exact i64 %sext.i77.us, 32
+  %arrayidx7.i79.us = getelementptr inbounds i32, i32* %inputData.1.i75.us, i64 %idxprom6.i78.us
+  %34 = load i32, i32* %arrayidx7.i79.us, align 4, !tbaa !6
+  %arrayidx9.i80.us = getelementptr inbounds i32, i32* %28, i64 %indvars.iv34.i63.us
+  store i32 %34, i32* %arrayidx9.i80.us, align 4, !tbaa !6
+  %indvars.iv.next35.i81.us = add nuw nsw i64 %indvars.iv34.i63.us, 1
+  %indvars.iv.next.i82.us = add nsw i64 %indvars.iv.i64.us, 1
+  %cmp.i83.us = icmp slt i64 %indvars.iv.next.i82.us, %6
+  br i1 %cmp.i83.us, label %for.body.i70.us, label %sw.epilog.us, !llvm.loop !87
 
-sw.epilog.us:                                     ; preds = %if.end.i.us, %if.end.i58.us, %if.end.i81.us, %for.body.us
+sw.epilog.us:                                     ; preds = %if.end.i.us, %if.end.i59.us, %if.end.i84.us, %for.body.us
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body.us, !llvm.loop !90
 
-for.cond.cleanup.loopexit102.unr-lcssa:           ; preds = %for.body, %for.body.preheader
+for.cond.cleanup.loopexit105.unr-lcssa:           ; preds = %for.body, %for.body.preheader
   %lcmp.mod.not = icmp eq i64 %xtraiter, 0
   br i1 %lcmp.mod.not, label %for.cond.cleanup, label %for.body.epil
 
-for.body.epil:                                    ; preds = %for.cond.cleanup.loopexit102.unr-lcssa, %for.body.epil
-  %epil.iter = phi i64 [ %epil.iter.sub, %for.body.epil ], [ %xtraiter, %for.cond.cleanup.loopexit102.unr-lcssa ]
+for.body.epil:                                    ; preds = %for.cond.cleanup.loopexit105.unr-lcssa, %for.body.epil
+  %epil.iter = phi i64 [ %epil.iter.sub, %for.body.epil ], [ %xtraiter, %for.cond.cleanup.loopexit105.unr-lcssa ]
   %epil.iter.sub = add i64 %epil.iter, -1
   %epil.iter.cmp.not = icmp eq i64 %epil.iter.sub, 0
   br i1 %epil.iter.cmp.not, label %for.cond.cleanup, label %for.body.epil, !llvm.loop !91
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit102.unr-lcssa, %for.body.epil, %sw.epilog.us, %entry
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit105.unr-lcssa, %for.body.epil, %sw.epilog.us, %entry
   ret void
 
 for.body:                                         ; preds = %for.body, %for.body.preheader.new
   %niter = phi i64 [ %unroll_iter, %for.body.preheader.new ], [ %niter.nsub.7, %for.body ]
   %niter.nsub.7 = add i64 %niter, -8
   %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
-  br i1 %niter.ncmp.7, label %for.cond.cleanup.loopexit102.unr-lcssa, label %for.body, !llvm.loop !90
+  br i1 %niter.ncmp.7, label %for.cond.cleanup.loopexit105.unr-lcssa, label %for.body, !llvm.loop !90
 }
 
 ; Function Attrs: nounwind uwtable willreturn mustprogress

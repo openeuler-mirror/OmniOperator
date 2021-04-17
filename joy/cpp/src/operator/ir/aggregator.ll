@@ -517,7 +517,7 @@ entry:
   br i1 %cmp, label %do.body, label %if.end
 
 do.body:                                          ; preds = %entry
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([59 x i8], [59 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @__FUNCTION__.sumProcessInt32, i64 0, i64 0), i32 61, i32 %offset)
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([59 x i8], [59 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @__FUNCTION__.sumProcessInt32, i64 0, i64 0), i32 62, i32 %offset)
   %putchar = tail call i32 @putchar(i32 10)
   br label %if.end
 
@@ -587,7 +587,7 @@ if.else:                                          ; preds = %if.end3.i.i.i.i, %l
   %16 = bitcast i8* %columnPtr to i32*
   %idx.ext107 = sext i32 %offset to i64
   %add.ptr108 = getelementptr inbounds i32, i32* %16, i64 %idx.ext107
-  %call14 = tail call noalias nonnull dereferenceable(4) i8* @_Znwm(i64 4) #14
+  %call14 = tail call i8* @omni_allocate(i64 4)
   %17 = bitcast i8* %call14 to i32*
   %18 = load i32, i32* %add.ptr108, align 4, !tbaa !15
   store i32 %18, i32* %17, align 4, !tbaa !15
@@ -669,6 +669,8 @@ if.end28:                                         ; preds = %_ZNSt6vectorI13Grou
 ; Function Attrs: nofree nounwind
 declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr #6
 
+declare dso_local i8* @omni_allocate(i64) local_unnamed_addr #0
+
 ; Function Attrs: uwtable
 define dso_local void @sumProcessInt64(%class.SumAggregator* %aggregator, i64 %key, i8* nocapture readonly %columnPtr, i32 %offset) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
@@ -677,7 +679,7 @@ entry:
   br i1 %cmp, label %do.body, label %if.end
 
 do.body:                                          ; preds = %entry
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([59 x i8], [59 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @__FUNCTION__.sumProcessInt64, i64 0, i64 0), i32 82, i32 %offset)
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([59 x i8], [59 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @__FUNCTION__.sumProcessInt64, i64 0, i64 0), i32 83, i32 %offset)
   %putchar = tail call i32 @putchar(i32 10)
   br label %if.end
 
@@ -747,7 +749,7 @@ if.else:                                          ; preds = %if.end3.i.i.i.i, %l
   %16 = bitcast i8* %columnPtr to i64*
   %idx.ext107 = sext i32 %offset to i64
   %add.ptr108 = getelementptr inbounds i64, i64* %16, i64 %idx.ext107
-  %call14 = tail call noalias nonnull dereferenceable(8) i8* @_Znwm(i64 8) #14
+  %call14 = tail call i8* @omni_allocate(i64 8)
   %17 = bitcast i8* %call14 to i64*
   %18 = load i64, i64* %add.ptr108, align 8, !tbaa !14
   store i64 %18, i64* %17, align 8, !tbaa !14
@@ -834,7 +836,7 @@ entry:
   br i1 %cmp, label %do.body, label %if.end
 
 do.body:                                          ; preds = %entry
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([59 x i8], [59 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__FUNCTION__.sumProcessDouble, i64 0, i64 0), i32 103, i32 %offset)
+  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([29 x i8], [29 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([59 x i8], [59 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([17 x i8], [17 x i8]* @__FUNCTION__.sumProcessDouble, i64 0, i64 0), i32 104, i32 %offset)
   %putchar = tail call i32 @putchar(i32 10)
   br label %if.end
 
@@ -904,7 +906,7 @@ if.else:                                          ; preds = %if.end3.i.i.i.i, %l
   %16 = bitcast i8* %columnPtr to double*
   %idx.ext107 = sext i32 %offset to i64
   %add.ptr108 = getelementptr inbounds double, double* %16, i64 %idx.ext107
-  %call14 = tail call noalias nonnull dereferenceable(8) i8* @_Znwm(i64 8) #14
+  %call14 = tail call i8* @omni_allocate(i64 8)
   %17 = bitcast i8* %call14 to double*
   %18 = load double, double* %add.ptr108, align 8, !tbaa !31
   store double %18, double* %17, align 8, !tbaa !31

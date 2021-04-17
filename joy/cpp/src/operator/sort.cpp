@@ -486,7 +486,7 @@ void quickSort(int64_t pagesIndexAddr,
     }
 }
 
-void setIntColumnValues(int64_t *valueAddresses, int32_t positionCount, Column **inputTable, int32_t *outputData) {
+void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData) {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Column *inputColumn = NULL;
@@ -494,7 +494,10 @@ void setIntColumnValues(int64_t *valueAddresses, int32_t positionCount, Column *
     int32_t tableIndex = 0;
     int32_t position = 0;
 
-    for (int32_t i = 0; i < positionCount; i++) {
+    int32_t start = offset;
+    int32_t end = offset + length;
+    int32_t outputIndex = 0;
+    for (int32_t i = start; i < end; i++) {
         valueAddress = valueAddresses[i];
         tableIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
@@ -504,11 +507,12 @@ void setIntColumnValues(int64_t *valueAddresses, int32_t positionCount, Column *
             preTableIndex = tableIndex;
         }
 
-        outputData[i] = inputData[position];
+        outputData[outputIndex] = inputData[position];
+        outputIndex++;
     }
 }
 
-void setInt64ColumnValues(int64_t *valueAddresses, int32_t positionCount, Column **inputTable, int64_t *outputData) {
+void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData) {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Column *inputColumn = NULL;
@@ -516,7 +520,10 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t positionCount, Column
     int32_t tableIndex = 0;
     int32_t position = 0;
 
-    for (int32_t i = 0; i < positionCount; i++) {
+    int32_t start = offset;
+    int32_t end = offset + length;
+    int32_t outputIndex = 0;
+    for (int32_t i = start; i < end; i++) {
         valueAddress = valueAddresses[i];
         tableIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
@@ -526,11 +533,12 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t positionCount, Column
             preTableIndex = tableIndex;
         }
 
-        outputData[i] = inputData[position];
+        outputData[outputIndex] = inputData[position];
+        outputIndex++;
     }
 }
 
-void setDoubleColumnValues(int64_t *valueAddresses, int32_t positionCount, Column **inputTable, double *outputData) {
+void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData) {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Column *inputColumn = NULL;
@@ -538,7 +546,10 @@ void setDoubleColumnValues(int64_t *valueAddresses, int32_t positionCount, Colum
     int32_t tableIndex = 0;
     int32_t position = 0;
 
-    for (int32_t i = 0; i < positionCount; i++) {
+    int32_t start = offset;
+    int32_t end = offset + length;
+    int32_t outputIndex = 0;
+    for (int32_t i = start; i < end; i++) {
         valueAddress = valueAddresses[i];
         tableIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
@@ -548,11 +559,12 @@ void setDoubleColumnValues(int64_t *valueAddresses, int32_t positionCount, Colum
             preTableIndex = tableIndex;
         }
 
-        outputData[i] = inputData[position];
+        outputData[outputIndex] = inputData[position];
+        outputIndex++;
     }
 }
 
-void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t positionCount)
+void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length)
 {
     PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
     Column ***inputTables = pagesIndex->getColumns();
@@ -574,13 +586,13 @@ void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCo
         switch (colType)
         {
         case 1:
-            setIntColumnValues(&valueAddresses[0], positionCount, inputTable, (int32_t *)outputData);
+            setInt32ColumnValues(valueAddresses, offset, length, inputTable, (int32_t *)outputData);
             break;
         case 2:
-            setInt64ColumnValues(&valueAddresses[0], positionCount, inputTable, (int64_t *)outputData);
+            setInt64ColumnValues(valueAddresses, offset, length, inputTable, (int64_t *)outputData);
             break;
         case 3:
-            setDoubleColumnValues(&valueAddresses[0], positionCount, inputTable, (double *)outputData);
+            setDoubleColumnValues(valueAddresses, offset, length, inputTable, (double *)outputData);
             break;    
         default:
             break;

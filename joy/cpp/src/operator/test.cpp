@@ -140,7 +140,8 @@ int test_sort() {
     sortExecute(contextAddress, sortAddress);
     std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
 
-    Table * output = sortGetOutput(contextAddress, sortAddress);
+    int pageCount;
+    Table **output = sortGetOutput(contextAddress, sortAddress, &pageCount);
 
     // free memory
     delete output;
@@ -219,6 +220,7 @@ int test_sort_one()
     sortExecute(contextAddress, sortAddress);
     std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
 
-    Table * output = sortGetOutput(contextAddress, sortAddress);
+    int pageCount;
+    Table **output = sortGetOutput(contextAddress, sortAddress, &pageCount);
     return 1236;
 }

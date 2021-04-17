@@ -95,7 +95,7 @@ public class OmniRuntime
         ByteBuffer[] statBufs = null;
         int statRowSize = 0;
         if (stats != null) {
-            statBufs = stats.getBuffers();
+            //statBufs = stats.getBuffers();
             statRowSize = stats.getLength();
 
         }
