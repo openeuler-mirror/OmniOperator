@@ -173,8 +173,9 @@ public class OmniRuntime
     private Vec[][] generateOMVec(OMResult[] result, VecType[] outputTypes)
     {
         Vec[][] output = new Vec[result.length][outputTypes.length];
-        int length = result[0].getLength();
         for (int i = 0; i < result.length; ++i) {
+            int length = result[i].getLength();
+
             for (int idx = 0; idx < outputTypes.length; idx++) {
                 ByteBuffer vecData = result[i].getBuffers()[idx];
                 //TODO: Need Byte Order Configurable
