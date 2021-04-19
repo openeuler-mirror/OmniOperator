@@ -149,6 +149,10 @@ void sortExecute(int64_t contextAddress, int64_t sortAddress)
     int32_t sortColCount = sort->getSortColCount();
     PagesIndex *pagesIndex = sort->getPagesIndex();
 
+    if (pagesIndex->getTableCount() == 0) {
+        return;
+    }
+
     int32_t positionCount = pagesIndex->getPositionCount();
     int32_t from = 0;
     int32_t sortColTypes[sortColCount];
@@ -231,6 +235,10 @@ Table **sortGetOutput(int64_t contextAddress, int64_t sortAddress, int32_t *tabl
     int32_t maxRowCount = getMaxRowCount(sourceTypes, outputCols, outputColsCount);
     int32_t tableCount = getTableCount(positionCount, maxRowCount);
     *tableCountAddr = tableCount;
+
+    if (tableCount == 0) {
+        return NULL;
+    }
 
     Table **result = (Table **)malloc(sizeof(Table *) * tableCount);
     Table *outputTable = NULL;

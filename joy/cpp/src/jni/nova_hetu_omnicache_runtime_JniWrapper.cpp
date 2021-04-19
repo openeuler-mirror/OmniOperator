@@ -350,7 +350,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortGetOut
     PRINT_JNI("after sortGetOutput call elapsed time: %ld ms\n", END(start));
     jobject output = transformTableToResultV2(env, outputTable, tableCount);
     PRINT_JNI("after transformTableToResult call elapsed time: %ld ms\n", END(start));
-    delete outputTable;
+    //delete outputTable;
     return output;
 }
 
@@ -367,6 +367,13 @@ jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result)
 
 jobject transformTableToResultV2(JNIEnv *env, Table **outputTables, int32_t tableCount)
 {
+  //std::cout << "outputTables=" << outputTables << ", tableCount=" << tableCount << endl;
+  if (tableCount == 0) {
+    jobject omResultObj = env->NewObject(omResultCls, methodId);
+    env->CallObjectMethod(omResultObj, setLengthMethodId, 0);
+    return omResultObj;
+  }
+
   int32_t columnCount = outputTables[0]->getColumnNumber();
   int32_t positionCount = 0;
   Table *outputTable;

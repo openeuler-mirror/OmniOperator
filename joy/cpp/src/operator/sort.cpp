@@ -164,6 +164,10 @@ void PagesIndex::addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, in
     this->tableCount = pageCount;
     this->positionCount = totalRowCount;
 
+    if (pageCount == 0) {
+        return;
+    }
+
     valueAddresses = (int64_t *)malloc(totalRowCount * sizeof(int64_t));
     columns = (Column ***)malloc(sizeof(Column **));
     for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
@@ -193,14 +197,14 @@ void PagesIndex::addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, in
 
 PagesIndex::~PagesIndex()
 {
-    for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-        for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-            delete columns[colIdx][tableIdx];
-        }
-        free(columns[colIdx]);
-    }
-    free(columns);
-    free(valueAddresses);
+    // for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
+    //     for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+    //         delete columns[colIdx][tableIdx];
+    //     }
+    //     free(columns[colIdx]);
+    // }
+    // free(columns);
+    // free(valueAddresses);
 }
 
 int64_t createSort(
