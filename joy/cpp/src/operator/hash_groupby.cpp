@@ -184,24 +184,24 @@ void HashGroupBy::inloop(char** head,
             {
                 case 1: {
                     int32_t* rowVal = reinterpret_cast<int32_t*>(head[idx]) + combinedHash.offset;
-                    // int32_t* copyVal = new int32_t;
-                    int32_t* copyVal = (int32_t*)omni_allocate(sizeof(int32_t));
+                    int32_t* copyVal = new int32_t;
+                    // int32_t* copyVal = (int32_t*)omni_allocate(sizeof(int32_t));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
                 case 2: {
                     int64_t* rowVal = reinterpret_cast<int64_t*>(head[idx]) + combinedHash.offset;
-                    // int64_t* copyVal = new int64_t;
-                    int64_t* copyVal = (int64_t*)omni_allocate(sizeof(int64_t));
+                    int64_t* copyVal = new int64_t;
+                    // int64_t* copyVal = (int64_t*)omni_allocate(sizeof(int64_t));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
                 case 3: {
                     double* rowVal = reinterpret_cast<double*>(head[idx]) + combinedHash.offset;
-                    // double* copyVal = new double;
-                    double* copyVal = (double*)omni_allocate(sizeof(double));
+                    double* copyVal = new double;
+                    // double* copyVal = (double*)omni_allocate(sizeof(double));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
@@ -386,21 +386,9 @@ int32_t HashGroupBy::getResult(std::vector<Table*>& result)
     uint32_t gbSize = groupByCols.size();
     uint32_t aggSize = aggCols.size();
     uint32_t colSize = gbSize + aggSize;
-    // Table* result = new Table(groupedRows.size(), colSize);
-    // uint32_t groupByColCnt = 0;
-    // uint32_t aggColCnt = 0;
-    // for (int32_t i = 0; i < colSize; ++i) {
-    //     if (this->inputColTypes[i] == 0) {
-    //         constructColumn(result, groupByCols[groupByColCnt].type, groupByColCnt, 0);
-    //         groupByColCnt++;
-    //     }else if(this->inputColTypes[i] == 1) {
-    //         constructColumn(result, aggCols[aggColCnt].type, aggColCnt, 1);
-    //         aggColCnt++;
-    //     }else {
-    //         DebugPrint("Error column type %d", this->inputColTypes[i]);
-    //     }
-    // }
-    int32_t* types = (int32_t*)omni_allocate(colSize * sizeof(uint32_t));    
+    
+    // int32_t* types = (int32_t*)omni_allocate(colSize * sizeof(uint32_t));    
+    int32_t* types = new int32_t[colSize];    
     int32_t idx = 0;
     int32_t rowSize = 0;
 
@@ -475,7 +463,7 @@ int32_t HashGroupBy::getResult(std::vector<Table*>& result)
         result.push_back(table);
         currentPosition += maxRowNum;
     }
-    omni_release((uint64_t)types);
+    delete[] types;
 #ifdef DEBUG_LEVEL_LOW
     std::stringstream os;
     os << std::this_thread::get_id();

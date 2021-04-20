@@ -898,7 +898,7 @@ sw.bb43:                                          ; preds = %for.body36
   %arrayidx46 = getelementptr inbounds i8*, i8** %head, i64 %idxprom41
   %30 = bitcast i8** %arrayidx46 to i32**
   %31 = load i32*, i32** %30, align 8, !tbaa !19
-  %call50 = invoke i8* @omni_allocate(i64 4)
+  %call50 = invoke noalias nonnull dereferenceable(4) i8* @_Znwm(i64 4) #18
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %sw.bb43
@@ -917,7 +917,7 @@ sw.bb51:                                          ; preds = %for.body36
   %arrayidx54 = getelementptr inbounds i8*, i8** %head, i64 %idxprom41
   %35 = bitcast i8** %arrayidx54 to i64**
   %36 = load i64*, i64** %35, align 8, !tbaa !19
-  %call61 = invoke i8* @omni_allocate(i64 8)
+  %call61 = invoke noalias nonnull dereferenceable(8) i8* @_Znwm(i64 8) #18
           to label %invoke.cont60 unwind label %lpad59
 
 invoke.cont60:                                    ; preds = %sw.bb51
@@ -936,7 +936,7 @@ sw.bb62:                                          ; preds = %for.body36
   %arrayidx65 = getelementptr inbounds i8*, i8** %head, i64 %idxprom41
   %40 = bitcast i8** %arrayidx65 to double**
   %41 = load double*, double** %40, align 8, !tbaa !19
-  %call72 = invoke i8* @omni_allocate(i64 8)
+  %call72 = invoke noalias nonnull dereferenceable(8) i8* @_Znwm(i64 8) #18
           to label %invoke.cont71 unwind label %lpad70
 
 invoke.cont71:                                    ; preds = %sw.bb62
@@ -953,13 +953,12 @@ lpad70:                                           ; preds = %sw.bb62
 
 sw.epilog74:                                      ; preds = %for.body36, %invoke.cont71, %invoke.cont60, %invoke.cont
   %rowPtr37.0 = phi i8* [ null, %for.body36 ], [ %call72, %invoke.cont71 ], [ %call61, %invoke.cont60 ], [ %call50, %invoke.cont ]
-  %45 = load i32, i32* %arrayidx42, align 4, !tbaa !25
   %cmp.not.i = icmp eq %struct.GroupByColumn* %groupByTuple.sroa.11.0260, %groupByTuple.sroa.18.0261
   br i1 %cmp.not.i, label %if.else.i, label %if.then.i
 
 if.then.i:                                        ; preds = %sw.epilog74
   %groupCol.sroa.0.0..sroa_idx = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %groupByTuple.sroa.11.0260, i64 0, i32 0
-  store i32 %45, i32* %groupCol.sroa.0.0..sroa_idx, align 8, !tbaa.struct !35
+  store i32 %29, i32* %groupCol.sroa.0.0..sroa_idx, align 8, !tbaa.struct !35
   %groupCol.sroa.6186.0..sroa_idx189 = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %groupByTuple.sroa.11.0260, i64 0, i32 1
   store i8* %rowPtr37.0, i8** %groupCol.sroa.6186.0..sroa_idx189, align 8, !tbaa.struct !36
   br label %invoke.cont78
@@ -981,34 +980,34 @@ if.else.i:                                        ; preds = %sw.epilog74
           to label %call2.i.i.i.i.i.noexc unwind label %lpad77
 
 call2.i.i.i.i.i.noexc:                            ; preds = %if.else.i
-  %46 = bitcast i8* %call2.i.i.i.i.i172 to %struct.GroupByColumn*
-  %groupCol.sroa.0.0..sroa_idx179 = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %46, i64 %sub.ptr.div.i31.i.i.i, i32 0
-  store i32 %45, i32* %groupCol.sroa.0.0..sroa_idx179, align 8, !tbaa.struct !35
-  %groupCol.sroa.6186.0..sroa_idx190 = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %46, i64 %sub.ptr.div.i31.i.i.i, i32 1
+  %45 = bitcast i8* %call2.i.i.i.i.i172 to %struct.GroupByColumn*
+  %groupCol.sroa.0.0..sroa_idx179 = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %45, i64 %sub.ptr.div.i31.i.i.i, i32 0
+  store i32 %29, i32* %groupCol.sroa.0.0..sroa_idx179, align 8, !tbaa.struct !35
+  %groupCol.sroa.6186.0..sroa_idx190 = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %45, i64 %sub.ptr.div.i31.i.i.i, i32 1
   store i8* %rowPtr37.0, i8** %groupCol.sroa.6186.0..sroa_idx190, align 8, !tbaa.struct !36
   br i1 %cmp.i.i.i.i, label %invoke.cont15.i.i, label %if.then.i.i.i.i.i.i.i.i76.i.i
 
 if.then.i.i.i.i.i.i.i.i76.i.i:                    ; preds = %call2.i.i.i.i.i.noexc
-  %47 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0258 to i8*
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 8 %call2.i.i.i.i.i172, i8* align 8 %47, i64 %sub.ptr.sub.i30.i.i.i, i1 false) #20
+  %46 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0258 to i8*
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 8 %call2.i.i.i.i.i172, i8* align 8 %46, i64 %sub.ptr.sub.i30.i.i.i, i1 false) #20
   br label %invoke.cont15.i.i
 
 invoke.cont15.i.i:                                ; preds = %call2.i.i.i.i.i.noexc, %if.then.i.i.i.i.i.i.i.i76.i.i
-  %add.ptr.i.i.i.i.i.i.i.i78.i.i = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %46, i64 %sub.ptr.div.i31.i.i.i
+  %add.ptr.i.i.i.i.i.i.i.i78.i.i = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %45, i64 %sub.ptr.div.i31.i.i.i
   %tobool.not.i68.i.i = icmp eq %struct.GroupByColumn* %groupByTuple.sroa.0.0258, null
   br i1 %tobool.not.i68.i.i, label %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i, label %if.then.i69.i.i
 
 if.then.i69.i.i:                                  ; preds = %invoke.cont15.i.i
-  %48 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0258 to i8*
-  call void @_ZdlPv(i8* nonnull %48) #20
+  %47 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0258 to i8*
+  call void @_ZdlPv(i8* nonnull %47) #20
   br label %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i
 
 _ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i: ; preds = %if.then.i69.i.i, %invoke.cont15.i.i
-  %add.ptr39.i.i = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %46, i64 %cond.i.i.i
+  %add.ptr39.i.i = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %45, i64 %cond.i.i.i
   br label %invoke.cont78
 
 invoke.cont78:                                    ; preds = %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i, %if.then.i
-  %groupByTuple.sroa.0.1 = phi %struct.GroupByColumn* [ %46, %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i ], [ %groupByTuple.sroa.0.0258, %if.then.i ]
+  %groupByTuple.sroa.0.1 = phi %struct.GroupByColumn* [ %45, %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i ], [ %groupByTuple.sroa.0.0258, %if.then.i ]
   %add.ptr.i.i.i.i.i.i.i.i78.i.i.pn = phi %struct.GroupByColumn* [ %add.ptr.i.i.i.i.i.i.i.i78.i.i, %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i ], [ %groupByTuple.sroa.11.0260, %if.then.i ]
   %groupByTuple.sroa.18.1 = phi %struct.GroupByColumn* [ %add.ptr39.i.i, %_ZNSt6vectorI13GroupByColumnSaIS0_EE17_M_realloc_insertIJRKS0_EEEvN9__gnu_cxx17__normal_iteratorIPS0_S2_EEDpOT_.exit.i ], [ %groupByTuple.sroa.18.0261, %if.then.i ]
   %groupByTuple.sroa.11.1 = getelementptr inbounds %struct.GroupByColumn, %struct.GroupByColumn* %add.ptr.i.i.i.i.i.i.i.i78.i.i.pn, i64 1
@@ -1017,25 +1016,25 @@ invoke.cont78:                                    ; preds = %_ZNSt6vectorI13Grou
   br i1 %exitcond.not, label %for.cond.cleanup35.loopexit, label %for.body36, !llvm.loop !56
 
 lpad77:                                           ; preds = %if.else.i
-  %49 = landingpad { i8*, i32 }
+  %48 = landingpad { i8*, i32 }
           cleanup
   br label %ehcleanup94
 
 invoke.cont88:                                    ; preds = %if.then.i.i.i.i.i.i.i.i.i, %invoke.cont.i.i175
   store %struct.GroupByColumn* %add.ptr.i.i.i.i, %struct.GroupByColumn** %_M_finish.i.i.i.i, align 8, !tbaa !45
-  %50 = getelementptr inbounds %"class.std::unordered_map", %"class.std::unordered_map"* %groupedRows, i64 0, i32 0
-  %call3.i.i170 = invoke { %"struct.std::__detail::_Hash_node"*, i8 } @_ZNSt10_HashtableImSt4pairIKmSt6vectorI13GroupByColumnSaIS3_EEESaIS6_ENSt8__detail10_Select1stESt8equal_toImESt4hashImENS8_18_Mod_range_hashingENS8_20_Default_ranged_hashENS8_20_Prime_rehash_policyENS8_17_Hashtable_traitsILb0ELb0ELb1EEEE10_M_emplaceIJS6_EEES0_INS8_14_Node_iteratorIS6_Lb0ELb0EEEbESt17integral_constantIbLb1EEDpOT_(%"class.std::_Hashtable"* nonnull dereferenceable(56) %50, %"struct.std::pair.28"* nonnull align 8 dereferenceable(32) %ref.tmp85)
+  %49 = getelementptr inbounds %"class.std::unordered_map", %"class.std::unordered_map"* %groupedRows, i64 0, i32 0
+  %call3.i.i170 = invoke { %"struct.std::__detail::_Hash_node"*, i8 } @_ZNSt10_HashtableImSt4pairIKmSt6vectorI13GroupByColumnSaIS3_EEESaIS6_ENSt8__detail10_Select1stESt8equal_toImESt4hashImENS8_18_Mod_range_hashingENS8_20_Default_ranged_hashENS8_20_Prime_rehash_policyENS8_17_Hashtable_traitsILb0ELb0ELb1EEEE10_M_emplaceIJS6_EEES0_INS8_14_Node_iteratorIS6_Lb0ELb0EEEbESt17integral_constantIbLb1EEDpOT_(%"class.std::_Hashtable"* nonnull dereferenceable(56) %49, %"struct.std::pair.28"* nonnull align 8 dereferenceable(32) %ref.tmp85)
           to label %invoke.cont90 unwind label %lpad89
 
 invoke.cont90:                                    ; preds = %invoke.cont88
   %_M_start.i.i.i166 = getelementptr inbounds %"struct.std::pair.28", %"struct.std::pair.28"* %ref.tmp85, i64 0, i32 1, i32 0, i32 0, i32 0
-  %51 = load %struct.GroupByColumn*, %struct.GroupByColumn** %_M_start.i.i.i166, align 8, !tbaa !42
-  %tobool.not.i.i.i.i167 = icmp eq %struct.GroupByColumn* %51, null
+  %50 = load %struct.GroupByColumn*, %struct.GroupByColumn** %_M_start.i.i.i166, align 8, !tbaa !42
+  %tobool.not.i.i.i.i167 = icmp eq %struct.GroupByColumn* %50, null
   br i1 %tobool.not.i.i.i.i167, label %_ZNSt4pairIKmSt6vectorI13GroupByColumnSaIS2_EEED2Ev.exit169, label %if.then.i.i.i.i168
 
 if.then.i.i.i.i168:                               ; preds = %invoke.cont90
-  %52 = bitcast %struct.GroupByColumn* %51 to i8*
-  call void @_ZdlPv(i8* nonnull %52) #20
+  %51 = bitcast %struct.GroupByColumn* %50 to i8*
+  call void @_ZdlPv(i8* nonnull %51) #20
   br label %_ZNSt4pairIKmSt6vectorI13GroupByColumnSaIS2_EEED2Ev.exit169
 
 _ZNSt4pairIKmSt6vectorI13GroupByColumnSaIS2_EEED2Ev.exit169: ; preds = %invoke.cont90, %if.then.i.i.i.i168
@@ -1044,42 +1043,42 @@ _ZNSt4pairIKmSt6vectorI13GroupByColumnSaIS2_EEED2Ev.exit169: ; preds = %invoke.c
   br i1 %tobool.not.i.i.i163, label %if.end, label %if.then.i.i.i164
 
 if.then.i.i.i164:                                 ; preds = %_ZNSt4pairIKmSt6vectorI13GroupByColumnSaIS2_EEED2Ev.exit169
-  %53 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0.lcssa to i8*
-  call void @_ZdlPv(i8* nonnull %53) #20
+  %52 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0.lcssa to i8*
+  call void @_ZdlPv(i8* nonnull %52) #20
   br label %if.end
 
 lpad87:                                           ; preds = %_ZNSt16allocator_traitsISaI13GroupByColumnEE8allocateERS1_m.exit.i.i.i.i.i, %if.then.i.i.i.i.i.i.i
-  %54 = landingpad { i8*, i32 }
+  %53 = landingpad { i8*, i32 }
           cleanup
   br label %ehcleanup93
 
 lpad89:                                           ; preds = %invoke.cont88
-  %55 = landingpad { i8*, i32 }
+  %54 = landingpad { i8*, i32 }
           cleanup
   %_M_start.i.i.i = getelementptr inbounds %"struct.std::pair.28", %"struct.std::pair.28"* %ref.tmp85, i64 0, i32 1, i32 0, i32 0, i32 0
-  %56 = load %struct.GroupByColumn*, %struct.GroupByColumn** %_M_start.i.i.i, align 8, !tbaa !42
-  %tobool.not.i.i.i.i161 = icmp eq %struct.GroupByColumn* %56, null
+  %55 = load %struct.GroupByColumn*, %struct.GroupByColumn** %_M_start.i.i.i, align 8, !tbaa !42
+  %tobool.not.i.i.i.i161 = icmp eq %struct.GroupByColumn* %55, null
   br i1 %tobool.not.i.i.i.i161, label %ehcleanup93, label %if.then.i.i.i.i
 
 if.then.i.i.i.i:                                  ; preds = %lpad89
-  %57 = bitcast %struct.GroupByColumn* %56 to i8*
-  call void @_ZdlPv(i8* nonnull %57) #20
+  %56 = bitcast %struct.GroupByColumn* %55 to i8*
+  call void @_ZdlPv(i8* nonnull %56) #20
   br label %ehcleanup93
 
 ehcleanup93:                                      ; preds = %if.then.i.i.i.i, %lpad89, %lpad87
-  %.pn = phi { i8*, i32 } [ %54, %lpad87 ], [ %55, %lpad89 ], [ %55, %if.then.i.i.i.i ]
+  %.pn = phi { i8*, i32 } [ %53, %lpad87 ], [ %54, %lpad89 ], [ %54, %if.then.i.i.i.i ]
   call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %23) #20
   br label %ehcleanup94
 
 ehcleanup94:                                      ; preds = %lpad, %lpad59, %lpad70, %lpad77, %ehcleanup93
   %groupByTuple.sroa.0.0252 = phi %struct.GroupByColumn* [ %groupByTuple.sroa.0.0.lcssa, %ehcleanup93 ], [ %groupByTuple.sroa.0.0258, %lpad77 ], [ %groupByTuple.sroa.0.0258, %lpad70 ], [ %groupByTuple.sroa.0.0258, %lpad59 ], [ %groupByTuple.sroa.0.0258, %lpad ]
-  %.pn158.pn = phi { i8*, i32 } [ %.pn, %ehcleanup93 ], [ %49, %lpad77 ], [ %44, %lpad70 ], [ %39, %lpad59 ], [ %34, %lpad ]
+  %.pn158.pn = phi { i8*, i32 } [ %.pn, %ehcleanup93 ], [ %48, %lpad77 ], [ %44, %lpad70 ], [ %39, %lpad59 ], [ %34, %lpad ]
   %tobool.not.i.i.i = icmp eq %struct.GroupByColumn* %groupByTuple.sroa.0.0252, null
   br i1 %tobool.not.i.i.i, label %_ZNSt6vectorI13GroupByColumnSaIS0_EED2Ev.exit, label %if.then.i.i.i
 
 if.then.i.i.i:                                    ; preds = %ehcleanup94
-  %58 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0252 to i8*
-  call void @_ZdlPv(i8* nonnull %58) #20
+  %57 = bitcast %struct.GroupByColumn* %groupByTuple.sroa.0.0252 to i8*
+  call void @_ZdlPv(i8* nonnull %57) #20
   br label %_ZNSt6vectorI13GroupByColumnSaIS0_EED2Ev.exit
 
 _ZNSt6vectorI13GroupByColumnSaIS0_EED2Ev.exit:    ; preds = %ehcleanup94, %if.then.i.i.i
@@ -1093,8 +1092,6 @@ if.end:                                           ; preds = %for.cond.i.i.i.i, %
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #11
-
-declare dso_local i8* @omni_allocate(i64) local_unnamed_addr #0
 
 ; Function Attrs: uwtable mustprogress
 define dso_local void @_ZN11HashGroupBy7processEP5Tablej(%class.HashGroupBy* nonnull dereferenceable(144) %this, %class.Table* %table, i32 %rowCount) unnamed_addr #9 align 2 {
@@ -2357,6 +2354,8 @@ for.inc230:                                       ; preds = %for.inc230.sink.spl
   br i1 %exitcond699.not, label %for.cond.cleanup79, label %for.body80, !llvm.loop !92
 }
 
+declare dso_local i8* @omni_allocate(i64) local_unnamed_addr #0
+
 ; Function Attrs: nobuiltin nounwind
 declare dso_local void @_ZdlPv(i8*) local_unnamed_addr #12
 
@@ -2373,96 +2372,92 @@ entry:
   %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
   %2 = lshr exact i64 %sub.ptr.sub.i, 3
   %conv = trunc i64 %2 to i32
-  %_M_finish.i185 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 2, i32 0, i32 0, i32 1
-  %3 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_finish.i185, align 8, !tbaa !2
-  %_M_start.i186 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 2, i32 0, i32 0, i32 0
-  %4 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_start.i186, align 8, !tbaa !8
-  %sub.ptr.lhs.cast.i187 = ptrtoint %struct.ColumnIndex* %3 to i64
-  %sub.ptr.rhs.cast.i188 = ptrtoint %struct.ColumnIndex* %4 to i64
-  %sub.ptr.sub.i189 = sub i64 %sub.ptr.lhs.cast.i187, %sub.ptr.rhs.cast.i188
-  %5 = lshr exact i64 %sub.ptr.sub.i189, 3
+  %_M_finish.i183 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 2, i32 0, i32 0, i32 1
+  %3 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_finish.i183, align 8, !tbaa !2
+  %_M_start.i184 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 2, i32 0, i32 0, i32 0
+  %4 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_start.i184, align 8, !tbaa !8
+  %sub.ptr.lhs.cast.i185 = ptrtoint %struct.ColumnIndex* %3 to i64
+  %sub.ptr.rhs.cast.i186 = ptrtoint %struct.ColumnIndex* %4 to i64
+  %sub.ptr.sub.i187 = sub i64 %sub.ptr.lhs.cast.i185, %sub.ptr.rhs.cast.i186
+  %5 = lshr exact i64 %sub.ptr.sub.i187, 3
   %conv3 = trunc i64 %5 to i32
   %add = add i32 %conv3, %conv
   %conv4 = zext i32 %add to i64
-  %mul = shl nuw nsw i64 %conv4, 2
-  %call5 = tail call i8* @omni_allocate(i64 %mul)
-  %6 = bitcast i8* %call5 to i32*
-  %7 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_start.i, align 8, !tbaa !19
-  %8 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_finish.i, align 8, !tbaa !19
-  %cmp.i.not264 = icmp eq %struct.ColumnIndex* %7, %8
-  br i1 %cmp.i.not264, label %for.cond.cleanup, label %for.body
+  %6 = shl nuw nsw i64 %conv4, 2
+  %call5 = tail call noalias nonnull i8* @_Znam(i64 %6) #18
+  %7 = bitcast i8* %call5 to i32*
+  %cmp.i.not262 = icmp eq %struct.ColumnIndex* %1, %0
+  br i1 %cmp.i.not262, label %for.cond33.preheader, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %sw.epilog
-  %phi.cast = and i64 %indvars.iv.next274, 4294967295
-  br label %for.cond.cleanup
+for.cond33.preheader.loopexit:                    ; preds = %sw.epilog
+  %phi.cast = and i64 %indvars.iv.next272, 4294967295
+  br label %for.cond33.preheader
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
-  %rowSize.0.lcssa = phi i32 [ 0, %entry ], [ %rowSize.1, %for.cond.cleanup.loopexit ]
-  %idx.0.lcssa = phi i64 [ 0, %entry ], [ %phi.cast, %for.cond.cleanup.loopexit ]
-  %9 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_start.i186, align 8, !tbaa !19
-  %10 = load %struct.ColumnIndex*, %struct.ColumnIndex** %_M_finish.i185, align 8, !tbaa !19
-  %cmp.i225.not260 = icmp eq %struct.ColumnIndex* %9, %10
-  br i1 %cmp.i225.not260, label %for.cond.cleanup35, label %for.body36
+for.cond33.preheader:                             ; preds = %for.cond33.preheader.loopexit, %entry
+  %rowSize.0.lcssa = phi i32 [ 0, %entry ], [ %rowSize.1, %for.cond33.preheader.loopexit ]
+  %idx.0.lcssa = phi i64 [ 0, %entry ], [ %phi.cast, %for.cond33.preheader.loopexit ]
+  %cmp.i223.not258 = icmp eq %struct.ColumnIndex* %4, %3
+  br i1 %cmp.i223.not258, label %for.cond.cleanup35, label %for.body36
 
 for.body:                                         ; preds = %entry, %sw.epilog
-  %indvars.iv273 = phi i64 [ %indvars.iv.next274, %sw.epilog ], [ 0, %entry ]
-  %rowSize.0266 = phi i32 [ %rowSize.1, %sw.epilog ], [ 0, %entry ]
-  %__begin1.sroa.0.0265 = phi %struct.ColumnIndex* [ %incdec.ptr.i211, %sw.epilog ], [ %7, %entry ]
-  %type = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin1.sroa.0.0265, i64 0, i32 1
-  %11 = load i32, i32* %type, align 4, !tbaa !93
-  %indvars.iv.next274 = add nuw nsw i64 %indvars.iv273, 1
-  %arrayidx = getelementptr inbounds i32, i32* %6, i64 %indvars.iv273
-  store i32 %11, i32* %arrayidx, align 4, !tbaa !25
-  switch i32 %11, label %sw.epilog [
+  %indvars.iv271 = phi i64 [ %indvars.iv.next272, %sw.epilog ], [ 0, %entry ]
+  %rowSize.0264 = phi i32 [ %rowSize.1, %sw.epilog ], [ 0, %entry ]
+  %__begin1.sroa.0.0263 = phi %struct.ColumnIndex* [ %incdec.ptr.i209, %sw.epilog ], [ %1, %entry ]
+  %type = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin1.sroa.0.0263, i64 0, i32 1
+  %8 = load i32, i32* %type, align 4, !tbaa !93
+  %indvars.iv.next272 = add nuw nsw i64 %indvars.iv271, 1
+  %arrayidx = getelementptr inbounds i32, i32* %7, i64 %indvars.iv271
+  store i32 %8, i32* %arrayidx, align 4, !tbaa !25
+  switch i32 %8, label %sw.epilog [
     i32 1, label %sw.bb
     i32 2, label %sw.bb16
     i32 3, label %sw.bb20
   ]
 
 sw.bb:                                            ; preds = %for.body
-  %add14 = add i32 %rowSize.0266, 4
+  %add14 = add i32 %rowSize.0264, 4
   br label %sw.epilog
 
 sw.bb16:                                          ; preds = %for.body
-  %add18 = add i32 %rowSize.0266, 8
+  %add18 = add i32 %rowSize.0264, 8
   br label %sw.epilog
 
 sw.bb20:                                          ; preds = %for.body
-  %add22 = add i32 %rowSize.0266, 8
+  %add22 = add i32 %rowSize.0264, 8
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %for.body, %sw.bb20, %sw.bb16, %sw.bb
-  %rowSize.1 = phi i32 [ %rowSize.0266, %for.body ], [ %add22, %sw.bb20 ], [ %add18, %sw.bb16 ], [ %add14, %sw.bb ]
-  %incdec.ptr.i211 = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin1.sroa.0.0265, i64 1
-  %cmp.i.not = icmp eq %struct.ColumnIndex* %incdec.ptr.i211, %8
-  br i1 %cmp.i.not, label %for.cond.cleanup.loopexit, label %for.body
+  %rowSize.1 = phi i32 [ %rowSize.0264, %for.body ], [ %add22, %sw.bb20 ], [ %add18, %sw.bb16 ], [ %add14, %sw.bb ]
+  %incdec.ptr.i209 = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin1.sroa.0.0263, i64 1
+  %cmp.i.not = icmp eq %struct.ColumnIndex* %incdec.ptr.i209, %0
+  br i1 %cmp.i.not, label %for.cond33.preheader.loopexit, label %for.body
 
-for.cond.cleanup35:                               ; preds = %sw.epilog57, %for.cond.cleanup
-  %rowSize.2.lcssa = phi i32 [ %rowSize.0.lcssa, %for.cond.cleanup ], [ %rowSize.3, %sw.epilog57 ]
+for.cond.cleanup35:                               ; preds = %sw.epilog57, %for.cond33.preheader
+  %rowSize.2.lcssa = phi i32 [ %rowSize.0.lcssa, %for.cond33.preheader ], [ %rowSize.3, %sw.epilog57 ]
   %div = sdiv i32 1048576, %rowSize.2.lcssa
-  %_M_element_count.i.i222 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 4, i32 0, i32 3
-  %12 = load i64, i64* %_M_element_count.i.i222, align 8, !tbaa !94
-  %conv62 = uitofp i64 %12 to double
+  %_M_element_count.i.i220 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 4, i32 0, i32 3
+  %9 = load i64, i64* %_M_element_count.i.i220, align 8, !tbaa !94
+  %conv62 = uitofp i64 %9 to double
   %conv63 = sitofp i32 %div to double
   %div64 = fdiv double %conv62, %conv63
-  %13 = tail call double @llvm.ceil.f64(double %div64)
-  %conv65 = fptosi double %13 to i32
-  %14 = bitcast %struct.Iterator* %iterator to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %14) #20
-  %15 = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1
-  %16 = bitcast %"class.std::vector.33"* %15 to i8*
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(32) %16, i8 0, i64 24, i1 false) #20
-  %_M_nxt.i.i.i221 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 4, i32 0, i32 2, i32 0
-  %17 = bitcast %"struct.std::__detail::_Hash_node_base"** %_M_nxt.i.i.i221 to %"struct.std::__detail::_Hash_node"**
-  %18 = load %"struct.std::__detail::_Hash_node"*, %"struct.std::__detail::_Hash_node"** %17, align 8, !tbaa !95
+  %10 = tail call double @llvm.ceil.f64(double %div64)
+  %conv65 = fptosi double %10 to i32
+  %11 = bitcast %struct.Iterator* %iterator to i8*
+  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %11) #20
+  %12 = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1
+  %13 = bitcast %"class.std::vector.33"* %12 to i8*
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(32) %13, i8 0, i64 24, i1 false) #20
+  %_M_nxt.i.i.i219 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 4, i32 0, i32 2, i32 0
+  %14 = bitcast %"struct.std::__detail::_Hash_node_base"** %_M_nxt.i.i.i219 to %"struct.std::__detail::_Hash_node"**
+  %15 = load %"struct.std::__detail::_Hash_node"*, %"struct.std::__detail::_Hash_node"** %14, align 8, !tbaa !95
   %ref.tmp.sroa.0.0..sroa_idx = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 0, i32 0, i32 0
-  store %"struct.std::__detail::_Hash_node"* %18, %"struct.std::__detail::_Hash_node"** %ref.tmp.sroa.0.0..sroa_idx, align 8
-  %_M_start.i220 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 3, i32 0, i32 0, i32 0
-  %19 = load %class.Aggregator**, %class.Aggregator*** %_M_start.i220, align 8, !tbaa !19
-  %_M_finish.i219 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 3, i32 0, i32 0, i32 1
-  %20 = load %class.Aggregator**, %class.Aggregator*** %_M_finish.i219, align 8, !tbaa !19
-  %cmp.i215.not258 = icmp eq %class.Aggregator** %19, %20
-  br i1 %cmp.i215.not258, label %for.cond92.preheader, label %for.body80.lr.ph
+  store %"struct.std::__detail::_Hash_node"* %15, %"struct.std::__detail::_Hash_node"** %ref.tmp.sroa.0.0..sroa_idx, align 8
+  %_M_start.i218 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 3, i32 0, i32 0, i32 0
+  %16 = load %class.Aggregator**, %class.Aggregator*** %_M_start.i218, align 8, !tbaa !19
+  %_M_finish.i217 = getelementptr inbounds %class.HashGroupBy, %class.HashGroupBy* %this, i64 0, i32 3, i32 0, i32 0, i32 1
+  %17 = load %class.Aggregator**, %class.Aggregator*** %_M_finish.i217, align 8, !tbaa !19
+  %cmp.i213.not256 = icmp eq %class.Aggregator** %16, %17
+  br i1 %cmp.i213.not256, label %for.cond92.preheader, label %for.body80.lr.ph
 
 for.body80.lr.ph:                                 ; preds = %for.cond.cleanup35
   %_M_finish.i.i = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1, i32 0, i32 0, i32 1
@@ -2470,74 +2465,74 @@ for.body80.lr.ph:                                 ; preds = %for.cond.cleanup35
   %_M_start.i27.i.i = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1, i32 0, i32 0, i32 0
   br label %for.body80
 
-for.body36:                                       ; preds = %for.cond.cleanup, %sw.epilog57
-  %indvars.iv = phi i64 [ %indvars.iv.next, %sw.epilog57 ], [ %idx.0.lcssa, %for.cond.cleanup ]
-  %rowSize.2262 = phi i32 [ %rowSize.3, %sw.epilog57 ], [ %rowSize.0.lcssa, %for.cond.cleanup ]
-  %__begin127.sroa.0.0261 = phi %struct.ColumnIndex* [ %incdec.ptr.i217, %sw.epilog57 ], [ %9, %for.cond.cleanup ]
-  %type39 = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin127.sroa.0.0261, i64 0, i32 1
-  %21 = load i32, i32* %type39, align 4, !tbaa !93
+for.body36:                                       ; preds = %for.cond33.preheader, %sw.epilog57
+  %indvars.iv = phi i64 [ %indvars.iv.next, %sw.epilog57 ], [ %idx.0.lcssa, %for.cond33.preheader ]
+  %rowSize.2260 = phi i32 [ %rowSize.3, %sw.epilog57 ], [ %rowSize.0.lcssa, %for.cond33.preheader ]
+  %__begin127.sroa.0.0259 = phi %struct.ColumnIndex* [ %incdec.ptr.i215, %sw.epilog57 ], [ %4, %for.cond33.preheader ]
+  %type39 = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin127.sroa.0.0259, i64 0, i32 1
+  %18 = load i32, i32* %type39, align 4, !tbaa !93
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %arrayidx42 = getelementptr inbounds i32, i32* %6, i64 %indvars.iv
-  store i32 %21, i32* %arrayidx42, align 4, !tbaa !25
-  switch i32 %21, label %sw.epilog57 [
+  %arrayidx42 = getelementptr inbounds i32, i32* %7, i64 %indvars.iv
+  store i32 %18, i32* %arrayidx42, align 4, !tbaa !25
+  switch i32 %18, label %sw.epilog57 [
     i32 1, label %sw.bb44
     i32 2, label %sw.bb48
     i32 3, label %sw.bb52
   ]
 
 sw.bb44:                                          ; preds = %for.body36
-  %add46 = add i32 %rowSize.2262, 4
+  %add46 = add i32 %rowSize.2260, 4
   br label %sw.epilog57
 
 sw.bb48:                                          ; preds = %for.body36
-  %add50 = add i32 %rowSize.2262, 8
+  %add50 = add i32 %rowSize.2260, 8
   br label %sw.epilog57
 
 sw.bb52:                                          ; preds = %for.body36
-  %add54 = add i32 %rowSize.2262, 8
+  %add54 = add i32 %rowSize.2260, 8
   br label %sw.epilog57
 
 sw.epilog57:                                      ; preds = %for.body36, %sw.bb52, %sw.bb48, %sw.bb44
-  %rowSize.3 = phi i32 [ %rowSize.2262, %for.body36 ], [ %add54, %sw.bb52 ], [ %add50, %sw.bb48 ], [ %add46, %sw.bb44 ]
-  %incdec.ptr.i217 = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin127.sroa.0.0261, i64 1
-  %cmp.i225.not = icmp eq %struct.ColumnIndex* %incdec.ptr.i217, %10
-  br i1 %cmp.i225.not, label %for.cond.cleanup35, label %for.body36
+  %rowSize.3 = phi i32 [ %rowSize.2260, %for.body36 ], [ %add54, %sw.bb52 ], [ %add50, %sw.bb48 ], [ %add46, %sw.bb44 ]
+  %incdec.ptr.i215 = getelementptr inbounds %struct.ColumnIndex, %struct.ColumnIndex* %__begin127.sroa.0.0259, i64 1
+  %cmp.i223.not = icmp eq %struct.ColumnIndex* %incdec.ptr.i215, %3
+  br i1 %cmp.i223.not, label %for.cond.cleanup35, label %for.body36
 
 for.cond92.preheader:                             ; preds = %invoke.cont87, %for.cond.cleanup35
-  %cmp255 = icmp sgt i32 %conv65, 0
-  br i1 %cmp255, label %for.body94.lr.ph, label %for.cond.cleanup93
+  %cmp253 = icmp sgt i32 %conv65, 0
+  br i1 %cmp253, label %for.body94.lr.ph, label %delete.notnull
 
 for.body94.lr.ph:                                 ; preds = %for.cond92.preheader
-  %_M_finish.i196 = getelementptr inbounds %"class.std::vector.38", %"class.std::vector.38"* %result, i64 0, i32 0, i32 0, i32 1
+  %_M_finish.i194 = getelementptr inbounds %"class.std::vector.38", %"class.std::vector.38"* %result, i64 0, i32 0, i32 0, i32 1
   %_M_end_of_storage.i = getelementptr inbounds %"class.std::vector.38", %"class.std::vector.38"* %result, i64 0, i32 0, i32 0, i32 2
   %_M_start.i27.i.i.i = getelementptr inbounds %"class.std::vector.38", %"class.std::vector.38"* %result, i64 0, i32 0, i32 0, i32 0
   br label %for.body94
 
 for.body80:                                       ; preds = %invoke.cont87.for.body80_crit_edge, %for.body80.lr.ph
-  %22 = phi %"struct.std::__detail::_Node_iterator"* [ null, %for.body80.lr.ph ], [ %.pre, %invoke.cont87.for.body80_crit_edge ]
-  %23 = phi %"struct.std::__detail::_Node_iterator"* [ null, %for.body80.lr.ph ], [ %125, %invoke.cont87.for.body80_crit_edge ]
-  %__begin171.sroa.0.0259 = phi %class.Aggregator** [ %19, %for.body80.lr.ph ], [ %incdec.ptr.i203, %invoke.cont87.for.body80_crit_edge ]
-  %24 = ptrtoint %"struct.std::__detail::_Node_iterator"* %22 to i64
-  %25 = load %class.Aggregator*, %class.Aggregator** %__begin171.sroa.0.0259, align 8, !tbaa !19
-  %_M_nxt.i.i.i = getelementptr inbounds %class.Aggregator, %class.Aggregator* %25, i64 0, i32 3, i32 0, i32 2, i32 0
-  %26 = bitcast %"struct.std::__detail::_Hash_node_base"** %_M_nxt.i.i.i to %"struct.std::__detail::_Hash_node"**
-  %27 = load %"struct.std::__detail::_Hash_node"*, %"struct.std::__detail::_Hash_node"** %26, align 8, !tbaa !95
-  %cmp.not.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %23, %22
+  %19 = phi %"struct.std::__detail::_Node_iterator"* [ null, %for.body80.lr.ph ], [ %.pre, %invoke.cont87.for.body80_crit_edge ]
+  %20 = phi %"struct.std::__detail::_Node_iterator"* [ null, %for.body80.lr.ph ], [ %122, %invoke.cont87.for.body80_crit_edge ]
+  %__begin171.sroa.0.0257 = phi %class.Aggregator** [ %16, %for.body80.lr.ph ], [ %incdec.ptr.i201, %invoke.cont87.for.body80_crit_edge ]
+  %21 = ptrtoint %"struct.std::__detail::_Node_iterator"* %19 to i64
+  %22 = load %class.Aggregator*, %class.Aggregator** %__begin171.sroa.0.0257, align 8, !tbaa !19
+  %_M_nxt.i.i.i = getelementptr inbounds %class.Aggregator, %class.Aggregator* %22, i64 0, i32 3, i32 0, i32 2, i32 0
+  %23 = bitcast %"struct.std::__detail::_Hash_node_base"** %_M_nxt.i.i.i to %"struct.std::__detail::_Hash_node"**
+  %24 = load %"struct.std::__detail::_Hash_node"*, %"struct.std::__detail::_Hash_node"** %23, align 8, !tbaa !95
+  %cmp.not.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %20, %19
   br i1 %cmp.not.i.i, label %if.else.i.i, label %if.then.i.i
 
 if.then.i.i:                                      ; preds = %for.body80
-  %28 = bitcast %"struct.std::__detail::_Node_iterator"* %23 to i64*
-  %29 = ptrtoint %"struct.std::__detail::_Hash_node"* %27 to i64
-  store i64 %29, i64* %28, align 8
-  %incdec.ptr.i.i204 = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %23, i64 1
-  store %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i.i204, %"struct.std::__detail::_Node_iterator"** %_M_finish.i.i, align 8, !tbaa !96
+  %25 = bitcast %"struct.std::__detail::_Node_iterator"* %20 to i64*
+  %26 = ptrtoint %"struct.std::__detail::_Hash_node"* %24 to i64
+  store i64 %26, i64* %25, align 8
+  %incdec.ptr.i.i202 = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %20, i64 1
+  store %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i.i202, %"struct.std::__detail::_Node_iterator"** %_M_finish.i.i, align 8, !tbaa !96
   br label %invoke.cont87
 
 if.else.i.i:                                      ; preds = %for.body80
-  %30 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i27.i.i, align 8, !tbaa !86
-  %31 = ptrtoint %"struct.std::__detail::_Node_iterator"* %30 to i64
-  %sub.ptr.lhs.cast.i28.i.i = ptrtoint %"struct.std::__detail::_Node_iterator"* %22 to i64
-  %sub.ptr.rhs.cast.i29.i.i = ptrtoint %"struct.std::__detail::_Node_iterator"* %30 to i64
+  %27 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i27.i.i, align 8, !tbaa !86
+  %28 = ptrtoint %"struct.std::__detail::_Node_iterator"* %27 to i64
+  %sub.ptr.lhs.cast.i28.i.i = ptrtoint %"struct.std::__detail::_Node_iterator"* %19 to i64
+  %sub.ptr.rhs.cast.i29.i.i = ptrtoint %"struct.std::__detail::_Node_iterator"* %27 to i64
   %sub.ptr.sub.i30.i.i = sub i64 %sub.ptr.lhs.cast.i28.i.i, %sub.ptr.rhs.cast.i29.i.i
   %sub.ptr.div.i31.i.i = ashr exact i64 %sub.ptr.sub.i30.i.i, 3
   %cmp.i.i.i = icmp eq i64 %sub.ptr.sub.i30.i.i, 0
@@ -2547,335 +2542,335 @@ if.else.i.i:                                      ; preds = %for.body80
   %cmp9.i.i = icmp ugt i64 %add.i.i, 2305843009213693951
   %or.cond.i.i = or i1 %cmp7.i.i, %cmp9.i.i
   %cond.i.i = select i1 %or.cond.i.i, i64 2305843009213693951, i64 %add.i.i
-  %cmp.not.i.i205 = icmp eq i64 %cond.i.i, 0
-  br i1 %cmp.not.i.i205, label %invoke.cont.i, label %_ZNSt16allocator_traitsISaINSt8__detail14_Node_iteratorISt4pairIKmSt6vectorI13GroupByColumnSaIS5_EEELb0ELb0EEEEE8allocateERSA_m.exit.i.i
+  %cmp.not.i.i203 = icmp eq i64 %cond.i.i, 0
+  br i1 %cmp.not.i.i203, label %invoke.cont.i, label %_ZNSt16allocator_traitsISaINSt8__detail14_Node_iteratorISt4pairIKmSt6vectorI13GroupByColumnSaIS5_EEELb0ELb0EEEEE8allocateERSA_m.exit.i.i
 
 _ZNSt16allocator_traitsISaINSt8__detail14_Node_iteratorISt4pairIKmSt6vectorI13GroupByColumnSaIS5_EEELb0ELb0EEEEE8allocateERSA_m.exit.i.i: ; preds = %if.else.i.i
   %mul.i.i.i.i = shl nuw i64 %cond.i.i, 3
-  %call2.i.i.i.i208 = invoke noalias nonnull i8* @_Znwm(i64 %mul.i.i.i.i) #19
+  %call2.i.i.i.i206 = invoke noalias nonnull i8* @_Znwm(i64 %mul.i.i.i.i) #19
           to label %call2.i.i.i.i.noexc unwind label %lpad
 
 call2.i.i.i.i.noexc:                              ; preds = %_ZNSt16allocator_traitsISaINSt8__detail14_Node_iteratorISt4pairIKmSt6vectorI13GroupByColumnSaIS5_EEELb0ELb0EEEEE8allocateERSA_m.exit.i.i
-  %32 = bitcast i8* %call2.i.i.i.i208 to %"struct.std::__detail::_Node_iterator"*
+  %29 = bitcast i8* %call2.i.i.i.i206 to %"struct.std::__detail::_Node_iterator"*
   br label %invoke.cont.i
 
 invoke.cont.i:                                    ; preds = %call2.i.i.i.i.noexc, %if.else.i.i
-  %cond.i67.i = phi %"struct.std::__detail::_Node_iterator"* [ %32, %call2.i.i.i.i.noexc ], [ null, %if.else.i.i ]
+  %cond.i67.i = phi %"struct.std::__detail::_Node_iterator"* [ %29, %call2.i.i.i.i.noexc ], [ null, %if.else.i.i ]
   %add.ptr.i = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %sub.ptr.div.i31.i.i
-  %33 = bitcast %"struct.std::__detail::_Node_iterator"* %add.ptr.i to i64*
-  %34 = ptrtoint %"struct.std::__detail::_Hash_node"* %27 to i64
-  store i64 %34, i64* %33, align 8
-  %cmp.i.i.not22.i.i.i.i72.i = icmp eq %"struct.std::__detail::_Node_iterator"* %30, %22
+  %30 = bitcast %"struct.std::__detail::_Node_iterator"* %add.ptr.i to i64*
+  %31 = ptrtoint %"struct.std::__detail::_Hash_node"* %24 to i64
+  store i64 %31, i64* %30, align 8
+  %cmp.i.i.not22.i.i.i.i72.i = icmp eq %"struct.std::__detail::_Node_iterator"* %27, %19
   br i1 %cmp.i.i.not22.i.i.i.i72.i, label %invoke.cont10.i.thread, label %for.body.i.i.i.i78.i.preheader
 
 for.body.i.i.i.i78.i.preheader:                   ; preds = %invoke.cont.i
-  %scevgep303 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 -1
-  %35 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep303 to i64
-  %36 = sub i64 %35, %31
-  %37 = lshr i64 %36, 3
-  %38 = add nuw nsw i64 %37, 1
-  %min.iters.check307 = icmp ult i64 %36, 24
-  br i1 %min.iters.check307, label %for.body.i.i.i.i78.i.preheader342, label %vector.memcheck309
+  %scevgep301 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 -1
+  %32 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep301 to i64
+  %33 = sub i64 %32, %28
+  %34 = lshr i64 %33, 3
+  %35 = add nuw nsw i64 %34, 1
+  %min.iters.check305 = icmp ult i64 %33, 24
+  br i1 %min.iters.check305, label %for.body.i.i.i.i78.i.preheader340, label %vector.memcheck307
 
-vector.memcheck309:                               ; preds = %for.body.i.i.i.i78.i.preheader
-  %scevgep312 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 1
-  %scevgep313 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 -1
-  %39 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep313 to i64
-  %40 = sub i64 %39, %31
-  %41 = lshr i64 %40, 3
-  %scevgep317 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep312, i64 %41
-  %scevgep319 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 1
-  %scevgep320 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep319, i64 %41
-  %bound0322 = icmp ult %"struct.std::__detail::_Node_iterator"* %cond.i67.i, %scevgep320
-  %bound1323 = icmp ult %"struct.std::__detail::_Node_iterator"* %30, %scevgep317
-  %found.conflict324 = and i1 %bound0322, %bound1323
-  br i1 %found.conflict324, label %for.body.i.i.i.i78.i.preheader342, label %vector.ph310
+vector.memcheck307:                               ; preds = %for.body.i.i.i.i78.i.preheader
+  %scevgep310 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 1
+  %scevgep311 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 -1
+  %36 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep311 to i64
+  %37 = sub i64 %36, %28
+  %38 = lshr i64 %37, 3
+  %scevgep315 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep310, i64 %38
+  %scevgep317 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 1
+  %scevgep318 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep317, i64 %38
+  %bound0320 = icmp ult %"struct.std::__detail::_Node_iterator"* %cond.i67.i, %scevgep318
+  %bound1321 = icmp ult %"struct.std::__detail::_Node_iterator"* %27, %scevgep315
+  %found.conflict322 = and i1 %bound0320, %bound1321
+  br i1 %found.conflict322, label %for.body.i.i.i.i78.i.preheader340, label %vector.ph308
 
-vector.ph310:                                     ; preds = %vector.memcheck309
-  %n.vec327 = and i64 %38, 4611686018427387900
-  %ind.end331 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %n.vec327
-  %ind.end333 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 %n.vec327
-  %42 = add nsw i64 %n.vec327, -4
-  %43 = lshr exact i64 %42, 2
-  %44 = add nuw nsw i64 %43, 1
-  %xtraiter = and i64 %44, 3
-  %45 = icmp ult i64 %42, 12
-  br i1 %45, label %middle.block300.unr-lcssa, label %vector.ph310.new
+vector.ph308:                                     ; preds = %vector.memcheck307
+  %n.vec325 = and i64 %35, 4611686018427387900
+  %ind.end329 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %n.vec325
+  %ind.end331 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 %n.vec325
+  %39 = add nsw i64 %n.vec325, -4
+  %40 = lshr exact i64 %39, 2
+  %41 = add nuw nsw i64 %40, 1
+  %xtraiter = and i64 %41, 3
+  %42 = icmp ult i64 %39, 12
+  br i1 %42, label %middle.block298.unr-lcssa, label %vector.ph308.new
 
-vector.ph310.new:                                 ; preds = %vector.ph310
-  %unroll_iter = and i64 %44, 9223372036854775804
-  br label %vector.body302
+vector.ph308.new:                                 ; preds = %vector.ph308
+  %unroll_iter = and i64 %41, 9223372036854775804
+  br label %vector.body300
 
-vector.body302:                                   ; preds = %vector.body302, %vector.ph310.new
-  %index328 = phi i64 [ 0, %vector.ph310.new ], [ %index.next329.3, %vector.body302 ]
-  %niter = phi i64 [ %unroll_iter, %vector.ph310.new ], [ %niter.nsub.3, %vector.body302 ]
-  %next.gep335 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index328
-  %next.gep337 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 %index328
-  %46 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep337 to <2 x i64>*
-  %wide.load339 = load <2 x i64>, <2 x i64>* %46, align 8, !alias.scope !97
-  %47 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep337, i64 2
+vector.body300:                                   ; preds = %vector.body300, %vector.ph308.new
+  %index326 = phi i64 [ 0, %vector.ph308.new ], [ %index.next327.3, %vector.body300 ]
+  %niter = phi i64 [ %unroll_iter, %vector.ph308.new ], [ %niter.nsub.3, %vector.body300 ]
+  %next.gep333 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index326
+  %next.gep335 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 %index326
+  %43 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335 to <2 x i64>*
+  %wide.load337 = load <2 x i64>, <2 x i64>* %43, align 8, !alias.scope !97
+  %44 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335, i64 2
+  %45 = bitcast %"struct.std::__detail::_Node_iterator"* %44 to <2 x i64>*
+  %wide.load338 = load <2 x i64>, <2 x i64>* %45, align 8, !alias.scope !97
+  %46 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep333 to <2 x i64>*
+  store <2 x i64> %wide.load337, <2 x i64>* %46, align 8, !alias.scope !100, !noalias !97
+  %47 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep333, i64 2
   %48 = bitcast %"struct.std::__detail::_Node_iterator"* %47 to <2 x i64>*
-  %wide.load340 = load <2 x i64>, <2 x i64>* %48, align 8, !alias.scope !97
-  %49 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335 to <2 x i64>*
-  store <2 x i64> %wide.load339, <2 x i64>* %49, align 8, !alias.scope !100, !noalias !97
-  %50 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335, i64 2
+  store <2 x i64> %wide.load338, <2 x i64>* %48, align 8, !alias.scope !100, !noalias !97
+  %index.next327 = or i64 %index326, 4
+  %next.gep333.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index.next327
+  %next.gep335.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 %index.next327
+  %49 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.1 to <2 x i64>*
+  %wide.load337.1 = load <2 x i64>, <2 x i64>* %49, align 8, !alias.scope !97
+  %50 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.1, i64 2
   %51 = bitcast %"struct.std::__detail::_Node_iterator"* %50 to <2 x i64>*
-  store <2 x i64> %wide.load340, <2 x i64>* %51, align 8, !alias.scope !100, !noalias !97
-  %index.next329 = or i64 %index328, 4
-  %next.gep335.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index.next329
-  %next.gep337.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 %index.next329
-  %52 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep337.1 to <2 x i64>*
-  %wide.load339.1 = load <2 x i64>, <2 x i64>* %52, align 8, !alias.scope !97
-  %53 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep337.1, i64 2
+  %wide.load338.1 = load <2 x i64>, <2 x i64>* %51, align 8, !alias.scope !97
+  %52 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep333.1 to <2 x i64>*
+  store <2 x i64> %wide.load337.1, <2 x i64>* %52, align 8, !alias.scope !100, !noalias !97
+  %53 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep333.1, i64 2
   %54 = bitcast %"struct.std::__detail::_Node_iterator"* %53 to <2 x i64>*
-  %wide.load340.1 = load <2 x i64>, <2 x i64>* %54, align 8, !alias.scope !97
-  %55 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.1 to <2 x i64>*
-  store <2 x i64> %wide.load339.1, <2 x i64>* %55, align 8, !alias.scope !100, !noalias !97
-  %56 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.1, i64 2
+  store <2 x i64> %wide.load338.1, <2 x i64>* %54, align 8, !alias.scope !100, !noalias !97
+  %index.next327.1 = or i64 %index326, 8
+  %next.gep333.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index.next327.1
+  %next.gep335.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 %index.next327.1
+  %55 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.2 to <2 x i64>*
+  %wide.load337.2 = load <2 x i64>, <2 x i64>* %55, align 8, !alias.scope !97
+  %56 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.2, i64 2
   %57 = bitcast %"struct.std::__detail::_Node_iterator"* %56 to <2 x i64>*
-  store <2 x i64> %wide.load340.1, <2 x i64>* %57, align 8, !alias.scope !100, !noalias !97
-  %index.next329.1 = or i64 %index328, 8
-  %next.gep335.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index.next329.1
-  %next.gep337.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 %index.next329.1
-  %58 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep337.2 to <2 x i64>*
-  %wide.load339.2 = load <2 x i64>, <2 x i64>* %58, align 8, !alias.scope !97
-  %59 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep337.2, i64 2
+  %wide.load338.2 = load <2 x i64>, <2 x i64>* %57, align 8, !alias.scope !97
+  %58 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep333.2 to <2 x i64>*
+  store <2 x i64> %wide.load337.2, <2 x i64>* %58, align 8, !alias.scope !100, !noalias !97
+  %59 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep333.2, i64 2
   %60 = bitcast %"struct.std::__detail::_Node_iterator"* %59 to <2 x i64>*
-  %wide.load340.2 = load <2 x i64>, <2 x i64>* %60, align 8, !alias.scope !97
-  %61 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.2 to <2 x i64>*
-  store <2 x i64> %wide.load339.2, <2 x i64>* %61, align 8, !alias.scope !100, !noalias !97
-  %62 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.2, i64 2
+  store <2 x i64> %wide.load338.2, <2 x i64>* %60, align 8, !alias.scope !100, !noalias !97
+  %index.next327.2 = or i64 %index326, 12
+  %next.gep333.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index.next327.2
+  %next.gep335.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 %index.next327.2
+  %61 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.3 to <2 x i64>*
+  %wide.load337.3 = load <2 x i64>, <2 x i64>* %61, align 8, !alias.scope !97
+  %62 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.3, i64 2
   %63 = bitcast %"struct.std::__detail::_Node_iterator"* %62 to <2 x i64>*
-  store <2 x i64> %wide.load340.2, <2 x i64>* %63, align 8, !alias.scope !100, !noalias !97
-  %index.next329.2 = or i64 %index328, 12
-  %next.gep335.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index.next329.2
-  %next.gep337.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 %index.next329.2
-  %64 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep337.3 to <2 x i64>*
-  %wide.load339.3 = load <2 x i64>, <2 x i64>* %64, align 8, !alias.scope !97
-  %65 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep337.3, i64 2
+  %wide.load338.3 = load <2 x i64>, <2 x i64>* %63, align 8, !alias.scope !97
+  %64 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep333.3 to <2 x i64>*
+  store <2 x i64> %wide.load337.3, <2 x i64>* %64, align 8, !alias.scope !100, !noalias !97
+  %65 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep333.3, i64 2
   %66 = bitcast %"struct.std::__detail::_Node_iterator"* %65 to <2 x i64>*
-  %wide.load340.3 = load <2 x i64>, <2 x i64>* %66, align 8, !alias.scope !97
-  %67 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.3 to <2 x i64>*
-  store <2 x i64> %wide.load339.3, <2 x i64>* %67, align 8, !alias.scope !100, !noalias !97
-  %68 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.3, i64 2
-  %69 = bitcast %"struct.std::__detail::_Node_iterator"* %68 to <2 x i64>*
-  store <2 x i64> %wide.load340.3, <2 x i64>* %69, align 8, !alias.scope !100, !noalias !97
-  %index.next329.3 = add i64 %index328, 16
+  store <2 x i64> %wide.load338.3, <2 x i64>* %66, align 8, !alias.scope !100, !noalias !97
+  %index.next327.3 = add i64 %index326, 16
   %niter.nsub.3 = add i64 %niter, -4
   %niter.ncmp.3 = icmp eq i64 %niter.nsub.3, 0
-  br i1 %niter.ncmp.3, label %middle.block300.unr-lcssa, label %vector.body302, !llvm.loop !102
+  br i1 %niter.ncmp.3, label %middle.block298.unr-lcssa, label %vector.body300, !llvm.loop !102
 
-middle.block300.unr-lcssa:                        ; preds = %vector.body302, %vector.ph310
-  %index328.unr = phi i64 [ 0, %vector.ph310 ], [ %index.next329.3, %vector.body302 ]
+middle.block298.unr-lcssa:                        ; preds = %vector.body300, %vector.ph308
+  %index326.unr = phi i64 [ 0, %vector.ph308 ], [ %index.next327.3, %vector.body300 ]
   %lcmp.mod.not = icmp eq i64 %xtraiter, 0
-  br i1 %lcmp.mod.not, label %middle.block300, label %vector.body302.epil
+  br i1 %lcmp.mod.not, label %middle.block298, label %vector.body300.epil
 
-vector.body302.epil:                              ; preds = %middle.block300.unr-lcssa, %vector.body302.epil
-  %index328.epil = phi i64 [ %index.next329.epil, %vector.body302.epil ], [ %index328.unr, %middle.block300.unr-lcssa ]
-  %epil.iter = phi i64 [ %epil.iter.sub, %vector.body302.epil ], [ %xtraiter, %middle.block300.unr-lcssa ]
-  %next.gep335.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index328.epil
-  %next.gep337.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %30, i64 %index328.epil
-  %70 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep337.epil to <2 x i64>*
-  %wide.load339.epil = load <2 x i64>, <2 x i64>* %70, align 8, !alias.scope !97
-  %71 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep337.epil, i64 2
+vector.body300.epil:                              ; preds = %middle.block298.unr-lcssa, %vector.body300.epil
+  %index326.epil = phi i64 [ %index.next327.epil, %vector.body300.epil ], [ %index326.unr, %middle.block298.unr-lcssa ]
+  %epil.iter = phi i64 [ %epil.iter.sub, %vector.body300.epil ], [ %xtraiter, %middle.block298.unr-lcssa ]
+  %next.gep333.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %index326.epil
+  %next.gep335.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %27, i64 %index326.epil
+  %67 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.epil to <2 x i64>*
+  %wide.load337.epil = load <2 x i64>, <2 x i64>* %67, align 8, !alias.scope !97
+  %68 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.epil, i64 2
+  %69 = bitcast %"struct.std::__detail::_Node_iterator"* %68 to <2 x i64>*
+  %wide.load338.epil = load <2 x i64>, <2 x i64>* %69, align 8, !alias.scope !97
+  %70 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep333.epil to <2 x i64>*
+  store <2 x i64> %wide.load337.epil, <2 x i64>* %70, align 8, !alias.scope !100, !noalias !97
+  %71 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep333.epil, i64 2
   %72 = bitcast %"struct.std::__detail::_Node_iterator"* %71 to <2 x i64>*
-  %wide.load340.epil = load <2 x i64>, <2 x i64>* %72, align 8, !alias.scope !97
-  %73 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep335.epil to <2 x i64>*
-  store <2 x i64> %wide.load339.epil, <2 x i64>* %73, align 8, !alias.scope !100, !noalias !97
-  %74 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep335.epil, i64 2
-  %75 = bitcast %"struct.std::__detail::_Node_iterator"* %74 to <2 x i64>*
-  store <2 x i64> %wide.load340.epil, <2 x i64>* %75, align 8, !alias.scope !100, !noalias !97
-  %index.next329.epil = add i64 %index328.epil, 4
+  store <2 x i64> %wide.load338.epil, <2 x i64>* %72, align 8, !alias.scope !100, !noalias !97
+  %index.next327.epil = add i64 %index326.epil, 4
   %epil.iter.sub = add i64 %epil.iter, -1
   %epil.iter.cmp.not = icmp eq i64 %epil.iter.sub, 0
-  br i1 %epil.iter.cmp.not, label %middle.block300, label %vector.body302.epil, !llvm.loop !104
+  br i1 %epil.iter.cmp.not, label %middle.block298, label %vector.body300.epil, !llvm.loop !104
 
-middle.block300:                                  ; preds = %vector.body302.epil, %middle.block300.unr-lcssa
-  %cmp.n334 = icmp eq i64 %38, %n.vec327
-  %cast.cmo = add nsw i64 %n.vec327, -1
+middle.block298:                                  ; preds = %vector.body300.epil, %middle.block298.unr-lcssa
+  %cmp.n332 = icmp eq i64 %35, %n.vec325
+  %cast.cmo = add nsw i64 %n.vec325, -1
   %ind.escape = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 %cast.cmo
-  br i1 %cmp.n334, label %invoke.cont10.i, label %for.body.i.i.i.i78.i.preheader342
+  br i1 %cmp.n332, label %invoke.cont10.i, label %for.body.i.i.i.i78.i.preheader340
 
-for.body.i.i.i.i78.i.preheader342:                ; preds = %vector.memcheck309, %for.body.i.i.i.i78.i.preheader, %middle.block300
-  %__cur.024.i.i.i.i73.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %cond.i67.i, %vector.memcheck309 ], [ %cond.i67.i, %for.body.i.i.i.i78.i.preheader ], [ %ind.end331, %middle.block300 ]
-  %__first.sroa.0.023.i.i.i.i74.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %30, %vector.memcheck309 ], [ %30, %for.body.i.i.i.i78.i.preheader ], [ %ind.end333, %middle.block300 ]
+for.body.i.i.i.i78.i.preheader340:                ; preds = %vector.memcheck307, %for.body.i.i.i.i78.i.preheader, %middle.block298
+  %__cur.024.i.i.i.i73.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %cond.i67.i, %vector.memcheck307 ], [ %cond.i67.i, %for.body.i.i.i.i78.i.preheader ], [ %ind.end329, %middle.block298 ]
+  %__first.sroa.0.023.i.i.i.i74.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %27, %vector.memcheck307 ], [ %27, %for.body.i.i.i.i78.i.preheader ], [ %ind.end331, %middle.block298 ]
   br label %for.body.i.i.i.i78.i
 
 invoke.cont10.i.thread:                           ; preds = %invoke.cont.i
-  %incdec.ptr.i206277 = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 1
+  %incdec.ptr.i204275 = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %cond.i67.i, i64 1
   br label %invoke.cont15.i
 
-for.body.i.i.i.i78.i:                             ; preds = %for.body.i.i.i.i78.i.preheader342, %for.body.i.i.i.i78.i
-  %__cur.024.i.i.i.i73.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i76.i, %for.body.i.i.i.i78.i ], [ %__cur.024.i.i.i.i73.i.ph, %for.body.i.i.i.i78.i.preheader342 ]
-  %__first.sroa.0.023.i.i.i.i74.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i.i75.i, %for.body.i.i.i.i78.i ], [ %__first.sroa.0.023.i.i.i.i74.i.ph, %for.body.i.i.i.i78.i.preheader342 ]
-  %76 = bitcast %"struct.std::__detail::_Node_iterator"* %__first.sroa.0.023.i.i.i.i74.i to i64*
-  %77 = bitcast %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i to i64*
-  %78 = load i64, i64* %76, align 8
-  store i64 %78, i64* %77, align 8
+for.body.i.i.i.i78.i:                             ; preds = %for.body.i.i.i.i78.i.preheader340, %for.body.i.i.i.i78.i
+  %__cur.024.i.i.i.i73.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i76.i, %for.body.i.i.i.i78.i ], [ %__cur.024.i.i.i.i73.i.ph, %for.body.i.i.i.i78.i.preheader340 ]
+  %__first.sroa.0.023.i.i.i.i74.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i.i75.i, %for.body.i.i.i.i78.i ], [ %__first.sroa.0.023.i.i.i.i74.i.ph, %for.body.i.i.i.i78.i.preheader340 ]
+  %73 = bitcast %"struct.std::__detail::_Node_iterator"* %__first.sroa.0.023.i.i.i.i74.i to i64*
+  %74 = bitcast %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i to i64*
+  %75 = load i64, i64* %73, align 8
+  store i64 %75, i64* %74, align 8
   %incdec.ptr.i.i.i.i.i75.i = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__first.sroa.0.023.i.i.i.i74.i, i64 1
   %incdec.ptr.i.i.i.i76.i = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i, i64 1
-  %cmp.i.i.not.i.i.i.i77.i = icmp eq %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i.i.i.i.i75.i, %22
+  %cmp.i.i.not.i.i.i.i77.i = icmp eq %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i.i.i.i.i75.i, %19
   br i1 %cmp.i.i.not.i.i.i.i77.i, label %invoke.cont10.i, label %for.body.i.i.i.i78.i, !llvm.loop !105
 
-invoke.cont10.i:                                  ; preds = %for.body.i.i.i.i78.i, %middle.block300
-  %__cur.024.i.i.i.i73.i.lcssa = phi %"struct.std::__detail::_Node_iterator"* [ %ind.escape, %middle.block300 ], [ %__cur.024.i.i.i.i73.i, %for.body.i.i.i.i78.i ]
-  %.pre275 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_finish.i.i, align 8, !tbaa !96
-  %incdec.ptr.i206 = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i.lcssa, i64 2
-  %cmp.i.i.not22.i.i.i.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %.pre275, %22
+invoke.cont10.i:                                  ; preds = %for.body.i.i.i.i78.i, %middle.block298
+  %__cur.024.i.i.i.i73.i.lcssa = phi %"struct.std::__detail::_Node_iterator"* [ %ind.escape, %middle.block298 ], [ %__cur.024.i.i.i.i73.i, %for.body.i.i.i.i78.i ]
+  %.pre273 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_finish.i.i, align 8, !tbaa !96
+  %incdec.ptr.i204 = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i.lcssa, i64 2
+  %cmp.i.i.not22.i.i.i.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %.pre273, %19
   br i1 %cmp.i.i.not22.i.i.i.i.i, label %invoke.cont15.i, label %for.body.i.i.i.i.i.preheader
 
 for.body.i.i.i.i.i.preheader:                     ; preds = %invoke.cont10.i
-  %scevgep = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %.pre275, i64 -1
-  %79 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep to i64
-  %80 = sub i64 %79, %24
-  %81 = lshr i64 %80, 3
-  %82 = add nuw nsw i64 %81, 1
-  %min.iters.check = icmp ult i64 %80, 24
-  br i1 %min.iters.check, label %for.body.i.i.i.i.i.preheader341, label %vector.memcheck
+  %scevgep = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %.pre273, i64 -1
+  %76 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep to i64
+  %77 = sub i64 %76, %21
+  %78 = lshr i64 %77, 3
+  %79 = add nuw nsw i64 %78, 1
+  %min.iters.check = icmp ult i64 %77, 24
+  br i1 %min.iters.check, label %for.body.i.i.i.i.i.preheader339, label %vector.memcheck
 
 vector.memcheck:                                  ; preds = %for.body.i.i.i.i.i.preheader
-  %scevgep284 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i.lcssa, i64 3
-  %scevgep285 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %.pre275, i64 -1
-  %83 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep285 to i64
-  %84 = sub i64 %83, %24
-  %85 = lshr i64 %84, 3
-  %scevgep289 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep284, i64 %85
-  %scevgep291 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 1
-  %scevgep292 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep291, i64 %85
-  %bound0 = icmp ult %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, %scevgep292
-  %bound1 = icmp ult %"struct.std::__detail::_Node_iterator"* %22, %scevgep289
+  %scevgep282 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i73.i.lcssa, i64 3
+  %scevgep283 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %.pre273, i64 -1
+  %80 = ptrtoint %"struct.std::__detail::_Node_iterator"* %scevgep283 to i64
+  %81 = sub i64 %80, %21
+  %82 = lshr i64 %81, 3
+  %scevgep287 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep282, i64 %82
+  %scevgep289 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 1
+  %scevgep290 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %scevgep289, i64 %82
+  %bound0 = icmp ult %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, %scevgep290
+  %bound1 = icmp ult %"struct.std::__detail::_Node_iterator"* %19, %scevgep287
   %found.conflict = and i1 %bound0, %bound1
-  br i1 %found.conflict, label %for.body.i.i.i.i.i.preheader341, label %vector.ph
+  br i1 %found.conflict, label %for.body.i.i.i.i.i.preheader339, label %vector.ph
 
 vector.ph:                                        ; preds = %vector.memcheck
-  %n.vec = and i64 %82, 4611686018427387900
-  %ind.end = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, i64 %n.vec
-  %ind.end295 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 %n.vec
-  %86 = add nsw i64 %n.vec, -4
-  %87 = lshr exact i64 %86, 2
-  %88 = add nuw nsw i64 %87, 1
-  %xtraiter345 = and i64 %88, 3
-  %89 = icmp ult i64 %86, 12
-  br i1 %89, label %middle.block.unr-lcssa, label %vector.ph.new
+  %n.vec = and i64 %79, 4611686018427387900
+  %ind.end = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, i64 %n.vec
+  %ind.end293 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 %n.vec
+  %83 = add nsw i64 %n.vec, -4
+  %84 = lshr exact i64 %83, 2
+  %85 = add nuw nsw i64 %84, 1
+  %xtraiter343 = and i64 %85, 3
+  %86 = icmp ult i64 %83, 12
+  br i1 %86, label %middle.block.unr-lcssa, label %vector.ph.new
 
 vector.ph.new:                                    ; preds = %vector.ph
-  %unroll_iter348 = and i64 %88, 9223372036854775804
+  %unroll_iter346 = and i64 %85, 9223372036854775804
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph.new
   %index = phi i64 [ 0, %vector.ph.new ], [ %index.next.3, %vector.body ]
-  %niter349 = phi i64 [ %unroll_iter348, %vector.ph.new ], [ %niter349.nsub.3, %vector.body ]
-  %next.gep = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, i64 %index
-  %next.gep297 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 %index
-  %90 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep297 to <2 x i64>*
-  %wide.load = load <2 x i64>, <2 x i64>* %90, align 8, !alias.scope !106
-  %91 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep297, i64 2
+  %niter347 = phi i64 [ %unroll_iter346, %vector.ph.new ], [ %niter347.nsub.3, %vector.body ]
+  %next.gep = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, i64 %index
+  %next.gep295 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 %index
+  %87 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep295 to <2 x i64>*
+  %wide.load = load <2 x i64>, <2 x i64>* %87, align 8, !alias.scope !106
+  %88 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep295, i64 2
+  %89 = bitcast %"struct.std::__detail::_Node_iterator"* %88 to <2 x i64>*
+  %wide.load297 = load <2 x i64>, <2 x i64>* %89, align 8, !alias.scope !106
+  %90 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep to <2 x i64>*
+  store <2 x i64> %wide.load, <2 x i64>* %90, align 8, !alias.scope !109, !noalias !106
+  %91 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep, i64 2
   %92 = bitcast %"struct.std::__detail::_Node_iterator"* %91 to <2 x i64>*
-  %wide.load299 = load <2 x i64>, <2 x i64>* %92, align 8, !alias.scope !106
-  %93 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep to <2 x i64>*
-  store <2 x i64> %wide.load, <2 x i64>* %93, align 8, !alias.scope !109, !noalias !106
-  %94 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep, i64 2
-  %95 = bitcast %"struct.std::__detail::_Node_iterator"* %94 to <2 x i64>*
-  store <2 x i64> %wide.load299, <2 x i64>* %95, align 8, !alias.scope !109, !noalias !106
+  store <2 x i64> %wide.load297, <2 x i64>* %92, align 8, !alias.scope !109, !noalias !106
   %index.next = or i64 %index, 4
-  %next.gep.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, i64 %index.next
-  %next.gep297.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 %index.next
-  %96 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep297.1 to <2 x i64>*
-  %wide.load.1 = load <2 x i64>, <2 x i64>* %96, align 8, !alias.scope !106
-  %97 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep297.1, i64 2
+  %next.gep.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, i64 %index.next
+  %next.gep295.1 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 %index.next
+  %93 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep295.1 to <2 x i64>*
+  %wide.load.1 = load <2 x i64>, <2 x i64>* %93, align 8, !alias.scope !106
+  %94 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep295.1, i64 2
+  %95 = bitcast %"struct.std::__detail::_Node_iterator"* %94 to <2 x i64>*
+  %wide.load297.1 = load <2 x i64>, <2 x i64>* %95, align 8, !alias.scope !106
+  %96 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.1 to <2 x i64>*
+  store <2 x i64> %wide.load.1, <2 x i64>* %96, align 8, !alias.scope !109, !noalias !106
+  %97 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.1, i64 2
   %98 = bitcast %"struct.std::__detail::_Node_iterator"* %97 to <2 x i64>*
-  %wide.load299.1 = load <2 x i64>, <2 x i64>* %98, align 8, !alias.scope !106
-  %99 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.1 to <2 x i64>*
-  store <2 x i64> %wide.load.1, <2 x i64>* %99, align 8, !alias.scope !109, !noalias !106
-  %100 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.1, i64 2
-  %101 = bitcast %"struct.std::__detail::_Node_iterator"* %100 to <2 x i64>*
-  store <2 x i64> %wide.load299.1, <2 x i64>* %101, align 8, !alias.scope !109, !noalias !106
+  store <2 x i64> %wide.load297.1, <2 x i64>* %98, align 8, !alias.scope !109, !noalias !106
   %index.next.1 = or i64 %index, 8
-  %next.gep.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, i64 %index.next.1
-  %next.gep297.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 %index.next.1
-  %102 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep297.2 to <2 x i64>*
-  %wide.load.2 = load <2 x i64>, <2 x i64>* %102, align 8, !alias.scope !106
-  %103 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep297.2, i64 2
+  %next.gep.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, i64 %index.next.1
+  %next.gep295.2 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 %index.next.1
+  %99 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep295.2 to <2 x i64>*
+  %wide.load.2 = load <2 x i64>, <2 x i64>* %99, align 8, !alias.scope !106
+  %100 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep295.2, i64 2
+  %101 = bitcast %"struct.std::__detail::_Node_iterator"* %100 to <2 x i64>*
+  %wide.load297.2 = load <2 x i64>, <2 x i64>* %101, align 8, !alias.scope !106
+  %102 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.2 to <2 x i64>*
+  store <2 x i64> %wide.load.2, <2 x i64>* %102, align 8, !alias.scope !109, !noalias !106
+  %103 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.2, i64 2
   %104 = bitcast %"struct.std::__detail::_Node_iterator"* %103 to <2 x i64>*
-  %wide.load299.2 = load <2 x i64>, <2 x i64>* %104, align 8, !alias.scope !106
-  %105 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.2 to <2 x i64>*
-  store <2 x i64> %wide.load.2, <2 x i64>* %105, align 8, !alias.scope !109, !noalias !106
-  %106 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.2, i64 2
-  %107 = bitcast %"struct.std::__detail::_Node_iterator"* %106 to <2 x i64>*
-  store <2 x i64> %wide.load299.2, <2 x i64>* %107, align 8, !alias.scope !109, !noalias !106
+  store <2 x i64> %wide.load297.2, <2 x i64>* %104, align 8, !alias.scope !109, !noalias !106
   %index.next.2 = or i64 %index, 12
-  %next.gep.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, i64 %index.next.2
-  %next.gep297.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 %index.next.2
-  %108 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep297.3 to <2 x i64>*
-  %wide.load.3 = load <2 x i64>, <2 x i64>* %108, align 8, !alias.scope !106
-  %109 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep297.3, i64 2
+  %next.gep.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, i64 %index.next.2
+  %next.gep295.3 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 %index.next.2
+  %105 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep295.3 to <2 x i64>*
+  %wide.load.3 = load <2 x i64>, <2 x i64>* %105, align 8, !alias.scope !106
+  %106 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep295.3, i64 2
+  %107 = bitcast %"struct.std::__detail::_Node_iterator"* %106 to <2 x i64>*
+  %wide.load297.3 = load <2 x i64>, <2 x i64>* %107, align 8, !alias.scope !106
+  %108 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.3 to <2 x i64>*
+  store <2 x i64> %wide.load.3, <2 x i64>* %108, align 8, !alias.scope !109, !noalias !106
+  %109 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.3, i64 2
   %110 = bitcast %"struct.std::__detail::_Node_iterator"* %109 to <2 x i64>*
-  %wide.load299.3 = load <2 x i64>, <2 x i64>* %110, align 8, !alias.scope !106
-  %111 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.3 to <2 x i64>*
-  store <2 x i64> %wide.load.3, <2 x i64>* %111, align 8, !alias.scope !109, !noalias !106
-  %112 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.3, i64 2
-  %113 = bitcast %"struct.std::__detail::_Node_iterator"* %112 to <2 x i64>*
-  store <2 x i64> %wide.load299.3, <2 x i64>* %113, align 8, !alias.scope !109, !noalias !106
+  store <2 x i64> %wide.load297.3, <2 x i64>* %110, align 8, !alias.scope !109, !noalias !106
   %index.next.3 = add i64 %index, 16
-  %niter349.nsub.3 = add i64 %niter349, -4
-  %niter349.ncmp.3 = icmp eq i64 %niter349.nsub.3, 0
-  br i1 %niter349.ncmp.3, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !111
+  %niter347.nsub.3 = add i64 %niter347, -4
+  %niter347.ncmp.3 = icmp eq i64 %niter347.nsub.3, 0
+  br i1 %niter347.ncmp.3, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !111
 
 middle.block.unr-lcssa:                           ; preds = %vector.body, %vector.ph
   %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.3, %vector.body ]
-  %lcmp.mod347.not = icmp eq i64 %xtraiter345, 0
-  br i1 %lcmp.mod347.not, label %middle.block, label %vector.body.epil
+  %lcmp.mod345.not = icmp eq i64 %xtraiter343, 0
+  br i1 %lcmp.mod345.not, label %middle.block, label %vector.body.epil
 
 vector.body.epil:                                 ; preds = %middle.block.unr-lcssa, %vector.body.epil
   %index.epil = phi i64 [ %index.next.epil, %vector.body.epil ], [ %index.unr, %middle.block.unr-lcssa ]
-  %epil.iter346 = phi i64 [ %epil.iter346.sub, %vector.body.epil ], [ %xtraiter345, %middle.block.unr-lcssa ]
-  %next.gep.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i206, i64 %index.epil
-  %next.gep297.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %22, i64 %index.epil
-  %114 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep297.epil to <2 x i64>*
-  %wide.load.epil = load <2 x i64>, <2 x i64>* %114, align 8, !alias.scope !106
-  %115 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep297.epil, i64 2
+  %epil.iter344 = phi i64 [ %epil.iter344.sub, %vector.body.epil ], [ %xtraiter343, %middle.block.unr-lcssa ]
+  %next.gep.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i204, i64 %index.epil
+  %next.gep295.epil = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %19, i64 %index.epil
+  %111 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep295.epil to <2 x i64>*
+  %wide.load.epil = load <2 x i64>, <2 x i64>* %111, align 8, !alias.scope !106
+  %112 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep295.epil, i64 2
+  %113 = bitcast %"struct.std::__detail::_Node_iterator"* %112 to <2 x i64>*
+  %wide.load297.epil = load <2 x i64>, <2 x i64>* %113, align 8, !alias.scope !106
+  %114 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.epil to <2 x i64>*
+  store <2 x i64> %wide.load.epil, <2 x i64>* %114, align 8, !alias.scope !109, !noalias !106
+  %115 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.epil, i64 2
   %116 = bitcast %"struct.std::__detail::_Node_iterator"* %115 to <2 x i64>*
-  %wide.load299.epil = load <2 x i64>, <2 x i64>* %116, align 8, !alias.scope !106
-  %117 = bitcast %"struct.std::__detail::_Node_iterator"* %next.gep.epil to <2 x i64>*
-  store <2 x i64> %wide.load.epil, <2 x i64>* %117, align 8, !alias.scope !109, !noalias !106
-  %118 = getelementptr %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %next.gep.epil, i64 2
-  %119 = bitcast %"struct.std::__detail::_Node_iterator"* %118 to <2 x i64>*
-  store <2 x i64> %wide.load299.epil, <2 x i64>* %119, align 8, !alias.scope !109, !noalias !106
+  store <2 x i64> %wide.load297.epil, <2 x i64>* %116, align 8, !alias.scope !109, !noalias !106
   %index.next.epil = add i64 %index.epil, 4
-  %epil.iter346.sub = add i64 %epil.iter346, -1
-  %epil.iter346.cmp.not = icmp eq i64 %epil.iter346.sub, 0
-  br i1 %epil.iter346.cmp.not, label %middle.block, label %vector.body.epil, !llvm.loop !112
+  %epil.iter344.sub = add i64 %epil.iter344, -1
+  %epil.iter344.cmp.not = icmp eq i64 %epil.iter344.sub, 0
+  br i1 %epil.iter344.cmp.not, label %middle.block, label %vector.body.epil, !llvm.loop !112
 
 middle.block:                                     ; preds = %vector.body.epil, %middle.block.unr-lcssa
-  %cmp.n = icmp eq i64 %82, %n.vec
-  br i1 %cmp.n, label %invoke.cont15.i, label %for.body.i.i.i.i.i.preheader341
+  %cmp.n = icmp eq i64 %79, %n.vec
+  br i1 %cmp.n, label %invoke.cont15.i, label %for.body.i.i.i.i.i.preheader339
 
-for.body.i.i.i.i.i.preheader341:                  ; preds = %vector.memcheck, %for.body.i.i.i.i.i.preheader, %middle.block
-  %__cur.024.i.i.i.i.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i206, %vector.memcheck ], [ %incdec.ptr.i206, %for.body.i.i.i.i.i.preheader ], [ %ind.end, %middle.block ]
-  %__first.sroa.0.023.i.i.i.i.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %22, %vector.memcheck ], [ %22, %for.body.i.i.i.i.i.preheader ], [ %ind.end295, %middle.block ]
+for.body.i.i.i.i.i.preheader339:                  ; preds = %vector.memcheck, %for.body.i.i.i.i.i.preheader, %middle.block
+  %__cur.024.i.i.i.i.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i204, %vector.memcheck ], [ %incdec.ptr.i204, %for.body.i.i.i.i.i.preheader ], [ %ind.end, %middle.block ]
+  %__first.sroa.0.023.i.i.i.i.i.ph = phi %"struct.std::__detail::_Node_iterator"* [ %19, %vector.memcheck ], [ %19, %for.body.i.i.i.i.i.preheader ], [ %ind.end293, %middle.block ]
   br label %for.body.i.i.i.i.i
 
-for.body.i.i.i.i.i:                               ; preds = %for.body.i.i.i.i.i.preheader341, %for.body.i.i.i.i.i
-  %__cur.024.i.i.i.i.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i.i ], [ %__cur.024.i.i.i.i.i.ph, %for.body.i.i.i.i.i.preheader341 ]
-  %__first.sroa.0.023.i.i.i.i.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i.i.i, %for.body.i.i.i.i.i ], [ %__first.sroa.0.023.i.i.i.i.i.ph, %for.body.i.i.i.i.i.preheader341 ]
-  %120 = bitcast %"struct.std::__detail::_Node_iterator"* %__first.sroa.0.023.i.i.i.i.i to i64*
-  %121 = bitcast %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i.i to i64*
-  %122 = load i64, i64* %120, align 8
-  store i64 %122, i64* %121, align 8
+for.body.i.i.i.i.i:                               ; preds = %for.body.i.i.i.i.i.preheader339, %for.body.i.i.i.i.i
+  %__cur.024.i.i.i.i.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i.i ], [ %__cur.024.i.i.i.i.i.ph, %for.body.i.i.i.i.i.preheader339 ]
+  %__first.sroa.0.023.i.i.i.i.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i.i.i.i.i.i, %for.body.i.i.i.i.i ], [ %__first.sroa.0.023.i.i.i.i.i.ph, %for.body.i.i.i.i.i.preheader339 ]
+  %117 = bitcast %"struct.std::__detail::_Node_iterator"* %__first.sroa.0.023.i.i.i.i.i to i64*
+  %118 = bitcast %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i.i to i64*
+  %119 = load i64, i64* %117, align 8
+  store i64 %119, i64* %118, align 8
   %incdec.ptr.i.i.i.i.i.i = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__first.sroa.0.023.i.i.i.i.i, i64 1
   %incdec.ptr.i.i.i.i.i = getelementptr inbounds %"struct.std::__detail::_Node_iterator", %"struct.std::__detail::_Node_iterator"* %__cur.024.i.i.i.i.i, i64 1
-  %cmp.i.i.not.i.i.i.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i.i.i.i.i.i, %.pre275
+  %cmp.i.i.not.i.i.i.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %incdec.ptr.i.i.i.i.i.i, %.pre273
   br i1 %cmp.i.i.not.i.i.i.i.i, label %invoke.cont15.i, label %for.body.i.i.i.i.i, !llvm.loop !113
 
 invoke.cont15.i:                                  ; preds = %for.body.i.i.i.i.i, %middle.block, %invoke.cont10.i.thread, %invoke.cont10.i
-  %__cur.0.lcssa.i.i.i.i.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i206, %invoke.cont10.i ], [ %incdec.ptr.i206277, %invoke.cont10.i.thread ], [ %ind.end, %middle.block ], [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i.i ]
-  %123 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i27.i.i, align 8, !tbaa !86
-  %tobool.not.i68.i = icmp eq %"struct.std::__detail::_Node_iterator"* %123, null
+  %__cur.0.lcssa.i.i.i.i.i = phi %"struct.std::__detail::_Node_iterator"* [ %incdec.ptr.i204, %invoke.cont10.i ], [ %incdec.ptr.i204275, %invoke.cont10.i.thread ], [ %ind.end, %middle.block ], [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i.i ]
+  %120 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i27.i.i, align 8, !tbaa !86
+  %tobool.not.i68.i = icmp eq %"struct.std::__detail::_Node_iterator"* %120, null
   br i1 %tobool.not.i68.i, label %.noexc, label %if.then.i69.i
 
 if.then.i69.i:                                    ; preds = %invoke.cont15.i
-  %124 = bitcast %"struct.std::__detail::_Node_iterator"* %123 to i8*
-  tail call void @_ZdlPv(i8* nonnull %124) #20
+  %121 = bitcast %"struct.std::__detail::_Node_iterator"* %120 to i8*
+  tail call void @_ZdlPv(i8* nonnull %121) #20
   br label %.noexc
 
 .noexc:                                           ; preds = %if.then.i69.i, %invoke.cont15.i
@@ -2886,78 +2881,73 @@ if.then.i69.i:                                    ; preds = %invoke.cont15.i
   br label %invoke.cont87
 
 invoke.cont87:                                    ; preds = %.noexc, %if.then.i.i
-  %125 = phi %"struct.std::__detail::_Node_iterator"* [ %__cur.0.lcssa.i.i.i.i.i, %.noexc ], [ %incdec.ptr.i.i204, %if.then.i.i ]
-  %incdec.ptr.i203 = getelementptr inbounds %class.Aggregator*, %class.Aggregator** %__begin171.sroa.0.0259, i64 1
-  %cmp.i215.not = icmp eq %class.Aggregator** %incdec.ptr.i203, %20
-  br i1 %cmp.i215.not, label %for.cond92.preheader, label %invoke.cont87.for.body80_crit_edge
+  %122 = phi %"struct.std::__detail::_Node_iterator"* [ %__cur.0.lcssa.i.i.i.i.i, %.noexc ], [ %incdec.ptr.i.i202, %if.then.i.i ]
+  %incdec.ptr.i201 = getelementptr inbounds %class.Aggregator*, %class.Aggregator** %__begin171.sroa.0.0257, i64 1
+  %cmp.i213.not = icmp eq %class.Aggregator** %incdec.ptr.i201, %17
+  br i1 %cmp.i213.not, label %for.cond92.preheader, label %invoke.cont87.for.body80_crit_edge
 
 invoke.cont87.for.body80_crit_edge:               ; preds = %invoke.cont87
   %.pre = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_end_of_storage.i.i, align 8, !tbaa !114
   br label %for.body80
 
 lpad:                                             ; preds = %_ZNSt16allocator_traitsISaINSt8__detail14_Node_iteratorISt4pairIKmSt6vectorI13GroupByColumnSaIS5_EEELb0ELb0EEEEE8allocateERSA_m.exit.i.i
-  %126 = landingpad { i8*, i32 }
+  %123 = landingpad { i8*, i32 }
           cleanup
-  br label %ehcleanup118
-
-for.cond.cleanup93:                               ; preds = %invoke.cont109, %for.cond92.preheader
-  %127 = ptrtoint i8* %call5 to i64
-  invoke void @omni_release(i64 %127)
-          to label %invoke.cont117 unwind label %lpad116
+  br label %ehcleanup116
 
 for.body94:                                       ; preds = %for.body94.lr.ph, %invoke.cont109
-  %i91.0257 = phi i32 [ 0, %for.body94.lr.ph ], [ %inc113, %invoke.cont109 ]
-  %currentPosition.0256 = phi i32 [ 0, %for.body94.lr.ph ], [ %add110, %invoke.cont109 ]
-  %128 = load i64, i64* %_M_element_count.i.i222, align 8, !tbaa !94
-  %129 = trunc i64 %128 to i32
-  %conv99 = sub i32 %129, %currentPosition.0256
-  %cmp.i202 = icmp slt i32 %conv99, %div
-  %.sroa.speculated = select i1 %cmp.i202, i32 %conv99, i32 %div
+  %i91.0255 = phi i32 [ 0, %for.body94.lr.ph ], [ %inc113, %invoke.cont109 ]
+  %currentPosition.0254 = phi i32 [ 0, %for.body94.lr.ph ], [ %add110, %invoke.cont109 ]
+  %124 = load i64, i64* %_M_element_count.i.i220, align 8, !tbaa !94
+  %125 = trunc i64 %124 to i32
+  %conv99 = sub i32 %125, %currentPosition.0254
+  %cmp.i200 = icmp slt i32 %conv99, %div
+  %.sroa.speculated = select i1 %cmp.i200, i32 %conv99, i32 %div
   %call105 = invoke noalias nonnull dereferenceable(64) i8* @_Znwm(i64 64) #18
           to label %invoke.cont104 unwind label %lpad103
 
 invoke.cont104:                                   ; preds = %for.body94
-  %130 = bitcast i8* %call105 to i32 (...)***
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV5Table, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %130, align 8, !tbaa !50
+  %126 = bitcast i8* %call105 to i32 (...)***
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV5Table, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %126, align 8, !tbaa !50
   %data.i = getelementptr inbounds i8, i8* %call105, i64 16
   tail call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(24) %data.i, i8 0, i64 24, i1 false) #20
   %positionCount2.i = getelementptr inbounds i8, i8* %call105, i64 48
-  %131 = bitcast i8* %positionCount2.i to i32*
-  store i32 %.sroa.speculated, i32* %131, align 8, !tbaa !73
+  %127 = bitcast i8* %positionCount2.i to i32*
+  store i32 %.sroa.speculated, i32* %127, align 8, !tbaa !73
   %columnCount3.i = getelementptr inbounds i8, i8* %call105, i64 52
-  %132 = bitcast i8* %columnCount3.i to i32*
-  store i32 %add, i32* %132, align 4, !tbaa !115
-  %call.i200 = invoke noalias nonnull i8* @_Znam(i64 %mul) #18
+  %128 = bitcast i8* %columnCount3.i to i32*
+  store i32 %add, i32* %128, align 4, !tbaa !115
+  %call.i198 = invoke noalias nonnull i8* @_Znam(i64 %6) #18
           to label %invoke.cont107 unwind label %lpad106
 
 invoke.cont107:                                   ; preds = %invoke.cont104
-  %133 = bitcast i8* %call105 to %class.Table*
+  %129 = bitcast i8* %call105 to %class.Table*
   %types.i = getelementptr inbounds i8, i8* %call105, i64 40
-  %134 = bitcast i8* %types.i to i8**
-  store i8* %call.i200, i8** %134, align 8, !tbaa !61
+  %130 = bitcast i8* %types.i to i8**
+  store i8* %call.i198, i8** %130, align 8, !tbaa !61
   %columnSize.i = getelementptr inbounds i8, i8* %call105, i64 56
-  %135 = bitcast i8* %columnSize.i to i32*
-  store i32 0, i32* %135, align 8, !tbaa !83
-  invoke void @_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator(%class.HashGroupBy* nonnull dereferenceable(144) %this, %class.Table* nonnull %133, i32* %6, i32 %conv, i32 %conv3, i32 %.sroa.speculated, %struct.Iterator* nonnull align 8 dereferenceable(32) %iterator)
+  %131 = bitcast i8* %columnSize.i to i32*
+  store i32 0, i32* %131, align 8, !tbaa !83
+  invoke void @_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator(%class.HashGroupBy* nonnull dereferenceable(144) %this, %class.Table* nonnull %129, i32* nonnull %7, i32 %conv, i32 %conv3, i32 %.sroa.speculated, %struct.Iterator* nonnull align 8 dereferenceable(32) %iterator)
           to label %invoke.cont108 unwind label %lpad103
 
 invoke.cont108:                                   ; preds = %invoke.cont107
-  %136 = load %class.Table**, %class.Table*** %_M_finish.i196, align 8, !tbaa !116
-  %137 = load %class.Table**, %class.Table*** %_M_end_of_storage.i, align 8, !tbaa !119
-  %cmp.not.i = icmp eq %class.Table** %136, %137
+  %132 = load %class.Table**, %class.Table*** %_M_finish.i194, align 8, !tbaa !116
+  %133 = load %class.Table**, %class.Table*** %_M_end_of_storage.i, align 8, !tbaa !119
+  %cmp.not.i = icmp eq %class.Table** %132, %133
   br i1 %cmp.not.i, label %if.else.i, label %if.then.i
 
 if.then.i:                                        ; preds = %invoke.cont108
-  %138 = bitcast %class.Table** %136 to i8**
-  store i8* %call105, i8** %138, align 8, !tbaa !19
-  %139 = load %class.Table**, %class.Table*** %_M_finish.i196, align 8, !tbaa !116
-  %incdec.ptr.i = getelementptr inbounds %class.Table*, %class.Table** %139, i64 1
+  %134 = bitcast %class.Table** %132 to i8**
+  store i8* %call105, i8** %134, align 8, !tbaa !19
+  %135 = load %class.Table**, %class.Table*** %_M_finish.i194, align 8, !tbaa !116
+  %incdec.ptr.i = getelementptr inbounds %class.Table*, %class.Table** %135, i64 1
   br label %invoke.cont109
 
 if.else.i:                                        ; preds = %invoke.cont108
-  %140 = load %class.Table**, %class.Table*** %_M_start.i27.i.i.i, align 8, !tbaa !120
-  %sub.ptr.lhs.cast.i28.i.i.i = ptrtoint %class.Table** %136 to i64
-  %sub.ptr.rhs.cast.i29.i.i.i = ptrtoint %class.Table** %140 to i64
+  %136 = load %class.Table**, %class.Table*** %_M_start.i27.i.i.i, align 8, !tbaa !120
+  %sub.ptr.lhs.cast.i28.i.i.i = ptrtoint %class.Table** %132 to i64
+  %sub.ptr.rhs.cast.i29.i.i.i = ptrtoint %class.Table** %136 to i64
   %sub.ptr.sub.i30.i.i.i = sub i64 %sub.ptr.lhs.cast.i28.i.i.i, %sub.ptr.rhs.cast.i29.i.i.i
   %sub.ptr.div.i31.i.i.i = ashr exact i64 %sub.ptr.sub.i30.i.i.i, 3
   %cmp.i.i.i.i = icmp eq i64 %sub.ptr.sub.i30.i.i.i, 0
@@ -2972,11 +2962,11 @@ if.else.i:                                        ; preds = %invoke.cont108
 
 _ZNSt16allocator_traitsISaIP5TableEE8allocateERS2_m.exit.i.i.i: ; preds = %if.else.i
   %mul.i.i.i.i.i = shl nuw i64 %cond.i.i.i, 3
-  %call2.i.i.i.i.i197 = invoke noalias nonnull i8* @_Znwm(i64 %mul.i.i.i.i.i) #19
+  %call2.i.i.i.i.i195 = invoke noalias nonnull i8* @_Znwm(i64 %mul.i.i.i.i.i) #19
           to label %call2.i.i.i.i.i.noexc unwind label %lpad103
 
 call2.i.i.i.i.i.noexc:                            ; preds = %_ZNSt16allocator_traitsISaIP5TableEE8allocateERS2_m.exit.i.i.i
-  %141 = bitcast i8* %call2.i.i.i.i.i197 to %class.Table**
+  %137 = bitcast i8* %call2.i.i.i.i.i195 to %class.Table**
   %.pre.i.i = load %class.Table**, %class.Table*** %_M_start.i27.i.i.i, align 8, !tbaa !120
   %.pre83.i.i = ptrtoint %class.Table** %.pre.i.i to i64
   %.pre84.i.i = sub i64 %sub.ptr.lhs.cast.i28.i.i.i, %.pre83.i.i
@@ -2984,114 +2974,108 @@ call2.i.i.i.i.i.noexc:                            ; preds = %_ZNSt16allocator_tr
 
 invoke.cont.i.i:                                  ; preds = %call2.i.i.i.i.i.noexc, %if.else.i
   %sub.ptr.sub.i.i.i.i.i.i.i.i74.pre-phi.i.i = phi i64 [ %.pre84.i.i, %call2.i.i.i.i.i.noexc ], [ %sub.ptr.sub.i30.i.i.i, %if.else.i ]
-  %142 = phi %class.Table** [ %.pre.i.i, %call2.i.i.i.i.i.noexc ], [ %140, %if.else.i ]
-  %cond.i67.i.i = phi %class.Table** [ %141, %call2.i.i.i.i.i.noexc ], [ null, %if.else.i ]
+  %138 = phi %class.Table** [ %.pre.i.i, %call2.i.i.i.i.i.noexc ], [ %136, %if.else.i ]
+  %cond.i67.i.i = phi %class.Table** [ %137, %call2.i.i.i.i.i.noexc ], [ null, %if.else.i ]
   %add.ptr.i.i = getelementptr inbounds %class.Table*, %class.Table** %cond.i67.i.i, i64 %sub.ptr.div.i31.i.i.i
-  %143 = bitcast %class.Table** %add.ptr.i.i to i8**
-  store i8* %call105, i8** %143, align 8, !tbaa !19
+  %139 = bitcast %class.Table** %add.ptr.i.i to i8**
+  store i8* %call105, i8** %139, align 8, !tbaa !19
   %tobool.not.i.i.i.i.i.i.i.i75.i.i = icmp eq i64 %sub.ptr.sub.i.i.i.i.i.i.i.i74.pre-phi.i.i, 0
   br i1 %tobool.not.i.i.i.i.i.i.i.i75.i.i, label %invoke.cont10.i.i, label %if.then.i.i.i.i.i.i.i.i76.i.i
 
 if.then.i.i.i.i.i.i.i.i76.i.i:                    ; preds = %invoke.cont.i.i
-  %144 = bitcast %class.Table** %cond.i67.i.i to i8*
-  %145 = bitcast %class.Table** %142 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 %144, i8* align 8 %145, i64 %sub.ptr.sub.i.i.i.i.i.i.i.i74.pre-phi.i.i, i1 false) #20
+  %140 = bitcast %class.Table** %cond.i67.i.i to i8*
+  %141 = bitcast %class.Table** %138 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 %140, i8* align 8 %141, i64 %sub.ptr.sub.i.i.i.i.i.i.i.i74.pre-phi.i.i, i1 false) #20
   br label %invoke.cont10.i.i
 
 invoke.cont10.i.i:                                ; preds = %if.then.i.i.i.i.i.i.i.i76.i.i, %invoke.cont.i.i
   %sub.ptr.div.i.i.i.i.i.i.i.i77.i.i = ashr exact i64 %sub.ptr.sub.i.i.i.i.i.i.i.i74.pre-phi.i.i, 3
   %add.ptr.i.i.i.i.i.i.i.i78.i.i = getelementptr inbounds %class.Table*, %class.Table** %cond.i67.i.i, i64 1
   %incdec.ptr.i.i = getelementptr inbounds %class.Table*, %class.Table** %add.ptr.i.i.i.i.i.i.i.i78.i.i, i64 %sub.ptr.div.i.i.i.i.i.i.i.i77.i.i
-  %146 = load %class.Table**, %class.Table*** %_M_finish.i196, align 8, !tbaa !116
-  %sub.ptr.lhs.cast.i.i.i.i.i.i.i.i.i.i = ptrtoint %class.Table** %146 to i64
+  %142 = load %class.Table**, %class.Table*** %_M_finish.i194, align 8, !tbaa !116
+  %sub.ptr.lhs.cast.i.i.i.i.i.i.i.i.i.i = ptrtoint %class.Table** %142 to i64
   %sub.ptr.sub.i.i.i.i.i.i.i.i.i.i = sub i64 %sub.ptr.lhs.cast.i.i.i.i.i.i.i.i.i.i, %sub.ptr.lhs.cast.i28.i.i.i
   %tobool.not.i.i.i.i.i.i.i.i.i.i = icmp eq i64 %sub.ptr.sub.i.i.i.i.i.i.i.i.i.i, 0
   br i1 %tobool.not.i.i.i.i.i.i.i.i.i.i, label %invoke.cont15.i.i, label %if.then.i.i.i.i.i.i.i.i.i.i
 
 if.then.i.i.i.i.i.i.i.i.i.i:                      ; preds = %invoke.cont10.i.i
-  %147 = bitcast %class.Table** %incdec.ptr.i.i to i8*
-  %148 = bitcast %class.Table** %136 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 8 %147, i8* align 8 %148, i64 %sub.ptr.sub.i.i.i.i.i.i.i.i.i.i, i1 false) #20
+  %143 = bitcast %class.Table** %incdec.ptr.i.i to i8*
+  %144 = bitcast %class.Table** %132 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 8 %143, i8* align 8 %144, i64 %sub.ptr.sub.i.i.i.i.i.i.i.i.i.i, i1 false) #20
   br label %invoke.cont15.i.i
 
 invoke.cont15.i.i:                                ; preds = %if.then.i.i.i.i.i.i.i.i.i.i, %invoke.cont10.i.i
-  %tobool.not.i68.i.i = icmp eq %class.Table** %142, null
+  %tobool.not.i68.i.i = icmp eq %class.Table** %138, null
   br i1 %tobool.not.i68.i.i, label %_ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i, label %if.then.i69.i.i
 
 if.then.i69.i.i:                                  ; preds = %invoke.cont15.i.i
-  %149 = bitcast %class.Table** %142 to i8*
-  tail call void @_ZdlPv(i8* nonnull %149) #20
+  %145 = bitcast %class.Table** %138 to i8*
+  tail call void @_ZdlPv(i8* nonnull %145) #20
   br label %_ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i
 
 _ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i: ; preds = %if.then.i69.i.i, %invoke.cont15.i.i
   %sub.ptr.div.i.i.i.i.i.i.i.i.i.i = ashr exact i64 %sub.ptr.sub.i.i.i.i.i.i.i.i.i.i, 3
   %add.ptr.i.i.i.i.i.i.i.i.i.i = getelementptr inbounds %class.Table*, %class.Table** %incdec.ptr.i.i, i64 %sub.ptr.div.i.i.i.i.i.i.i.i.i.i
   store %class.Table** %cond.i67.i.i, %class.Table*** %_M_start.i27.i.i.i, align 8, !tbaa !120
-  store %class.Table** %add.ptr.i.i.i.i.i.i.i.i.i.i, %class.Table*** %_M_finish.i196, align 8, !tbaa !116
+  store %class.Table** %add.ptr.i.i.i.i.i.i.i.i.i.i, %class.Table*** %_M_finish.i194, align 8, !tbaa !116
   %add.ptr39.i.i = getelementptr inbounds %class.Table*, %class.Table** %cond.i67.i.i, i64 %cond.i.i.i
   br label %invoke.cont109
 
 invoke.cont109:                                   ; preds = %_ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i, %if.then.i
-  %_M_end_of_storage.i.sink = phi %class.Table*** [ %_M_end_of_storage.i, %_ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i ], [ %_M_finish.i196, %if.then.i ]
+  %_M_end_of_storage.i.sink = phi %class.Table*** [ %_M_end_of_storage.i, %_ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i ], [ %_M_finish.i194, %if.then.i ]
   %add.ptr39.i.i.sink = phi %class.Table** [ %add.ptr39.i.i, %_ZNSt6vectorIP5TableSaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_.exit.i ], [ %incdec.ptr.i, %if.then.i ]
   store %class.Table** %add.ptr39.i.i.sink, %class.Table*** %_M_end_of_storage.i.sink, align 8, !tbaa !19
-  %add110 = add nsw i32 %currentPosition.0256, %div
-  %inc113 = add nuw nsw i32 %i91.0257, 1
+  %add110 = add nsw i32 %currentPosition.0254, %div
+  %inc113 = add nuw nsw i32 %i91.0255, 1
   %exitcond.not = icmp eq i32 %inc113, %conv65
-  br i1 %exitcond.not, label %for.cond.cleanup93, label %for.body94, !llvm.loop !121
+  br i1 %exitcond.not, label %delete.notnull, label %for.body94, !llvm.loop !121
 
 lpad103:                                          ; preds = %_ZNSt16allocator_traitsISaIP5TableEE8allocateERS2_m.exit.i.i.i, %invoke.cont107, %for.body94
-  %150 = landingpad { i8*, i32 }
+  %146 = landingpad { i8*, i32 }
           cleanup
-  br label %ehcleanup118
+  br label %ehcleanup116
 
 lpad106:                                          ; preds = %invoke.cont104
-  %151 = landingpad { i8*, i32 }
+  %147 = landingpad { i8*, i32 }
           cleanup
   tail call void @_ZdlPv(i8* nonnull %call105) #23
-  br label %ehcleanup118
+  br label %ehcleanup116
 
-invoke.cont117:                                   ; preds = %for.cond.cleanup93
-  %_M_start.i.i.i191 = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1, i32 0, i32 0, i32 0
-  %152 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i.i.i191, align 8, !tbaa !86
-  %tobool.not.i.i.i.i192 = icmp eq %"struct.std::__detail::_Node_iterator"* %152, null
-  br i1 %tobool.not.i.i.i.i192, label %_ZN8IteratorD2Ev.exit194, label %if.then.i.i.i.i193
+delete.notnull:                                   ; preds = %invoke.cont109, %for.cond92.preheader
+  tail call void @_ZdaPv(i8* nonnull %call5) #23
+  %_M_start.i.i.i189 = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1, i32 0, i32 0, i32 0
+  %148 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i.i.i189, align 8, !tbaa !86
+  %tobool.not.i.i.i.i190 = icmp eq %"struct.std::__detail::_Node_iterator"* %148, null
+  br i1 %tobool.not.i.i.i.i190, label %_ZN8IteratorD2Ev.exit192, label %if.then.i.i.i.i191
 
-if.then.i.i.i.i193:                               ; preds = %invoke.cont117
-  %153 = bitcast %"struct.std::__detail::_Node_iterator"* %152 to i8*
-  tail call void @_ZdlPv(i8* nonnull %153) #20
-  br label %_ZN8IteratorD2Ev.exit194
+if.then.i.i.i.i191:                               ; preds = %delete.notnull
+  %149 = bitcast %"struct.std::__detail::_Node_iterator"* %148 to i8*
+  tail call void @_ZdlPv(i8* nonnull %149) #20
+  br label %_ZN8IteratorD2Ev.exit192
 
-_ZN8IteratorD2Ev.exit194:                         ; preds = %invoke.cont117, %if.then.i.i.i.i193
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %14) #20
+_ZN8IteratorD2Ev.exit192:                         ; preds = %delete.notnull, %if.then.i.i.i.i191
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %11) #20
   ret i32 %conv65
 
-lpad116:                                          ; preds = %for.cond.cleanup93
-  %154 = landingpad { i8*, i32 }
-          cleanup
-  br label %ehcleanup118
-
-ehcleanup118:                                     ; preds = %lpad103, %lpad106, %lpad116, %lpad
-  %.pn182 = phi { i8*, i32 } [ %126, %lpad ], [ %154, %lpad116 ], [ %150, %lpad103 ], [ %151, %lpad106 ]
+ehcleanup116:                                     ; preds = %lpad103, %lpad106, %lpad
+  %.pn181 = phi { i8*, i32 } [ %123, %lpad ], [ %146, %lpad103 ], [ %147, %lpad106 ]
   %_M_start.i.i.i = getelementptr inbounds %struct.Iterator, %struct.Iterator* %iterator, i64 0, i32 1, i32 0, i32 0, i32 0
-  %155 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i.i.i, align 8, !tbaa !86
-  %tobool.not.i.i.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %155, null
+  %150 = load %"struct.std::__detail::_Node_iterator"*, %"struct.std::__detail::_Node_iterator"** %_M_start.i.i.i, align 8, !tbaa !86
+  %tobool.not.i.i.i.i = icmp eq %"struct.std::__detail::_Node_iterator"* %150, null
   br i1 %tobool.not.i.i.i.i, label %_ZN8IteratorD2Ev.exit, label %if.then.i.i.i.i
 
-if.then.i.i.i.i:                                  ; preds = %ehcleanup118
-  %156 = bitcast %"struct.std::__detail::_Node_iterator"* %155 to i8*
-  tail call void @_ZdlPv(i8* nonnull %156) #20
+if.then.i.i.i.i:                                  ; preds = %ehcleanup116
+  %151 = bitcast %"struct.std::__detail::_Node_iterator"* %150 to i8*
+  tail call void @_ZdlPv(i8* nonnull %151) #20
   br label %_ZN8IteratorD2Ev.exit
 
-_ZN8IteratorD2Ev.exit:                            ; preds = %ehcleanup118, %if.then.i.i.i.i
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %14) #20
-  resume { i8*, i32 } %.pn182
+_ZN8IteratorD2Ev.exit:                            ; preds = %ehcleanup116, %if.then.i.i.i.i
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %11) #20
+  resume { i8*, i32 } %.pn181
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare double @llvm.ceil.f64(double) #4
-
-declare dso_local void @omni_release(i64) local_unnamed_addr #0
 
 ; Function Attrs: uwtable
 define dso_local void @_ZN11HashGroupBy15constructColumnEP5Tablejij(%class.HashGroupBy* nocapture nonnull readonly dereferenceable(144) %this, %class.Table* %table, i32 %type, i32 %columnIdx, i32 %outputColType) local_unnamed_addr #6 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

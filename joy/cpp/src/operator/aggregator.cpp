@@ -69,7 +69,8 @@ extern "C" void sumProcessInt32(SumAggregator* aggregator, int64_t key, void* co
         *((int32_t*)(value->second[0].val)) += *rowVal;
     }else {
         std::vector<GroupByColumn> gbc;
-        int32_t* val = (int32_t*)omni_allocate(sizeof(int32_t));
+        // int32_t* val = (int32_t*)omni_allocate(sizeof(int32_t));
+        int32_t* val = new int32_t;
         *val = *rowVal;
         GroupByColumn c = {INT32, val};
         gbc.push_back(c);
@@ -90,7 +91,8 @@ extern "C" void sumProcessInt64(SumAggregator* aggregator, int64_t key, void* co
         *((int64_t*)(value->second[0].val)) += *rowVal;
     }else {
         std::vector<GroupByColumn> gbc;
-        int64_t* val = (int64_t*)omni_allocate(sizeof(int64_t));
+        // int64_t* val = (int64_t*)omni_allocate(sizeof(int64_t));
+        int64_t* val = new int64_t;
         *val = *rowVal;
         GroupByColumn c = {INT64, val};
         gbc.push_back(c);
@@ -111,7 +113,8 @@ extern "C" void sumProcessDouble(SumAggregator* aggregator, int64_t key, void* c
         *((double*)(value->second[0].val)) += *rowVal;
     }else {
         std::vector<GroupByColumn> gbc;
-        double* val = (double*)omni_allocate(sizeof(double));
+        // double* val = (double*)omni_allocate(sizeof(double));
+        double* val = new double;
         *val = *rowVal;
         GroupByColumn c = {DOUBLE, val};
         gbc.push_back(c);
