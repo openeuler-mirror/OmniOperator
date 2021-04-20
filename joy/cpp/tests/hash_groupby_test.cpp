@@ -122,13 +122,14 @@ TEST(HashGroupByTest, VerfifyCorrectness)
         groupBy->process(input[i], DATA_SIZE);
     }
     
-    Table* result = groupBy->getResult();
+    std::vector<Table*> result;
+    int32_t tableCount = groupBy->getResult(result);
 
-    EXPECT_EQ(result->getColumnNumber(), 4);
-    EXPECT_EQ(result->getPositionCount(), 3);
+    EXPECT_EQ(result[0]->getColumnNumber(), 4);
+    EXPECT_EQ(result[0]->getPositionCount(), 3);
 
-    for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
-        Column* col = result->getColumn(i);
+    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
+        Column* col = result[0]->getColumn(i);
         col->printColumn();
     }
     
@@ -140,12 +141,12 @@ TEST(HashGroupByTest, VerfifyCorrectness)
         delete input[i];
     }
     
-    for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
-        Column* col = result->getColumn(i);
+    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
+        Column* col = result[0]->getColumn(i);
         delete col->getData();
         delete col;
     }
-    delete result;
+    delete result[0];
 }
 
 TEST(HashGroupByTest, VerfifyCorrectness_GroupByAggSameCols)
@@ -186,12 +187,13 @@ TEST(HashGroupByTest, VerfifyCorrectness_GroupByAggSameCols)
         groupBy->process(input[i], DATA_SIZE);
     }
     
-    Table* result = groupBy->getResult();
+    std::vector<Table*> result;
+    int32_t tableCount = groupBy->getResult(result);
 
-    EXPECT_EQ(result->getColumnNumber(), 4);
+    EXPECT_EQ(result[0]->getColumnNumber(), 4);
 
-    for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
-        Column* col = result->getColumn(i);
+    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
+        Column* col = result[0]->getColumn(i);
         col->printColumn();
     }
     
@@ -201,89 +203,12 @@ TEST(HashGroupByTest, VerfifyCorrectness_GroupByAggSameCols)
         delete input[i];
     }
     
-    for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
-        Column* col = result->getColumn(i);
+    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
+        Column* col = result[0]->getColumn(i);
         delete col->getData();
         delete col;
     }
-    delete result;
-}
-
-TEST(HashGroupByTest, PerformanceTest1)
-{
-    const int PAGE_NUM = 10;
-    Table* input[PAGE_NUM];
-    const int DATA_SIZE = 10000000;
-    for (int32_t i = 0; i < PAGE_NUM; ++i) {
-        Table* table = new Table(DATA_SIZE, 4);
-         int32_t* data1 = new int32_t[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data1[i] = i % 4;
-        }
-        Column* col1 = new Column(data1, INT32, DATA_SIZE);
-
-        int32_t* data2 = new int32_t[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data2[i] = i % 4;
-        }
-        Column* col2 = new Column(data2, INT32, DATA_SIZE);
-
-        double* data3 = new double[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data3[i] = 0.1;
-        }
-        Column* col3 = new Column(data3, DOUBLE, DATA_SIZE);
-
-        double* data4 = new double[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data4[i] = 0.1;
-        }
-        Column* col4 = new Column(data4, DOUBLE, DATA_SIZE);
-
-        table->setColumn(col1, INT32);
-        table->setColumn(col2, INT32);
-        table->setColumn(col3, DOUBLE);
-        table->setColumn(col4, DOUBLE);
-        input[i] = table;
-    }
-    
-    ColumnIndex c0 = {0, INT32};
-    ColumnIndex c1 = {1, INT32};
-    ColumnIndex c2 = {2, DOUBLE};
-    ColumnIndex c3 = {3, DOUBLE};
-    std::vector<ColumnIndex> v1 = {c0, c1};
-    std::vector<ColumnIndex> v2 = {c2, c3};
-    std::vector<Aggregator*> aggs;
-    SumAggregator* sum1 = new SumAggregator(3);
-    SumAggregator* sum2 = new SumAggregator(3);
-    aggs.push_back(sum1);
-    aggs.push_back(sum2);
-    HashGroupBy* groupBy = new HashGroupBy(v1, v2, aggs);
-
-    typedef std::chrono::high_resolution_clock Time;
-    typedef std::chrono::milliseconds ms;
-    typedef std::chrono::duration<float> fsec;
-
-    auto t0 = Time::now();
-    for (int32_t j = 0; j < 10; ++j) {
-        for (int32_t i = 0; i < PAGE_NUM; ++i) {
-            groupBy->process(input[i], DATA_SIZE);
-        }   
-    }
-    auto t1 = Time::now();
-    fsec fs = t1 - t0;
-    ms d = std::chrono::duration_cast<ms>(fs);
-    std::cout << "group by elapsed time: " << (double)d.count()/10 << "ms" << std::endl;
-    
-    Table* result = groupBy->getResult();
-    
-    for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
-        Column* col = result->getColumn(i);
-        col->printColumn();
-        delete col->getData();
-        delete col;
-    }
-    delete result;
+    delete result[0];
 }
 
 #include <time.h>
@@ -319,9 +244,10 @@ void perfTest(int64_t moduleAddr)
     for (int32_t i = 0; i < pageNum; ++i) {
         opAddr = executeHashGroupByLlvm(opAddr, columnTypes1, input[i]->getColumnNumber(), (void**)input[i]->getHeads(), input[i]->getColumnNumber(), input[i]->getPositionCount());
     }
-    Table* res1 = executeAggFinal(opAddr);
-    EXPECT_EQ(res1->getColumnNumber(), 4);
-    EXPECT_EQ(res1->getPositionCount(), 4);
+    std::vector<Table*> result;
+    int32_t tableCount = executeAggFinal(opAddr, result); 
+    EXPECT_EQ(result[0]->getColumnNumber(), 4);
+    EXPECT_EQ(result[0]->getPositionCount(), 4);
 
     destroyInput(input, pageNum);
     delete[] columnTypes1;
@@ -331,7 +257,6 @@ TEST(HashGroupByTest, PerfViaAPI_Multiple_Threads)
 {
     const auto processor_count = std::thread::hardware_concurrency();
     std::cout << "core number: " << processor_count << std::endl;
-    std::this_thread::sleep_for(10000ms);
     uint32_t groupCols[] = {0, 1};
     uint32_t groupTypes[] = {2, 2};
     uint32_t aggCols[] = {2, 3};
@@ -347,8 +272,8 @@ TEST(HashGroupByTest, PerfViaAPI_Multiple_Threads)
 
     uint64_t moduleAddr = prepareHashGroupBy(groupColsContext, groupTypesContext, aggColsContext, aggTypesContext, aggFunTypeContext, retTypesContext);
     
-    int threadNums[] = {1, 8, 16, 32, 64, 100};
-    for (int32_t i = 0; i < 6; ++i) {
+    int threadNums[] = {1, 8, 16, 32, 64};
+    for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
         auto t_ = threadNums[i] < processor_count ? processor_count / threadNums[i] : 1;
