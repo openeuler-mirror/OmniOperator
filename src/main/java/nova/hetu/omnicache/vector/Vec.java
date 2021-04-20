@@ -222,4 +222,11 @@ public abstract class Vec
     {
         this.size = size;
     }
+
+    public void setClosable(boolean isClosable)
+    {
+        if (omniChunk != null) {
+            omniChunk.setReleasable(isClosable);
+        }
+    }
 }

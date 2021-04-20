@@ -6,6 +6,10 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.Random;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
 public class MemoryTest
 {
     static int count = 1000000;
@@ -73,6 +77,23 @@ public class MemoryTest
         for (LongVec vec : list) {
             vec.close();
         }
+    }
+
+    @Test
+    void testSetClosable()
+    {
+        final int vecSize = 1024;
+        Vec vec = new LongVec(vecSize);
+        assertTrue(vec.close());
+
+        vec = new LongVec(vecSize);
+        vec.setClosable(true);
+        assertTrue(vec.close());
+
+        vec = new LongVec(vecSize);
+        vec.setClosable(false);
+        assertFalse(vec.close());
+        assertEquals(vec.size(), vecSize);
     }
 
     @AfterClass

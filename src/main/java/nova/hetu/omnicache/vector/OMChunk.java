@@ -23,6 +23,7 @@ class OMChunk
     private ByteBuffer data;
     private long memAddress;
     private AtomicInteger referenceCount;
+    private boolean isReleasable = true;
 
     public OMChunk(ByteBuffer data)
     {
@@ -51,15 +52,23 @@ class OMChunk
 
     public boolean release()
     {
-        return release(-1);
+        return isReleasable && release(-1);
     }
 
     public boolean release(int decrement)
     {
+        if (!isReleasable) {
+            return false;
+        }
         if (referenceCount.addAndGet(decrement) == 0) {
             OMVectorBase.release(memAddress);
             return true;
         }
         return false;
+    }
+
+    public void setReleasable(boolean isReleasable)
+    {
+        this.isReleasable = isReleasable;
     }
 }
