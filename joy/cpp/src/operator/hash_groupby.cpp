@@ -226,8 +226,8 @@ void HashGroupBy::process(Table* table, uint32_t rowCount)
 #endif
     this->preloop(table);
     char** heads = table->getHeads();
-    int32_t* ct = reinterpret_cast<int32_t*>(table->getColumnTypes());
-    int32_t n = table->getColumnNumber();
+    int32_t* columnTypes = reinterpret_cast<int32_t*>(table->getColumnTypes());
+    int32_t rowNum = table->getColumnNumber();
     int32_t groupColNum = this->groupByCols.size();
     int32_t* groupByColIdx = new int32_t[groupColNum];
     int32_t aggColNum = this->aggCols.size();
@@ -245,7 +245,7 @@ void HashGroupBy::process(Table* table, uint32_t rowCount)
     }
    
     for (int32_t i = 0; i < rowCount; ++i) {
-        this->inloop(heads, i, ct, n, groupByColIdx, groupColNum, aggColIdx, aggColNum, aggFuncTypes);
+        this->inloop(heads, i, columnTypes, rowNum, groupByColIdx, groupColNum, aggColIdx, aggColNum, aggFuncTypes);
     }
     this->postloop(table);
     delete[] groupByColIdx;

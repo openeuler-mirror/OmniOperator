@@ -1,5 +1,5 @@
 #clang++-12 -g hammer.h hammer.cpp param.h optimizer.h hammer_test.cpp perf_test.cpp SimpleOptimizer.h SimpleOptimizer.cpp `llvm-config-12 --cxxflags --ldflags --libs` -lstdc++ -lgtest -lpthread -o hammer_test
-g++ -g `ls *.cpp *.h` `llvm-config --cxxflags --ldflags --libs` -lstdc++ -lgtest -lpthread -o hammer_test
+g++ -g `ls *.cpp *.h` `llvm-config-12 --cxxflags --ldflags --libs` -lstdc++ -lgtest -lpthread -o hammer_test
 #g++ -g hammer.h hammer.cpp param.h optimizer.h hammer_test.cpp perf_test.cpp SimpleOptimizer.h SimpleOptimizer.cpp -lz -lgtest -lpthread `/opt/kkrazy/llvm-project/build/bin/llvm-config --cxxflags --ldflags --libs` -o hammer_test
 #g++ -g MultiModuleHardening.cpp `llvm-config --cxxflags --ldflags --libs` -o main
 # clang++ -O3 op_template.c `llvm-config --cxxflags --ldflags --libs` -o op

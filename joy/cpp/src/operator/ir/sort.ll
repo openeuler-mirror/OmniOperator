@@ -1,5 +1,5 @@
-; ModuleID = '/home/omni-cache/joy/cpp/src/operator/ir/../sort.cpp'
-source_filename = "/home/omni-cache/joy/cpp/src/operator/ir/../sort.cpp"
+; ModuleID = '/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/../sort.cpp'
+source_filename = "/usr/code/olk_dev/omni_runtime_joy/omni-cache/joy/cpp/src/operator/ir/../sort.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
@@ -343,84 +343,32 @@ entry:
   br i1 %isnull, label %delete.end, label %delete.notnull
 
 delete.notnull:                                   ; preds = %entry
-  %typesCount.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %1, i64 0, i32 1
-  %2 = load i32, i32* %typesCount.i, align 8, !tbaa !40
-  %cmp24.i = icmp sgt i32 %2, 0
-  br i1 %cmp24.i, label %for.cond2.preheader.lr.ph.i, label %_ZN10PagesIndexD2Ev.exit
-
-for.cond2.preheader.lr.ph.i:                      ; preds = %delete.notnull
-  %tableCount.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %1, i64 0, i32 7
-  %columns.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %1, i64 0, i32 6
-  br label %for.cond2.preheader.i
-
-for.cond2.preheader.i:                            ; preds = %for.cond.cleanup4.i, %for.cond2.preheader.lr.ph.i
-  %indvars.iv27.i = phi i64 [ 0, %for.cond2.preheader.lr.ph.i ], [ %indvars.iv.next28.i, %for.cond.cleanup4.i ]
-  %3 = load i32, i32* %tableCount.i, align 8, !tbaa !42
-  %cmp322.i = icmp sgt i32 %3, 0
-  br i1 %cmp322.i, label %for.body5.i, label %for.cond.cleanup4.i
-
-for.cond.cleanup4.i:                              ; preds = %for.inc.i, %for.cond2.preheader.i
-  %4 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !43
-  %arrayidx10.i = getelementptr inbounds %class.Column**, %class.Column*** %4, i64 %indvars.iv27.i
-  %5 = bitcast %class.Column*** %arrayidx10.i to i8**
-  %6 = load i8*, i8** %5, align 8, !tbaa !2
-  tail call void @free(i8* %6) #19
-  %indvars.iv.next28.i = add nuw nsw i64 %indvars.iv27.i, 1
-  %7 = load i32, i32* %typesCount.i, align 8, !tbaa !40
-  %8 = sext i32 %7 to i64
-  %cmp.i = icmp slt i64 %indvars.iv.next28.i, %8
-  br i1 %cmp.i, label %for.cond2.preheader.i, label %_ZN10PagesIndexD2Ev.exit, !llvm.loop !44
-
-for.body5.i:                                      ; preds = %for.cond2.preheader.i, %for.inc.i
-  %9 = phi i32 [ %15, %for.inc.i ], [ %3, %for.cond2.preheader.i ]
-  %indvars.iv.i = phi i64 [ %indvars.iv.next.i, %for.inc.i ], [ 0, %for.cond2.preheader.i ]
-  %10 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !43
-  %arrayidx.i = getelementptr inbounds %class.Column**, %class.Column*** %10, i64 %indvars.iv27.i
-  %11 = load %class.Column**, %class.Column*** %arrayidx.i, align 8, !tbaa !2
-  %arrayidx7.i = getelementptr inbounds %class.Column*, %class.Column** %11, i64 %indvars.iv.i
-  %12 = load %class.Column*, %class.Column** %arrayidx7.i, align 8, !tbaa !2
-  %isnull.i = icmp eq %class.Column* %12, null
-  br i1 %isnull.i, label %for.inc.i, label %delete.notnull.i
-
-delete.notnull.i:                                 ; preds = %for.body5.i
-  %13 = bitcast %class.Column* %12 to void (%class.Column*)***
-  %vtable.i = load void (%class.Column*)**, void (%class.Column*)*** %13, align 8, !tbaa !8
-  %vfn.i = getelementptr inbounds void (%class.Column*)*, void (%class.Column*)** %vtable.i, i64 1
-  %14 = load void (%class.Column*)*, void (%class.Column*)** %vfn.i, align 8
-  tail call void %14(%class.Column* nonnull dereferenceable(40) %12) #19
-  %.pre.i = load i32, i32* %tableCount.i, align 8, !tbaa !42
-  br label %for.inc.i
-
-for.inc.i:                                        ; preds = %delete.notnull.i, %for.body5.i
-  %15 = phi i32 [ %9, %for.body5.i ], [ %.pre.i, %delete.notnull.i ]
-  %indvars.iv.next.i = add nuw nsw i64 %indvars.iv.i, 1
-  %16 = sext i32 %15 to i64
-  %cmp3.i = icmp slt i64 %indvars.iv.next.i, %16
-  br i1 %cmp3.i, label %for.body5.i, label %for.cond.cleanup4.i, !llvm.loop !45
-
-_ZN10PagesIndexD2Ev.exit:                         ; preds = %for.cond.cleanup4.i, %delete.notnull
-  %columns14.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %1, i64 0, i32 6
-  %17 = bitcast %class.Column**** %columns14.i to i8**
-  %18 = load i8*, i8** %17, align 8, !tbaa !43
-  tail call void @free(i8* %18) #19
-  %valueAddresses.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %1, i64 0, i32 3
-  %19 = bitcast i64** %valueAddresses.i to i8**
-  %20 = load i8*, i8** %19, align 8, !tbaa !46
-  tail call void @free(i8* %20) #19
-  %21 = bitcast %class.PagesIndex* %1 to i8*
-  tail call void @_ZdlPv(i8* %21) #22
+  %2 = bitcast %class.PagesIndex* %1 to i8*
+  tail call void @_ZdlPv(i8* %2) #22
   br label %delete.end
 
-delete.end:                                       ; preds = %_ZN10PagesIndexD2Ev.exit, %entry
+delete.end:                                       ; preds = %delete.notnull, %entry
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
 define dso_local void @_ZN4SortD0Ev(%class.Sort* nonnull dereferenceable(80) %this) unnamed_addr #9 align 2 {
 entry:
-  tail call void @_ZN4SortD2Ev(%class.Sort* nonnull dereferenceable(80) %this) #19
-  %0 = bitcast %class.Sort* %this to i8*
-  tail call void @_ZdlPv(i8* nonnull %0) #22
+  %0 = getelementptr inbounds %class.Sort, %class.Sort* %this, i64 0, i32 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [9 x i8*] }, { [9 x i8*] }* @_ZTV4Sort, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %0, align 8, !tbaa !8
+  %pagesIndex.i = getelementptr inbounds %class.Sort, %class.Sort* %this, i64 0, i32 9
+  %1 = load %class.PagesIndex*, %class.PagesIndex** %pagesIndex.i, align 8, !tbaa !41
+  %isnull.i = icmp eq %class.PagesIndex* %1, null
+  br i1 %isnull.i, label %_ZN4SortD2Ev.exit, label %delete.notnull.i
+
+delete.notnull.i:                                 ; preds = %entry
+  %2 = bitcast %class.PagesIndex* %1 to i8*
+  tail call void @_ZdlPv(i8* %2) #22
+  br label %_ZN4SortD2Ev.exit
+
+_ZN4SortD2Ev.exit:                                ; preds = %entry, %delete.notnull.i
+  %3 = bitcast %class.Sort* %this to i8*
+  tail call void @_ZdlPv(i8* nonnull %3) #22
   ret void
 }
 
@@ -453,12 +401,12 @@ define dso_local void @_Z4swapPlii(i64* nocapture %valueAddresses, i32 %a, i32 %
 entry:
   %idxprom = sext i32 %a to i64
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %0 = load i64, i64* %arrayidx, align 8, !tbaa !42
   %idxprom1 = sext i32 %b to i64
   %arrayidx2 = getelementptr inbounds i64, i64* %valueAddresses, i64 %idxprom1
-  %1 = load i64, i64* %arrayidx2, align 8, !tbaa !47
-  store i64 %1, i64* %arrayidx, align 8, !tbaa !47
-  store i64 %0, i64* %arrayidx2, align 8, !tbaa !47
+  %1 = load i64, i64* %arrayidx2, align 8, !tbaa !42
+  store i64 %1, i64* %arrayidx, align 8, !tbaa !42
+  store i64 %0, i64* %arrayidx2, align 8, !tbaa !42
   ret void
 }
 
@@ -516,51 +464,51 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %offset.idx26 = add i64 %index, %0
   %15 = getelementptr inbounds i64, i64* %valueAddresses, i64 %offset.idx26
   %16 = bitcast i64* %15 to <2 x i64>*
-  %wide.load = load <2 x i64>, <2 x i64>* %16, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  %wide.load = load <2 x i64>, <2 x i64>* %16, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %17 = getelementptr inbounds i64, i64* %15, i64 2
   %18 = bitcast i64* %17 to <2 x i64>*
-  %wide.load28 = load <2 x i64>, <2 x i64>* %18, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  %wide.load28 = load <2 x i64>, <2 x i64>* %18, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %19 = getelementptr inbounds i64, i64* %valueAddresses, i64 %offset.idx
   %20 = bitcast i64* %19 to <2 x i64>*
-  %wide.load29 = load <2 x i64>, <2 x i64>* %20, align 8, !tbaa !47, !alias.scope !51
+  %wide.load29 = load <2 x i64>, <2 x i64>* %20, align 8, !tbaa !42, !alias.scope !46
   %21 = getelementptr inbounds i64, i64* %19, i64 2
   %22 = bitcast i64* %21 to <2 x i64>*
-  %wide.load30 = load <2 x i64>, <2 x i64>* %22, align 8, !tbaa !47, !alias.scope !51
+  %wide.load30 = load <2 x i64>, <2 x i64>* %22, align 8, !tbaa !42, !alias.scope !46
   %23 = bitcast i64* %15 to <2 x i64>*
-  store <2 x i64> %wide.load29, <2 x i64>* %23, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  store <2 x i64> %wide.load29, <2 x i64>* %23, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %24 = bitcast i64* %17 to <2 x i64>*
-  store <2 x i64> %wide.load30, <2 x i64>* %24, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  store <2 x i64> %wide.load30, <2 x i64>* %24, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %25 = bitcast i64* %19 to <2 x i64>*
-  store <2 x i64> %wide.load, <2 x i64>* %25, align 8, !tbaa !47, !alias.scope !51
+  store <2 x i64> %wide.load, <2 x i64>* %25, align 8, !tbaa !42, !alias.scope !46
   %26 = bitcast i64* %21 to <2 x i64>*
-  store <2 x i64> %wide.load28, <2 x i64>* %26, align 8, !tbaa !47, !alias.scope !51
+  store <2 x i64> %wide.load28, <2 x i64>* %26, align 8, !tbaa !42, !alias.scope !46
   %index.next = or i64 %index, 4
   %offset.idx.1 = add i64 %index.next, %1
   %offset.idx26.1 = add i64 %index.next, %0
   %27 = getelementptr inbounds i64, i64* %valueAddresses, i64 %offset.idx26.1
   %28 = bitcast i64* %27 to <2 x i64>*
-  %wide.load.1 = load <2 x i64>, <2 x i64>* %28, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  %wide.load.1 = load <2 x i64>, <2 x i64>* %28, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %29 = getelementptr inbounds i64, i64* %27, i64 2
   %30 = bitcast i64* %29 to <2 x i64>*
-  %wide.load28.1 = load <2 x i64>, <2 x i64>* %30, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  %wide.load28.1 = load <2 x i64>, <2 x i64>* %30, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %31 = getelementptr inbounds i64, i64* %valueAddresses, i64 %offset.idx.1
   %32 = bitcast i64* %31 to <2 x i64>*
-  %wide.load29.1 = load <2 x i64>, <2 x i64>* %32, align 8, !tbaa !47, !alias.scope !51
+  %wide.load29.1 = load <2 x i64>, <2 x i64>* %32, align 8, !tbaa !42, !alias.scope !46
   %33 = getelementptr inbounds i64, i64* %31, i64 2
   %34 = bitcast i64* %33 to <2 x i64>*
-  %wide.load30.1 = load <2 x i64>, <2 x i64>* %34, align 8, !tbaa !47, !alias.scope !51
+  %wide.load30.1 = load <2 x i64>, <2 x i64>* %34, align 8, !tbaa !42, !alias.scope !46
   %35 = bitcast i64* %27 to <2 x i64>*
-  store <2 x i64> %wide.load29.1, <2 x i64>* %35, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  store <2 x i64> %wide.load29.1, <2 x i64>* %35, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %36 = bitcast i64* %29 to <2 x i64>*
-  store <2 x i64> %wide.load30.1, <2 x i64>* %36, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  store <2 x i64> %wide.load30.1, <2 x i64>* %36, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %37 = bitcast i64* %31 to <2 x i64>*
-  store <2 x i64> %wide.load.1, <2 x i64>* %37, align 8, !tbaa !47, !alias.scope !51
+  store <2 x i64> %wide.load.1, <2 x i64>* %37, align 8, !tbaa !42, !alias.scope !46
   %38 = bitcast i64* %33 to <2 x i64>*
-  store <2 x i64> %wide.load28.1, <2 x i64>* %38, align 8, !tbaa !47, !alias.scope !51
+  store <2 x i64> %wide.load28.1, <2 x i64>* %38, align 8, !tbaa !42, !alias.scope !46
   %index.next.1 = add i64 %index, 8
   %niter.nsub.1 = add i64 %niter, -2
   %niter.ncmp.1 = icmp eq i64 %niter.nsub.1, 0
-  br i1 %niter.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !53
+  br i1 %niter.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !48
 
 middle.block.unr-lcssa:                           ; preds = %vector.body, %vector.ph
   %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1, %vector.body ]
@@ -572,24 +520,24 @@ vector.body.epil:                                 ; preds = %middle.block.unr-lc
   %offset.idx26.epil = add i64 %index.unr, %0
   %39 = getelementptr inbounds i64, i64* %valueAddresses, i64 %offset.idx26.epil
   %40 = bitcast i64* %39 to <2 x i64>*
-  %wide.load.epil = load <2 x i64>, <2 x i64>* %40, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  %wide.load.epil = load <2 x i64>, <2 x i64>* %40, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %41 = getelementptr inbounds i64, i64* %39, i64 2
   %42 = bitcast i64* %41 to <2 x i64>*
-  %wide.load28.epil = load <2 x i64>, <2 x i64>* %42, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  %wide.load28.epil = load <2 x i64>, <2 x i64>* %42, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %43 = getelementptr inbounds i64, i64* %valueAddresses, i64 %offset.idx.epil
   %44 = bitcast i64* %43 to <2 x i64>*
-  %wide.load29.epil = load <2 x i64>, <2 x i64>* %44, align 8, !tbaa !47, !alias.scope !51
+  %wide.load29.epil = load <2 x i64>, <2 x i64>* %44, align 8, !tbaa !42, !alias.scope !46
   %45 = getelementptr inbounds i64, i64* %43, i64 2
   %46 = bitcast i64* %45 to <2 x i64>*
-  %wide.load30.epil = load <2 x i64>, <2 x i64>* %46, align 8, !tbaa !47, !alias.scope !51
+  %wide.load30.epil = load <2 x i64>, <2 x i64>* %46, align 8, !tbaa !42, !alias.scope !46
   %47 = bitcast i64* %39 to <2 x i64>*
-  store <2 x i64> %wide.load29.epil, <2 x i64>* %47, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  store <2 x i64> %wide.load29.epil, <2 x i64>* %47, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %48 = bitcast i64* %41 to <2 x i64>*
-  store <2 x i64> %wide.load30.epil, <2 x i64>* %48, align 8, !tbaa !47, !alias.scope !48, !noalias !51
+  store <2 x i64> %wide.load30.epil, <2 x i64>* %48, align 8, !tbaa !42, !alias.scope !43, !noalias !46
   %49 = bitcast i64* %43 to <2 x i64>*
-  store <2 x i64> %wide.load.epil, <2 x i64>* %49, align 8, !tbaa !47, !alias.scope !51
+  store <2 x i64> %wide.load.epil, <2 x i64>* %49, align 8, !tbaa !42, !alias.scope !46
   %50 = bitcast i64* %45 to <2 x i64>*
-  store <2 x i64> %wide.load28.epil, <2 x i64>* %50, align 8, !tbaa !47, !alias.scope !51
+  store <2 x i64> %wide.load28.epil, <2 x i64>* %50, align 8, !tbaa !42, !alias.scope !46
   br label %middle.block
 
 middle.block:                                     ; preds = %middle.block.unr-lcssa, %vector.body.epil
@@ -608,11 +556,11 @@ for.body.preheader31:                             ; preds = %vector.memcheck, %f
 
 for.body.prol:                                    ; preds = %for.body.preheader31
   %arrayidx.i.prol = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv.ph
-  %53 = load i64, i64* %arrayidx.i.prol, align 8, !tbaa !47
+  %53 = load i64, i64* %arrayidx.i.prol, align 8, !tbaa !42
   %arrayidx2.i.prol = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv13.ph
-  %54 = load i64, i64* %arrayidx2.i.prol, align 8, !tbaa !47
-  store i64 %54, i64* %arrayidx.i.prol, align 8, !tbaa !47
-  store i64 %53, i64* %arrayidx2.i.prol, align 8, !tbaa !47
+  %54 = load i64, i64* %arrayidx2.i.prol, align 8, !tbaa !42
+  store i64 %54, i64* %arrayidx.i.prol, align 8, !tbaa !42
+  store i64 %53, i64* %arrayidx2.i.prol, align 8, !tbaa !42
   %inc.prol = add nuw nsw i32 %i.010.ph, 1
   %indvars.iv.next.prol = add nsw i64 %indvars.iv.ph, 1
   %indvars.iv.next14.prol = add nsw i64 %indvars.iv13.ph, 1
@@ -634,24 +582,24 @@ for.body:                                         ; preds = %for.body.prol.loope
   %indvars.iv = phi i64 [ %indvars.iv.next.1, %for.body ], [ %indvars.iv.unr, %for.body.prol.loopexit ]
   %i.010 = phi i32 [ %inc.1, %for.body ], [ %i.010.unr, %for.body.prol.loopexit ]
   %arrayidx.i = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %57 = load i64, i64* %arrayidx.i, align 8, !tbaa !47
+  %57 = load i64, i64* %arrayidx.i, align 8, !tbaa !42
   %arrayidx2.i = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv13
-  %58 = load i64, i64* %arrayidx2.i, align 8, !tbaa !47
-  store i64 %58, i64* %arrayidx.i, align 8, !tbaa !47
-  store i64 %57, i64* %arrayidx2.i, align 8, !tbaa !47
+  %58 = load i64, i64* %arrayidx2.i, align 8, !tbaa !42
+  store i64 %58, i64* %arrayidx.i, align 8, !tbaa !42
+  store i64 %57, i64* %arrayidx2.i, align 8, !tbaa !42
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %indvars.iv.next14 = add nsw i64 %indvars.iv13, 1
   %arrayidx.i.1 = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv.next
-  %59 = load i64, i64* %arrayidx.i.1, align 8, !tbaa !47
+  %59 = load i64, i64* %arrayidx.i.1, align 8, !tbaa !42
   %arrayidx2.i.1 = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv.next14
-  %60 = load i64, i64* %arrayidx2.i.1, align 8, !tbaa !47
-  store i64 %60, i64* %arrayidx.i.1, align 8, !tbaa !47
-  store i64 %59, i64* %arrayidx2.i.1, align 8, !tbaa !47
+  %60 = load i64, i64* %arrayidx2.i.1, align 8, !tbaa !42
+  store i64 %60, i64* %arrayidx.i.1, align 8, !tbaa !42
+  store i64 %59, i64* %arrayidx2.i.1, align 8, !tbaa !42
   %inc.1 = add nuw nsw i32 %i.010, 2
   %indvars.iv.next.1 = add nsw i64 %indvars.iv, 2
   %indvars.iv.next14.1 = add nsw i64 %indvars.iv13, 2
   %exitcond.not.1 = icmp eq i32 %inc.1, %s
-  br i1 %exitcond.not.1, label %for.cond.cleanup, label %for.body, !llvm.loop !55
+  br i1 %exitcond.not.1, label %for.cond.cleanup, label %for.body, !llvm.loop !50
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
@@ -668,426 +616,363 @@ entry:
 define dso_local void @_ZN10PagesIndex9addTablesEPlS0_iPii(%class.PagesIndex* nocapture nonnull dereferenceable(44) %this, i64* nocapture readonly %datas, i64* nocapture readonly %nulls, i32 %pageCount, i32* nocapture readonly %rowCounts, i32 %totalRowCount) local_unnamed_addr #8 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
   %tableCount = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 7
-  store i32 %pageCount, i32* %tableCount, align 8, !tbaa !42
+  store i32 %pageCount, i32* %tableCount, align 8, !tbaa !51
   %positionCount = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 4
-  store i32 %totalRowCount, i32* %positionCount, align 8, !tbaa !56
+  store i32 %totalRowCount, i32* %positionCount, align 8, !tbaa !52
+  %cmp = icmp eq i32 %pageCount, 0
+  br i1 %cmp, label %cleanup, label %if.end
+
+if.end:                                           ; preds = %entry
   %conv = sext i32 %totalRowCount to i64
   %mul = shl nsw i64 %conv, 3
   %call = tail call noalias i8* @malloc(i64 %mul) #19
   %valueAddresses = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 3
   %0 = bitcast i64** %valueAddresses to i8**
-  store i8* %call, i8** %0, align 8, !tbaa !46
+  store i8* %call, i8** %0, align 8, !tbaa !53
   %call2 = tail call noalias dereferenceable_or_null(8) i8* @malloc(i64 8) #19
   %columns = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 6
   %1 = bitcast %class.Column**** %columns to i8**
-  store i8* %call2, i8** %1, align 8, !tbaa !43
+  store i8* %call2, i8** %1, align 8, !tbaa !54
   %typesCount = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 1
   %2 = load i32, i32* %typesCount, align 8, !tbaa !40
-  %cmp94 = icmp sgt i32 %2, 0
-  br i1 %cmp94, label %for.body.lr.ph, label %for.cond8.preheader.thread
+  %cmp3104 = icmp sgt i32 %2, 0
+  br i1 %cmp3104, label %for.body.lr.ph, label %for.cond9.preheader.thread
 
-for.body.lr.ph:                                   ; preds = %entry
-  %conv4 = sext i32 %pageCount to i64
-  %mul5 = shl nsw i64 %conv4, 3
-  %wide.trip.count122 = zext i32 %2 to i64
-  %call6128 = tail call noalias i8* @malloc(i64 %mul5) #19
+for.body.lr.ph:                                   ; preds = %if.end
+  %conv5 = sext i32 %pageCount to i64
+  %mul6 = shl nsw i64 %conv5, 3
+  %wide.trip.count132 = zext i32 %2 to i64
+  %call7138 = tail call noalias i8* @malloc(i64 %mul6) #19
   %3 = bitcast i8* %call2 to i8**
-  store i8* %call6128, i8** %3, align 8, !tbaa !2
-  %exitcond123.not129 = icmp eq i32 %2, 1
-  br i1 %exitcond123.not129, label %for.cond8.preheader, label %for.body.for.body_crit_edge, !llvm.loop !57
+  store i8* %call7138, i8** %3, align 8, !tbaa !2
+  %exitcond133.not139 = icmp eq i32 %2, 1
+  br i1 %exitcond133.not139, label %for.cond9.preheader, label %for.body.for.body_crit_edge, !llvm.loop !55
 
-for.cond8.preheader:                              ; preds = %for.body.for.body_crit_edge, %for.body.lr.ph
-  %cmp991 = icmp sgt i32 %pageCount, 0
-  br i1 %cmp991, label %for.body11.lr.ph, label %for.cond.cleanup10
+for.cond9.preheader:                              ; preds = %for.body.for.body_crit_edge, %for.body.lr.ph
+  %cmp10101 = icmp sgt i32 %pageCount, 0
+  br i1 %cmp10101, label %for.body12.lr.ph, label %cleanup
 
-for.cond8.preheader.thread:                       ; preds = %entry
-  %cmp991124 = icmp sgt i32 %pageCount, 0
-  br i1 %cmp991124, label %for.body11.preheader, label %for.cond.cleanup10
+for.cond9.preheader.thread:                       ; preds = %if.end
+  %cmp10101134 = icmp sgt i32 %pageCount, 0
+  br i1 %cmp10101134, label %for.body12.preheader, label %cleanup
 
-for.body11.lr.ph:                                 ; preds = %for.cond8.preheader
+for.body12.lr.ph:                                 ; preds = %for.cond9.preheader
   %types = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 0
-  br i1 %cmp94, label %for.body11.us.preheader, label %for.body11.preheader
+  br i1 %cmp3104, label %for.body12.us.preheader, label %for.body12.preheader
 
-for.body11.preheader:                             ; preds = %for.cond8.preheader.thread, %for.body11.lr.ph
-  %wide.trip.count118 = zext i32 %pageCount to i64
-  br label %for.body11
+for.body12.preheader:                             ; preds = %for.cond9.preheader.thread, %for.body12.lr.ph
+  %wide.trip.count128 = zext i32 %pageCount to i64
+  br label %for.body12
 
-for.body11.us.preheader:                          ; preds = %for.body11.lr.ph
+for.body12.us.preheader:                          ; preds = %for.body12.lr.ph
   %4 = zext i32 %2 to i64
-  %wide.trip.count108 = zext i32 %pageCount to i64
+  %wide.trip.count118 = zext i32 %pageCount to i64
   %wide.trip.count = zext i32 %2 to i64
-  br label %for.body11.us
+  br label %for.body12.us
 
-for.body11.us:                                    ; preds = %for.body11.us.preheader, %for.cond.cleanup41.us
-  %indvars.iv105 = phi i64 [ 0, %for.body11.us.preheader ], [ %indvars.iv.next106, %for.cond.cleanup41.us ]
-  %valueAddrIdx.092.us = phi i32 [ 0, %for.body11.us.preheader ], [ %valueAddrIdx.1.lcssa.us, %for.cond.cleanup41.us ]
-  %arrayidx13.us = getelementptr inbounds i32, i32* %rowCounts, i64 %indvars.iv105
-  %5 = load i32, i32* %arrayidx13.us, align 4, !tbaa !6
-  %6 = mul nsw i64 %indvars.iv105, %4
-  %conv30.us = sext i32 %5 to i64
-  br label %for.body21.us
+for.body12.us:                                    ; preds = %for.body12.us.preheader, %for.cond.cleanup42.us
+  %indvars.iv115 = phi i64 [ 0, %for.body12.us.preheader ], [ %indvars.iv.next116, %for.cond.cleanup42.us ]
+  %valueAddrIdx.0102.us = phi i32 [ 0, %for.body12.us.preheader ], [ %valueAddrIdx.1.lcssa.us, %for.cond.cleanup42.us ]
+  %arrayidx14.us = getelementptr inbounds i32, i32* %rowCounts, i64 %indvars.iv115
+  %5 = load i32, i32* %arrayidx14.us, align 4, !tbaa !6
+  %6 = mul nsw i64 %indvars.iv115, %4
+  %conv31.us = sext i32 %5 to i64
+  br label %for.body22.us
 
-for.cond.cleanup41.us.loopexit:                   ; preds = %for.body42.us, %middle.block135
-  %indvars.iv.next102.lcssa = phi i64 [ %ind.end145, %middle.block135 ], [ %indvars.iv.next102, %for.body42.us ]
-  %7 = trunc i64 %indvars.iv.next102.lcssa to i32
-  br label %for.cond.cleanup41.us
+for.cond.cleanup42.us.loopexit:                   ; preds = %for.body43.us, %middle.block145
+  %indvars.iv.next112.lcssa = phi i64 [ %ind.end155, %middle.block145 ], [ %indvars.iv.next112, %for.body43.us ]
+  %7 = trunc i64 %indvars.iv.next112.lcssa to i32
+  br label %for.cond.cleanup42.us
 
-for.cond.cleanup41.us:                            ; preds = %for.cond.cleanup41.us.loopexit, %for.cond17.for.cond39.preheader_crit_edge.us
-  %valueAddrIdx.1.lcssa.us = phi i32 [ %valueAddrIdx.092.us, %for.cond17.for.cond39.preheader_crit_edge.us ], [ %7, %for.cond.cleanup41.us.loopexit ]
-  %indvars.iv.next106 = add nuw nsw i64 %indvars.iv105, 1
-  %exitcond109.not = icmp eq i64 %indvars.iv.next106, %wide.trip.count108
-  br i1 %exitcond109.not, label %for.cond.cleanup10, label %for.body11.us, !llvm.loop !58
+for.cond.cleanup42.us:                            ; preds = %for.cond.cleanup42.us.loopexit, %for.cond18.for.cond40.preheader_crit_edge.us
+  %valueAddrIdx.1.lcssa.us = phi i32 [ %valueAddrIdx.0102.us, %for.cond18.for.cond40.preheader_crit_edge.us ], [ %7, %for.cond.cleanup42.us.loopexit ]
+  %indvars.iv.next116 = add nuw nsw i64 %indvars.iv115, 1
+  %exitcond119.not = icmp eq i64 %indvars.iv.next116, %wide.trip.count118
+  br i1 %exitcond119.not, label %cleanup, label %for.body12.us, !llvm.loop !56
 
-for.body42.us:                                    ; preds = %for.body42.us.preheader, %for.body42.us
-  %indvars.iv101 = phi i64 [ %indvars.iv.next102, %for.body42.us ], [ %indvars.iv101.ph, %for.body42.us.preheader ]
-  %indvars.iv99 = phi i64 [ %indvars.iv.next100, %for.body42.us ], [ %indvars.iv99.ph, %for.body42.us.preheader ]
-  %or.i.us = or i64 %shl.i.us, %indvars.iv99
-  %arrayidx46.us = getelementptr inbounds i64, i64* %23, i64 %indvars.iv101
-  store i64 %or.i.us, i64* %arrayidx46.us, align 8, !tbaa !47
-  %indvars.iv.next102 = add nsw i64 %indvars.iv101, 1
-  %indvars.iv.next100 = add nuw nsw i64 %indvars.iv99, 1
-  %exitcond104.not = icmp eq i64 %indvars.iv.next100, %wide.trip.count103
-  br i1 %exitcond104.not, label %for.cond.cleanup41.us.loopexit, label %for.body42.us, !llvm.loop !59
+for.body43.us:                                    ; preds = %for.body43.us.preheader, %for.body43.us
+  %indvars.iv111 = phi i64 [ %indvars.iv.next112, %for.body43.us ], [ %indvars.iv111.ph, %for.body43.us.preheader ]
+  %indvars.iv109 = phi i64 [ %indvars.iv.next110, %for.body43.us ], [ %indvars.iv109.ph, %for.body43.us.preheader ]
+  %or.i.us = or i64 %shl.i.us, %indvars.iv109
+  %arrayidx47.us = getelementptr inbounds i64, i64* %23, i64 %indvars.iv111
+  store i64 %or.i.us, i64* %arrayidx47.us, align 8, !tbaa !42
+  %indvars.iv.next112 = add nsw i64 %indvars.iv111, 1
+  %indvars.iv.next110 = add nuw nsw i64 %indvars.iv109, 1
+  %exitcond114.not = icmp eq i64 %indvars.iv.next110, %wide.trip.count113
+  br i1 %exitcond114.not, label %for.cond.cleanup42.us.loopexit, label %for.body43.us, !llvm.loop !57
 
-for.body21.us:                                    ; preds = %for.body11.us, %for.body21.us
-  %indvars.iv = phi i64 [ 0, %for.body11.us ], [ %indvars.iv.next, %for.body21.us ]
+for.body22.us:                                    ; preds = %for.body12.us, %for.body22.us
+  %indvars.iv = phi i64 [ 0, %for.body12.us ], [ %indvars.iv.next, %for.body22.us ]
   %8 = add nuw nsw i64 %indvars.iv, %6
   %9 = load i32*, i32** %types, align 8, !tbaa !38
-  %arrayidx23.us = getelementptr inbounds i32, i32* %9, i64 %indvars.iv
-  %10 = load i32, i32* %arrayidx23.us, align 4, !tbaa !6
+  %arrayidx24.us = getelementptr inbounds i32, i32* %9, i64 %indvars.iv
+  %10 = load i32, i32* %arrayidx24.us, align 4, !tbaa !6
   %switch.selectcmp.i.us = icmp eq i32 %10, 2
   %switch.select.i.us = select i1 %switch.selectcmp.i.us, i32 2, i32 1
   %switch.selectcmp9.i.us = icmp eq i32 %10, 3
   %switch.select10.i.us = select i1 %switch.selectcmp9.i.us, i32 3, i32 %switch.select.i.us
-  %arrayidx26.us = getelementptr inbounds i64, i64* %datas, i64 %8
-  %11 = load i64, i64* %arrayidx26.us, align 8, !tbaa !47
+  %arrayidx27.us = getelementptr inbounds i64, i64* %datas, i64 %8
+  %11 = load i64, i64* %arrayidx27.us, align 8, !tbaa !42
   %12 = inttoptr i64 %11 to i8*
-  %arrayidx28.us = getelementptr inbounds i64, i64* %nulls, i64 %8
-  %13 = load i64, i64* %arrayidx28.us, align 8, !tbaa !47
+  %arrayidx29.us = getelementptr inbounds i64, i64* %nulls, i64 %8
+  %13 = load i64, i64* %arrayidx29.us, align 8, !tbaa !42
   %14 = inttoptr i64 %13 to i32*
-  %call29.us = tail call noalias nonnull dereferenceable(40) i8* @_Znwm(i64 40) #20
-  %15 = bitcast i8* %call29.us to i32 (...)***
+  %call30.us = tail call noalias nonnull dereferenceable(40) i8* @_Znwm(i64 40) #20
+  %15 = bitcast i8* %call30.us to i32 (...)***
   store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV6Column, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %15, align 8, !tbaa !8
-  %data.i.us = getelementptr inbounds i8, i8* %call29.us, i64 8
+  %data.i.us = getelementptr inbounds i8, i8* %call30.us, i64 8
   %16 = bitcast i8* %data.i.us to i8**
   store i8* %12, i8** %16, align 8, !tbaa !10
-  %nulls.i.us = getelementptr inbounds i8, i8* %call29.us, i64 16
+  %nulls.i.us = getelementptr inbounds i8, i8* %call30.us, i64 16
   %17 = bitcast i8* %nulls.i.us to i32**
-  store i32* %14, i32** %17, align 8, !tbaa !61
-  %type.i.us = getelementptr inbounds i8, i8* %call29.us, i64 24
+  store i32* %14, i32** %17, align 8, !tbaa !59
+  %type.i.us = getelementptr inbounds i8, i8* %call30.us, i64 24
   %18 = bitcast i8* %type.i.us to i32*
   store i32 %switch.select10.i.us, i32* %18, align 8, !tbaa !14
-  %size.i.us = getelementptr inbounds i8, i8* %call29.us, i64 32
+  %size.i.us = getelementptr inbounds i8, i8* %call30.us, i64 32
   %19 = bitcast i8* %size.i.us to i64*
-  store i64 %conv30.us, i64* %19, align 8, !tbaa !15
-  %20 = load %class.Column***, %class.Column**** %columns, align 8, !tbaa !43
-  %arrayidx33.us = getelementptr inbounds %class.Column**, %class.Column*** %20, i64 %indvars.iv
-  %21 = load %class.Column**, %class.Column*** %arrayidx33.us, align 8, !tbaa !2
-  %arrayidx35.us = getelementptr inbounds %class.Column*, %class.Column** %21, i64 %indvars.iv105
-  %22 = bitcast %class.Column** %arrayidx35.us to i8**
-  store i8* %call29.us, i8** %22, align 8, !tbaa !2
+  store i64 %conv31.us, i64* %19, align 8, !tbaa !15
+  %20 = load %class.Column***, %class.Column**** %columns, align 8, !tbaa !54
+  %arrayidx34.us = getelementptr inbounds %class.Column**, %class.Column*** %20, i64 %indvars.iv
+  %21 = load %class.Column**, %class.Column*** %arrayidx34.us, align 8, !tbaa !2
+  %arrayidx36.us = getelementptr inbounds %class.Column*, %class.Column** %21, i64 %indvars.iv115
+  %22 = bitcast %class.Column** %arrayidx36.us to i8**
+  store i8* %call30.us, i8** %22, align 8, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond17.for.cond39.preheader_crit_edge.us, label %for.body21.us, !llvm.loop !62
+  br i1 %exitcond.not, label %for.cond18.for.cond40.preheader_crit_edge.us, label %for.body22.us, !llvm.loop !60
 
-for.cond17.for.cond39.preheader_crit_edge.us:     ; preds = %for.body21.us
-  %cmp4088.us = icmp sgt i32 %5, 0
-  br i1 %cmp4088.us, label %for.body42.lr.ph.us, label %for.cond.cleanup41.us
+for.cond18.for.cond40.preheader_crit_edge.us:     ; preds = %for.body22.us
+  %cmp4198.us = icmp sgt i32 %5, 0
+  br i1 %cmp4198.us, label %for.body43.lr.ph.us, label %for.cond.cleanup42.us
 
-for.body42.lr.ph.us:                              ; preds = %for.cond17.for.cond39.preheader_crit_edge.us
-  %shl.i.us = shl nuw nsw i64 %indvars.iv105, 32
-  %23 = load i64*, i64** %valueAddresses, align 8, !tbaa !46
-  %24 = sext i32 %valueAddrIdx.092.us to i64
-  %wide.trip.count103 = zext i32 %5 to i64
+for.body43.lr.ph.us:                              ; preds = %for.cond18.for.cond40.preheader_crit_edge.us
+  %shl.i.us = shl nuw nsw i64 %indvars.iv115, 32
+  %23 = load i64*, i64** %valueAddresses, align 8, !tbaa !53
+  %24 = sext i32 %valueAddrIdx.0102.us to i64
+  %wide.trip.count113 = zext i32 %5 to i64
   %25 = zext i32 %5 to i64
-  %min.iters.check138 = icmp ult i32 %5, 4
-  br i1 %min.iters.check138, label %for.body42.us.preheader, label %vector.ph139
+  %min.iters.check148 = icmp ult i32 %5, 4
+  br i1 %min.iters.check148, label %for.body43.us.preheader, label %vector.ph149
 
-vector.ph139:                                     ; preds = %for.body42.lr.ph.us
-  %n.vec141 = and i64 %25, 4294967292
-  %ind.end145 = add nsw i64 %n.vec141, %24
-  %broadcast.splatinsert153 = insertelement <2 x i64> poison, i64 %shl.i.us, i32 0
-  %broadcast.splat154 = shufflevector <2 x i64> %broadcast.splatinsert153, <2 x i64> poison, <2 x i32> zeroinitializer
-  %broadcast.splatinsert155 = insertelement <2 x i64> poison, i64 %shl.i.us, i32 0
-  %broadcast.splat156 = shufflevector <2 x i64> %broadcast.splatinsert155, <2 x i64> poison, <2 x i32> zeroinitializer
-  %26 = add nsw i64 %n.vec141, -4
+vector.ph149:                                     ; preds = %for.body43.lr.ph.us
+  %n.vec151 = and i64 %25, 4294967292
+  %ind.end155 = add nsw i64 %n.vec151, %24
+  %broadcast.splatinsert163 = insertelement <2 x i64> poison, i64 %shl.i.us, i32 0
+  %broadcast.splat164 = shufflevector <2 x i64> %broadcast.splatinsert163, <2 x i64> poison, <2 x i32> zeroinitializer
+  %broadcast.splatinsert165 = insertelement <2 x i64> poison, i64 %shl.i.us, i32 0
+  %broadcast.splat166 = shufflevector <2 x i64> %broadcast.splatinsert165, <2 x i64> poison, <2 x i32> zeroinitializer
+  %26 = add nsw i64 %n.vec151, -4
   %27 = lshr exact i64 %26, 2
   %28 = add nuw nsw i64 %27, 1
   %xtraiter = and i64 %28, 1
   %29 = icmp eq i64 %26, 0
-  br i1 %29, label %middle.block135.unr-lcssa, label %vector.ph139.new
+  br i1 %29, label %middle.block145.unr-lcssa, label %vector.ph149.new
 
-vector.ph139.new:                                 ; preds = %vector.ph139
+vector.ph149.new:                                 ; preds = %vector.ph149
   %unroll_iter = and i64 %28, 9223372036854775806
-  br label %vector.body137
+  br label %vector.body147
 
-vector.body137:                                   ; preds = %vector.body137, %vector.ph139.new
-  %index142 = phi i64 [ 0, %vector.ph139.new ], [ %index.next143.1, %vector.body137 ]
-  %vec.ind149 = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph139.new ], [ %vec.ind.next152.1, %vector.body137 ]
-  %niter = phi i64 [ %unroll_iter, %vector.ph139.new ], [ %niter.nsub.1, %vector.body137 ]
-  %offset.idx148 = add i64 %index142, %24
-  %step.add150 = add <2 x i64> %vec.ind149, <i64 2, i64 2>
-  %30 = or <2 x i64> %broadcast.splat154, %vec.ind149
-  %31 = or <2 x i64> %broadcast.splat156, %step.add150
-  %32 = getelementptr inbounds i64, i64* %23, i64 %offset.idx148
+vector.body147:                                   ; preds = %vector.body147, %vector.ph149.new
+  %index152 = phi i64 [ 0, %vector.ph149.new ], [ %index.next153.1, %vector.body147 ]
+  %vec.ind159 = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph149.new ], [ %vec.ind.next162.1, %vector.body147 ]
+  %niter = phi i64 [ %unroll_iter, %vector.ph149.new ], [ %niter.nsub.1, %vector.body147 ]
+  %offset.idx158 = add i64 %index152, %24
+  %step.add160 = add <2 x i64> %vec.ind159, <i64 2, i64 2>
+  %30 = or <2 x i64> %broadcast.splat164, %vec.ind159
+  %31 = or <2 x i64> %broadcast.splat166, %step.add160
+  %32 = getelementptr inbounds i64, i64* %23, i64 %offset.idx158
   %33 = bitcast i64* %32 to <2 x i64>*
-  store <2 x i64> %30, <2 x i64>* %33, align 8, !tbaa !47
+  store <2 x i64> %30, <2 x i64>* %33, align 8, !tbaa !42
   %34 = getelementptr inbounds i64, i64* %32, i64 2
   %35 = bitcast i64* %34 to <2 x i64>*
-  store <2 x i64> %31, <2 x i64>* %35, align 8, !tbaa !47
-  %index.next143 = or i64 %index142, 4
-  %vec.ind.next152 = add <2 x i64> %vec.ind149, <i64 4, i64 4>
-  %offset.idx148.1 = add i64 %index.next143, %24
-  %step.add150.1 = add <2 x i64> %vec.ind149, <i64 6, i64 6>
-  %36 = or <2 x i64> %broadcast.splat154, %vec.ind.next152
-  %37 = or <2 x i64> %broadcast.splat156, %step.add150.1
-  %38 = getelementptr inbounds i64, i64* %23, i64 %offset.idx148.1
+  store <2 x i64> %31, <2 x i64>* %35, align 8, !tbaa !42
+  %index.next153 = or i64 %index152, 4
+  %vec.ind.next162 = add <2 x i64> %vec.ind159, <i64 4, i64 4>
+  %offset.idx158.1 = add i64 %index.next153, %24
+  %step.add160.1 = add <2 x i64> %vec.ind159, <i64 6, i64 6>
+  %36 = or <2 x i64> %broadcast.splat164, %vec.ind.next162
+  %37 = or <2 x i64> %broadcast.splat166, %step.add160.1
+  %38 = getelementptr inbounds i64, i64* %23, i64 %offset.idx158.1
   %39 = bitcast i64* %38 to <2 x i64>*
-  store <2 x i64> %36, <2 x i64>* %39, align 8, !tbaa !47
+  store <2 x i64> %36, <2 x i64>* %39, align 8, !tbaa !42
   %40 = getelementptr inbounds i64, i64* %38, i64 2
   %41 = bitcast i64* %40 to <2 x i64>*
-  store <2 x i64> %37, <2 x i64>* %41, align 8, !tbaa !47
-  %index.next143.1 = add i64 %index142, 8
-  %vec.ind.next152.1 = add <2 x i64> %vec.ind149, <i64 8, i64 8>
+  store <2 x i64> %37, <2 x i64>* %41, align 8, !tbaa !42
+  %index.next153.1 = add i64 %index152, 8
+  %vec.ind.next162.1 = add <2 x i64> %vec.ind159, <i64 8, i64 8>
   %niter.nsub.1 = add i64 %niter, -2
   %niter.ncmp.1 = icmp eq i64 %niter.nsub.1, 0
-  br i1 %niter.ncmp.1, label %middle.block135.unr-lcssa, label %vector.body137, !llvm.loop !63
+  br i1 %niter.ncmp.1, label %middle.block145.unr-lcssa, label %vector.body147, !llvm.loop !61
 
-middle.block135.unr-lcssa:                        ; preds = %vector.body137, %vector.ph139
-  %index142.unr = phi i64 [ 0, %vector.ph139 ], [ %index.next143.1, %vector.body137 ]
-  %vec.ind149.unr = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph139 ], [ %vec.ind.next152.1, %vector.body137 ]
+middle.block145.unr-lcssa:                        ; preds = %vector.body147, %vector.ph149
+  %index152.unr = phi i64 [ 0, %vector.ph149 ], [ %index.next153.1, %vector.body147 ]
+  %vec.ind159.unr = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph149 ], [ %vec.ind.next162.1, %vector.body147 ]
   %lcmp.mod.not = icmp eq i64 %xtraiter, 0
-  br i1 %lcmp.mod.not, label %middle.block135, label %vector.body137.epil
+  br i1 %lcmp.mod.not, label %middle.block145, label %vector.body147.epil
 
-vector.body137.epil:                              ; preds = %middle.block135.unr-lcssa
-  %offset.idx148.epil = add i64 %index142.unr, %24
-  %step.add150.epil = add <2 x i64> %vec.ind149.unr, <i64 2, i64 2>
-  %42 = or <2 x i64> %broadcast.splat154, %vec.ind149.unr
-  %43 = or <2 x i64> %broadcast.splat156, %step.add150.epil
-  %44 = getelementptr inbounds i64, i64* %23, i64 %offset.idx148.epil
+vector.body147.epil:                              ; preds = %middle.block145.unr-lcssa
+  %offset.idx158.epil = add i64 %index152.unr, %24
+  %step.add160.epil = add <2 x i64> %vec.ind159.unr, <i64 2, i64 2>
+  %42 = or <2 x i64> %broadcast.splat164, %vec.ind159.unr
+  %43 = or <2 x i64> %broadcast.splat166, %step.add160.epil
+  %44 = getelementptr inbounds i64, i64* %23, i64 %offset.idx158.epil
   %45 = bitcast i64* %44 to <2 x i64>*
-  store <2 x i64> %42, <2 x i64>* %45, align 8, !tbaa !47
+  store <2 x i64> %42, <2 x i64>* %45, align 8, !tbaa !42
   %46 = getelementptr inbounds i64, i64* %44, i64 2
   %47 = bitcast i64* %46 to <2 x i64>*
-  store <2 x i64> %43, <2 x i64>* %47, align 8, !tbaa !47
-  br label %middle.block135
+  store <2 x i64> %43, <2 x i64>* %47, align 8, !tbaa !42
+  br label %middle.block145
 
-middle.block135:                                  ; preds = %middle.block135.unr-lcssa, %vector.body137.epil
-  %cmp.n147 = icmp eq i64 %n.vec141, %25
-  br i1 %cmp.n147, label %for.cond.cleanup41.us.loopexit, label %for.body42.us.preheader
+middle.block145:                                  ; preds = %middle.block145.unr-lcssa, %vector.body147.epil
+  %cmp.n157 = icmp eq i64 %n.vec151, %25
+  br i1 %cmp.n157, label %for.cond.cleanup42.us.loopexit, label %for.body43.us.preheader
 
-for.body42.us.preheader:                          ; preds = %for.body42.lr.ph.us, %middle.block135
-  %indvars.iv101.ph = phi i64 [ %24, %for.body42.lr.ph.us ], [ %ind.end145, %middle.block135 ]
-  %indvars.iv99.ph = phi i64 [ 0, %for.body42.lr.ph.us ], [ %n.vec141, %middle.block135 ]
-  br label %for.body42.us
+for.body43.us.preheader:                          ; preds = %for.body43.lr.ph.us, %middle.block145
+  %indvars.iv111.ph = phi i64 [ %24, %for.body43.lr.ph.us ], [ %ind.end155, %middle.block145 ]
+  %indvars.iv109.ph = phi i64 [ 0, %for.body43.lr.ph.us ], [ %n.vec151, %middle.block145 ]
+  br label %for.body43.us
 
 for.body.for.body_crit_edge:                      ; preds = %for.body.lr.ph, %for.body.for.body_crit_edge
-  %indvars.iv.next121130 = phi i64 [ %indvars.iv.next121, %for.body.for.body_crit_edge ], [ 1, %for.body.lr.ph ]
-  %.pre = load %class.Column***, %class.Column**** %columns, align 8, !tbaa !43
-  %call6 = tail call noalias i8* @malloc(i64 %mul5) #19
-  %arrayidx = getelementptr inbounds %class.Column**, %class.Column*** %.pre, i64 %indvars.iv.next121130
+  %indvars.iv.next131140 = phi i64 [ %indvars.iv.next131, %for.body.for.body_crit_edge ], [ 1, %for.body.lr.ph ]
+  %.pre = load %class.Column***, %class.Column**** %columns, align 8, !tbaa !54
+  %call7 = tail call noalias i8* @malloc(i64 %mul6) #19
+  %arrayidx = getelementptr inbounds %class.Column**, %class.Column*** %.pre, i64 %indvars.iv.next131140
   %48 = bitcast %class.Column*** %arrayidx to i8**
-  store i8* %call6, i8** %48, align 8, !tbaa !2
-  %indvars.iv.next121 = add nuw nsw i64 %indvars.iv.next121130, 1
-  %exitcond123.not = icmp eq i64 %indvars.iv.next121, %wide.trip.count122
-  br i1 %exitcond123.not, label %for.cond8.preheader, label %for.body.for.body_crit_edge, !llvm.loop !57
+  store i8* %call7, i8** %48, align 8, !tbaa !2
+  %indvars.iv.next131 = add nuw nsw i64 %indvars.iv.next131140, 1
+  %exitcond133.not = icmp eq i64 %indvars.iv.next131, %wide.trip.count132
+  br i1 %exitcond133.not, label %for.cond9.preheader, label %for.body.for.body_crit_edge, !llvm.loop !55
 
-for.cond.cleanup10:                               ; preds = %for.cond.cleanup41, %for.cond.cleanup41.us, %for.cond8.preheader.thread, %for.cond8.preheader
-  ret void
+for.body12:                                       ; preds = %for.body12.preheader, %for.cond.cleanup42
+  %indvars.iv126 = phi i64 [ 0, %for.body12.preheader ], [ %indvars.iv.next127, %for.cond.cleanup42 ]
+  %valueAddrIdx.0102 = phi i32 [ 0, %for.body12.preheader ], [ %valueAddrIdx.1.lcssa, %for.cond.cleanup42 ]
+  %arrayidx14 = getelementptr inbounds i32, i32* %rowCounts, i64 %indvars.iv126
+  %49 = load i32, i32* %arrayidx14, align 4, !tbaa !6
+  %cmp4198 = icmp sgt i32 %49, 0
+  br i1 %cmp4198, label %for.body43.lr.ph, label %for.cond.cleanup42
 
-for.body11:                                       ; preds = %for.body11.preheader, %for.cond.cleanup41
-  %indvars.iv116 = phi i64 [ 0, %for.body11.preheader ], [ %indvars.iv.next117, %for.cond.cleanup41 ]
-  %valueAddrIdx.092 = phi i32 [ 0, %for.body11.preheader ], [ %valueAddrIdx.1.lcssa, %for.cond.cleanup41 ]
-  %arrayidx13 = getelementptr inbounds i32, i32* %rowCounts, i64 %indvars.iv116
-  %49 = load i32, i32* %arrayidx13, align 4, !tbaa !6
-  %cmp4088 = icmp sgt i32 %49, 0
-  br i1 %cmp4088, label %for.body42.lr.ph, label %for.cond.cleanup41
-
-for.body42.lr.ph:                                 ; preds = %for.body11
-  %shl.i = shl nuw nsw i64 %indvars.iv116, 32
-  %50 = load i64*, i64** %valueAddresses, align 8, !tbaa !46
-  %51 = sext i32 %valueAddrIdx.092 to i64
-  %wide.trip.count114 = zext i32 %49 to i64
+for.body43.lr.ph:                                 ; preds = %for.body12
+  %shl.i = shl nuw nsw i64 %indvars.iv126, 32
+  %50 = load i64*, i64** %valueAddresses, align 8, !tbaa !53
+  %51 = sext i32 %valueAddrIdx.0102 to i64
+  %wide.trip.count124 = zext i32 %49 to i64
   %52 = zext i32 %49 to i64
   %min.iters.check = icmp ult i32 %49, 4
-  br i1 %min.iters.check, label %for.body42.preheader, label %vector.ph
+  br i1 %min.iters.check, label %for.body43.preheader, label %vector.ph
 
-vector.ph:                                        ; preds = %for.body42.lr.ph
+vector.ph:                                        ; preds = %for.body43.lr.ph
   %n.vec = and i64 %52, 4294967292
   %ind.end = add nsw i64 %n.vec, %51
   %broadcast.splatinsert = insertelement <2 x i64> poison, i64 %shl.i, i32 0
   %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
-  %broadcast.splatinsert133 = insertelement <2 x i64> poison, i64 %shl.i, i32 0
-  %broadcast.splat134 = shufflevector <2 x i64> %broadcast.splatinsert133, <2 x i64> poison, <2 x i32> zeroinitializer
+  %broadcast.splatinsert143 = insertelement <2 x i64> poison, i64 %shl.i, i32 0
+  %broadcast.splat144 = shufflevector <2 x i64> %broadcast.splatinsert143, <2 x i64> poison, <2 x i32> zeroinitializer
   %53 = add nsw i64 %n.vec, -4
   %54 = lshr exact i64 %53, 2
   %55 = add nuw nsw i64 %54, 1
-  %xtraiter160 = and i64 %55, 1
+  %xtraiter170 = and i64 %55, 1
   %56 = icmp eq i64 %53, 0
   br i1 %56, label %middle.block.unr-lcssa, label %vector.ph.new
 
 vector.ph.new:                                    ; preds = %vector.ph
-  %unroll_iter162 = and i64 %55, 9223372036854775806
+  %unroll_iter172 = and i64 %55, 9223372036854775806
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph.new
   %index = phi i64 [ 0, %vector.ph.new ], [ %index.next.1, %vector.body ]
   %vec.ind = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph.new ], [ %vec.ind.next.1, %vector.body ]
-  %niter163 = phi i64 [ %unroll_iter162, %vector.ph.new ], [ %niter163.nsub.1, %vector.body ]
+  %niter173 = phi i64 [ %unroll_iter172, %vector.ph.new ], [ %niter173.nsub.1, %vector.body ]
   %offset.idx = add i64 %index, %51
   %step.add = add <2 x i64> %vec.ind, <i64 2, i64 2>
   %57 = or <2 x i64> %broadcast.splat, %vec.ind
-  %58 = or <2 x i64> %broadcast.splat134, %step.add
+  %58 = or <2 x i64> %broadcast.splat144, %step.add
   %59 = getelementptr inbounds i64, i64* %50, i64 %offset.idx
   %60 = bitcast i64* %59 to <2 x i64>*
-  store <2 x i64> %57, <2 x i64>* %60, align 8, !tbaa !47
+  store <2 x i64> %57, <2 x i64>* %60, align 8, !tbaa !42
   %61 = getelementptr inbounds i64, i64* %59, i64 2
   %62 = bitcast i64* %61 to <2 x i64>*
-  store <2 x i64> %58, <2 x i64>* %62, align 8, !tbaa !47
+  store <2 x i64> %58, <2 x i64>* %62, align 8, !tbaa !42
   %index.next = or i64 %index, 4
   %vec.ind.next = add <2 x i64> %vec.ind, <i64 4, i64 4>
   %offset.idx.1 = add i64 %index.next, %51
   %step.add.1 = add <2 x i64> %vec.ind, <i64 6, i64 6>
   %63 = or <2 x i64> %broadcast.splat, %vec.ind.next
-  %64 = or <2 x i64> %broadcast.splat134, %step.add.1
+  %64 = or <2 x i64> %broadcast.splat144, %step.add.1
   %65 = getelementptr inbounds i64, i64* %50, i64 %offset.idx.1
   %66 = bitcast i64* %65 to <2 x i64>*
-  store <2 x i64> %63, <2 x i64>* %66, align 8, !tbaa !47
+  store <2 x i64> %63, <2 x i64>* %66, align 8, !tbaa !42
   %67 = getelementptr inbounds i64, i64* %65, i64 2
   %68 = bitcast i64* %67 to <2 x i64>*
-  store <2 x i64> %64, <2 x i64>* %68, align 8, !tbaa !47
+  store <2 x i64> %64, <2 x i64>* %68, align 8, !tbaa !42
   %index.next.1 = add i64 %index, 8
   %vec.ind.next.1 = add <2 x i64> %vec.ind, <i64 8, i64 8>
-  %niter163.nsub.1 = add i64 %niter163, -2
-  %niter163.ncmp.1 = icmp eq i64 %niter163.nsub.1, 0
-  br i1 %niter163.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !64
+  %niter173.nsub.1 = add i64 %niter173, -2
+  %niter173.ncmp.1 = icmp eq i64 %niter173.nsub.1, 0
+  br i1 %niter173.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !62
 
 middle.block.unr-lcssa:                           ; preds = %vector.body, %vector.ph
   %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1, %vector.body ]
   %vec.ind.unr = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ %vec.ind.next.1, %vector.body ]
-  %lcmp.mod161.not = icmp eq i64 %xtraiter160, 0
-  br i1 %lcmp.mod161.not, label %middle.block, label %vector.body.epil
+  %lcmp.mod171.not = icmp eq i64 %xtraiter170, 0
+  br i1 %lcmp.mod171.not, label %middle.block, label %vector.body.epil
 
 vector.body.epil:                                 ; preds = %middle.block.unr-lcssa
   %offset.idx.epil = add i64 %index.unr, %51
   %step.add.epil = add <2 x i64> %vec.ind.unr, <i64 2, i64 2>
   %69 = or <2 x i64> %broadcast.splat, %vec.ind.unr
-  %70 = or <2 x i64> %broadcast.splat134, %step.add.epil
+  %70 = or <2 x i64> %broadcast.splat144, %step.add.epil
   %71 = getelementptr inbounds i64, i64* %50, i64 %offset.idx.epil
   %72 = bitcast i64* %71 to <2 x i64>*
-  store <2 x i64> %69, <2 x i64>* %72, align 8, !tbaa !47
+  store <2 x i64> %69, <2 x i64>* %72, align 8, !tbaa !42
   %73 = getelementptr inbounds i64, i64* %71, i64 2
   %74 = bitcast i64* %73 to <2 x i64>*
-  store <2 x i64> %70, <2 x i64>* %74, align 8, !tbaa !47
+  store <2 x i64> %70, <2 x i64>* %74, align 8, !tbaa !42
   br label %middle.block
 
 middle.block:                                     ; preds = %middle.block.unr-lcssa, %vector.body.epil
   %cmp.n = icmp eq i64 %n.vec, %52
-  br i1 %cmp.n, label %for.cond.cleanup41.loopexit, label %for.body42.preheader
+  br i1 %cmp.n, label %for.cond.cleanup42.loopexit, label %for.body43.preheader
 
-for.body42.preheader:                             ; preds = %for.body42.lr.ph, %middle.block
-  %indvars.iv112.ph = phi i64 [ %51, %for.body42.lr.ph ], [ %ind.end, %middle.block ]
-  %indvars.iv110.ph = phi i64 [ 0, %for.body42.lr.ph ], [ %n.vec, %middle.block ]
-  br label %for.body42
+for.body43.preheader:                             ; preds = %for.body43.lr.ph, %middle.block
+  %indvars.iv122.ph = phi i64 [ %51, %for.body43.lr.ph ], [ %ind.end, %middle.block ]
+  %indvars.iv120.ph = phi i64 [ 0, %for.body43.lr.ph ], [ %n.vec, %middle.block ]
+  br label %for.body43
 
-for.cond.cleanup41.loopexit:                      ; preds = %for.body42, %middle.block
-  %indvars.iv.next113.lcssa = phi i64 [ %ind.end, %middle.block ], [ %indvars.iv.next113, %for.body42 ]
-  %75 = trunc i64 %indvars.iv.next113.lcssa to i32
-  br label %for.cond.cleanup41
+for.cond.cleanup42.loopexit:                      ; preds = %for.body43, %middle.block
+  %indvars.iv.next123.lcssa = phi i64 [ %ind.end, %middle.block ], [ %indvars.iv.next123, %for.body43 ]
+  %75 = trunc i64 %indvars.iv.next123.lcssa to i32
+  br label %for.cond.cleanup42
 
-for.cond.cleanup41:                               ; preds = %for.cond.cleanup41.loopexit, %for.body11
-  %valueAddrIdx.1.lcssa = phi i32 [ %valueAddrIdx.092, %for.body11 ], [ %75, %for.cond.cleanup41.loopexit ]
-  %indvars.iv.next117 = add nuw nsw i64 %indvars.iv116, 1
-  %exitcond119.not = icmp eq i64 %indvars.iv.next117, %wide.trip.count118
-  br i1 %exitcond119.not, label %for.cond.cleanup10, label %for.body11, !llvm.loop !58
+for.cond.cleanup42:                               ; preds = %for.cond.cleanup42.loopexit, %for.body12
+  %valueAddrIdx.1.lcssa = phi i32 [ %valueAddrIdx.0102, %for.body12 ], [ %75, %for.cond.cleanup42.loopexit ]
+  %indvars.iv.next127 = add nuw nsw i64 %indvars.iv126, 1
+  %exitcond129.not = icmp eq i64 %indvars.iv.next127, %wide.trip.count128
+  br i1 %exitcond129.not, label %cleanup, label %for.body12, !llvm.loop !56
 
-for.body42:                                       ; preds = %for.body42.preheader, %for.body42
-  %indvars.iv112 = phi i64 [ %indvars.iv.next113, %for.body42 ], [ %indvars.iv112.ph, %for.body42.preheader ]
-  %indvars.iv110 = phi i64 [ %indvars.iv.next111, %for.body42 ], [ %indvars.iv110.ph, %for.body42.preheader ]
-  %or.i = or i64 %shl.i, %indvars.iv110
-  %arrayidx46 = getelementptr inbounds i64, i64* %50, i64 %indvars.iv112
-  store i64 %or.i, i64* %arrayidx46, align 8, !tbaa !47
-  %indvars.iv.next113 = add nsw i64 %indvars.iv112, 1
-  %indvars.iv.next111 = add nuw nsw i64 %indvars.iv110, 1
-  %exitcond115.not = icmp eq i64 %indvars.iv.next111, %wide.trip.count114
-  br i1 %exitcond115.not, label %for.cond.cleanup41.loopexit, label %for.body42, !llvm.loop !65
+for.body43:                                       ; preds = %for.body43.preheader, %for.body43
+  %indvars.iv122 = phi i64 [ %indvars.iv.next123, %for.body43 ], [ %indvars.iv122.ph, %for.body43.preheader ]
+  %indvars.iv120 = phi i64 [ %indvars.iv.next121, %for.body43 ], [ %indvars.iv120.ph, %for.body43.preheader ]
+  %or.i = or i64 %shl.i, %indvars.iv120
+  %arrayidx47 = getelementptr inbounds i64, i64* %50, i64 %indvars.iv122
+  store i64 %or.i, i64* %arrayidx47, align 8, !tbaa !42
+  %indvars.iv.next123 = add nsw i64 %indvars.iv122, 1
+  %indvars.iv.next121 = add nuw nsw i64 %indvars.iv120, 1
+  %exitcond125.not = icmp eq i64 %indvars.iv.next121, %wide.trip.count124
+  br i1 %exitcond125.not, label %for.cond.cleanup42.loopexit, label %for.body43, !llvm.loop !63
+
+cleanup:                                          ; preds = %for.cond.cleanup42, %for.cond.cleanup42.us, %for.cond9.preheader.thread, %for.cond9.preheader, %entry
+  ret void
 }
 
 ; Function Attrs: inaccessiblememonly nofree nounwind willreturn
 declare dso_local noalias noundef i8* @malloc(i64) local_unnamed_addr #13
 
-; Function Attrs: nounwind uwtable
-define dso_local void @_ZN10PagesIndexD2Ev(%class.PagesIndex* nocapture nonnull readonly dereferenceable(44) %this) unnamed_addr #9 align 2 {
+; Function Attrs: norecurse nounwind readnone uwtable willreturn
+define dso_local void @_ZN10PagesIndexD2Ev(%class.PagesIndex* nocapture nonnull dereferenceable(44) %this) unnamed_addr #14 align 2 {
 entry:
-  %typesCount = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 1
-  %0 = load i32, i32* %typesCount, align 8, !tbaa !40
-  %cmp24 = icmp sgt i32 %0, 0
-  br i1 %cmp24, label %for.cond2.preheader.lr.ph, label %for.cond.cleanup
-
-for.cond2.preheader.lr.ph:                        ; preds = %entry
-  %tableCount = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 7
-  %columns = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 6
-  br label %for.cond2.preheader
-
-for.cond2.preheader:                              ; preds = %for.cond2.preheader.lr.ph, %for.cond.cleanup4
-  %indvars.iv27 = phi i64 [ 0, %for.cond2.preheader.lr.ph ], [ %indvars.iv.next28, %for.cond.cleanup4 ]
-  %1 = load i32, i32* %tableCount, align 8, !tbaa !42
-  %cmp322 = icmp sgt i32 %1, 0
-  br i1 %cmp322, label %for.body5, label %for.cond.cleanup4
-
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup4, %entry
-  %columns14 = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 6
-  %2 = bitcast %class.Column**** %columns14 to i8**
-  %3 = load i8*, i8** %2, align 8, !tbaa !43
-  tail call void @free(i8* %3) #19
-  %valueAddresses = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %this, i64 0, i32 3
-  %4 = bitcast i64** %valueAddresses to i8**
-  %5 = load i8*, i8** %4, align 8, !tbaa !46
-  tail call void @free(i8* %5) #19
   ret void
-
-for.cond.cleanup4:                                ; preds = %for.inc, %for.cond2.preheader
-  %6 = load %class.Column***, %class.Column**** %columns, align 8, !tbaa !43
-  %arrayidx10 = getelementptr inbounds %class.Column**, %class.Column*** %6, i64 %indvars.iv27
-  %7 = bitcast %class.Column*** %arrayidx10 to i8**
-  %8 = load i8*, i8** %7, align 8, !tbaa !2
-  tail call void @free(i8* %8) #19
-  %indvars.iv.next28 = add nuw nsw i64 %indvars.iv27, 1
-  %9 = load i32, i32* %typesCount, align 8, !tbaa !40
-  %10 = sext i32 %9 to i64
-  %cmp = icmp slt i64 %indvars.iv.next28, %10
-  br i1 %cmp, label %for.cond2.preheader, label %for.cond.cleanup, !llvm.loop !44
-
-for.body5:                                        ; preds = %for.cond2.preheader, %for.inc
-  %11 = phi i32 [ %17, %for.inc ], [ %1, %for.cond2.preheader ]
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %for.cond2.preheader ]
-  %12 = load %class.Column***, %class.Column**** %columns, align 8, !tbaa !43
-  %arrayidx = getelementptr inbounds %class.Column**, %class.Column*** %12, i64 %indvars.iv27
-  %13 = load %class.Column**, %class.Column*** %arrayidx, align 8, !tbaa !2
-  %arrayidx7 = getelementptr inbounds %class.Column*, %class.Column** %13, i64 %indvars.iv
-  %14 = load %class.Column*, %class.Column** %arrayidx7, align 8, !tbaa !2
-  %isnull = icmp eq %class.Column* %14, null
-  br i1 %isnull, label %for.inc, label %delete.notnull
-
-delete.notnull:                                   ; preds = %for.body5
-  %15 = bitcast %class.Column* %14 to void (%class.Column*)***
-  %vtable = load void (%class.Column*)**, void (%class.Column*)*** %15, align 8, !tbaa !8
-  %vfn = getelementptr inbounds void (%class.Column*)*, void (%class.Column*)** %vtable, i64 1
-  %16 = load void (%class.Column*)*, void (%class.Column*)** %vfn, align 8
-  tail call void %16(%class.Column* nonnull dereferenceable(40) %14) #19
-  %.pre = load i32, i32* %tableCount, align 8, !tbaa !42
-  br label %for.inc
-
-for.inc:                                          ; preds = %for.body5, %delete.notnull
-  %17 = phi i32 [ %11, %for.body5 ], [ %.pre, %delete.notnull ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %18 = sext i32 %17 to i64
-  %cmp3 = icmp slt i64 %indvars.iv.next, %18
-  br i1 %cmp3, label %for.body5, label %for.cond.cleanup4, !llvm.loop !45
 }
-
-; Function Attrs: inaccessiblemem_or_argmemonly nounwind willreturn
-declare dso_local void @free(i8* nocapture noundef) local_unnamed_addr #14
 
 ; Function Attrs: uwtable
 define dso_local i64 @_Z10createSortPiiS_iS_S_S_i(i32* %sourceTypes, i32 %typeCount, i32* %outputCols, i32 %outputColCount, i32* %sortCols, i32* %sortAscendings, i32* %sortNullFirsts, i32 %sortColCount) local_unnamed_addr #4 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -1194,10 +1079,10 @@ define dso_local i32 @_Z17compareInt64ValuePliS_i(i64* nocapture readonly %leftD
 entry:
   %idxprom = sext i32 %leftPosition to i64
   %arrayidx = getelementptr inbounds i64, i64* %leftData, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %0 = load i64, i64* %arrayidx, align 8, !tbaa !42
   %idxprom1 = sext i32 %rightPosition to i64
   %arrayidx2 = getelementptr inbounds i64, i64* %rightData, i64 %idxprom1
-  %1 = load i64, i64* %arrayidx2, align 8, !tbaa !47
+  %1 = load i64, i64* %arrayidx2, align 8, !tbaa !42
   %cmp = icmp sgt i64 %0, %1
   br i1 %cmp, label %cleanup, label %if.else
 
@@ -1215,10 +1100,10 @@ define dso_local i32 @_Z18compareDoubleValuePdiS_i(double* nocapture readonly %l
 entry:
   %idxprom = sext i32 %leftPosition to i64
   %arrayidx = getelementptr inbounds double, double* %leftData, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8, !tbaa !66
+  %0 = load double, double* %arrayidx, align 8, !tbaa !64
   %idxprom1 = sext i32 %rightPosition to i64
   %arrayidx2 = getelementptr inbounds double, double* %rightData, i64 %idxprom1
-  %1 = load double, double* %arrayidx2, align 8, !tbaa !66
+  %1 = load double, double* %arrayidx2, align 8, !tbaa !64
   %cmp = fcmp ogt double %0, %1
   br i1 %cmp, label %cleanup, label %if.else
 
@@ -1239,15 +1124,15 @@ define dso_local i32 @_Z9compareTolPiS_S_S_iii(i64 %pagesIndexAddr, i32* nocaptu
 entry:
   %0 = inttoptr i64 %pagesIndexAddr to %class.PagesIndex*
   %valueAddresses.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 3
-  %1 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !46
+  %1 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !53
   %columns.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 6
-  %2 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !43
+  %2 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !54
   %idxprom = sext i32 %leftPosition to i64
   %arrayidx = getelementptr inbounds i64, i64* %1, i64 %idxprom
-  %3 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %3 = load i64, i64* %arrayidx, align 8, !tbaa !42
   %idxprom4 = sext i32 %rightPosition to i64
   %arrayidx5 = getelementptr inbounds i64, i64* %1, i64 %idxprom4
-  %4 = load i64, i64* %arrayidx5, align 8, !tbaa !47
+  %4 = load i64, i64* %arrayidx5, align 8, !tbaa !42
   %cmp8126 = icmp sgt i32 %sortColCount, 0
   br i1 %cmp8126, label %for.body.lr.ph, label %cleanup47
 
@@ -1287,14 +1172,14 @@ for.body.us:                                      ; preds = %for.body.lr.ph, %fo
 
 for.cond.us:                                      ; preds = %sw.epilog.us
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %cleanup47, label %for.body.us, !llvm.loop !68
+  br i1 %exitcond.not, label %cleanup47, label %for.body.us, !llvm.loop !66
 
 sw.bb30.us:                                       ; preds = %for.body.us
   %12 = bitcast i8* %10 to double*
   %arrayidx.i.us = getelementptr inbounds double, double* %12, i64 %idxprom.i
-  %13 = load double, double* %arrayidx.i.us, align 8, !tbaa !66
+  %13 = load double, double* %arrayidx.i.us, align 8, !tbaa !64
   %arrayidx2.i.us = getelementptr inbounds double, double* %12, i64 %idxprom1.i
-  %14 = load double, double* %arrayidx2.i.us, align 8, !tbaa !66
+  %14 = load double, double* %arrayidx2.i.us, align 8, !tbaa !64
   %cmp.i.us = fcmp ogt double %13, %14
   br i1 %cmp.i.us, label %sw.epilog.us, label %if.else.i.us
 
@@ -1308,9 +1193,9 @@ if.else5.i.us:                                    ; preds = %if.else.i.us
 sw.bb28.us:                                       ; preds = %for.body.us
   %15 = bitcast i8* %10 to i64*
   %arrayidx.i105.us = getelementptr inbounds i64, i64* %15, i64 %idxprom.i
-  %16 = load i64, i64* %arrayidx.i105.us, align 8, !tbaa !47
+  %16 = load i64, i64* %arrayidx.i105.us, align 8, !tbaa !42
   %arrayidx2.i107.us = getelementptr inbounds i64, i64* %15, i64 %idxprom1.i
-  %17 = load i64, i64* %arrayidx2.i107.us, align 8, !tbaa !47
+  %17 = load i64, i64* %arrayidx2.i107.us, align 8, !tbaa !42
   %cmp.i108.us = icmp sgt i64 %16, %17
   br i1 %cmp.i108.us, label %sw.epilog.us, label %if.else.i110.us
 
@@ -1341,7 +1226,7 @@ sw.epilog.us:                                     ; preds = %sw.bb.us, %if.else.
 
 for.cond:                                         ; preds = %sw.epilog
   %exitcond134.not = icmp eq i64 %indvars.iv.next132, %wide.trip.count
-  br i1 %exitcond134.not, label %cleanup47, label %for.body, !llvm.loop !68
+  br i1 %exitcond134.not, label %cleanup47, label %for.body, !llvm.loop !66
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.cond
   %indvars.iv131 = phi i64 [ %indvars.iv.next132, %for.cond ], [ 0, %for.body.lr.ph ]
@@ -1380,9 +1265,9 @@ sw.bb28:                                          ; preds = %for.body
   %33 = bitcast i8* %25 to i64*
   %34 = bitcast i8* %28 to i64*
   %arrayidx.i105 = getelementptr inbounds i64, i64* %33, i64 %idxprom.i
-  %35 = load i64, i64* %arrayidx.i105, align 8, !tbaa !47
+  %35 = load i64, i64* %arrayidx.i105, align 8, !tbaa !42
   %arrayidx2.i107 = getelementptr inbounds i64, i64* %34, i64 %idxprom1.i
-  %36 = load i64, i64* %arrayidx2.i107, align 8, !tbaa !47
+  %36 = load i64, i64* %arrayidx2.i107, align 8, !tbaa !42
   %cmp.i108 = icmp sgt i64 %35, %36
   br i1 %cmp.i108, label %sw.epilog, label %if.else.i110
 
@@ -1395,9 +1280,9 @@ sw.bb30:                                          ; preds = %for.body
   %37 = bitcast i8* %25 to double*
   %38 = bitcast i8* %28 to double*
   %arrayidx.i = getelementptr inbounds double, double* %37, i64 %idxprom.i
-  %39 = load double, double* %arrayidx.i, align 8, !tbaa !66
+  %39 = load double, double* %arrayidx.i, align 8, !tbaa !64
   %arrayidx2.i = getelementptr inbounds double, double* %38, i64 %idxprom1.i
-  %40 = load double, double* %arrayidx2.i, align 8, !tbaa !66
+  %40 = load double, double* %arrayidx2.i, align 8, !tbaa !64
   %cmp.i = fcmp ogt double %39, %40
   br i1 %cmp.i, label %sw.epilog, label %if.else.i
 
@@ -1461,7 +1346,7 @@ define dso_local void @_Z9quickSortlPiS_S_S_iii(i64 %pagesIndexAddr, i32* readon
 entry:
   %0 = inttoptr i64 %pagesIndexAddr to %class.PagesIndex*
   %valueAddresses.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 3
-  %1 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !46
+  %1 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !53
   %sub403 = sub nsw i32 %to, %from
   %cmp404 = icmp slt i32 %sub403, 7
   br i1 %cmp404, label %for.cond.preheader, label %if.end.lr.ph
@@ -1502,17 +1387,17 @@ for.cond.cleanup8:                                ; preds = %land.rhs, %for.body
   %inc = add nsw i32 %i.0378, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i32 %inc, %to
-  br i1 %exitcond.not, label %cleanup, label %for.cond3.preheader, !llvm.loop !69
+  br i1 %exitcond.not, label %cleanup, label %for.cond3.preheader, !llvm.loop !67
 
 for.body9:                                        ; preds = %land.rhs
   %arrayidx2.i = getelementptr inbounds i64, i64* %.lcssa, i64 %indvars.iv.next423
   %6 = bitcast i64* %arrayidx2.i to <2 x i64>*
-  %7 = load <2 x i64>, <2 x i64>* %6, align 8, !tbaa !47
+  %7 = load <2 x i64>, <2 x i64>* %6, align 8, !tbaa !42
   %reorder_shuffle = shufflevector <2 x i64> %7, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
   %8 = bitcast i64* %arrayidx2.i to <2 x i64>*
-  store <2 x i64> %reorder_shuffle, <2 x i64>* %8, align 8, !tbaa !47
+  store <2 x i64> %reorder_shuffle, <2 x i64>* %8, align 8, !tbaa !42
   %cmp4 = icmp sgt i64 %indvars.iv.next423, %4
-  br i1 %cmp4, label %land.rhs, label %for.cond.cleanup8, !llvm.loop !70
+  br i1 %cmp4, label %land.rhs, label %for.cond.cleanup8, !llvm.loop !68
 
 if.end:                                           ; preds = %if.end.lr.ph, %if.then105
   %sub406 = phi i32 [ %sub403, %if.end.lr.ph ], [ %sub92, %if.then105 ]
@@ -1683,11 +1568,11 @@ if.then41:                                        ; preds = %while.body39
   %inc48 = add nsw i32 %a.1382, 1
   %idxprom.i350 = sext i32 %a.1382 to i64
   %arrayidx.i351 = getelementptr inbounds i64, i64* %9, i64 %idxprom.i350
-  %16 = load i64, i64* %arrayidx.i351, align 8, !tbaa !47
+  %16 = load i64, i64* %arrayidx.i351, align 8, !tbaa !42
   %arrayidx2.i353 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv424
-  %17 = load i64, i64* %arrayidx2.i353, align 8, !tbaa !47
-  store i64 %17, i64* %arrayidx.i351, align 8, !tbaa !47
-  store i64 %16, i64* %arrayidx2.i353, align 8, !tbaa !47
+  %17 = load i64, i64* %arrayidx2.i353, align 8, !tbaa !42
+  store i64 %17, i64* %arrayidx.i351, align 8, !tbaa !42
+  store i64 %16, i64* %arrayidx2.i353, align 8, !tbaa !42
   br label %if.end49
 
 if.end49:                                         ; preds = %if.then41, %while.body39
@@ -1695,7 +1580,7 @@ if.end49:                                         ; preds = %if.then41, %while.b
   %a.2 = phi i32 [ %inc48, %if.then41 ], [ %a.1382, %while.body39 ]
   %indvars.iv.next425 = add nsw i64 %indvars.iv424, 1
   %exitcond426.not = icmp eq i64 %indvars.iv424, %smax
-  br i1 %exitcond426.not, label %while.end, label %land.rhs35, !llvm.loop !71
+  br i1 %exitcond426.not, label %while.end, label %land.rhs35, !llvm.loop !69
 
 while.end.loopexit.split.loop.exit448:            ; preds = %land.rhs35
   %18 = trunc i64 %indvars.iv424 to i32
@@ -1733,12 +1618,12 @@ if.then59:                                        ; preds = %while.body57
   %m.7 = select i1 %cmp60, i32 %d.1394, i32 %spec.select276
   %dec67 = add nsw i32 %d.1394, -1
   %arrayidx.i298 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv427
-  %22 = load i64, i64* %arrayidx.i298, align 8, !tbaa !47
+  %22 = load i64, i64* %arrayidx.i298, align 8, !tbaa !42
   %idxprom1.i299 = sext i32 %d.1394 to i64
   %arrayidx2.i300 = getelementptr inbounds i64, i64* %9, i64 %idxprom1.i299
-  %23 = load i64, i64* %arrayidx2.i300, align 8, !tbaa !47
-  store i64 %23, i64* %arrayidx.i298, align 8, !tbaa !47
-  store i64 %22, i64* %arrayidx2.i300, align 8, !tbaa !47
+  %23 = load i64, i64* %arrayidx2.i300, align 8, !tbaa !42
+  store i64 %23, i64* %arrayidx.i298, align 8, !tbaa !42
+  store i64 %22, i64* %arrayidx2.i300, align 8, !tbaa !42
   br label %if.end68
 
 if.end68:                                         ; preds = %if.then59, %while.body57
@@ -1746,7 +1631,7 @@ if.end68:                                         ; preds = %if.then59, %while.b
   %d.2 = phi i32 [ %dec67, %if.then59 ], [ %d.1394, %while.body57 ]
   %indvars.iv.next428 = add nsw i64 %indvars.iv427, -1
   %cmp52.not.not = icmp sgt i64 %indvars.iv427, %20
-  br i1 %cmp52.not.not, label %land.rhs53, label %while.end83.loopexit, !llvm.loop !72
+  br i1 %cmp52.not.not, label %land.rhs53, label %while.end83.loopexit, !llvm.loop !70
 
 if.end73:                                         ; preds = %land.rhs53
   %24 = trunc i64 %indvars.iv427 to i32
@@ -1755,13 +1640,13 @@ if.end73:                                         ; preds = %land.rhs53
   %inc81 = add nsw i32 %b.1.lcssa, 1
   %dec82 = add nsw i32 %24, -1
   %arrayidx.i294 = getelementptr inbounds i64, i64* %9, i64 %20
-  %25 = load i64, i64* %arrayidx.i294, align 8, !tbaa !47
+  %25 = load i64, i64* %arrayidx.i294, align 8, !tbaa !42
   %sext = shl i64 %indvars.iv427, 32
   %idxprom1.i295 = ashr exact i64 %sext, 32
   %arrayidx2.i296 = getelementptr inbounds i64, i64* %9, i64 %idxprom1.i295
-  %26 = load i64, i64* %arrayidx2.i296, align 8, !tbaa !47
-  store i64 %26, i64* %arrayidx.i294, align 8, !tbaa !47
-  store i64 %25, i64* %arrayidx2.i296, align 8, !tbaa !47
+  %26 = load i64, i64* %arrayidx2.i296, align 8, !tbaa !42
+  store i64 %26, i64* %arrayidx.i294, align 8, !tbaa !42
+  store i64 %25, i64* %arrayidx2.i296, align 8, !tbaa !42
   br label %while.cond
 
 while.end83.loopexit:                             ; preds = %if.end68
@@ -1830,51 +1715,51 @@ vector.body489:                                   ; preds = %vector.body489, %ve
   %offset.idx520 = add i64 %index510, %28
   %44 = getelementptr inbounds i64, i64* %9, i64 %offset.idx520
   %45 = bitcast i64* %44 to <2 x i64>*
-  %wide.load522 = load <2 x i64>, <2 x i64>* %45, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  %wide.load522 = load <2 x i64>, <2 x i64>* %45, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %46 = getelementptr inbounds i64, i64* %44, i64 2
   %47 = bitcast i64* %46 to <2 x i64>*
-  %wide.load523 = load <2 x i64>, <2 x i64>* %47, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  %wide.load523 = load <2 x i64>, <2 x i64>* %47, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %48 = getelementptr inbounds i64, i64* %9, i64 %offset.idx519
   %49 = bitcast i64* %48 to <2 x i64>*
-  %wide.load524 = load <2 x i64>, <2 x i64>* %49, align 8, !tbaa !47, !alias.scope !76
+  %wide.load524 = load <2 x i64>, <2 x i64>* %49, align 8, !tbaa !42, !alias.scope !74
   %50 = getelementptr inbounds i64, i64* %48, i64 2
   %51 = bitcast i64* %50 to <2 x i64>*
-  %wide.load525 = load <2 x i64>, <2 x i64>* %51, align 8, !tbaa !47, !alias.scope !76
+  %wide.load525 = load <2 x i64>, <2 x i64>* %51, align 8, !tbaa !42, !alias.scope !74
   %52 = bitcast i64* %44 to <2 x i64>*
-  store <2 x i64> %wide.load524, <2 x i64>* %52, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  store <2 x i64> %wide.load524, <2 x i64>* %52, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %53 = bitcast i64* %46 to <2 x i64>*
-  store <2 x i64> %wide.load525, <2 x i64>* %53, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  store <2 x i64> %wide.load525, <2 x i64>* %53, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %54 = bitcast i64* %48 to <2 x i64>*
-  store <2 x i64> %wide.load522, <2 x i64>* %54, align 8, !tbaa !47, !alias.scope !76
+  store <2 x i64> %wide.load522, <2 x i64>* %54, align 8, !tbaa !42, !alias.scope !74
   %55 = bitcast i64* %50 to <2 x i64>*
-  store <2 x i64> %wide.load523, <2 x i64>* %55, align 8, !tbaa !47, !alias.scope !76
+  store <2 x i64> %wide.load523, <2 x i64>* %55, align 8, !tbaa !42, !alias.scope !74
   %index.next511 = or i64 %index510, 4
   %offset.idx519.1 = add i64 %index.next511, %29
   %offset.idx520.1 = add i64 %index.next511, %28
   %56 = getelementptr inbounds i64, i64* %9, i64 %offset.idx520.1
   %57 = bitcast i64* %56 to <2 x i64>*
-  %wide.load522.1 = load <2 x i64>, <2 x i64>* %57, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  %wide.load522.1 = load <2 x i64>, <2 x i64>* %57, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %58 = getelementptr inbounds i64, i64* %56, i64 2
   %59 = bitcast i64* %58 to <2 x i64>*
-  %wide.load523.1 = load <2 x i64>, <2 x i64>* %59, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  %wide.load523.1 = load <2 x i64>, <2 x i64>* %59, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %60 = getelementptr inbounds i64, i64* %9, i64 %offset.idx519.1
   %61 = bitcast i64* %60 to <2 x i64>*
-  %wide.load524.1 = load <2 x i64>, <2 x i64>* %61, align 8, !tbaa !47, !alias.scope !76
+  %wide.load524.1 = load <2 x i64>, <2 x i64>* %61, align 8, !tbaa !42, !alias.scope !74
   %62 = getelementptr inbounds i64, i64* %60, i64 2
   %63 = bitcast i64* %62 to <2 x i64>*
-  %wide.load525.1 = load <2 x i64>, <2 x i64>* %63, align 8, !tbaa !47, !alias.scope !76
+  %wide.load525.1 = load <2 x i64>, <2 x i64>* %63, align 8, !tbaa !42, !alias.scope !74
   %64 = bitcast i64* %56 to <2 x i64>*
-  store <2 x i64> %wide.load524.1, <2 x i64>* %64, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  store <2 x i64> %wide.load524.1, <2 x i64>* %64, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %65 = bitcast i64* %58 to <2 x i64>*
-  store <2 x i64> %wide.load525.1, <2 x i64>* %65, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  store <2 x i64> %wide.load525.1, <2 x i64>* %65, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %66 = bitcast i64* %60 to <2 x i64>*
-  store <2 x i64> %wide.load522.1, <2 x i64>* %66, align 8, !tbaa !47, !alias.scope !76
+  store <2 x i64> %wide.load522.1, <2 x i64>* %66, align 8, !tbaa !42, !alias.scope !74
   %67 = bitcast i64* %62 to <2 x i64>*
-  store <2 x i64> %wide.load523.1, <2 x i64>* %67, align 8, !tbaa !47, !alias.scope !76
+  store <2 x i64> %wide.load523.1, <2 x i64>* %67, align 8, !tbaa !42, !alias.scope !74
   %index.next511.1 = add i64 %index510, 8
   %niter.nsub.1 = add i64 %niter, -2
   %niter.ncmp.1 = icmp eq i64 %niter.nsub.1, 0
-  br i1 %niter.ncmp.1, label %middle.block487.unr-lcssa, label %vector.body489, !llvm.loop !78
+  br i1 %niter.ncmp.1, label %middle.block487.unr-lcssa, label %vector.body489, !llvm.loop !76
 
 middle.block487.unr-lcssa:                        ; preds = %vector.body489, %vector.ph493
   %index510.unr = phi i64 [ 0, %vector.ph493 ], [ %index.next511.1, %vector.body489 ]
@@ -1886,24 +1771,24 @@ vector.body489.epil:                              ; preds = %middle.block487.unr
   %offset.idx520.epil = add i64 %index510.unr, %28
   %68 = getelementptr inbounds i64, i64* %9, i64 %offset.idx520.epil
   %69 = bitcast i64* %68 to <2 x i64>*
-  %wide.load522.epil = load <2 x i64>, <2 x i64>* %69, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  %wide.load522.epil = load <2 x i64>, <2 x i64>* %69, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %70 = getelementptr inbounds i64, i64* %68, i64 2
   %71 = bitcast i64* %70 to <2 x i64>*
-  %wide.load523.epil = load <2 x i64>, <2 x i64>* %71, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  %wide.load523.epil = load <2 x i64>, <2 x i64>* %71, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %72 = getelementptr inbounds i64, i64* %9, i64 %offset.idx519.epil
   %73 = bitcast i64* %72 to <2 x i64>*
-  %wide.load524.epil = load <2 x i64>, <2 x i64>* %73, align 8, !tbaa !47, !alias.scope !76
+  %wide.load524.epil = load <2 x i64>, <2 x i64>* %73, align 8, !tbaa !42, !alias.scope !74
   %74 = getelementptr inbounds i64, i64* %72, i64 2
   %75 = bitcast i64* %74 to <2 x i64>*
-  %wide.load525.epil = load <2 x i64>, <2 x i64>* %75, align 8, !tbaa !47, !alias.scope !76
+  %wide.load525.epil = load <2 x i64>, <2 x i64>* %75, align 8, !tbaa !42, !alias.scope !74
   %76 = bitcast i64* %68 to <2 x i64>*
-  store <2 x i64> %wide.load524.epil, <2 x i64>* %76, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  store <2 x i64> %wide.load524.epil, <2 x i64>* %76, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %77 = bitcast i64* %70 to <2 x i64>*
-  store <2 x i64> %wide.load525.epil, <2 x i64>* %77, align 8, !tbaa !47, !alias.scope !73, !noalias !76
+  store <2 x i64> %wide.load525.epil, <2 x i64>* %77, align 8, !tbaa !42, !alias.scope !71, !noalias !74
   %78 = bitcast i64* %72 to <2 x i64>*
-  store <2 x i64> %wide.load522.epil, <2 x i64>* %78, align 8, !tbaa !47, !alias.scope !76
+  store <2 x i64> %wide.load522.epil, <2 x i64>* %78, align 8, !tbaa !42, !alias.scope !74
   %79 = bitcast i64* %74 to <2 x i64>*
-  store <2 x i64> %wide.load523.epil, <2 x i64>* %79, align 8, !tbaa !47, !alias.scope !76
+  store <2 x i64> %wide.load523.epil, <2 x i64>* %79, align 8, !tbaa !42, !alias.scope !74
   br label %middle.block487
 
 middle.block487:                                  ; preds = %middle.block487.unr-lcssa, %vector.body489.epil
@@ -1922,11 +1807,11 @@ for.body.i289.preheader:                          ; preds = %vector.memcheck492,
 
 for.body.i289.prol:                               ; preds = %for.body.i289.preheader
   %arrayidx.i.i283.prol = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.i281.ph
-  %81 = load i64, i64* %arrayidx.i.i283.prol, align 8, !tbaa !47
+  %81 = load i64, i64* %arrayidx.i.i283.prol, align 8, !tbaa !42
   %arrayidx2.i.i284.prol = getelementptr inbounds i64, i64* %9, i64 %indvars.iv13.i280.ph
-  %82 = load i64, i64* %arrayidx2.i.i284.prol, align 8, !tbaa !47
-  store i64 %82, i64* %arrayidx.i.i283.prol, align 8, !tbaa !47
-  store i64 %81, i64* %arrayidx2.i.i284.prol, align 8, !tbaa !47
+  %82 = load i64, i64* %arrayidx2.i.i284.prol, align 8, !tbaa !42
+  store i64 %82, i64* %arrayidx.i.i283.prol, align 8, !tbaa !42
+  store i64 %81, i64* %arrayidx2.i.i284.prol, align 8, !tbaa !42
   %inc.i285.prol = add nuw nsw i32 %i.010.i282.ph, 1
   %indvars.iv.next.i286.prol = add nsw i64 %indvars.iv.i281.ph, 1
   %indvars.iv.next14.i287.prol = add nsw i64 %indvars.iv13.i280.ph, 1
@@ -1944,24 +1829,24 @@ for.body.i289:                                    ; preds = %for.body.i289.prol.
   %indvars.iv.i281 = phi i64 [ %indvars.iv.next.i286.1, %for.body.i289 ], [ %indvars.iv.i281.unr.ph, %for.body.i289.prol.loopexit ]
   %i.010.i282 = phi i32 [ %inc.i285.1, %for.body.i289 ], [ %i.010.i282.unr.ph, %for.body.i289.prol.loopexit ]
   %arrayidx.i.i283 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.i281
-  %84 = load i64, i64* %arrayidx.i.i283, align 8, !tbaa !47
+  %84 = load i64, i64* %arrayidx.i.i283, align 8, !tbaa !42
   %arrayidx2.i.i284 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv13.i280
-  %85 = load i64, i64* %arrayidx2.i.i284, align 8, !tbaa !47
-  store i64 %85, i64* %arrayidx.i.i283, align 8, !tbaa !47
-  store i64 %84, i64* %arrayidx2.i.i284, align 8, !tbaa !47
+  %85 = load i64, i64* %arrayidx2.i.i284, align 8, !tbaa !42
+  store i64 %85, i64* %arrayidx.i.i283, align 8, !tbaa !42
+  store i64 %84, i64* %arrayidx2.i.i284, align 8, !tbaa !42
   %indvars.iv.next.i286 = add nsw i64 %indvars.iv.i281, 1
   %indvars.iv.next14.i287 = add nsw i64 %indvars.iv13.i280, 1
   %arrayidx.i.i283.1 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.next.i286
-  %86 = load i64, i64* %arrayidx.i.i283.1, align 8, !tbaa !47
+  %86 = load i64, i64* %arrayidx.i.i283.1, align 8, !tbaa !42
   %arrayidx2.i.i284.1 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.next14.i287
-  %87 = load i64, i64* %arrayidx2.i.i284.1, align 8, !tbaa !47
-  store i64 %87, i64* %arrayidx.i.i283.1, align 8, !tbaa !47
-  store i64 %86, i64* %arrayidx2.i.i284.1, align 8, !tbaa !47
+  %87 = load i64, i64* %arrayidx2.i.i284.1, align 8, !tbaa !42
+  store i64 %87, i64* %arrayidx.i.i283.1, align 8, !tbaa !42
+  store i64 %86, i64* %arrayidx2.i.i284.1, align 8, !tbaa !42
   %inc.i285.1 = add nuw nsw i32 %i.010.i282, 2
   %indvars.iv.next.i286.1 = add nsw i64 %indvars.iv.i281, 2
   %indvars.iv.next14.i287.1 = add nsw i64 %indvars.iv13.i280, 2
   %exitcond.not.i288.1 = icmp eq i32 %inc.i285.1, %.sroa.speculated361
-  br i1 %exitcond.not.i288.1, label %_Z10vectorSwapPliii.exit290, label %for.body.i289, !llvm.loop !79
+  br i1 %exitcond.not.i288.1, label %_Z10vectorSwapPliii.exit290, label %for.body.i289, !llvm.loop !77
 
 _Z10vectorSwapPliii.exit290:                      ; preds = %for.body.i289.prol.loopexit, %for.body.i289, %middle.block487, %while.end83
   %sub92 = sub nsw i32 %d.1.lcssa, %c.1.lcssa
@@ -2024,51 +1909,51 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %offset.idx482 = add i64 %index, %89
   %104 = getelementptr inbounds i64, i64* %9, i64 %offset.idx482
   %105 = bitcast i64* %104 to <2 x i64>*
-  %wide.load = load <2 x i64>, <2 x i64>* %105, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  %wide.load = load <2 x i64>, <2 x i64>* %105, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %106 = getelementptr inbounds i64, i64* %104, i64 2
   %107 = bitcast i64* %106 to <2 x i64>*
-  %wide.load484 = load <2 x i64>, <2 x i64>* %107, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  %wide.load484 = load <2 x i64>, <2 x i64>* %107, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %108 = getelementptr inbounds i64, i64* %9, i64 %offset.idx
   %109 = bitcast i64* %108 to <2 x i64>*
-  %wide.load485 = load <2 x i64>, <2 x i64>* %109, align 8, !tbaa !47, !alias.scope !83
+  %wide.load485 = load <2 x i64>, <2 x i64>* %109, align 8, !tbaa !42, !alias.scope !81
   %110 = getelementptr inbounds i64, i64* %108, i64 2
   %111 = bitcast i64* %110 to <2 x i64>*
-  %wide.load486 = load <2 x i64>, <2 x i64>* %111, align 8, !tbaa !47, !alias.scope !83
+  %wide.load486 = load <2 x i64>, <2 x i64>* %111, align 8, !tbaa !42, !alias.scope !81
   %112 = bitcast i64* %104 to <2 x i64>*
-  store <2 x i64> %wide.load485, <2 x i64>* %112, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  store <2 x i64> %wide.load485, <2 x i64>* %112, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %113 = bitcast i64* %106 to <2 x i64>*
-  store <2 x i64> %wide.load486, <2 x i64>* %113, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  store <2 x i64> %wide.load486, <2 x i64>* %113, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %114 = bitcast i64* %108 to <2 x i64>*
-  store <2 x i64> %wide.load, <2 x i64>* %114, align 8, !tbaa !47, !alias.scope !83
+  store <2 x i64> %wide.load, <2 x i64>* %114, align 8, !tbaa !42, !alias.scope !81
   %115 = bitcast i64* %110 to <2 x i64>*
-  store <2 x i64> %wide.load484, <2 x i64>* %115, align 8, !tbaa !47, !alias.scope !83
+  store <2 x i64> %wide.load484, <2 x i64>* %115, align 8, !tbaa !42, !alias.scope !81
   %index.next = or i64 %index, 4
   %offset.idx.1 = add i64 %index.next, %90
   %offset.idx482.1 = add i64 %index.next, %89
   %116 = getelementptr inbounds i64, i64* %9, i64 %offset.idx482.1
   %117 = bitcast i64* %116 to <2 x i64>*
-  %wide.load.1 = load <2 x i64>, <2 x i64>* %117, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  %wide.load.1 = load <2 x i64>, <2 x i64>* %117, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %118 = getelementptr inbounds i64, i64* %116, i64 2
   %119 = bitcast i64* %118 to <2 x i64>*
-  %wide.load484.1 = load <2 x i64>, <2 x i64>* %119, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  %wide.load484.1 = load <2 x i64>, <2 x i64>* %119, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %120 = getelementptr inbounds i64, i64* %9, i64 %offset.idx.1
   %121 = bitcast i64* %120 to <2 x i64>*
-  %wide.load485.1 = load <2 x i64>, <2 x i64>* %121, align 8, !tbaa !47, !alias.scope !83
+  %wide.load485.1 = load <2 x i64>, <2 x i64>* %121, align 8, !tbaa !42, !alias.scope !81
   %122 = getelementptr inbounds i64, i64* %120, i64 2
   %123 = bitcast i64* %122 to <2 x i64>*
-  %wide.load486.1 = load <2 x i64>, <2 x i64>* %123, align 8, !tbaa !47, !alias.scope !83
+  %wide.load486.1 = load <2 x i64>, <2 x i64>* %123, align 8, !tbaa !42, !alias.scope !81
   %124 = bitcast i64* %116 to <2 x i64>*
-  store <2 x i64> %wide.load485.1, <2 x i64>* %124, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  store <2 x i64> %wide.load485.1, <2 x i64>* %124, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %125 = bitcast i64* %118 to <2 x i64>*
-  store <2 x i64> %wide.load486.1, <2 x i64>* %125, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  store <2 x i64> %wide.load486.1, <2 x i64>* %125, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %126 = bitcast i64* %120 to <2 x i64>*
-  store <2 x i64> %wide.load.1, <2 x i64>* %126, align 8, !tbaa !47, !alias.scope !83
+  store <2 x i64> %wide.load.1, <2 x i64>* %126, align 8, !tbaa !42, !alias.scope !81
   %127 = bitcast i64* %122 to <2 x i64>*
-  store <2 x i64> %wide.load484.1, <2 x i64>* %127, align 8, !tbaa !47, !alias.scope !83
+  store <2 x i64> %wide.load484.1, <2 x i64>* %127, align 8, !tbaa !42, !alias.scope !81
   %index.next.1 = add i64 %index, 8
   %niter546.nsub.1 = add i64 %niter546, -2
   %niter546.ncmp.1 = icmp eq i64 %niter546.nsub.1, 0
-  br i1 %niter546.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !85
+  br i1 %niter546.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !83
 
 middle.block.unr-lcssa:                           ; preds = %vector.body, %vector.ph
   %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1, %vector.body ]
@@ -2080,24 +1965,24 @@ vector.body.epil:                                 ; preds = %middle.block.unr-lc
   %offset.idx482.epil = add i64 %index.unr, %89
   %128 = getelementptr inbounds i64, i64* %9, i64 %offset.idx482.epil
   %129 = bitcast i64* %128 to <2 x i64>*
-  %wide.load.epil = load <2 x i64>, <2 x i64>* %129, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  %wide.load.epil = load <2 x i64>, <2 x i64>* %129, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %130 = getelementptr inbounds i64, i64* %128, i64 2
   %131 = bitcast i64* %130 to <2 x i64>*
-  %wide.load484.epil = load <2 x i64>, <2 x i64>* %131, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  %wide.load484.epil = load <2 x i64>, <2 x i64>* %131, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %132 = getelementptr inbounds i64, i64* %9, i64 %offset.idx.epil
   %133 = bitcast i64* %132 to <2 x i64>*
-  %wide.load485.epil = load <2 x i64>, <2 x i64>* %133, align 8, !tbaa !47, !alias.scope !83
+  %wide.load485.epil = load <2 x i64>, <2 x i64>* %133, align 8, !tbaa !42, !alias.scope !81
   %134 = getelementptr inbounds i64, i64* %132, i64 2
   %135 = bitcast i64* %134 to <2 x i64>*
-  %wide.load486.epil = load <2 x i64>, <2 x i64>* %135, align 8, !tbaa !47, !alias.scope !83
+  %wide.load486.epil = load <2 x i64>, <2 x i64>* %135, align 8, !tbaa !42, !alias.scope !81
   %136 = bitcast i64* %128 to <2 x i64>*
-  store <2 x i64> %wide.load485.epil, <2 x i64>* %136, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  store <2 x i64> %wide.load485.epil, <2 x i64>* %136, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %137 = bitcast i64* %130 to <2 x i64>*
-  store <2 x i64> %wide.load486.epil, <2 x i64>* %137, align 8, !tbaa !47, !alias.scope !80, !noalias !83
+  store <2 x i64> %wide.load486.epil, <2 x i64>* %137, align 8, !tbaa !42, !alias.scope !78, !noalias !81
   %138 = bitcast i64* %132 to <2 x i64>*
-  store <2 x i64> %wide.load.epil, <2 x i64>* %138, align 8, !tbaa !47, !alias.scope !83
+  store <2 x i64> %wide.load.epil, <2 x i64>* %138, align 8, !tbaa !42, !alias.scope !81
   %139 = bitcast i64* %134 to <2 x i64>*
-  store <2 x i64> %wide.load484.epil, <2 x i64>* %139, align 8, !tbaa !47, !alias.scope !83
+  store <2 x i64> %wide.load484.epil, <2 x i64>* %139, align 8, !tbaa !42, !alias.scope !81
   br label %middle.block
 
 middle.block:                                     ; preds = %middle.block.unr-lcssa, %vector.body.epil
@@ -2116,11 +2001,11 @@ for.body.i.preheader:                             ; preds = %vector.memcheck, %f
 
 for.body.i.prol:                                  ; preds = %for.body.i.preheader
   %arrayidx.i.i.prol = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.i.ph
-  %141 = load i64, i64* %arrayidx.i.i.prol, align 8, !tbaa !47
+  %141 = load i64, i64* %arrayidx.i.i.prol, align 8, !tbaa !42
   %arrayidx2.i.i.prol = getelementptr inbounds i64, i64* %9, i64 %indvars.iv13.i.ph
-  %142 = load i64, i64* %arrayidx2.i.i.prol, align 8, !tbaa !47
-  store i64 %142, i64* %arrayidx.i.i.prol, align 8, !tbaa !47
-  store i64 %141, i64* %arrayidx2.i.i.prol, align 8, !tbaa !47
+  %142 = load i64, i64* %arrayidx2.i.i.prol, align 8, !tbaa !42
+  store i64 %142, i64* %arrayidx.i.i.prol, align 8, !tbaa !42
+  store i64 %141, i64* %arrayidx2.i.i.prol, align 8, !tbaa !42
   %inc.i.prol = add nuw nsw i32 %i.010.i.ph, 1
   %indvars.iv.next.i.prol = add nsw i64 %indvars.iv.i.ph, 1
   %indvars.iv.next14.i.prol = add nsw i64 %indvars.iv13.i.ph, 1
@@ -2138,24 +2023,24 @@ for.body.i:                                       ; preds = %for.body.i.prol.loo
   %indvars.iv.i = phi i64 [ %indvars.iv.next.i.1, %for.body.i ], [ %indvars.iv.i.unr.ph, %for.body.i.prol.loopexit ]
   %i.010.i = phi i32 [ %inc.i.1, %for.body.i ], [ %i.010.i.unr.ph, %for.body.i.prol.loopexit ]
   %arrayidx.i.i = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.i
-  %144 = load i64, i64* %arrayidx.i.i, align 8, !tbaa !47
+  %144 = load i64, i64* %arrayidx.i.i, align 8, !tbaa !42
   %arrayidx2.i.i = getelementptr inbounds i64, i64* %9, i64 %indvars.iv13.i
-  %145 = load i64, i64* %arrayidx2.i.i, align 8, !tbaa !47
-  store i64 %145, i64* %arrayidx.i.i, align 8, !tbaa !47
-  store i64 %144, i64* %arrayidx2.i.i, align 8, !tbaa !47
+  %145 = load i64, i64* %arrayidx2.i.i, align 8, !tbaa !42
+  store i64 %145, i64* %arrayidx.i.i, align 8, !tbaa !42
+  store i64 %144, i64* %arrayidx2.i.i, align 8, !tbaa !42
   %indvars.iv.next.i = add nsw i64 %indvars.iv.i, 1
   %indvars.iv.next14.i = add nsw i64 %indvars.iv13.i, 1
   %arrayidx.i.i.1 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.next.i
-  %146 = load i64, i64* %arrayidx.i.i.1, align 8, !tbaa !47
+  %146 = load i64, i64* %arrayidx.i.i.1, align 8, !tbaa !42
   %arrayidx2.i.i.1 = getelementptr inbounds i64, i64* %9, i64 %indvars.iv.next14.i
-  %147 = load i64, i64* %arrayidx2.i.i.1, align 8, !tbaa !47
-  store i64 %147, i64* %arrayidx.i.i.1, align 8, !tbaa !47
-  store i64 %146, i64* %arrayidx2.i.i.1, align 8, !tbaa !47
+  %147 = load i64, i64* %arrayidx2.i.i.1, align 8, !tbaa !42
+  store i64 %147, i64* %arrayidx.i.i.1, align 8, !tbaa !42
+  store i64 %146, i64* %arrayidx2.i.i.1, align 8, !tbaa !42
   %inc.i.1 = add nuw nsw i32 %i.010.i, 2
   %indvars.iv.next.i.1 = add nsw i64 %indvars.iv.i, 2
   %indvars.iv.next14.i.1 = add nsw i64 %indvars.iv13.i, 2
   %exitcond.not.i.1 = icmp eq i32 %inc.i.1, %.sroa.speculated
-  br i1 %exitcond.not.i.1, label %_Z10vectorSwapPliii.exit, label %for.body.i, !llvm.loop !86
+  br i1 %exitcond.not.i.1, label %_Z10vectorSwapPliii.exit, label %for.body.i, !llvm.loop !84
 
 _Z10vectorSwapPliii.exit:                         ; preds = %for.body.i.prol.loopexit, %for.body.i, %middle.block, %_Z10vectorSwapPliii.exit290
   %cmp99 = icmp sgt i32 %sub88, 1
@@ -2172,7 +2057,7 @@ if.end102:                                        ; preds = %if.then100, %_Z10ve
 
 if.then105:                                       ; preds = %if.end102
   %sub106 = sub nsw i32 %to, %sub92
-  %148 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !46
+  %148 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !53
   %cmp = icmp slt i32 %sub92, 7
   br i1 %cmp, label %for.cond.preheader, label %if.end
 
@@ -2201,7 +2086,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %preTableIndex.031 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
   %inputData.030 = phi i32* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %2 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %2 = load i64, i64* %arrayidx, align 8, !tbaa !42
   %3 = lshr i64 %2, 32
   %conv.i = trunc i64 %3 to i32
   %cmp2.not = icmp eq i32 %preTableIndex.031, %conv.i
@@ -2228,7 +2113,7 @@ if.end:                                           ; preds = %if.then, %for.body
   %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %cmp = icmp slt i64 %indvars.iv.next, %1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !87
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !85
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
@@ -2252,7 +2137,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %preTableIndex.031 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
   %inputData.030 = phi i64* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %2 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %2 = load i64, i64* %arrayidx, align 8, !tbaa !42
   %3 = lshr i64 %2, 32
   %conv.i = trunc i64 %3 to i32
   %cmp2.not = icmp eq i32 %preTableIndex.031, %conv.i
@@ -2273,13 +2158,13 @@ if.end:                                           ; preds = %if.then, %for.body
   %sext = shl i64 %2, 32
   %idxprom6 = ashr exact i64 %sext, 32
   %arrayidx7 = getelementptr inbounds i64, i64* %inputData.1, i64 %idxprom6
-  %7 = load i64, i64* %arrayidx7, align 8, !tbaa !47
+  %7 = load i64, i64* %arrayidx7, align 8, !tbaa !42
   %arrayidx9 = getelementptr inbounds i64, i64* %outputData, i64 %indvars.iv34
-  store i64 %7, i64* %arrayidx9, align 8, !tbaa !47
+  store i64 %7, i64* %arrayidx9, align 8, !tbaa !42
   %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %cmp = icmp slt i64 %indvars.iv.next, %1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !88
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !86
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
@@ -2303,7 +2188,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %preTableIndex.031 = phi i32 [ -1, %for.body.preheader ], [ %preTableIndex.1, %if.end ]
   %inputData.030 = phi double* [ null, %for.body.preheader ], [ %inputData.1, %if.end ]
   %arrayidx = getelementptr inbounds i64, i64* %valueAddresses, i64 %indvars.iv
-  %2 = load i64, i64* %arrayidx, align 8, !tbaa !47
+  %2 = load i64, i64* %arrayidx, align 8, !tbaa !42
   %3 = lshr i64 %2, 32
   %conv.i = trunc i64 %3 to i32
   %cmp2.not = icmp eq i32 %preTableIndex.031, %conv.i
@@ -2324,13 +2209,13 @@ if.end:                                           ; preds = %if.then, %for.body
   %sext = shl i64 %2, 32
   %idxprom6 = ashr exact i64 %sext, 32
   %arrayidx7 = getelementptr inbounds double, double* %inputData.1, i64 %idxprom6
-  %7 = load double, double* %arrayidx7, align 8, !tbaa !66
+  %7 = load double, double* %arrayidx7, align 8, !tbaa !64
   %arrayidx9 = getelementptr inbounds double, double* %outputData, i64 %indvars.iv34
-  store double %7, double* %arrayidx9, align 8, !tbaa !66
+  store double %7, double* %arrayidx9, align 8, !tbaa !64
   %indvars.iv.next35 = add nuw nsw i64 %indvars.iv34, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %cmp = icmp slt i64 %indvars.iv.next, %1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !89
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !87
 }
 
 ; Function Attrs: nofree norecurse nounwind uwtable mustprogress
@@ -2338,9 +2223,9 @@ define dso_local void @_Z9getResultlPiilS_ii(i64 %pagesIndexAddr, i32* nocapture
 entry:
   %0 = inttoptr i64 %pagesIndexAddr to %class.PagesIndex*
   %columns.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 6
-  %1 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !43
+  %1 = load %class.Column***, %class.Column**** %columns.i, align 8, !tbaa !54
   %valueAddresses.i = getelementptr inbounds %class.PagesIndex, %class.PagesIndex* %0, i64 0, i32 3
-  %2 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !46
+  %2 = load i64*, i64** %valueAddresses.i, align 8, !tbaa !53
   %cmp87 = icmp sgt i32 %outputColsCount, 0
   br i1 %cmp87, label %for.body.lr.ph, label %for.cond.cleanup
 
@@ -2394,7 +2279,7 @@ for.body.i.us:                                    ; preds = %if.end.i.us, %sw.bb
   %preTableIndex.031.i.us = phi i32 [ -1, %sw.bb9.us ], [ %preTableIndex.1.i.us, %if.end.i.us ]
   %inputData.030.i.us = phi double* [ null, %sw.bb9.us ], [ %inputData.1.i.us, %if.end.i.us ]
   %arrayidx.i.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i.us
-  %15 = load i64, i64* %arrayidx.i.us, align 8, !tbaa !47
+  %15 = load i64, i64* %arrayidx.i.us, align 8, !tbaa !42
   %16 = lshr i64 %15, 32
   %conv.i.i.us = trunc i64 %16 to i32
   %cmp2.not.i.us = icmp eq i32 %preTableIndex.031.i.us, %conv.i.i.us
@@ -2415,13 +2300,13 @@ if.end.i.us:                                      ; preds = %if.then.i.us, %for.
   %sext.i.us = shl i64 %15, 32
   %idxprom6.i.us = ashr exact i64 %sext.i.us, 32
   %arrayidx7.i.us = getelementptr inbounds double, double* %inputData.1.i.us, i64 %idxprom6.i.us
-  %20 = load double, double* %arrayidx7.i.us, align 8, !tbaa !66
+  %20 = load double, double* %arrayidx7.i.us, align 8, !tbaa !64
   %arrayidx9.i.us = getelementptr inbounds double, double* %14, i64 %indvars.iv34.i.us
-  store double %20, double* %arrayidx9.i.us, align 8, !tbaa !66
+  store double %20, double* %arrayidx9.i.us, align 8, !tbaa !64
   %indvars.iv.next35.i.us = add nuw nsw i64 %indvars.iv34.i.us, 1
   %indvars.iv.next.i.us = add nsw i64 %indvars.iv.i.us, 1
   %cmp.i.us = icmp slt i64 %indvars.iv.next.i.us, %6
-  br i1 %cmp.i.us, label %for.body.i.us, label %sw.epilog.us, !llvm.loop !89
+  br i1 %cmp.i.us, label %for.body.i.us, label %sw.epilog.us, !llvm.loop !87
 
 for.body.i45.us.preheader:                        ; preds = %for.body.us
   %21 = bitcast i8* %11 to i64*
@@ -2433,7 +2318,7 @@ for.body.i45.us:                                  ; preds = %for.body.i45.us.pre
   %preTableIndex.031.i40.us = phi i32 [ %preTableIndex.1.i51.us, %if.end.i59.us ], [ -1, %for.body.i45.us.preheader ]
   %inputData.030.i41.us = phi i64* [ %inputData.1.i50.us, %if.end.i59.us ], [ null, %for.body.i45.us.preheader ]
   %arrayidx.i42.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i39.us
-  %22 = load i64, i64* %arrayidx.i42.us, align 8, !tbaa !47
+  %22 = load i64, i64* %arrayidx.i42.us, align 8, !tbaa !42
   %23 = lshr i64 %22, 32
   %conv.i.i43.us = trunc i64 %23 to i32
   %cmp2.not.i44.us = icmp eq i32 %preTableIndex.031.i40.us, %conv.i.i43.us
@@ -2454,13 +2339,13 @@ if.end.i59.us:                                    ; preds = %if.then.i49.us, %fo
   %sext.i52.us = shl i64 %22, 32
   %idxprom6.i53.us = ashr exact i64 %sext.i52.us, 32
   %arrayidx7.i54.us = getelementptr inbounds i64, i64* %inputData.1.i50.us, i64 %idxprom6.i53.us
-  %27 = load i64, i64* %arrayidx7.i54.us, align 8, !tbaa !47
+  %27 = load i64, i64* %arrayidx7.i54.us, align 8, !tbaa !42
   %arrayidx9.i55.us = getelementptr inbounds i64, i64* %21, i64 %indvars.iv34.i38.us
-  store i64 %27, i64* %arrayidx9.i55.us, align 8, !tbaa !47
+  store i64 %27, i64* %arrayidx9.i55.us, align 8, !tbaa !42
   %indvars.iv.next35.i56.us = add nuw nsw i64 %indvars.iv34.i38.us, 1
   %indvars.iv.next.i57.us = add nsw i64 %indvars.iv.i39.us, 1
   %cmp.i58.us = icmp slt i64 %indvars.iv.next.i57.us, %6
-  br i1 %cmp.i58.us, label %for.body.i45.us, label %sw.epilog.us, !llvm.loop !88
+  br i1 %cmp.i58.us, label %for.body.i45.us, label %sw.epilog.us, !llvm.loop !86
 
 for.body.i70.us.preheader:                        ; preds = %for.body.us
   %28 = bitcast i8* %11 to i32*
@@ -2472,7 +2357,7 @@ for.body.i70.us:                                  ; preds = %for.body.i70.us.pre
   %preTableIndex.031.i65.us = phi i32 [ %preTableIndex.1.i76.us, %if.end.i84.us ], [ -1, %for.body.i70.us.preheader ]
   %inputData.030.i66.us = phi i32* [ %inputData.1.i75.us, %if.end.i84.us ], [ null, %for.body.i70.us.preheader ]
   %arrayidx.i67.us = getelementptr inbounds i64, i64* %2, i64 %indvars.iv.i64.us
-  %29 = load i64, i64* %arrayidx.i67.us, align 8, !tbaa !47
+  %29 = load i64, i64* %arrayidx.i67.us, align 8, !tbaa !42
   %30 = lshr i64 %29, 32
   %conv.i.i68.us = trunc i64 %30 to i32
   %cmp2.not.i69.us = icmp eq i32 %preTableIndex.031.i65.us, %conv.i.i68.us
@@ -2499,12 +2384,12 @@ if.end.i84.us:                                    ; preds = %if.then.i74.us, %fo
   %indvars.iv.next35.i81.us = add nuw nsw i64 %indvars.iv34.i63.us, 1
   %indvars.iv.next.i82.us = add nsw i64 %indvars.iv.i64.us, 1
   %cmp.i83.us = icmp slt i64 %indvars.iv.next.i82.us, %6
-  br i1 %cmp.i83.us, label %for.body.i70.us, label %sw.epilog.us, !llvm.loop !87
+  br i1 %cmp.i83.us, label %for.body.i70.us, label %sw.epilog.us, !llvm.loop !85
 
 sw.epilog.us:                                     ; preds = %if.end.i.us, %if.end.i59.us, %if.end.i84.us, %for.body.us
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body.us, !llvm.loop !90
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body.us, !llvm.loop !88
 
 for.cond.cleanup.loopexit105.unr-lcssa:           ; preds = %for.body, %for.body.preheader
   %lcmp.mod.not = icmp eq i64 %xtraiter, 0
@@ -2514,7 +2399,7 @@ for.body.epil:                                    ; preds = %for.cond.cleanup.lo
   %epil.iter = phi i64 [ %epil.iter.sub, %for.body.epil ], [ %xtraiter, %for.cond.cleanup.loopexit105.unr-lcssa ]
   %epil.iter.sub = add i64 %epil.iter, -1
   %epil.iter.cmp.not = icmp eq i64 %epil.iter.sub, 0
-  br i1 %epil.iter.cmp.not, label %for.cond.cleanup, label %for.body.epil, !llvm.loop !91
+  br i1 %epil.iter.cmp.not, label %for.cond.cleanup, label %for.body.epil, !llvm.loop !89
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit105.unr-lcssa, %for.body.epil, %sw.epilog.us, %entry
   ret void
@@ -2523,7 +2408,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %niter = phi i64 [ %unroll_iter, %for.body.preheader.new ], [ %niter.nsub.7, %for.body ]
   %niter.nsub.7 = add i64 %niter, -8
   %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
-  br i1 %niter.ncmp.7, label %for.cond.cleanup.loopexit105.unr-lcssa, label %for.body, !llvm.loop !90
+  br i1 %niter.ncmp.7, label %for.cond.cleanup.loopexit105.unr-lcssa, label %for.body, !llvm.loop !88
 }
 
 ; Function Attrs: nounwind uwtable willreturn mustprogress
@@ -2571,7 +2456,7 @@ attributes #10 = { nofree norecurse nounwind uwtable willreturn mustprogress "di
 attributes #11 = { nofree norecurse nounwind uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #12 = { nofree norecurse nounwind uwtable willreturn writeonly "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #13 = { inaccessiblememonly nofree nounwind willreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #14 = { inaccessiblemem_or_argmemonly nounwind willreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #14 = { norecurse nounwind readnone uwtable willreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #15 = { norecurse nounwind readonly uwtable willreturn mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #16 = { nofree nounwind uwtable "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #17 = { nounwind uwtable willreturn mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -2585,7 +2470,7 @@ attributes #22 = { builtin nounwind }
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"Ubuntu clang version 12.0.0-++20210301072539+98f06b16a313-1~exp1~20210301183256.51"}
+!1 = !{!"Ubuntu clang version 12.0.0-++20210225092633+e0e6b1e39e7e-1~exp1~20210225083352.50"}
 !2 = !{!3, !3, i64 0}
 !3 = !{!"any pointer", !4, i64 0}
 !4 = !{!"omnipotent char", !5, i64 0}
@@ -2626,54 +2511,52 @@ attributes #22 = { builtin nounwind }
 !39 = !{!"_ZTS10PagesIndex", !3, i64 0, !7, i64 8, !3, i64 16, !7, i64 24, !3, i64 32, !7, i64 40}
 !40 = !{!39, !7, i64 8}
 !41 = !{!30, !3, i64 72}
-!42 = !{!39, !7, i64 40}
-!43 = !{!39, !3, i64 32}
-!44 = distinct !{!44, !28}
-!45 = distinct !{!45, !28}
-!46 = !{!39, !3, i64 16}
-!47 = !{!13, !13, i64 0}
-!48 = !{!49}
-!49 = distinct !{!49, !50}
-!50 = distinct !{!50, !"LVerDomain"}
-!51 = !{!52}
-!52 = distinct !{!52, !50}
-!53 = distinct !{!53, !28, !54}
-!54 = !{!"llvm.loop.isvectorized", i32 1}
-!55 = distinct !{!55, !28, !54}
-!56 = !{!39, !7, i64 24}
-!57 = distinct !{!57, !28}
-!58 = distinct !{!58, !28}
-!59 = distinct !{!59, !28, !60, !54}
-!60 = !{!"llvm.loop.unroll.runtime.disable"}
-!61 = !{!11, !3, i64 16}
-!62 = distinct !{!62, !28}
-!63 = distinct !{!63, !28, !54}
-!64 = distinct !{!64, !28, !54}
-!65 = distinct !{!65, !28, !60, !54}
-!66 = !{!67, !67, i64 0}
-!67 = !{!"double", !4, i64 0}
+!42 = !{!13, !13, i64 0}
+!43 = !{!44}
+!44 = distinct !{!44, !45}
+!45 = distinct !{!45, !"LVerDomain"}
+!46 = !{!47}
+!47 = distinct !{!47, !45}
+!48 = distinct !{!48, !28, !49}
+!49 = !{!"llvm.loop.isvectorized", i32 1}
+!50 = distinct !{!50, !28, !49}
+!51 = !{!39, !7, i64 40}
+!52 = !{!39, !7, i64 24}
+!53 = !{!39, !3, i64 16}
+!54 = !{!39, !3, i64 32}
+!55 = distinct !{!55, !28}
+!56 = distinct !{!56, !28}
+!57 = distinct !{!57, !28, !58, !49}
+!58 = !{!"llvm.loop.unroll.runtime.disable"}
+!59 = !{!11, !3, i64 16}
+!60 = distinct !{!60, !28}
+!61 = distinct !{!61, !28, !49}
+!62 = distinct !{!62, !28, !49}
+!63 = distinct !{!63, !28, !58, !49}
+!64 = !{!65, !65, i64 0}
+!65 = !{!"double", !4, i64 0}
+!66 = distinct !{!66, !28}
+!67 = distinct !{!67, !28}
 !68 = distinct !{!68, !28}
 !69 = distinct !{!69, !28}
 !70 = distinct !{!70, !28}
-!71 = distinct !{!71, !28}
-!72 = distinct !{!72, !28}
-!73 = !{!74}
-!74 = distinct !{!74, !75}
-!75 = distinct !{!75, !"LVerDomain"}
-!76 = !{!77}
-!77 = distinct !{!77, !75}
-!78 = distinct !{!78, !28, !54}
-!79 = distinct !{!79, !28, !54}
-!80 = !{!81}
-!81 = distinct !{!81, !82}
-!82 = distinct !{!82, !"LVerDomain"}
-!83 = !{!84}
-!84 = distinct !{!84, !82}
-!85 = distinct !{!85, !28, !54}
-!86 = distinct !{!86, !28, !54}
+!71 = !{!72}
+!72 = distinct !{!72, !73}
+!73 = distinct !{!73, !"LVerDomain"}
+!74 = !{!75}
+!75 = distinct !{!75, !73}
+!76 = distinct !{!76, !28, !49}
+!77 = distinct !{!77, !28, !49}
+!78 = !{!79}
+!79 = distinct !{!79, !80}
+!80 = distinct !{!80, !"LVerDomain"}
+!81 = !{!82}
+!82 = distinct !{!82, !80}
+!83 = distinct !{!83, !28, !49}
+!84 = distinct !{!84, !28, !49}
+!85 = distinct !{!85, !28}
+!86 = distinct !{!86, !28}
 !87 = distinct !{!87, !28}
 !88 = distinct !{!88, !28}
-!89 = distinct !{!89, !28}
-!90 = distinct !{!90, !28}
-!91 = distinct !{!91, !92}
-!92 = !{!"llvm.loop.unroll.disable"}
+!89 = distinct !{!89, !90}
+!90 = !{!"llvm.loop.unroll.disable"}
