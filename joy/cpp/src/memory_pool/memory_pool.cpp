@@ -1,8 +1,9 @@
-#define JEMALLOC_NO_DEMANGLE
 #include <iostream>
 #include "memory_pool.h"
 #include <jemalloc/jemalloc.h>
-//#include "./jemalloc/jemalloc_defs.h"
+
+const size_t alignment = 64;
+
 class JemallocAllocator {
         public:
     static int allocate(int64_t size, uint8_t** buffer) {
@@ -12,13 +13,13 @@ class JemallocAllocator {
         }
         // jemalloc alloc
         //std::cout << "jemalloc allocate" << std::endl;
-        *buffer = reinterpret_cast<uint8_t*>(je_malloc(static_cast<size_t>(size)));
+        *buffer = reinterpret_cast<uint8_t*> (mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(alignment)));
         return 0;
     }
     static int release(uint8_t* buffer) {
         // jemalloc free
         //std::cout << "jemalloc allocate" << std::endl;
-        je_free(reinterpret_cast<void*>(buffer));
+        dallocx(reinterpret_cast<void*>(buffer), MALLOCX_ALIGN(alignment));
         return 0;
     }
 };
