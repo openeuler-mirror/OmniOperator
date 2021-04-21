@@ -53,6 +53,7 @@ JitContext* optimizeByLlvm( PrepareContext groupByCols,
     testParam["_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
     testParam["_ZN11HashGroupBy15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
     Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
     Hammer hammer2("/opt/lib/ir/hash_groupby.ll", testParam);
     Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);

@@ -79,6 +79,7 @@ int64_t sortPrepare(
 
 
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
 
     Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
     Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
@@ -232,13 +233,13 @@ Table **sortGetOutput(int64_t contextAddress, int64_t sortAddress, int32_t *tabl
     int32_t *outputCols = sort->getOutputCols();
     int32_t *sourceTypes = sort->getSourceTypes();
 
+    if (positionCount == 0) {
+        return NULL;
+    }
+
     int32_t maxRowCount = getMaxRowCount(sourceTypes, outputCols, outputColsCount);
     int32_t tableCount = getTableCount(positionCount, maxRowCount);
     *tableCountAddr = tableCount;
-
-    if (tableCount == 0) {
-        return NULL;
-    }
 
     Table **result = (Table **)malloc(sizeof(Table *) * tableCount);
     Table *outputTable = NULL;
@@ -260,7 +261,7 @@ Table **sortGetOutput(int64_t contextAddress, int64_t sortAddress, int32_t *tabl
             auto start = START();
             allocColumns((int64_t)outputTable, sourceTypes, outputCols, outputColsCount, rowCount);
             PRINT_API("ORIGINAL allocColumns call elapsed time: %ld ms\n", END(start));
-            getResult((int64_t)pagesIndex, outputCols, outputColsCount, (int64_t)outputTable, sourceTypes, position, rowCount); 
+            getResult((int64_t)pagesIndex, outputCols, outputColsCount, (int64_t)outputTable, sourceTypes, position, rowCount);
             PRINT_API("ORIGINAL getResult call elapsed time: %ld ms\n", END(start));
         }
         position += rowCount;   

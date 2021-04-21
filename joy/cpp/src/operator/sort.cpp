@@ -60,7 +60,8 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
     MemoryPool *pool = getMemoryPool();
     int32_t outputCol;
     int32_t columnTypeIdx;
-    uint8_t *data = NULL;
+    void *data = NULL;
+    Column *column = NULL;
     
     for (int32_t i = 0; i < outputColCount; i++) {
         outputCol = outputCols[i];
@@ -68,20 +69,27 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
         switch (columnTypeIdx)
         {
         case 1:
-            pool->allocate(positionCount * sizeof(int32_t), &data);
+            //pool->allocate(positionCount * sizeof(int32_t), &data);
+            data = malloc(positionCount * sizeof(int32_t));
+            column = new Column(data, INT32, positionCount);
+            outputTable->setColumn(column, INT32);
             break;
         case 2:
-            pool->allocate(positionCount * sizeof(int64_t), &data);
+            //pool->allocate(positionCount * sizeof(int64_t), &data);
+            data = malloc(positionCount * sizeof(int64_t));
+            column = new Column(data, INT64, positionCount);
+            outputTable->setColumn(column, INT64);
             break;
         case 3:
-            pool->allocate(positionCount * sizeof(double), &data);
+            //pool->allocate(positionCount * sizeof(double), &data);
+            data = malloc(positionCount * sizeof(double));
+            column = new Column(data, DOUBLE, positionCount);
+            outputTable->setColumn(column, DOUBLE);
             break;    
         default:
+            printf("unsupported type\n");
             break;
         }
-        ColumnType columnType = getColumnType(columnTypeIdx);
-        Column *column = new Column(data, columnType, positionCount);
-        outputTable->setColumn(column, columnType);
     }
 }
 
@@ -163,15 +171,15 @@ void PagesIndex::addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, in
 
     this->tableCount = pageCount;
     this->positionCount = totalRowCount;
-
+    
     if (pageCount == 0) {
         return;
     }
-
+    
     valueAddresses = (int64_t *)malloc(totalRowCount * sizeof(int64_t));
-    columns = (Column ***)malloc(sizeof(Column **));
-    for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-        columns[colIdx] = (Column **)malloc(sizeof(Column *) * tableCount);
+    columns = (Column ***)malloc(sizeof(Column **) * typesCount);
+    for (int32_t i = 0; i < typesCount; i++) {
+        columns[i] = (Column **)malloc(sizeof(Column *) * tableCount);
     }
 
     for (int32_t tableIdx = 0; tableIdx < pageCount; tableIdx++) {
@@ -197,14 +205,14 @@ void PagesIndex::addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, in
 
 PagesIndex::~PagesIndex()
 {
-    // for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-    //     for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-    //         delete columns[colIdx][tableIdx];
-    //     }
-    //     free(columns[colIdx]);
-    // }
-    // free(columns);
-    // free(valueAddresses);
+     for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
+         for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+             delete columns[colIdx][tableIdx];
+         }
+         free(columns[colIdx]);
+     }
+     free(columns);
+     free(valueAddresses);
 }
 
 int64_t createSort(
@@ -531,6 +539,7 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
         valueAddress = valueAddresses[i];
         tableIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
+
         if (preTableIndex != tableIndex) {
             inputColumn = inputTable[tableIndex];
             inputData = (int64_t *)(inputColumn->getData());
