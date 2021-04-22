@@ -7,8 +7,8 @@ const size_t alignment = 64;
 class JemallocAllocator {
         public:
     static int allocate(int64_t size, uint8_t** buffer) {
-        if (size == 0) {
-            std::cout << "allocate size is 0" << std::endl;
+        if (size < 0) {
+            std::cout << "allocate size is negative." << std::endl;
             return -1;
         }
         // jemalloc alloc

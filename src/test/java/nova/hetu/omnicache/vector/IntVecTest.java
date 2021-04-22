@@ -36,4 +36,12 @@ public class IntVecTest
             Assert.assertEquals(i, slice2.get(i));
         }
     }
+
+    @Test
+    public void testZeroSizeAllocate() {
+        IntVec v1 = new IntVec(0);
+        int[] values = new int[0];
+        v1.getData().asIntBuffer().put(values, 0 , values.length);
+        v1.close();
+    }
 }

@@ -37,4 +37,12 @@ public class DoubleVecTest
             Assert.assertEquals(vec1.get(i), slice2.get(i));
         }
     }
+
+    @Test
+    public void testZeroSizeAllocate() {
+        DoubleVec v1 = new DoubleVec(0);
+        double[] values = new double[0];
+        v1.getData().asDoubleBuffer().put(values, 0 , values.length);
+        v1.close();
+    }
 }

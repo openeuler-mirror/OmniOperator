@@ -42,11 +42,6 @@ public abstract class Vec
 
     public Vec(int rowSize, int alloc_size)
     {
-        if (rowSize == 0 && alloc_size == 0) {
-            this.omniChunk = null;
-            this.size = 0;
-            return;
-        }
         this.omniChunk = new OMChunk(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN));
         this.size = rowSize;
     }

@@ -89,4 +89,12 @@ public class LongVecTest
             System.out.println("total time: " + total);
         }
     }
+
+    @Test
+    public void testZeroSizeAllocate() {
+        LongVec v1 = new LongVec(0);
+        long[] values = new long[0];
+        v1.getData().asLongBuffer().put(values, 0 , values.length);
+        v1.close();
+    }
 }
