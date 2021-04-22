@@ -1,7 +1,14 @@
 #include <iostream>
 #include "memory_pool.h"
 #include <jemalloc/jemalloc.h>
+#ifdef DEBUG
+#include <atomic>
+#include <thread>
+#include <unistd.h>
 
+std::atomic_long g_allocateCount(0);
+std::atomic_long g_releaseCount(0);
+#endif
 const size_t alignment = 64;
 
 class JemallocAllocator {
@@ -55,11 +62,29 @@ MemoryPool *getMemoryPool()
 void* omni_allocate(uint64_t size) {
     uint8_t* buf;
     jemallocMemoryPool.allocate(size, &buf);
+#ifdef DEBUG
+    g_allocateCount += 1;
+#endif
     return (void *)buf;
 }
 
 void omni_release(int64_t address) {
     uint8_t* ptr = (uint8_t*)address;
     jemallocMemoryPool.release(ptr);
+#ifdef DEBUG
+    g_releaseCount += 1;
+#endif
 }
 
+#ifdef DEBUG
+void printStatistics()
+{
+    while (true)
+    {
+        std::cout << "Allocate Count=" << g_allocateCount << ", Release Count=" << g_releaseCount << ", Leak Count=" << (g_allocateCount - g_releaseCount) << std::endl;
+        sleep(10);
+    }
+}
+
+static std::thread g_backThread = std::thread(printStatistics);
+#endif
