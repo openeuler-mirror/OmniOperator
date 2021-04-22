@@ -57,7 +57,6 @@ int32_t getColTypeIdx(ColumnType type)
 void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount)
 {
     Table *outputTable = (Table *)outputTableAddr;
-    MemoryPool *pool = getMemoryPool();
     int32_t outputCol;
     int32_t columnTypeIdx;
     void *data = NULL;
@@ -69,20 +68,17 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
         switch (columnTypeIdx)
         {
         case 1:
-            //pool->allocate(positionCount * sizeof(int32_t), &data);
-            data = malloc(positionCount * sizeof(int32_t));
+            data = omni_allocate(positionCount * sizeof(int32_t));
             column = new Column(data, INT32, positionCount);
             outputTable->setColumn(column, INT32);
             break;
         case 2:
-            //pool->allocate(positionCount * sizeof(int64_t), &data);
-            data = malloc(positionCount * sizeof(int64_t));
+            data = omni_allocate(positionCount * sizeof(int64_t));
             column = new Column(data, INT64, positionCount);
             outputTable->setColumn(column, INT64);
             break;
         case 3:
-            //pool->allocate(positionCount * sizeof(double), &data);
-            data = malloc(positionCount * sizeof(double));
+            data = omni_allocate(positionCount * sizeof(double));
             column = new Column(data, DOUBLE, positionCount);
             outputTable->setColumn(column, DOUBLE);
             break;    
@@ -205,14 +201,14 @@ void PagesIndex::addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, in
 
 PagesIndex::~PagesIndex()
 {
-     for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-         for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-             delete columns[colIdx][tableIdx];
-         }
-         free(columns[colIdx]);
-     }
-     free(columns);
-     free(valueAddresses);
+    for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
+        for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+            delete columns[colIdx][tableIdx];
+        }
+        free(columns[colIdx]);
+    }
+    free(columns);
+    free(valueAddresses);
 }
 
 int64_t createSort(

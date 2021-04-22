@@ -1,27 +1,8 @@
 #include "sort_api.h"
 #include "../util/debug.h"
-#include "../harden/Hammer.h"
-#include "../harden/HammerConfig.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include <thread>
 
 using namespace codegen;
-
-typedef int64_t (*jit_createSort)(int32_t *, int32_t, int32_t *, int32_t, int32_t *, int32_t *, int32_t *, int32_t);
-typedef void (*jit_quickSort)(int64_t, int32_t *, int32_t *, int32_t *, int32_t *, int32_t, int32_t, int32_t);
-typedef void (*jit_allocColumns)(int64_t, int32_t *, int32_t *, int32_t, int32_t);
-typedef void (*jit_getResult)(int64_t, int32_t *, int32_t, int64_t, int32_t *, int32_t, int32_t);
-
-typedef struct JitSortContext
-{
-    LLJIT *jitter;
-    jit_createSort createSortFunc;
-    jit_quickSort sortFunc;
-    jit_allocColumns allocColumnsFunc;
-    jit_getResult getResultFunc;
-} JitSortContext;
 
 int64_t sortPrepare(
     int32_t *sourceTypes,
@@ -61,7 +42,6 @@ int64_t sortPrepare(
     testParam["_Z10createSortPiiS_iS_S_S_i@6"] = &p_sortNullFirsts;
     testParam["_Z10createSortPiiS_iS_S_S_i@7"] = &p_sortColCount;
 
-
     testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
     testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
     testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
@@ -76,8 +56,6 @@ int64_t sortPrepare(
     testParam["_Z9getResultlPiilS_ii@2"] = &p_outputColCount;
     testParam["_Z9getResultlPiilS_ii@4"] = &p_sourceTypes;
 
-
-
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
 
@@ -86,7 +64,6 @@ int64_t sortPrepare(
     hammer1.harden();
     hammer2.harden();
     deps.push_back(&hammer2);
-
 
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
@@ -267,5 +244,15 @@ Table **sortGetOutput(int64_t contextAddress, int64_t sortAddress, int32_t *tabl
         position += rowCount;   
         result[i] = outputTable;
     }
+
+    delete sort;
     return result;
+}
+
+void freeOutputTable(Table **outputTable, int32_t tableCount)
+{
+    for (int32_t i = 0; i < tableCount; i++) {
+        delete outputTable[i];
+    }
+    delete[] outputTable;
 }

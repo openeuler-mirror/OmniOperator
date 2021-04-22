@@ -58,8 +58,7 @@ void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, 
     std::cout << "buildSortTestData finished elapsed end time: " << (double)d.count() << " ms" << std::endl;
 }
 
-//void sortProcess(long **datas, long **nulls, int tableCount, uint32_t rowNum)
-void sortProcess1()
+void sortProcess()
 {
     //std::cout << "current thread on CPU " << sched_getcpu() << endl;
     uint32_t rowNum = g_distinctValue * g_repeatCount;
@@ -78,40 +77,15 @@ void sortProcess1()
     long sortAddress = sortCreateOperator(g_contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     sortAddInput(g_contextAddress, sortAddress, g_datas, g_nulls, g_tableCount, rowCounts, g_tableCount * rowNum);
     sortExecute(g_contextAddress, sortAddress);
-    Table *output = sortGetOutput(g_contextAddress, sortAddress);
+    int32_t outputTableCount = 0;
+    Table **output = sortGetOutput(g_contextAddress, sortAddress, &outputTableCount);
     //auto t1 = Time::now();
     //fsec fs = t1 - t0;
     //ms d = std::chrono::duration_cast<ms>(fs);
     //g_time = g_time + (long)d.count();
     //std::cout << "THREAD sortProcess finished elapsed end time: " << (double)d.count() << " ms" << std::endl;
-}
 
-void sortProcess2()
-{
-    //std::cout << "current thread on CPU " << sched_getcpu() << endl;
-    uint32_t rowNum = g_distinctValue * g_repeatCount;
-    int32_t rowCounts[g_tableCount];
-    for (int i = 0; i < g_tableCount; i++) {
-        rowCounts[i] = rowNum;
-    }
-
-    int sourceTypes[] = {2, 2};
-    int outputCols[] = {0, 1};
-    int sortCols[] = {0, 1};
-    int ascendings[] = {1, 1};
-    int nullFirsts[] = {0, 0};
-
-    //auto t0 = Time::now();
-    long sortAddress = sortCreateOperator(g_contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    sortAddInput(g_contextAddress, sortAddress, g_datas, g_nulls, g_tableCount, rowCounts, g_tableCount * rowNum);
-    sortExecute(g_contextAddress, sortAddress);
-    int32_t tableCount = 0;
-    Table **output = sortGetOutputV2(g_contextAddress, sortAddress, &tableCount);
-    //auto t1 = Time::now();
-    //fsec fs = t1 - t0;
-    //ms d = std::chrono::duration_cast<ms>(fs);
-    //g_time = g_time + (long)d.count();
-    //std::cout << "THREAD sortProcess finished elapsed end time: " << (double)d.count() << " ms" << std::endl;
+    freeOutputTable(output, outputTableCount);
 }
 
 
@@ -133,8 +107,7 @@ int main(int argc, char **argv) {
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    //g_contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    g_contextAddress = 0;
+    g_contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     int threadNums[] = {1, 8, 16, 32, 64, 100};
     for (int i = 0; i < 6; i++) {
@@ -149,7 +122,7 @@ int main(int argc, char **argv) {
 
         vector<std::thread> threads;
         for (int i = 0; i < threadCount; i++) {
-            std::thread threadObj(sortProcess1);
+            std::thread threadObj(sortProcess);
             threads.push_back(std::move(threadObj));
         }
 
@@ -182,4 +155,6 @@ int main(int argc, char **argv) {
     }
     delete[] g_datas;
     delete[] g_nulls;
+
+    delete (JitSortContext *)g_contextAddress;
 }

@@ -350,7 +350,8 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortGetOut
     PRINT_JNI("after sortGetOutput call elapsed time: %ld ms\n", END(start));
     jobject output = transformTableToResultV2(env, outputTable, tableCount);
     PRINT_JNI("after transformTableToResult call elapsed time: %ld ms\n", END(start));
-    //delete outputTable;
+    
+    freeOutputTable(outputTable, tableCount);
     return output;
 }
 
