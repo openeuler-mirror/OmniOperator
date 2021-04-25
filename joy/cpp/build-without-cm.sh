@@ -8,9 +8,9 @@ irFolder="/opt/lib/ir"
 if [ ! -d "$libFolder" ]; then
 	mkdir -p "$libFolder"
 fi
- 
+
 if [ ! -d "$irFolder" ]; then
-        mkdir -p "$irFolder" 
+        mkdir -p "$irFolder"
 fi
 
 cd src/operator/ir

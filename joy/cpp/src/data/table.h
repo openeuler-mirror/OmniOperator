@@ -140,7 +140,12 @@ public:
         this->types = new ColumnType[columnCount];
         this->columnSize = 0;
     }
-    virtual ~Table() { delete []types; }
+    virtual ~Table() {
+        for (int32_t i = 0; i < columnSize; i++) {
+            delete data[i];
+        }
+        delete []types; 
+    }
     Layout getLayout();
     void setColumn(Column* column, ColumnType type) {
         types[columnSize] = type;
