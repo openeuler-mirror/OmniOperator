@@ -141,12 +141,12 @@ TEST(SortTest, testOrderByDoubleColumn)
     Table **actualTable = sortGetOutput(contextAddress, sortAddress, &outputTableCount);
 
     int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
-    Column expectCol1(expectData1, INT64, DATA_SIZE);
+    Column *expectCol1 = new Column(expectData1, INT64, DATA_SIZE);
     double expectData2[DATA_SIZE] = {1.1, 4.4, 2.2, 5.5, 3.3, 6.6};
-    Column expectCol2(expectData2, DOUBLE, DATA_SIZE);
+    Column *expectCol2 = new Column(expectData2, DOUBLE, DATA_SIZE);
     Table* expectTable = new Table(DATA_SIZE, 2);
-    expectTable->setColumn(&expectCol1, INT64);
-    expectTable->setColumn(&expectCol2, DOUBLE);
+    expectTable->setColumn(expectCol1, INT64);
+    expectTable->setColumn(expectCol2, DOUBLE);
 
     actualTable[0]->printTable();
     expectTable->printTable();
@@ -198,12 +198,12 @@ TEST(SortTest, testOrderByDoubleColumnV2)
     Table **actualTable = sortGetOutput(contextAddress, sortAddress, &outputTableCount);
 
     int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
-    Column expectCol1(expectData1, INT64, DATA_SIZE);
+    Column *expectCol1 = new Column(expectData1, INT64, DATA_SIZE);
     double expectData2[DATA_SIZE] = {1.1, 4.4, 2.2, 5.5, 3.3, 6.6};
-    Column expectCol2(expectData2, DOUBLE, DATA_SIZE);
-    Table* expectTable = new Table(DATA_SIZE, 2);
-    expectTable->setColumn(&expectCol1, INT64);
-    expectTable->setColumn(&expectCol2, DOUBLE);
+    Column *expectCol2 = new Column(expectData2, DOUBLE, DATA_SIZE);
+    Table *expectTable = new Table(DATA_SIZE, 2);
+    expectTable->setColumn(expectCol1, INT64);
+    expectTable->setColumn(expectCol2, DOUBLE);
 
     actualTable[0]->printTable();
     expectTable->printTable();
