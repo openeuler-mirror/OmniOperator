@@ -18,7 +18,7 @@
 class LLVMCodeGen
 {
 public:
-    llvm::Function *generateFunc(Expr exp);
+    llvm::Function *generateFunc(std::string name, Expr exp);
     
 };
 
