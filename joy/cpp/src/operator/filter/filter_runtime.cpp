@@ -1,9 +1,10 @@
 #include "filter_runtime.h"
+#include "../operator/filter/filter.h"
 #include <regex>
 
 
 int64_t Filter_runtime::filter_compile_runtime_with_parser(Context* context, Expr expression, int32_t* input_type) {
-    auto filter_module = Filter::compile(&expr, &context, &input_type);
+    auto filter_module = Filter::compile(&expression, &context, &input_type);
         
     return (int64_t) &filter_module;
 }

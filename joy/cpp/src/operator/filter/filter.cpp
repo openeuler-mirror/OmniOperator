@@ -3,8 +3,10 @@
 //
 #include "stdio.h"
 #include "chrono"
+#include "filter.h"
 #include <vector>
 #include "../../common/expressions.h"
+#include "../../codegen/codegen.h"
 
 using namespace std;
 
@@ -43,6 +45,18 @@ bool filter(int a, long b, double c) {
 
 long compile(Expr expression, Context context, int* inputTypes, int count){
     return 0;
+}
+
+// since we are not using the old way then this code become useless
+void Filter::inloop(Generator* generator, Table* table, int rowIndex) {
+    // TODO: implement get table param and builder methods
+    auto table_ptr = generator->getTableParam();
+    for (const int& i : generator->getInputs()) {
+        //retrieve the value of the column to be used for groupby
+        Column* column = generator->builder.build_get_nth_column(table, (uint32_t)i);
+        generator->builder.build_get_value(column, rowIndex);
+    }
+
 }
 
 // long compile(Expr expression, Context context, int32_t* inputTypes, int count){

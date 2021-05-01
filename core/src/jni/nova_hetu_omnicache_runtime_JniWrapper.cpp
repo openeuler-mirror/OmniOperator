@@ -455,6 +455,41 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_ge
     return result;
 }
 
+JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
+  (JNIEnv *env, jobject jObj, jlong jFilterPtr, jlongArray jInputData, jlong jInputTypes, jint jInputVecCount, jlong jSelectedRowsAddress, jint jInputRowNumber){
+    int64_t filterPtr = (int64_t) jFilterPtr;
+    int64_t *inputData = (int64_t)(env->GetLongArrayElements(jInputData, JNI_FALSE));
+    int64_t inputTypes = (int64_t) jInputTypes;
+    int32_t vecCount = (int32_t) jInputVecCount;
+    int64_t selectedRowsAddr = (int64_t) jSelectedRowsAddress;
+    int32_t rowNumber = (int32_t) jInputRowNumber;
+
+    int32_t index = filterExecute(filterPtr, inputData, inputTypes, vecCount, selectedRowsAddr, rowNumber);
+
+    env->ReleaseLongArrayElements(jInputData, inputData);
+    env->ReleaseIntArrayElements(jInputRowNumber, rowNumber);
+    return (jint)index;
+  }
+
+JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecuteV1
+  (JNIEnv *env, jobject jObj, jlong jFilterPtr, jlongArray jInputData, jlong jInputTypes, jint jInputVecCount, jint jInputRowNumber, jlongArray jProjectVecAddress, jintArray jProjectIdx, jint jProjectVecCount){
+    int64_t filterPtr = (int64_t) jFilterPtr;
+    int64_t *inputData = (int64_t)(env->GetLongArrayElements(jInputData, JNI_FALSE));
+    int64_t inputTypes = (int64_t) jInputTypes;
+    int32_t vecCount = (int32_t) jInputVecCount;
+    int32_t rowNumber = (int32_t) jInputRowNumber;
+    int64_t *projectVecAddress = (int64_t)(env->GetLongArrayElements(jProjectVecAddress, JNI_FALSE));
+    int32_t *projectIdx = (int32_t)(env->GetIntArrayElements(jProjectIdx, JNI_FALSE));
+    int32_t projectVecCount = (int32_t) jProjectVecCount;
+
+    int32_t index = filterExecuteV1(filterPtr, inputData, inputTypes, vecCount, rowNumber, projectVecAddress, projectIdx, projectVecCount);
+    env->ReleaseLongArrayElements(jInputData, inputData);
+    env->ReleaseLongArrayElements(jProjectVecAddress, projectVecAddress);
+    env->ReleaseIntArrayElements(jProjectIdx, projectIdx);
+
+    return (jint)index;
+  }
+
 jobjectArray transform(JNIEnv *env, std::vector<Table*>& result)
 {
   jobjectArray res = env->NewObjectArray(result.size(), omResultCls, NULL);

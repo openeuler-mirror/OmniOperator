@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 
+// this is used as a replace of rust match status, might be useful if we want to handle the error at the api level
 enum Status
 {
     OK,
@@ -14,7 +15,6 @@ enum Status
 class Filter_runtime{
 public:
     int64_t filter_compile_runtime_with_parser(Context* context, Expr expression, int32_t* input_type);
-    //void filter_execute(JitFunction filterModule, Table inputData, usize rowNumber, bool* selectedRows);
 };
 
 #endif
