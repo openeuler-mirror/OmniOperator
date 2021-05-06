@@ -116,17 +116,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterCompil
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    filterExecute
- * Signature: (J[JJIJI)I
- */
-JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
-  (JNIEnv *, jobject, jlong, jlongArray, jlong, jint, jlong, jint);
-
-/*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    filterExecuteV1
  * Signature: (J[JJIJI)I //TODO: add signature here
  */
-JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecuteV1
+JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
   (JNIEnv *, jobject, jlong, jlongArray, jlong, jint, jint, jlongArray, jintArray, jint);
 
 

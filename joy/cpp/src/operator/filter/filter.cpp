@@ -1,62 +1,58 @@
-//
-// Created by kkrazy on 2021-03-18.
-//
 #include "stdio.h"
 #include "chrono"
 #include "filter.h"
 #include <vector>
 #include "../../common/expressions.h"
-#include "../../codegen/codegen.h"
 
 using namespace std;
 
-int main() {
-    int count = 102400;
-    auto c1 = new int[count];
-    auto c2 = new int[count];
-    auto c3 = new int[count];
-    auto c4 = new bool[count];
-    for (int i=0; i<1023; i++) {
-        c1[i] = 12;
-        c2[i] = 2;
-        c3[i] = 6;
-    }
+// int main() {
+//     int count = 102400;
+//     auto c1 = new int[count];
+//     auto c2 = new int[count];
+//     auto c3 = new int[count];
+//     auto c4 = new bool[count];
+//     for (int i=0; i<1023; i++) {
+//         c1[i] = 12;
+//         c2[i] = 2;
+//         c3[i] = 6;
+//     }
 
-    typedef std::chrono::high_resolution_clock Time;
-    typedef std::chrono::microseconds us;
-    typedef std::chrono::duration<float> fsec;
+//     typedef std::chrono::high_resolution_clock Time;
+//     typedef std::chrono::microseconds us;
+//     typedef std::chrono::duration<float> fsec;
 
-    auto t1 = Time::now();
-    double result = 0;
-    for (int i=0; i<count; i++) {
-        c4[i] = c1[i] > 10 && c2[i] < 5 && c3[i] ==6;
-    }
-    auto t0 = Time::now();
-    fsec fs = t0 - t1;
-    us d = std::chrono::duration_cast<us>(fs);
-    printf(" filter duration time: %lu\n", d.count());
-    printf(" filter result: %d\n", c4[1]);
-    return 12345;
+//     auto t1 = Time::now();
+//     double result = 0;
+//     for (int i=0; i<count; i++) {
+//         c4[i] = c1[i] > 10 && c2[i] < 5 && c3[i] ==6;
+//     }
+//     auto t0 = Time::now();
+//     fsec fs = t0 - t1;
+//     us d = std::chrono::duration_cast<us>(fs);
+//     printf(" filter duration time: %lu\n", d.count());
+//     printf(" filter result: %d\n", c4[1]);
+//     return 12345;
+// }
+
+Filter::Filter(jit_evaluateExpression evaluater)
+{
+    this->evaluater = evaluater;
 }
 
-bool filter(int a, long b, double c) {
-    return a > 10 && b < 5 && c ==6;
-}
-
-long compile(Expr expression, Context context, int* inputTypes, int count){
-    return 0;
-}
-
-// since we are not using the old way then this code become useless
-void Filter::inloop(Generator* generator, Table* table, int rowIndex) {
-    // TODO: implement get table param and builder methods
-    auto table_ptr = generator->getTableParam();
-    for (const int& i : generator->getInputs()) {
-        //retrieve the value of the column to be used for groupby
-        Column* column = generator->builder.build_get_nth_column(table, (uint32_t)i);
-        generator->builder.build_get_value(column, rowIndex);
+int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
+{
+    int numSelectedRows = 0;
+    for (int index = 0; index < rowNumber; index++)
+    {
+        auto evaluater = this->evaluater;
+        if (evaluater(table, index))
+        {
+            selectedRows[index] = index;
+            index += 1;
+        }
     }
-
+    return numSelectedRows;
 }
 
 // long compile(Expr expression, Context context, int32_t* inputTypes, int count){

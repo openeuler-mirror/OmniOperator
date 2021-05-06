@@ -4,6 +4,8 @@
 #include "../common/expressions.h"
 #include <cstring>
 
+using namespace std;
+
 class Parser
 {
 public:

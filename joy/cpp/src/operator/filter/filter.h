@@ -1,14 +1,18 @@
 #ifndef __FILTER_H__
 #define __FILTER_H__
 
-#include "../../codegen/codegen.h"
+#include "../../data/table.h"
 
-class Filter: public Codegen{
-    public:
-        void preloop(Generator* generator, Table* table){};
-        void inloop(Generator* generator, Table* table, int rowIndex);
-        void postloop(Generator* generator, Table* table){};
-        
+typedef bool (*jit_evaluateExpression)(Table* table, int32_t);
+
+class Filter
+{
+public:
+    Filter(jit_evaluateExpression evaluater);
+    int32_t filter(Table *table, int32_t rowNumber, int32_t *selectedRows);
+
+private:
+    jit_evaluateExpression evaluater;
 };
 
 #endif
