@@ -1,23 +1,22 @@
 #### How to compile
 
-1. `mvn clean install`
-2. change `build.sh` to `cargo test` to include the tests
+1. `./build.sh release` will build code and install `omruntime.so` to `/opt/lib`
 
 #### Workspace Setup
-Add env var `LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/kkrazy/omni-cache/src/main/rust/omvector/target/debug;RUST_BACKTRACE=1` to 
+Add env var `LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/lib` to 
 the default template to run tests which includes the shared lib automatically.
 
 #### Overview
-The OmniCache is designed to
+The OmniRuntime is designed to
 
-* Fast OmniCache data exchange, potential via TCP/UPD/RDMA to directly and efficiently transfer vectors into the memory
+* Fast OmniRuntime data exchange, potential via TCP/UPD/RDMA to directly and efficiently transfer vectors into the memory
 * Support inter-language zero-copy
 * SIMD optimization via Weld/LLVM
 
-The OmniCache is library used to implement higher level data analytics logics
+The OmniRuntime is library used to implement higher level data analytics logics
 
 ##### OMVector - 
-The OmniCache provides c/c++ interface similar to `vector` with Java binding using JNI. The `OMVector` also provides SIMD enabled
+The OmniRuntime provides c/c++ interface similar to `vector` with Java binding using JNI. The `OMVector` also provides SIMD enabled
 operations called 'in-situ operation', which normally takes another `vector` as parameter. For scalar parameters, it will be
 a `vector` with single value.
 
@@ -30,7 +29,7 @@ aggregation and locating a specific element in the `vector`. The `vector` will a
 in the `vector`. 
 
 ##### OMCache
-OmniCache will also provide a `OMCache` API which keep tracks of all the loaded `OMVector`. The OMCache also maintains the mapping between 
+OmniRuntime will also provide a `OMCache` API which keep tracks of all the loaded `OMVector`. The OMCache also maintains the mapping between 
 the `OMVector` and the `Table`, e.g. the schema informtion to support SQL alike operations
 
 

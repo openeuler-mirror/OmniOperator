@@ -1,0 +1,6 @@
+add_subdirectory(jit)
+add_subdirectory(vector)
+add_subdirectory(data)
+add_subdirectory(operator)
+add_subdirectory(util)
+add_subdirectory(memory)

@@ -1,5 +1,0 @@
-add_subdirectory(harden)
-add_subdirectory(data)
-add_subdirectory(operator)
-add_subdirectory(util)
-add_subdirectory(memory_pool)

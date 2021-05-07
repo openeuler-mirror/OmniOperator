@@ -1,0 +1,64 @@
+#include "harden_optimizer.h"
+
+#include "llvm/Transforms/Scalar.h"
+#include <llvm/Analysis/SparsePropagation.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+
+using namespace llvm;
+using namespace llvm::orc;
+using namespace codegen;
+
+void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM) {
+    conf.populate(FPM, MPM);
+}
+
+Expected<ThreadSafeModule>
+HardenOptimizer::operator()(ThreadSafeModule TSM,
+                            const MaterializationResponsibility &) {
+
+    Module &M = *TSM.getModuleUnlocked();
+    if (M.getName().find("__standard_lib") != std::string::npos ||
+        M.getName().find("aggregator") != std::string::npos || M.getName().find("sort_api") != std::string::npos ||
+        M.getName().find("test") != std::string::npos || M.getName().find("memory_pool") != std::string::npos) {
+        return std::move(TSM);
+    }
+    int original_count = M.getInstructionCount();
+
+    legacy::FunctionPassManager FPM(&M);
+    legacy::PassManager MPM;
+
+    populatePass(FPM, MPM);
+
+    pmb.populateFunctionPassManager(FPM);
+    pmb.populateModulePassManager(MPM);
+
+    FPM.doInitialization();
+    for (Function &F : M) {
+        if (F.getName().find("process") != std::string::npos || F.getName().find("inloop") != std::string::npos) {
+            FPM.run(F);
+        }
+    }
+    FPM.doFinalization();
+    MPM.run(M);
+
+    // dbgs() << "--- AFTER OPTIMIZATION ---\n" << M << "\n";
+
+    int new_count = M.getInstructionCount();
+    // outs() << "\n " << M.getName() << " instruct count: original: " << original_count << " new:" << new_count;
+
+    return std::move(TSM);
+}

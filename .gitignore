@@ -41,4 +41,7 @@ cpp/build
 cpp/bin
 cpp/lib
 cpp/inc
-
+cmake-build-debug
+libs
+*.so
+*.gch
