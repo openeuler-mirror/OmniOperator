@@ -121,7 +121,7 @@ public:
         int32_t *sortNullFirsts,
         int32_t sortColCount);
     ~NativeOmniSortOperator();
-    int32_t addInput(Table* data, int32_t rowCount) override 
+    int32_t addInput(Table* data, int32_t rowCount) override
     {
         return 0;
     }
