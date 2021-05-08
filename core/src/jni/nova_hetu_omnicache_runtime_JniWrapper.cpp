@@ -283,10 +283,10 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_execu
 }
 
 JitContext *createSortJitContext(
-  int32_t *sourceTypes, 
-  int32_t typesCount, 
-  int32_t *outputCols, 
-  int32_t outputColsCount, 
+  int32_t *sourceTypes,
+  int32_t typesCount,
+  int32_t *outputCols,
+  int32_t outputColsCount,
   int32_t *sortCols,
   int32_t *sortAscendings,
   int32_t *sortNullFirsts,
@@ -330,13 +330,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createSortOp
     sortOperatorFactory->setJitContext(jitContext);
     PRINT_JNI("after create sort operator factory call elapsed time: %ld ms\n", END(start));
     return (int64_t)sortOperatorFactory;
-} 
+}
 
 JitContext *createSortJitContext(
-  int32_t *sourceTypes, 
-  int32_t typesCount, 
-  int32_t *outputCols, 
-  int32_t outputColsCount, 
+  int32_t *sourceTypes,
+  int32_t typesCount,
+  int32_t *outputCols,
+  int32_t outputColsCount,
   int32_t *sortCols,
   int32_t *sortAscendings,
   int32_t *sortNullFirsts,
@@ -418,7 +418,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createSortOp
     }
 
     return (int64_t)sortOperator;
-}  
+}
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
@@ -461,8 +461,8 @@ JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_addSortInput
     }
 
     sortOperator->addInput(inputTables, rowCounts, jPageCount);
-    PRINT_JNI("after sortAddInput call elapsed time: %ld ms\n", END(start));   
-}  
+    PRINT_JNI("after sortAddInput call elapsed time: %ld ms\n", END(start));
+}
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper

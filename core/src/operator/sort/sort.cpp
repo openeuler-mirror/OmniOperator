@@ -59,7 +59,7 @@ int32_t getColTypeIdx(ColumnType type)
     }
 }
 
-int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount) 
+int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount)
 {
     int32_t rowSize = 0;
     int type;
@@ -75,12 +75,12 @@ int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t output
             break;
         case 3:
             rowSize = rowSize + sizeof(double);
-            break;    
+            break;
         default:
             break;
         }
     }
-    
+
     int32_t maxRowCount = (DEFAULT_MAX_PAGE_SIZE_IN_BYTES + rowSize - 1) / rowSize;
     return maxRowCount;
 }
@@ -136,15 +136,15 @@ NativeOmniSortOperatorFactory::NativeOmniSortOperatorFactory(
     int32_t sortColCount)
 {
     int32_t intByteLen = sizeof(int32_t);
-    
+
     this->sourceTypes = new int32_t[sourceTypeCount];
     memcpy(this->sourceTypes, sourceTypes, sourceTypeCount * intByteLen);
     this->sourceTypeCount = sourceTypeCount;
-    
+
     this->outputCols = new int32_t[outputColCount];
     memcpy(this->outputCols, outputCols, outputColCount * intByteLen);
     this->outputColCount = outputColCount;
-    
+
     int32_t sortColByteLen = sortColCount * intByteLen;
     this->sortCols = new int32_t[sortColCount];
     memcpy(this->sortCols, sortCols, sortColByteLen);
@@ -158,8 +158,8 @@ NativeOmniSortOperatorFactory::NativeOmniSortOperatorFactory(
     this->sortColCount = sortColCount;
 }
 
-NativeOmniSortOperatorFactory::~NativeOmniSortOperatorFactory() 
-{ 
+NativeOmniSortOperatorFactory::~NativeOmniSortOperatorFactory()
+{
     delete[] sourceTypes;
     delete[] outputCols;
     delete[] sortCols;
@@ -192,7 +192,7 @@ NativeOmniSortOperatorFactory * NativeOmniSortOperatorFactory::createNativeOmniS
         sortColCount);
     return operatorFactory;
 }
-    
+
 NativeOmniOperator * NativeOmniSortOperatorFactory::createOmniOperator()
 {
     NativeOmniSortOperator *sortOperator = new NativeOmniSortOperator(
@@ -245,7 +245,7 @@ int32_t NativeOmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int3
 }
 
 // return error code
-int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables) 
+int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
 {
     int32_t positionCount = pagesIndex->getPositionCount();
     if (positionCount <= 0) {
@@ -281,14 +281,14 @@ int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
     for (int32_t i = 0; i < tableCount; i++) {
         rowCount = min(maxRowCount, positionCount - position);
         table = new Table(rowCount, outputColsCount);
-        
+
         auto start = START();
         allocColumns((int64_t)table, sourceTypes, outputCols, outputColsCount, rowCount);
         PRINT_IMPL("alloc columns elapsed time: %ld ms\n", END(start));
         pagesIndex->getOutput(outputCols, outputColsCount, (int64_t)table, sourceTypes, position, rowCount);
         PRINT_IMPL("get result elapsed time: %ld ms\n", END(start));
-        
-        position += rowCount;   
+
+        position += rowCount;
         outputTables[i] = table;
     }
     return 0;
@@ -332,7 +332,7 @@ int32_t PagesIndex::addTables(Table **datas, int32_t *rowCounts, int32_t tableCo
         }
 
     }
-   
+
     return 0;
 }
 
@@ -364,7 +364,7 @@ void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t
             break;
         case 3:
             setDoubleColumnValues(valueAddresses, offset, length, inputTable, (double *)outputData);
-            break;    
+            break;
         default:
             break;
         }
@@ -678,7 +678,7 @@ void quickSort(int64_t pagesIndexAddr,
     }
 }
 
-void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData) 
+void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
@@ -705,7 +705,7 @@ void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     }
 }
 
-void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData) 
+void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
@@ -733,7 +733,7 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     }
 }
 
-void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData) 
+void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
