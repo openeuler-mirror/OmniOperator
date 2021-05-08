@@ -1,4 +1,4 @@
-#include "../../src/jni/sort_api.h"
+#include "../../src/operator/sort/sort.h"
 #include <time.h>
 #include <unistd.h>
 #include <vector>
@@ -9,48 +9,43 @@
 int g_tableCount;
 int g_distinctValue;
 int g_repeatCount;
-long g_contextAddress;
-long *g_datas;
-long *g_nulls;
-Table *g_expectedTable;
+NativeOmniSortOperatorFactory *g_factory = NULL;
+Table **g_inputTables;
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
 atomic_long g_time;
 
-void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, long *datas, long *nulls)
+void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, Table **inputTables)
 {
     uint32_t positionCount = distinctValueCount * repeatCount;
     long *data1;
     long *data2;
-    long *null1;
-    long *null2;
     uint32_t size = positionCount * sizeof(long);
     uint32_t idx = 0;
 
     auto t0 = Time::now();
     for (int i = 0; i < tableCount; i++) {
+        Table *table = new Table(positionCount, 2);
+
         data1 = (long *)malloc(size);
-        null1 = (long *)malloc(size);
         data2 = (long *)malloc(size);
-        null2 = (long *)malloc(size);
 
         idx = 0;
         for (int j = 0; j < distinctValueCount; j++) {
             for (int k = 0; k < repeatCount; k++) {
                 data1[idx] = j;
                 data2[idx] = j;
-                null1[idx] = 0;
-                null2[idx] = 0;
                 idx++;
             }
         }
 
-        datas[i * 2 + 0] = (long)data1;
-        datas[i * 2 + 1] = (long)data2;
-        nulls[i * 2 + 0] = (long)null1;
-        nulls[i * 2 + 1] = (long)null2;
+        Column *column1 = new Column(data1, INT64, positionCount);
+        Column *column2 = new Column(data2, INT64, positionCount);
+        table->setColumn(column1, INT64);
+        table->setColumn(column2, INT64);
+        inputTables[i] = table;
     }
     auto t1 = Time::now();
     fsec fs = t1 - t0;
@@ -74,20 +69,21 @@ void sortProcess()
     int nullFirsts[] = {0, 0};
 
     //auto t0 = Time::now();
-    long sortAddress = sortCreateOperator(g_contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    sortAddInput(g_contextAddress, sortAddress, g_datas, g_nulls, g_tableCount, rowCounts, g_tableCount * rowNum);
-    sortExecute(g_contextAddress, sortAddress);
-    int32_t outputTableCount = 0;
-    Table **output = sortGetOutput(g_contextAddress, sortAddress, &outputTableCount);
+    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)g_factory->createOmniOperator();
+    sortOperator->addInput(g_inputTables, rowCounts, g_tableCount);
+    vector<Table *> outputTables;
+    sortOperator->getOutput(outputTables);
+
     //auto t1 = Time::now();
     //fsec fs = t1 - t0;
     //ms d = std::chrono::duration_cast<ms>(fs);
     //g_time = g_time + (long)d.count();
     //std::cout << "THREAD sortProcess finished elapsed end time: " << (double)d.count() << " ms" << std::endl;
 
-    freeOutputTable(output, outputTableCount);
+    freeDataInColumn(&outputTables[0], outputTables.size());
+    freeOutputTable(outputTables);
+    delete sortOperator;
 }
-
 
 int main(int argc, char **argv) {
     g_tableCount = stoi(argv[1]);
@@ -98,16 +94,15 @@ int main(int argc, char **argv) {
     std::cout << "core number: " << processor_count << std::endl;
     //std::this_thread::sleep_for(10000ms);
 
-    g_datas = (long *)malloc(g_tableCount * 2 * sizeof(long));
-    g_nulls = (long *)malloc(g_tableCount * 2 * sizeof(long));
-    buildSortTestData(g_tableCount, g_distinctValue, g_repeatCount, g_datas, g_nulls);
+    g_inputTables = (Table **)malloc(g_tableCount * sizeof(Table *));
+    buildSortTestData(g_tableCount, g_distinctValue, g_repeatCount, g_inputTables);
 
     int sourceTypes[] = {2, 2};
     int outputCols[] = {0, 1};
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    g_contextAddress = sortPrepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    g_factory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     int threadNums[] = {1, 8, 16, 32, 64, 100};
     for (int i = 0; i < 6; i++) {
@@ -147,14 +142,7 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(100ms);
     }
 
-    for (int i = 0; i < g_tableCount; i++) {
-        delete[] (long *)(g_datas[i * 2 + 0]);
-        delete[] (long *)(g_datas[i * 2 + 1]);
-        delete[] (long *)(g_nulls[i * 2 + 0]);
-        delete[] (long *)(g_nulls[i * 2 + 1]);
-    }
-    delete[] g_datas;
-    delete[] g_nulls;
-
-    delete (JitSortContext *)g_contextAddress;
+    freeDataInColumn(g_inputTables, g_tableCount);
+    freeInputTable(g_inputTables, g_tableCount);
+    delete g_factory;
 }

@@ -1,41 +1,39 @@
 #ifndef __SORT_H__
 #define __SORT_H__
 
+#include "../native_base.h"
 #include "../../vector/table.h"
 #include "../../vector/type.h"
+#include "../../jit/hammer.h"
+#include "../../jit/hammer_config.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include <vector>
 
 using namespace std;
 
-class SortOrder
-{
-public:
-    SortOrder(){}
-    SortOrder(int32_t ascending, int32_t nullsFirst) : ascending(ascending), nullsFirst(nullsFirst) {}
-    ~SortOrder() {}
-    int32_t isAscending() { return this->ascending; }
-    int32_t isNullsFirst() { return this->nullsFirst; }
-    void setAscending(int32_t ascending) { this->ascending = ascending; }
-    void setNullsFirst(int32_t nullsFirst) { this->nullsFirst = nullsFirst; }
-    int32_t compareValue(Column *leftColumn, int32_t leftPosition, Column *rightColumn, int32_t rightPosition);
+typedef int64_t (*jit_createSort)(int32_t *, int32_t, int32_t *, int32_t, int32_t *, int32_t *, int32_t *, int32_t);
 
-private:
-    int32_t ascending;
-    int32_t nullsFirst;
-};
+typedef struct JitSortContext
+{
+    LLJIT *jitter;
+    jit_createSort createSortFunc;
+} JitSortContext;
 
 class PagesIndex
 {
 public:
-    PagesIndex(int32_t *sourceTypes, int32_t typesCount);
+    PagesIndex(int32_t *types, int32_t typesCount);
     ~PagesIndex();
-    void addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, int32_t *rowCounts, int32_t totalRowCount);
+    int32_t addTables(Table **datas, int32_t *rowCounts, int32_t tableCount);
+    void getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length);
 
-    int32_t *getColumnTypes()
+    int32_t *getTypes()
     {
         return types;
     };
-    int32_t getTypeCount() {
+    int32_t getTypesCount() {
         return typesCount;
     };
     int64_t *getValueAddresses()
@@ -50,38 +48,71 @@ public:
     {
         return this->columns;
     }
-    int32_t getTableCount()
+    int32_t getTablesCount()
     {
-        return this->tableCount;
+        return this->tablesCount;
     }
 
 private:
     int32_t *types;
     int32_t typesCount;
+    Column ***columns; // Column *  [columnCount][tableCount]
+    int32_t tablesCount;
     int64_t *valueAddresses;
     int32_t positionCount;
-    Column ***columns; // columns *[colCount][tableCount]
-    int32_t tableCount;
 };
 
-class SimplePagesIndexComparator
+class NativeOmniSortOperatorFactory : public NativeOmniOperatorFactory
 {
 public:
-    SimplePagesIndexComparator(int32_t *sortCols, SortOrder *sortOrder, ColumnType *sortTypes)
-        : sortCols(sortCols), sortOrder(sortOrder), sortTypes(sortTypes) {}
-    ~SimplePagesIndexComparator() {}
-    int32_t compareTo(PagesIndex *pagesIndex, int32_t leftPosition, int32_t rightPosition);
+    NativeOmniSortOperatorFactory(
+        int32_t *sourceTypes,
+        int32_t sourceTypeCount,
+        int32_t *outputCols,
+        int32_t outputColCount,
+        int32_t *sortCols,
+        int32_t *sortAscendings,
+        int32_t *sortNullFirsts,
+        int32_t sortColCount);
+    ~NativeOmniSortOperatorFactory();
+    static NativeOmniSortOperatorFactory *createNativeOmniSortOperatorFactory(
+        int32_t *sourceTypes,
+        int32_t sourceTypeCount,
+        int32_t *outputCols,
+        int32_t outputColCount,
+        int32_t *sortCols,
+        int32_t *sortAscendings,
+        int32_t *sortNullFirsts,
+        int32_t sortColCount);
+    NativeOmniOperator *createOmniOperator();
+    int32_t *getSourceTypes() { return sourceTypes; }
+    int32_t getSourceTypeCount() { return sourceTypeCount; }
+    int32_t *getOutputCols() { return outputCols; }
+    int32_t getOutputColCount() { return outputColCount; }
+    int32_t *getSortCols() { return sortCols; }
+    int32_t *getSortAscendings() { return sortAscendings; }
+    int32_t *getSortNullFirsts() { return sortNullFirsts; }
+    int32_t getSortColCount() { return sortColCount; }
+    void setSortContext(JitSortContext *jitSortContext) { this->sortContext = jitSortContext; }
+    JitSortContext *getSortContext() { return sortContext; }
 
 private:
+    int32_t *sourceTypes;
+    int32_t sourceTypeCount;
+    int32_t *outputCols;
+    int32_t outputColCount;
     int32_t *sortCols;
-    SortOrder *sortOrder;
-    ColumnType *sortTypes;
+    int32_t *sortAscendings;
+    int32_t *sortNullFirsts;
+    int32_t sortColCount;
+    JitSortContext *sortContext;
 };
 
-class Sort
+class NativeOmniSortOperator : public NativeOmniOperator
 {
 public:
-    Sort(int32_t *sourceTypes,
+    NativeOmniSortOperator(
+        int32_t *sourceTypes,
         int32_t typesCount,
         int32_t *outputCols,
         int32_t outputColsCount,
@@ -89,13 +120,13 @@ public:
         int32_t *sortAscendings,
         int32_t *sortNullFirsts,
         int32_t sortColCount);
-    ~Sort();
-    void preloop(Table *table);
-    void inloop(Table *table, uint32_t rowIdx);
-    void postloop(Table *table);
-    void process(Table *table, uint32_t rowIdx);
-    Table *getResult() {};
-    void createPagesIndex(int32_t *sourceTypes, int32_t typesCount, int64_t *datas, int64_t *nulls, int32_t pageCount, int64_t *rowCounts, int64_t totalRowCount);
+    ~NativeOmniSortOperator();
+    int32_t addInput(Table* data, int32_t rowCount) override 
+    {
+        return 0;
+    }
+    int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
+    int32_t getOutput(vector<Table *>& outputTables) override;
 
     int32_t *getSourceTypes() { return sourceTypes; }
     int32_t getTypescount() { return typesCount; }
@@ -119,6 +150,8 @@ private:
     PagesIndex *pagesIndex;
 };
 
+typedef NativeOmniOperator * (*sort_module) (NativeOmniSortOperatorFactory *);
+
 int64_t createSort(
     int32_t *sourceTypes,
     int32_t typeCount,
@@ -133,6 +166,10 @@ void quickSort(int64_t pagesIndexAddr, int32_t *sortCols, int32_t *sortColTypes,
 ColumnType getColumnType(int32_t colTypeIdx);
 void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount);
 void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length);
+
+void freeInputTable(Table **inputTables, int32_t inputTableCount);
+void freeOutputTable(vector<Table *>& outputTables);
+void freeDataInColumn(Table **tables, int32_t tableCount);
 
 #ifdef DEBUG_JNI
 #define PRINT_JNI(format, ...) printf("[%s][%s][%d]:" format, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)

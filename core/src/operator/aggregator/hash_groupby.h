@@ -37,7 +37,7 @@ typedef struct HashPosition
 class NativeOmniHashAggregationOperatorFactory : public NativeOmniOperatorFactory
 {
 public:
-    uintptr_t createOmniOperator() override;
+    NativeOmniOperator *createOmniOperator() override;
     NativeOmniHashAggregationOperatorFactory
     (PrepareContext groupByColContext, PrepareContext groupByTypeContext, PrepareContext aggColContext, PrepareContext aggTypeContext, PrepareContext aggFuncTypeContext)
     : groupByColContext(groupByColContext), groupByTypeContext(groupByTypeContext), aggColContext(aggColContext), aggTypeContext(aggTypeContext), aggFuncTypeContext(aggFuncTypeContext)

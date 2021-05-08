@@ -10,12 +10,14 @@ typedef struct JitContext
     uintptr_t func;
 } JitContext;
 
+class NativeOmniOperator;
+
 class NativeOmniOperatorFactory 
 {
 public:
     NativeOmniOperatorFactory() {}
     virtual ~NativeOmniOperatorFactory(){}
-    virtual uintptr_t createOmniOperator(){};
+    virtual NativeOmniOperator *createOmniOperator(){};
     virtual void setJitContext(JitContext* JitContext)
     {
         jitContext = JitContext;

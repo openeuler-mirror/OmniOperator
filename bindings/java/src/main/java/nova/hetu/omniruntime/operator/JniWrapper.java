@@ -44,15 +44,13 @@ public class JniWrapper
 
     public native OMResult[] executeAggFinal(long operatorId);
 
-    public native long sortPrepare(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
+    public native long createSortOperatorFactory(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
 
-    public native long sortCreateOperator(long contextAddress, int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
+    public native long createSortOperator(long factoryAddress);
 
-    public native void sortAddInput(long contextAddress, long sortAddress, long[] inputAddrs, long[] nulls, int pageCount, int[] positionCounts, int rowNum);
+    public native void addSortInput(long operatorAddress, long[] dataAddrs, int[] positionCounts, int pageCount);
 
-    public native void sortExecute(long contextAddress, long sortAddress);
-
-    public native OMResult sortGetOutput(long contextAddress, long sortAddress);
+    public native OMResult[] getSortOutput(long operatorAddress);
 
     public native long filterCompile(String expression, long clsTypeAddress, int inputVecCount);
 

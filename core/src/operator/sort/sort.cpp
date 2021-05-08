@@ -5,7 +5,12 @@
 #include <iostream>
 #include <algorithm>
 
-void quickSort(int64_t sortAddress, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to);
+int32_t DEFAULT_MAX_PAGE_SIZE_IN_BYTES = 1 * 1024 * 1024;
+
+void quickSort(int64_t operatorAddress, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to);
+void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData);
+void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData);
+void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData);
 
 int64_t encodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset)
 {
@@ -54,6 +59,37 @@ int32_t getColTypeIdx(ColumnType type)
     }
 }
 
+int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount) 
+{
+    int32_t rowSize = 0;
+    int type;
+    for (int32_t i = 0; i < outputColsCount; i++) {
+        type = sourceTypes[outputCols[i]];
+        switch (type)
+        {
+        case 1:
+            rowSize = rowSize + sizeof(int32_t);
+            break;
+        case 2:
+            rowSize = rowSize + sizeof(int64_t);
+            break;
+        case 3:
+            rowSize = rowSize + sizeof(double);
+            break;    
+        default:
+            break;
+        }
+    }
+    
+    int32_t maxRowCount = (DEFAULT_MAX_PAGE_SIZE_IN_BYTES + rowSize - 1) / rowSize;
+    return maxRowCount;
+}
+
+int32_t getTableCount(int32_t positionCount, int32_t maxRowCount)
+{
+    return ((positionCount + maxRowCount - 1) / maxRowCount);
+}
+
 void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount)
 {
     Table *outputTable = (Table *)outputTableAddr;
@@ -89,8 +125,91 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
     }
 }
 
+NativeOmniSortOperatorFactory::NativeOmniSortOperatorFactory(
+    int32_t *sourceTypes,
+    int32_t sourceTypeCount,
+    int32_t *outputCols,
+    int32_t outputColCount,
+    int32_t *sortCols,
+    int32_t *sortAscendings,
+    int32_t *sortNullFirsts,
+    int32_t sortColCount)
+{
+    int32_t intByteLen = sizeof(int32_t);
+    
+    this->sourceTypes = new int32_t[sourceTypeCount];
+    memcpy(this->sourceTypes, sourceTypes, sourceTypeCount * intByteLen);
+    this->sourceTypeCount = sourceTypeCount;
+    
+    this->outputCols = new int32_t[outputColCount];
+    memcpy(this->outputCols, outputCols, outputColCount * intByteLen);
+    this->outputColCount = outputColCount;
+    
+    int32_t sortColByteLen = sortColCount * intByteLen;
+    this->sortCols = new int32_t[sortColCount];
+    memcpy(this->sortCols, sortCols, sortColByteLen);
+
+    this->sortAscendings = new int32_t[sortColCount];
+    memcpy(this->sortAscendings, sortAscendings, sortColByteLen);
+
+    this->sortNullFirsts = new int32_t[sortColCount];
+    memcpy(this->sortNullFirsts, sortNullFirsts, sortColByteLen);
+
+    this->sortColCount = sortColCount;
+}
+
+NativeOmniSortOperatorFactory::~NativeOmniSortOperatorFactory() 
+{ 
+    delete[] sourceTypes;
+    delete[] outputCols;
+    delete[] sortCols;
+    delete[] sortAscendings;
+    delete[] sortNullFirsts;
+
+    // if (sortContext != NULL) {
+    //     delete sortContext;
+    // }
+}
+
+NativeOmniSortOperatorFactory * NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+    int32_t *sourceTypes,
+    int32_t sourceTypeCount,
+    int32_t *outputCols,
+    int32_t outputColCount,
+    int32_t *sortCols,
+    int32_t *sortAscendings,
+    int32_t *sortNullFirsts,
+    int32_t sortColCount)
+{
+    NativeOmniSortOperatorFactory *operatorFactory = new NativeOmniSortOperatorFactory(
+        sourceTypes,
+        sourceTypeCount,
+        outputCols,
+        outputColCount,
+        sortCols,
+        sortAscendings,
+        sortNullFirsts,
+        sortColCount);
+    return operatorFactory;
+}
+    
+NativeOmniOperator * NativeOmniSortOperatorFactory::createOmniOperator()
+{
+    NativeOmniSortOperator *sortOperator = new NativeOmniSortOperator(
+        sourceTypes,
+        sourceTypeCount,
+        outputCols,
+        outputColCount,
+        sortCols,
+        sortAscendings,
+        sortNullFirsts,
+        sortColCount);
+    return sortOperator;
+}
+
 // function implements for class Sort
-Sort::Sort(int32_t *sourceTypes,
+NativeOmniSortOperator::NativeOmniSortOperator(
+    int32_t *sourceTypes,
     int32_t typesCount,
     int32_t *outputCols,
     int32_t outputColsCount,
@@ -110,26 +229,170 @@ Sort::Sort(int32_t *sourceTypes,
     this->pagesIndex = new PagesIndex(sourceTypes, typesCount);
 }
 
-Sort::~Sort()
+NativeOmniSortOperator::~NativeOmniSortOperator()
 {
     delete pagesIndex;
 }
 
-void Sort::preloop(Table *table)
+int32_t NativeOmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
 {
+    if (pageCount <= 0) {
+        return 0;
+    }
+
+    pagesIndex->addTables(datas, rowCounts, pageCount);
+    return 0;
 }
 
-void Sort::inloop(Table *table, uint32_t rowIdx)
+// return error code
+int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables) 
 {
+    int32_t positionCount = pagesIndex->getPositionCount();
+    if (positionCount <= 0) {
+        return 0;
+    }
+
+    // first, sort
+    int32_t to = positionCount;
+    int32_t from = 0;
+    int32_t sortColTypes[sortColCount];
+    for (int32_t i = 0; i < sortColCount; i++) {
+        sortColTypes[i] = sourceTypes[sortCols[i]];
+    }
+
+    quickSort(
+        (int64_t)pagesIndex,
+        sortCols,
+        sortColTypes,
+        sortAscendings,
+        sortNullFirsts,
+        sortColCount,
+        from,
+        to);
+
+    // next, get output
+    int32_t maxRowCount = getMaxRowCount(sourceTypes, outputCols, outputColsCount);
+    int32_t tableCount = getTableCount(positionCount, maxRowCount);
+    outputTables.reserve(tableCount);
+
+    Table *table = NULL;
+    int32_t position = 0;
+    int32_t rowCount = 0;
+    for (int32_t i = 0; i < tableCount; i++) {
+        rowCount = min(maxRowCount, positionCount - position);
+        table = new Table(rowCount, outputColsCount);
+        
+        auto start = START();
+        allocColumns((int64_t)table, sourceTypes, outputCols, outputColsCount, rowCount);
+        PRINT_IMPL("alloc columns elapsed time: %ld ms\n", END(start));
+        pagesIndex->getOutput(outputCols, outputColsCount, (int64_t)table, sourceTypes, position, rowCount);
+        PRINT_IMPL("get result elapsed time: %ld ms\n", END(start));
+        
+        position += rowCount;   
+        outputTables[i] = table;
+    }
+    return 0;
 }
 
-void Sort::postloop(Table *table)
+// function implements for class PagesIndex
+PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
 {
+    this->types = types;
+    this->typesCount = typesCount;
 }
 
-void Sort::process(Table *table, uint32_t rowIdx)
+// return error number
+int32_t PagesIndex::addTables(Table **datas, int32_t *rowCounts, int32_t tableCount)
 {
+    int32_t rowCount = 0;
+    Table *data = NULL;
+    int64_t valueAddress = 0;
+    int32_t valueAddrIdx = 0;
+
+    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+        this->positionCount += rowCounts[tableIdx];
+    }
+    this->valueAddresses = (int64_t *)malloc(this->positionCount * sizeof(int64_t));
+    this->columns = (Column ***)malloc(this->typesCount * sizeof(Column **));
+    for (int32_t i = 0; i < this->typesCount; i++) {
+        this->columns[i] = (Column **)malloc(tableCount * sizeof(Column *));
+    }
+
+    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+        data = datas[tableIdx];
+        for (int32_t colIdx = 0; colIdx < this->typesCount; colIdx++) {
+            this->columns[colIdx][tableIdx] = data->getColumn(colIdx);
+        }
+
+        rowCount = rowCounts[tableIdx];
+        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            valueAddress = encodeSyntheticAddress(tableIdx, rowIdx);
+            this->valueAddresses[valueAddrIdx] = valueAddress;
+            valueAddrIdx++;
+        }
+
+    }
+   
+    return 0;
 }
+
+void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length)
+{
+    Column ***inputTables = this->columns;
+    Table *outputTable = (Table *)outputTableAddr;
+    int64_t *valueAddresses = this->valueAddresses;
+
+    Column *outputColumn = NULL;
+    int32_t outputCol = 0;
+    void *outputData = NULL;
+    int colType = 0;
+
+    for (int32_t j = 0; j < outputColsCount; j++) {
+        outputColumn = outputTable->getColumn(j);
+        outputCol = outputCols[j];
+        outputData = outputColumn->getData();
+        colType = sourceTypes[outputCol];
+        Column **inputTable = inputTables[outputCol];
+
+        switch (colType)
+        {
+        case 1:
+            setInt32ColumnValues(valueAddresses, offset, length, inputTable, (int32_t *)outputData);
+            break;
+        case 2:
+            setInt64ColumnValues(valueAddresses, offset, length, inputTable, (int64_t *)outputData);
+            break;
+        case 3:
+            setDoubleColumnValues(valueAddresses, offset, length, inputTable, (double *)outputData);
+            break;    
+        default:
+            break;
+        }
+    }
+}
+
+PagesIndex::~PagesIndex()
+{
+    for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
+        free(columns[colIdx]);
+    }
+    free(columns);
+    free(valueAddresses);
+}
+
+// int64_t createSort(
+//     int32_t *sourceTypes,
+//     int32_t typeCount,
+//     int32_t *outputCols,
+//     int32_t outputColCount,
+//     int32_t *sortCols,
+//     int32_t *sortAscendings,
+//     int32_t *sortNullFirsts,
+//     int32_t sortColCount)
+// {
+//     NativeOmniSortOperator *NativeOmniSortOperator = new NativeOmniSortOperator(sourceTypes, typeCount, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts, sortColCount);
+//     return (int64_t)NativeOmniSortOperator;
+// }
 
 void swap(int64_t *valueAddresses, int32_t a, int32_t b)
 {
@@ -144,85 +407,6 @@ void vectorSwap(int64_t *valueAddresses, int32_t from, int32_t l, int32_t s)
     {
         swap(valueAddresses, from, l);
     }
-}
-
-// function implements for class PagesIndex
-PagesIndex::PagesIndex(int32_t *sourceTypes, int32_t typesCount)
-{
-    this->types = sourceTypes;
-    this->typesCount = typesCount;
-}
-
-void PagesIndex::addTables(int64_t *datas, int64_t *nulls, int32_t pageCount, int32_t *rowCounts, int32_t totalRowCount)
-{
-    Column *column;
-    ColumnType type;
-    void *data;
-    int32_t *null;
-    int32_t rowNum;
-    int32_t start;
-    int32_t columnIdx;
-    int32_t valueAddrIdx = 0;
-    int64_t valueAddress = 0;
-
-    this->tableCount = pageCount;
-    this->positionCount = totalRowCount;
-    
-    if (pageCount == 0) {
-        return;
-    }
-    
-    valueAddresses = (int64_t *)malloc(totalRowCount * sizeof(int64_t));
-    columns = (Column ***)malloc(sizeof(Column **) * typesCount);
-    for (int32_t i = 0; i < typesCount; i++) {
-        columns[i] = (Column **)malloc(sizeof(Column *) * tableCount);
-    }
-
-    for (int32_t tableIdx = 0; tableIdx < pageCount; tableIdx++) {
-        rowNum = (int32_t)(rowCounts[tableIdx]);
-        start = tableIdx * typesCount;
-
-        for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-            columnIdx = start + colIdx;
-            type = getColumnType(types[colIdx]);
-            data = (void *)(datas[columnIdx]);
-            null = (int32_t *)(nulls[columnIdx]);
-            column = new Column(data, type, rowNum, null);
-            columns[colIdx][tableIdx] = column;
-        }
-
-        for (int32_t rowIdx = 0; rowIdx < rowNum; rowIdx++) {
-            valueAddress = encodeSyntheticAddress(tableIdx, rowIdx);
-            valueAddresses[valueAddrIdx] = valueAddress;
-            valueAddrIdx++;
-        }
-    }
-}
-
-PagesIndex::~PagesIndex()
-{
-    for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-        for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-            delete columns[colIdx][tableIdx];
-        }
-        free(columns[colIdx]);
-    }
-    free(columns);
-    free(valueAddresses);
-}
-
-int64_t createSort(
-    int32_t *sourceTypes,
-    int32_t typeCount,
-    int32_t *outputCols,
-    int32_t outputColCount,
-    int32_t *sortCols,
-    int32_t *sortAscendings,
-    int32_t *sortNullFirsts,
-    int32_t sortColCount)
-{
-    Sort *sort = new Sort(sourceTypes, typeCount, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-    return (int64_t)sort;
 }
 
 // return 0 when left and right both are nulls
@@ -293,7 +477,7 @@ int32_t compareTo(
 {
     PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
     int64_t *valueAddresses = pagesIndex->getValueAddresses();
-    Column *** columns = pagesIndex->getColumns();
+    Column ***columns = pagesIndex->getColumns();
 
     int64_t leftValueAddress = valueAddresses[leftPosition];
     int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
@@ -494,7 +678,8 @@ void quickSort(int64_t pagesIndexAddr,
     }
 }
 
-void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData) {
+void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData) 
+{
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Column *inputColumn = NULL;
@@ -520,7 +705,8 @@ void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     }
 }
 
-void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData) {
+void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData) 
+{
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Column *inputColumn = NULL;
@@ -547,7 +733,8 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     }
 }
 
-void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData) {
+void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData) 
+{
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Column *inputColumn = NULL;
@@ -573,38 +760,32 @@ void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t leng
     }
 }
 
-void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length)
+void freeInputTable(Table **inputTables, int32_t inputTableCount)
 {
-    PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
-    Column ***inputTables = pagesIndex->getColumns();
-    Table *outputTable = (Table *)outputTableAddr;
-    int64_t *valueAddresses = pagesIndex->getValueAddresses();
+    for (int32_t tableIdx = 0; tableIdx < inputTableCount; tableIdx++) {
+        delete inputTables[tableIdx];
+    }
+    delete inputTables;
+}
 
-    Column *outputColumn = NULL;
-    int32_t outputCol = 0;
-    void *outputData = NULL;
-    int colType = 0;
+void freeOutputTable(vector<Table *>& outputTables)
+{
+    int32_t tablesCount = outputTables.size();
+    for (int32_t tableIdx = 0; tableIdx < tablesCount; tableIdx++) {
+        delete outputTables[tableIdx];
+    }
+}
 
-    for (int32_t j = 0; j < outputColsCount; j++) {
-        outputColumn = outputTable->getColumn(j);
-        outputCol = outputCols[j];
-        outputData = outputColumn->getData();
-        colType = sourceTypes[outputCol];
-        Column **inputTable = inputTables[outputCol];
+void freeDataInColumn(Table **tables, int32_t tableCount)
+{
+    Table *table;
+    int32_t columnCount = 0;
 
-        switch (colType)
-        {
-        case 1:
-            setInt32ColumnValues(valueAddresses, offset, length, inputTable, (int32_t *)outputData);
-            break;
-        case 2:
-            setInt64ColumnValues(valueAddresses, offset, length, inputTable, (int64_t *)outputData);
-            break;
-        case 3:
-            setDoubleColumnValues(valueAddresses, offset, length, inputTable, (double *)outputData);
-            break;    
-        default:
-            break;
+    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
+        table = tables[tableIdx];
+        columnCount = table->getColumnNumber();
+        for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
+            free(table->getColumn(colIdx)->getData());
         }
     }
 }

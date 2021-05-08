@@ -66,12 +66,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIn
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    executeAggFinal
- * Signature: (J)Lnova/hetu/omnicache/runtime/OMResult;
+ * Signature: (J)[Lnova/hetu/omnicache/runtime/OMResult;
  */
-// JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
-//   (JNIEnv *, jobject, jlong);
 JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
-  (JNIEnv* env, jobject jObj, jlong jOperatorId);
+  (JNIEnv *, jobject, jlong);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
@@ -123,17 +121,19 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    filterExecuteV1
+ * Signature: (J[JJII[J[II)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecuteV1
+  (JNIEnv *, jobject, jlong, jlongArray, jlong, jint, jint, jlongArray, jintArray, jint);
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    filterFinished
  * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinished
   (JNIEnv *, jobject, jlong);
-
-JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_vector_OMVectorBase_allocate
-  (JNIEnv *, jclass, jlong);
-
-JNIEXPORT void JNICALL Java_nova_hetu_omnicache_vector_OMVectorBase_release
-  (JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus
 }

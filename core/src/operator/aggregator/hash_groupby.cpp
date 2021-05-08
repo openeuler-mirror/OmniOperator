@@ -11,7 +11,7 @@
 #include <sstream>
 #endif
 
-uintptr_t NativeOmniHashAggregationOperatorFactory::createOmniOperator()
+NativeOmniOperator * NativeOmniHashAggregationOperatorFactory::createOmniOperator()
 {
     std::vector<ColumnIndex> groupByIndex;
     std::vector<ColumnIndex> aggIndex;
@@ -50,7 +50,7 @@ uintptr_t NativeOmniHashAggregationOperatorFactory::createOmniOperator()
     }
 
     NativeOmniHashAggregationOperator* groupBy = new NativeOmniHashAggregationOperator(groupByIndex, aggIndex, aggs);
-    return reinterpret_cast<uintptr_t>(groupBy);
+    return groupBy;
 }
 
 void NativeOmniHashAggregationOperator::preloop(Table* table) 

@@ -140,3 +140,71 @@ TEST(hammer, test_groupby_primitive_arg) {
 TEST(hammer, test_groupby_original) {
     test_groupby(false);
 }
+
+// void test_sort(bool harden)
+// {
+//     std::map < std::string, ParamValue * > testParam;
+//     int sortCols[] = {0, 1};
+//     int sortColTypes[] = {1, 1};
+//     int sortAscendings[] = {1, 1};
+//     int sortNullFirsts[] = {1, 1};
+//     int sortColCount = 2;
+
+//     auto p_sortCols = ParamValue(sortCols, 2);
+//     auto p_sortColTypes = ParamValue(sortColTypes, 2);
+//     auto p_sortAscendings = ParamValue(sortAscendings, 2);
+//     auto p_sortNullFirsts = ParamValue(sortNullFirsts, 2);
+//     auto p_sortColCount = ParamValue(&sortColCount);
+
+//     testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
+//     testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
+//     testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
+//     testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
+//     testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
+
+//     std::list < Hammer * > deps = std::list<Hammer *>();
+
+//     Hammer hammer1("/opt/lib/ir/test.ll", testParam);
+//     Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
+//     Hammer hammer5("/opt/lib/ir/sort.ll", testParam);
+
+//     if (harden) {
+//         hammer1.harden();
+//         hammer2.harden();
+//         hammer5.harden();
+//     }
+
+//     deps.push_back(&hammer2);
+//     deps.push_back(&hammer5);
+
+//     auto opt_conf = HammerConfig::getConf(2, 119);
+//     auto JITTER = hammer1.create_jitter(deps,*opt_conf);
+
+//     auto sort = JITTER->lookup("_Z9test_sortv");
+//     if (sort) {
+//         auto main = (int (*)()) sort->getAddress();
+
+//         typedef std::chrono::high_resolution_clock Time;
+//         typedef std::chrono::milliseconds ms;
+//         typedef std::chrono::duration<float> fsec;
+
+//         auto t1 = Time::now();
+//         int result = 0;
+//         std::cout << "about to call sort \n";
+
+//         result = main();
+//         auto t0 = Time::now();
+//         fsec fs = t0 - t1;
+//         ms d = std::chrono::duration_cast<ms>(fs);
+//         std::cout << (harden ? "optimized" : "original") << " sort duration time: " << d.count() << "ms\n";
+//         printf("\nresult: %d", result);
+//     }
+// }
+
+// TEST(hammer, test_sort_original) {
+//     test_sort(false);
+// }
+
+// TEST(hammer, test_sort_harden) {
+//     test_sort(true);
+// }

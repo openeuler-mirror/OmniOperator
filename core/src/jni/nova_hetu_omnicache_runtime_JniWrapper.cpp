@@ -4,7 +4,6 @@
 //
 #include "../vector/table.h"
 #include "../vector/type.h"
-#include "sort_api.h"
 #include "nova_hetu_omnicache_runtime_JniWrapper.h"
 #include "../jit/hammer.h"
 #include "../memory/memory_pool.h"
@@ -12,6 +11,7 @@
 #include "../util/debug.h"
 
 #include "../operator/aggregator/hash_groupby.h"
+#include "../operator/sort/sort.h"
 
 #include <iostream>
 #include <cstring>
@@ -282,14 +282,24 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_execu
     return tranform(env, result);
 }
 
+JitContext *createSortJitContext(
+  int32_t *sourceTypes, 
+  int32_t typesCount, 
+  int32_t *outputCols, 
+  int32_t outputColsCount, 
+  int32_t *sortCols,
+  int32_t *sortAscendings,
+  int32_t *sortNullFirsts,
+  int32_t sortColsCount);
+
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    sortPrepare
+ * Method:    createSortOperatorFactory
  * Signature: ([II[II[I[I[II)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortPrepare
+JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createSortOperatorFactory
   (JNIEnv *env, jobject jObj, jintArray jSourceTypes, jint jTypeCount, jintArray jOutputCols, jint jOutputColCount,
-    jintArray jSortCols, jintArray jAscendings, jintArray jNullFirsts, jint jSortColCount)
+   jintArray jSortCols, jintArray jAscendings, jintArray jNullFirsts, jint jSortColCount)
 {
     auto start = START();
     jint *sourceTypesArr = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
@@ -298,8 +308,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortPrepare
     jint *ascendingsArr = env->GetIntArrayElements(jAscendings, JNI_FALSE);
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
-    PRINT_JNI("before sortPrepare call elapsed time: %ld ms\n", END(start));
-    int64_t contextAddress = sortPrepare(
+    PRINT_JNI("before create sort operator factory call elapsed time: %ld ms\n", END(start));
+    NativeOmniSortOperatorFactory *sortOperatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
       sourceTypesArr,
       jTypeCount,
       outputColsArr,
@@ -308,90 +318,169 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortPrepare
       ascendingsArr,
       nullFirstsArr,
       jSortColCount);
-    PRINT_JNI("after sortPrepare call elapsed time: %ld ms\n", END(start));
-    return contextAddress;
+    JitContext *jitContext = createSortJitContext(
+      sortOperatorFactory->getSourceTypes(),
+      sortOperatorFactory->getSourceTypeCount(),
+      sortOperatorFactory->getOutputCols(),
+      sortOperatorFactory->getOutputColCount(),
+      sortOperatorFactory->getSortCols(),
+      sortOperatorFactory->getSortAscendings(),
+      sortOperatorFactory->getSortNullFirsts(),
+      sortOperatorFactory->getSortColCount());
+    sortOperatorFactory->setJitContext(jitContext);
+    PRINT_JNI("after create sort operator factory call elapsed time: %ld ms\n", END(start));
+    return (int64_t)sortOperatorFactory;
+} 
+
+JitContext *createSortJitContext(
+  int32_t *sourceTypes, 
+  int32_t typesCount, 
+  int32_t *outputCols, 
+  int32_t outputColsCount, 
+  int32_t *sortCols,
+  int32_t *sortAscendings,
+  int32_t *sortNullFirsts,
+  int32_t sortColsCount)
+{
+    auto start = START();
+    using namespace codegen;
+    std::map<std::string, ParamValue *> testParam;
+    std::list<Hammer *> deps = std::list<Hammer *>();
+    int sortColTypes[sortColsCount];
+
+    for (int32_t i = 0; i < sortColsCount; ++i) {
+        sortColTypes[i] = sourceTypes[sortCols[i]];
+    }
+
+    ParamValue p_sourceTypes = ParamValue(sourceTypes, typesCount);
+    ParamValue p_typeCount = ParamValue(&typesCount);
+    ParamValue p_outputCols = ParamValue(outputCols, outputColsCount);
+    ParamValue p_outputColCount = ParamValue(&outputColsCount);
+    ParamValue p_sortCols = ParamValue(sortCols, sortColsCount);
+    ParamValue p_sortColTypes = ParamValue(sortColTypes, sortColsCount);
+    ParamValue p_sortAscendings = ParamValue(sortAscendings, sortColsCount);
+    ParamValue p_sortNullFirsts = ParamValue(sortNullFirsts, sortColsCount);
+    ParamValue p_sortColCount = ParamValue(&sortColsCount);
+
+    testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
+    testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
+    testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
+    testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
+    testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
+
+    testParam["_Z12allocColumnslPiS_ii@1"] = &p_sourceTypes;
+    testParam["_Z12allocColumnslPiS_ii@2"] = &p_outputCols;
+    testParam["_Z12allocColumnslPiS_ii@3"] = &p_outputColCount;
+
+    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@1"] = &p_outputCols;
+    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@2"] = &p_outputColCount;
+    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@4"] = &p_sourceTypes;
+
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+
+    Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
+    hammer1.harden();
+    hammer2.harden();
+    deps.push_back(&hammer2);
+
+    HammerConfig hammerConfig;
+    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    auto func = (sort_module)(jitter->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
+
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(func);;
+    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+
+    PRINT_API("create jit sort context elapsed time: %ld ms\n", END(start));
+    return jitContext;
 }
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    sortCreateOperator
- * Signature: (J[II[II[I[I[II)J
+ * Method:    createSortOperator
+ * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortCreateOperator
-  (JNIEnv *env, jobject jObj, jlong jContextAddress, jintArray jSourceTypes, jint jTypeCount, jintArray jOutputCols,
-    jint jOutputColCount, jintArray jSortCols, jintArray jAscendings, jintArray jNullFirsts, jint jSortColCount)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createSortOperator
+  (JNIEnv *env, jobject jObj, jlong nativeSortOperatorFactory)
 {
-    auto start = START();
-    jint *sourceTypesArr = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
-    jint *outputColsArr = env->GetIntArrayElements(jOutputCols, JNI_FALSE);
-    jint *sortColsArr = env->GetIntArrayElements(jSortCols, JNI_FALSE);
-    jint *ascendingsArr = env->GetIntArrayElements(jAscendings, JNI_FALSE);
-    jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
+    NativeOmniSortOperatorFactory *sortOperatorFactory = (NativeOmniSortOperatorFactory *)nativeSortOperatorFactory;
+    JitContext *jitContext = sortOperatorFactory->getJitContext();
+    NativeOmniOperator *sortOperator = NULL;
 
-    PRINT_JNI("before sortCreateOperator call elapsed time: %ld ms\n", END(start));
-    int64_t sortAddress = sortCreateOperator(
-      jContextAddress,
-      sourceTypesArr,
-      jTypeCount,
-      outputColsArr,
-      jOutputColCount,
-      sortColsArr,
-      ascendingsArr,
-      nullFirstsArr,
-      jSortColCount);
-    PRINT_JNI("after sortCreateOperator call elapsed time: %ld ms\n", END(start));
-    return sortAddress;
-}
+    if (jitContext == NULL) {
+      sortOperator = sortOperatorFactory->createOmniOperator();
+    }
+    else {
+      sort_module sortModule = (sort_module)(jitContext->func);
+      sortOperator = sortModule(sortOperatorFactory);
+    }
+
+    return (int64_t)sortOperator;
+}  
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    sortAddInput
- * Signature: (JJ[J[JI[JJ)V
+ * Method:    addSortInput
+ * Signature: (J[J[II)V
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortAddInput
-  (JNIEnv *env, jobject jObj, jlong jContextAddress, jlong jSortAddress, jlongArray jInputAddr, jlongArray jInputNulls,
-   jint jPageCount, jintArray jRowCounts, jint jTotalRowCount)
+JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_addSortInput
+  (JNIEnv *env, jobject jObj, jlong jSortOperator, jlongArray jDataAddr, jintArray jRowCounts, jint jPageCount)
 {
     auto start = START();
-    jlong *inputAddr = env->GetLongArrayElements(jInputAddr, JNI_FALSE);
-    jlong *nullAddr = env->GetLongArrayElements(jInputNulls, JNI_FALSE);
+    jlong *inputAddr = env->GetLongArrayElements(jDataAddr, JNI_FALSE);
     jint *rowCounts = env->GetIntArrayElements(jRowCounts, JNI_FALSE);
 
     PRINT_JNI("before sortAddInput call elapsed time: %ld ms\n", END(start));
-    sortAddInput(jContextAddress, jSortAddress, inputAddr, nullAddr, jPageCount, rowCounts, jTotalRowCount);
-    PRINT_JNI("after sortAddInput call elapsed time: %ld ms\n", END(start));
-}
+    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)jSortOperator;
+    int32_t *sourceTypes = sortOperator->getSourceTypes();
+    int32_t columnCount = sortOperator->getTypescount();
+    Table *table;
+    Column *column;
+    int32_t rowCount;
+    int32_t startOffset = 0;
+
+    ColumnType columnTypes[columnCount];
+    ColumnType columnType;
+    for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
+      columnTypes[colIdx] = getColumnType(sourceTypes[colIdx]);
+    }
+
+    Table **inputTables = (Table **)malloc(jPageCount * sizeof(Table *));
+    for (int32_t tableIdx = 0; tableIdx < jPageCount; tableIdx++) {
+      startOffset = tableIdx * columnCount;
+      rowCount = rowCounts[tableIdx];
+      table = new Table(rowCount, columnCount);
+      for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
+        columnType = columnTypes[colIdx];
+        column = new Column((void *)(inputAddr[startOffset + colIdx]), columnType, rowCount);
+        table->setColumn(column, columnType);
+      }
+      inputTables[tableIdx] = table;
+    }
+
+    sortOperator->addInput(inputTables, rowCounts, jPageCount);
+    PRINT_JNI("after sortAddInput call elapsed time: %ld ms\n", END(start));   
+}  
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    sortExecute
- * Signature: (JJ)V
+ * Method:    getSortOutput
+ * Signature: (J)[Lnova/hetu/omnicache/runtime/OMResult;
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortExecute
-  (JNIEnv *env, jobject jObj, jlong jContextAddress, jlong jSortAddress)
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getSortOutput
+  (JNIEnv *env, jobject jObj, jlong jSortOperator)
 {
     auto start = START();
-    sortExecute(jContextAddress, jSortAddress);
-    PRINT_JNI("after sortExecute call elapsed time: %ld ms\n", END(start));
-}
-
-/*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    sortGetOutput
- * Signature: (JJ)Lnova/hetu/omnicache/runtime/OMResult;
- */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_sortGetOutput
-  (JNIEnv *env, jobject jObj, jlong jContextAddress, jlong jSortAddress)
-{
-    auto start = START();
-    int32_t tableCount = 0;
-    Table **outputTable = sortGetOutput(jContextAddress, jSortAddress, &tableCount);
-    PRINT_JNI("after sortGetOutput call elapsed time: %ld ms\n", END(start));
-    jobject output = transformTableToResultV2(env, outputTable, tableCount);
-    PRINT_JNI("after transformTableToResult call elapsed time: %ld ms\n", END(start));
-    
-    freeOutputTable(outputTable, tableCount);
-    return output;
+    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)jSortOperator;
+    vector<Table *> outputTables;
+    sortOperator->getOutput(outputTables);
+    PRINT_JNI("after getOutput call elapsed time: %ld ms\n", END(start));
+    jobjectArray result = tranform(env, outputTables);
+    PRINT_JNI("after transform call elapsed time: %ld ms\n", END(start));
+    freeOutputTable(outputTables);
+    return result;
 }
 
 jobjectArray tranform(JNIEnv *env, std::vector<Table*>& result)

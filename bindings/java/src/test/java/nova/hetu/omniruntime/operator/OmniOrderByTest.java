@@ -54,11 +54,6 @@ public class OmniOrderByTest
         List<Vec> datas = new ArrayList<>();
         datas.add(vec1);
         datas.add(vec2);
-        List<Vec> nulls = new ArrayList<>();
-        IntVec nullVec1 = new IntVec(8);
-        IntVec nullVec2 = new IntVec(8);
-        nulls.add(nullVec1);
-        nulls.add(nullVec2);
 
         int[] sourceTypes = {1, 1};
         int[] outputCols = {0, 1};
@@ -66,11 +61,10 @@ public class OmniOrderByTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        long contextAddress = 0;
-        long sortAddress = orderBy.createOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-        orderBy.addInput(contextAddress, sortAddress, datas, nulls, 1, 2);
-        orderBy.execute(contextAddress, sortAddress);
-        OMResult result = orderBy.getOutput(contextAddress, sortAddress);
+        long factoryAddress = 0;
+        long operatorAddress = orderBy.createOperator(factoryAddress);
+        orderBy.addInput(operatorAddress, datas, 1, 2);
+        OMResult result = orderBy.getOutput(operatorAddress);
 
         ByteBuffer[] output = result.getBuffers();
         int len = result.getLength();
@@ -87,11 +81,10 @@ public class OmniOrderByTest
         Assert.assertEquals(actual0, expected0);
         Assert.assertEquals(actual1, expected1);
 
-        contextAddress = orderBy.prepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-        sortAddress = orderBy.createOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-        orderBy.addInput(contextAddress, sortAddress, datas, nulls, 1, 2);
-        orderBy.execute(contextAddress, sortAddress);
-        result = orderBy.getOutput(contextAddress, sortAddress);
+        factoryAddress = orderBy.createOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+        operatorAddress = orderBy.createOperator(factoryAddress);
+        orderBy.addInput(operatorAddress, datas, 1, 2);
+        result = orderBy.getOutput(operatorAddress);
 
         output = result.getBuffers();
         len = result.getLength();
@@ -121,23 +114,14 @@ public class OmniOrderByTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        long contextAddress = orderBy.prepare(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+        long factoryAddress = orderBy.createOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
         start = System.currentTimeMillis();
-        long sortAddress = orderBy.createOperator(contextAddress, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+        long operatorAddress = orderBy.createOperator(factoryAddress);
 
-        int rowNum = vecs.get(0).size();
-        List<Vec> nulls = new ArrayList<>();
-        for (int i = 0; i < vecs.size(); i++) {
-            IntVec nullVec1 = new IntVec(rowNum);
-            IntVec nullVec2 = new IntVec(rowNum);
-            nulls.add(nullVec1);
-            nulls.add(nullVec2);
-        }
-        orderBy.addInput(contextAddress, sortAddress, vecs, nulls, 10, 2);
+        orderBy.addInput(operatorAddress, vecs, 10, 2);
 
-        orderBy.execute(contextAddress, sortAddress);
-        OMResult result = orderBy.getOutput(contextAddress, sortAddress);
+        OMResult result = orderBy.getOutput(operatorAddress);
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
 
@@ -148,29 +132,22 @@ public class OmniOrderByTest
     public void testOrderByMultiPerformance()
     {
         dataVecs = buildVecs();
-        int rowNum = dataVecs.get(0).size();
-        dataNulls = new ArrayList<>();
-        for (int i = 0; i < dataVecs.size(); i++) {
-            IntVec nullVec1 = new IntVec(rowNum);
-            IntVec nullVec2 = new IntVec(rowNum);
-            dataNulls.add(nullVec1);
-            dataNulls.add(nullVec2);
-        }
+
+        int[] sourceTypes = {2, 2};
+        int[] outputCols = {0, 1};
+        int[] sortCols = {0, 1};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+        long factoryAddress = orderBy.createOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
         int threadNum = 4;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
         for (int i = 0; i < threadNum; i++) {
             Thread thread = new Thread(() -> {
                 try {
-                    int[] sourceTypes = {2, 2};
-                    int[] outputCols = {0, 1};
-                    int[] sortCols = {0, 1};
-                    int[] ascendings = {1, 1};
-                    int[] nullFirsts = {0, 0};
-                    long sortAddress = orderBy.createOperator(0, sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-                    orderBy.addInput(0, sortAddress, dataVecs, dataNulls, totalPageCount, 2);
-                    orderBy.execute(0, sortAddress);
-                    orderBy.getOutput(0, sortAddress);
+                    long operatorAddress = orderBy.createOperator(factoryAddress);
+                    orderBy.addInput(operatorAddress, dataVecs, totalPageCount, 2);
+                    orderBy.getOutput(operatorAddress);
                 }
                 finally {
                     countDownLatch.countDown();

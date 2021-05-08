@@ -3,7 +3,6 @@
 //
 #include "chrono"
 #include "aggregator/hash_groupby.h"
-#include "../jni/sort_api.h"
 #include <time.h>
 #include <vector>
 #include <iostream>
@@ -102,3 +101,137 @@ int test_group_by(int page_count, int row_count, int *data_type, int column_coun
     delete result;
     return 1234;
 }
+
+// int test_sort() {
+//     printf("test_sort called\n");
+
+//     // construct input data
+//     const int32_t DATA_SIZE = 10000000;
+//     int32_t *data1 = new int32_t[DATA_SIZE];
+//     for (int32_t i = 0; i < DATA_SIZE; ++i) {
+//         data1[i] = i;
+//     }
+//     int *nulls1 = new int[DATA_SIZE];
+//     memset(nulls1, false, DATA_SIZE);
+
+//     int32_t *data2 = new int32_t[DATA_SIZE];
+//     for (int32_t i = 0; i < DATA_SIZE; ++i) {
+//         data2[i] = i;
+//     }
+//     int *nulls2 = new int[DATA_SIZE];
+//     memset(nulls2, false, DATA_SIZE);
+
+//     long datas[2] = {(long)data1, (long)data2};
+//     long nulls[2] = {(long)nulls1, (long)nulls2};
+//     int rowCounts[1] = {DATA_SIZE};
+
+//     clock_t start = clock();
+//     NativeOmniSortOperator *NativeOmniSortOperator = createSort();
+//     NativeOmniSortOperator->addInput(datas, nulls, 1, rowCounts, DATA_SIZE);
+//     int32_t tableCount = 0;
+//     Table **outputTable = NativeOmniSortOperator->getOutput(&tableCount);
+//     std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
+
+//     // free memory
+//     delete outputTable;
+//     delete[]nulls2;
+//     delete[]nulls1;
+//     delete[]data2;
+//     delete[]data1;
+
+//     return 1235;
+// }
+
+// void buildSortData(int tableCount, int distinctValueCount, int repeatCount, long *datas, long *nulls)
+// {
+//     uint32_t positionCount = distinctValueCount * repeatCount;
+//     long *data1;
+//     long *data2;
+//     long *null1;
+//     long *null2;
+//     uint32_t size = positionCount * sizeof(long);
+//     uint32_t idx = 0;
+
+//     for (int i = 0; i < tableCount; i++) {
+//         data1 = (long *)malloc(size);
+//         null1 = (long *)malloc(size);
+//         data2 = (long *)malloc(size);
+//         null2 = (long *)malloc(size);
+
+//         idx = 0;
+//         for (int j = 0; j < distinctValueCount; j++) {
+//             for (int k = 0; k < repeatCount; k++) {
+//                 data1[idx] = j;
+//                 data2[idx] = j;
+//                 null1[idx] = 0;
+//                 null2[idx] = 0;
+//                 idx++;
+//             }
+//         }
+
+//         datas[i * 2 + 0] = (long)data1;
+//         datas[i * 2 + 1] = (long)data2;
+//         nulls[i * 2 + 0] = (long)null1;
+//         nulls[i * 2 + 1] = (long)null2;
+//     }
+// }
+
+// int test_sort_one()
+// {
+//     printf("test_sort_one called\n");
+
+//     int tableCount = 10;
+//     int distinctValue = 4;
+//     int repeatCount = 250000;
+//     uint32_t rowNum = distinctValue * repeatCount;
+
+//     long *datas = (long *)malloc(tableCount * 2 * sizeof(long));
+//     long *nulls = (long *)malloc(tableCount * 2 * sizeof(long));
+//     buildSortData(tableCount, distinctValue, repeatCount, datas, nulls);
+//     std::cout<<"finish build sort data" << endl;
+
+//     int rowCounts[tableCount];
+//     for (int i = 0; i < tableCount; i++) {
+//         rowCounts[i] = rowNum;
+//     }
+
+//     Sort *sort = createSort();
+//     PagesIndex *pagesIndex = sort->getPagesIndex();
+//     pagesIndex->addTables(datas, nulls, tableCount, rowCounts, distinctValue * repeatCount);
+
+//     int32_t sortColCount = sort->getSortColCount();
+//     int32_t *sourceTypes = sort->getSourceTypes();
+//     int32_t *sortCols = sort->getSortCols();
+//     int32_t positionCount = pagesIndex->getPositionCount();
+//     int32_t *outputCols = sort->getOutputCols();
+//     int32_t outputColsCount = sort->getOutputColsCount();
+
+//     int32_t sortColTypes[sortColCount];
+//     for (int32_t i = 0; i < sortColCount; i++) {
+//         sortColTypes[i] = sourceTypes[sortCols[i]];
+//     }
+
+//     clock_t start = clock();
+//     quickSort((int64_t)pagesIndex,
+//             sortCols,
+//             sortColTypes,
+//             sort->getSortAscendings(),
+//             sort->getSortNullFirsts(),
+//             sortColCount,
+//             0,
+//             positionCount);
+//     std::cout << "sort elapsed end time: " << (double) (std::clock() - start) / 1000 << " ms" << std::endl;
+
+//     Table *outputTable = new Table(positionCount, outputColsCount);
+//     getResult((int64_t)pagesIndex, outputCols, outputColsCount, (int64_t)outputTable, sourceTypes, 0, positionCount);
+
+//     for (int i = 0; i < tableCount; i++) {
+//         delete[] (long *)(datas[i * 2 + 0]);
+//         delete[] (long *)(datas[i * 2 + 1]);
+//         delete[] (long *)(nulls[i * 2 + 0]);
+//         delete[] (long *)(nulls[i * 2 + 1]);
+//     }
+//     delete[] datas;
+//     delete[] nulls;
+//     return 1236;
+// }
