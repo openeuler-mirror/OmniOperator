@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../src/operator/hash_groupby.h"
+#include "../../src/operator/aggregator/hash_groupby.h"
 #include "../../src/jni/api.h"
 #include <time.h>
 #include <vector>
