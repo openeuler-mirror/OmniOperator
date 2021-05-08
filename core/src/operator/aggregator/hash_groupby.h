@@ -1,8 +1,8 @@
 #ifndef __HASH_GROUPBY_H__
 #define __HASH_GROUPBY_H__
 
+#include "../native_base.h"
 #include "aggregator.h"
-#include "../op_template.h"
 #include "../../util/op_template_cache.h"
 #include "../../util/debug.h"
 
@@ -18,12 +18,64 @@ typedef struct Iterator
     std::vector<std::unordered_map<uint64_t, std::vector<GroupByColumn>>::iterator> aggIterators;
 } HashGroupByIterator;
 
-class HashGroupBy : public OpTemplate {
+class MultiChannelHash {
 public:
-    HashGroupBy(std::vector<ColumnIndex> groupByCols, std::vector<ColumnIndex> aggCols, std::vector<Aggregator*> aggregators)
+    MultiChannelHash() : result(0){}
+    uint64_t combineHash(uint64_t result, uint64_t value) {
+        return (31 * result + value);
+    }
+private:
+    uint64_t result;
+};
+
+typedef struct HashPosition
+{
+    uint64_t hashVal;
+    uint32_t offset;
+} HashPosition;
+
+class NativeOmniHashAggregationOperatorFactory : public NativeOmniOperatorFactory
+{
+public:
+    uintptr_t createOmniOperator() override;
+    NativeOmniHashAggregationOperatorFactory
+    (PrepareContext groupByColContext, PrepareContext groupByTypeContext, PrepareContext aggColContext, PrepareContext aggTypeContext, PrepareContext aggFuncTypeContext)
+    : groupByColContext(groupByColContext), groupByTypeContext(groupByTypeContext), aggColContext(aggColContext), aggTypeContext(aggTypeContext), aggFuncTypeContext(aggFuncTypeContext)
+    {}
+
+    ~NativeOmniHashAggregationOperatorFactory() override
+    {}
+private:
+    PrepareContext groupByColContext; 
+    PrepareContext groupByTypeContext;
+    PrepareContext aggColContext;
+    PrepareContext aggTypeContext;
+    PrepareContext aggFuncTypeContext;
+};
+
+class NativeOmniHashAggregationOperator : public NativeOmniOperator
+{
+public:
+    NativeOmniHashAggregationOperator(std::vector<ColumnIndex> groupByCols, std::vector<ColumnIndex> aggCols, std::vector<Aggregator*> aggregators)
     : groupByCols(groupByCols), aggCols(aggCols), aggregators(aggregators)
+    {
+
+    }
+
+    int32_t addInput(Table* data, int32_t rowCount) override;
+
+    int32_t getOutput(std::vector<Table*>& data) override;
+
+    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override
+    {
+        return 0;
+    }
+
+    NativeOmniHashAggregationOperator(std::vector<Aggregator*> aggregators)
+    : aggregators(aggregators)
     { }
-    ~HashGroupBy()
+
+    ~NativeOmniHashAggregationOperator()
     {
         // delete map
         for (auto& item : groupedRows) {
@@ -52,52 +104,25 @@ public:
         for (auto& agg : aggregators) {
             delete agg;
         }
-        delete[] inputColTypes;
     }
-    void preloop(Table* table) override;
-    void inloop(Table* table, uint32_t rowIdx) override;
-    void inloop(char** head, 
-                uint32_t offset, 
-                int32_t* types, 
-                int32_t colNum,  
-                int32_t* groupByColIdx,
-                int32_t groupByColNum,
-                int32_t* aggColIdx,
-                int32_t aggColNum,
-                int32_t* aggFuncTypes); 
-    void postloop(Table* table) override;
-    void process(Table*, uint32_t) override;
+    void preloop(Table* table);
+    void inloop(Table* table, uint32_t rowIdx);
+    void inloop(char** head, uint32_t offset, int32_t* types, int32_t colNum, int32_t* groupByColIdx, int32_t groupByColNum, int32_t* aggColIdx, int32_t aggColNum, int32_t* aggFuncTypes); 
+    void postloop(Table* table);
     void constructColumn(Table* table, uint32_t type, int32_t columnIdx, uint32_t outputColType);
     void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize, int32_t tableRowSize, HashGroupByIterator& iterator);
-    // Table* getResult() override;
-    int32_t getResult(std::vector<Table*>&);
-    Table* getResult() {} 
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();
+
 private:
-    std::vector<ColumnIndex> groupByCols;
-    std::vector<ColumnIndex> aggCols;
     std::vector<Aggregator*> aggregators;
     std::unordered_map<uint64_t, std::vector<GroupByColumn>> groupedRows;
+    std::vector<ColumnIndex> groupByCols;
+    std::vector<ColumnIndex> aggCols;
     uint32_t* inputColTypes;
 };
-HashGroupBy* createHashGroupBy(std::vector<ColumnIndex>& groupByIndex, 
-                                    std::vector<ColumnIndex>& aggIndex, 
-                                    std::vector<Aggregator*>& aggs);
-class MultiChannelHash {
-public:
-    MultiChannelHash() : result(0){}
-    uint64_t combineHash(uint64_t result, uint64_t value) {
-        return (31 * result + value);
-    }
-private:
-    uint64_t result;
-};
 
-typedef struct HashPosition
-{
-    uint64_t hashVal;
-    uint32_t offset;
-} HashPosition;
+typedef void (*jit_module)(NativeOmniHashAggregationOperator*, Table*);
+typedef uintptr_t (*opt_module) (NativeOmniHashAggregationOperatorFactory*);
 
 #endif

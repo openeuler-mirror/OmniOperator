@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <unordered_map>
 #include <mutex>
-#include "../operator/op_template.h"
 
 template<typename T>
 class OpTemplateCache

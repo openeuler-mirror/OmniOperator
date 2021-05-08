@@ -11,13 +11,54 @@
 #include <sstream>
 #endif
 
+uintptr_t NativeOmniHashAggregationOperatorFactory::createOmniOperator()
+{
+    std::vector<ColumnIndex> groupByIndex;
+    std::vector<ColumnIndex> aggIndex;
+    std::vector<Aggregator*> aggs;
+    
+    for (int32_t i = 0; i < groupByColContext.len; ++i) {
+        ColumnIndex c = {groupByColContext.context[i], (ColumnType)groupByTypeContext.context[i]};
+        groupByIndex.push_back(c);
+    }
+    for (int32_t i = 0; i < aggColContext.len; ++i) {
+        ColumnIndex c = {aggColContext.context[i], (ColumnType)aggTypeContext.context[i]};
+        aggIndex.push_back(c);
 
-void HashGroupBy::preloop(Table* table) 
+        if ((AggregateType)aggFuncTypeContext.context[i] == SUM) {
+            switch (aggTypeContext.context[i])
+            {
+                case INT32: {
+                    SumAggregator* agg = new SumAggregator(1);
+                    aggs.push_back(agg);
+                    break;
+                }
+                case INT64: {
+                    SumAggregator* agg = new SumAggregator(2);
+                    aggs.push_back(agg);
+                    break;
+                }
+                case DOUBLE: {
+                    SumAggregator* agg = new SumAggregator(3);
+                    aggs.push_back(agg);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    NativeOmniHashAggregationOperator* groupBy = new NativeOmniHashAggregationOperator(groupByIndex, aggIndex, aggs);
+    return reinterpret_cast<uintptr_t>(groupBy);
+}
+
+void NativeOmniHashAggregationOperator::preloop(Table* table) 
 {
     this->inputColTypes = new uint32_t[groupByCols.size() + aggCols.size()];
 }
 
-void HashGroupBy::inloop(Table* table, uint32_t rowIndex) 
+void NativeOmniHashAggregationOperator::inloop(Table* table, uint32_t rowIndex) 
 {
     // caculate hash value on group by column(s)
     uint64_t combinedHash = 0;
@@ -76,7 +117,7 @@ void HashGroupBy::inloop(Table* table, uint32_t rowIndex)
     }
 }
 
-void HashGroupBy::postloop(Table* table) 
+void NativeOmniHashAggregationOperator::postloop(Table* table) 
 {
 
 }
@@ -128,21 +169,20 @@ extern "C" void processAgg(uint64_t key,
     }
 }
 
-void HashGroupBy::inloop(char** head, 
-                        uint32_t offset, 
-                        int32_t* types, 
-                        int32_t colNum,  
-                        int32_t* groupByColIdx,
-                        int32_t groupByColNum,
-                        int32_t* aggColIdx,
-                        int32_t aggColNum,
-                        int32_t* aggFuncTypes) 
+void NativeOmniHashAggregationOperator::inloop(char** head, 
+                                                uint32_t offset, 
+                                                int32_t* types, 
+                                                int32_t colNum,  
+                                                int32_t* groupByColIdx,
+                                                int32_t groupByColNum,
+                                                int32_t* aggColIdx,
+                                                int32_t aggColNum,
+                                                int32_t* aggFuncTypes) 
 {    
     HashPosition combinedHash = {0, 0};
     MultiChannelHash hashFunc;
     for (int32_t i = 0; i < groupByColNum; ++i) {    
         uint64_t hash = 0;
-        void* rowPtr = nullptr;
         uint32_t idx = groupByColIdx[i];
         switch (types[idx])
         {
@@ -150,21 +190,18 @@ void HashGroupBy::inloop(char** head,
                 int32_t* rowVal = reinterpret_cast<int32_t*>(head[idx]) + offset;
                 std::hash<int32_t> hashInt32;
                 hash = hashInt32(*rowVal);
-                rowPtr = reinterpret_cast<void*>(rowVal);
                 break;
             }
             case 2: {
                 int64_t* rowVal = reinterpret_cast<int64_t*>(head[idx]) + offset;
                 std::hash<int64_t> hashInt64;
                 hash = hashInt64(*rowVal);
-                rowPtr = reinterpret_cast<void*>(rowVal);
                 break;
             }
             case 3: {
                 double* rowVal = reinterpret_cast<double*>(head[idx]) + offset;
                 std::hash<double> hashDouble;
                 hash = hashDouble(*rowVal);
-                rowPtr = reinterpret_cast<void*>(rowVal);
                 break;
             }
             default:
@@ -219,7 +256,7 @@ void HashGroupBy::inloop(char** head,
     processAgg(combinedHash.hashVal, aggregators, aggFuncTypes, aggColNum, types, aggColIdx, (void**)head, offset);
 }
 
-void HashGroupBy::process(Table* table, uint32_t rowCount) 
+int32_t NativeOmniHashAggregationOperator::addInput(Table* table, int32_t rowCount) 
 {
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncEntry;
@@ -230,9 +267,12 @@ void HashGroupBy::process(Table* table, uint32_t rowCount)
     int32_t rowNum = table->getColumnNumber();
     int32_t groupColNum = this->groupByCols.size();
     int32_t* groupByColIdx = new int32_t[groupColNum];
+    // int32_t* groupByColIdx = reinterpret_cast<int32_t*>(omni_allocate(groupColNum * sizeof(int32_t)));
     int32_t aggColNum = this->aggCols.size();
     int32_t* aggColIdx = new int32_t[aggColNum];
+    // int32_t* aggColIdx = reinterpret_cast<int32_t*>(omni_allocate(aggColNum * sizeof(int32_t)));
     int32_t* aggFuncTypes = new int32_t[aggColNum];
+    // int32_t* aggFuncTypes = reinterpret_cast<int32_t*>(omni_allocate(aggColNum * sizeof(int32_t)));
     
     for (int32_t i = 0; i < groupColNum; ++i) {
         groupByColIdx[i] = this->groupByCols[i].idx;
@@ -251,36 +291,38 @@ void HashGroupBy::process(Table* table, uint32_t rowCount)
     delete[] groupByColIdx;
     delete[] aggColIdx;
     delete[] aggFuncTypes;
-#ifdef DEBUG_LEVEL_HIGH
-    DebugFuncExit;
-#endif
+    // omni_release(reinterpret_cast<uintptr_t>(groupByColIdx));
+    // omni_release(reinterpret_cast<uintptr_t>(aggColIdx));
+    // omni_release(reinterpret_cast<uintptr_t>(aggFuncTypes));
+    return 0;
 }
+
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
 
 fsec g_total_execute_time;
 
-extern "C" void JIT_hashGroupByExecute(HashGroupBy* op, Table* table) 
-{
-    fsec local_execute_time;
-    auto t0 = Time::now();
-    op->process(table, table->getPositionCount());
-    auto t1 = Time::now();
-    local_execute_time = (t1 - t0);
+// extern "C" void JIT_hashGroupByExecute(NativeOmniHashAggregationOperator* op, Table* table) 
+// {
+//     fsec local_execute_time;
+//     auto t0 = Time::now();
+//     op->process(table, table->getPositionCount());
+//     auto t1 = Time::now();
+//     local_execute_time = (t1 - t0);
     
-    ms dd = std::chrono::duration_cast<ms>(local_execute_time);
-    g_total_execute_time += (t1 - t0);
-    ms d = std::chrono::duration_cast<ms>(g_total_execute_time);
-}
+//     ms dd = std::chrono::duration_cast<ms>(local_execute_time);
+//     g_total_execute_time += (t1 - t0);
+//     ms d = std::chrono::duration_cast<ms>(g_total_execute_time);
+// }
 
-void HashGroupBy::constructColumn(Table* table, 
-                                    int32_t* types, 
-                                    uint32_t groupByColSize, 
-                                    uint32_t aggColSize, 
-                                    int32_t tableRowSize, 
-                                    HashGroupByIterator& iterator)
-{
+void NativeOmniHashAggregationOperator::constructColumn(Table* table, 
+                                                        int32_t* types, 
+                                                        uint32_t groupByColSize, 
+                                                        uint32_t aggColSize, 
+                                                        int32_t tableRowSize, 
+                                                        HashGroupByIterator& iterator)
+                {
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncEntry;
 #endif
@@ -303,7 +345,10 @@ void HashGroupBy::constructColumn(Table* table,
                 table->setColumn(new Column(c, DOUBLE, tableRowSize), DOUBLE);
                 break;
             }
+            default: {
+                DebugError("Type %d doesn't support", types[i]);
                 break;
+            }
         }
     }
     // set value row by row
@@ -331,8 +376,10 @@ void HashGroupBy::constructColumn(Table* table,
                      /* code */
                     break;
                 }
-                default:
+                default: {
+                    DebugError("Type %d doesn't support", types[i]);
                     break;
+                }
             }
         }
         rIdx++;
@@ -381,7 +428,7 @@ void HashGroupBy::constructColumn(Table* table,
 #endif 
 }
 
-int32_t HashGroupBy::getResult(std::vector<Table*>& result) 
+int32_t NativeOmniHashAggregationOperator::getOutput(std::vector<Table*>& result) 
 {
     uint32_t gbSize = groupByCols.size();
     uint32_t aggSize = aggCols.size();
@@ -450,12 +497,7 @@ int32_t HashGroupBy::getResult(std::vector<Table*>& result)
     {
         iterator.aggIterators.push_back(agg->getState().begin());
     } 
-    // std::cout << "group iter col size : " << iterator.groupIterator->second.size() << std::endl;
-    // std::cout << "agg iter col size : " << iterator.aggIterators[0]->second.size() << std::endl;
-    // std::cout << "group iter row size : " << groupedRows.size() << std::endl;
-    // std::cout << "agg iter row size : " << aggregators[0]->getState().size() << std::endl;
-    // std::cout << "pageCount : " << pageCount << std::endl;
-    // std::cout << "maxRowNum : " << maxRowNum << std::endl;
+
     for (int32_t i = 0; i < pageCount; ++i) {
         int32_t tableSize = std::min(maxRowNum, (int32_t)(this->groupedRows.size() - currentPosition));
         Table* table = new Table(tableSize, colSize);
@@ -472,10 +514,10 @@ int32_t HashGroupBy::getResult(std::vector<Table*>& result)
     return pageCount;
 }
 
-void HashGroupBy::constructColumn(Table* table,
-                                    uint32_t type,
-                                    int32_t columnIdx,
-                                    uint32_t outputColType) 
+void NativeOmniHashAggregationOperator::constructColumn(Table* table,
+                                                        uint32_t type,
+                                                        int32_t columnIdx,
+                                                        uint32_t outputColType) 
 {
     if (outputColType == 0) {
         uint32_t rowCount = this->groupedRows.size();
@@ -548,17 +590,4 @@ void HashGroupBy::constructColumn(Table* table,
         }
     }
 
-}
-HashGroupBy* createHashGroupBy(std::vector<ColumnIndex>& groupByIndex, 
-                                    std::vector<ColumnIndex>& aggIndex, 
-                                    std::vector<Aggregator*>& aggs)
-{
-#ifdef DEBUG_LEVEL_HIGH
-    DebugFuncEntry;
-#endif
-#ifdef DEBUG_LEVEL_HIGH
-    DebugPrint("Creating groupby id: %ld", 1L);
-#endif
-    HashGroupBy* groupBy = new HashGroupBy(groupByIndex, aggIndex, aggs);
-    return groupBy;
 }

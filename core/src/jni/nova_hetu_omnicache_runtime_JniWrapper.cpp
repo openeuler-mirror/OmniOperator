@@ -4,12 +4,14 @@
 //
 #include "../vector/table.h"
 #include "../vector/type.h"
-#include "api.h"
 #include "sort_api.h"
 #include "nova_hetu_omnicache_runtime_JniWrapper.h"
+#include "../jit/hammer.h"
 #include "../memory/memory_pool.h"
 #include "../util/op_template_cache.h"
 #include "../util/debug.h"
+
+#include "../operator/aggregator/hash_groupby.h"
 
 #include <iostream>
 #include <cstring>
@@ -90,6 +92,11 @@ void transformValueFromPrepareInfo(uint32_t* prepareInfo, uint32_t* target, int 
     }
 }
 
+/**
+ * Return an NativeOmniHashAggregationFactory object address.
+ * 
+ * 
+ **/
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_prepareAgg
 (JNIEnv *env, jobject jObj, jlong jPrepareInfo, jint jGroupByChannelLen,jint jGroupByTypeLen,
 jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
@@ -127,60 +134,78 @@ jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
     transformValueFromPrepareInfo(prepareInfo, outPutTypes, outPutTypeLen, &index);
     PrepareContext outPutTypeContext = {outPutTypes, outPutTypeLen};
 
-#ifdef OPTIMIZE_BY_ASYNC
-#ifdef DEBUG_LEVEL_LOW
-    DebugPrint("StageId:%ld, OpId:%ld Async codegen optimizing.", stageId, opId);
-#endif
-    std::thread t(prepareHashGroupBy, stageId,opId, groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-    t.detach();
-#else 
-    return prepareHashGroupBy(groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-#endif
+    // return prepareHashGroupBy(groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
+    using namespace codegen;
+    std::map<std::string, ParamValue *> testParam;
+    std::list<Hammer *> deps = std::list<Hammer *>();
+    int32_t groupColNum = groupByColContext.len;
+    int32_t aggColNum = aggColContext.len;
+    int32_t colNum = groupByColContext.len + aggColContext.len;
+    int32_t* colTypes = new int32_t[colNum];
+    
+    for (int i = 0; i < groupColNum; ++i) {
+        colTypes[groupByColContext.context[i]] = groupByTypeContext.context[i];
+    }
+    for (int i = 0; i < aggColNum; ++i) {
+        colTypes[aggColContext.context[i]] = aggTypeContext.context[i];
+    }
+
+    ParamValue p_col_type = ParamValue(colTypes, colNum);
+    ParamValue p_col_count = ParamValue(&colNum);
+    ParamValue p_groupByColIdx = ParamValue((int32_t*)groupByColContext.context, groupColNum);
+    ParamValue p_group_num = ParamValue(&groupColNum);
+    ParamValue p_aggColIdx = ParamValue((int32_t*)aggColContext.context, aggColNum);
+    ParamValue p_agg_num = ParamValue(&aggColNum);
+    ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
+    ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
+
+    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
+    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
+    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
+    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
+    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@9"] = &p_agg_types;
+    
+    testParam["processAgg@2"] =  &p_agg_types;
+    testParam["processAgg@3"] =  &p_agg_num;
+    testParam["processAgg@4"] =  &p_col_type;
+
+    testParam["_ZN33NativeOmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@2"] = &p_col_type;
+    testParam["_ZN33NativeOmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
+    testParam["_ZN33NativeOmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/hash_groupby.ll", testParam);
+    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
+    hammer1.harden();
+    hammer2.harden();
+    hammer3.harden();
+
+    deps.push_back(&hammer3);
+    deps.push_back(&hammer2);
+    HammerConfig hammerConfig;
+    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    
+    auto func = (opt_module)(jitter->lookup("_ZN40NativeOmniHashAggregationOperatorFactory18createOmniOperatorEv")->getAddress());
+    JitContext* jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(func);
+    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    
+    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory = new NativeOmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    nativeOperatorFactory->setJitContext(jitContext); 
+    return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createOperator
-(JNIEnv *env, jobject jObj, jlong jModuleId, jint jSize, jlong jPrepareInfo, jint jGroupByChannelLen, jint jGroupByTypeLen,
- jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
-  {
-      int totalLen = jGroupByChannelLen + jGroupByTypeLen + jAggChannelLen + jAggTypeLen + jAggFuncTypeLen + jOutPutTyeLen;
-  // if (totalLen != jSize) {
-  //   std::cerr << "mismatch the input prepare info" << totalLen << "," << jSize;
-  //   }
-    // groupby channel and type
-    size_t groupByChannelLen = (size_t)jGroupByChannelLen;
-    uint32_t* prepareInfo = (uint32_t*)jPrepareInfo;
-    uint32_t* groupByChannels =  new uint32_t[groupByChannelLen];
-    int index = 0;
-    transformValueFromPrepareInfo(prepareInfo, groupByChannels, jGroupByChannelLen, &index);
-    PrepareContext groupByColContext = {groupByChannels, groupByChannelLen};
-    size_t groupByTypeLen = (size_t)jGroupByTypeLen;
-    uint32_t* groupByTypes = new uint32_t[groupByTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, groupByTypes, groupByTypeLen, &index);
-    PrepareContext groupByTypeContext = {groupByTypes, groupByTypeLen};
+(JNIEnv *env, jobject jObj, jlong jNativeFactoryObj)
+{
 
-    // agg channel and type
-    size_t aggChannelLen = (size_t)jAggChannelLen;
-    uint32_t* aggChannels = new uint32_t[aggChannelLen];
-    transformValueFromPrepareInfo(prepareInfo, aggChannels, aggChannelLen, &index);
-    PrepareContext aggColContext = {aggChannels, aggChannelLen};
-    size_t aggTypeLen = (size_t)jAggTypeLen;
-    uint32_t* aggTypes = new uint32_t[aggTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, aggTypes, aggTypeLen, &index);
-    PrepareContext aggTypeContext = {aggTypes, aggTypeLen};
+    // return createOperator(jModuleId, groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
 
-    // agg function type
-    size_t aggFuncTypeLen = (size_t)jAggFuncTypeLen;
-    uint32_t* aggFuncTypes = new uint32_t[aggFuncTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, aggFuncTypes, aggFuncTypeLen, &index);
-    PrepareContext aggFuncTypeContext = {aggFuncTypes, aggFuncTypeLen};
-    size_t outPutTypeLen = (size_t)jOutPutTyeLen;
-    uint32_t* outPutTypes= new uint32_t[outPutTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, outPutTypes, outPutTypeLen, &index);
-    PrepareContext outPutTypeContext = {outPutTypes, outPutTypeLen};
-
-    return createOperator(jModuleId, groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-  }
+    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(jNativeFactoryObj);
+    return reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
+}
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIntermediate
 (JNIEnv * env, jobject jObj, jlong jOperatorId, jlong jInputDataAddress, jlong jTotalColumn, jint
@@ -204,22 +229,34 @@ jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
     uint32_t* colTypes = new uint32_t[jColumnCout];
     uint64_t opAddr;
     for (int cIndex = 0;cIndex < totalColumnCount;cIndex++) {
-      void* data = reinterpret_cast<void *>(address[cIndex]);
-      int cIdx =  cIndex % jColumnCout;
-      colTypes[cIdx] = buildColumnType(inputTypes[cIdx]);
-      table[cIdx] = (char*)data;
+        int32_t rowNum = rowNums[cIndex / jColumnCout];
 
-      if ((cIndex + 1) % jColumnCout == 0) {
-        opAddr = executeHashGroupByLlvm(jOperatorId, colTypes, jColumnCout, (void**)table, jColumnCout, rowNums[cIndex / jColumnCout]);
+        void* data = reinterpret_cast<void *>(address[cIndex]);
+        int cIdx =  cIndex % jColumnCout;
+        colTypes[cIdx] = buildColumnType(inputTypes[cIdx]);
+        table[cIdx] = (char*)data;
+
+        if ((cIndex + 1) % jColumnCout == 0) {
+            Table* t = new Table(rowNum, jColumnCout);
+            for (int i = 0; i < jColumnCout; i++) {
+                void* data = table[i];
+                ColumnType columnType = static_cast<ColumnType>(colTypes[i]);
+                Column* col = new Column(data, columnType, rowNum);
+                t->setColumn(col, columnType);
+            }
+        
+            NativeOmniHashAggregationOperator* groupBy = reinterpret_cast<NativeOmniHashAggregationOperator*>(opId);
+            groupBy->addInput(t, t->getPositionCount());
+            opAddr = reinterpret_cast<uint64_t>(groupBy);
+        }
     }
-}
 
     // release memory
     delete[] table;
     delete[] colTypes;
     // std::cout << "exit of execute" << std::endl;
     return opAddr;
-  }
+}
 
 JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
   (JNIEnv* env, jobject jObj, jlong jOperatorId)
@@ -229,17 +266,19 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_execu
 #endif
 	int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
     // execute agg final
-    // Table* outputTable = executeAggFinal(opId);
     std::vector<Table*> result;
-    int32_t pageCount = executeAggFinal(opId, result);
+    // int32_t pageCount = executeAggFinal(opId, result);
 
-    // jobject omResultObj = transformTableToResult(env, outputTable);
-    // release memory
-    // g_typeCache.remove(opId);
+    NativeOmniHashAggregationOperator* groupBy = reinterpret_cast<NativeOmniHashAggregationOperator*>(opId);
+    if (groupBy == nullptr) {
+        DebugError("No operator %ld exists.", 0x11111);
+    }
+    int32_t errNo = groupBy->getOutput(result);
+    delete groupBy;
+
 #ifdef DEBUG_LEVEL_LOW
 	DebugFuncExit;
 #endif
-    // return omResultObj;
     return tranform(env, result);
 }
 

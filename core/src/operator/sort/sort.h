@@ -3,7 +3,6 @@
 
 #include "../../vector/table.h"
 #include "../../vector/type.h"
-#include "../op_template.h"
 #include <vector>
 
 using namespace std;
@@ -79,7 +78,7 @@ private:
     ColumnType *sortTypes;
 };
 
-class Sort : public OpTemplate
+class Sort
 {
 public:
     Sort(int32_t *sourceTypes,
