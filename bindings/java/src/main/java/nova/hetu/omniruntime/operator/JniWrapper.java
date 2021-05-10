@@ -18,45 +18,48 @@ import java.nio.ByteBuffer;
 
 public class JniWrapper
 {
+    public enum OperatorType{
+        HASH_AGGREGATION(0);
+        private int value;
+        OperatorType(int v){
+            this.value = v;
+        }
+
+        public int getValue()
+        {
+            return value;
+        }
+    };
     static {
         System.loadLibrary("omruntime");
     }
-
     public native String compile(String code);
-
     public native OMResult executeV1(String function, String key, ByteBuffer[] inputs, long rowNum, ByteBuffer[] stats, long statRowNum, int[] inpuTypes, int[] outputTypes);
-
     public native OMResult execute(String function, String key, ByteBuffer[] inputs, int[] inpuTypes, long rowNum, int[] outputTypes);
-
     public native OMResult getFinalResult(String key, int[] outputTypes);
-
     public native long prepareAgg(long prepareInfoAddress, int groupByLen, int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
             int aggregationFunctionTypeLen, int outputTypeLen);
-
     public native long createOperator(long moduleId, int size, long prepareInfoAddress, int groupByLen,
                                   int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
                                   int aggregationFunctionTypeLen, int outputTypeLen);
-
     public native long executeAggIntermediate(long operatorId, long dataAddress, long totalColumn, int columnCount, long rowAddress, int rowNum, long inputTypeAdress);
-
 //    public native OMResult executeAggFinal(long operatorId);
-
     public native OMResult[] executeAggFinal(long operatorId);
-
-    public native long createSortOperatorFactory(int[] sourceTypes, int[] outputCols, int[] sortCols, int[] ascendings, int[] nullFirsts);
-
     public native long createSortOperator(long factoryAddress);
-
     public native void addSortInput(long operatorAddress, long[] dataAddrs, int[] positionCounts, int pageCount);
-
     public native OMResult[] getSortOutput(long operatorAddress);
-
     public native long filterCompile(String expression, long clsTypeAddress, int inputVecCount);
-
     public native int filterExecute(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, long selectedPositionsAddress, int inputRowSize);
-
     public native int filterExecuteV1(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, int inputRowSize,long[] projectVecArrayAddress,int[] projectIdx,int projectVecCount);
-
-
     public native void filterFinished(long handle);
+
+    // Only createOperatorFactory JNIs have difference
+    public native long createSortOperatorFactory(int[] sourceTypes, int[] outputCols, int[] sortCols, int[] ascendings, int[] nullFirsts);
+    public native long createHashAggregationOperatorFactory(int[] groupByChanel, int[] groupByTypes, int[] aggChannels, int[] aggTypes, int[] aggFunctionTypes, int[] aggOutputTypes);
+    // createOperator
+    public native long createOperator(long factoryAddress, int operatorType);
+    // addInput
+    public native long addInput(long operatorAddress, long[] dataAddress, int[] positionCount, int pageCount);
+    // getOutput
+    public native OMResult[] getOutput(long operatorAddress);
 }

@@ -97,42 +97,24 @@ void transformValueFromPrepareInfo(uint32_t* prepareInfo, uint32_t* target, int 
  * 
  * 
  **/
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_prepareAgg
-(JNIEnv *env, jobject jObj, jlong jPrepareInfo, jint jGroupByChannelLen,jint jGroupByTypeLen,
-jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHashAggregationOperatorFactory
+(JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jintArray jGroupByType, jintArray jAggChannel, jintArray jAggType, jintArray jAggFuncType, jintArray jOutPutTye)
 {
-  int totalLen = jGroupByChannelLen + jGroupByTypeLen + jAggChannelLen + jAggTypeLen + jAggFuncTypeLen + jOutPutTyeLen;
     // groupby channel and type
-    size_t groupByChannelLen = (size_t)jGroupByChannelLen;
-    uint32_t* prepareInfo = (uint32_t*)jPrepareInfo;
-    uint32_t* groupByChannels =  new uint32_t[groupByChannelLen];
-    int index = 0;
-    transformValueFromPrepareInfo(prepareInfo, groupByChannels, jGroupByChannelLen, &index);
-    PrepareContext groupByColContext = {groupByChannels, groupByChannelLen};
-    size_t groupByTypeLen = (size_t)jGroupByTypeLen;
-    uint32_t* groupByTypes = new uint32_t[groupByTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, groupByTypes, groupByTypeLen, &index);
-    PrepareContext groupByTypeContext = {groupByTypes, groupByTypeLen};
+    jint *groupByCols = env->GetIntArrayElements(jGroupByChannel, JNI_FALSE);
+    jint *groupByTypes = env->GetIntArrayElements(jGroupByType, JNI_FALSE);
+    jint *aggCols = env->GetIntArrayElements(jAggChannel, JNI_FALSE);
+    jint *aggTypes = env->GetIntArrayElements(jAggType, JNI_FALSE);
+    jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
 
-    // agg channel and type
-    size_t aggChannelLen = (size_t)jAggChannelLen;
-    uint32_t* aggChannels = new uint32_t[aggChannelLen];
-    transformValueFromPrepareInfo(prepareInfo, aggChannels, aggChannelLen, &index);
-    PrepareContext aggColContext = {aggChannels, aggChannelLen};
-    size_t aggTypeLen = (size_t)jAggTypeLen;
-    uint32_t* aggTypes = new uint32_t[aggTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, aggTypes, aggTypeLen, &index);
-    PrepareContext aggTypeContext = {aggTypes, aggTypeLen};
+    size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
+    size_t aggNum = (size_t)env->GetArrayLength(jAggChannel);
 
-    // agg function type
-    size_t aggFuncTypeLen = (size_t)jAggFuncTypeLen;
-    uint32_t* aggFuncTypes = new uint32_t[aggFuncTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, aggFuncTypes, aggFuncTypeLen, &index);
-    PrepareContext aggFuncTypeContext = {aggFuncTypes, aggFuncTypeLen};
-    size_t outPutTypeLen = (size_t)jOutPutTyeLen;
-    uint32_t* outPutTypes= new uint32_t[outPutTypeLen];
-    transformValueFromPrepareInfo(prepareInfo, outPutTypes, outPutTypeLen, &index);
-    PrepareContext outPutTypeContext = {outPutTypes, outPutTypeLen};
+    PrepareContext groupByColContext = {(uint32_t*)groupByCols, groupByNum};
+    PrepareContext groupByTypeContext = {(uint32_t*)groupByTypes, groupByNum};
+    PrepareContext aggColContext = {(uint32_t*)aggCols, aggNum};
+    PrepareContext aggTypeContext = {(uint32_t*)aggTypes, aggNum};
+    PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
 
     // return prepareHashGroupBy(groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
     using namespace codegen;
@@ -197,21 +179,25 @@ jint jAggChannelLen, jint jAggTypeLen, jint jAggFuncTypeLen, jint jOutPutTyeLen)
 }
 
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createOperator
-(JNIEnv *env, jobject jObj, jlong jNativeFactoryObj)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOperator
+(JNIEnv *env, jobject jObj, jlong jNativeFactoryObj, jint type)
 {
 
     // return createOperator(jModuleId, groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-
-    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(jNativeFactoryObj);
-    return reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
+    if (type == 0) {
+        NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(jNativeFactoryObj);
+        auto objAddr = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
+        std::cout << "create hash agg... address=" << (uint64_t)objAddr << std::endl;
+        return reinterpret_cast<uint64_t>(objAddr);
+    }
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggIntermediate
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_executeAggIntermediate
 (JNIEnv * env, jobject jObj, jlong jOperatorId, jlong jInputDataAddress, jlong jTotalColumn, jint
 jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
 {
     int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
+    std::cout << "executing address=" << opId << " input address=" << jInputDataAddress << " total_column=" << jTotalColumn <<  std::endl;
     size_t totalColumnCount = (size_t)jTotalColumn;
     int64_t* address = reinterpret_cast<int64_t*>(jInputDataAddress);
     int32_t* rowNums = reinterpret_cast<int32_t*>(jRowAddress); 
@@ -258,7 +244,7 @@ jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
     return opAddr;
 }
 
-JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getOutput
   (JNIEnv* env, jobject jObj, jlong jOperatorId)
 {
 #ifdef DEBUG_LEVEL_LOW

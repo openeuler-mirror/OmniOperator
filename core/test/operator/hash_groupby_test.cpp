@@ -224,8 +224,7 @@ void perfTest(int64_t moduleAddr, Table** input)
     }
     // create operatory
     NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(moduleAddr);
-    uintptr_t opAddr = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
-    NativeOmniHashAggregationOperator* groupBy = reinterpret_cast<NativeOmniHashAggregationOperator*>(opAddr);
+    auto groupBy = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
  
     // execution
     for (int32_t i = 0; i < pageNum; ++i) {

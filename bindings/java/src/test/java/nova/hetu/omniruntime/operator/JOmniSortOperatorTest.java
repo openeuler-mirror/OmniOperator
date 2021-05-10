@@ -1,10 +1,11 @@
 package nova.hetu.omniruntime.operator;
 
+import nova.hetu.omniruntime.operator.orderby.JOmniSortOperator;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecType;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -13,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static nova.hetu.omniruntime.operator.JOmniSortOperator.JOmniSortOperatorFactory.createJOmniSortOperatorFactory;
+import static nova.hetu.omniruntime.operator.orderby.JOmniSortOperator.JOmniSortOperatorFactory.createJOmniSortOperatorFactory;
 
 public class JOmniSortOperatorTest
 {
@@ -57,10 +58,12 @@ public class JOmniSortOperatorTest
         int[] nullFirsts = {0, 0};
         int[] positionCounts = {8};
 
+        VecType[] types = {VecType.INT, VecType.INT};
+
         JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
         JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-        sortOperator.addInput(datas, positionCounts, 1);
+        sortOperator.addInput(datas, positionCounts, 1, types);
         OMResult[] results = sortOperator.getOutput();
 
         Assert.assertEquals(results.length, 1);
@@ -95,12 +98,14 @@ public class JOmniSortOperatorTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
+        VecType[] types = {VecType.LONG, VecType.LONG};
+
         JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
 
         start = System.currentTimeMillis();
         JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-        sortOperator.addInput(vecs, positionCounts, totalPageCount);
+        sortOperator.addInput(vecs, positionCounts, totalPageCount, types);
         OMResult[] results = sortOperator.getOutput();
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
@@ -120,12 +125,13 @@ public class JOmniSortOperatorTest
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
 
         int threadNum = 4;
+        VecType[] types = {VecType.LONG, VecType.LONG};
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
         for (int i = 0; i < threadNum; i++) {
             Thread thread = new Thread(() -> {
                 try {
                     JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-                    sortOperator.addInput(dataVecs, positionCounts, totalPageCount);
+                    sortOperator.addInput(dataVecs, positionCounts, totalPageCount, types);
                     sortOperator.getOutput();
                 }
                 finally {

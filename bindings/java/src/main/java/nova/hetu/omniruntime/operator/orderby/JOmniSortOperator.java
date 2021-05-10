@@ -1,6 +1,7 @@
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.List;
 
@@ -68,7 +69,7 @@ public class JOmniSortOperator
     }
 
     @Override
-    public int addInput(List<Vec> datas, int[] positionCounts, int pageCount)
+    public int addInput(List<Vec> datas, int[] positionCounts, int pageCount, VecType[] types)
     {
         int vecSize = datas.size();
         long[] dataAddrs = new long[vecSize];
@@ -78,6 +79,11 @@ public class JOmniSortOperator
 
         long nativeOperator = getNativeOperator();
         getJniWrapper().addSortInput(nativeOperator, dataAddrs, positionCounts, pageCount);
+        return 0;
+    }
+
+    @Override
+    public int addInput(List<Vec> data, int positionCount, VecType[] types) {
         return 0;
     }
 
