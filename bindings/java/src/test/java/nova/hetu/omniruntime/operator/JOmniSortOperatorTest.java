@@ -1,6 +1,5 @@
 package nova.hetu.omniruntime.operator;
 
-import nova.hetu.omniruntime.operator.orderby.JOmniSortOperator;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -14,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static nova.hetu.omniruntime.operator.orderby.JOmniSortOperator.JOmniSortOperatorFactory.createJOmniSortOperatorFactory;
+import static nova.hetu.omniruntime.operator.JOmniSortOperator.JOmniSortOperatorFactory.createJOmniSortOperatorFactory;
 
 public class JOmniSortOperatorTest
 {

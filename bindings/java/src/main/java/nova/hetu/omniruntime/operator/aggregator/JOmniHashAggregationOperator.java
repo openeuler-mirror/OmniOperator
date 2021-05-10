@@ -4,7 +4,6 @@ import nova.hetu.omniruntime.operator.JOmniOperator;
 import nova.hetu.omniruntime.operator.JOmniOperatorFactory;
 import nova.hetu.omniruntime.operator.JniWrapper;
 import nova.hetu.omniruntime.operator.OMResult;
-import nova.hetu.omniruntime.operator.orderby.JOmniSortOperator;
 import nova.hetu.omniruntime.vector.*;
 
 import java.util.List;

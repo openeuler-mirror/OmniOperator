@@ -1,4 +1,4 @@
-package nova.hetu.omniruntime.operator.orderby;
+package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.OMResult;
 import nova.hetu.omniruntime.operator.OmniRuntime;
