@@ -17,16 +17,16 @@ NativeOmniOperator * NativeOmniHashAggregationOperatorFactory::createOmniOperato
     std::vector<ColumnIndex> aggIndex;
     std::vector<Aggregator*> aggs;
     
-    for (int32_t i = 0; i < groupByColContext.len; ++i) {
-        ColumnIndex c = {groupByColContext.context[i], (ColumnType)groupByTypeContext.context[i]};
+    for (int32_t i = 0; i < this->groupByColContext.len; ++i) {
+        ColumnIndex c = {this->groupByColContext.context[i], (ColumnType)this->groupByTypeContext.context[i]};
         groupByIndex.push_back(c);
     }
-    for (int32_t i = 0; i < aggColContext.len; ++i) {
-        ColumnIndex c = {aggColContext.context[i], (ColumnType)aggTypeContext.context[i]};
+    for (int32_t i = 0; i < this->aggColContext.len; ++i) {
+        ColumnIndex c = {this->aggColContext.context[i], (ColumnType)this->aggTypeContext.context[i]};
         aggIndex.push_back(c);
 
-        if ((AggregateType)aggFuncTypeContext.context[i] == SUM) {
-            switch (aggTypeContext.context[i])
+        if ((AggregateType)this->aggFuncTypeContext.context[i] == SUM) {
+            switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
                     SumAggregator* agg = new SumAggregator(1);
@@ -43,8 +43,10 @@ NativeOmniOperator * NativeOmniHashAggregationOperatorFactory::createOmniOperato
                     aggs.push_back(agg);
                     break;
                 }
-                default:
+                default: {
+                    DebugError("No such type %d", this->aggTypeContext.context[i]);
                     break;
+                }
             }
         }
     }
@@ -135,6 +137,7 @@ extern "C" void processAgg(uint64_t key,
         int32_t idx = aggIdx[i];
         int32_t type = types[idx];
         void* colPtr = head[idx];
+
         switch (aggTypes[i])
         {
             case 0: { // sum
@@ -222,7 +225,6 @@ void NativeOmniHashAggregationOperator::inloop(char** head,
                 case 1: {
                     int32_t* rowVal = reinterpret_cast<int32_t*>(head[idx]) + combinedHash.offset;
                     int32_t* copyVal = new int32_t;
-                    // int32_t* copyVal = (int32_t*)omni_allocate(sizeof(int32_t));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
@@ -230,7 +232,6 @@ void NativeOmniHashAggregationOperator::inloop(char** head,
                 case 2: {
                     int64_t* rowVal = reinterpret_cast<int64_t*>(head[idx]) + combinedHash.offset;
                     int64_t* copyVal = new int64_t;
-                    // int64_t* copyVal = (int64_t*)omni_allocate(sizeof(int64_t));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
@@ -238,7 +239,6 @@ void NativeOmniHashAggregationOperator::inloop(char** head,
                 case 3: {
                     double* rowVal = reinterpret_cast<double*>(head[idx]) + combinedHash.offset;
                     double* copyVal = new double;
-                    // double* copyVal = (double*)omni_allocate(sizeof(double));
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
@@ -264,15 +264,13 @@ int32_t NativeOmniHashAggregationOperator::addInput(Table* table, int32_t rowCou
     this->preloop(table);
     char** heads = table->getHeads();
     int32_t* columnTypes = reinterpret_cast<int32_t*>(table->getColumnTypes());
+
     int32_t rowNum = table->getColumnNumber();
     int32_t groupColNum = this->groupByCols.size();
     int32_t* groupByColIdx = new int32_t[groupColNum];
-    // int32_t* groupByColIdx = reinterpret_cast<int32_t*>(omni_allocate(groupColNum * sizeof(int32_t)));
     int32_t aggColNum = this->aggCols.size();
     int32_t* aggColIdx = new int32_t[aggColNum];
-    // int32_t* aggColIdx = reinterpret_cast<int32_t*>(omni_allocate(aggColNum * sizeof(int32_t)));
     int32_t* aggFuncTypes = new int32_t[aggColNum];
-    // int32_t* aggFuncTypes = reinterpret_cast<int32_t*>(omni_allocate(aggColNum * sizeof(int32_t)));
     
     for (int32_t i = 0; i < groupColNum; ++i) {
         groupByColIdx[i] = this->groupByCols[i].idx;
@@ -281,9 +279,8 @@ int32_t NativeOmniHashAggregationOperator::addInput(Table* table, int32_t rowCou
     for (int32_t i = 0; i < aggColNum; ++i) {
         aggColIdx[i] = this->aggCols[i].idx;
         this->inputColTypes[this->aggCols[i].idx] = 1; // 1 represents agg
-        aggFuncTypes[i] = aggregators[i]->getType();
+        aggFuncTypes[i] = this->aggregators[i]->getType();
     }
-   
     for (int32_t i = 0; i < rowCount; ++i) {
         this->inloop(heads, i, columnTypes, rowNum, groupByColIdx, groupColNum, aggColIdx, aggColNum, aggFuncTypes);
     }
@@ -291,9 +288,6 @@ int32_t NativeOmniHashAggregationOperator::addInput(Table* table, int32_t rowCou
     delete[] groupByColIdx;
     delete[] aggColIdx;
     delete[] aggFuncTypes;
-    // omni_release(reinterpret_cast<uintptr_t>(groupByColIdx));
-    // omni_release(reinterpret_cast<uintptr_t>(aggColIdx));
-    // omni_release(reinterpret_cast<uintptr_t>(aggFuncTypes));
     return 0;
 }
 
@@ -302,19 +296,6 @@ typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
 
 fsec g_total_execute_time;
-
-// extern "C" void JIT_hashGroupByExecute(NativeOmniHashAggregationOperator* op, Table* table) 
-// {
-//     fsec local_execute_time;
-//     auto t0 = Time::now();
-//     op->process(table, table->getPositionCount());
-//     auto t1 = Time::now();
-//     local_execute_time = (t1 - t0);
-    
-//     ms dd = std::chrono::duration_cast<ms>(local_execute_time);
-//     g_total_execute_time += (t1 - t0);
-//     ms d = std::chrono::duration_cast<ms>(g_total_execute_time);
-// }
 
 void NativeOmniHashAggregationOperator::constructColumn(Table* table, 
                                                         int32_t* types, 

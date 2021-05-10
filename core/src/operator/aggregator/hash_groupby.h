@@ -34,30 +34,13 @@ typedef struct HashPosition
     uint32_t offset;
 } HashPosition;
 
-class NativeOmniHashAggregationOperatorFactory : public NativeOmniOperatorFactory
-{
-public:
-    NativeOmniOperator *createOmniOperator() override;
-    NativeOmniHashAggregationOperatorFactory
-    (PrepareContext groupByColContext, PrepareContext groupByTypeContext, PrepareContext aggColContext, PrepareContext aggTypeContext, PrepareContext aggFuncTypeContext)
-    : groupByColContext(groupByColContext), groupByTypeContext(groupByTypeContext), aggColContext(aggColContext), aggTypeContext(aggTypeContext), aggFuncTypeContext(aggFuncTypeContext)
-    {}
-
-    ~NativeOmniHashAggregationOperatorFactory() override
-    {}
-private:
-    PrepareContext groupByColContext; 
-    PrepareContext groupByTypeContext;
-    PrepareContext aggColContext;
-    PrepareContext aggTypeContext;
-    PrepareContext aggFuncTypeContext;
-};
+class NativeOmniHashAggregationOperatorFactory;
 
 class NativeOmniHashAggregationOperator : public NativeOmniOperator
 {
 public:
-    NativeOmniHashAggregationOperator(std::vector<ColumnIndex> groupByCols, std::vector<ColumnIndex> aggCols, std::vector<Aggregator*> aggregators)
-    : groupByCols(groupByCols), aggCols(aggCols), aggregators(aggregators)
+    NativeOmniHashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs)
+    : groupByCols(groupByCol), aggCols(aggCol), aggregators(aggs)
     {
 
     }
@@ -115,6 +98,7 @@ public:
     uint32_t* aggColumnIndexes();
 
 private:
+    friend class NativeOmniHashAggregationOperatorFactory;
     std::vector<Aggregator*> aggregators;
     std::unordered_map<uint64_t, std::vector<GroupByColumn>> groupedRows;
     std::vector<ColumnIndex> groupByCols;
@@ -122,7 +106,27 @@ private:
     uint32_t* inputColTypes;
 };
 
+class NativeOmniHashAggregationOperatorFactory : public NativeOmniOperatorFactory
+{
+public:
+    NativeOmniOperator* createOmniOperator() override;
+
+    NativeOmniHashAggregationOperatorFactory
+    (PrepareContext groupByCol, PrepareContext groupByType, PrepareContext aggCol, PrepareContext aggType, PrepareContext aggFuncType)
+    : groupByColContext(groupByCol), groupByTypeContext(groupByType), aggColContext(aggCol), aggTypeContext(aggType), aggFuncTypeContext(aggFuncType)
+    { }
+
+    ~NativeOmniHashAggregationOperatorFactory() override
+    {}
+private:
+    PrepareContext groupByColContext; 
+    PrepareContext groupByTypeContext;
+    PrepareContext aggColContext;
+    PrepareContext aggTypeContext;
+    PrepareContext aggFuncTypeContext;
+};
+
 typedef void (*jit_module)(NativeOmniHashAggregationOperator*, Table*);
-typedef uintptr_t (*opt_module) (NativeOmniHashAggregationOperatorFactory*);
+typedef NativeOmniOperator* (*opt_module) (NativeOmniHashAggregationOperatorFactory*);
 
 #endif

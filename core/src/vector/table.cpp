@@ -26,6 +26,9 @@ void Table::printTable()
                     printf("%f\t", *((double *)valuePtr));
                     break;
                 }
+                default: {
+                    printf("no such type in table %d", column->getType());
+                }
             }
         }
         printf("\n");

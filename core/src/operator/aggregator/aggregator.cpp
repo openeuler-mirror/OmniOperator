@@ -85,13 +85,12 @@ extern "C" void sumProcessInt64(SumAggregator* aggregator, int64_t key, void* co
     }
     auto& state = aggregator->getState();
     auto value = state.find(key);
-
     int64_t* rowVal = reinterpret_cast<int64_t*>(columnPtr) + offset;
+
     if (value != state.end()) {
         *((int64_t*)(value->second[0].val)) += *rowVal;
     }else {
         std::vector<GroupByColumn> gbc;
-        // int64_t* val = (int64_t*)omni_allocate(sizeof(int64_t));
         int64_t* val = new int64_t;
         *val = *rowVal;
         GroupByColumn c = {INT64, val};

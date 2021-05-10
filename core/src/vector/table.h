@@ -119,8 +119,10 @@ public:
                     std::cout << *ptr << " ";
                     break;
                 }
-                default:
+                default:{
+                    std::cout << "No such type " << type << " in column" << std::endl;
                     break;
+                }
             }
         }
         std::cout << std::endl;
