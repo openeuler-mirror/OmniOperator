@@ -39,7 +39,6 @@ public class OMVectorBase
 
     static {
         System.loadLibrary("omruntime");
-        System.loadLibrary("omvector");
     }
 
     public OMVectorBase() {}

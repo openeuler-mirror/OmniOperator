@@ -74,35 +74,35 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_execu
   (JNIEnv* env, jobject jObj, jlong jOperatorId);
 
 /*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
  * Method:    createSortOperatorFactory
- * Signature: ([II[II[I[I[II)J
+ * Signature: ([I[I[I[I[I)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createSortOperatorFactory
-  (JNIEnv *, jobject, jintArray, jint, jintArray, jint, jintArray, jintArray, jintArray, jint);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createSortOperatorFactory
+  (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray);
 
 /*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
  * Method:    createSortOperator
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createSortOperator
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createSortOperator
   (JNIEnv *, jobject, jlong);
 
 /*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
  * Method:    addSortInput
  * Signature: (J[J[II)V
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_addSortInput
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addSortInput
   (JNIEnv *, jobject, jlong, jlongArray, jintArray, jint);
 
 /*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
  * Method:    getSortOutput
- * Signature: (J)[Lnova/hetu/omnicache/runtime/OMResult;
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
  */
-JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getSortOutput
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getSortOutput
   (JNIEnv *, jobject, jlong);
 
 /*
@@ -129,10 +129,20 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinished
   (JNIEnv *, jobject, jlong);
 
-JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_vector_OMVectorBase_allocate
-  (JNIEnv *, jclass, jlong);
+/*
+ * Class:     nova_hetu_omniruntime_vector_OMVectorBase
+ * Method:    allocate
+ * Signature: (I)Ljava/nio/ByteBuffer;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_OMVectorBase_allocate
+  (JNIEnv *, jclass, jint);
 
-JNIEXPORT void JNICALL Java_nova_hetu_omnicache_vector_OMVectorBase_release
+/*
+ * Class:     nova_hetu_omniruntime_vector_OMVectorBase
+ * Method:    release
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_OMVectorBase_release
   (JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus

@@ -9,7 +9,7 @@ public class OmniOrderBy
 {
     public long createOperatorFactory(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount)
     {
-        long factoryAddress = getJniWrapper().createSortOperatorFactory(sourceTypes, typeCount, outputCols, outputColCount, sortCols, ascendings, nullFirsts, sortColCount);
+        long factoryAddress = getJniWrapper().createSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
         return factoryAddress;
     }
 
