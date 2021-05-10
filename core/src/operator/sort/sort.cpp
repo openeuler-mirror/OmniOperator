@@ -299,6 +299,8 @@ PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
 {
     this->types = types;
     this->typesCount = typesCount;
+    this->tablesCount = 0;
+    this->positionCount = 0;
 }
 
 // return error number
@@ -379,20 +381,6 @@ PagesIndex::~PagesIndex()
     free(columns);
     free(valueAddresses);
 }
-
-// int64_t createSort(
-//     int32_t *sourceTypes,
-//     int32_t typeCount,
-//     int32_t *outputCols,
-//     int32_t outputColCount,
-//     int32_t *sortCols,
-//     int32_t *sortAscendings,
-//     int32_t *sortNullFirsts,
-//     int32_t sortColCount)
-// {
-//     NativeOmniSortOperator *NativeOmniSortOperator = new NativeOmniSortOperator(sourceTypes, typeCount, outputCols, outputColCount, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-//     return (int64_t)NativeOmniSortOperator;
-// }
 
 void swap(int64_t *valueAddresses, int32_t a, int32_t b)
 {

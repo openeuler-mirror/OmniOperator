@@ -20,7 +20,6 @@ public class JniWrapper
 {
     static {
         System.loadLibrary("omruntime");
-        System.loadLibrary("omvector");
     }
 
     public native String compile(String code);
@@ -44,7 +43,7 @@ public class JniWrapper
 
     public native OMResult[] executeAggFinal(long operatorId);
 
-    public native long createSortOperatorFactory(int[] sourceTypes, int typeCount, int[] outputCols, int outputColCount, int[] sortCols, int[] ascendings, int[] nullFirsts, int sortColCount);
+    public native long createSortOperatorFactory(int[] sourceTypes, int[] outputCols, int[] sortCols, int[] ascendings, int[] nullFirsts);
 
     public native long createSortOperator(long factoryAddress);
 

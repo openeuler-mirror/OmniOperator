@@ -93,8 +93,6 @@ public:
     int32_t *getSortAscendings() { return sortAscendings; }
     int32_t *getSortNullFirsts() { return sortNullFirsts; }
     int32_t getSortColCount() { return sortColCount; }
-    void setSortContext(JitSortContext *jitSortContext) { this->sortContext = jitSortContext; }
-    JitSortContext *getSortContext() { return sortContext; }
 
 private:
     int32_t *sourceTypes;
@@ -105,7 +103,6 @@ private:
     int32_t *sortAscendings;
     int32_t *sortNullFirsts;
     int32_t sortColCount;
-    JitSortContext *sortContext;
 };
 
 class NativeOmniSortOperator : public NativeOmniOperator
