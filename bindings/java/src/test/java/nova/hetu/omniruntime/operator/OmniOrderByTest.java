@@ -1,5 +1,6 @@
 package nova.hetu.omniruntime.operator;
 
+import nova.hetu.omniruntime.operator.orderby.OmniOrderBy;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;

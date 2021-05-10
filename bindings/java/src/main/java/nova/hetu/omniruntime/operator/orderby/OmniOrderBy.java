@@ -1,5 +1,7 @@
-package nova.hetu.omniruntime.operator;
+package nova.hetu.omniruntime.operator.orderby;
 
+import nova.hetu.omniruntime.operator.OMResult;
+import nova.hetu.omniruntime.operator.OmniRuntime;
 import nova.hetu.omniruntime.vector.Vec;
 
 import java.util.List;

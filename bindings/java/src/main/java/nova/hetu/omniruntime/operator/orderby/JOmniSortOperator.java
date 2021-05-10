@@ -1,5 +1,9 @@
-package nova.hetu.omniruntime.operator;
+package nova.hetu.omniruntime.operator.orderby;
 
+import nova.hetu.omniruntime.operator.JOmniOperator;
+import nova.hetu.omniruntime.operator.JOmniOperatorFactory;
+import nova.hetu.omniruntime.operator.JniWrapper;
+import nova.hetu.omniruntime.operator.OMResult;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecType;
 
