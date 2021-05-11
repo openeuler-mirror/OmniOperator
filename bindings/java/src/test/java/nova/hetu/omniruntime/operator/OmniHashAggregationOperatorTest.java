@@ -185,9 +185,9 @@ public class OmniHashAggregationOperatorTest {
                     Vec[][] result = generateOMVec(output, aggOutputTypes);
                     Assert.assertEquals(result[0].length, 4);
                     Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
-                    Assert.assertEquals(((LongVec)result[1][0]).get(0), rowNum);
-                    Assert.assertEquals(((LongVec)result[2][2]).get(0), rowNum * pageCount);
-                    Assert.assertEquals(((LongVec)result[3][3]).get(0), rowNum * pageCount);
+                    Assert.assertEquals(((LongVec)result[0][1]).get(0), 0);
+                    Assert.assertEquals(((LongVec)result[0][2]).get(0), rowNum * pageCount);
+                    Assert.assertEquals(((LongVec)result[0][3]).get(0), rowNum * pageCount);
 
                     // release result memory
                     for (int i = 0; i < result.length; ++i) {
@@ -215,8 +215,8 @@ public class OmniHashAggregationOperatorTest {
         LongVec c1 = new LongVec(rowNum);
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
-            c1.set(i, i % 4);
-            c2.set(i, i % 4);
+            c1.set(i, 0);
+            c2.set(i, 0);
         }
 
         LongVec c3 = new LongVec(rowNum);
