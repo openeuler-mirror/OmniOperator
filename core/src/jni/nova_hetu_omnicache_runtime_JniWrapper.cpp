@@ -12,6 +12,7 @@
 
 #include "../operator/aggregator/hash_groupby.h"
 #include "../operator/sort/sort.h"
+#include "../operator/filter/filter.h"
 
 #include <iostream>
 #include <cstring>
@@ -455,38 +456,87 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_ge
     return result;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterCompile
-  (JNIEnv *env, jobject jObj, jstring jFilterExpression , jintArray jInputTypes, jint jInputVecCount) {
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    createFilterAndProjectOperatorFactory
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createFilterAndProjectOperatorFactory
+  (JNIEnv *env, jobject jObj, jstring jFilterExpression , jintArray jInputTypes, jint jInputVecCount, jintArray jProjectIdx, jint jProjectVecCount) {
 
     std::string filterExpression = std::string(env->GetStringUTFChars(jFilterExpression, JNI_FALSE));
     jint *inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
     int32_t vecCount = (int32_t) jInputVecCount;
-    // TODO: add context
-    int64_t filterPtr = filterCompile(filterExpression, inputTypes, vecCount);
-    env->ReleaseStringUTFChars(jFilterExpression, filterExpression.c_str());
-    env->ReleaseIntArrayElements(jInputTypes, inputTypes, JNI_FALSE);
-    return filterPtr;
-  }
-
-JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
-  (JNIEnv *env, jobject jObj, jlong jFilterPtr, jlongArray jInputData, jintArray jInputTypes, jint jInputVecCount, jint jInputRowNumber, jlongArray jProjectVecAddress, jintArray jProjectIdx, jint jProjectVecCount){
-    int64_t filterPtr = (int64_t) jFilterPtr;
-    jlong *inputData = env->GetLongArrayElements(jInputData, JNI_FALSE);
-    jint *inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
-    int32_t vecCount = (int32_t) jInputVecCount;
-    int32_t rowNumber = (int32_t) jInputRowNumber;
-    jlong *projectVecAddress = env->GetLongArrayElements(jProjectVecAddress, JNI_FALSE);
     jint *projectIdx = env->GetIntArrayElements(jProjectIdx, JNI_FALSE);
     int32_t projectVecCount = (int32_t) jProjectVecCount;
-
-    int32_t index = filterExecute(filterPtr, inputData, inputTypes, vecCount, rowNumber, projectVecAddress, projectIdx, projectVecCount);
-    env->ReleaseLongArrayElements(jInputData, inputData, JNI_FALSE);
+    // TODO: add context
+    NativeOmniFilterOperatorFactory* factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, vecCount, projectIdx, projectVecCount);
+    env->ReleaseStringUTFChars(jFilterExpression, filterExpression.c_str());
     env->ReleaseIntArrayElements(jInputTypes, inputTypes, JNI_FALSE);
-    env->ReleaseLongArrayElements(jProjectVecAddress, projectVecAddress, JNI_FALSE);
-    env->ReleaseIntArrayElements(jProjectIdx, projectIdx, JNI_FALSE);
-
-    return index;
+    return (int64_t)factory;
   }
+
+  /*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    createFilterAndProjectOperator
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createFilterAndProjectOperator
+  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperatorFactory)
+{
+    NativeOmniFilterOperatorFactory *filterAndProjectOperatorFactory = (NativeOmniFilterOperatorFactory *)jFilterAndProjectOperatorFactory;
+    return (int64_t)filterAndProjectOperatorFactory->createOmniOperator();
+}
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    filterAndProjectAddInput
+ * Signature: (J[J[II)V
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndProjectAddInput
+  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperator, jlongArray jInputData, jintArray jRowCounts)
+{
+    NativeOmniFilterOperator *filterAndProjectOperator = (NativeOmniFilterOperator *) jFilterAndProjectOperator;
+    jlong *inputData = env->GetLongArrayElements(jInputData, JNI_FALSE);
+    int32_t rowNumber = (int32_t) jRowCounts;
+    Table *table = getTableFromDataAddress(inputData, rowNumber, filterAndProjectOperator->getVecCount(), filterAndProjectOperator->getInputTypes());
+    
+    return filterAndProjectOperator->addInput(table, rowNumber);
+}
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    filterAndProjectGetOutput
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
+ */
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndProjectGetOutput
+  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperator)
+{
+    NativeOmniFilterOperator *filterAndProjectOperator = (NativeOmniFilterOperator *) jFilterAndProjectOperator;
+    std::vector<Table*> result;
+
+    if (filterAndProjectOperator == nullptr) {
+        DebugError("No operator %ld exists.", 0x11111);
+    }
+    int32_t errNo = filterAndProjectOperator->getOutput(result);
+    delete filterAndProjectOperator;
+
+    return transform(env, result);
+}
+
+Table *getTableFromDataAddress(int64_t *dataAddress, int32_t rowNumber, int32_t vecCount, int32_t *inputTypes)
+{
+    Table *table = new Table(rowNumber, vecCount);
+    uint32_t *colTypes = new uint32_t[vecCount];
+    for (int vecIndex = 0; vecIndex < vecCount; vecIndex++)
+    {
+        void *data = reinterpret_cast<void *>(dataAddress[vecIndex]);
+        ColumnType type = buildColumnType(inputTypes[vecIndex]);
+        Column *column = new Column(data, type, rowNumber);
+        table->setColumn(column, type);
+    }
+
+    return table;
+}
 
 jobjectArray transform(JNIEnv *env, std::vector<Table*>& result)
 {

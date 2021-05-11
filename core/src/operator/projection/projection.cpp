@@ -1,29 +1,30 @@
 #include "projection.h"
+#include "../../memory/memory_pool.h"
 
 Projection::Projection(int32_t *inputTypes,
                        int32_t inputVecCount,
                        int32_t inputVecLength,
                        int32_t *projectVecs,
-                       int32_t projectVecCount,
-                       int64_t *projectedVecAddrs)
+                       int32_t projectVecCount)
 {
     this->inputTypes = inputTypes;
     this->inputVecCount = inputVecCount;
     this->inputVecLength = inputVecLength;
     this->projectVecs = projectVecs;
     this->projectVecCount = projectVecCount;
-    this->projectedVecAddrs = projectedVecAddrs;
 }
 
 Projection::~Projection() {}
 
-void Projection::project(int32_t *selectedPosition, int selectedPositionCount, Table *table)
+Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount, Table *table)
 {
     if (selectedPositionCount == table->getPositionCount())
     {
         // no need to copy the values
-        return;
+        return table;
     }
+
+    Table *projectedData = new Table(selectedPositionCount, this->projectVecCount);
 
     for (int vecIndex = 0; vecIndex < this->projectVecCount; vecIndex++)
     {
@@ -33,32 +34,38 @@ void Projection::project(int32_t *selectedPosition, int selectedPositionCount, T
         {
             case INT32:
             {
+                int32_t* projectedVec = (int32_t*) omni_allocate(selectedPositionCount * sizeof(int32_t));
                 int32_t *originalVec = (int32_t *)column->getData();
-                int32_t *projectedVec = (int32_t *)projectedVecAddrs[vecIndex];
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
                     projectedVec[rowIndex] = originalVec[rowIndex];
                 }
+                Column *projectedColumn = new Column(projectedVec, column->getType(), selectedPositionCount);
+                projectedData->setColumn(projectedColumn, column->getType());
                 break;
             }
             case INT64:
             {
+                int64_t* projectedVec = (int64_t*) omni_allocate(selectedPositionCount * sizeof(int64_t));
                 int64_t *originalVec = (int64_t *)column->getData();
-                int64_t *projectedVec = (int64_t *)projectedVecAddrs[vecIndex];
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
                     projectedVec[rowIndex] = originalVec[rowIndex];
                 }
+                Column *projectedColumn = new Column(projectedVec, column->getType(), selectedPositionCount);
+                projectedData->setColumn(projectedColumn, column->getType());
                 break;
             }
             case DOUBLE:
             {
+                double* projectedVec = (double*) omni_allocate(selectedPositionCount * sizeof(double));
                 double *originalVec = (double *)column->getData();
-                double *projectedVec = (double *)projectedVecAddrs[vecIndex];
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
                     projectedVec[rowIndex] = originalVec[rowIndex];
                 }
+                Column *projectedColumn = new Column(projectedVec, column->getType(), selectedPositionCount);
+                projectedData->setColumn(projectedColumn, column->getType());
                 break;
             }
             default:
@@ -66,4 +73,6 @@ void Projection::project(int32_t *selectedPosition, int selectedPositionCount, T
                 break;
         }
     }
+
+    return projectedData;
 }

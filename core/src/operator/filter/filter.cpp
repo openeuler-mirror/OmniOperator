@@ -1,8 +1,11 @@
 #include "stdio.h"
 #include "chrono"
-#include "filter.h"
 #include <vector>
+#include "filter.h"
+#include "filter_compiler.h"
+#include "../projection/projection.h"
 #include "../../common/expressions.h"
+#include "../../common/parser/parser.h"
 
 using namespace std;
 
@@ -34,6 +37,44 @@ using namespace std;
 //     printf(" filter result: %d\n", c4[1]);
 //     return 12345;
 // }
+
+NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
+{
+    Parser parserObject;
+    Expr parsedExpr = parserObject.parseRowExpression(this->expression);
+    // might want to check if parsed suceed?
+    //TODO: replace the placeholder context
+    Compiler *compiler = new Compiler(parsedExpr, this->inputTypes, this->vecCount);
+    Filter *filter = compiler->compile();
+    free(inputTypes);
+    return new NativeOmniFilterOperator(filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
+}
+
+int32_t NativeOmniFilterOperator::addInput(Table* data, int32_t rowCount)
+{
+    int32_t *selectedRows = new int32_t[rowCount];
+
+    int32_t numSelectedRows = this->filter->filter(data, rowCount, selectedRows);
+
+    Projection *projection = new Projection(this->inputTypes, this->vecCount, rowCount, this->projectIndex, this->projectVecCount);
+    Table *projectedData = projection->project(selectedRows, numSelectedRows, data);
+    this->projectedVecs = projectedData;
+
+    delete[] selectedRows;
+    return numSelectedRows;
+}
+
+int32_t NativeOmniFilterOperator::getOutput(std::vector<Table*>& data)
+{
+    if (this->projectedVecs == nullptr) {
+        return 0;
+    }
+
+    data.push_back(this->projectedVecs);
+    this->projectedVecs = nullptr;
+    // TODO: cleanup memory in old tables
+    return projectedVecs->getPositionCount();
+}
 
 Filter::Filter(jit_evaluateExpression evaluater)
 {

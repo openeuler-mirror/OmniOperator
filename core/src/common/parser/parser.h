@@ -1,7 +1,7 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
-#include "../common/expressions.h"
+#include "../expressions.h"
 #include <cstring>
 
 using namespace std;
