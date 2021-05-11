@@ -25,7 +25,7 @@ public abstract class JOmniOperator {
         return nativeOperator;
     }
 
-    public abstract int addInput(List<Vec> data, int[] positionCounts, int pageCount, VecType[] types);
+    public abstract int addInput(List<Vec> datas, int[] positionCounts, VecType[] types);
 
     public abstract int addInput(List<Vec> data, int positionCount, VecType[] types);
 

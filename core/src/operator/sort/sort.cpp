@@ -4,6 +4,9 @@
 #include "../../memory/memory_pool.h"
 #include <iostream>
 #include <algorithm>
+#include <cstring>
+
+using namespace std;
 
 int32_t DEFAULT_MAX_PAGE_SIZE_IN_BYTES = 1 * 1024 * 1024;
 
@@ -165,10 +168,6 @@ NativeOmniSortOperatorFactory::~NativeOmniSortOperatorFactory()
     delete[] sortCols;
     delete[] sortAscendings;
     delete[] sortNullFirsts;
-
-    // if (sortContext != NULL) {
-    //     delete sortContext;
-    // }
 }
 
 NativeOmniSortOperatorFactory * NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
@@ -260,6 +259,7 @@ int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
         sortColTypes[i] = sourceTypes[sortCols[i]];
     }
 
+    auto quickSortStart = START();
     quickSort(
         (int64_t)pagesIndex,
         sortCols,
@@ -268,7 +268,8 @@ int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
         sortNullFirsts,
         sortColCount,
         from,
-        to);
+        to);   
+    PRINT_IMPL("quick sort elapsed time : %ld ms\n", END(quickSortStart));
 
     // next, get output
     int32_t maxRowCount = getMaxRowCount(sourceTypes, outputCols, outputColsCount);
@@ -289,7 +290,7 @@ int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
         PRINT_IMPL("get result elapsed time: %ld ms\n", END(start));
 
         position += rowCount;
-        outputTables[i] = table;
+        outputTables.push_back(table);
     }
     return 0;
 }

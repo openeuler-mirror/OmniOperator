@@ -9,21 +9,74 @@ bool tableMatch(Table *outputTables, Table *expectTable);
 bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber);
 bool columnMatch(Column *actualColumn, Column *expectColumn);
 
+JitContext *createTestSortJitContext(
+  int32_t *sourceTypes,
+  int32_t typesCount,
+  int32_t *outputCols,
+  int32_t outputColsCount,
+  int32_t *sortCols,
+  int32_t *sortAscendings,
+  int32_t *sortNullFirsts,
+  int32_t sortColsCount)
+{
+    using namespace codegen;
+    std::map<std::string, ParamValue *> testParam;
+    std::list<Hammer *> deps = std::list<Hammer *>();
+    int sortColTypes[sortColsCount];
+
+    for (int32_t i = 0; i < sortColsCount; ++i) {
+        sortColTypes[i] = sourceTypes[sortCols[i]];
+    }
+
+    ParamValue p_sourceTypes = ParamValue(sourceTypes, typesCount);
+    ParamValue p_typeCount = ParamValue(&typesCount);
+    ParamValue p_outputCols = ParamValue(outputCols, outputColsCount);
+    ParamValue p_outputColCount = ParamValue(&outputColsCount);
+    ParamValue p_sortCols = ParamValue(sortCols, sortColsCount);
+    ParamValue p_sortColTypes = ParamValue(sortColTypes, sortColsCount);
+    ParamValue p_sortAscendings = ParamValue(sortAscendings, sortColsCount);
+    ParamValue p_sortNullFirsts = ParamValue(sortNullFirsts, sortColsCount);
+    ParamValue p_sortColCount = ParamValue(&sortColsCount);
+
+    testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
+    testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
+    testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
+    testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
+    testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
+
+    testParam["_Z12allocColumnslPiS_ii@1"] = &p_sourceTypes;
+    testParam["_Z12allocColumnslPiS_ii@2"] = &p_outputCols;
+    testParam["_Z12allocColumnslPiS_ii@3"] = &p_outputColCount;
+
+    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@1"] = &p_outputCols;
+    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@2"] = &p_outputColCount;
+    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@4"] = &p_sourceTypes;
+
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+
+    Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
+    hammer1.harden();
+    hammer2.harden();
+    deps.push_back(&hammer2);
+
+    HammerConfig hammerConfig;
+    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    auto func = (sort_module)(jitter->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
+
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(func);;
+    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+
+    return jitContext;
+}
+
 TEST (OrderByTest, TestSortByPerformance)
 {
     // construct input data
     const int32_t DATA_SIZE = 100000;
-    int32_t sourceTypes[2] = {1, 1};
-    int32_t outputCols[2] = {0, 1};
-    int32_t sortCols[2] = {0, 1};
-    int32_t ascendings[2] = {true, true};
-    int32_t nullFirsts[2] = {true, true};
-
-    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
-        sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
-
-    int32_t *data1 = new int32_t[DATA_SIZE];
+     int32_t *data1 = new int32_t[DATA_SIZE];
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
         data1[i] = i;
     }
@@ -42,6 +95,26 @@ TEST (OrderByTest, TestSortByPerformance)
     Column *column2 = new Column(data2, INT32, DATA_SIZE);
     tables[0]->setColumn(column1, INT32);
     tables[0]->setColumn(column2, INT32);
+
+    int32_t sourceTypes[2] = {1, 1};
+    int32_t outputCols[2] = {0, 1};
+    int32_t sortCols[2] = {0, 1};
+    int32_t ascendings[2] = {true, true};
+    int32_t nullFirsts[2] = {true, true};
+
+    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+        sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    operatorFactory->setJitContext(jitContext);    
+    NativeOmniSortOperator *sortOperator;
+    if (jitContext == NULL) {   
+        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    }
+    else {
+        sort_module sortModule = (sort_module)(jitContext->func);
+        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+    }
+
     sortOperator->addInput(tables, rowCounts, 1);
 
     clock_t start = clock();
@@ -54,69 +127,73 @@ TEST (OrderByTest, TestSortByPerformance)
     delete []data1;
     delete sortOperator;
     delete operatorFactory;
+    delete jitContext;
     freeInputTable(tables, 1);
     freeDataInColumn(&outputTables[0], outputTables.size());
     freeOutputTable(outputTables);
 }
 
-TEST(SortTest, testOrderByOneColumn)
-{
-    //construct input data
-    const int32_t DATA_SIZE = 5;
+// TEST(SortTest, testOrderByOneColumn)
+// {
+//     //construct input data
+//     const int32_t DATA_SIZE = 5;
+//     int32_t data1[DATA_SIZE] = {4, 3, 2, 1, 0};
+//     int64_t data2[DATA_SIZE] = {0, 1, 2, 3, 4};
+//     int32_t rowCounts[1] = {DATA_SIZE};
 
-    int sourceTypes[2] = {1, 2};
-    int outputCols[2] = {0, 1};
-    int sortCols[1] = {1};
-    int ascendings[1] = {false};
-    int nullFirsts[1] = {true};
+//     Table **tables = (Table **)malloc(1 * sizeof(Table *));
+//     tables[0] = new Table(DATA_SIZE, 2);
+//     Column *column1 = new Column(data1, INT32, DATA_SIZE);
+//     Column *column2 = new Column(data2, INT64, DATA_SIZE);
+//     tables[0]->setColumn(column1, INT32);
+//     tables[0]->setColumn(column2, INT64);
 
-    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
-        sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+//     int sourceTypes[2] = {1, 2};
+//     int outputCols[2] = {0, 1};
+//     int sortCols[1] = {1};
+//     int ascendings[1] = {false};
+//     int nullFirsts[1] = {true};
 
-    int32_t data1[DATA_SIZE] = {4, 3, 2, 1, 0};
-    int64_t data2[DATA_SIZE] = {0, 1, 2, 3, 4};
-    int32_t rowCounts[1] = {DATA_SIZE};
+//     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+//         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+//     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+//     operatorFactory->setJitContext(jitContext);     
+//     NativeOmniSortOperator *sortOperator;
+//     if (jitContext == NULL) {   
+//         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+//     }
+//     else {
+//         sort_module sortModule = (sort_module)(jitContext->func);
+//         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+//     }
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 2);
-    Column *column1 = new Column(data1, INT32, DATA_SIZE);
-    Column *column2 = new Column(data2, INT64, DATA_SIZE);
-    tables[0]->setColumn(column1, INT32);
-    tables[0]->setColumn(column2, INT64);
+//     sortOperator->addInput(tables, rowCounts, 1);
+//     vector<Table *> outputTables;
+//     sortOperator->getOutput(outputTables);
 
-    sortOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    sortOperator->getOutput(outputTables);
+//     int32_t expectData1[DATA_SIZE] = {0, 1, 2, 3, 4};
+//     Column expectCol1(expectData1, INT32, DATA_SIZE);
+//     int64_t expectData2[DATA_SIZE] = {4, 3, 2, 1, 0};
+//     Column expectCol2(expectData2, INT64, DATA_SIZE);
+//     Table* expectTable = new Table(DATA_SIZE, 2);
+//     expectTable->setColumn(&expectCol1, INT32);
+//     expectTable->setColumn(&expectCol2, INT64);
 
-    int32_t expectData1[DATA_SIZE] = {0, 1, 2, 3, 4};
-    Column expectCol1(expectData1, INT32, DATA_SIZE);
-    int64_t expectData2[DATA_SIZE] = {4, 3, 2, 1, 0};
-    Column expectCol2(expectData2, INT64, DATA_SIZE);
-    Table* expectTable = new Table(DATA_SIZE, 2);
-    expectTable->setColumn(&expectCol1, INT32);
-    expectTable->setColumn(&expectCol2, INT64);
+//     EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
 
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
-
-    //free memory
-    delete sortOperator;
-    delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-}
+//     //free memory
+//     delete sortOperator;
+//     delete operatorFactory;
+//     delete jitContext;
+//     freeInputTable(tables, 1);
+//     freeDataInColumn(&outputTables[0], outputTables.size());
+//     freeOutputTable(outputTables);
+// }
 
 TEST(SortTest, testOrderByDoubleColumn)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
-    int32_t sourceTypes[3] = {1, 2, 3};
-    int32_t outputCols[2] = {1, 2};
-    int32_t sortCols[2] = {0, 2};
-    int32_t ascendings[2] = {false, true};
-    int32_t nullFirsts[2] = {true, true};
-
     // prepare data
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
@@ -134,9 +211,24 @@ TEST(SortTest, testOrderByDoubleColumn)
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
 
+    int32_t sourceTypes[3] = {1, 2, 3};
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {0, 2};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
+
     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    operatorFactory->setJitContext(jitContext);
+    NativeOmniSortOperator *sortOperator;
+    if (jitContext == NULL) {   
+        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    }
+    else {
+        sort_module sortModule = (sort_module)(jitContext->func);
+        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+    }
 
     sortOperator->addInput(tables, rowCounts, 1);
     vector<Table *> outputTables;
@@ -154,6 +246,7 @@ TEST(SortTest, testOrderByDoubleColumn)
 
     delete sortOperator;
     delete operatorFactory;
+    delete jitContext;
     freeInputTable(tables, 1);
     freeDataInColumn(&outputTables[0], outputTables.size());
     freeOutputTable(outputTables);
@@ -164,12 +257,6 @@ TEST(SortTest, testOrderByDoubleColumnV2)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
-    int32_t sourceTypes[3] = {1, 2, 3};
-    int32_t outputCols[2] = {1, 2};
-    int32_t sortCols[2] = {0, 2};
-    int32_t ascendings[2] = {false, true};
-    int32_t nullFirsts[2] = {true, true};
-
     // prepare data
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
@@ -187,9 +274,24 @@ TEST(SortTest, testOrderByDoubleColumnV2)
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
 
+    int32_t sourceTypes[3] = {1, 2, 3};
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {0, 2};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
+
     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    operatorFactory->setJitContext(jitContext);    
+    NativeOmniSortOperator *sortOperator;
+    if (jitContext == NULL) {   
+        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    }
+    else {
+        sort_module sortModule = (sort_module)(jitContext->func);
+        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+    }
 
     sortOperator->addInput(tables, rowCounts, 1);
     vector<Table *> outputTables;
@@ -207,6 +309,7 @@ TEST(SortTest, testOrderByDoubleColumnV2)
 
     delete sortOperator;
     delete operatorFactory;
+    delete jitContext;
     freeInputTable(tables, 1);
     freeDataInColumn(&outputTables[0], outputTables.size());
     freeOutputTable(outputTables);
@@ -247,10 +350,10 @@ void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t r
 
 TEST(SortTest, testOrderByTwoColumnPerf)
 {
-    printf("test_sort_one called\n");
+    printf("testOrderByTwoColumnPerf called\n");
 
     int32_t tableCount = 1;
-    int32_t distinctValue = 40;
+    int32_t distinctValue = 400;
     int32_t repeatCount = 25000;
     int32_t rowNum = distinctValue * repeatCount;
     Table **tables = (Table **)malloc(tableCount * sizeof(Table *));
@@ -270,22 +373,36 @@ TEST(SortTest, testOrderByTwoColumnPerf)
 
     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    //JitContext *jitContext = NULL;
+    operatorFactory->setJitContext(jitContext);
 
-    sortOperator->addInput(tables, rowCounts, tableCount);
+    NativeOmniSortOperator *sortOperator;
+    if (jitContext == NULL) {   
+        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+    }
+    else {
+        sort_module sortModule = (sort_module)(jitContext->func);
+        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+    }
+
     typedef std::chrono::high_resolution_clock Time;
     typedef std::chrono::milliseconds ms;
     typedef std::chrono::duration<float> fsec;
     auto t0 = Time::now();
+    sortOperator->addInput(tables, rowCounts, tableCount);
     vector<Table *> outputTables;
     sortOperator->getOutput(outputTables);
     auto t1 = Time::now();
     fsec fs = t1 - t0;
     ms d = std::chrono::duration_cast<ms>(fs);
-    std::cout << "sort elapsed time: " << (double)d.count() << "ms" << std::endl;
+    std::cout << "testOrderByTwoColumnPerf sort elapsed time: " << (double)d.count() << "ms" << std::endl;
 
     delete sortOperator;
     delete operatorFactory;
+    if (jitContext != NULL) {
+        delete jitContext;
+    }
     freeDataInColumn(tables, tableCount);
     freeInputTable(tables, tableCount);
     freeDataInColumn(&outputTables[0], outputTables.size());

@@ -4,6 +4,9 @@ import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class JOmniSortOperator
         extends JOmniOperator
@@ -11,6 +14,7 @@ public class JOmniSortOperator
     public static class JOmniSortOperatorFactory
             extends JOmniOperatorFactory
     {
+        private static final Map<Integer, Long> omniSortCompilers = new ConcurrentHashMap<>();
         private final int[] sourceTypes;
         private final int[] outputColumns;
         private final int[] sortColumns;
@@ -24,9 +28,16 @@ public class JOmniSortOperator
                 int[] sortAscendings,
                 int[] sortNullFirsts)
         {
-            // compile and optimized
-            long nativeOperatorFactory = getJniWrapper().createSortOperatorFactory(
-                    sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts);
+            long nativeOperatorFactory;
+            int key = Objects.hash(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts);
+            if (omniSortCompilers.containsKey(key)) {
+                nativeOperatorFactory = omniSortCompilers.get(key);
+            }
+            else {
+                // compile and optimized
+                nativeOperatorFactory = getJniWrapper().createSortOperatorFactory(
+                        sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts);
+            }
 
             return new JOmniSortOperatorFactory(
                     sourceTypes,
@@ -69,7 +80,7 @@ public class JOmniSortOperator
     }
 
     @Override
-    public int addInput(List<Vec> datas, int[] positionCounts, int pageCount, VecType[] types)
+    public int addInput(List<Vec> datas, int[] positionCounts, VecType[] types)
     {
         int vecSize = datas.size();
         long[] dataAddrs = new long[vecSize];
@@ -78,7 +89,7 @@ public class JOmniSortOperator
         }
 
         long nativeOperator = getNativeOperator();
-        getJniWrapper().addSortInput(nativeOperator, dataAddrs, positionCounts, pageCount);
+        getJniWrapper().addSortInput(nativeOperator, dataAddrs, positionCounts, positionCounts.length);
         return 0;
     }
 
