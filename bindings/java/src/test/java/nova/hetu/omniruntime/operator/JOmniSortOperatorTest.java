@@ -62,7 +62,7 @@ public class JOmniSortOperatorTest
         JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
         JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-        sortOperator.addInput(datas, positionCounts, 1, types);
+        sortOperator.addInput(datas, positionCounts, types);
         OMResult[] results = sortOperator.getOutput();
 
         Assert.assertEquals(results.length, 1);
@@ -104,7 +104,7 @@ public class JOmniSortOperatorTest
 
         start = System.currentTimeMillis();
         JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-        sortOperator.addInput(vecs, positionCounts, totalPageCount, types);
+        sortOperator.addInput(vecs, positionCounts, types);
         OMResult[] results = sortOperator.getOutput();
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
@@ -130,7 +130,7 @@ public class JOmniSortOperatorTest
             Thread thread = new Thread(() -> {
                 try {
                     JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-                    sortOperator.addInput(dataVecs, positionCounts, totalPageCount, types);
+                    sortOperator.addInput(dataVecs, positionCounts, types);
                     sortOperator.getOutput();
                 }
                 finally {

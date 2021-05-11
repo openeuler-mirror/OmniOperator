@@ -4,22 +4,10 @@
 #include "../native_base.h"
 #include "../../vector/table.h"
 #include "../../vector/type.h"
-#include "../../jit/hammer.h"
-#include "../../jit/hammer_config.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
 #include <vector>
 
-using namespace std;
-
 typedef int64_t (*jit_createSort)(int32_t *, int32_t, int32_t *, int32_t, int32_t *, int32_t *, int32_t *, int32_t);
-
-typedef struct JitSortContext
-{
-    LLJIT *jitter;
-    jit_createSort createSortFunc;
-} JitSortContext;
 
 class PagesIndex
 {
@@ -123,7 +111,7 @@ public:
         return 0;
     }
     int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
-    int32_t getOutput(vector<Table *>& outputTables) override;
+    int32_t getOutput(std::vector<Table *>& outputTables) override;
 
     int32_t *getSourceTypes() { return sourceTypes; }
     int32_t getTypescount() { return typesCount; }
@@ -165,7 +153,7 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
 void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length);
 
 void freeInputTable(Table **inputTables, int32_t inputTableCount);
-void freeOutputTable(vector<Table *>& outputTables);
+void freeOutputTable(std::vector<Table *>& outputTables);
 void freeDataInColumn(Table **tables, int32_t tableCount);
 
 #ifdef DEBUG_JNI
