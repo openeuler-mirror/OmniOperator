@@ -16,7 +16,7 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         super(jniWrapper, nativeOperator);
     }
     @Override
-    public int addInput(List<Vec> data, int[] positionCounts, int pageCount, VecType[] types) {
+    public int addInput(List<Vec> data, int[] positionCounts, VecType[] types) {
         return 0;
     }
     private LongVec transformVecAddress(List<Vec> inputs) {
