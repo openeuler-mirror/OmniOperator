@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import static java.lang.String.format;
@@ -41,48 +40,6 @@ public class OmniHashAggregationOperatorTest {
             }
         }
         return output;
-    }
-
-    @Test
-    public void testExecuteAggOnePage() {
-        long operatorId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
-        long stageId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
-        int totalChannel = 2;
-        int[] groupByChanel = {0};
-        int[] groupByTypes = {2};
-        int[] aggChannels = {1};
-        int[] aggTypes = {2};
-        int[] aggFunctionTypes = {0};
-        int[] aggOutputTypes = {2, 2};
-        VecType[] inputTypes = {VecType.LONG, VecType.LONG};
-        JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory factory = JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory.createJOmniHashAggregationOperatorFactory(
-                groupByChanel, groupByTypes,aggChannels,aggTypes,aggFunctionTypes,aggOutputTypes
-        );
-
-        JOmniHashAggregationOperator omniOperator = (JOmniHashAggregationOperator)factory.createOmniOperator();
-
-        int rowNum = 10;
-        List<Vec> inputData = build2Columns(rowNum);
-        omniOperator.addInput(inputData, rowNum, inputTypes);
-        // release input data memory
-        releaseVecMemory(inputData.toArray(new Vec[0]));
-
-        OMResult[] output = omniOperator.getOutput();
-        System.out.println("Native result OMResult number: " + output.length);
-        for (int i = 0; i < output.length; ++i) {
-            if (output[i].getBuffers().length != aggOutputTypes.length) {
-                throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", output[i].getBuffers().length, aggOutputTypes.length, output[i].getLength()));
-            }
-        }
-
-        Vec[][] result = generateOMVec(output, aggOutputTypes);
-        Assert.assertEquals(result[0].length, 2);
-        Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
-        Assert.assertEquals(((LongVec)result[1][0]).get(0), rowNum);
-        // release result memory
-        for (int i = 0; i < result.length; ++i) {
-            releaseVecMemory(result[i]);
-        }
     }
 
     @Test

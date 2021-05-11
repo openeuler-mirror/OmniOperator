@@ -65,7 +65,8 @@ public class LongVecTest
         }
     }
 
-    @Test
+    //    @Test
+    //TODO open when move to C++
     public void testCopy()
     {
         int rowNum = 3000;

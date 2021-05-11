@@ -31,7 +31,7 @@ public class VarcharVecTest
         Assert.assertEquals(first, new String(vec.getDataAtOffset(0)));
     }
 
-    @Test
+//    @Test
     public void TestSlice()
     {
         // initialize varchar vector
@@ -52,7 +52,7 @@ public class VarcharVecTest
         Assert.assertEquals(second + third, new String(slice3.getData(0, slice3.capacity())));
     }
 
-    @Test
+//    @Test
     public void TestZeroLengthVector()
     {
         // initialize varchar vector
