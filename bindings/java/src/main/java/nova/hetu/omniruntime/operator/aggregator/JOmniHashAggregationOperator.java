@@ -4,11 +4,8 @@ import nova.hetu.omniruntime.operator.JOmniOperator;
 import nova.hetu.omniruntime.operator.JOmniOperatorFactory;
 import nova.hetu.omniruntime.operator.JniWrapper;
 import nova.hetu.omniruntime.operator.OMResult;
-import nova.hetu.omniruntime.vector.AggType;
-import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.LongVec;
-import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecType;
+import nova.hetu.omniruntime.utils.OmniUtils;
+import nova.hetu.omniruntime.vector.*;
 
 import java.util.List;
 import java.util.Objects;
@@ -21,93 +18,30 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         super(jniWrapper, nativeOperator);
     }
     @Override
-    public int addInput(List<Vec> data, int[] positionCounts, VecType[] types) {
-        return 0;
-    }
-    private LongVec transformVecAddress(List<Vec> inputs) {
-        LongVec address = new LongVec(inputs.size());
-        for (int idx = 0; idx < inputs.size(); idx++) {
-            address.set(idx, inputs.get(idx).getAddress());
-        }
-        return address;
-    }
-
-    private static int[] transformVecType(VecType[] vecTypes)
-    {
-        int[] vecTypeValue = new int[vecTypes.length];
-        for (int idx = 0; idx < vecTypes.length; idx++) {
-            vecTypeValue[idx] = vecTypes[idx].getValue();
-        }
-        return vecTypeValue;
-    }
-
-    private static int[] transformAggType(AggType[] aggTypes)
-    {
-        int[] aggTypeValue = new int[aggTypes.length];
-        for (int idx = 0; idx < aggTypes.length; idx++) {
-            aggTypeValue[idx] = aggTypes[idx].getValue();
-        }
-        return aggTypeValue;
-    }
-
-    private IntVec getRowNumbers(List<Vec> inputs, int columnCount) {
-        int totalColumn = inputs.size();
-        if (totalColumn % columnCount != 0) {
-            throw new IllegalArgumentException(format("input vec error:total colum: %s,column count: %s", totalColumn, columnCount));
-        }
-
-        int pageNum = totalColumn / columnCount;
-        IntVec rowNums = new IntVec(pageNum);
-        for (int idx = 0; idx < pageNum; idx++) {
-            rowNums.set(idx, inputs.get(idx * columnCount).size());
-        }
-        return rowNums;
-    }
-
-    public int transformPrepareInfoToVec(IntVec prepareInfo, int[] values, int offset)
-    {
-        for (int value : values) {
-            prepareInfo.set(offset++, value);
-        }
-        return offset;
-    }
-
-    @Override
-    public int addInput(List<Vec> data, int positionCount, VecType[] vecTypes)
-    {
-        LongVec inputDataAddr = null;
+    public int addInput(List<Vec> data, int[] positionCounts) {
         IntVec inputRowSize = null;
-        IntVec inputVecTypes = null;
+        int columnCount = data.size() / positionCounts.length;
+        LongVec inputDataAddr = null;
         try {
-            inputDataAddr = transformVecAddress(data);
-            inputRowSize = getRowNumbers(data, vecTypes.length);
-            int[] inputTypes = transformVecType(vecTypes);
-            inputVecTypes = new IntVec(inputTypes.length);
-            transformPrepareInfoToVec(inputVecTypes, inputTypes, 0);
-
-            // TODO use uified addInput
-            getJniWrapper().executeAggIntermediate(
-                    getNativeOperator(),
-                    inputDataAddr.getAddress(),
-                    inputDataAddr.size(),
-                    vecTypes.length,
-                    inputRowSize.getAddress(),
-                    inputRowSize.size(),
-                    inputVecTypes.getAddress());
+            inputDataAddr = OmniUtils.transformVecAddress(data);
+            inputRowSize = OmniUtils.getRowNumbers(data, columnCount);
+            getJniWrapper().addInput(getNativeOperator(), inputDataAddr.getAddress(), inputDataAddr.size(), inputRowSize.getAddress(), inputRowSize.size());
             return 0;
         } catch (RuntimeException e) {
             throw new IllegalArgumentException("execute agg intermediate failed.", e);
         } finally {
-            if (inputDataAddr != null) {
-                inputDataAddr.close();
-            }
             if (inputRowSize != null) {
                 inputRowSize.close();
             }
-            if (inputVecTypes != null) {
-                inputVecTypes.close();
+            if (inputDataAddr != null) {
+                inputDataAddr.close();
             }
         }
+    }
+
+    @Override
+    public int addInput(List<Vec> data, int positionCount) {
+        return 0;
     }
 
     @Override
@@ -137,7 +71,7 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
             Long nativeOperatorFactory = getOmniFactoryCache().getIfPresent(hashKey);
             if (nativeOperatorFactory == null) {
                 nativeOperatorFactory = getJniWrapper().createHashAggregationOperatorFactory(
-                        groupByChanel, transformVecType(groupByTypes), aggChannels, transformVecType(aggTypes), transformAggType(aggFunctionTypes), transformVecType(aggOutputTypes));
+                        groupByChanel, OmniUtils.transformVecType(groupByTypes), aggChannels, OmniUtils.transformVecType(aggTypes), OmniUtils.transformAggType(aggFunctionTypes), OmniUtils.transformVecType(aggOutputTypes));
                 if (nativeOperatorFactory == null) {
                     throw new RuntimeException(format("create nativeOperatorFactory failed"));
                 }
@@ -146,11 +80,11 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
 
             return new JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory(
                     groupByChanel,
-                    transformVecType(groupByTypes),
+                    OmniUtils.transformVecType(groupByTypes),
                     aggChannels,
-                    transformVecType(aggTypes),
-                    transformAggType(aggFunctionTypes),
-                    transformVecType(aggOutputTypes),
+                    OmniUtils.transformVecType(aggTypes),
+                    OmniUtils.transformAggType(aggFunctionTypes),
+                    OmniUtils.transformVecType(aggOutputTypes),
                     nativeOperatorFactory);
         }
 
@@ -175,7 +109,7 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         @Override
         public JOmniOperator createOmniOperator() {
             JniWrapper jniWrapper = getJniWrapper();
-            long nativeOperator = jniWrapper.createOperator(getNativeOperatorFactory(), JniWrapper.OperatorType.HASH_AGGREGATION.getValue());
+            long nativeOperator = jniWrapper.createOperator(getNativeOperatorFactory());
             JOmniOperator jOmniOperator = new JOmniHashAggregationOperator(jniWrapper, nativeOperator);
             return jOmniOperator;
         }

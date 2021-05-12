@@ -53,15 +53,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHas
  * Signature: (JIJIIIIII)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOperator
-(JNIEnv *, jobject, jlong, jint);
+(JNIEnv *, jobject, jlong);
 
 /*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    executeAggIntermediate
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    addInput
  * Signature: (JJJIJIJ)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_executeAggIntermediate
-  (JNIEnv *, jobject, jlong, jlong, jlong, jint, jlong, jint, jlong);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
+(JNIEnv* env, jobject jObj, jlong jOperatorAddr, jlong jInputDataAddress, jlong jTotalColumn, jlong jRowAddress, jint jRowNums);
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
@@ -71,7 +71,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_executeAg
 // JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
 //   (JNIEnv *, jobject, jlong);
 JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getOutput
-  (JNIEnv*, jobject, jlong);
+  (JNIEnv* env, jobject jObj, jlong jOperatorAddr);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_JniWrapper

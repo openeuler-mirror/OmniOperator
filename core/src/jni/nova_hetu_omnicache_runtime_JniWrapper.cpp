@@ -178,89 +178,69 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHas
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
-
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOperator
-(JNIEnv *env, jobject jObj, jlong jNativeFactoryObj, jint type)
+(JNIEnv *env, jobject jObj, jlong jNativeFactoryObj)
 {
-
-    // return createOperator(jModuleId, groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-    if (type == 0) {
-        NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(jNativeFactoryObj);
-        auto objAddr = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
-//        std::cout << "create hash agg... address=" << (uint64_t)objAddr << std::endl;
-        return reinterpret_cast<uint64_t>(objAddr);
-    }
+    NativeOmniOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniOperatorFactory*>(jNativeFactoryObj);
+    auto objAddr = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
+    return reinterpret_cast<uint64_t>(objAddr);
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_executeAggIntermediate
-(JNIEnv * env, jobject jObj, jlong jOperatorId, jlong jInputDataAddress, jlong jTotalColumn, jint
-jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
+(JNIEnv* env, jobject jObj, jlong jOperatorAddr, jlong jInputDataAddress, jlong jInputDataAddrCnt, jlong jRowAddress, jint jRowNums)
 {
-    int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
-//    std::cout << "executing address=" << opId << " input address=" << jInputDataAddress << " total_column=" << jTotalColumn <<  std::endl;
-    size_t totalColumnCount = (size_t)jTotalColumn;
+    int64_t opAddr = static_cast<int64_t>(jOperatorAddr);
+    size_t totalColumnCount = static_cast<size_t>(jInputDataAddrCnt);
     int64_t* address = reinterpret_cast<int64_t*>(jInputDataAddress);
     int32_t* rowNums = reinterpret_cast<int32_t*>(jRowAddress); 
-
-    if (totalColumnCount % jColumnCout != 0) {
-      // need handle the error
-      std::cout << "input data error,total count:" << totalColumnCount << ",columnCout:" << jColumnCout << std::endl;
-    }
-
-    // uint32_t* inputTypes = g_typeCache.get(opId);
-    uint32_t* inputTypes = reinterpret_cast<uint32_t*>(inputTypeAddr);
+    int32_t columnCount = totalColumnCount / jRowNums;
+    int32_t pageCount = static_cast<int32_t>(jRowNums);
+    
+    NativeOmniOperator* op = reinterpret_cast<NativeOmniOperator*>(opAddr);
+    int32_t *colTypes = op->getSourceTypes();
     
     // build table
-    char** table = new char*[jColumnCout];
-    uint32_t* colTypes = new uint32_t[jColumnCout];
-    uint64_t opAddr;
-    for (int cIndex = 0;cIndex < totalColumnCount;cIndex++) {
-        int32_t rowNum = rowNums[cIndex / jColumnCout];
-
+    char** table = new char*[columnCount];
+    int32_t pageIndex = 0;
+    for (int cIndex = 0; cIndex < totalColumnCount; cIndex++) {
+        int32_t rowNum = rowNums[pageIndex];
         void* data = reinterpret_cast<void *>(address[cIndex]);
-        int cIdx =  cIndex % jColumnCout;
-        colTypes[cIdx] = buildColumnType(inputTypes[cIdx]);
+        int cIdx =  cIndex % columnCount;
         table[cIdx] = (char*)data;
 
-        if ((cIndex + 1) % jColumnCout == 0) {
-            Table* t = new Table(rowNum, jColumnCout);
-            for (int i = 0; i < jColumnCout; i++) {
+        if ((cIndex + 1) % columnCount == 0) {
+            pageIndex++;
+            Table* t = new Table(rowNum, columnCount);
+            for (int i = 0; i < columnCount; i++) {
                 void* data = table[i];
                 ColumnType columnType = static_cast<ColumnType>(colTypes[i]);
                 Column* col = new Column(data, columnType, rowNum);
                 t->setColumn(col, columnType);
             }
-        
-            NativeOmniHashAggregationOperator* groupBy = reinterpret_cast<NativeOmniHashAggregationOperator*>(opId);
-            groupBy->addInput(t, t->getPositionCount());
-            opAddr = reinterpret_cast<uint64_t>(groupBy);
+
+            op->addInput(t, t->getPositionCount());
+            opAddr = reinterpret_cast<uint64_t>(op);
         }
     }
-
     // release memory
     delete[] table;
-    delete[] colTypes;
-    // std::cout << "exit of execute" << std::endl;
     return opAddr;
 }
 
 JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getOutput
-  (JNIEnv* env, jobject jObj, jlong jOperatorId)
+  (JNIEnv* env, jobject jObj, jlong jOperatorAddr)
 {
 #ifdef DEBUG_LEVEL_LOW
 	DebugFuncEntry;
 #endif
-	int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
     // execute agg final
     std::vector<Table*> result;
-    // int32_t pageCount = executeAggFinal(opId, result);
-
-    NativeOmniHashAggregationOperator* groupBy = reinterpret_cast<NativeOmniHashAggregationOperator*>(opId);
-    if (groupBy == nullptr) {
-        DebugError("No operator %ld exists.", 0x11111);
+    NativeOmniOperator* op = reinterpret_cast<NativeOmniOperator*>(jOperatorAddr);
+    if (op == nullptr) {
+        DebugError("No operator is null pointer %ld.", 0x0);
     }
-    int32_t errNo = groupBy->getOutput(result);
-    delete groupBy;
+    int32_t errNo = op->getOutput(result);
+    delete op;
 
 #ifdef DEBUG_LEVEL_LOW
 	DebugFuncExit;

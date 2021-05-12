@@ -80,7 +80,7 @@ public class JOmniSortOperator
     }
 
     @Override
-    public int addInput(List<Vec> datas, int[] positionCounts, VecType[] types)
+    public int addInput(List<Vec> datas, int[] positionCounts)
     {
         int vecSize = datas.size();
         long[] dataAddrs = new long[vecSize];
@@ -94,7 +94,7 @@ public class JOmniSortOperator
     }
 
     @Override
-    public int addInput(List<Vec> data, int positionCount, VecType[] types) {
+    public int addInput(List<Vec> data, int positionCounts) {
         return 0;
     }
 

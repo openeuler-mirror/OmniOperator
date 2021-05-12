@@ -63,15 +63,17 @@ public class OmniHashAggregationOperatorTest {
         );
         int rowNum = 40000;
         int pageCount = 10;
+        int[] rowNums = new int[pageCount];
 
         List<Vec> inputData = new ArrayList<>();
         for (int i = 0; i < pageCount; i++) {
             inputData.addAll(build4Columns(rowNum));
+            rowNums[i] = rowNum;
         }
 
         JOmniHashAggregationOperator omniOperator = (JOmniHashAggregationOperator)factory.createOmniOperator();
 
-        omniOperator.addInput(inputData, rowNum, inputTypes);
+        omniOperator.addInput(inputData, rowNums);
 
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
@@ -127,13 +129,16 @@ public class OmniHashAggregationOperatorTest {
                             groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes
                     );
 
+                    int[] rowNums = new int[pageCount];
+
                     List<Vec> inputData = new ArrayList<>();
                     for (int i = 0; i < pageCount; i++) {
                         inputData.addAll(build4Columns(rowNum));
+                        rowNums[i] = rowNum;
                     }
 
                     JOmniHashAggregationOperator omniOperator = (JOmniHashAggregationOperator)factory.createOmniOperator();
-                    omniOperator.addInput(inputData, rowNum, inputTypes);
+                    omniOperator.addInput(inputData, rowNums);
                     // release input data memory
                     releaseVecMemory(inputData.toArray(new Vec[0]));
 

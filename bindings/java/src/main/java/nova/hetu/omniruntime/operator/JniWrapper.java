@@ -52,14 +52,15 @@ public class JniWrapper
     public native int filterExecute(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, long selectedPositionsAddress, int inputRowSize);
     public native int filterExecuteV1(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, int inputRowSize,long[] projectVecArrayAddress,int[] projectIdx,int projectVecCount);
     public native void filterFinished(long handle);
+    // ================================ legacy code above ==================================================
 
     // Only createOperatorFactory JNIs have difference
     public native long createSortOperatorFactory(int[] sourceTypes, int[] outputCols, int[] sortCols, int[] ascendings, int[] nullFirsts);
     public native long createHashAggregationOperatorFactory(int[] groupByChanel, int[] groupByTypes, int[] aggChannels, int[] aggTypes, int[] aggFunctionTypes, int[] aggOutputTypes);
     // createOperator
-    public native long createOperator(long factoryAddress, int operatorType);
+    public native long createOperator(long factoryAddress);
     // addInput
-    public native long addInput(long operatorAddress, long[] dataAddress, int[] positionCount, int pageCount);
+    public native long addInput(long operatorAddress, long vecAddress, long vecNum, long rowCountAddress, int rowCountNum);
     // getOutput
     public native OMResult[] getOutput(long operatorAddress);
 }

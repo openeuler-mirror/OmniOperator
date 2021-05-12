@@ -42,7 +42,15 @@ public:
     NativeOmniHashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs)
     : groupByCols(groupByCol), aggCols(aggCol), aggregators(aggs)
     {
-
+        int32_t colSize = groupByCol.size() + aggCol.size();
+        sourceTypes = new int32_t[colSize];
+        int32_t idx = 0;
+        for (auto& c : groupByCol) {
+            sourceTypes[idx++] = (int32_t)c.type;
+        }
+        for (auto& c : aggCol) {
+            sourceTypes[idx++] = (int32_t)c.type;
+        }
     }
 
     int32_t addInput(Table* data, int32_t rowCount) override;
@@ -96,6 +104,10 @@ public:
     void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize, int32_t tableRowSize, HashGroupByIterator& iterator);
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();
+    int32_t* getSourceTypes()
+    {
+        return sourceTypes;
+    }
 
 private:
     friend class NativeOmniHashAggregationOperatorFactory;
@@ -104,6 +116,7 @@ private:
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
     uint32_t* inputColTypes;
+    int32_t* sourceTypes;
 };
 
 class NativeOmniHashAggregationOperatorFactory : public NativeOmniOperatorFactory
@@ -127,6 +140,5 @@ private:
 };
 
 typedef void (*jit_module)(NativeOmniHashAggregationOperator*, Table*);
-typedef NativeOmniOperator* (*opt_module) (NativeOmniHashAggregationOperatorFactory*);
 
 #endif
