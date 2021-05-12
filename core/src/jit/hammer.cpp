@@ -159,10 +159,10 @@ bool Hammer::harden_function(Function &function) {
         if (params.find(key) != params.end()) {
             auto value = params[key];
             auto newArg = to_llvm_value(key, *value);
-            arg.print(errs());
-            errs() << "\n";
-            newArg->print(errs());
-            errs() << "\n";
+//            arg.print(errs());
+//            errs() << "\n";
+//            newArg->print(errs());
+//            errs() << "\n";
             arg.replaceAllUsesWith(newArg);
         } else {
             //outs() << "no new argument value to bind\n";

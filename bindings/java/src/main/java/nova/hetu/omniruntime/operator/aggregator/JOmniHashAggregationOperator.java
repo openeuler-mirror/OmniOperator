@@ -11,6 +11,7 @@ import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.List;
+import java.util.Objects;
 
 import static java.lang.String.format;
 
@@ -132,8 +133,16 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
                 VecType[] aggOutputTypes)
         {
             // compile and optimized
-            long nativeOperatorFactory = getJniWrapper().createHashAggregationOperatorFactory(
-                    groupByChanel, transformVecType(groupByTypes), aggChannels, transformVecType(aggTypes), transformAggType(aggFunctionTypes), transformVecType(aggOutputTypes));
+            Integer hashKey = Objects.hash(groupByTypes, aggTypes, aggFunctionTypes);
+            Long nativeOperatorFactory = getOmniFactoryCache().getIfPresent(hashKey);
+            if (nativeOperatorFactory == null) {
+                nativeOperatorFactory = getJniWrapper().createHashAggregationOperatorFactory(
+                        groupByChanel, transformVecType(groupByTypes), aggChannels, transformVecType(aggTypes), transformAggType(aggFunctionTypes), transformVecType(aggOutputTypes));
+                if (nativeOperatorFactory == null) {
+                    throw new RuntimeException(format("create nativeOperatorFactory failed"));
+                }
+                getOmniFactoryCache().put(hashKey, nativeOperatorFactory);
+            }
 
             return new JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory(
                     groupByChanel,

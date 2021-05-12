@@ -187,7 +187,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOpe
     if (type == 0) {
         NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(jNativeFactoryObj);
         auto objAddr = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
-        std::cout << "create hash agg... address=" << (uint64_t)objAddr << std::endl;
+//        std::cout << "create hash agg... address=" << (uint64_t)objAddr << std::endl;
         return reinterpret_cast<uint64_t>(objAddr);
     }
 }
@@ -197,7 +197,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_executeAg
 jColumnCout, jlong jRowAddress, jint jRowNums, jlong inputTypeAddr)
 {
     int64_t opId =reinterpret_cast<int64_t>(jOperatorId);
-    std::cout << "executing address=" << opId << " input address=" << jInputDataAddress << " total_column=" << jTotalColumn <<  std::endl;
+//    std::cout << "executing address=" << opId << " input address=" << jInputDataAddress << " total_column=" << jTotalColumn <<  std::endl;
     size_t totalColumnCount = (size_t)jTotalColumn;
     int64_t* address = reinterpret_cast<int64_t*>(jInputDataAddress);
     int32_t* rowNums = reinterpret_cast<int32_t*>(jRowAddress); 
