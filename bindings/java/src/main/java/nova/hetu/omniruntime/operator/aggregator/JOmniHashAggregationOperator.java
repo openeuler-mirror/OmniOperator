@@ -4,7 +4,11 @@ import nova.hetu.omniruntime.operator.JOmniOperator;
 import nova.hetu.omniruntime.operator.JOmniOperatorFactory;
 import nova.hetu.omniruntime.operator.JniWrapper;
 import nova.hetu.omniruntime.operator.OMResult;
-import nova.hetu.omniruntime.vector.*;
+import nova.hetu.omniruntime.vector.AggType;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.List;
 
@@ -27,7 +31,8 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         return address;
     }
 
-    private int[] transformVecType(VecType[] vecTypes) {
+    private static int[] transformVecType(VecType[] vecTypes)
+    {
         int[] vecTypeValue = new int[vecTypes.length];
         for (int idx = 0; idx < vecTypes.length; idx++) {
             vecTypeValue[idx] = vecTypes[idx].getValue();
@@ -35,7 +40,8 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         return vecTypeValue;
     }
 
-    private int[] transformAggType(AggType[] aggTypes) {
+    private static int[] transformAggType(AggType[] aggTypes)
+    {
         int[] aggTypeValue = new int[aggTypes.length];
         for (int idx = 0; idx < aggTypes.length; idx++) {
             aggTypeValue[idx] = aggTypes[idx].getValue();
@@ -65,9 +71,9 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         return offset;
     }
 
-
     @Override
-    public int addInput(List<Vec> data, int positionCount, VecType[] vecTypes) {
+    public int addInput(List<Vec> data, int positionCount, VecType[] vecTypes)
+    {
         LongVec inputDataAddr = null;
         IntVec inputRowSize = null;
         IntVec inputVecTypes = null;
@@ -119,23 +125,23 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
 
         public static JOmniHashAggregationOperatorFactory createJOmniHashAggregationOperatorFactory(
                 int[] groupByChanel,
-                int[] groupByTypes,
+                VecType[] groupByTypes,
                 int[] aggChannels,
-                int[] aggTypes,
-                int[] aggFunctionTypes,
-                int[] aggOutputTypes)
+                VecType[] aggTypes,
+                AggType[] aggFunctionTypes,
+                VecType[] aggOutputTypes)
         {
             // compile and optimized
             long nativeOperatorFactory = getJniWrapper().createHashAggregationOperatorFactory(
-                    groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes);
+                    groupByChanel, transformVecType(groupByTypes), aggChannels, transformVecType(aggTypes), transformAggType(aggFunctionTypes), transformVecType(aggOutputTypes));
 
             return new JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory(
                     groupByChanel,
-                    groupByTypes,
+                    transformVecType(groupByTypes),
                     aggChannels,
-                    aggTypes,
-                    aggFunctionTypes,
-                    aggOutputTypes,
+                    transformVecType(aggTypes),
+                    transformAggType(aggFunctionTypes),
+                    transformVecType(aggOutputTypes),
                     nativeOperatorFactory);
         }
 

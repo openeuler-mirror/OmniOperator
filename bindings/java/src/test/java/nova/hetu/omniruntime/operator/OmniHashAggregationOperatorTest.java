@@ -1,7 +1,12 @@
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.aggregator.JOmniHashAggregationOperator;
-import nova.hetu.omniruntime.vector.*;
+import nova.hetu.omniruntime.vector.AggType;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -43,23 +48,24 @@ public class OmniHashAggregationOperatorTest {
     }
 
     @Test
-    public void testExecuteAggMultiplePage() {
+    public void testExecuteAggMultiplePage()
+    {
         int[] groupByChanel = {0, 1};
-        int[] groupByTypes = {2, 2};
+        VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
         int[] aggChannels = {2, 3};
-        int[] aggTypes = {2, 2};
-        int[] aggFunctionTypes = {0, 0};
-        int[] aggOutputTypes = {2, 2, 2, 2};
+        VecType[] aggTypes = {VecType.LONG, VecType.LONG};
+        AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
+        VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
 
         VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory factory = JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory.createJOmniHashAggregationOperatorFactory(
-                groupByChanel, groupByTypes,aggChannels,aggTypes,aggFunctionTypes,aggOutputTypes
+                groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes
         );
         int rowNum = 40000;
         int pageCount = 10;
 
         List<Vec> inputData = new ArrayList<>();
-        for (int i = 0; i < pageCount;i++) {
+        for (int i = 0; i < pageCount; i++) {
             inputData.addAll(build4Columns(rowNum));
         }
 
@@ -77,7 +83,7 @@ public class OmniHashAggregationOperatorTest {
                 throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", output[i].getBuffers().length, aggOutputTypes.length, output[i].getLength()));
             }
         }
-        Vec[][] result = generateOMVec(output, aggOutputTypes);
+        Vec[][] result = generateOMVec(output, transformVecType(aggOutputTypes));
         Assert.assertEquals(result[0].length, 4);
         Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
         Assert.assertEquals(((LongVec)result[0][1]).get(0), 0);
@@ -111,18 +117,18 @@ public class OmniHashAggregationOperatorTest {
             Thread thread = new Thread(() -> {
                 try {
                     int[] groupByChanel = {0, 1};
-                    int[] groupByTypes = {2, 2};
+                    VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
                     int[] aggChannels = {2, 3};
-                    int[] aggTypes = {2, 2};
-                    int[] aggFunctionTypes = {0, 0};
-                    int[] aggOutputTypes = {2, 2, 2, 2};
+                    VecType[] aggTypes = {VecType.LONG, VecType.LONG};
+                    AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
+                    VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
                     VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
                     JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory factory = JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory.createJOmniHashAggregationOperatorFactory(
-                            groupByChanel, groupByTypes,aggChannels,aggTypes,aggFunctionTypes,aggOutputTypes
+                            groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes
                     );
 
                     List<Vec> inputData = new ArrayList<>();
-                    for (int i = 0; i < pageCount;i++) {
+                    for (int i = 0; i < pageCount; i++) {
                         inputData.addAll(build4Columns(rowNum));
                     }
 
@@ -139,7 +145,7 @@ public class OmniHashAggregationOperatorTest {
                             throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", output[i].getBuffers().length, aggOutputTypes.length, output[i].getLength()));
                         }
                     }
-                    Vec[][] result = generateOMVec(output, aggOutputTypes);
+                    Vec[][] result = generateOMVec(output, transformVecType(aggOutputTypes));
                     Assert.assertEquals(result[0].length, 4);
                     Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
                     Assert.assertEquals(((LongVec)result[0][1]).get(0), 0);
@@ -207,5 +213,14 @@ public class OmniHashAggregationOperatorTest {
         columns.add(c2);
 
         return columns;
+    }
+
+    private static int[] transformVecType(VecType[] vecTypes)
+    {
+        int[] vecTypeValue = new int[vecTypes.length];
+        for (int idx = 0; idx < vecTypes.length; idx++) {
+            vecTypeValue[idx] = vecTypes[idx].getValue();
+        }
+        return vecTypeValue;
     }
 }
