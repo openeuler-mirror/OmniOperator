@@ -513,7 +513,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndP
     NativeOmniFilterOperator *filterAndProjectOperator = (NativeOmniFilterOperator *) jFilterAndProjectOperator;
     jlong *inputData = env->GetLongArrayElements(jInputData, JNI_FALSE);
     int32_t rowNumber = (int32_t) jRowCounts;
-    Table *table = getTableFromDataAddress(inputData, rowNumber, filterAndProjectOperator->getVecCount(), filterAndProjectOperator->getInputTypes());
+    Table *table = getTableFromDataAddress(inputData, rowNumber, filterAndProjectOperator->getVecCount(), filterAndProjectOperator->getSourceTypes());
     
     return filterAndProjectOperator->addInput(table, rowNumber);
 }

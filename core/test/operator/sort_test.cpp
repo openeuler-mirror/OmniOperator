@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/sort/sort.h"
+#include "../../src/jit/param_value.h"
+#include "../../src/jit/hammer.h"
 #include <time.h>
 #include <vector>
 #include <iostream>

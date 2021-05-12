@@ -13,8 +13,8 @@ TEST (FilterTest, TestFilterCompile) {
     int32_t *inputTypes = (int32_t *)malloc(sizeof(int32_t) * vecCount);
     *(inputTypes) = 1;
     *(inputTypes + 1) = 1;
-    *(inputTypes + 2) = 1;
-    *(inputTypes + 3) = 1;
+    *(inputTypes + 2) = 3;
+    *(inputTypes + 3) = 3;
     // int64_t filterAddr = filterCompile(filterExpression, inputTypes, vecCount);
 
     const int32_t DATA_SIZE = 1000;
@@ -28,14 +28,14 @@ TEST (FilterTest, TestFilterCompile) {
         data2[i] = i;
     }
 
-    int32_t *data3 = new int32_t[DATA_SIZE];
+    double *data3 = new double[DATA_SIZE];
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data1[i] = i;
+        data3[i] = i;
     }
 
-    int32_t *data4 = new int32_t[DATA_SIZE];
+    double *data4 = new double[DATA_SIZE];
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data2[i] = i;
+        data4[i] = i;
     }
 
     int64_t datas[4] = {(int64_t)data1, (int64_t)data2, (int64_t)data3, (int64_t)data4};

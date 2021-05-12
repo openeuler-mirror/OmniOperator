@@ -12,7 +12,7 @@ bool testExpressionEvaluater(Table *table, int32_t index)
     case INT64:
         return *((int64_t*) column->getValue(index)) % 2 == 0;
     case DOUBLE:
-        return *((int32_t*) column->getValue(index)) > 10;
+        return *((double*) column->getValue(index)) > 10;
     default:
         break;
     }
