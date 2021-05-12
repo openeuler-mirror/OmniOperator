@@ -487,13 +487,28 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createFil
     return (int64_t)filterAndProjectOperatorFactory->createOmniOperator();
 }
 
+Table *getTableFromDataAddress(int64_t *dataAddress, int32_t rowNumber, int32_t vecCount, int32_t *inputTypes)
+{
+    Table *table = new Table(rowNumber, vecCount);
+    uint32_t *colTypes = new uint32_t[vecCount];
+    for (int vecIndex = 0; vecIndex < vecCount; vecIndex++)
+    {
+        void *data = reinterpret_cast<void *>(dataAddress[vecIndex]);
+        ColumnType type = buildColumnType(inputTypes[vecIndex]);
+        Column *column = new Column(data, type, rowNumber);
+        table->setColumn(column, type);
+    }
+
+    return table;
+}
+
 /*
  * Class:     nova_hetu_omniruntime_operator_JniWrapper
  * Method:    filterAndProjectAddInput
  * Signature: (J[J[II)V
  */
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndProjectAddInput
-  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperator, jlongArray jInputData, jintArray jRowCounts)
+  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperator, jlongArray jInputData, jint jRowCounts)
 {
     NativeOmniFilterOperator *filterAndProjectOperator = (NativeOmniFilterOperator *) jFilterAndProjectOperator;
     jlong *inputData = env->GetLongArrayElements(jInputData, JNI_FALSE);
@@ -502,6 +517,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndP
     
     return filterAndProjectOperator->addInput(table, rowNumber);
 }
+
 
 /*
  * Class:     nova_hetu_omniruntime_operator_JniWrapper
@@ -523,20 +539,6 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_fi
     return transform(env, result);
 }
 
-Table *getTableFromDataAddress(int64_t *dataAddress, int32_t rowNumber, int32_t vecCount, int32_t *inputTypes)
-{
-    Table *table = new Table(rowNumber, vecCount);
-    uint32_t *colTypes = new uint32_t[vecCount];
-    for (int vecIndex = 0; vecIndex < vecCount; vecIndex++)
-    {
-        void *data = reinterpret_cast<void *>(dataAddress[vecIndex]);
-        ColumnType type = buildColumnType(inputTypes[vecIndex]);
-        Column *column = new Column(data, type, rowNumber);
-        table->setColumn(column, type);
-    }
-
-    return table;
-}
 
 jobjectArray transform(JNIEnv *env, std::vector<Table*>& result)
 {

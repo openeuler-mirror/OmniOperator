@@ -2,6 +2,7 @@
 #define __PARSER_H__
 
 #include "../expressions.h"
+#include <string>
 #include <cstring>
 
 using namespace std;

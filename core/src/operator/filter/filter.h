@@ -37,6 +37,8 @@ public:
     int32_t *getInputTypes() { return this->inputTypes; }
     int32_t getVecCount() { return this->vecCount; }
 
+    int32_t *getSourceTypes() { return this->inputTypes; }
+
     private:
     Filter *filter;
     int32_t *inputTypes;
@@ -54,7 +56,7 @@ public:
     {
     }
 
-    ~NativeOmniFilterOperatorFactory() override;
+    ~NativeOmniFilterOperatorFactory() override {};
 
     NativeOmniOperator* createOmniOperator() override;
 
