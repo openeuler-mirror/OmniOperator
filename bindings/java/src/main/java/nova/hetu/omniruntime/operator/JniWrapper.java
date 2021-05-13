@@ -39,15 +39,12 @@ public class JniWrapper
     public native OMResult getFinalResult(String key, int[] outputTypes);
     public native long prepareAgg(long prepareInfoAddress, int groupByLen, int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
             int aggregationFunctionTypeLen, int outputTypeLen);
-    public native long createOperator(long moduleId, int size, long prepareInfoAddress, int groupByLen,
+    public native long createOperatorOld(long moduleId, int size, long prepareInfoAddress, int groupByLen,
                                   int groupByTypeLen, int aggregationChannelLen, int aggregationTypeLen,
                                   int aggregationFunctionTypeLen, int outputTypeLen);
     public native long executeAggIntermediate(long operatorId, long dataAddress, long totalColumn, int columnCount, long rowAddress, int rowNum, long inputTypeAdress);
 //    public native OMResult executeAggFinal(long operatorId);
     public native OMResult[] executeAggFinal(long operatorId);
-    public native long createSortOperator(long factoryAddress);
-    public native void addSortInput(long operatorAddress, long[] dataAddrs, int[] positionCounts, int pageCount);
-    public native OMResult[] getSortOutput(long operatorAddress);
     public native long filterCompile(String expression, long clsTypeAddress, int inputVecCount);
     public native int filterExecute(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, long selectedPositionsAddress, int inputRowSize);
     public native int filterExecuteV1(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, int inputRowSize,long[] projectVecArrayAddress,int[] projectIdx,int projectVecCount);
@@ -60,7 +57,7 @@ public class JniWrapper
     // createOperator
     public native long createOperator(long factoryAddress);
     // addInput
-    public native long addInput(long operatorAddress, long vecAddress, long vecNum, long rowCountAddress, int rowCountNum);
+    public native int addInput(long operatorAddress, long vecAddress, int vecNum, long rowCountAddress, int rowCountNum);
     // getOutput
     public native OMResult[] getOutput(long operatorAddress);
 }

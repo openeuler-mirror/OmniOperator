@@ -3,7 +3,6 @@
 
 #include "../native_base.h"
 #include "aggregator.h"
-#include "../../util/op_template_cache.h"
 #include "../../util/debug.h"
 
 #include <vector>

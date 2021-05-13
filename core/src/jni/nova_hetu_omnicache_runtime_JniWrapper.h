@@ -41,72 +41,6 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_getFinalRe
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    createHashAggregationOperatorFactory
- * Signature: (JIIIIII)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHashAggregationOperatorFactory
-(JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray);
-
-/*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    createOperator
- * Signature: (JIJIIIIII)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOperator
-(JNIEnv *, jobject, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    addInput
- * Signature: (JJJIJIJ)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
-(JNIEnv* env, jobject jObj, jlong jOperatorAddr, jlong jInputDataAddress, jlong jTotalColumn, jlong jRowAddress, jint jRowNums);
-
-/*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    getOutput
- * Signature: (J)Lnova/hetu/omnicache/runtime/OMResult;
- */
-// JNIEXPORT jobject JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_executeAggFinal
-//   (JNIEnv *, jobject, jlong);
-JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getOutput
-  (JNIEnv* env, jobject jObj, jlong jOperatorAddr);
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    createSortOperatorFactory
- * Signature: ([I[I[I[I[I)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createSortOperatorFactory
-  (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray);
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    createSortOperator
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createSortOperator
-  (JNIEnv *, jobject, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    addSortInput
- * Signature: (J[J[II)V
- */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addSortInput
-  (JNIEnv *, jobject, jlong, jlongArray, jintArray, jint);
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    getSortOutput
- * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
- */
-JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getSortOutput
-  (JNIEnv *, jobject, jlong);
-
-/*
- * Class:     nova_hetu_omnicache_runtime_JniWrapper
  * Method:    filterCompile
  * Signature: (Ljava/lang/String;JI)J
  */
@@ -127,6 +61,46 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterExecute
  * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinished
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    createSortOperatorFactory
+ * Signature: ([I[I[I[I[I)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createSortOperatorFactory
+  (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    createHashAggregationOperatorFactory
+ * Signature: ([I[I[I[I[I[I)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHashAggregationOperatorFactory
+  (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    createOperator
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOperator
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    addInput
+ * Signature: (JJIJI)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
+  (JNIEnv *, jobject, jlong, jlong, jint, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    getOutput
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
+ */
+JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getOutput
   (JNIEnv *, jobject, jlong);
 
 /*

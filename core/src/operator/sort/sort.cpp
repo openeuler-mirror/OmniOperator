@@ -122,7 +122,7 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
             outputTable->setColumn(column, DOUBLE);
             break;    
         default:
-            printf("unsupported type\n");
+            printf("unsupported type.");
             break;
         }
     }
@@ -269,7 +269,7 @@ int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
         sortColCount,
         from,
         to);   
-    PRINT_IMPL("quick sort elapsed time : %ld ms\n", END(quickSortStart));
+    OP_DEBUG_LOG("quick sort elapsed time : %ld ms.", END(quickSortStart));
 
     // next, get output
     int32_t maxRowCount = getMaxRowCount(sourceTypes, outputCols, outputColsCount);
@@ -285,9 +285,9 @@ int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
 
         auto start = START();
         allocColumns((int64_t)table, sourceTypes, outputCols, outputColsCount, rowCount);
-        PRINT_IMPL("alloc columns elapsed time: %ld ms\n", END(start));
+        OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
         pagesIndex->getOutput(outputCols, outputColsCount, (int64_t)table, sourceTypes, position, rowCount);
-        PRINT_IMPL("get result elapsed time: %ld ms\n", END(start));
+        OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));
 
         position += rowCount;
         outputTables.push_back(table);

@@ -7,8 +7,6 @@
 
 #include <vector>
 
-typedef int64_t (*jit_createSort)(int32_t *, int32_t, int32_t *, int32_t, int32_t *, int32_t *, int32_t *, int32_t);
-
 class PagesIndex
 {
 public:
@@ -155,23 +153,5 @@ void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCo
 void freeInputTable(Table **inputTables, int32_t inputTableCount);
 void freeOutputTable(std::vector<Table *>& outputTables);
 void freeDataInColumn(Table **tables, int32_t tableCount);
-
-#ifdef DEBUG_JNI
-#define PRINT_JNI(format, ...) printf("[%s][%s][%d]:" format, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#else
-#define PRINT_JNI(format, ...)
-#endif
-
-#ifdef DEBUG_API
-#define PRINT_API(format, ...) printf("[%s][%s][%d]:" format, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#else
-#define PRINT_API(format, ...)
-#endif
-
-#ifdef DEBUG_IMPL
-#define PRINT_IMPL(format, ...) printf("[%s][%s][%d]:" format, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#else
-#define PRINT_IMPL(format, ...)
-#endif
 
 #endif

@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/sort/sort.h"
+#include "../../src/jit/hammer.h"
 #include <time.h>
 #include <vector>
 #include <iostream>
@@ -72,7 +73,7 @@ JitContext *createTestSortJitContext(
     return jitContext;
 }
 
-TEST (OrderByTest, TestSortByPerformance)
+TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 {
     // construct input data
     const int32_t DATA_SIZE = 100000;
@@ -133,7 +134,7 @@ TEST (OrderByTest, TestSortByPerformance)
     freeOutputTable(outputTables);
 }
 
-// TEST(SortTest, testOrderByOneColumn)
+// TEST(NativeOmniSortOperatorTest, testOrderByOneColumn)
 // {
 //     //construct input data
 //     const int32_t DATA_SIZE = 5;
@@ -190,7 +191,7 @@ TEST (OrderByTest, TestSortByPerformance)
 //     freeOutputTable(outputTables);
 // }
 
-TEST(SortTest, testOrderByDoubleColumn)
+TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
@@ -253,7 +254,7 @@ TEST(SortTest, testOrderByDoubleColumn)
     delete expectTable;
 }
 
-TEST(SortTest, testOrderByDoubleColumnV2)
+TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
@@ -348,7 +349,7 @@ void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t r
     }
 }
 
-TEST(SortTest, testOrderByTwoColumnPerf)
+TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
 {
     printf("testOrderByTwoColumnPerf called\n");
 
