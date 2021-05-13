@@ -1,11 +1,11 @@
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.List;
 
-public abstract class JOmniOperator {
+public abstract class JOmniOperator
+{
     private final JniWrapper jniWrapper;
     private final long nativeOperator;
 
@@ -25,7 +25,7 @@ public abstract class JOmniOperator {
         return nativeOperator;
     }
 
-    public abstract int addInput(List<Vec> data, int[] positionCounts);
+    public abstract int addInput(List<Vec> datas, int[] positionCounts);
 
     public abstract int addInput(List<Vec> data, int positionCount);
 

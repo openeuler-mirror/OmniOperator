@@ -3,7 +3,6 @@ package nova.hetu.omniruntime.operator;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -57,8 +56,6 @@ public class JOmniSortOperatorTest
         int[] nullFirsts = {0, 0};
         int[] positionCounts = {8};
 
-        VecType[] types = {VecType.INT, VecType.INT};
-
         JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
         JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
@@ -97,8 +94,6 @@ public class JOmniSortOperatorTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        VecType[] types = {VecType.LONG, VecType.LONG};
-
         JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
 
@@ -124,7 +119,6 @@ public class JOmniSortOperatorTest
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
 
         int threadNum = 4;
-        VecType[] types = {VecType.LONG, VecType.LONG};
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
         for (int i = 0; i < threadNum; i++) {
             Thread thread = new Thread(() -> {

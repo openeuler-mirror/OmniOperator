@@ -1,7 +1,9 @@
 package nova.hetu.omniruntime.operator;
 
+import nova.hetu.omniruntime.utils.OmniUtils;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.List;
 import java.util.Map;
@@ -68,7 +70,7 @@ public class JOmniSortOperator
         public JOmniOperator createOmniOperator()
         {
             JniWrapper jniWrapper = getJniWrapper();
-            long nativeOperator = jniWrapper.createSortOperator(getNativeOperatorFactory());
+            long nativeOperator = jniWrapper.createOperator(getNativeOperatorFactory());
             JOmniOperator jOmniOperator = new JOmniSortOperator(jniWrapper, nativeOperator);
             return jOmniOperator;
         }
@@ -82,26 +84,34 @@ public class JOmniSortOperator
     @Override
     public int addInput(List<Vec> datas, int[] positionCounts)
     {
-        int vecSize = datas.size();
-        long[] dataAddrs = new long[vecSize];
-        for (int i = 0; i < vecSize; i++) {
-            dataAddrs[i] = datas.get(i).getAddress();
+        int vecCount = datas.size();
+        int pageCount = positionCounts.length;
+
+        if (vecCount == 0 || pageCount == 0) {
+            return 0;
         }
 
-        long nativeOperator = getNativeOperator();
-        getJniWrapper().addSortInput(nativeOperator, dataAddrs, positionCounts, positionCounts.length);
+        int columnCount = vecCount / pageCount;
+
+        LongVec datasAddrVec = OmniUtils.transformVecAddress(datas);
+        IntVec rowCountsAddrVec = OmniUtils.getRowNumbers(datas, columnCount);
+        getJniWrapper().addInput(getNativeOperator(), datasAddrVec.getAddress(), vecCount, rowCountsAddrVec.getAddress(), pageCount);
+
+        datasAddrVec.close();
+        rowCountsAddrVec.close();
         return 0;
     }
 
     @Override
-    public int addInput(List<Vec> data, int positionCounts) {
+    public int addInput(List<Vec> data, int positionCounts)
+    {
         return 0;
     }
 
     @Override
     public OMResult[] getOutput() {
         long nativeOperator = getNativeOperator();
-        OMResult[] results = getJniWrapper().getSortOutput(nativeOperator);
+        OMResult[] results = getJniWrapper().getOutput(nativeOperator);
         return results;
     }
 }

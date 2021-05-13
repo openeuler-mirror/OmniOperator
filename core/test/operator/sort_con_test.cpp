@@ -15,7 +15,7 @@ Table **g_inputTables;
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
-atomic_long g_time;
+std::atomic_long g_time;
 
 void buildSortTestData(int tableCount, int distinctValueCount, int repeatCount, Table **inputTables)
 {
@@ -71,7 +71,7 @@ void sortProcess()
     //auto t0 = Time::now();
     NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)g_factory->createOmniOperator();
     sortOperator->addInput(g_inputTables, rowCounts, g_tableCount);
-    vector<Table *> outputTables;
+    std::vector<Table *> outputTables;
     sortOperator->getOutput(outputTables);
 
     //auto t1 = Time::now();
@@ -86,9 +86,13 @@ void sortProcess()
 }
 
 int main(int argc, char **argv) {
-    g_tableCount = stoi(argv[1]);
-    g_distinctValue = stoi(argv[2]);
-    g_repeatCount = stoi(argv[3]);
+    if (argc < 4) {
+        std::cout << "Usage: program tablecount distinctvalue repeatcount" << std::endl;
+        return 0;
+    }
+    g_tableCount = atoi(argv[1]);
+    g_distinctValue = atoi(argv[2]);
+    g_repeatCount = atoi(argv[3]);
 
     const auto processor_count = std::thread::hardware_concurrency();
     std::cout << "core number: " << processor_count << std::endl;
@@ -115,7 +119,7 @@ int main(int argc, char **argv) {
         double wall_elapsed = 0;
         double cpu_elapsed = 0;
 
-        vector<std::thread> threads;
+        std::vector<std::thread> threads;
         for (int i = 0; i < threadCount; i++) {
             std::thread threadObj(sortProcess);
             threads.push_back(std::move(threadObj));
@@ -138,8 +142,6 @@ int main(int argc, char **argv) {
 
         //std::cout << "PROCESS finished, each thread elapsed time: " << (g_time / threadCount) << " ms" << endl;
         //g_time = 0;
-        
-        std::this_thread::sleep_for(100ms);
     }
 
     freeDataInColumn(g_inputTables, g_tableCount);

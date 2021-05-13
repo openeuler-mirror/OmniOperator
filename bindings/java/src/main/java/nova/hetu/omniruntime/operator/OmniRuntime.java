@@ -228,7 +228,7 @@ public class OmniRuntime
         }
 
         try {
-            return jniWrapper.createOperator(
+            return jniWrapper.createOperatorOld(
                     moduleId,
                     size,
                     prepareInfo.getAddress(),
