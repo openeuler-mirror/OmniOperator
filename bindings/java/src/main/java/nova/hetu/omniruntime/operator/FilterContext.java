@@ -17,29 +17,28 @@ import nova.hetu.omniruntime.vector.IntVec;
 
 public class FilterContext
 {
-    private long filterModuleHandle;
-    private IntVec inputVecTypes;
+    private long nativeOperatorAddress;
+    private int[] inputVecTypes;
     private boolean isFilterSupported;
 
     public long getFilterId()
     {
-        return filterModuleHandle;
+        return nativeOperatorAddress;
     }
 
     public void setFilterId(long filterModuleHandle)
     {
-        this.filterModuleHandle = filterModuleHandle;
+        this.nativeOperatorAddress = filterModuleHandle;
     }
 
-    public IntVec getInputVecTypes()
+    public int[] getInputVecTypes()
     {
         return inputVecTypes;
     }
 
-    public void setInputVecTypes(int[] columnTypes)
+    public void setInputVecTypes(int[] inputVecTypes)
     {
-        this.inputVecTypes = new IntVec(columnTypes.length);
-        inputVecTypes.getData().asIntBuffer().put(columnTypes);
+        this.inputVecTypes = inputVecTypes;
     }
 
     public boolean isFilterSupported()
@@ -52,8 +51,5 @@ public class FilterContext
         this.isFilterSupported = isFilterSupported;
     }
 
-    public void finished()
-    {
-        this.getInputVecTypes().close();
-    }
+    public void finished() {}
 }

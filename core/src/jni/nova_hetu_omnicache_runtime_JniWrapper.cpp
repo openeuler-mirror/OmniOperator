@@ -469,23 +469,11 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createFilter
     jint *projectIdx = env->GetIntArrayElements(jProjectIdx, JNI_FALSE);
     int32_t projectVecCount = (int32_t) jProjectVecCount;
     // TODO: add context
-    NativeOmniFilterOperatorFactory* factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, vecCount, projectIdx, projectVecCount);
+    NativeOmniFilterOperatorFactory *factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, vecCount, projectIdx, projectVecCount);
     env->ReleaseStringUTFChars(jFilterExpression, filterExpression.c_str());
     env->ReleaseIntArrayElements(jInputTypes, inputTypes, JNI_FALSE);
     return (int64_t)factory;
   }
-
-  /*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    createFilterAndProjectOperator
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createFilterAndProjectOperator
-  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperatorFactory)
-{
-    NativeOmniFilterOperatorFactory *filterAndProjectOperatorFactory = (NativeOmniFilterOperatorFactory *)jFilterAndProjectOperatorFactory;
-    return (int64_t)filterAndProjectOperatorFactory->createOmniOperator();
-}
 
 Table *getTableFromDataAddress(int64_t *dataAddress, int32_t rowNumber, int32_t vecCount, int32_t *inputTypes)
 {
@@ -501,44 +489,6 @@ Table *getTableFromDataAddress(int64_t *dataAddress, int32_t rowNumber, int32_t 
 
     return table;
 }
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    filterAndProjectAddInput
- * Signature: (J[J[II)V
- */
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndProjectAddInput
-  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperator, jlongArray jInputData, jint jRowCounts)
-{
-    NativeOmniFilterOperator *filterAndProjectOperator = (NativeOmniFilterOperator *) jFilterAndProjectOperator;
-    jlong *inputData = env->GetLongArrayElements(jInputData, JNI_FALSE);
-    int32_t rowNumber = (int32_t) jRowCounts;
-    Table *table = getTableFromDataAddress(inputData, rowNumber, filterAndProjectOperator->getVecCount(), filterAndProjectOperator->getSourceTypes());
-    
-    return filterAndProjectOperator->addInput(table, rowNumber);
-}
-
-
-/*
- * Class:     nova_hetu_omniruntime_operator_JniWrapper
- * Method:    filterAndProjectGetOutput
- * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
- */
-JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_filterAndProjectGetOutput
-  (JNIEnv *env, jobject jObj, jlong jFilterAndProjectOperator)
-{
-    NativeOmniFilterOperator *filterAndProjectOperator = (NativeOmniFilterOperator *) jFilterAndProjectOperator;
-    std::vector<Table*> result;
-
-    if (filterAndProjectOperator == nullptr) {
-        DebugError("No operator %ld exists.", 0x11111);
-    }
-    int32_t errNo = filterAndProjectOperator->getOutput(result);
-    delete filterAndProjectOperator;
-
-    return transform(env, result);
-}
-
 
 jobjectArray transform(JNIEnv *env, std::vector<Table*>& result)
 {
