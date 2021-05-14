@@ -85,7 +85,7 @@ public abstract class Vec
      */
     public Vec slice(int startIdx, int endIdx)
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default slice()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default slice()");
     }
 
     /**
@@ -96,7 +96,7 @@ public abstract class Vec
      */
     public Vec hash()
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default hash()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default hash()");
     }
 
     /**
@@ -107,7 +107,7 @@ public abstract class Vec
      */
     public Vec mul(int other)
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default mul()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default mul()");
     }
 
     /**
@@ -118,7 +118,7 @@ public abstract class Vec
      */
     public Vec mmul(Vec other)
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default mmul()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default mmul()");
     }
 
     /**
@@ -128,7 +128,7 @@ public abstract class Vec
      */
     public Vec filter()
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default filter()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default filter()");
     }
 
     /**
@@ -136,7 +136,7 @@ public abstract class Vec
      */
     public Vec groupby(/** how to pass in group by parameters? the columns to be used for group by */)
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default groupby()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default groupby()");
     }
 
     /**
@@ -147,7 +147,7 @@ public abstract class Vec
      */
     public Vec join(Vec other /** how to pass in the join conditions? might require many other columns*/)
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default join()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default join()");
     }
 
     /**
@@ -158,7 +158,7 @@ public abstract class Vec
      */
     public Vec concat(Vec other)
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default concat()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default concat()");
     }
 
     public int size()
@@ -178,7 +178,7 @@ public abstract class Vec
 
     public int remaining()
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default remaining()");
+        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default remaining()");
     }
 
     public void copy(Vec other, int[] elementsToCopy, int offset, int length, int thisOffset)

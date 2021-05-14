@@ -13,7 +13,8 @@
  */
 package nova.hetu.omniruntime.operator;
 
-import nova.hetu.omniruntime.operator.aggregator.JOmniHashAggregationOperator;
+import nova.hetu.omniruntime.utils.OmniErrorType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.utils.OmniUtils;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -59,11 +60,10 @@ public class JFilterAndProjectOperator
         return getJniWrapper().getOutput(getNativeOperator());
     }
 
-    public void finished(FilterContext filterContext)
+    public void finished()
     {
         //TODO:Do Release filter module off-heap resource
-        jniWrapper.filterFinished(filterContext.getFilterId());
-        filterContext.finished();
+        jniWrapper.filterFinished(getNativeOperator());
     }
 
     public static class JFilterAndProjectOperatorFactory
@@ -82,8 +82,9 @@ public class JFilterAndProjectOperator
             if (nativeOperatorFactory == null) {
                 nativeOperatorFactory = getJniWrapper().createFilterAndProjectOperatorFactory(
                         filterExpression, OmniUtils.transformVecType(inputTypes), inputTypes.length, projects, projects.length);
-                if (nativeOperatorFactory == null) {
-                    throw new RuntimeException("create nativeOperatorFactory failed");
+                // TODO: find a better way to handle errors
+                if (nativeOperatorFactory == 0) {
+                    throw new OmniRuntimeException(OmniErrorType.OMNI_NATIVE_ERROR, "create nativeOperatorFactory failed");
                 }
                 getOmniFactoryCache().put(hashKey, nativeOperatorFactory);
             }
@@ -95,6 +96,9 @@ public class JFilterAndProjectOperator
         {
             JniWrapper jniWrapper = getJniWrapper();
             long nativeOperator = jniWrapper.createOperator(getNativeOperatorFactory());
+            if (nativeOperator == 0) {
+                throw new OmniRuntimeException(OmniErrorType.OMNI_NATIVE_ERROR, "create nativeOperator failed");
+            }
             return new JFilterAndProjectOperator(jniWrapper, nativeOperator);
         }
     }
