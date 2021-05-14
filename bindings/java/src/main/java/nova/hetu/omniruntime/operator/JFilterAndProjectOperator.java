@@ -15,6 +15,7 @@ package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.aggregator.JOmniHashAggregationOperator;
 import nova.hetu.omniruntime.utils.OmniUtils;
+import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecType;
@@ -41,7 +42,8 @@ public class JFilterAndProjectOperator
     {
         int vecCount = vecs.size();
         LongVec vecAddresses = transformVecAddress(vecs);
-        jniWrapper.addInput(this.getNativeOperator(), vecAddresses.getAddress(), vecCount, getRowNumbers(vecs, vecCount).getAddress(), rowNumber);
+        IntVec rowNums = getRowNumbers(vecs, vecCount);
+        jniWrapper.addInput(this.getNativeOperator(), vecAddresses.getAddress(), vecCount, rowNums.getAddress(), rowNums.size());
         return 0;
     }
 
@@ -93,7 +95,7 @@ public class JFilterAndProjectOperator
         {
             JniWrapper jniWrapper = getJniWrapper();
             long nativeOperator = jniWrapper.createOperator(getNativeOperatorFactory());
-            return new JOmniHashAggregationOperator(jniWrapper, nativeOperator);
+            return new JFilterAndProjectOperator(jniWrapper, nativeOperator);
         }
     }
 }

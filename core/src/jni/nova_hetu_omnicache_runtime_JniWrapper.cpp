@@ -183,6 +183,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createOpe
 (JNIEnv *env, jobject jObj, jlong jNativeFactoryObj)
 {
     NativeOmniOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniOperatorFactory*>(jNativeFactoryObj);
+    if (nativeOperatorFactory->getJitContext() == nullptr) {
+      NativeOmniOperator* op = nativeOperatorFactory->createOmniOperator();
+      return (int64_t) op;
+    }
     auto objAddr = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
     return reinterpret_cast<uint64_t>(objAddr);
 }
@@ -196,10 +200,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
     int32_t* rowNums = reinterpret_cast<int32_t*>(jRowAddress); 
     int32_t columnCount = totalColumnCount / jRowNums;
     int32_t pageCount = static_cast<int32_t>(jRowNums);
-    
     NativeOmniOperator* op = reinterpret_cast<NativeOmniOperator*>(opAddr);
     int32_t *colTypes = op->getSourceTypes();
-    
     // build table
     char** table = new char*[columnCount];
     int32_t pageIndex = 0;
@@ -208,7 +210,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
         void* data = reinterpret_cast<void *>(address[cIndex]);
         int cIdx =  cIndex % columnCount;
         table[cIdx] = (char*)data;
-
         if ((cIndex + 1) % columnCount == 0) {
             pageIndex++;
             Table* t = new Table(rowNum, columnCount);
@@ -218,7 +219,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
                 Column* col = new Column(data, columnType, rowNum);
                 t->setColumn(col, columnType);
             }
-
             op->addInput(t, t->getPositionCount());
             opAddr = reinterpret_cast<uint64_t>(op);
         }
@@ -460,9 +460,8 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_ge
  * Class:     nova_hetu_omniruntime_operator_JniWrapper
  * Method:    createFilterAndProjectOperatorFactory
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createFilterAndProjectOperatorFactory
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createFilterAndProjectOperatorFactory
   (JNIEnv *env, jobject jObj, jstring jFilterExpression , jintArray jInputTypes, jint jInputVecCount, jintArray jProjectIdx, jint jProjectVecCount) {
-
     std::string filterExpression = std::string(env->GetStringUTFChars(jFilterExpression, JNI_FALSE));
     jint *inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
     int32_t vecCount = (int32_t) jInputVecCount;
@@ -470,8 +469,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_createFilter
     int32_t projectVecCount = (int32_t) jProjectVecCount;
     // TODO: add context
     NativeOmniFilterOperatorFactory *factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, vecCount, projectIdx, projectVecCount);
-    env->ReleaseStringUTFChars(jFilterExpression, filterExpression.c_str());
-    env->ReleaseIntArrayElements(jInputTypes, inputTypes, JNI_FALSE);
+    // env->ReleaseStringUTFChars(jFilterExpression, filterExpression.c_str());
+    // env->ReleaseIntArrayElements(jInputTypes, inputTypes, JNI_FALSE);
     return (int64_t)factory;
   }
 

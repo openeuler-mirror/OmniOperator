@@ -36,7 +36,7 @@ public:
 
     int32_t getVecCount() { return this->vecCount; }
 
-    int32_t *getSourceTypes() { return this->inputTypes; }
+    int32_t *getSourceTypes() override { return this->inputTypes; }
 
     private:
     Filter *filter;

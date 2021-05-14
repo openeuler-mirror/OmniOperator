@@ -46,6 +46,7 @@ NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
     //TODO: replace the placeholder context
     Compiler *compiler = new Compiler(parsedExpr, this->inputTypes, this->vecCount);
     Filter *filter = compiler->compile();
+    delete compiler;
     return new NativeOmniFilterOperator(filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
 
@@ -60,6 +61,7 @@ int32_t NativeOmniFilterOperator::addInput(Table* data, int32_t rowCount)
     this->projectedVecs = projectedData;
 
     delete[] selectedRows;
+    delete projection;
     return numSelectedRows;
 }
 
@@ -88,7 +90,7 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
         auto evaluater = this->evaluater;
         if (evaluater(table, index))
         {
-            selectedRows[index] = index;
+            selectedRows[numSelectedRows] = index;
             numSelectedRows += 1;
         }
     }

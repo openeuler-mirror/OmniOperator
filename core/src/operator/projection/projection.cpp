@@ -38,7 +38,7 @@ Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount,
                 int32_t *originalVec = (int32_t *)column->getData();
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
-                    projectedVec[rowIndex] = originalVec[rowIndex];
+                    projectedVec[rowIndex] = originalVec[selectedPosition[rowIndex]];
                 }
                 Column *projectedColumn = new Column(projectedVec, column->getType(), selectedPositionCount);
                 projectedData->setColumn(projectedColumn, column->getType());
@@ -50,7 +50,7 @@ Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount,
                 int64_t *originalVec = (int64_t *)column->getData();
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
-                    projectedVec[rowIndex] = originalVec[rowIndex];
+                    projectedVec[rowIndex] = originalVec[selectedPosition[rowIndex]];
                 }
                 Column *projectedColumn = new Column(projectedVec, column->getType(), selectedPositionCount);
                 projectedData->setColumn(projectedColumn, column->getType());
@@ -62,7 +62,7 @@ Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount,
                 double *originalVec = (double *)column->getData();
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
-                    projectedVec[rowIndex] = originalVec[rowIndex];
+                    projectedVec[rowIndex] = originalVec[selectedPosition[rowIndex]];
                 }
                 Column *projectedColumn = new Column(projectedVec, column->getType(), selectedPositionCount);
                 projectedData->setColumn(projectedColumn, column->getType());

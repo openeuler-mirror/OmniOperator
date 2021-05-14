@@ -45,3 +45,6 @@ cmake-build-debug
 libs
 *.so
 *.gch
+
+core/main_test
+bindings/java/*.log

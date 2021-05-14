@@ -25,6 +25,8 @@ Compiler::Compiler(Expr expression, int32_t *inputTypes, int32_t vecCount)
     this->vecCount = vecCount;
 }
 
+Compiler::~Compiler() {}
+
 Filter *Compiler::compile()
 {
     // TODO: replace the evaluater with compiled function
