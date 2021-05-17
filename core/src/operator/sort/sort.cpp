@@ -300,7 +300,9 @@ PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
 {
     this->types = types;
     this->typesCount = typesCount;
+    this->columns = NULL;
     this->tablesCount = 0;
+    this->valueAddresses = NULL;
     this->positionCount = 0;
 }
 
@@ -376,11 +378,15 @@ void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t
 
 PagesIndex::~PagesIndex()
 {
-    for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-        free(columns[colIdx]);
+    if (columns != NULL) {
+        for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
+            free(columns[colIdx]);
+        }
+        free(columns);
     }
-    free(columns);
-    free(valueAddresses);
+    if (valueAddresses != NULL) {
+        free(valueAddresses);
+    }
 }
 
 void swap(int64_t *valueAddresses, int32_t a, int32_t b)
