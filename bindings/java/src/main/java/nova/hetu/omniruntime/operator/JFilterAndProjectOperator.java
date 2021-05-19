@@ -60,12 +60,6 @@ public class JFilterAndProjectOperator
         return getJniWrapper().getOutput(getNativeOperator());
     }
 
-    public void finished()
-    {
-        //TODO:Do Release filter module off-heap resource
-        jniWrapper.filterFinished(getNativeOperator());
-    }
-
     public static class JFilterAndProjectOperatorFactory
             extends JOmniOperatorFactory
     {

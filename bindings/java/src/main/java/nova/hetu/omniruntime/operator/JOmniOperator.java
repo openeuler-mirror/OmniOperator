@@ -30,4 +30,9 @@ public abstract class JOmniOperator {
     public abstract int addInput(List<Vec> data, int positionCount);
 
     public abstract OMResult[] getOutput();
+
+    public void close()
+    {
+        jniWrapper.close(nativeOperator);
+    }
 }

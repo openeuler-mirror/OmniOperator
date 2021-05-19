@@ -83,13 +83,13 @@ TEST (FilterTest, MultipleInputs) {
     EXPECT_TRUE(checkOutput(ret[1], numReturned, filter1));
     EXPECT_EQ(numReturned, 200);
 
+    op->close();
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
     delete in1;
     delete in2;
     delete filter;
-    delete op;
     delete ret[0];
     delete ret[1];
 
@@ -126,12 +126,12 @@ TEST (FilterTest, NegativeValues) {
     // Both values are negative for every multiple of 35.
     EXPECT_EQ(numReturned, 286);
 
+    op->close();
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
     delete in1;
     delete filter;
-    delete op;
     delete ret[0];
 }
 
@@ -173,13 +173,13 @@ TEST (FilterTest, AllTypes) {
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter3));
     EXPECT_EQ(numReturned, 1000);
 
+    op->close();
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
     delete[] data3;
     delete in1;
     delete filter;
-    delete op;
     delete ret[0];
 }
 
@@ -227,6 +227,7 @@ TEST (FilterTest, Compile) {
     int32_t numSelectedRows = op->getOutput(ret);
     EXPECT_EQ(numSelectedRows, 500);
     
+    op->close();
     delete[] inputTypes;
     delete[] data1; 
     delete[] data2;
@@ -235,6 +236,5 @@ TEST (FilterTest, Compile) {
     delete[] projectIdx;
     delete t;
     delete factory;
-    delete op;
     delete ret[0];
 }

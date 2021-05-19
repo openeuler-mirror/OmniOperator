@@ -241,7 +241,6 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_ge
         DebugError("No operator is null pointer %ld.", 0x0);
     }
     int32_t errNo = op->getOutput(result);
-    delete op;
 
 #ifdef DEBUG_LEVEL_LOW
 	DebugFuncExit;
@@ -472,6 +471,16 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createFil
     // env->ReleaseStringUTFChars(jFilterExpression, filterExpression.c_str());
     // env->ReleaseIntArrayElements(jInputTypes, inputTypes, JNI_FALSE);
     return (int64_t)factory;
+  }
+
+/*
+ * Class:     nova_hetu_omnicache_runtime_JniWrapper
+ * Method:    close
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_close
+  (JNIEnv *env, jobject jObj, jlong opAddr) {
+    NativeOmniOperator* op = (NativeOmniOperator*) opAddr;
+    op->close();
   }
 
 Table *getTableFromDataAddress(int64_t *dataAddress, int32_t rowNumber, int32_t vecCount, int32_t *inputTypes)

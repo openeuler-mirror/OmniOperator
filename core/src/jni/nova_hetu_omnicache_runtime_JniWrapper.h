@@ -115,10 +115,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createFil
 
 /*
  * Class:     nova_hetu_omnicache_runtime_JniWrapper
- * Method:    filterFinished
+ * Method:    close
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omnicache_runtime_JniWrapper_filterFinished
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_close
   (JNIEnv *, jobject, jlong);
 
 /*

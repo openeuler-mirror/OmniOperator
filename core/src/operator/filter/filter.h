@@ -40,6 +40,8 @@ public:
 
     int32_t *getSourceTypes() override { return this->inputTypes; }
 
+    void close() override { delete this; }
+
     private:
     Filter *filter;
     int32_t *inputTypes;
