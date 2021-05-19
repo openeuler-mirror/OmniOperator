@@ -17,7 +17,7 @@ class NativeOmniOperatorFactory
 public:
     NativeOmniOperatorFactory() {}
     virtual ~NativeOmniOperatorFactory(){}
-    virtual NativeOmniOperator *createOmniOperator(){};
+    virtual NativeOmniOperator *createOmniOperator(){ return nullptr; };
     virtual void setJitContext(JitContext* JitContext)
     {
         jitContext = JitContext;

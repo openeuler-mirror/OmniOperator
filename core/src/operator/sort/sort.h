@@ -111,7 +111,7 @@ public:
     int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
     int32_t getOutput(std::vector<Table *>& outputTables) override;
 
-    int32_t *getSourceTypes() { return sourceTypes; }
+    int32_t *getSourceTypes() override { return sourceTypes; }
     int32_t getTypescount() { return typesCount; }
     int32_t *getOutputCols() { return outputCols; }
     int32_t getOutputColsCount() { return outputColsCount; }

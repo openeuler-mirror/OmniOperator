@@ -291,6 +291,14 @@ int32_t NativeOmniHashAggregationOperator::addInput(Table* table, int32_t rowCou
     return 0;
 }
 
+int32_t NativeOmniHashAggregationOperator::addInput(Table** tables, int32_t* rowCount, int32_t pageCount)
+{
+    for (int32_t tableIdx = 0; tableIdx < pageCount; ++tableIdx) {
+        this->addInput(tables[tableIdx], rowCount[tableIdx]);
+    }
+    return 0;
+}
+
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
