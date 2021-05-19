@@ -49,7 +49,6 @@ public class JniWrapper
     public native void addSortInput(long operatorAddress, long[] dataAddrs, int[] positionCounts, int pageCount);
     public native OMResult[] getSortOutput(long operatorAddress);
 
-    public native void filterFinished(long handle);
     // ================================ legacy code above ==================================================
 
     // Only createOperatorFactory JNIs have difference
@@ -62,4 +61,5 @@ public class JniWrapper
     public native long addInput(long operatorAddress, long vecAddress, long vecNum, long rowCountAddress, int rowCountNum);
     // getOutput
     public native OMResult[] getOutput(long operatorAddress);
+    public native void close(long handle);
 }

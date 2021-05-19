@@ -55,6 +55,19 @@ public class JFilterAndProjectTest {
             Assert.assertEquals(res1.get(), cnt);
             cnt += 2;
         }
+
+        // Test multiple inputs
+        op.addInput(table, 1000);
+        res = op.getOutput()[0];
+        Assert.assertEquals(res.getLength(), 500);
+        buffers = res.getBuffers();
+        res1 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        cnt = 0;
+        while (res1.hasRemaining()) {
+            Assert.assertEquals(res1.get(), cnt);
+            cnt += 2;
+        }
+        op.close();
     }
     
 }
