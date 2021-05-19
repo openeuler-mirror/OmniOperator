@@ -5,6 +5,20 @@
 #include <cstring>
 #include <vector>
 
+<<<<<<< HEAD
+TEST (FilterTest, TestFilterCompile) {
+    // simple unit test
+    std::string filterExpression = "AND(AND($operator$GT(#3, 8766), $operator$LT(#3, 9131)), AND(BETWEEN(#2, 0.05, 0.07), $operator$LT(#0, 24.0)))";
+
+    int32_t vecCount = 4;
+    int32_t *inputTypes = (int32_t *)malloc(sizeof(int32_t) * vecCount);
+    *(inputTypes) = 1;
+    *(inputTypes + 1) = 1;
+    *(inputTypes + 2) = 3;
+    *(inputTypes + 3) = 3;
+    // int64_t filterAddr = filterCompile(filterExpression, inputTypes, vecCount);
+
+=======
 Table* createInput(const int32_t NUM_ROWS,
                     const int32_t NUM_COLS,
                     int32_t* inputTypes,
@@ -51,15 +65,17 @@ bool filter3(Table* t, int32_t index) {
     return val1 % 3 == 0 && val2 == (int64_t) 3e9 && val3 >= 0.4;
 }
 
-TEST (FilterTest, OneColumn) {
+TEST (FilterTest, MultipleInputs) {
     const int32_t NUM_COLS = 1;
     int32_t* inputTypes = new int32_t[NUM_COLS];
     inputTypes[0] = 1;
     
     const int32_t NUM_ROWS = 1000;
     int32_t* data1 = new int32_t[NUM_ROWS];
+    int32_t* data2 = new int32_t[NUM_ROWS];
     for (int32_t i = 0; i < NUM_ROWS; i++) {
         data1[i] = i % 10;
+        data2[i] = i % 5 + 1;
     }
     int64_t allData[NUM_COLS] = {(int64_t) data1};
     const int32_t PROJECT_COUNT = 1;
@@ -74,12 +90,23 @@ TEST (FilterTest, OneColumn) {
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter1));
     EXPECT_EQ(numReturned, 500);
 
+    allData[0] = (int64_t) data2;
+    Table* in2 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    op->addInput(in2, NUM_ROWS);
+    numReturned = op->getOutput(ret);
+    EXPECT_TRUE(checkOutput(ret[1], numReturned, filter1));
+    EXPECT_EQ(numReturned, 200);
+
     delete[] inputTypes;
     delete[] data1;
+    delete[] data2;
     delete in1;
+    delete in2;
     delete filter;
     delete op;
     delete ret[0];
+    delete ret[1];
+
 }
 
 TEST (FilterTest, NegativeValues) {
@@ -181,6 +208,7 @@ TEST (FilterTest, Compile) {
     inputTypes[2] = 3;
     inputTypes[3] = 3;
     
+>>>>>>> filter-project-refactor
     const int32_t DATA_SIZE = 1000;
     int32_t *data1 = new int32_t[DATA_SIZE];
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
@@ -203,6 +231,62 @@ TEST (FilterTest, Compile) {
     }
 
     int64_t datas[4] = {(int64_t)data1, (int64_t)data2, (int64_t)data3, (int64_t)data4};
+<<<<<<< HEAD
+
+    // unnecessary with refactored code
+    // int32_t *projectedVec = new int32_t[DATA_SIZE];
+    // int64_t* projectedVecAddress = new int64_t[1];
+    // projectedVecAddress[0] = (int64_t) projectedVec;
+
+    int32_t *projectIdx = new int32_t[1];
+    projectIdx[0] = 0;
+
+    // Table* t = new Table(rowNum, columnCount);
+    //         for (int i = 0; i < columnCount; i++) {
+    //             void* data = table[i];
+    //             ColumnType columnType = static_cast<ColumnType>(colTypes[i]);
+    //             Column* col = new Column(data, columnType, rowNum);
+    //             t->setColumn(col, columnType);
+    //         }
+
+    std::cout << "data initialized" << std::endl;
+
+    Table* t = new Table(DATA_SIZE, vecCount);
+    for (int i = 0; i < vecCount; i++) {
+        void* data = (void*) datas[i];
+        ColumnType columnType = static_cast<ColumnType>(inputTypes[i]);
+        Column* col = new Column(data, columnType, DATA_SIZE);
+        t->setColumn(col, columnType);
+    }
+
+    std::cout << "table created" << std::endl;
+
+    NativeOmniFilterOperatorFactory *factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, vecCount, projectIdx, 1);
+    NativeOmniOperator *op = factory->createOmniOperator();
+    op->addInput(t, DATA_SIZE);
+
+    std::cout << "addInput performed" << std::endl;
+
+    std::vector<Table*>* ret = new std::vector<Table*>();
+
+    std::cout << "table ret created" << std::endl;
+    int32_t numSelectedRows = op->getOutput(*ret);
+
+    // int32_t numSelectedRows = filterExecute(filterAddr, datas, inputTypes, vecCount, DATA_SIZE, projectedVecAddress, projectIdx, 1);
+    EXPECT_EQ(numSelectedRows, 500);
+    std::cout << "Number of selected rows: " << numSelectedRows << std::endl;
+
+    delete[] (inputTypes);
+    delete[] (data1); 
+    delete[] (data2);
+    delete[] (data3);
+    delete[] (data4);
+    delete[] projectIdx;
+    delete t;
+    delete factory;
+    delete ret;
+
+=======
     int32_t *projectIdx = new int32_t[1];
     projectIdx[0] = 0;
     Table* t = createInput(DATA_SIZE, NUM_COLS, inputTypes, datas);
@@ -224,4 +308,5 @@ TEST (FilterTest, Compile) {
     delete factory;
     delete op;
     delete ret[0];
+>>>>>>> filter-project-refactor
 }

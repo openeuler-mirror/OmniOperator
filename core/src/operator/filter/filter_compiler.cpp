@@ -1,5 +1,6 @@
 #include "filter_compiler.h"
 #include "../../common/expressions.h"
+#include "../../codegen/llvm_codegen.h"
 #include <cstring>
 
 bool testExpressionEvaluater(Table *table, int32_t index)
@@ -25,10 +26,10 @@ Compiler::Compiler(Expr expression, int32_t *inputTypes, int32_t vecCount)
     this->vecCount = vecCount;
 }
 
-Compiler::~Compiler() {}
-
 Filter *Compiler::compile()
 {
-    // TODO: replace the evaluater with compiled function
-    return new Filter(testExpressionEvaluater);
+    LLVMCodeGen codeGenObj;
+    ComparisionExpr& c_expr = dynamic_cast<ComparisionExpr&>(expression); 
+    codeGenObj.generateFunc("comparisionFunc", c_expr);
+    return new Filter(&codeGenObj, c_expr.columnIdx, c_expr.columnData);
 }

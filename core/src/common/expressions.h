@@ -1,6 +1,9 @@
 #ifndef __EXPRESSIONS_H__
 #define __EXPRESSIONS_H__
 
+#include <vector>
+#include <stdint.h>
+
 // place holder context class here
 class Context
 {
@@ -25,7 +28,8 @@ enum ComparisionOperator
 
 class Expr
 {
-
+    public:
+        virtual ~Expr() = default;
 };
 
 class BinaryExpr : public Expr
@@ -42,8 +46,8 @@ class ComparisionExpr : public Expr
 {
 public:
     ComparisionOperator op;
-    int columnIdx;
-    int columnData;
+    int32_t columnIdx;
+    int32_t columnData;
 
 };
 #endif

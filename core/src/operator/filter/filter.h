@@ -4,17 +4,19 @@
 #include "../native_base.h"
 #include "../../vector/table.h"
 #include "../../util/debug.h"
+#include "../../codegen/llvm_codegen.h"
 
-typedef bool (*jit_evaluateExpression)(Table* table, int32_t);
 
 class Filter
 {
 public:
-    Filter(jit_evaluateExpression evaluater);
+    Filter(LLVMCodeGen* codegen, int32_t columnIdx, int32_t data);
     int32_t filter(Table *table, int32_t rowNumber, int32_t *selectedRows);
 
 private:
-    jit_evaluateExpression evaluater;
+    LLVMCodeGen *codeGen;
+    int32_t columnIdx;
+    int32_t data;
 };
 
 class NativeOmniFilterOperator : public NativeOmniOperator

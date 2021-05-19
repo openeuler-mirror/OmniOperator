@@ -20,13 +20,18 @@ class LLVMCodeGen
 {
 public:
     LLVMCodeGen();
-    llvm::Function *generateFunc(std::string name, Expr exp);
+
+    void generateFunc(std::string name, ComparisionExpr exp);
+    
+    void generateFunc(std::string name, BinaryExpr exp);
+
+    void compile();
+
+    bool execute(int32_t left, int32_t right);
 
 private:
-    std::unique_ptr<llvm::LLVMContext> _context;
-    std::unique_ptr<llvm::IRBuilder<>> _builder;
-    std::unique_ptr<llvm::Module> _module;
-        
+    std::string _func_name;
+    llvm::Module* _module;        
     
 };
 
