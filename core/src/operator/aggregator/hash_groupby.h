@@ -56,10 +56,7 @@ public:
 
     int32_t getOutput(std::vector<Table*>& data) override;
 
-    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override
-    {
-        return 0;
-    }
+    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
 
     NativeOmniHashAggregationOperator(std::vector<Aggregator*> aggregators)
     : aggregators(aggregators)
@@ -103,7 +100,7 @@ public:
     void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize, int32_t tableRowSize, HashGroupByIterator& iterator);
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();
-    int32_t* getSourceTypes()
+    int32_t* getSourceTypes() override
     {
         return sourceTypes;
     }

@@ -144,7 +144,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness)
     
     for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
         Column* col = result[0]->getColumn(i);
-        delete col->getData();
+        delete[] reinterpret_cast<int64_t*>(col->getData());
         delete col;
     }
 }
@@ -206,7 +206,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCol
     
     for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
         Column* col = result[0]->getColumn(i);
-        delete col->getData();
+        delete[] reinterpret_cast<int64_t*>(col->getData());
         delete col;
     }
 }
@@ -215,9 +215,8 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCol
 #include <mutex>
 double total_cpu_time;
 double total_wall_time;
-void perfTest(int64_t moduleAddr, Table** input)
+void perfTest(int64_t moduleAddr, Table** input, int32_t pageNum, int32_t* rowCount)
 {
-    int32_t pageNum = 20;
     uint32_t* columnTypes1 = new uint32_t[input[0]->getColumnNumber()];
     for (int32_t i = 0; i < input[0]->getColumnNumber(); ++i) {
         columnTypes1[i] = (int32_t)input[0]->getColumnTypes()[i];
@@ -227,9 +226,7 @@ void perfTest(int64_t moduleAddr, Table** input)
     auto groupBy = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
  
     // execution
-    for (int32_t i = 0; i < pageNum; ++i) {
-        groupBy->addInput(input[i], input[i]->getPositionCount());
-    }
+    auto errNo = groupBy->addInput(input, rowCount, pageNum);
     std::vector<Table*> result;
     int32_t tableCount = groupBy->getOutput(result); 
     EXPECT_EQ(result[0]->getColumnNumber(), 4);
@@ -337,6 +334,10 @@ TEST(NativeOmniHashAggregationOperatorTest, PerfViaAPI_Multiple_Threads)
     int32_t cardinality = 4;
     
     Table** input = buildInput(pageNum, rowPerPage, cardinality);
+    int32_t* rowCount = new int32_t[pageNum];
+    for (int32_t i = 0; i < pageNum; i++) {
+        rowCount[i] = rowPerPage;
+    }
     uint64_t factoryObjAddr = prepare();
     std::cout << "after prepare" << std::endl;
     int threadNums[] = {1, 8, 16, 32, 64};
@@ -354,7 +355,7 @@ TEST(NativeOmniHashAggregationOperatorTest, PerfViaAPI_Multiple_Threads)
         std::vector<std::thread> vecOfThreads;
         for (int32_t i = 0; i < threadNum; ++i) {
             // same stage Id
-            std::thread t(perfTest, factoryObjAddr, input);
+            std::thread t(perfTest, factoryObjAddr, input, pageNum, rowCount);
             vecOfThreads.push_back(std::move(t));
         }
         for (auto& th : vecOfThreads) {
@@ -374,7 +375,7 @@ TEST(NativeOmniHashAggregationOperatorTest, PerfViaAPI_Multiple_Threads)
         std::cout << threadNum << " cpu_elapsed time: " << cpu_elapsed / processor_count * t_ << "s" << std::endl;
         std::this_thread::sleep_for(100ms);
     }
-
+    delete[] rowCount;
     destroyInput(input, pageNum);
 }
 
