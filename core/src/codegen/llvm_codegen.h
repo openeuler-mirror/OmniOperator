@@ -15,6 +15,9 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 
+using namespace llvm;
+using namespace std;
+
 // Given an expression generates the function for it.
 class LLVMCodeGen
 {
@@ -25,9 +28,13 @@ public:
     
     void generateFunc(std::string name, BinaryExpr exp);
 
+    llvm::Value* generateComparisionBody(ComparisionExpr* expr, Value* left , Value* right);
+
     void compile();
 
     bool execute(int32_t left, int32_t right);
+
+    bool execute(int32_t arg0, int32_t arg1, int32_t arg2, int32_t arg3);
 
 private:
     std::string _func_name;

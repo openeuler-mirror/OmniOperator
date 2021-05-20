@@ -38,8 +38,6 @@ public:
     LogicalOperator op;
     Expr left;
     Expr right;
-    BinaryExpr();
-    BinaryExpr(LogicalOperator logOp, Expr leftExpr, Expr rightExpr);
 };
 
 class ComparisionExpr : public Expr
