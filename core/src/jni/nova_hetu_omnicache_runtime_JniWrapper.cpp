@@ -278,10 +278,13 @@ JitContext *createSortJitContext(
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
 
     Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/pages_index.ll", testParam);
+    Hammer hammer3("/opt/lib/ir/memory_pool.ll", testParam);
     hammer1.harden();
     hammer2.harden();
+    hammer3.harden();
     deps.push_back(&hammer2);
+    deps.push_back(&hammer3);
 
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
