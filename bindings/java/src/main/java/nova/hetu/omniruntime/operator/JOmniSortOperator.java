@@ -114,4 +114,9 @@ public class JOmniSortOperator
         OMResult[] results = getJniWrapper().getOutput(nativeOperator);
         return results;
     }
+
+    @Override
+    public void close() {
+        getJniWrapper().close(getNativeOperator());
+    }
 }

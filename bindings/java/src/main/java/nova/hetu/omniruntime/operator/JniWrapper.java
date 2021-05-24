@@ -60,4 +60,5 @@ public class JniWrapper
     public native int addInput(long operatorAddress, long vecAddress, int vecNum, long rowCountAddress, int rowCountNum);
     // getOutput
     public native OMResult[] getOutput(long operatorAddress);
+    public native void close(long operatorAddress);
 }
