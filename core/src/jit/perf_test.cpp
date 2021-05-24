@@ -195,14 +195,15 @@ void test_sort(bool harden)
         auto start = Time::now();
         llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
         llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-    
-        Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
-        Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
 
+        Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
+        Hammer hammer2("/opt/lib/ir/pages_index.ll", testParam);
+        Hammer hammer3("/opt/lib/ir/memory_pool.ll", testParam);
         hammer1.harden();
         hammer2.harden();
-
+        hammer3.harden();
         deps.push_back(&hammer2);
+        deps.push_back(&hammer3);
 
         auto opt_conf = HammerConfig::getConf(2, 119);
         auto JITTER = hammer1.create_jitter(deps,*opt_conf);
@@ -217,7 +218,7 @@ void test_sort(bool harden)
         d = std::chrono::duration_cast<ms>(fs);
         std::cout << " lookup func 1: " << d.count() << "ms\n";
 
-        auto func = (sort_module)(JITTER->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
+        auto func = (opt_module)(JITTER->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
         auto t_lookup_func2 = Time::now();
         fs = t_lookup_func2 - t_lookup_func;
         d = std::chrono::duration_cast<ms>(fs);

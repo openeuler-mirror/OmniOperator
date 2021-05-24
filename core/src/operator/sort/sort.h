@@ -2,51 +2,10 @@
 #define __SORT_H__
 
 #include "../native_base.h"
-#include "../../vector/table.h"
 #include "../../vector/type.h"
+#include "../pages_index.h"
 
 #include <vector>
-
-class PagesIndex
-{
-public:
-    PagesIndex(int32_t *types, int32_t typesCount);
-    ~PagesIndex();
-    int32_t addTables(Table **datas, int32_t *rowCounts, int32_t tableCount);
-    void getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length);
-
-    int32_t *getTypes()
-    {
-        return types;
-    };
-    int32_t getTypesCount() {
-        return typesCount;
-    };
-    int64_t *getValueAddresses()
-    {
-        return this->valueAddresses;
-    }
-    int32_t getPositionCount()
-    {
-        return this->positionCount;
-    };
-    Column ***getColumns()
-    {
-        return this->columns;
-    }
-    int32_t getTablesCount()
-    {
-        return this->tablesCount;
-    }
-
-private:
-    int32_t *types;
-    int32_t typesCount;
-    Column ***columns; // Column *  [columnCount][tableCount]
-    int32_t tablesCount;
-    int64_t *valueAddresses;
-    int32_t positionCount;
-};
 
 class NativeOmniSortOperatorFactory : public NativeOmniOperatorFactory
 {
@@ -133,22 +92,7 @@ private:
     PagesIndex *pagesIndex;
 };
 
-typedef NativeOmniOperator * (*sort_module) (NativeOmniSortOperatorFactory *);
-
-int64_t createSort(
-    int32_t *sourceTypes,
-    int32_t typeCount,
-    int32_t *outputCols,
-    int32_t outputColCount,
-    int32_t *sortCols,
-    int32_t *sortAscendings,
-    int32_t *sortNullFirsts,
-    int32_t sortColCount);
-
-void quickSort(int64_t pagesIndexAddr, int32_t *sortCols, int32_t *sortColTypes, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to);
 ColumnType getColumnType(int32_t colTypeIdx);
-void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount);
-void getResult(int64_t pagesIndexAddr, int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length);
 
 void freeInputTable(Table **inputTables, int32_t inputTableCount);
 void freeOutputTable(std::vector<Table *>& outputTables);
