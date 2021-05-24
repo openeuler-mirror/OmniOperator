@@ -103,6 +103,14 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
 JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_getOutput
   (JNIEnv *, jobject, jlong);
 
+  /*
+ * Class:     nova_hetu_omniruntime_operator_JniWrapper
+ * Method:    close
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/void;
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_close
+  (JNIEnv *, jobject, jlong);
+
 /*
  * Class:     nova_hetu_omniruntime_vector_OMVectorBase
  * Method:    allocate

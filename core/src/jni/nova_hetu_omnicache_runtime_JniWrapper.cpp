@@ -94,6 +94,8 @@ void transformValueFromPrepareInfo(uint32_t* prepareInfo, uint32_t* target, int 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHashAggregationOperatorFactory
 (JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jintArray jGroupByType, jintArray jAggChannel, jintArray jAggType, jintArray jAggFuncType, jintArray jOutPutTye)
 {
+    JNI_DEBUG_LOG("create hashagg operator factory starting.");
+    auto start = START();
     // groupby channel and type
     jint *groupByCols = env->GetIntArrayElements(jGroupByChannel, JNI_FALSE);
     jint *groupByTypes = env->GetIntArrayElements(jGroupByType, JNI_FALSE);
@@ -169,6 +171,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_createHas
     
     NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory = new NativeOmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     nativeOperatorFactory->setJitContext(jitContext); 
+    JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
@@ -366,8 +369,16 @@ JNIEXPORT jobjectArray JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_ge
     jobjectArray result = transform(env, outputTables);
     JNI_DEBUG_LOG("transform finished, elapsed time: %ld ms.", END(start));
     freeOutputTable(outputTables);
-    delete nativeOperator;
     return result;
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_close
+  (JNIEnv *env, jobject jObj, jlong jOperatorAddr)
+{
+    JNI_DEBUG_LOG("close starting.");
+    NativeOmniOperator *nativeOperator = (NativeOmniOperator *)jOperatorAddr;
+    delete nativeOperator;
+    JNI_DEBUG_LOG("close finished, elapsed time: %ld ms.", END(start));
 }
 
 jobjectArray transform(JNIEnv *env, std::vector<Table*>& result)
