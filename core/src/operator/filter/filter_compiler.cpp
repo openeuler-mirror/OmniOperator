@@ -31,5 +31,6 @@ Filter *Compiler::compile()
     LLVMCodeGen codeGenObj;
     ComparisionExpr& c_expr = dynamic_cast<ComparisionExpr&>(expression); 
     codeGenObj.generateFunc("comparisionFunc", c_expr);
+    codeGenObj.compile();
     return new Filter(&codeGenObj, c_expr.columnIdx, c_expr.columnData);
 }

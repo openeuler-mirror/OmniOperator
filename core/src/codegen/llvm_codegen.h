@@ -14,6 +14,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+
 
 using namespace llvm;
 using namespace std;
@@ -38,7 +40,8 @@ public:
 
 private:
     std::string _func_name;
-    llvm::Module* _module;        
+    llvm::Module* _module;    
+    std::unique_ptr<llvm::ExecutionEngine> _ee;    
     
 };
 
