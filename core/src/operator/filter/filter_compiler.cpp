@@ -21,7 +21,7 @@ bool testExpressionEvaluater(Table *table, int32_t index)
     }
 }
 
-Compiler::Compiler(Expr expression, int32_t *inputTypes, int32_t vecCount)
+Compiler::Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount)
 {
     this->expression = expression;
     this->inputTypes = inputTypes;
@@ -30,8 +30,8 @@ Compiler::Compiler(Expr expression, int32_t *inputTypes, int32_t vecCount)
 
 Filter *Compiler::compile()
 {
-    LLVMCodeGen codeGenObj;
-    codeGenObj.generateFunc("comparisionFunc", &expression);
-    codeGenObj.compile();
-    return new Filter(&codeGenObj, c_expr->columnIdx, c_expr->columnData);
+    LLVMCodeGen* codeGenObj = new LLVMCodeGen();
+    codeGenObj->generateFunc("comparisionFunc", expression);
+    codeGenObj->compile();
+    return new Filter(codeGenObj, expression);
 }

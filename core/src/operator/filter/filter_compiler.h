@@ -19,12 +19,12 @@ public:
     // Optional fn_value_opt;
 
     // // todo getter functions
-    Compiler(Expr expression, int32_t *inputTypes, int32_t vecCount);
-    ~Compiler();
+    Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount);
+    ~Compiler() {}
     Filter *compile();
 
 private:
-    Expr expression;
+    Expr* expression;
     int32_t *inputTypes;
     int32_t vecCount;
 };

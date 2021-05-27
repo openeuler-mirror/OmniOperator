@@ -1,7 +1,9 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
+#ifndef __EXPRESSION_H__
 #include "../expressions.h"
+#endif
 #include <string>
 #include <cstring>
 
@@ -10,10 +12,11 @@ using namespace std;
 class Parser
 {
 public:
-    Expr parseRowExpression(string input);
-    ComparisionExpr generateComparisionExpr(string exprStr, int startIdx, int endIdx);
+    Expr *parseRowExpression(string input);
+    Expr *generateComparisionExpr(string exprStr, int startIdx, int endIdx, ComparisionOperator cmpOp);
+    BetweenExpr *generateBetween(string exprStr);
+    InExpr *generateInExpr(string exprStr);
 };
 
-int simpleTest();
 
 #endif

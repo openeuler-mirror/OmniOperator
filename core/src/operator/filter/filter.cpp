@@ -41,7 +41,10 @@ using namespace std;
 NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
 {
     Parser parserObject;
-    Expr parsedExpr = parserObject.parseRowExpression(this->expression);
+    std::cout << "parsing: " << this->expression << std::endl;
+    Expr* parsedExpr = parserObject.parseRowExpression(this->expression);
+    ComparisionExpr *c_expr =  (ComparisionExpr *) parsedExpr;
+    std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
     //TODO: replace the placeholder context
     Compiler *compiler = new Compiler(parsedExpr, this->inputTypes, this->vecCount);
@@ -53,9 +56,7 @@ NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
 int32_t NativeOmniFilterOperator::addInput(Table* data, int32_t rowCount)
 {
     int32_t *selectedRows = new int32_t[rowCount];
-
     int32_t numSelectedRows = this->filter->filter(data, rowCount, selectedRows);
-
     Projection *projection = new Projection(this->inputTypes, this->vecCount, rowCount, this->projectIndex, this->projectVecCount);
     Table *projectedData = projection->project(selectedRows, numSelectedRows, data);
     this->projectedVecs = projectedData;
@@ -77,7 +78,7 @@ int32_t NativeOmniFilterOperator::getOutput(std::vector<Table*>& data)
     return projectedVecs->getPositionCount();
 }
 
-Filter::Filter(LLVMCodeGen* codegen, Expr* expr)
+Filter::Filter(LLVMCodeGen* codeGen, Expr* expr)
 {
     this->codeGen = codeGen;
     this->expr = expr;
@@ -96,8 +97,7 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
         {
             case INT32:{
                 if (codeGen->execute(expr, *((int32_t*) column->getValue(index)))) {
-                    selectedRows[index] = index;
-                    numSelectedRows += 1;
+                    selectedRows[numSelectedRows++] = index;
                 }
                 break;
             }

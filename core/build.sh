@@ -21,9 +21,9 @@ echo "${NC}"
 
 cd ../../
 if [ $1 = 'debug' ] && [ $2 = 'low' ];then
-  clang++-12 -g -ggdb -O2 -D DEBUG_LEVEL_LOW -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux/" src/common/*.cpp src/common/parser/*.cpp src/jni/*.cpp src/operator/*/*.cpp src/util/*.cpp src/vector/*.cpp src/memory/*.cpp src/jit/hammer.cpp src/jit/hammer_config.cpp src/jit/harden_optimizer.cpp -ljemalloc `llvm-config-12 --cxxflags --ldflags --libs` -lpthread -ldl -lgtest -lstdc++ -shared -o libomruntime.so
+  clang++-12 -g -ggdb -O2 -D DEBUG_LEVEL_LOW -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux/" src/codegen/*.cpp src/common/*.cpp src/common/parser/*.cpp src/jni/*.cpp src/operator/*/*.cpp src/util/*.cpp src/vector/*.cpp src/memory/*.cpp src/jit/hammer.cpp src/jit/hammer_config.cpp src/jit/harden_optimizer.cpp -ljemalloc `llvm-config-12 --cxxflags --ldflags --libs` -lpthread -ldl -lgtest -lstdc++ -shared -o libomruntime.so
 elif [ $1 = 'debug' ] && [ $2 = 'high' ];then
-  clang++-12 -g -ggdb -O2 -D DEBUG_LEVEL_HIGH -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux/" src/common/*.cpp src/common/parser/*.cpp src/jni/*.cpp src/operator/*/*.cpp src/util/*.cpp src/vector/*.cpp src/memory/*.cpp src/jit/hammer.cpp src/jit/hammer_config.cpp src/jit/harden_optimizer.cpp -ljemalloc `llvm-config-12 --cxxflags --ldflags --libs` -lpthread -ldl -lgtest -lstdc++ -shared -o libomruntime.so
+  clang++-12 -g -ggdb -O2 -D DEBUG_LEVEL_HIGH -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux/" src/codegen/*.cpp src/common/*.cpp src/common/parser/*.cpp src/jni/*.cpp src/operator/*/*.cpp src/util/*.cpp src/vector/*.cpp src/memory/*.cpp src/jit/hammer.cpp src/jit/hammer_config.cpp src/jit/harden_optimizer.cpp -ljemalloc `llvm-config-12 --cxxflags --ldflags --libs` -lpthread -ldl -lgtest -lstdc++ -shared -o libomruntime.so
 elif [ $1 = 'release' ];then
   clang++-12 -g -dwarf-3 -O2 -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux/" src/common/*.cpp src/common/parser/*.cpp src/jni/*.cpp src/operator/*/*.cpp src/util/*.cpp src/vector/*.cpp src/memory/*.cpp src/jit/hammer.cpp src/jit/hammer_config.cpp src/jit/harden_optimizer.cpp -ljemalloc `llvm-config-12 --cxxflags --ldflags --libs` -lpthread -ldl -lgtest -lstdc++ -shared -o libomruntime.so
   cp libomruntime.so /opt/lib/
