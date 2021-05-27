@@ -106,18 +106,18 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {true, true};
 
-    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory *operatorFactory = OmniSortOperatorFactory::createOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);    
-    NativeOmniSortOperator *sortOperator;
+    OmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
-        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+        sortOperator = (OmniSortOperator *)operatorFactory->createOperator();
     }
     else {
         opt_module sortModule = (opt_module)(jitContext->func);
-        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+        sortOperator = (OmniSortOperator *)sortModule(operatorFactory);
     }
 
     sortOperator->addInput(tables, rowCounts, 1);
@@ -159,17 +159,17 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 //     int ascendings[1] = {false};
 //     int nullFirsts[1] = {true};
 
-//     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+//     OmniSortOperatorFactory *operatorFactory = OmniSortOperatorFactory::createOperatorFactory(
 //         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 //     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 //     operatorFactory->setJitContext(jitContext);     
-//     NativeOmniSortOperator *sortOperator;
+//     OmniSortOperator *sortOperator;
 //     if (jitContext == NULL) {   
-//         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+//         sortOperator = (OmniSortOperator *)operatorFactory->createOperator();
 //     }
 //     else {
 //         opt_module sortModule = (opt_module)(jitContext->func);
-//         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+//         sortOperator = (OmniSortOperator *)sortModule(operatorFactory);
 //     }
 
 //     sortOperator->addInput(tables, rowCounts, 1);
@@ -222,18 +222,18 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory *operatorFactory = OmniSortOperatorFactory::createOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);
-    NativeOmniSortOperator *sortOperator;
+    OmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
-        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+        sortOperator = (OmniSortOperator *)operatorFactory->createOperator();
     }
     else {
         opt_module sortModule = (opt_module)(jitContext->func);
-        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+        sortOperator = (OmniSortOperator *)sortModule(operatorFactory);
     }
 
     sortOperator->addInput(tables, rowCounts, 1);
@@ -286,18 +286,18 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory *operatorFactory = OmniSortOperatorFactory::createOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);    
-    NativeOmniSortOperator *sortOperator;
+    OmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
-        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+        sortOperator = (OmniSortOperator *)operatorFactory->createOperator();
     }
     else {
         opt_module sortModule = (opt_module)(jitContext->func);
-        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+        sortOperator = (OmniSortOperator *)sortModule(operatorFactory);
     }
 
     sortOperator->addInput(tables, rowCounts, 1);
@@ -378,19 +378,19 @@ TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
     int32_t ascendings[] = {1, 1};
     int32_t nullFirsts[] = {0, 0};
 
-    NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory *operatorFactory = OmniSortOperatorFactory::createOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);
 
-    NativeOmniSortOperator *sortOperator;
+    OmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
-        sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
+        sortOperator = (OmniSortOperator *)operatorFactory->createOperator();
     }
     else {
         opt_module sortModule = (opt_module)(jitContext->func);
-        sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
+        sortOperator = (OmniSortOperator *)sortModule(operatorFactory);
     }
 
     typedef std::chrono::high_resolution_clock Time;

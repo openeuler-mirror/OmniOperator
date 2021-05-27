@@ -174,9 +174,9 @@ void test_sort(bool harden)
     int sortNullFirsts[] = {1, 1};
     int sortColCount = 2;
 
-    NativeOmniSortOperatorFactory *sortOperatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory *sortOperatorFactory = OmniSortOperatorFactory::createOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-    NativeOmniOperator *sortOperator = NULL;
+    OmniOperator *sortOperator = NULL;
     if (harden) {
         auto p_sortCols = ParamValue(sortCols, 2);
         auto p_sortColTypes = ParamValue(sortColTypes, 2);
@@ -227,7 +227,7 @@ void test_sort(bool harden)
         sortOperator = func(sortOperatorFactory);
     }
     else {
-        sortOperator = sortOperatorFactory->createOmniOperator();
+        sortOperator = sortOperatorFactory->createOperator();
     }
 
     sortOperator->addInput(datas, rowCounts, 1);

@@ -10,22 +10,6 @@ using namespace std;
 
 int32_t DEFAULT_MAX_PAGE_SIZE_IN_BYTES = 1 * 1024 * 1024;
 
-ColumnType getColumnType(int32_t colTypeIdx)
-{
-    if (colTypeIdx == 1) {
-        return INT32;
-    }
-    else if (colTypeIdx == 2) {
-        return INT64;
-    }
-    else if (colTypeIdx == 3) {
-        return DOUBLE;
-    }
-    else {
-        return INT32;
-    }
-}
-
 int32_t getColTypeIdx(ColumnType type)
 {
     if (type == INT32) {
@@ -108,7 +92,7 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
     }
 }
 
-NativeOmniSortOperatorFactory::NativeOmniSortOperatorFactory(
+OmniSortOperatorFactory::OmniSortOperatorFactory(
     int32_t *sourceTypes,
     int32_t sourceTypeCount,
     int32_t *outputCols,
@@ -141,7 +125,7 @@ NativeOmniSortOperatorFactory::NativeOmniSortOperatorFactory(
     this->sortColCount = sortColCount;
 }
 
-NativeOmniSortOperatorFactory::~NativeOmniSortOperatorFactory()
+OmniSortOperatorFactory::~OmniSortOperatorFactory()
 {
     delete[] sourceTypes;
     delete[] outputCols;
@@ -150,7 +134,7 @@ NativeOmniSortOperatorFactory::~NativeOmniSortOperatorFactory()
     delete[] sortNullFirsts;
 }
 
-NativeOmniSortOperatorFactory * NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
+OmniSortOperatorFactory * OmniSortOperatorFactory::createOperatorFactory(
     int32_t *sourceTypes,
     int32_t sourceTypeCount,
     int32_t *outputCols,
@@ -160,7 +144,7 @@ NativeOmniSortOperatorFactory * NativeOmniSortOperatorFactory::createNativeOmniS
     int32_t *sortNullFirsts,
     int32_t sortColCount)
 {
-    NativeOmniSortOperatorFactory *operatorFactory = new NativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory *operatorFactory = new OmniSortOperatorFactory(
         sourceTypes,
         sourceTypeCount,
         outputCols,
@@ -172,9 +156,9 @@ NativeOmniSortOperatorFactory * NativeOmniSortOperatorFactory::createNativeOmniS
     return operatorFactory;
 }
 
-NativeOmniOperator * NativeOmniSortOperatorFactory::createOmniOperator()
+OmniOperator * OmniSortOperatorFactory::createOperator()
 {
-    NativeOmniSortOperator *sortOperator = new NativeOmniSortOperator(
+    OmniSortOperator *sortOperator = new OmniSortOperator(
         sourceTypes,
         sourceTypeCount,
         outputCols,
@@ -187,7 +171,7 @@ NativeOmniOperator * NativeOmniSortOperatorFactory::createOmniOperator()
 }
 
 // function implements for class Sort
-NativeOmniSortOperator::NativeOmniSortOperator(
+OmniSortOperator::OmniSortOperator(
     int32_t *sourceTypes,
     int32_t typesCount,
     int32_t *outputCols,
@@ -208,12 +192,12 @@ NativeOmniSortOperator::NativeOmniSortOperator(
     this->pagesIndex = new PagesIndex(sourceTypes, typesCount);
 }
 
-NativeOmniSortOperator::~NativeOmniSortOperator()
+OmniSortOperator::~OmniSortOperator()
 {
     delete pagesIndex;
 }
 
-int32_t NativeOmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
+int32_t OmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
 {
     if (pageCount <= 0) {
         return 0;
@@ -224,7 +208,7 @@ int32_t NativeOmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int3
 }
 
 // return error code
-int32_t NativeOmniSortOperator::getOutput(vector<Table *>& outputTables)
+int32_t OmniSortOperator::getOutput(vector<Table *>& outputTables)
 {
     int32_t positionCount = pagesIndex->getPositionCount();
     if (positionCount <= 0) {

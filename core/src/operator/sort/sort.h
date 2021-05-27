@@ -1,16 +1,16 @@
 #ifndef __SORT_H__
 #define __SORT_H__
 
-#include "../native_base.h"
+#include "../omni_operator_factory.h"
 #include "../../vector/type.h"
 #include "../pages_index.h"
 
 #include <vector>
 
-class NativeOmniSortOperatorFactory : public NativeOmniOperatorFactory
+class OmniSortOperatorFactory : public OmniOperatorFactory
 {
 public:
-    NativeOmniSortOperatorFactory(
+    OmniSortOperatorFactory(
         int32_t *sourceTypes,
         int32_t sourceTypeCount,
         int32_t *outputCols,
@@ -19,8 +19,8 @@ public:
         int32_t *sortAscendings,
         int32_t *sortNullFirsts,
         int32_t sortColCount);
-    ~NativeOmniSortOperatorFactory();
-    static NativeOmniSortOperatorFactory *createNativeOmniSortOperatorFactory(
+    ~OmniSortOperatorFactory();
+    static OmniSortOperatorFactory *createOperatorFactory(
         int32_t *sourceTypes,
         int32_t sourceTypeCount,
         int32_t *outputCols,
@@ -29,7 +29,7 @@ public:
         int32_t *sortAscendings,
         int32_t *sortNullFirsts,
         int32_t sortColCount);
-    NativeOmniOperator *createOmniOperator();
+    OmniOperator *createOperator();
     int32_t *getSourceTypes() { return sourceTypes; }
     int32_t getSourceTypeCount() { return sourceTypeCount; }
     int32_t *getOutputCols() { return outputCols; }
@@ -50,10 +50,10 @@ private:
     int32_t sortColCount;
 };
 
-class NativeOmniSortOperator : public NativeOmniOperator
+class OmniSortOperator : public OmniOperator
 {
 public:
-    NativeOmniSortOperator(
+    OmniSortOperator(
         int32_t *sourceTypes,
         int32_t typesCount,
         int32_t *outputCols,
@@ -62,7 +62,7 @@ public:
         int32_t *sortAscendings,
         int32_t *sortNullFirsts,
         int32_t sortColCount);
-    ~NativeOmniSortOperator();
+    ~OmniSortOperator();
     int32_t addInput(Table* data, int32_t rowCount) override
     {
         return 0;
@@ -91,8 +91,6 @@ private:
     int32_t sortColCount;
     PagesIndex *pagesIndex;
 };
-
-ColumnType getColumnType(int32_t colTypeIdx);
 
 void freeInputTable(Table **inputTables, int32_t inputTableCount);
 void freeOutputTable(std::vector<Table *>& outputTables);

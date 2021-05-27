@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../src/operator/aggregator/hash_groupby.h"
+#include "../../src/operator/aggregator/hash_groupby.h"
 #include <time.h>
 #include <vector>
 #include <iostream>
@@ -117,7 +117,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness)
     SumAggregator* sum2 = new SumAggregator(3);
     aggs.push_back(sum1);
     aggs.push_back(sum2);
-    NativeOmniHashAggregationOperator* groupBy = new NativeOmniHashAggregationOperator(v1, v2, aggs);
+    OmniHashAggregationOperator* groupBy = new OmniHashAggregationOperator(v1, v2, aggs);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
         groupBy->addInput(input[i], DATA_SIZE);
@@ -182,7 +182,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCol
     SumAggregator* sum2 = new SumAggregator(2);
     aggs.push_back(sum1);
     aggs.push_back(sum2);
-    NativeOmniHashAggregationOperator* groupBy = new NativeOmniHashAggregationOperator(v1, v2, aggs);
+    OmniHashAggregationOperator* groupBy = new OmniHashAggregationOperator(v1, v2, aggs);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
         groupBy->addInput(input[i], DATA_SIZE);
@@ -222,7 +222,7 @@ void perfTest(int64_t moduleAddr, Table** input, int32_t pageNum, int32_t* rowCo
         columnTypes1[i] = (int32_t)input[0]->getColumnTypes()[i];
     }
     // create operatory
-    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(moduleAddr);
+    OmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<OmniHashAggregationOperatorFactory*>(moduleAddr);
     auto groupBy = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
  
     // execution
@@ -318,7 +318,7 @@ uint64_t prepare()
     jitContext->func = reinterpret_cast<uintptr_t>(func);
     jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
     std::cout << "after jit" << std::endl;
-    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory = new NativeOmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    OmniHashAggregationOperatorFactory* nativeOperatorFactory = new OmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->setJitContext(jitContext); 
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -387,8 +387,8 @@ void perfTestOriginal(int64_t moduleAddr, Table** input)
         columnTypes1[i] = (int32_t)input[0]->getColumnTypes()[i];
     }
     // create operatory
-    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<NativeOmniHashAggregationOperatorFactory*>(moduleAddr);
-    auto groupBy = nativeOperatorFactory->createOmniOperator();
+    OmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<OmniHashAggregationOperatorFactory*>(moduleAddr);
+    auto groupBy = nativeOperatorFactory->createOperator();
  
     // execution
     for (int32_t i = 0; i < pageNum; ++i) {
@@ -435,7 +435,7 @@ TEST(NativeOmniHashAggregationOperatorTest, Original_Multiple_Threads)
     PrepareContext aggTypeContext = {aggTypes, 2};
     PrepareContext aggFuncTypeContext = {aggFunType, 2};
     PrepareContext retTypesContext = {retTypes, 4};
-    NativeOmniHashAggregationOperatorFactory* nativeOperatorFactory = new NativeOmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    OmniHashAggregationOperatorFactory* nativeOperatorFactory = new OmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
     
     int threadNums[] = {1, 8, 16, 32, 64};

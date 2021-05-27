@@ -1,26 +1,26 @@
 package nova.hetu.omniruntime.operator;
 
+import com.google.common.collect.ImmutableList;
+import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecBatch;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static nova.hetu.omniruntime.operator.JOmniSortOperator.JOmniSortOperatorFactory.createJOmniSortOperatorFactory;
-
-public class JOmniSortOperatorTest
+public class OmniSortOperatorTest
 {
-    List<Vec> dataVecs;
     int totalPageCount = 20;
     int pageDistinctCount = 4;
     int pageDistinctValueRepeatCount = 25000;
-    int[] positionCounts = new int[totalPageCount];
 
     @Test
     public void testOrderByTwoColumn()
@@ -45,34 +45,33 @@ public class JOmniSortOperatorTest
         vec2.set(6, 7);
         vec2.set(7, 8);
 
-        List<Vec> datas = new ArrayList<>();
-        datas.add(vec1);
-        datas.add(vec2);
+        VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2}, 8);
 
         int[] sourceTypes = {1, 1};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        int[] positionCounts = {8};
 
-        JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
-        JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-        sortOperator.addInput(datas, positionCounts);
-        OMResult[] results = sortOperator.getOutput();
+        OmniOperator sortOperator = sortOperatorFactory.createOperator();
+        sortOperator.addInput(ImmutableList.of(vecBatch));
+        Iterator<VecBatch> results = sortOperator.getOutput();
 
-        Assert.assertEquals(results.length, 1);
+        results.hasNext();
+        VecBatch resultVecBatch = results.next();
+        ByteBuffer output0 = resultVecBatch.getVectors()[0].getData();
+        ByteBuffer output1 = resultVecBatch.getVectors()[1].getData();
+        int len = resultVecBatch.getRowCount();
 
-        ByteBuffer[] output = results[0].getBuffers();
-        int len = results[0].getLength();
         int[] actual0 = new int[len];
         int[] actual1 = new int[len];
-        output[0].order(ByteOrder.LITTLE_ENDIAN);
-        output[1].order(ByteOrder.LITTLE_ENDIAN);
+        output0.order(ByteOrder.LITTLE_ENDIAN);
+        output1.order(ByteOrder.LITTLE_ENDIAN);
         for (int i = 0; i < len; i++) {
-            actual0[i] = output[0].getInt(i * Integer.BYTES);
-            actual1[i] = output[1].getInt(i * Integer.BYTES);
+            actual0[i] = output0.getInt(i * Integer.BYTES);
+            actual1[i] = output1.getInt(i * Integer.BYTES);
         }
         int[] expected0 = {1, 2, 3, 4, 5, 6, 7, 8};
         int[] expected1 = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -84,7 +83,7 @@ public class JOmniSortOperatorTest
     public void testOrderByPerformance()
     {
         long start = System.currentTimeMillis();
-        List<Vec> vecs = buildVecs();
+        ImmutableList<VecBatch> vecs = buildVecs();
         long elapsed = System.currentTimeMillis() - start;
         System.out.println("buildVecs elapsed time : " + elapsed + " ms");
 
@@ -94,13 +93,13 @@ public class JOmniSortOperatorTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
 
         start = System.currentTimeMillis();
-        JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-        sortOperator.addInput(vecs, positionCounts);
-        OMResult[] results = sortOperator.getOutput();
+        OmniOperator sortOperator = sortOperatorFactory.createOperator();
+        sortOperator.addInput(vecs);
+        sortOperator.getOutput();
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
     }
@@ -108,14 +107,14 @@ public class JOmniSortOperatorTest
     @Test
     public void testOrderByMultiPerformance()
     {
-        dataVecs = buildVecs();
+        ImmutableList<VecBatch> vecs = buildVecs();
 
         int[] sourceTypes = {2, 2};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        JOmniSortOperator.JOmniSortOperatorFactory sortOperatorFactory = createJOmniSortOperatorFactory(
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
 
         int threadNum = 4;
@@ -123,8 +122,8 @@ public class JOmniSortOperatorTest
         for (int i = 0; i < threadNum; i++) {
             Thread thread = new Thread(() -> {
                 try {
-                    JOmniSortOperator sortOperator = (JOmniSortOperator)sortOperatorFactory.createOmniOperator();
-                    sortOperator.addInput(dataVecs, positionCounts);
+                    OmniOperator sortOperator = sortOperatorFactory.createOperator();
+                    sortOperator.addInput(vecs);
                     sortOperator.getOutput();
                 }
                 finally {
@@ -141,8 +140,9 @@ public class JOmniSortOperatorTest
         }
     }
 
-    private List<Vec> buildVecs()
+    private ImmutableList<VecBatch> buildVecs()
     {
+        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
         int positionCount = pageDistinctCount * pageDistinctValueRepeatCount;
         List<Vec> vecs = new ArrayList<>();
         for (int i = 0; i < totalPageCount; i++) {
@@ -158,9 +158,9 @@ public class JOmniSortOperatorTest
             }
             vecs.add(longVec1);
             vecs.add(longVec2);
-
-            positionCounts[i] = positionCount;
+            VecBatch vecBatch = new VecBatch(new Vec[] {longVec1, longVec2}, positionCount);
+            vecBatchList.add(vecBatch);
         }
-        return vecs;
+        return vecBatchList.build();
     }
 }
