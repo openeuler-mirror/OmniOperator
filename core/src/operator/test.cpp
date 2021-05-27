@@ -103,7 +103,7 @@
 //     return 1234;
 // }
 
-NativeOmniSortOperator *createSortOperator(
+OmniSortOperator *createSortOperator(
     int32_t *sourceTypes,
     int32_t typesCount,
     int32_t *outputCols,
@@ -113,7 +113,7 @@ NativeOmniSortOperator *createSortOperator(
     int32_t *sortNullFirsts,
     int32_t sortColsCount)
 {
-    return new NativeOmniSortOperator(sourceTypes, typesCount, outputCols, outputColsCount, 
+    return new OmniSortOperator(sourceTypes, typesCount, outputCols, outputColsCount,
         sortCols, sortAscendings, sortNullFirsts, sortColsCount);
 }
 

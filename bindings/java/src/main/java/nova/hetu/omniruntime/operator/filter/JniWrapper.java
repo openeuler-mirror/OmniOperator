@@ -12,36 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nova.hetu.omniruntime.operator;
+package nova.hetu.omniruntime.operator.filter;
 
-import java.nio.ByteBuffer;
-
-public class OMResult {
-    private ByteBuffer[] buffers;
-    private int length;
-    private String key;
-
-    public String getKey() {
-        return key;
+public class JniWrapper
+{
+    static {
+        System.loadLibrary("omruntime");
     }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public ByteBuffer[] getBuffers() {
-        return buffers;
-    }
-
-    public void setBuffers(ByteBuffer[] buffers) {
-        this.buffers = buffers;
-    }
-
-    public int getLength() {
-        return length;
-    }
-
-    public void setLength(int length) {
-        this.length = length;
-    }
+    public native long filterCompile(String expression, long clsTypeAddress, int inputVecCount);
+    public native int filterExecute(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, long selectedPositionsAddress, int inputRowSize);
+    public native int filterExecuteV1(long handle, long[] inputVecArrayAddress, long clsTypeAddress, int inputVecCount, int inputRowSize,long[] projectVecArrayAddress,int[] projectIdx,int projectVecCount);
+    public native void filterFinished(long handle);
 }
