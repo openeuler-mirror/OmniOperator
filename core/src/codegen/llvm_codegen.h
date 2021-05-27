@@ -26,15 +26,13 @@ class LLVMCodeGen
 public:
     LLVMCodeGen();
 
-    void generateFunc(std::string name, ComparisionExpr exp);
+    void generateFunc(std::string name, Expr* expr);
     
-    void generateFunc(std::string name, BinaryExpr exp);
-
     llvm::Value* generateComparisionBody(ComparisionExpr* expr, Value* left , Value* right);
 
     void compile();
 
-    bool execute(int32_t left, int32_t right);
+    bool execute(Expr* expr, int32_t data);
 
     bool execute(int32_t arg0, int32_t arg1, int32_t arg2, int32_t arg3);
 

@@ -10,13 +10,12 @@
 class Filter
 {
 public:
-    Filter(LLVMCodeGen* codegen, int32_t columnIdx, int32_t data);
+    Filter(LLVMCodeGen* codegen, Expr* expr);
     int32_t filter(Table *table, int32_t rowNumber, int32_t *selectedRows);
 
 private:
     LLVMCodeGen *codeGen;
-    int32_t columnIdx;
-    int32_t data;
+    Expr* expr;
 };
 
 class NativeOmniFilterOperator : public NativeOmniOperator

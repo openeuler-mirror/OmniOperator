@@ -3,6 +3,8 @@
 #include "../../codegen/llvm_codegen.h"
 #include <cstring>
 
+using namespace std;
+
 bool testExpressionEvaluater(Table *table, int32_t index)
 {
     Column *column = table->getColumn(0);
@@ -29,8 +31,7 @@ Compiler::Compiler(Expr expression, int32_t *inputTypes, int32_t vecCount)
 Filter *Compiler::compile()
 {
     LLVMCodeGen codeGenObj;
-    ComparisionExpr& c_expr = dynamic_cast<ComparisionExpr&>(expression); 
-    codeGenObj.generateFunc("comparisionFunc", c_expr);
+    codeGenObj.generateFunc("comparisionFunc", &expression);
     codeGenObj.compile();
-    return new Filter(&codeGenObj, c_expr.columnIdx, c_expr.columnData);
+    return new Filter(&codeGenObj, c_expr->columnIdx, c_expr->columnData);
 }

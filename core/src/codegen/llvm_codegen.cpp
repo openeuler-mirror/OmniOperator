@@ -47,103 +47,13 @@ JITSymbol dummy_lookup(const string& name)
 LLVMCodeGen::LLVMCodeGen() 
 {
     _module = new Module("Omniruntime Module", context);
-}
-
-
-// Logic to generate the function.
-// TODO: Currently only supports comparision operator
-void LLVMCodeGen::generateFunc(std::string name, ComparisionExpr expr) 
-{
-    _func_name = name;
-	// (double, double, double)
-	std::vector<Type*> param_type(2, Type::getDoubleTy(context));
-	// double (*)(double, double, double)
-	FunctionType* prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
-    cout <<"MOdule::" << _module <<endl;
-
-	Function *func = Function::Create(prototype, Function::ExternalLinkage, name, _module);
-	BasicBlock *body = BasicBlock::Create(context, "body", func);
-	builder.SetInsertPoint(body);
-
-	std::vector<Value*> args;
-	for(auto& arg : func->args())
-    {
-		args.push_back(&arg);
-    }
-
-    Value* temp = generateComparisionBody(&expr, args[0], args[1]);
-
-	builder.CreateRet(temp);
-}
-
-void LLVMCodeGen::generateFunc(std::string name, BinaryExpr b_expr) 
-{
-    _func_name = name;
-	std::vector<Type*> param_type(4, Type::getDoubleTy(context));
-	// double (*)(double, double, double)
-	FunctionType* prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
-    cout <<"MOdule::" << _module <<endl;
-
-	Function *func = Function::Create(prototype, Function::ExternalLinkage, name, _module);
-	BasicBlock *body = BasicBlock::Create(context, "body", func);
-	builder.SetInsertPoint(body);
-
-	std::vector<Value*> args;
-	for(auto& arg : func->args())
-    {
-		args.push_back(&arg);
-    }
-    ComparisionExpr *left_expr =  (ComparisionExpr *) &b_expr.left;
-    ComparisionExpr *right_expr = (ComparisionExpr *) &b_expr.right; 
-
-    Value* left  = generateComparisionBody(left_expr, args[0], args[1]);
-    Value* right  = generateComparisionBody(right_expr, args[2], args[3]);
-    Value* result;
-    switch (b_expr.op)
-    {
-    case AND:
-        result = builder.CreateAnd(left, right, "and");
-        break;
-    case OR:
-        result = builder.CreateOr(left, right, "or");
-        break;
-    }
-	builder.CreateRet(result);
-}
-
-Value* LLVMCodeGen::generateComparisionBody(ComparisionExpr* c_expr, Value* left, Value* right)
-{
-    cout << "Generating comparision::" << left <<":" << right<<endl;
-    Value* temp;
-    switch(c_expr->op) {
-        case LT:
-            temp = builder.CreateFCmpULT(left, right, "cmplt");
-            break;
-        case GT:
-            temp = builder.CreateFCmpUGT(left, right, "cmpgt");
-            break;
-        case LTE:
-            temp = builder.CreateFCmpULE(left, right, "cmplte");
-            break;
-        case GTE:
-            temp = builder.CreateFCmpUGE(left, right, "cmpgte");
-            break;   
-        case EQ:
-            temp = builder.CreateFCmpUEQ(left, right, "cmpeq");
-            break;         
-    }
-    cout << "Generated expression::" << temp <<endl;
-    return temp;
-}
-
-void LLVMCodeGen::compile() {
-        cout<<"Executing the code"<<endl;
-    // Initialization
+     // Initialization
 	LLVMInitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetAsmParser();
     InitializeNativeTargetDisassembler();
-    std::string builder_error;
+
+     std::string builder_error;
 
     
 
@@ -162,25 +72,113 @@ void LLVMCodeGen::compile() {
     if (_ee == nullptr) {
         cout <<"Execution engine is null" << endl;
     }
-    cout<<"Adding module..." << endl;
+}
+
+
+// Logic to generate the function.
+// TODO: Currently only supports comparision operator
+void LLVMCodeGen::generateFunc(std::string name, Expr* expr) 
+{
+    ComparisionExpr *c_expr =  (ComparisionExpr *) expr;
+    _func_name = name;
+	// (int, int)
+	std::vector<Type*> param_type(2, Type::getInt32Ty(context));
+	// int (*)(int, int)
+	FunctionType* prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
+    cout <<"MOdule::" << _module <<endl;
+
+	Function *func = Function::Create(prototype, Function::ExternalLinkage, name, _module);
+	BasicBlock *body = BasicBlock::Create(context, "body", func);
+	builder.SetInsertPoint(body);
+
+	std::vector<Value*> args;
+	for(auto& arg : func->args())
+    {
+		args.push_back(&arg);
+    }
+
+    llvm::Value *result = builder.CreateSub(args[0], args[1], "result");
+            builder.CreateRet(result);
+}
+
+
+Value* LLVMCodeGen::generateComparisionBody(ComparisionExpr* c_expr, Value* left, Value* right)
+{
+    cout << "Generating comparision::" << left <<":" << right<<endl;
+    Value* temp;
+    switch(c_expr->op) {
+        case LT:
+            temp = builder.CreateICmpULT(left, right, "cmplt");
+            break;
+        case GT:
+            temp = builder.CreateICmpUGT(left, right, "cmpgt");
+            break;
+        case LTE:
+            temp = builder.CreateICmpULE(left, right, "cmplte");
+            break;
+        case GTE:
+            temp = builder.CreateICmpUGE(left, right, "cmpgte");
+            break;   
+        case EQ:
+            temp = builder.CreateICmpEQ(left, right, "cmpeq");
+            break;         
+    }
+    cout << "Generated expression::" << temp <<endl;
+    return temp;
+}
+
+void LLVMCodeGen::compile() {
+    cout<<"Compiling..." << endl;
    // exec_engine->addModule(std::move(MODULE));
     cout<<"Finalize module ..." << endl;
     _ee->finalizeObject();
 	
 }
 
-bool LLVMCodeGen::execute(int32_t left, int32_t right) {
-
+bool LLVMCodeGen::execute(Expr* expr, int32_t data) {
+    ComparisionExpr *c_expr =  (ComparisionExpr *) expr;
     cout<<"Get the function ..." << endl;
-    int32_t (*native_func)(double, double) = (decltype(native_func)) _ee->getFunctionAddress(_func_name);
-    printf("%d\n", native_func(left,right));
+    int32_t (*native_func)(int32_t, int32_t) = (int32_t (*)(int32_t, int32_t)) _ee->getFunctionAddress(_func_name);
+    int32_t result = native_func(c_expr->columnData, data);
+    
+    switch(c_expr->op) {
+        case LT:
+            if (result < 0) {
+                return true;
+            } else {
+                return false;
+            }
+        case GT:
+            if (result > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        case LTE:
+            if (result <= 0) {
+                return true;
+            } else {
+                return false;
+            }
+        case GTE:
+           if (result >= 0) {
+                return true;
+            } else {
+                return false;
+            }  
+        case EQ:
+            if (result == 0) {
+                return true;
+            } else {
+                return false;
+            }         
+    }
  
-    return true;
+    return false;
 }
 
 bool LLVMCodeGen::execute(int32_t arg0, int32_t arg1, int32_t arg2, int32_t arg3) {
     return true;
-
 }
 
 
@@ -191,11 +189,10 @@ int main()
 	left_expr.columnData = 2;
 	left_expr.columnIdx = 0;
 	left_expr.op = ComparisionOperator::LT;
-    codeGenObj.generateFunc("test_func", left_expr);
+    codeGenObj.generateFunc("test_func", &left_expr);
     codeGenObj.compile();
-    for (int i = 0; i < 10; i++) {
-         codeGenObj.execute(4,i);
-    }
+    Expr * expr = &left_expr;
+    cout<<"Result:::" << codeGenObj.execute(expr, 4);
      
 	return 0;
 }

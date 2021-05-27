@@ -77,24 +77,25 @@ int32_t NativeOmniFilterOperator::getOutput(std::vector<Table*>& data)
     return projectedVecs->getPositionCount();
 }
 
-Filter::Filter(LLVMCodeGen* codegen, int32_t col_idx, int32_t data)
+Filter::Filter(LLVMCodeGen* codegen, Expr* expr)
 {
     this->codeGen = codeGen;
-    this->columnIdx = col_idx;
-    this->data = data;
+    this->expr = expr;
 }
 
 int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
 {
     int numSelectedRows = 0;
-    Column *column = table->getColumn(columnIdx);
+    ComparisionExpr *c_expr =  (ComparisionExpr *) expr;
+
+    Column *column = table->getColumn(c_expr->columnIdx);
 
     for (int index = 0; index < rowNumber; index++)
     {
         switch (column->getType())
         {
             case INT32:{
-                if (codeGen->execute(data, *((int32_t*) column->getValue(index)))) {
+                if (codeGen->execute(expr, *((int32_t*) column->getValue(index)))) {
                     selectedRows[index] = index;
                     numSelectedRows += 1;
                 }
