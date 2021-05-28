@@ -72,5 +72,54 @@ public class JFilterAndProjectTest {
         op.close();
         */
     }
+
+    private List<Vec> createTable(final int NUM_ROWS)
+    {
+        IntVec col1 = new IntVec(NUM_ROWS);
+        IntVec col2 = new IntVec(NUM_ROWS);
+        DoubleVec col3 = new DoubleVec(NUM_ROWS);
+        DoubleVec col4 = new DoubleVec(NUM_ROWS);
+        for (int i = 0; i < NUM_ROWS; i++) {
+            col1.set(i, i);
+            col2.set(i, i);
+            col3.set(i, i);
+            col4.set(i, i);
+        }
+        List<Vec> table = new ArrayList<>();
+        table.add(col1);
+        table.add(col2);
+        table.add(col3);
+        table.add(col4);
+        return table;
+    }
+
+    @Test
+    public void multithreadTest()
+    {
+        VecType[] types = {VecType.INT, VecType.INT, VecType.DOUBLE, VecType.DOUBLE};
+        int[] projectIndices = {0, 1, 2, 3};
+        String s = "$operator$LESS_THAN_OR_EQUAL(#0, 500)";
+        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+                s,
+                types,
+                projectIndices
+        );
+        final int NUM_ROWS = 1000;
+        JOmniOperator op = factory.createOmniOperator();
+        List<Vec> table = createTable(NUM_ROWS);
+        for (int i = 0; i < 1000; i++) {
+            Thread t = new Thread(() -> {
+                op.addInput(table, NUM_ROWS);
+                OMResult res = op.getOutput()[0];
+                System.out.println(res.getLength());
+                Assert.assertEquals(res.getLength(), 501);
+            });
+            t.start();
+        }
+        try {
+            Thread.sleep(10000);
+        }
+        catch (Exception e) {}
+    }
     
 }

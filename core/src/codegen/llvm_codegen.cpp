@@ -137,10 +137,10 @@ void LLVMCodeGen::compile() {
 
 bool LLVMCodeGen::execute(Expr* expr, int32_t data) {
     ComparisionExpr *c_expr =  (ComparisionExpr *) expr;
-    cout<<"Get the function ..." << data << " " << c_expr->columnData << endl;
+    // cout<<"Get the function ..." << data << " " << c_expr->columnData << endl;
     int32_t (*native_func)(int32_t, int32_t) = (int32_t (*)(int32_t, int32_t)) _ee->getFunctionAddress(_func_name);
     int32_t result = native_func(data, c_expr->columnData);
-    
+    // return true;
     // return false;
     switch(c_expr->op) {
         case LT:

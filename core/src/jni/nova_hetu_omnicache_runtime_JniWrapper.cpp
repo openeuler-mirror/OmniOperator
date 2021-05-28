@@ -207,6 +207,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
     int32_t pageIndex = 0;
     for (int cIndex = 0; cIndex < totalColumnCount; cIndex++) {
         int32_t rowNum = rowNums[pageIndex];
+        std::cout << "PASSED NUMBER OF ROWS: " << rowNum << std::endl;
         void* data = reinterpret_cast<void *>(address[cIndex]);
         int cIdx =  cIndex % columnCount;
         table[cIdx] = (char*)data;
@@ -219,6 +220,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_JniWrapper_addInput
                 Column* col = new Column(data, columnType, rowNum);
                 t->setColumn(col, columnType);
             }
+            std::cout << "JNI NUMBER OF ROWS: " << t->getPositionCount() << std::endl;
             op->addInput(t, t->getPositionCount());
             opAddr = reinterpret_cast<uint64_t>(op);
         }

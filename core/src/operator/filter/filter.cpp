@@ -114,6 +114,7 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
         }
         
     }
+    std::cout << "SELECTED " << numSelectedRows << "ROWS!" << std::endl;
     return numSelectedRows;
 }
 
