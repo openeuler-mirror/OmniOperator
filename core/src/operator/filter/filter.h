@@ -53,12 +53,9 @@ public:
 class NativeOmniFilterOperatorFactory : public NativeOmniOperatorFactory
 {
 public:
-    NativeOmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
-        : expression(expression), inputTypes(inputTypes), vecCount(vecCount), projectIndex(projectIndex), projectVecCount(projectVecCount)
-    {
-    }
+    NativeOmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount);
 
-    ~NativeOmniFilterOperatorFactory() override {};
+    ~NativeOmniFilterOperatorFactory() override;
 
     NativeOmniOperator* createOmniOperator() override;
 
@@ -68,6 +65,7 @@ private:
     int32_t vecCount;
     int32_t *projectIndex;
     int32_t projectVecCount;
+    Filter *filter;
 };
 
 #endif

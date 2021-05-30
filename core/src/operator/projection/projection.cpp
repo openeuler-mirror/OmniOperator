@@ -34,7 +34,7 @@ Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount,
         {
             case INT32:
             {
-                int32_t* projectedVec = (int32_t*) omni_allocate(selectedPositionCount * sizeof(int32_t));
+                int32_t *projectedVec = (int32_t*) omni_allocate(selectedPositionCount * sizeof(int32_t));
                 int32_t *originalVec = (int32_t *)column->getData();
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
@@ -46,7 +46,7 @@ Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount,
             }
             case INT64:
             {
-                int64_t* projectedVec = (int64_t*) omni_allocate(selectedPositionCount * sizeof(int64_t));
+                int64_t *projectedVec = (int64_t*) omni_allocate(selectedPositionCount * sizeof(int64_t));
                 int64_t *originalVec = (int64_t *)column->getData();
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {
@@ -58,7 +58,7 @@ Table *Projection::project(int32_t *selectedPosition, int selectedPositionCount,
             }
             case DOUBLE:
             {
-                double* projectedVec = (double*) omni_allocate(selectedPositionCount * sizeof(double));
+                double *projectedVec = (double*) omni_allocate(selectedPositionCount * sizeof(double));
                 double *originalVec = (double *)column->getData();
                 for (int rowIndex = 0; rowIndex < selectedPositionCount; rowIndex++)
                 {

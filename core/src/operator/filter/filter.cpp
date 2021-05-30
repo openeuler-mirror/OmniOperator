@@ -38,19 +38,33 @@ using namespace std;
 //     return 12345;
 // }
 
-NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
+NativeOmniFilterOperatorFactory::NativeOmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
 {
+    this->inputTypes = inputTypes;
+    this->vecCount = vecCount;
+    this->projectIndex = projectIndex;
+    this->projectVecCount = projectVecCount;
+
     Parser parserObject;
-    std::cout << "parsing: " << this->expression << std::endl;
-    Expr* parsedExpr = parserObject.parseRowExpression(this->expression);
+    std::cout << "parsing: " << expression << std::endl;
+    Expr* parsedExpr = parserObject.parseRowExpression(expression);
     ComparisionExpr *c_expr =  (ComparisionExpr *) parsedExpr;
     std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
     //TODO: replace the placeholder context
-    Compiler *compiler = new Compiler(parsedExpr, this->inputTypes, this->vecCount);
-    Filter *filter = compiler->compile();
+    Compiler *compiler = new Compiler(parsedExpr, inputTypes, vecCount);
+    this->filter = compiler->compile();
     delete compiler;
-    return new NativeOmniFilterOperator(filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
+}
+
+NativeOmniFilterOperatorFactory::~NativeOmniFilterOperatorFactory()
+{
+    delete this->filter;
+}
+
+NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
+{
+    return new NativeOmniFilterOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
 
 int32_t NativeOmniFilterOperator::addInput(Table* data, int32_t rowCount)
@@ -114,7 +128,6 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
         }
         
     }
-    std::cout << "SELECTED " << numSelectedRows << "ROWS!" << std::endl;
     return numSelectedRows;
 }
 
