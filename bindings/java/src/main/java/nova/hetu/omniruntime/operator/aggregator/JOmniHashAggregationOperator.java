@@ -49,6 +49,11 @@ public class JOmniHashAggregationOperator extends JOmniOperator {
         return getJniWrapper().getOutput(getNativeOperator());
     }
 
+    @Override
+    public void close() {
+        getJniWrapper().close(getNativeOperator());
+    }
+
     public static class JOmniHashAggregationOperatorFactory
             extends JOmniOperatorFactory {
         private final int[] groupByChanel;

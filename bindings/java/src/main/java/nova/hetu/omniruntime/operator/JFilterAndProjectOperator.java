@@ -44,7 +44,7 @@ public class JFilterAndProjectOperator
         int vecCount = vecs.size();
         LongVec vecAddresses = transformVecAddress(vecs);
         IntVec rowNums = getRowNumbers(vecs, vecCount);
-        jniWrapper.addInput(this.getNativeOperator(), vecAddresses.getAddress(), vecCount, rowNums.getAddress(), rowNums.size());
+        jniWrapper.addInput(getNativeOperator(), vecAddresses.getAddress(), vecCount, rowNums.getAddress(), rowNums.size());
         return 0;
     }
 
@@ -58,6 +58,12 @@ public class JFilterAndProjectOperator
     public OMResult[] getOutput()
     {
         return getJniWrapper().getOutput(getNativeOperator());
+    }
+
+    @Override
+    public void close()
+    {
+        jniWrapper.close(getNativeOperator());
     }
 
     public static class JFilterAndProjectOperatorFactory

@@ -1,6 +1,5 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/sort/sort.h"
-#include "../../src/jit/param_value.h"
 #include "../../src/jit/hammer.h"
 #include <time.h>
 #include <vector>
@@ -58,14 +57,17 @@ JitContext *createTestSortJitContext(
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
 
     Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/memory_pool.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/pages_index.ll", testParam);
+    Hammer hammer3("/opt/lib/ir/memory_pool.ll", testParam);
     hammer1.harden();
     hammer2.harden();
+    hammer3.harden();
     deps.push_back(&hammer2);
+    deps.push_back(&hammer3);
 
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (sort_module)(jitter->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);;
@@ -74,7 +76,7 @@ JitContext *createTestSortJitContext(
     return jitContext;
 }
 
-TEST (OrderByTest, TestSortByPerformance)
+TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 {
     // construct input data
     const int32_t DATA_SIZE = 100000;
@@ -107,13 +109,14 @@ TEST (OrderByTest, TestSortByPerformance)
     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);    
     NativeOmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
     }
     else {
-        sort_module sortModule = (sort_module)(jitContext->func);
+        opt_module sortModule = (opt_module)(jitContext->func);
         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
     }
 
@@ -135,7 +138,7 @@ TEST (OrderByTest, TestSortByPerformance)
     freeOutputTable(outputTables);
 }
 
-// TEST(SortTest, testOrderByOneColumn)
+// TEST(NativeOmniSortOperatorTest, testOrderByOneColumn)
 // {
 //     //construct input data
 //     const int32_t DATA_SIZE = 5;
@@ -165,7 +168,7 @@ TEST (OrderByTest, TestSortByPerformance)
 //         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
 //     }
 //     else {
-//         sort_module sortModule = (sort_module)(jitContext->func);
+//         opt_module sortModule = (opt_module)(jitContext->func);
 //         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
 //     }
 
@@ -192,7 +195,7 @@ TEST (OrderByTest, TestSortByPerformance)
 //     freeOutputTable(outputTables);
 // }
 
-TEST(SortTest, testOrderByDoubleColumn)
+TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
@@ -222,13 +225,14 @@ TEST(SortTest, testOrderByDoubleColumn)
     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);
     NativeOmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
     }
     else {
-        sort_module sortModule = (sort_module)(jitContext->func);
+        opt_module sortModule = (opt_module)(jitContext->func);
         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
     }
 
@@ -255,7 +259,7 @@ TEST(SortTest, testOrderByDoubleColumn)
     delete expectTable;
 }
 
-TEST(SortTest, testOrderByDoubleColumnV2)
+TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
 {
     // construct input data
     const int32_t DATA_SIZE = 6;
@@ -285,13 +289,14 @@ TEST(SortTest, testOrderByDoubleColumnV2)
     NativeOmniSortOperatorFactory *operatorFactory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    //JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);    
     NativeOmniSortOperator *sortOperator;
     if (jitContext == NULL) {   
         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
     }
     else {
-        sort_module sortModule = (sort_module)(jitContext->func);
+        opt_module sortModule = (opt_module)(jitContext->func);
         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
     }
 
@@ -350,7 +355,7 @@ void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t r
     }
 }
 
-TEST(SortTest, testOrderByTwoColumnPerf)
+TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
 {
     printf("testOrderByTwoColumnPerf called\n");
 
@@ -384,7 +389,7 @@ TEST(SortTest, testOrderByTwoColumnPerf)
         sortOperator = (NativeOmniSortOperator *)operatorFactory->createOmniOperator();
     }
     else {
-        sort_module sortModule = (sort_module)(jitContext->func);
+        opt_module sortModule = (opt_module)(jitContext->func);
         sortOperator = (NativeOmniSortOperator *)sortModule(operatorFactory);
     }
 

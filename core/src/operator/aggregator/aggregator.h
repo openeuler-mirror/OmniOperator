@@ -24,8 +24,23 @@ public:
     virtual ~Aggregator() 
     {
         for (auto& i : state) {
-            // FIXME free data by type
-            delete i.second[0].val;
+            switch (dataType)
+            {
+                case 1: {
+                    delete reinterpret_cast<int32_t*>(i.second[0].val);
+                    break;
+                }
+                case 2: {
+                    delete reinterpret_cast<int64_t*>(i.second[0].val);
+                    break;
+                }
+                case 3: {
+                    delete reinterpret_cast<double*>(i.second[0].val);
+                    break;
+                }
+                default:
+                    break;
+            }
         }
         state.clear();
     }
