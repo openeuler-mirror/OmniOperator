@@ -1,7 +1,8 @@
 #ifndef __FILTER_H__
 #define __FILTER_H__
 
-#include "../native_base.h"
+#include "../omni_operator_factory.h"
+#include "../omni_operator.h"
 #include "../../vector/table.h"
 #include "../../util/debug.h"
 #include "../../codegen/llvm_codegen.h"
@@ -18,10 +19,10 @@ private:
     Expr* expr;
 };
 
-class NativeOmniFilterOperator : public NativeOmniOperator
+class OmniFilterOperator : public OmniOperator
 {
 public:
-    NativeOmniFilterOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
+    OmniFilterOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
         : filter(filter), inputTypes(inputTypes), vecCount(vecCount), projectIndex(projectIndex), projectVecCount(projectVecCount)
     {
     }
@@ -30,10 +31,7 @@ public:
 
     int32_t getOutput(std::vector<Table*>& data) override;
 
-    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override
-    {
-        return 0;
-    }
+    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
 
     int32_t getVecCount() { return this->vecCount; }
 
@@ -50,14 +48,14 @@ public:
     Table *projectedVecs;
 };
 
-class NativeOmniFilterOperatorFactory : public NativeOmniOperatorFactory
+class OmniFilterOperatorFactory : public OmniOperatorFactory
 {
 public:
-    NativeOmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount);
+    OmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount);
 
-    ~NativeOmniFilterOperatorFactory() override;
+    ~OmniFilterOperatorFactory() override;
 
-    NativeOmniOperator* createOmniOperator() override;
+    OmniOperator* createOmniOperator() override;
 
 private:
     std::string expression;

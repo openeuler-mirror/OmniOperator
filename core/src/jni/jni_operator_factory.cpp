@@ -250,3 +250,15 @@ JitContext *createSortJitContext(
     JNI_DEBUG_LOG("create jit sort context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jInputTypes, jint jInputLength, jstring jExpression, jintArray jProjectIndices, jint jProjectLength)
+{
+    std::string filterExpression = std::string(env->getStringUTFChars(jExpression, JNI_FALSE));
+    jint *inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
+    int32_t inputLength = (int32_t) jInputLength;
+    jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
+    int32_t projectLength = (int32_t) jProjectIndices;
+    NativeOmniFilterOperatorFactory *factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
+    return (int64_t) factory;
+}

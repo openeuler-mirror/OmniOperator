@@ -9,7 +9,7 @@
 
 using namespace std;
 
-NativeOmniFilterOperatorFactory::NativeOmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
+OmniFilterOperatorFactory::OmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
 {
     this->inputTypes = inputTypes;
     this->vecCount = vecCount;
@@ -29,17 +29,17 @@ NativeOmniFilterOperatorFactory::NativeOmniFilterOperatorFactory(std::string exp
     delete compiler;
 }
 
-NativeOmniFilterOperatorFactory::~NativeOmniFilterOperatorFactory()
+OmniFilterOperatorFactory::~OmniFilterOperatorFactory()
 {
     delete this->filter;
 }
 
-NativeOmniOperator * NativeOmniFilterOperatorFactory::createOmniOperator()
+OmniOperator * OmniFilterOperatorFactory::createOmniOperator()
 {
-    return new NativeOmniFilterOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
+    return new OmniFilterOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
 
-int32_t NativeOmniFilterOperator::addInput(Table* data, int32_t rowCount)
+int32_t OmniFilterOperator::addInput(Table* data, int32_t rowCount)
 {
     int32_t *selectedRows = new int32_t[rowCount];
     int32_t numSelectedRows = this->filter->filter(data, rowCount, selectedRows);
@@ -52,7 +52,7 @@ int32_t NativeOmniFilterOperator::addInput(Table* data, int32_t rowCount)
     return numSelectedRows;
 }
 
-int32_t NativeOmniFilterOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount) override
+int32_t OmniFilterOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount) override
 {
     if (pageCount != 1) {
         std::cout << "ERROR: invalid page count " << pageCount << std::end
@@ -71,7 +71,7 @@ int32_t NativeOmniFilterOperator::addInput(Table** data, int32_t* rowCount, int3
     return numSelectedRows;
 }
 
-int32_t NativeOmniFilterOperator::getOutput(std::vector<Table*>& data)
+int32_t OmniFilterOperator::getOutput(std::vector<Table*>& data)
 {
     if (this->projectedVecs == nullptr) {
         return 0;
