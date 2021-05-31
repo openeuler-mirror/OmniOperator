@@ -15,6 +15,7 @@ NativeOmniFilterOperatorFactory::NativeOmniFilterOperatorFactory(std::string exp
     this->vecCount = vecCount;
     this->projectIndex = projectIndex;
     this->projectVecCount = projectVecCount;
+    this->setJitContext(nullptr);
 
     Parser parserObject;
     std::cout << "parsing: " << expression << std::endl;
