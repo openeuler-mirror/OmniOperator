@@ -13,13 +13,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
-import static nova.hetu.omniruntime.operator.OmniFilterAndProjectOperatorFactory.create;
-
 public class OmniFilterAndProjectOperatorTest {
 
-    private ImmutableList<VecBatch> makeInput(Vec ...cols) {
-        return ImmutableList.of(cols);
+    private ImmutableList<VecBatch> makeInput(int nRows, Vec ...cols) {
+        return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols, nRows)});
     }
 
     @Test
@@ -38,11 +35,11 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1));
+        op.addInput(makeInput(NUM_ROWS, col1));
 
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 2000);
-        IntBuffer res1 = res.getBuffers()[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res1.hasRemaining()) {
             Assert.assertTrue(res1.get() < 2000);
         }
@@ -66,13 +63,12 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, 3000000000L);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1, col2));
+        op.addInput(makeInput(NUM_ROWS, col1, col2));
 
         VecBatch res = op.getOutput().next();
-        Assert.assertEquals(res.getLength(), 800);
-        ByteBuffer[] buffers = res.getBuffers();
-        IntBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res1 = buffers[1].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        Assert.assertEquals(res.getRowCount(), 800);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         while (res0.hasRemaining()) {
             Assert.assertTrue(res0.get() > 20);
             Assert.assertEquals(res1.get(), 3000000000L);
@@ -98,13 +94,12 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 100);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1, col2));
+        op.addInput(makeInput(NUM_ROWS, col1, col2));
 
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 50);
-        ByteBuffer[] buffers = res.getBuffers();
-        DoubleBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
-        LongBuffer res1 = buffers[1].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 50);
+        DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         while (res0.hasRemaining()) {
             Assert.assertEquals(res0.get(), 50);
             Assert.assertEquals(res1.get(), 50);
@@ -131,12 +126,11 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, v);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1, col2));
+        op.addInput(makeInput(NUM_ROWS, col1, col2));
 
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 834);
-        ByteBuffer[] buffers = res.getBuffers();
-        IntBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 834);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res0.hasRemaining()) {
             Assert.assertTrue(res0.get() >= 30);
         }
@@ -158,11 +152,11 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1));
+        op.addInput(makeInput(NUM_ROWS, col1));
 
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 4999);
-        DoubleBuffer res0 = res.getBuffers()[0].order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 4999);
+        DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
         double cnt = 1;
         while (res0.hasRemaining()) {
             Assert.assertEquals(res0.get(), cnt++);
@@ -185,11 +179,11 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, 9348);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1));
+        op.addInput(makeInput(NUM_ROWS, col1));
 
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 20000);
-        IntBuffer res0 = res.getBuffers()[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 20000);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res0.hasRemaining()) {
             Assert.assertEquals(res0.get(), 9348);
         }
@@ -213,23 +207,21 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i % 10);
             col2.set(i, i % 6 + 1);
         }
-        op.addInput(makeInput(col1));
+        op.addInput(makeInput(NUM_ROWS, col1));
 
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 500);
-        ByteBuffer[] buffers = res.getBuffers();
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 500);
 
-        IntBuffer res1 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res1.hasRemaining()) {
             Assert.assertTrue(res1.get() <= 4);
         }
 
         // Test multiple inputs
-        op.addInput(makeInput(col2));
-        res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 668);
-        buffers = res.getBuffers();
-        res1 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        op.addInput(makeInput(NUM_ROWS, col2));
+        res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 668);
+        res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res1.hasRemaining()) {
             Assert.assertTrue(res1.get() <= 4);
         }
@@ -259,12 +251,11 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, val2);
         }
 
-        op.addInput(makeInput(col1, col2));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 286);
-        ByteBuffer[] buffers = res.getBuffers();
-        IntBuffer res1 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res2 = buffers[1].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1, col2));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 286);
+        IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        LongBuffer res2 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         while (res1.hasRemaining()) {
             Assert.assertTrue(res1.get() < 0);
             Assert.assertTrue(res2.get() < 0);
@@ -292,13 +283,12 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 10 / 10D);
         }
 
-        op.addInput(makeInput(col1, col2, col3));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 1000);
-        ByteBuffer[] buffers = res.getBuffers();
-        IntBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res1 = buffers[1].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-        DoubleBuffer res2 = buffers[2].order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1, col2, col3));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 1000);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        DoubleBuffer res2 = res.getVectors()[2].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
         while (res1.hasRemaining()) {
             Assert.assertEquals(res0.get(), 0);
             Assert.assertEquals(res1.get(), (long) 3e9);
@@ -328,11 +318,10 @@ public class OmniFilterAndProjectOperatorTest {
                 projectIndices
         );
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1, col2, col3, col4));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 100);
-        ByteBuffer[] buffers = res.getBuffers();
-        IntBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1, col2, col3, col4));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 100);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res0.hasRemaining()) {
             Assert.assertTrue(res0.get() < 24);
         }
@@ -365,14 +354,13 @@ public class OmniFilterAndProjectOperatorTest {
             col6.set(i, i % 55);
         }
 
-        op.addInput(makeInput(col1, col2, col3, col4, col5, col6));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 543);
-        ByteBuffer[] buffers = res.getBuffers();
-        IntBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        IntBuffer res2 = buffers[1].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        DoubleBuffer res4 = buffers[2].order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
-        LongBuffer res5 = buffers[3].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1, col2, col3, col4, col5, col6));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 543);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res2 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        DoubleBuffer res4 = res.getVectors()[2].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        LongBuffer res5 = res.getVectors()[3].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         while (res0.hasRemaining()) {
             Assert.assertTrue((res0.get() != 1 && res2.get() > 4800 && res4.get() < 50.8) ||  res5.get() >= 52);
         }
@@ -402,14 +390,13 @@ public class OmniFilterAndProjectOperatorTest {
             col4.set(i, i % 9 - 4);
         }
 
-        op.addInput(makeInput(col1, col2, col3, col4));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 3498);
-        ByteBuffer[] buffers = res.getBuffers();
-        LongBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-        LongBuffer res1 = buffers[1].order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-        IntBuffer res2 = buffers[2].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        IntBuffer res3 = buffers[3].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1, col2, col3, col4));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 3498);
+        LongBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        IntBuffer res2 = res.getVectors()[2].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res3 = res.getVectors()[3].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res0.hasRemaining()) {
             Assert.assertTrue((res0.get() >= 0 || res1.get() <= -3e9) && (res2.get() == -12 || res3.get() < 50));
         }
@@ -443,10 +430,10 @@ public class OmniFilterAndProjectOperatorTest {
         col1.set(7, 13);
         col2.set(2, 0);
 
-        op.addInput(makeInput(col1, col2));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 6);
-        IntBuffer fib = res.getBuffers()[1].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1, col2));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 6);
+        IntBuffer fib = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         Assert.assertEquals(fib.get(), 1);
         Assert.assertEquals(fib.get(), 2);
         Assert.assertEquals(fib.get(), 3);
@@ -472,10 +459,10 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(col1));
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 2000);
-        IntBuffer res0 = res.getBuffers()[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        op.addInput(makeInput(NUM_ROWS, col1));
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 2000);
+        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res0.hasRemaining()) {
             Assert.assertEquals(res0.get(), 5);
         }
@@ -518,10 +505,10 @@ public class OmniFilterAndProjectOperatorTest {
         List<Vec> table = createTable(NUM_ROWS);
         for (int i = 0; i < 1000; i++) {
             Thread t = new Thread(() -> {
-                op.addInput(ImmutableList.of(new VecBatch(table)));
-                OMResult res = op.getOutput()[0];
+                op.addInput(ImmutableList.copyOf(new VecBatch[] {new VecBatch(table, NUM_ROWS)}));
+                VecBatch res = op.getOutput().next();
                 // System.out.println(res.getLength());
-                Assert.assertEquals(res.getLength(), 501);
+                Assert.assertEquals(res.getRowCount(), 501);
             });
             t.start();
         }
