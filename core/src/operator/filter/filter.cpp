@@ -34,7 +34,7 @@ OmniFilterOperatorFactory::~OmniFilterOperatorFactory()
     delete this->filter;
 }
 
-OmniOperator * OmniFilterOperatorFactory::createOmniOperator()
+omni::Operator * OmniFilterOperatorFactory::createOperator()
 {
     return new OmniFilterOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }

@@ -92,7 +92,7 @@ TEST (FilterTest, LessThan) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$LESS_THAN(#0, 2000)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
 
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
@@ -123,7 +123,7 @@ TEST (FilterTest, GreaterThan) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$GREATER_THAN(#0, 20)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
 
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
@@ -157,7 +157,7 @@ TEST (FilterTest, EqualTo) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$EQUAL(#2, 50)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
 
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
@@ -191,7 +191,7 @@ TEST (FilterTest, GreaterThanOrEqualTo) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$GREATER_THAN_OR_EQUAL(#1, 30)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 834);
@@ -219,7 +219,7 @@ TEST (FilterTest, NotEqualTo) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$NOT_EQUAL(#0, 0)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
 
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
@@ -248,7 +248,7 @@ TEST (FilterTest, AllPass) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$EQUAL(#0, 9348)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
 
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
@@ -278,7 +278,7 @@ TEST (FilterTest, MultipleInputs) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$LESS_THAN_OR_EQUAL(#0, 4)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
 
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
@@ -327,7 +327,7 @@ TEST (FilterTest, NegativeValues) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("AND($operator$LESS_THAN_OR_EQUAL(#0, -1), $operator$LESS_THAN_OR_EQUAL(#1, -1))", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter2));
@@ -369,7 +369,7 @@ TEST (FilterTest, AllTypes) {
     Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
     std::string expr = "AND($operator$EQUAL(#0, 0), AND($operator$EQUAL(#1, 1000000000), $operator$GREATER_THAN_OR_EQUAL(#2, 0.4)))";
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(in1, NUM_ROWS);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter3));
@@ -414,7 +414,7 @@ TEST (FilterTest, Compile) {
     Table* t = createInput(DATA_SIZE, NUM_COLS, inputTypes, datas);
 
     NativeOmniFilterOperatorFactory *factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, NUM_COLS, projectIdx, 1);
-    NativeOmniOperator *op = factory->createOmniOperator();
+    NativeOmniOperator *op = factory->createOperator();
     op->addInput(t, DATA_SIZE);
     std::vector<Table*> ret;
     int32_t numSelectedRows = op->getOutput(ret);
@@ -466,7 +466,7 @@ TEST (FilterTest, LogicalOperators1) {
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
     int32_t numReturned = op->getOutput(ret);
@@ -502,7 +502,7 @@ TEST (FilterTest, LogicalOperators2) {
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
     int32_t numReturned = op->getOutput(ret);
@@ -540,7 +540,7 @@ TEST (FilterTest, LogicalOperators3) {
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
     int32_t numReturned = op->getOutput(ret);
@@ -569,7 +569,7 @@ TEST (FilterTest, ArithmeticAdd) {
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$GREATER_THAN(ADD(#0, 1), 4)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
     int32_t numReturned = op->getOutput(ret);
@@ -599,7 +599,7 @@ TEST (FilterTest, ArithmeticSubtract) {
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory("$operator$LESS_THAN(0, SUBTRACT(#0, 5))", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
     int32_t numReturned = op->getOutput(ret);
@@ -630,7 +630,7 @@ TEST (FilterTest, ArithmeticMultiply) {
 
     std::string expr = "AND($operator$EQUAL(0, MULTIPLY(#0, #0)), $operator$GREATER_THAN(7, MULTIPLY(2, #1)))";
     NativeOmniOperatorFactory* factory = new NativeOmniFilterOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
-    NativeOmniOperator* op = factory->createOmniOperator();
+    NativeOmniOperator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
     int32_t numReturned = op->getOutput(ret);

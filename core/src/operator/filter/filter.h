@@ -1,8 +1,8 @@
 #ifndef __FILTER_H__
 #define __FILTER_H__
 
-#include "../omni_operator_factory.h"
-#include "../omni_operator.h"
+#include "../operator_factory.h"
+#include "../operator.h"
 #include "../../vector/table.h"
 #include "../../util/debug.h"
 #include "../../codegen/llvm_codegen.h"
@@ -19,7 +19,7 @@ private:
     Expr* expr;
 };
 
-class OmniFilterOperator : public OmniOperator
+class OmniFilterOperator : public omni::Operator
 {
 public:
     OmniFilterOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
@@ -37,7 +37,7 @@ public:
 
     int32_t *getSourceTypes() override { return this->inputTypes; }
 
-    void close() override { delete this; }
+    // void close() override { delete this; }
 
     private:
     Filter *filter;
@@ -48,14 +48,14 @@ public:
     Table *projectedVecs;
 };
 
-class OmniFilterOperatorFactory : public OmniOperatorFactory
+class OmniFilterOperatorFactory : public OperatorFactory
 {
 public:
     OmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount);
 
     ~OmniFilterOperatorFactory() override;
 
-    OmniOperator* createOmniOperator() override;
+    omni::Operator* createOperator() override;
 
 private:
     std::string expression;
