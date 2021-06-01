@@ -183,17 +183,17 @@ bool LLVMCodeGen::execute(int32_t arg0, int32_t arg1, int32_t arg2, int32_t arg3
 }
 
 
-int main()
-{
-	LLVMCodeGen codeGenObj;
-    ComparisionExpr left_expr;
-	left_expr.columnData = 2;
-	left_expr.columnIdx = 0;
-	left_expr.op = ComparisionOperator::LT;
-    codeGenObj.generateFunc("test_func", &left_expr);
-    codeGenObj.compile();
-    Expr * expr = &left_expr;
-    cout<<"Result:::" << codeGenObj.execute(expr, 4);
+// int main()
+// {
+// 	LLVMCodeGen codeGenObj;
+//     ComparisionExpr left_expr;
+// 	left_expr.columnData = 2;
+// 	left_expr.columnIdx = 0;
+// 	left_expr.op = ComparisionOperator::LT;
+//     codeGenObj.generateFunc("test_func", &left_expr);
+//     codeGenObj.compile();
+//     Expr * expr = &left_expr;
+//     cout<<"Result:::" << codeGenObj.execute(expr, 4);
      
-	return 0;
-}
+// 	return 0;
+// }
