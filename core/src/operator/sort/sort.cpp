@@ -92,7 +92,7 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
     }
 }
 
-OmniSortOperatorFactory::OmniSortOperatorFactory(
+SortOperatorFactory::SortOperatorFactory(
     int32_t *sourceTypes,
     int32_t sourceTypeCount,
     int32_t *outputCols,
@@ -125,7 +125,7 @@ OmniSortOperatorFactory::OmniSortOperatorFactory(
     this->sortColCount = sortColCount;
 }
 
-OmniSortOperatorFactory::~OmniSortOperatorFactory()
+SortOperatorFactory::~SortOperatorFactory()
 {
     delete[] sourceTypes;
     delete[] outputCols;
@@ -134,7 +134,7 @@ OmniSortOperatorFactory::~OmniSortOperatorFactory()
     delete[] sortNullFirsts;
 }
 
-OmniSortOperatorFactory * OmniSortOperatorFactory::createOperatorFactory(
+SortOperatorFactory * SortOperatorFactory::createOperatorFactory(
     int32_t *sourceTypes,
     int32_t sourceTypeCount,
     int32_t *outputCols,
@@ -144,7 +144,7 @@ OmniSortOperatorFactory * OmniSortOperatorFactory::createOperatorFactory(
     int32_t *sortNullFirsts,
     int32_t sortColCount)
 {
-    OmniSortOperatorFactory *operatorFactory = new OmniSortOperatorFactory(
+    SortOperatorFactory *operatorFactory = new SortOperatorFactory(
         sourceTypes,
         sourceTypeCount,
         outputCols,
@@ -156,9 +156,9 @@ OmniSortOperatorFactory * OmniSortOperatorFactory::createOperatorFactory(
     return operatorFactory;
 }
 
-OmniOperator * OmniSortOperatorFactory::createOperator()
+omni::Operator * SortOperatorFactory::createOperator()
 {
-    OmniSortOperator *sortOperator = new OmniSortOperator(
+    SortOperator *sortOperator = new SortOperator(
         sourceTypes,
         sourceTypeCount,
         outputCols,
@@ -171,7 +171,7 @@ OmniOperator * OmniSortOperatorFactory::createOperator()
 }
 
 // function implements for class Sort
-OmniSortOperator::OmniSortOperator(
+SortOperator::SortOperator(
     int32_t *sourceTypes,
     int32_t typesCount,
     int32_t *outputCols,
@@ -192,12 +192,12 @@ OmniSortOperator::OmniSortOperator(
     this->pagesIndex = new PagesIndex(sourceTypes, typesCount);
 }
 
-OmniSortOperator::~OmniSortOperator()
+SortOperator::~SortOperator()
 {
     delete pagesIndex;
 }
 
-int32_t OmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
+int32_t SortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
 {
     if (pageCount <= 0) {
         return 0;
@@ -208,7 +208,7 @@ int32_t OmniSortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pa
 }
 
 // return error code
-int32_t OmniSortOperator::getOutput(vector<Table *>& outputTables)
+int32_t SortOperator::getOutput(vector<Table *>& outputTables)
 {
     int32_t positionCount = pagesIndex->getPositionCount();
     if (positionCount <= 0) {

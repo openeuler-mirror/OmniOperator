@@ -8,8 +8,10 @@
 #include "jni_operator.h"
 #include "jni_common_def.h"
 #include "../vector/table.h"
-#include "../operator/omni_operator_factory.h"
+#include "../operator/operator_factory.h"
 #include "../util/debug.h"
+
+using namespace omni;
 
 jobject transformTableToResult(JNIEnv *env, Table *outputTable)
 {
@@ -90,7 +92,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 {
     JNI_DEBUG_LOG("add input starting.");
     auto start = START();
-    OmniOperator *nativeOperator = (OmniOperator *)jOperatorAddr;
+    omni::Operator *nativeOperator = (omni::Operator *)jOperatorAddr;
     int32_t *sourceTypes = nativeOperator->getSourceTypes();
     int64_t *inputDatas = (int64_t *)jInputDataAddress;
     int32_t *rowCounts = (int32_t *)jRowCountAddress;
@@ -135,7 +137,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 {
     JNI_DEBUG_LOG("get output starting.");
     auto start = START();
-    OmniOperator *nativeOperator = (OmniOperator *)jOperatorAddr;
+    omni::Operator *nativeOperator = (omni::Operator *)jOperatorAddr;
     std::vector<Table *> outputTables;
     int32_t errNo = nativeOperator->getOutput(outputTables);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
@@ -157,7 +159,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
         (JNIEnv *env, jobject jObj, jlong jOperatorAddr)
 {
     JNI_DEBUG_LOG("close starting.");
-    OmniOperator *nativeOperator = (OmniOperator *)jOperatorAddr;
+    omni::Operator *nativeOperator = (omni::Operator *)jOperatorAddr;
     delete nativeOperator;
     JNI_DEBUG_LOG("close finished, elapsed time: %ld ms.", END(start));
 }
