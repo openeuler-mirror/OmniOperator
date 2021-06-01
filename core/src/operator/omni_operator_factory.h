@@ -18,7 +18,7 @@ class OmniOperatorFactory
 public:
     OmniOperatorFactory() {}
     virtual ~OmniOperatorFactory(){}
-    virtual OmniOperator *createOperator(){ return nullptr; };
+    virtual OmniOperator *createOmniOperator(){ return nullptr; };
     virtual void setJitContext(JitContext* JitContext)
     {
         jitContext = JitContext;

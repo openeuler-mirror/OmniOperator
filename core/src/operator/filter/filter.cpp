@@ -52,10 +52,10 @@ int32_t OmniFilterOperator::addInput(Table* data, int32_t rowCount)
     return numSelectedRows;
 }
 
-int32_t OmniFilterOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount) override
+int32_t OmniFilterOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount)
 {
     if (pageCount != 1) {
-        std::cout << "ERROR: invalid page count " << pageCount << std::end
+        std::cout << "ERROR: invalid page count " << pageCount << std::endl;
     }
 
     int32_t pageRowCount = rowCount[0];

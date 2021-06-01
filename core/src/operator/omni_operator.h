@@ -15,6 +15,7 @@ public:
     virtual int32_t addInput(Table **data, int32_t *rowCount, int32_t pageCount) = 0;
     virtual int32_t getOutput(std::vector<Table *>& data) = 0;
     virtual int32_t* getSourceTypes() = 0;
+    virtual void close() = 0;
 };
 
 #endif

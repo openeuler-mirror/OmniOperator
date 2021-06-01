@@ -2,8 +2,11 @@ package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.*;
+
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import java.nio.*;
 import java.util.ArrayList;
@@ -14,6 +17,10 @@ import java.util.List;
 import static nova.hetu.omniruntime.operator.OmniFilterAndProjectOperatorFactory.create;
 
 public class OmniFilterAndProjectOperatorTest {
+
+    private ImmutableList<VecBatch> makeInput(Vec ...cols) {
+        return ImmutableList.of(cols);
+    }
 
     @Test
     public void lessThan()
@@ -30,13 +37,11 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < NUM_ROWS; i++) {
             col1.set(i, i);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1));
 
-        OMResult res = op.getOutput()[0];
-        Assert.assertEquals(res.getLength(), 2000);
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 2000);
         IntBuffer res1 = res.getBuffers()[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res1.hasRemaining()) {
             Assert.assertTrue(res1.get() < 2000);
@@ -60,13 +65,10 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i % 25);
             col2.set(i, 3000000000L);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        table.add(col2);
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2));
 
-        OMResult res = op.getOutput()[0];
+        VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getLength(), 800);
         ByteBuffer[] buffers = res.getBuffers();
         IntBuffer res0 = buffers[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -95,11 +97,8 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, i % 100);
             col3.set(i, i % 100);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        table.add(col2);
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2));
 
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 50);
@@ -131,11 +130,8 @@ public class OmniFilterAndProjectOperatorTest {
             if (i % 45 == 0) v = 30;
             col2.set(i, v);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        table.add(col2);
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2));
 
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 834);
@@ -161,10 +157,8 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < NUM_ROWS; i++) {
             col1.set(i, i);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1));
 
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 4999);
@@ -190,10 +184,8 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < NUM_ROWS; i++) {
             col1.set(i, 9348);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1));
 
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 20000);
@@ -221,9 +213,7 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i % 10);
             col2.set(i, i % 6 + 1);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1));
 
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 500);
@@ -234,10 +224,8 @@ public class OmniFilterAndProjectOperatorTest {
             Assert.assertTrue(res1.get() <= 4);
         }
 
-        table = new ArrayList<>();
-        table.add(col2);
         // Test multiple inputs
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col2));
         res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 668);
         buffers = res.getBuffers();
@@ -271,11 +259,7 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, val2);
         }
 
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        table.add(col2);
-
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 286);
         ByteBuffer[] buffers = res.getBuffers();
@@ -307,12 +291,8 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, i % 2 == 0 ? (long) 3e9 : 0);
             col3.set(i, i % 10 / 10D);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        table.add(col2);
-        table.add(col3);
 
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2, col3));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 1000);
         ByteBuffer[] buffers = res.getBuffers();
@@ -341,7 +321,6 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 10 / 100D);
             col4.set(i, i);
         }
-        List<Vec> table = new ArrayList<>(Arrays.asList(col1, col2, col3, col4));
 
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND(AND($operator$GREATER_THAN(#3, 8766), $operator$LESS_THAN(#3, 9131)), AND($operator$BETWEEN(#2, 0.05, 0.07), $operator$LESS_THAN(#0, 24.0)))",
@@ -349,7 +328,7 @@ public class OmniFilterAndProjectOperatorTest {
                 projectIndices
         );
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2, col3, col4));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 100);
         ByteBuffer[] buffers = res.getBuffers();
@@ -385,9 +364,8 @@ public class OmniFilterAndProjectOperatorTest {
             col5.set(i, 50 + i / 10D);
             col6.set(i, i % 55);
         }
-        List<Vec> table = new ArrayList<>(Arrays.asList(col1, col2, col3, col4, col5, col6));
 
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2, col3, col4, col5, col6));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 543);
         ByteBuffer[] buffers = res.getBuffers();
@@ -423,9 +401,8 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
             col4.set(i, i % 9 - 4);
         }
-        List<Vec> table = new ArrayList<>(Arrays.asList(col1, col2, col3, col4));
 
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2, col3, col4));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 3498);
         ByteBuffer[] buffers = res.getBuffers();
@@ -465,11 +442,8 @@ public class OmniFilterAndProjectOperatorTest {
         col1.set(6, 8);
         col1.set(7, 13);
         col2.set(2, 0);
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
-        table.add(col2);
 
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1, col2));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 6);
         IntBuffer fib = res.getBuffers()[1].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -496,11 +470,9 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < NUM_ROWS; i++) {
             col1.set(i, i % 5);
         }
-        List<Vec> table = new ArrayList<>();
-        table.add(col1);
 
         OmniOperator op = factory.createOperator();
-        op.addInput(table, NUM_ROWS);
+        op.addInput(makeInput(col1));
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 2000);
         IntBuffer res0 = res.getBuffers()[0].order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -546,7 +518,7 @@ public class OmniFilterAndProjectOperatorTest {
         List<Vec> table = createTable(NUM_ROWS);
         for (int i = 0; i < 1000; i++) {
             Thread t = new Thread(() -> {
-                op.addInput(table, NUM_ROWS);
+                op.addInput(ImmutableList.of(new VecBatch(table)));
                 OMResult res = op.getOutput()[0];
                 // System.out.println(res.getLength());
                 Assert.assertEquals(res.getLength(), 501);
