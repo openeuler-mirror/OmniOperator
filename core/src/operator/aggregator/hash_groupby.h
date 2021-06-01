@@ -1,13 +1,15 @@
 #ifndef __HASH_GROUPBY_H__
 #define __HASH_GROUPBY_H__
 
-#include "../omni_operator_factory.h"
+#include "../operator_factory.h"
 #include "aggregator.h"
 #include "../../util/debug.h"
 
 #include <vector>
 #include <stdint.h>
 #include <thread>
+
+using namespace omni;
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 
@@ -33,12 +35,12 @@ typedef struct HashPosition
     uint32_t offset;
 } HashPosition;
 
-class OmniHashAggregationOperatorFactory;
+class HashAggregationOperatorFactory;
 
-class OmniHashAggregationOperator : public OmniOperator
+class HashAggregationOperator : public omni::Operator
 {
 public:
-    OmniHashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs)
+    HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs)
     : groupByCols(groupByCol), aggCols(aggCol), aggregators(aggs)
     {
         int32_t colSize = groupByCol.size() + aggCol.size();
@@ -58,11 +60,11 @@ public:
 
     int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
 
-    OmniHashAggregationOperator(std::vector<Aggregator*> aggregators)
+    HashAggregationOperator(std::vector<Aggregator*> aggregators)
     : aggregators(aggregators)
     { }
 
-    ~OmniHashAggregationOperator()
+    ~HashAggregationOperator()
     {
         // delete map
         for (auto& item : groupedRows) {
@@ -106,7 +108,7 @@ public:
     }
 
 private:
-    friend class OmniHashAggregationOperatorFactory;
+    friend class HashAggregationOperatorFactory;
     std::vector<Aggregator*> aggregators;
     std::unordered_map<uint64_t, std::vector<GroupByColumn>> groupedRows;
     std::vector<ColumnIndex> groupByCols;
@@ -115,17 +117,17 @@ private:
     int32_t* sourceTypes;
 };
 
-class OmniHashAggregationOperatorFactory : public OmniOperatorFactory
+class HashAggregationOperatorFactory : public OperatorFactory
 {
 public:
-    OmniOperator* createOperator() override;
+    omni::Operator* createOperator() override;
 
-    OmniHashAggregationOperatorFactory
+    HashAggregationOperatorFactory
     (PrepareContext groupByCol, PrepareContext groupByType, PrepareContext aggCol, PrepareContext aggType, PrepareContext aggFuncType)
     : groupByColContext(groupByCol), groupByTypeContext(groupByType), aggColContext(aggCol), aggTypeContext(aggType), aggFuncTypeContext(aggFuncType)
     { }
 
-    ~OmniHashAggregationOperatorFactory() override
+    ~HashAggregationOperatorFactory() override
     {}
 private:
     PrepareContext groupByColContext; 
@@ -135,6 +137,6 @@ private:
     PrepareContext aggFuncTypeContext;
 };
 
-typedef void (*jit_module)(OmniHashAggregationOperator*, Table*);
+typedef void (*jit_module)(HashAggregationOperator*, Table*);
 
 #endif

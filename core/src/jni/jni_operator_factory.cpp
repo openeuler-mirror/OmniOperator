@@ -6,10 +6,12 @@
 #include "../memory/memory_pool.h"
 #include "../jit/param_value.h"
 #include "../jit/hammer.h"
-#include "../operator/omni_operator_factory.h"
+#include "../operator/operator_factory.h"
 #include "../operator/sort/sort.h"
 #include "../operator/aggregator/hash_groupby.h"
 #include "../util/debug.h"
+
+using namespace omni;
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
@@ -21,9 +23,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 {
     JNI_DEBUG_LOG("create omni operator starting.");
     auto start = START();
-    OmniOperatorFactory *operatorFactory = (OmniOperatorFactory *)jNativeFactoryObj;
+    OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
     JitContext *jitContext = operatorFactory->getJitContext();
-    OmniOperator *nativeOperator = NULL;
+    omni::Operator *nativeOperator = NULL;
 
     if (jitContext == NULL) {
         nativeOperator = operatorFactory->createOperator();
@@ -116,12 +118,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
 
-    auto func = (opt_module)(jitter->lookup("_ZN34OmniHashAggregationOperatorFactory14createOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);
     jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
 
-    OmniHashAggregationOperatorFactory* nativeOperatorFactory = new OmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    HashAggregationOperatorFactory* nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     nativeOperatorFactory->setJitContext(jitContext);
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -159,7 +161,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
     jint sortColsCount = env->GetArrayLength(jSortCols);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
-    OmniSortOperatorFactory *sortOperatorFactory = OmniSortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
             sourceTypesArr,
             sourceTypesCount,
             outputColsArr,
@@ -241,7 +243,7 @@ JitContext *createSortJitContext(
 
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN23OmniSortOperatorFactory14createOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN19SortOperatorFactory14createOperatorEv")->getAddress());
 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);;
@@ -249,16 +251,4 @@ JitContext *createSortJitContext(
 
     JNI_DEBUG_LOG("create jit sort context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
-}
-
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory
-        (JNIEnv *env, jobject jObj, jintArray jInputTypes, jint jInputLength, jstring jExpression, jintArray jProjectIndices, jint jProjectLength)
-{
-    std::string filterExpression = std::string(env->getStringUTFChars(jExpression, JNI_FALSE));
-    jint *inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
-    int32_t inputLength = (int32_t) jInputLength;
-    jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
-    int32_t projectLength = (int32_t) jProjectIndices;
-    NativeOmniFilterOperatorFactory *factory = new NativeOmniFilterOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
-    return (int64_t) factory;
 }

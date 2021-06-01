@@ -72,7 +72,10 @@ public final class OmniOperator
         public boolean hasNext()
         {
             if (results == null || (index == results.getVecBatches().length && !isFinished())) {
-                return advanced();
+                advanced();
+            }
+            if (results == null || index == results.getVecBatches().length) {
+                return false;
             }
             return true;
         }
@@ -83,14 +86,10 @@ public final class OmniOperator
             return results.getVecBatches()[index++];
         }
 
-        private boolean advanced()
+        private void advanced()
         {
             index = 0;
             results = getOutput(nativeOperator);
-            if (isFinished()) {
-                return false;
-            }
-            return true;
         }
 
         private boolean isFinished()

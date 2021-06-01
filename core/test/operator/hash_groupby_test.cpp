@@ -117,7 +117,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness)
     SumAggregator* sum2 = new SumAggregator(3);
     aggs.push_back(sum1);
     aggs.push_back(sum2);
-    OmniHashAggregationOperator* groupBy = new OmniHashAggregationOperator(v1, v2, aggs);
+    HashAggregationOperator* groupBy = new HashAggregationOperator(v1, v2, aggs);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
         groupBy->addInput(input[i], DATA_SIZE);
@@ -182,7 +182,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCol
     SumAggregator* sum2 = new SumAggregator(2);
     aggs.push_back(sum1);
     aggs.push_back(sum2);
-    OmniHashAggregationOperator* groupBy = new OmniHashAggregationOperator(v1, v2, aggs);
+    HashAggregationOperator* groupBy = new HashAggregationOperator(v1, v2, aggs);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
         groupBy->addInput(input[i], DATA_SIZE);
@@ -222,7 +222,7 @@ void perfTest(int64_t moduleAddr, Table** input, int32_t pageNum, int32_t* rowCo
         columnTypes1[i] = (int32_t)input[0]->getColumnTypes()[i];
     }
     // create operatory
-    OmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<OmniHashAggregationOperatorFactory*>(moduleAddr);
+    HashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<HashAggregationOperatorFactory*>(moduleAddr);
     auto groupBy = reinterpret_cast<opt_module>(nativeOperatorFactory->getJitContext()->func)(nativeOperatorFactory);
  
     // execution
@@ -284,23 +284,21 @@ uint64_t prepare()
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
-    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
-    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
-    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
-    testParam["_ZN33NativeOmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@9"] = &p_agg_types;
-    
+    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
+    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
+    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
+    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
+    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@9"] = &p_agg_types;
+
     testParam["processAgg@2"] =  &p_agg_types;
     testParam["processAgg@3"] =  &p_agg_num;
     testParam["processAgg@4"] =  &p_col_type;
 
-    testParam["_ZN33NativeOmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@2"] = &p_col_type;
-    testParam["_ZN33NativeOmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
-    testParam["_ZN33NativeOmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
-
+    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@2"] = &p_col_type;
+    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
+    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-
     Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
     Hammer hammer2("/opt/lib/ir/hash_groupby.ll", testParam);
     Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
@@ -313,12 +311,12 @@ uint64_t prepare()
     deps.push_back(&hammer2);
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN40NativeOmniHashAggregationOperatorFactory18createOmniOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);
     jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
     std::cout << "after jit" << std::endl;
-    OmniHashAggregationOperatorFactory* nativeOperatorFactory = new OmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    HashAggregationOperatorFactory* nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->setJitContext(jitContext); 
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -387,7 +385,7 @@ void perfTestOriginal(int64_t moduleAddr, Table** input)
         columnTypes1[i] = (int32_t)input[0]->getColumnTypes()[i];
     }
     // create operatory
-    OmniHashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<OmniHashAggregationOperatorFactory*>(moduleAddr);
+    HashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<HashAggregationOperatorFactory*>(moduleAddr);
     auto groupBy = nativeOperatorFactory->createOperator();
  
     // execution
@@ -435,7 +433,7 @@ TEST(NativeOmniHashAggregationOperatorTest, Original_Multiple_Threads)
     PrepareContext aggTypeContext = {aggTypes, 2};
     PrepareContext aggFuncTypeContext = {aggFunType, 2};
     PrepareContext retTypesContext = {retTypes, 4};
-    OmniHashAggregationOperatorFactory* nativeOperatorFactory = new OmniHashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    HashAggregationOperatorFactory* nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
     
     int threadNums[] = {1, 8, 16, 32, 64};

@@ -11,7 +11,7 @@
 #include <sstream>
 #endif
 
-OmniOperator * OmniHashAggregationOperatorFactory::createOperator()
+omni::Operator * HashAggregationOperatorFactory::createOperator()
 {
     std::vector<ColumnIndex> groupByIndex;
     std::vector<ColumnIndex> aggIndex;
@@ -51,16 +51,16 @@ OmniOperator * OmniHashAggregationOperatorFactory::createOperator()
         }
     }
 
-    OmniHashAggregationOperator* groupBy = new OmniHashAggregationOperator(groupByIndex, aggIndex, aggs);
+    HashAggregationOperator* groupBy = new HashAggregationOperator(groupByIndex, aggIndex, aggs);
     return groupBy;
 }
 
-void OmniHashAggregationOperator::preloop(Table* table)
+void HashAggregationOperator::preloop(Table* table)
 {
     this->inputColTypes = new uint32_t[groupByCols.size() + aggCols.size()];
 }
 
-void OmniHashAggregationOperator::inloop(Table* table, uint32_t rowIndex)
+void HashAggregationOperator::inloop(Table* table, uint32_t rowIndex)
 {
     // caculate hash value on group by column(s)
     uint64_t combinedHash = 0;
@@ -119,7 +119,7 @@ void OmniHashAggregationOperator::inloop(Table* table, uint32_t rowIndex)
     }
 }
 
-void OmniHashAggregationOperator::postloop(Table* table)
+void HashAggregationOperator::postloop(Table* table)
 {
 
 }
@@ -172,7 +172,7 @@ extern "C" void processAgg(uint64_t key,
     }
 }
 
-void OmniHashAggregationOperator::inloop(char** head,
+void HashAggregationOperator::inloop(char** head,
                                                 uint32_t offset, 
                                                 int32_t* types, 
                                                 int32_t colNum,  
@@ -256,7 +256,7 @@ void OmniHashAggregationOperator::inloop(char** head,
     processAgg(combinedHash.hashVal, aggregators, aggFuncTypes, aggColNum, types, aggColIdx, (void**)head, offset);
 }
 
-int32_t OmniHashAggregationOperator::addInput(Table* table, int32_t rowCount)
+int32_t HashAggregationOperator::addInput(Table* table, int32_t rowCount)
 {
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncEntry;
@@ -291,7 +291,7 @@ int32_t OmniHashAggregationOperator::addInput(Table* table, int32_t rowCount)
     return 0;
 }
 
-int32_t OmniHashAggregationOperator::addInput(Table** tables, int32_t* rowCount, int32_t pageCount)
+int32_t HashAggregationOperator::addInput(Table** tables, int32_t* rowCount, int32_t pageCount)
 {
     for (int32_t tableIdx = 0; tableIdx < pageCount; ++tableIdx) {
         this->addInput(tables[tableIdx], rowCount[tableIdx]);
@@ -305,7 +305,7 @@ typedef std::chrono::duration<float> fsec;
 
 fsec g_total_execute_time;
 
-void OmniHashAggregationOperator::constructColumn(Table* table,
+void HashAggregationOperator::constructColumn(Table* table,
                                                         int32_t* types, 
                                                         uint32_t groupByColSize, 
                                                         uint32_t aggColSize, 
@@ -417,7 +417,7 @@ void OmniHashAggregationOperator::constructColumn(Table* table,
 #endif 
 }
 
-int32_t OmniHashAggregationOperator::getOutput(std::vector<Table*>& result)
+int32_t HashAggregationOperator::getOutput(std::vector<Table*>& result)
 {
     uint32_t gbSize = groupByCols.size();
     uint32_t aggSize = aggCols.size();
@@ -503,7 +503,7 @@ int32_t OmniHashAggregationOperator::getOutput(std::vector<Table*>& result)
     return pageCount;
 }
 
-void OmniHashAggregationOperator::constructColumn(Table* table,
+void HashAggregationOperator::constructColumn(Table* table,
                                                         uint32_t type,
                                                         int32_t columnIdx,
                                                         uint32_t outputColType) 
