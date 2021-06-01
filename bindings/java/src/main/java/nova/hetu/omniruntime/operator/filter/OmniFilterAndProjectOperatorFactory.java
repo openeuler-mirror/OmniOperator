@@ -16,8 +16,8 @@ public class OmniFilterAndProjectOperatorFactory
     private int[] projectIndices;
 
     public OmniFilterAndProjectOperatorFactory(
-            VecType[] inputTypes,
             String expression,
+            VecType[] inputTypes,
             int[] projectIndices)
     {
         this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
@@ -34,6 +34,12 @@ public class OmniFilterAndProjectOperatorFactory
                 expression,
                 projectIndices,
                 projectIndices.length);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(expression, inputTypes, projectIndices);
     }
 
     private static native long createFilterAndProjectOperatorFactory(int[] inputTypes, int inputLength, String expression, int[] projectIndices, int projectLength);

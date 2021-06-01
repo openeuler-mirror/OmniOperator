@@ -1,5 +1,6 @@
 package nova.hetu.omniruntime.operator;
 
+import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.*;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -10,16 +11,16 @@ import java.util.Arrays;
 import java.util.List;
 
 
-import static nova.hetu.omniruntime.operator.JFilterAndProjectOperator.JFilterAndProjectOperatorFactory.create;
+import static nova.hetu.omniruntime.operator.OmniFilterAndProjectOperatorFactory.create;
 
-public class JFilterAndProjectTest {
+public class OmniFilterAndProjectOperatorTest {
 
     @Test
     public void lessThan()
     {
         VecType[] types = {VecType.INT};
         int[] projectIndices = {0};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN(#0, 2000)",
                 types,
                 projectIndices
@@ -31,7 +32,7 @@ public class JFilterAndProjectTest {
         }
         List<Vec> table = new ArrayList<>();
         table.add(col1);
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
 
         OMResult res = op.getOutput()[0];
@@ -47,7 +48,7 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.INT, VecType.LONG};
         int[] projectIndices = {0, 1};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN(#0, 20)",
                 types,
                 projectIndices
@@ -62,7 +63,7 @@ public class JFilterAndProjectTest {
         List<Vec> table = new ArrayList<>();
         table.add(col1);
         table.add(col2);
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
 
         OMResult res = op.getOutput()[0];
@@ -81,7 +82,7 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
         int[] projectIndices = {2, 1};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$EQUAL(#2, 50)",
                 types,
                 projectIndices
@@ -97,7 +98,7 @@ public class JFilterAndProjectTest {
         List<Vec> table = new ArrayList<>();
         table.add(col1);
         table.add(col2);
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
 
         OMResult res = op.getOutput()[0];
@@ -116,7 +117,7 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.INT, VecType.INT};
         int[] projectIndices = {1};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN_OR_EQUAL(#1, 30)",
                 types,
                 projectIndices
@@ -133,7 +134,7 @@ public class JFilterAndProjectTest {
         List<Vec> table = new ArrayList<>();
         table.add(col1);
         table.add(col2);
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
 
         OMResult res = op.getOutput()[0];
@@ -150,7 +151,7 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.DOUBLE};
         int[] projectIndices = {0};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$NOT_EQUAL(#0, 0)",
                 types,
                 projectIndices
@@ -162,7 +163,7 @@ public class JFilterAndProjectTest {
         }
         List<Vec> table = new ArrayList<>();
         table.add(col1);
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
 
         OMResult res = op.getOutput()[0];
@@ -179,7 +180,7 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.INT};
         int[] projectIndices = {0};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$EQUAL(#0, 9348)",
                 types,
                 projectIndices
@@ -191,7 +192,7 @@ public class JFilterAndProjectTest {
         }
         List<Vec> table = new ArrayList<>();
         table.add(col1);
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
 
         OMResult res = op.getOutput()[0];
@@ -207,13 +208,13 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.INT};
         int[] projectIndices = {0};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN_OR_EQUAL(#0, 4)",
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 1000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(NUM_ROWS);
         IntVec col2 = new IntVec(NUM_ROWS);
         for (int i = 0; i < NUM_ROWS; i++) {
@@ -252,13 +253,13 @@ public class JFilterAndProjectTest {
 
         VecType[] types = {VecType.INT, VecType.LONG};
         int[] projectIndices = {0, 1};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND($operator$LESS_THAN_OR_EQUAL(#0, -1), $operator$LESS_THAN_OR_EQUAL(#1, -1))",
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 10000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(NUM_ROWS);
         LongVec col2 = new LongVec(NUM_ROWS);
         for (int i = 0; i < NUM_ROWS; i++) {
@@ -291,13 +292,13 @@ public class JFilterAndProjectTest {
     public void allTypes() {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
         int[] projectIndices = {0, 1, 2};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND($operator$EQUAL(#0, 0), AND($operator$EQUAL(#1, 1000000000), $operator$GREATER_THAN_OR_EQUAL(#2, 0.4)))",
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 10000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(NUM_ROWS);
         LongVec col2 = new LongVec(NUM_ROWS);
         DoubleVec col3 = new DoubleVec(NUM_ROWS);
@@ -342,12 +343,12 @@ public class JFilterAndProjectTest {
         }
         List<Vec> table = new ArrayList<>(Arrays.asList(col1, col2, col3, col4));
 
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND(AND($operator$GREATER_THAN(#3, 8766), $operator$LESS_THAN(#3, 9131)), AND($operator$BETWEEN(#2, 0.05, 0.07), $operator$LESS_THAN(#0, 24.0)))",
                 types,
                 projectIndices
         );
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 100);
@@ -363,13 +364,13 @@ public class JFilterAndProjectTest {
         VecType[] types = {VecType.INT, VecType.INT, VecType.INT, VecType.LONG, VecType.DOUBLE, VecType.LONG};
         int[] projectIndices = {0, 2, 4, 5};
         String s = "OR($operator$GREATER_THAN_OR_EQUAL(#5, 52), AND($operator$LESS_THAN(#4, 50.8), AND(AND($operator$GREATER_THAN(#2, 4800), $operator$LESS_THAN_OR_EQUAL(#1, 9990)), AND($operator$NOT_EQUAL(#0, 1), $operator$EQUAL(#3, 3000000000)))))";
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 s,
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 10000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(NUM_ROWS);
         IntVec col2 = new IntVec(NUM_ROWS);
         IntVec col3 = new IntVec(NUM_ROWS);
@@ -405,13 +406,13 @@ public class JFilterAndProjectTest {
         VecType[] types = {VecType.INT, VecType.INT, VecType.LONG, VecType.LONG};
         int[] projectIndices = {3, 2, 1, 0};
         String s = "AND(OR($operator$LESS_THAN(#0, 50), $operator$EQUAL(#1, -12)), OR($operator$LESS_THAN_OR_EQUAL(#2, -3000000000), $operator$GREATER_THAN_OR_EQUAL(#3, 0)))";
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 s,
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 10000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(NUM_ROWS);
         IntVec col2 = new IntVec(NUM_ROWS);
         LongVec col3 = new LongVec(NUM_ROWS);
@@ -442,13 +443,13 @@ public class JFilterAndProjectTest {
         VecType[] types = {VecType.INT, VecType.DOUBLE};
         int[] projectIndices = {1, 0};
         String expr = "OR(OR(OR($operator$EQUAL(#0, 1), $operator$EQUAL(#0, 2)), $operator$EQUAL(#0, 3)), OR(OR(OR(OR($operator$EQUAL(#0, 999), $operator$EQUAL(#0, 5)), $operator$EQUAL(#0, 8)), $operator$EQUAL(#0, 13)), $operator$NOT_EQUAL(#1, 0)))";
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 expr,
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 10000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(NUM_ROWS);
         DoubleVec col2 = new DoubleVec(NUM_ROWS);
         for (int i = 0; i < NUM_ROWS; i++) {
@@ -485,7 +486,7 @@ public class JFilterAndProjectTest {
     {
         VecType[] types = {VecType.INT};
         int[] projectIndices = {0};
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN(ADD(#0, 1), 4)",
                 types,
                 projectIndices
@@ -498,7 +499,7 @@ public class JFilterAndProjectTest {
         List<Vec> table = new ArrayList<>();
         table.add(col1);
 
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         op.addInput(table, NUM_ROWS);
         OMResult res = op.getOutput()[0];
         Assert.assertEquals(res.getLength(), 2000);
@@ -535,13 +536,13 @@ public class JFilterAndProjectTest {
         VecType[] types = {VecType.INT, VecType.INT, VecType.DOUBLE, VecType.DOUBLE};
         int[] projectIndices = {0, 1, 2, 3};
         String s = "$operator$LESS_THAN_OR_EQUAL(#0, 500)";
-        JFilterAndProjectOperator.JFilterAndProjectOperatorFactory factory = create(
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 s,
                 types,
                 projectIndices
         );
         final int NUM_ROWS = 1000;
-        JOmniOperator op = factory.createOmniOperator();
+        OmniOperator op = factory.createOperator();
         List<Vec> table = createTable(NUM_ROWS);
         for (int i = 0; i < 1000; i++) {
             Thread t = new Thread(() -> {
