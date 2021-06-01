@@ -9,7 +9,7 @@
 int g_tableCount;
 int g_distinctValue;
 int g_repeatCount;
-NativeOmniSortOperatorFactory *g_factory = NULL;
+OmniSortOperatorFactory *g_factory = NULL;
 Table **g_inputTables;
 
 typedef std::chrono::high_resolution_clock Time;
@@ -69,7 +69,7 @@ void sortProcess()
     int nullFirsts[] = {0, 0};
 
     //auto t0 = Time::now();
-    NativeOmniSortOperator *sortOperator = (NativeOmniSortOperator *)g_factory->createOmniOperator();
+    OmniSortOperator *sortOperator = (OmniSortOperator *)g_factory->createOperator();
     sortOperator->addInput(g_inputTables, rowCounts, g_tableCount);
     std::vector<Table *> outputTables;
     sortOperator->getOutput(outputTables);
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    g_factory = NativeOmniSortOperatorFactory::createNativeOmniSortOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    g_factory = OmniSortOperatorFactory::createOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     int threadNums[] = {1, 8, 16, 32, 64, 100};
     for (int i = 0; i < 6; i++) {

@@ -1,6 +1,6 @@
-project(Joy)
-set(MY_TARGET joy)
-set(MY_LINK data operator util memory harden)
+project(omni-runtime)
+set(MY_TARGET omni-runtime)
+set(MY_LINK operator util memory jit jni vector)
 
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_COMPILER "clang++-12")
@@ -17,7 +17,6 @@ message("=========================START BUILD======================")
 
 aux_source_directory(. ROOT_DIR)
 add_subdirectory(src)
-add_subdirectory(../jni)
 
 include_directories(inc)
 link_directories(lib)
@@ -37,11 +36,11 @@ set(EXTRA_LIBS ${EXTRA_LIBS} ${MY_LINK})
 message("========================= START ADD ======================")
 enable_testing()
 # add_executable(${MY_TARGET} ${ROOT_DIR})
-add_library(${MY_TARGET} SHARED ${ROOT_DIR})
+#add_library(${MY_TARGET} SHARED ${ROOT_DIR})
 
 message(STATUS "FOUND LLVM LIB ${llvm_libs}")
 
-target_link_libraries(${MY_TARGET} PUBLIC ${EXTRA_LIBS} ${llvm_libs} pthread dl stdc++ edit)
+#target_link_libraries(${MY_TARGET} PUBLIC ${EXTRA_LIBS} ${llvm_libs} pthread dl stdc++ edit)
 
-add_subdirectory(../tests)
+add_subdirectory(test/operator)
 message("=========================  END ======================")
