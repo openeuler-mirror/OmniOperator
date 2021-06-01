@@ -174,9 +174,9 @@ void test_sort(bool harden)
     int sortNullFirsts[] = {1, 1};
     int sortColCount = 2;
 
-    OmniSortOperatorFactory *sortOperatorFactory = OmniSortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-    OmniOperator *sortOperator = NULL;
+    omni::Operator *sortOperator = NULL;
     if (harden) {
         auto p_sortCols = ParamValue(sortCols, 2);
         auto p_sortColTypes = ParamValue(sortColTypes, 2);
