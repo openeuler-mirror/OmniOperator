@@ -1,13 +1,14 @@
 #ifndef __LOOKUP_JOIN_H__
 #define __LOOKUP_JOIN_H__
 
-#include "../native_base.h"
+#include "../operator_factory.h"
+#include "../operator.h"
 #include "join_hash_table.h"
 
-class NativeOmniLookupJoinOperatorFactory : public NativeOmniOperatorFactory
+class LookupJoinOperatorFactory : public OperatorFactory
 {
 public:
-    NativeOmniLookupJoinOperatorFactory(
+    LookupJoinOperatorFactory(
         int32_t *probeTypes,
         int32_t probeTypesCount,
         int32_t *probeOutputCols,
@@ -18,8 +19,8 @@ public:
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
         JoinHashTables *hashTables);
-    ~NativeOmniLookupJoinOperatorFactory();
-    static NativeOmniLookupJoinOperatorFactory *createNativeOmniLookupJoinOperatorFactory(
+    ~LookupJoinOperatorFactory();
+    static LookupJoinOperatorFactory *createLookupJoinOperatorFactory(
         int32_t *probeTypes,
         int32_t probeTypesCount,
         int32_t *probeOutputCols,
@@ -30,7 +31,7 @@ public:
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
         int64_t hashBuilderFactoryAddr);
-    NativeOmniOperator *createOmniOperator();
+    Operator *createOmniOperator();
 private:
     int32_t *probeTypes;      // all types for probe
     int32_t probeTypesCount;
@@ -47,10 +48,10 @@ private:
 class JoinProbe;
 class LookupJoinOutputBuilder;
 
-class NativeOmniLookupJoinOperator : public NativeOmniOperator
+class LookupJoinOperator : public Operator
 {
 public:
-    NativeOmniLookupJoinOperator(
+    LookupJoinOperator(
         int32_t *probeTypes,
         int32_t probeTypesCount,
         int32_t *probeOutputCols,
@@ -61,7 +62,7 @@ public:
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
         JoinHashTables *hashTables);
-    ~NativeOmniLookupJoinOperator();
+    ~LookupJoinOperator();
     int32_t addInput(Table* data, int32_t rowCount) override;
     int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
     int32_t getOutput(std::vector<Table *>& outputTables) override;

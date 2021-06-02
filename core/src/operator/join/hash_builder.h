@@ -1,15 +1,16 @@
 #ifndef __HASH_BUILDER_H__
 #define __HASH_BUILDER_H__
 
-#include "../native_base.h"
+#include "../operator_factory.h"
+#include "../operator.h"
 #include "../pages_index.h"
 #include "join_hash_table.h"
 #include <atomic>
 
-class NativeOmniHashBuilderOperatorFactory : public NativeOmniOperatorFactory
+class HashBuilderOperatorFactory : public OperatorFactory
 {
 public:
-    NativeOmniHashBuilderOperatorFactory(
+    HashBuilderOperatorFactory(
         int32_t *buildTypes,
         int32_t buildTypesCount,
         int32_t *buildOutputCols,
@@ -17,8 +18,8 @@ public:
         int32_t *buildHashCols,
         int32_t buildHashColsCount,
         int32_t operatorCount);
-    ~NativeOmniHashBuilderOperatorFactory();
-    static NativeOmniHashBuilderOperatorFactory *createNativeOmniHashBuilderOperatorFactory(
+    ~HashBuilderOperatorFactory();
+    static HashBuilderOperatorFactory *createHashBuilderOperatorFactory(
         int32_t *buildTypes,
         int32_t buildTypesCount,
         int32_t *buildOutputCols,
@@ -26,7 +27,7 @@ public:
         int32_t *buildHashCols,
         int32_t buildHashColsCount,
         int32_t operatorCount);
-    NativeOmniOperator *createOmniOperator();
+    Operator *createOmniOperator();
     JoinHashTables *getHashTables()
     {
         return hashTables;
@@ -42,10 +43,10 @@ private:
     std::atomic<int32_t> operatorIndex;
 };
 
-class NativeOmniHashBuilderOperator : public NativeOmniOperator
+class HashBuilderOperator : public Operator
 {
 public:
-    NativeOmniHashBuilderOperator(
+    HashBuilderOperator(
         int32_t *buildTypes,
         int32_t buildTypesCount,
         int32_t *buildOutputCols,
@@ -54,7 +55,7 @@ public:
         int32_t buildHashColsCount,
         JoinHashTables *hashTables,
         int32_t partitionIndex);
-    ~NativeOmniHashBuilderOperator();
+    ~HashBuilderOperator();
     int32_t addInput(Table* data, int32_t rowCount) override
     {
         return 0;

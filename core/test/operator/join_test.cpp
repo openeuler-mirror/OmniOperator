@@ -51,10 +51,10 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
 
-    NativeOmniHashBuilderOperatorFactory *hashBuilderFactory = NativeOmniHashBuilderOperatorFactory::createNativeOmniHashBuilderOperatorFactory(
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
         buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->setJitContext(NULL);
-    NativeOmniHashBuilderOperator *hashBuilderOperator = (NativeOmniHashBuilderOperator *)hashBuilderFactory->createOmniOperator();
+    HashBuilderOperator *hashBuilderOperator = (HashBuilderOperator *)hashBuilderFactory->createOmniOperator();
     hashBuilderOperator->addInput(buildTables, rowCounts, 1);
 
     int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
@@ -73,11 +73,11 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputTypes[1] = {2};
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    NativeOmniLookupJoinOperatorFactory *lookupJoinFactory = NativeOmniLookupJoinOperatorFactory::createNativeOmniLookupJoinOperatorFactory(
+    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
         probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
         buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
     lookupJoinFactory->setJitContext(NULL);
-    NativeOmniLookupJoinOperator *lookupJoinOperator = (NativeOmniLookupJoinOperator *)lookupJoinFactory->createOmniOperator();
+    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)lookupJoinFactory->createOmniOperator();
     lookupJoinOperator->addInput(probeTable, DATA_SIZE);
     std::vector<Table *> output;
     lookupJoinOperator->getOutput(output);
@@ -132,14 +132,14 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 2;
 
-    NativeOmniHashBuilderOperatorFactory *hashBuilderFactory = NativeOmniHashBuilderOperatorFactory::createNativeOmniHashBuilderOperatorFactory(
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
         buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->setJitContext(NULL);
 
-    NativeOmniHashBuilderOperator *hashBuilderOperator0 = (NativeOmniHashBuilderOperator *)hashBuilderFactory->createOmniOperator();
+    HashBuilderOperator *hashBuilderOperator0 = (HashBuilderOperator *)hashBuilderFactory->createOmniOperator();
     hashBuilderOperator0->addInput(buildTables0, rowCounts0, 1);
 
-    NativeOmniHashBuilderOperator *hashBuilderOperator1 = (NativeOmniHashBuilderOperator *)hashBuilderFactory->createOmniOperator();
+    HashBuilderOperator *hashBuilderOperator1 = (HashBuilderOperator *)hashBuilderFactory->createOmniOperator();
     hashBuilderOperator1->addInput(buildTables1, rowCounts1, 1);
 
     int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
@@ -158,11 +158,11 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputTypes[1] = {2};
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    NativeOmniLookupJoinOperatorFactory *lookupJoinFactory = NativeOmniLookupJoinOperatorFactory::createNativeOmniLookupJoinOperatorFactory(
+    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
         probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
         buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
     lookupJoinFactory->setJitContext(NULL);
-    NativeOmniLookupJoinOperator *lookupJoinOperator = (NativeOmniLookupJoinOperator *)lookupJoinFactory->createOmniOperator();
+    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)lookupJoinFactory->createOmniOperator();
     lookupJoinOperator->addInput(probeTable, DATA_SIZE);
     std::vector<Table *> output;
     lookupJoinOperator->getOutput(output);

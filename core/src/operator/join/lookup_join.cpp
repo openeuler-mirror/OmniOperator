@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstring>
 
-NativeOmniLookupJoinOperatorFactory::NativeOmniLookupJoinOperatorFactory(
+LookupJoinOperatorFactory::LookupJoinOperatorFactory(
     int32_t *probeTypes,
     int32_t probeTypesCount,
     int32_t *probeOutputCols,
@@ -56,7 +56,7 @@ NativeOmniLookupJoinOperatorFactory::NativeOmniLookupJoinOperatorFactory(
     // }
 }
 
-NativeOmniLookupJoinOperatorFactory::~NativeOmniLookupJoinOperatorFactory()
+LookupJoinOperatorFactory::~LookupJoinOperatorFactory()
 {
     delete[] probeTypes;
     delete[] probeOutputCols;
@@ -65,7 +65,7 @@ NativeOmniLookupJoinOperatorFactory::~NativeOmniLookupJoinOperatorFactory()
     delete[] buildOutputTypes;
 }
 
-NativeOmniLookupJoinOperatorFactory *NativeOmniLookupJoinOperatorFactory::createNativeOmniLookupJoinOperatorFactory(
+LookupJoinOperatorFactory *LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
     int32_t *probeTypes,
     int32_t probeTypesCount,
     int32_t *probeOutputCols,
@@ -77,9 +77,9 @@ NativeOmniLookupJoinOperatorFactory *NativeOmniLookupJoinOperatorFactory::create
     int32_t buildOutputColsCount,
     int64_t hashBuilderFactoryAddr)
 {
-    NativeOmniHashBuilderOperatorFactory *hashBuilderFactory = (NativeOmniHashBuilderOperatorFactory *)hashBuilderFactoryAddr;
+    HashBuilderOperatorFactory *hashBuilderFactory = (HashBuilderOperatorFactory *)hashBuilderFactoryAddr;
     JoinHashTables *hashTables = hashBuilderFactory->getHashTables();
-    NativeOmniLookupJoinOperatorFactory *operatorFactory = new NativeOmniLookupJoinOperatorFactory(
+    LookupJoinOperatorFactory *operatorFactory = new LookupJoinOperatorFactory(
         probeTypes,
         probeTypesCount,
         probeOutputCols,
@@ -93,9 +93,9 @@ NativeOmniLookupJoinOperatorFactory *NativeOmniLookupJoinOperatorFactory::create
     return operatorFactory;
 }
 
-NativeOmniOperator *NativeOmniLookupJoinOperatorFactory::createOmniOperator()
+Operator *LookupJoinOperatorFactory::createOmniOperator()
 {
-    NativeOmniLookupJoinOperator *lookupJoinoperator = new NativeOmniLookupJoinOperator(
+    LookupJoinOperator *lookupJoinoperator = new LookupJoinOperator(
         probeTypes,
         probeTypesCount,
         probeOutputCols,
@@ -109,7 +109,7 @@ NativeOmniOperator *NativeOmniLookupJoinOperatorFactory::createOmniOperator()
     return lookupJoinoperator;
 }
 
-NativeOmniLookupJoinOperator::NativeOmniLookupJoinOperator(
+LookupJoinOperator::LookupJoinOperator(
     int32_t *probeTypes,
     int32_t probeTypesCount,
     int32_t *probeOutputCols,
@@ -137,10 +137,10 @@ NativeOmniLookupJoinOperator::NativeOmniLookupJoinOperator(
     this->outputBuilder = new LookupJoinOutputBuilder(probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes, buildOutputColsCount);
 }
 
-NativeOmniLookupJoinOperator::~NativeOmniLookupJoinOperator()
+LookupJoinOperator::~LookupJoinOperator()
 {}
 
-int32_t NativeOmniLookupJoinOperator::addInput(Table *data, int32_t rowCount)
+int32_t LookupJoinOperator::addInput(Table *data, int32_t rowCount)
 {
     this->joinProbe = new JoinProbe(data, probeHashCols, probeHashColsCount, rowCount);
     this->partitionedJoinPosition = -1;
@@ -150,12 +150,12 @@ int32_t NativeOmniLookupJoinOperator::addInput(Table *data, int32_t rowCount)
     return 0;
 }
 
-int32_t NativeOmniLookupJoinOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
+int32_t LookupJoinOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
 {
     return 0;
 }
 
-int32_t NativeOmniLookupJoinOperator::getOutput(std::vector<Table *>& outputTables)
+int32_t LookupJoinOperator::getOutput(std::vector<Table *>& outputTables)
 {
     if (outputTable != NULL) {
         Table *result = outputTable;
@@ -166,9 +166,9 @@ int32_t NativeOmniLookupJoinOperator::getOutput(std::vector<Table *>& outputTabl
     return 0;
 }
 
-int32_t *NativeOmniLookupJoinOperator::getSourceTypes()
+int32_t *LookupJoinOperator::getSourceTypes()
 {}
-void NativeOmniLookupJoinOperator::processProbe()
+void LookupJoinOperator::processProbe()
 {
     if (joinProbe == NULL) {
         return;
@@ -188,7 +188,7 @@ void NativeOmniLookupJoinOperator::processProbe()
     }
 }
 
-bool NativeOmniLookupJoinOperator::joinCurrentPosition()
+bool LookupJoinOperator::joinCurrentPosition()
 {
     while (partitionedJoinPosition >= 0) {
         // handle data of build
@@ -199,7 +199,7 @@ bool NativeOmniLookupJoinOperator::joinCurrentPosition()
     return true;
 }
 
-bool NativeOmniLookupJoinOperator::advanceProbePosition()
+bool LookupJoinOperator::advanceProbePosition()
 {
     if (!joinProbe->advanceNextPosition()) {
         // build output data
@@ -212,7 +212,7 @@ bool NativeOmniLookupJoinOperator::advanceProbePosition()
     return true;
 }
 
-int64_t NativeOmniLookupJoinOperator::getNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition)
+int64_t LookupJoinOperator::getNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition)
 {
     int64_t result = hashTables->getNextJoinPosition(currentJoinPosition, probePosition);
     return result;

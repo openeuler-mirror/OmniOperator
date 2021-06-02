@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstring>
 
-NativeOmniHashBuilderOperatorFactory::NativeOmniHashBuilderOperatorFactory(
+HashBuilderOperatorFactory::HashBuilderOperatorFactory(
         int32_t *buildTypes,
         int32_t buildTypesCount,
         int32_t *buildOutputCols,
@@ -30,14 +30,14 @@ NativeOmniHashBuilderOperatorFactory::NativeOmniHashBuilderOperatorFactory(
     this->operatorIndex = 0;
 }
 
-NativeOmniHashBuilderOperatorFactory::~NativeOmniHashBuilderOperatorFactory()
+HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
 {
     delete[] buildTypes;
     delete[] buildOutputCols;
     delete[] buildHashCols;
 }
 
-NativeOmniHashBuilderOperatorFactory *NativeOmniHashBuilderOperatorFactory::createNativeOmniHashBuilderOperatorFactory(
+HashBuilderOperatorFactory *HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
         int32_t *buildTypes,
         int32_t buildTypesCount,
         int32_t *buildOutputCols,
@@ -46,7 +46,7 @@ NativeOmniHashBuilderOperatorFactory *NativeOmniHashBuilderOperatorFactory::crea
         int32_t buildHashColsCount,
         int32_t operatorCount)
 {
-    NativeOmniHashBuilderOperatorFactory *operatorFactory = new NativeOmniHashBuilderOperatorFactory(
+    HashBuilderOperatorFactory *operatorFactory = new HashBuilderOperatorFactory(
         buildTypes,
         buildTypesCount,
         buildOutputCols,
@@ -57,10 +57,10 @@ NativeOmniHashBuilderOperatorFactory *NativeOmniHashBuilderOperatorFactory::crea
     return operatorFactory;
 }
 
-NativeOmniOperator *NativeOmniHashBuilderOperatorFactory::createOmniOperator()
+Operator *HashBuilderOperatorFactory::createOmniOperator()
 {
     int32_t partitionIndex = operatorIndex++;
-    NativeOmniHashBuilderOperator *hashBuilderOperator = new NativeOmniHashBuilderOperator(
+    HashBuilderOperator *hashBuilderOperator = new HashBuilderOperator(
         buildTypes,
         buildTypesCount,
         buildOutputCols,
@@ -72,7 +72,7 @@ NativeOmniOperator *NativeOmniHashBuilderOperatorFactory::createOmniOperator()
     return hashBuilderOperator;
 }
 
-NativeOmniHashBuilderOperator::NativeOmniHashBuilderOperator(
+HashBuilderOperator::HashBuilderOperator(
         int32_t *buildTypes,
         int32_t buildTypesCount,
         int32_t *buildOutputCols,
@@ -93,12 +93,12 @@ NativeOmniHashBuilderOperator::NativeOmniHashBuilderOperator(
     this->pagesIndex = new PagesIndex(buildTypes, buildTypesCount);
 }
 
-NativeOmniHashBuilderOperator::~NativeOmniHashBuilderOperator()
+HashBuilderOperator::~HashBuilderOperator()
 {
 
 }
 
-int32_t NativeOmniHashBuilderOperator::addInput(Table **datas, int32_t *rowCounts, int32_t tableCount)
+int32_t HashBuilderOperator::addInput(Table **datas, int32_t *rowCounts, int32_t tableCount)
 {
     if (tableCount <= 0) {
         return 0;
@@ -116,9 +116,9 @@ int32_t NativeOmniHashBuilderOperator::addInput(Table **datas, int32_t *rowCount
     return 0;
 }
 
-int32_t NativeOmniHashBuilderOperator::getOutput(std::vector<Table *>& outputTables)
+int32_t HashBuilderOperator::getOutput(std::vector<Table *>& outputTables)
 {
 }
 
-int32_t *NativeOmniHashBuilderOperator::getSourceTypes()
+int32_t *HashBuilderOperator::getSourceTypes()
 {}
