@@ -53,7 +53,7 @@ private:
     std::string _func_name;
     llvm::Module* _module;    
     std::unique_ptr<llvm::ExecutionEngine> _ee;    
-    
+    int64_t funcAddr;  
 };
 
 int simpleTest();

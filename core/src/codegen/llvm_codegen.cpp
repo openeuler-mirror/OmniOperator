@@ -293,41 +293,44 @@ void LLVMCodeGen::generateBetweenExprFunc(BetweenExpr *bt_expr)
         // exec_engine->addModule(std::move(MODULE));
         cout << "Finalize module ..." << endl;
         _ee->finalizeObject();
+        this->funcAddr = _ee->getFunctionAddress(_func_name);
     }
 
 bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data)
 {
     // cout << c_expr->columnData.intVal << " " << data->intVal << endl;
     int32_t result;
-     switch (c_expr->columnData.dataType)
+    //cout << c_expr->columnData.dataType <<endl;
+     switch (data->dataType)
     {
 
     case INT32D:
     {
-        int32_t (*native_func)(int32_t, int32_t) = (int32_t(*)(int32_t, int32_t))_ee->getFunctionAddress(_func_name);
+        int32_t (*native_func)(int32_t, int32_t) = (int32_t(*)(int32_t, int32_t))this->funcAddr;
         result = native_func(data->intVal, c_expr->columnData.intVal);
         break;
     }
        
     case INT64D:
     {
-        int32_t (*native_func)(int64_t, int64_t) = (int32_t(*)(int64_t, int64_t))_ee->getFunctionAddress(_func_name);
+        int32_t (*native_func)(int64_t, int64_t) = (int32_t(*)(int64_t, int64_t))this->funcAddr;
         result = native_func(c_expr->columnData.longVal, data->longVal);
         break;
     }
         
     case DOUBLED:
     {
-        int32_t (*native_func)(double, double) = (int32_t(*)(double, double))_ee->getFunctionAddress(_func_name);
+        int32_t (*native_func)(double, double) = (int32_t(*)(double, double))this->funcAddr;
         result = native_func(c_expr->columnData.doubleVal, data->doubleVal);
-        break;
+        cout << result << endl;
+	break;
     }
         
     case STRINGD:
         // TODO:: Handle string type
         break;
     }
-    
+       
     switch (c_expr->op)
     {
     case LT:
@@ -375,6 +378,8 @@ bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data
         {
             return false;
         }
+    case NEQ:
+	return result != 0;
     }
 
     return false;
