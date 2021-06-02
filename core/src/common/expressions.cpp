@@ -1,13 +1,6 @@
 #include "expressions.h"
 #include <stdio.h>
 #include <iostream>
-#include <string>
-
-
-ExprType Expr::getType() {
-    return INVALID_E;
-}
-
 
 BinaryExpr::BinaryExpr() {
 }
@@ -22,29 +15,28 @@ BinaryExpr::~BinaryExpr() {
     delete right;
 }
 
-ExprType BinaryExpr::getType() {
-    return ExprType::BINARY_E;
-}
-
-
 ComparisionExpr::ComparisionExpr() {
 }
 
-ComparisionExpr::ComparisionExpr(ComparisionOperator cmpOp, int colId, Data colData) {
+ComparisionExpr::ComparisionExpr(ComparisionOperator cmpOp, int colId, int colData) {
     op = cmpOp;
     columnIdx = colId;
     columnData = colData;
 } 
 
-ExprType ComparisionExpr::getType() {
-    return ExprType::COMPARISION_E;
+BetweenExpr::BetweenExpr() {
 }
 
+BetweenExpr::BetweenExpr(int colId, int lowBound, int highBound) {
+    columnIdx = colId;
+    lowerBound = lowBound;
+    upperBound = highBound;
+}
 
 UnaryExpr::UnaryExpr() {
 }
 
-UnaryExpr::UnaryExpr(LogicalOperator logOp, Expr *expr){
+UnaryExpr::UnaryExpr(LogicalOperator logOp, Expr *expr) {
     op = logOp;
     exp = expr;
 } 
@@ -53,15 +45,10 @@ UnaryExpr::~UnaryExpr() {
     delete exp;
 }
 
-ExprType UnaryExpr::getType() {
-    return ExprType::UNARY_E;
-}
-
-
 ArithmeticExpr::ArithmeticExpr() {
 }
 
-ArithmeticExpr::ArithmeticExpr(ArithmeticOperator aOp, Expr *leftExpr, Expr *rightExpr){
+ArithmeticExpr::ArithmeticExpr(ArithmeticOperator aOp, Expr *leftExpr, Expr *rightExpr) {
     op = aOp;
     left = leftExpr;
     right = rightExpr;
@@ -72,69 +59,20 @@ ArithmeticExpr::~ArithmeticExpr() {
     delete right;
 }
 
-ExprType ArithmeticExpr::getType() {
-    return ExprType::ARITHMETIC_E;
-}
-
-
-BetweenExpr::BetweenExpr() {
-}
-
-BetweenExpr::BetweenExpr(int colId, Data lowBound, Data upBound) {
-    columnIdx = colId;
-    lowerBound = lowBound;
-    upperBound = upBound;
-}
-
-ExprType BetweenExpr::getType() {
-    return ExprType::BETWEEN_E;
-}
-
-
 InExpr::InExpr() {
 }
 
-InExpr::InExpr(Data col, std::vector<Data> vals) {
-    column = col;
+InExpr::InExpr(int colId, std::vector<int> vals) {
+    columnIdx = colId;
     arr = vals;
 }
-
-ExprType InExpr::getType() {
-    return ExprType::IN_E;
-}
-
-
-CoalesceExpr::CoalesceExpr() {
-}
-
-CoalesceExpr::CoalesceExpr(std::vector<int> cols) {
-    columnIds = cols;
-}
-
-ExprType CoalesceExpr::getType() {
-    return ExprType::COALESCE_E;
-}
-
-
-SubstrExpr::SubstrExpr() {
-}
-
-SubstrExpr::SubstrExpr(int colId, int startId, int len) {
-    columnIdx = colId;
-    startIdx = startId;
-    length = len;
-}
-
-ExprType SubstrExpr::getType() {
-    return ExprType::SUBSTR_E;
-}
-
 
 // debugging Expr tree
 void Expr::printExprTree() {
 }
 
 void BinaryExpr::printExprTree() {
+
     switch(op) 
     {
         case AND:
@@ -167,34 +105,6 @@ void UnaryExpr::printExprTree() {
     printf(")");
 }
 
-void Data::printData(bool printWithTypes) {
-    switch(dataType)
-    {
-        case INT32D:
-            if (printWithTypes) printf("i32_");
-            printf("%d", intVal);
-            break;
-        case INT64D:
-            if (printWithTypes) printf("i64_");
-            printf("%ld", longVal);
-            break;
-        case DOUBLED:
-            if (printWithTypes) printf("d64_");
-            printf("%f", doubleVal);
-            break;
-        case STRINGD:
-            if (printWithTypes) printf("s_");
-            printf("'%s'", stringVal.c_str());
-            break;
-        case COLUMND:
-            printf("#%d", colVal);
-            break;
-        default:
-            printf("invalid DataType %d", dataType);
-    }
-}
-
-
 void ComparisionExpr::printExprTree() {
     switch(op) 
     {
@@ -217,20 +127,14 @@ void ComparisionExpr::printExprTree() {
             printf("Cmp(NEQ, ");
             break;
         default:
-            printf("invalid ComparisionOperator %d(", op);
+            printf("invalid ComparisionOperator %d", op);
             break;
     }
-    printf("#%d, ", columnIdx);
-    columnData.printData(false);
-    printf(")");
+    printf("#%d, %d)", columnIdx, columnData);
 }
 
 void BetweenExpr::printExprTree() {
-    printf("Between(#%d, ", columnIdx);
-    lowerBound.printData(false);
-    printf(", ");
-    upperBound.printData(false);
-    printf(")");
+    printf("Between(#%d, %d, %d)", columnIdx, lowerBound, upperBound);
 }
 
 void ArithmeticExpr::printExprTree() {
@@ -261,24 +165,9 @@ void ArithmeticExpr::printExprTree() {
 
 void InExpr::printExprTree() {
     printf("In(");
-    column.printData(false);
-    printf(", ");
+    printf("#%d, ", columnIdx);
     for (int i = 0; i < arr.size() - 1; i++) {
-        arr[i].printData(false);
-        printf(", ");
+        printf("%d, ", arr[i]);
     }
-    arr[arr.size() - 1].printData(false);
-    printf(")");
-}
-
-void CoalesceExpr::printExprTree() {
-    printf("Coalesce(");
-    for (int i = 0; i < columnIds.size() - 1; i++) {
-        printf("#%d, ", columnIds[i]);
-    }
-    printf("#%d)", columnIds[columnIds.size() - 1]);
-}
-
-void SubstrExpr::printExprTree() {
-    printf("Substr(#%d, %d, %d)", columnIdx, startIdx, length);
+    printf("%d)", arr[arr.size()-1]);
 }

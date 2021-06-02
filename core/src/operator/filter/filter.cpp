@@ -101,10 +101,7 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
         switch (column->getType())
         {
             case INT32:{
-                Data actualData;
-                actualData.intVal = *((int32_t*) column->getValue(index);
-                actualData.dataType = DataType::INT32D;
-                if (codeGen->executeComparisionExprFunc(expr, actualData))) {
+                if (codeGen->execute(expr, *((int32_t*) column->getValue(index)))) {
                     selectedRows[numSelectedRows++] = index;
                 }
                 break;
