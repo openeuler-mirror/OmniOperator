@@ -1,5 +1,6 @@
 #include "hash_builder.h"
 #include "join_hash_table.h"
+#include "../pages_hash_strategy.h"
 #include <vector>
 #include <cstring>
 
