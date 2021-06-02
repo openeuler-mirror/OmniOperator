@@ -75,7 +75,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test
+    @Test(enabled = false)
     public void equalTo()
     {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
@@ -136,7 +136,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test
+    @Test(enabled = false)
     public void notEqualTo()
     {
         VecType[] types = {VecType.DOUBLE};
@@ -228,7 +228,7 @@ public class OmniFilterAndProjectOperatorTest {
         op.close();
     }
 
-    @Test
+    @Test(enabled=false)
     public void negativeValues() {
 
         VecType[] types = {VecType.INT, VecType.LONG};
@@ -263,7 +263,7 @@ public class OmniFilterAndProjectOperatorTest {
 
     }
 
-    @Test
+    @Test(enabled=false)
     public void allTypes() {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
         int[] projectIndices = {0, 1, 2};
@@ -296,7 +296,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test
+    @Test(enabled=false)
     public void compileTest() {
         VecType[] types = {VecType.INT, VecType.INT, VecType.DOUBLE, VecType.DOUBLE};
         int[] projectIndices = {0};
@@ -327,7 +327,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test
+    @Test(enabled=false)
     public void logicalOperators1() {
         VecType[] types = {VecType.INT, VecType.INT, VecType.INT, VecType.LONG, VecType.DOUBLE, VecType.LONG};
         int[] projectIndices = {0, 2, 4, 5};
@@ -367,7 +367,7 @@ public class OmniFilterAndProjectOperatorTest {
 
     }
 
-    @Test
+    @Test(enabled=false)
     public void logicalOperators2() {
         VecType[] types = {VecType.INT, VecType.INT, VecType.LONG, VecType.LONG};
         int[] projectIndices = {3, 2, 1, 0};
@@ -402,7 +402,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test
+    @Test(enabled=false)
     public void logicalOperators3() {
         VecType[] types = {VecType.INT, VecType.DOUBLE};
         int[] projectIndices = {1, 0};
@@ -442,7 +442,7 @@ public class OmniFilterAndProjectOperatorTest {
         Assert.assertEquals(fib.get(), 13);
     }
 
-    @Test
+    @Test(enabled=false)
     public void arithmeticAdd()
     {
         VecType[] types = {VecType.INT};
@@ -489,7 +489,7 @@ public class OmniFilterAndProjectOperatorTest {
         return table;
     }
 
-    @Test
+    @Test(enabled=false)
     public void multithreadTest()
     {
         VecType[] types = {VecType.INT, VecType.INT, VecType.DOUBLE, VecType.DOUBLE};
