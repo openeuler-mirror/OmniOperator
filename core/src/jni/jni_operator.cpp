@@ -66,22 +66,6 @@ jobjectArray transform(JNIEnv *env, std::vector<Table*>& result)
     return res;
 }
 
-ColumnType getColumnType(int32_t colTypeIdx)
-{
-    if (colTypeIdx == 1) {
-        return INT32;
-    }
-    else if (colTypeIdx == 2) {
-        return INT64;
-    }
-    else if (colTypeIdx == 3) {
-        return DOUBLE;
-    }
-    else {
-        return INT32;
-    }
-}
-
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperator
  * Method:    addInput

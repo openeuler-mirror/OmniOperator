@@ -25,25 +25,14 @@ public class OmniSortOperatorTest
     @Test
     public void testOrderByTwoColumn()
     {
+        int[] data1 = {5, 3, 2, 6, 1, 4, 7, 8};
+        int[] data2 = {5, 3, 2, 6, 1, 4, 7, 8};
         IntVec vec1 = new IntVec(8);
-        vec1.set(0, 5);
-        vec1.set(1, 3);
-        vec1.set(2, 2);
-        vec1.set(3, 6);
-        vec1.set(4, 1);
-        vec1.set(5, 4);
-        vec1.set(6, 7);
-        vec1.set(7, 8);
-
         IntVec vec2 = new IntVec(8);
-        vec2.set(0, 5);
-        vec2.set(1, 3);
-        vec2.set(2, 2);
-        vec2.set(3, 6);
-        vec2.set(4, 1);
-        vec2.set(5, 4);
-        vec2.set(6, 7);
-        vec2.set(7, 8);
+        for (int i = 0; i < 8; i++) {
+            vec1.set(i, data1[i]);
+            vec2.set(i, data2[i]);
+        }
 
         VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2}, 8);
 

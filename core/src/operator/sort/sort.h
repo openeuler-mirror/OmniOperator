@@ -23,7 +23,7 @@ public:
 
     ~SortOperatorFactory();
 
-    static SortOperatorFactory *createOperatorFactory(
+    static SortOperatorFactory *createSortOperatorFactory(
             int32_t *sourceTypes,
             int32_t sourceTypeCount,
             int32_t *outputCols,

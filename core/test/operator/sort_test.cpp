@@ -103,7 +103,7 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -156,7 +156,7 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 //     int ascendings[1] = {false};
 //     int nullFirsts[1] = {true};
 
-//     SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+//     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
 //         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 //     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 //     operatorFactory->setJitContext(jitContext);     
@@ -219,7 +219,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -283,7 +283,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -375,7 +375,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
     int32_t ascendings[] = {1, 1};
     int32_t nullFirsts[] = {0, 0};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;

@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    g_factory = SortOperatorFactory::createOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    g_factory = SortOperatorFactory::createSortOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     int threadNums[] = {1, 8, 16, 32, 64, 100};
     for (int i = 0; i < 6; i++) {

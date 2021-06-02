@@ -152,7 +152,7 @@ int32_t LookupJoinOperator::addInput(Table *data, int32_t rowCount)
 
 int32_t LookupJoinOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
 {
-    return 0;
+    return addInput(datas[0], rowCounts[0]);
 }
 
 int32_t LookupJoinOperator::getOutput(std::vector<Table *>& outputTables)

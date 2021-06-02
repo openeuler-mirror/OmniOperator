@@ -7,6 +7,8 @@
 #include "join_hash_table.h"
 #include <atomic>
 
+using namespace omni;
+
 class HashBuilderOperatorFactory : public OperatorFactory
 {
 public:
@@ -27,7 +29,7 @@ public:
         int32_t *buildHashCols,
         int32_t buildHashColsCount,
         int32_t operatorCount);
-    Operator *createOmniOperator();
+    omni::Operator *createOmniOperator();
     JoinHashTables *getHashTables()
     {
         return hashTables;
@@ -43,7 +45,7 @@ private:
     std::atomic<int32_t> operatorIndex;
 };
 
-class HashBuilderOperator : public Operator
+class HashBuilderOperator : public omni::Operator
 {
 public:
     HashBuilderOperator(
