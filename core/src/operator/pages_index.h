@@ -54,4 +54,8 @@ private:
     int32_t positionCount;
 };
 
+int64_t encodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset);
+int32_t decodeSliceIndex(int64_t sliceAddress);
+int32_t decodePosition(int64_t sliceAddress);
+
 #endif

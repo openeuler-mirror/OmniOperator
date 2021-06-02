@@ -187,4 +187,8 @@ private:
     uint32_t columnCount;
     uint32_t columnSize;
 };
+
+ColumnType getColumnType(int32_t colTypeIdx);
+int32_t getColTypeIdx(ColumnType type);
+
 #endif

@@ -1,0 +1,456 @@
+#include "join_hash_table.h"
+#include "../hash_util.h"
+#include "../pages_index.h"
+
+#include <algorithm>
+
+int32_t CACHE_SIZE = 131072; // 128KB
+
+int32_t numberOfTrailingZeros(int32_t value)
+{
+    if (value == 0) {
+        return 32;
+    }
+
+    int32_t y;
+    int32_t n = 31;
+    y = value << 16;
+    if (y != 0) {
+        n = n - 16;
+        value = y;
+    }
+
+    y = value << 8;
+    if (y != 0) {
+        n = n - 8;
+        value = y;
+    }
+
+    y = value << 4;
+    if (y != 0) {
+        n = n - 4;
+        value = y;
+    }
+
+    y = value << 2;
+    if (y != 0) {
+        n = n - 2;
+        value = y;
+    }
+
+    uint32_t temp = (uint32_t)(value << 1);
+    temp = temp >> 31;
+    return n - temp;
+}
+
+JoinHashTables::JoinHashTables(int32_t hashTableCount)
+{
+    hashTables = (int64_t *)malloc(hashTableCount * sizeof(int64_t));
+    this->hashTableCount = hashTableCount;
+    this->partitionMask = hashTableCount - 1;
+    this->shiftSize = numberOfTrailingZeros(hashTableCount) + 1;
+}
+
+JoinHashTables::~JoinHashTables()
+{
+
+}
+
+void JoinHashTables::addHashTable(int32_t partitionIndex, JoinHashTable *hashTable)
+{
+    std::lock_guard<std::shared_timed_mutex> writerLock(mutex);
+    hashTables[partitionIndex] = (int64_t)hashTable;
+}
+
+JoinHashTable *JoinHashTables::getHashTable(int32_t partitionIndex)
+{
+    std::shared_lock<std::shared_timed_mutex> readerLock(mutex);
+    JoinHashTable *hashTable = (JoinHashTable *)(hashTables[partitionIndex]);
+    return hashTable;
+}
+
+bool JoinHashTables::isJoinPositionEligible()
+{
+    return true;
+}
+
+int64_t JoinHashTables::getNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition)
+{
+    int32_t partition = decodePartition(currentJoinPosition);
+    int32_t joinPosition = decodeJoinPosition(currentJoinPosition);
+    JoinHashTable *hashTable = (JoinHashTable *)(hashTables[partition]);
+    int32_t nextJoinPosition = hashTable->getNextJoinPosition(joinPosition, probePosition);
+    if (nextJoinPosition < 0) {
+        return nextJoinPosition;
+    }
+
+    int64_t partitionedJoinPosition = encodePartitionedJoinPosition(partition, nextJoinPosition);
+    return partitionedJoinPosition;
+}
+
+int64_t hashRow(int32_t rowIndex, Column **columns, int32_t columnCount)
+{
+    int64_t result = 0;
+    Column *column;
+    int64_t hash;
+    void *valueAddr;
+
+    for (int32_t columnIdx = 0; columnIdx < columnCount; columnIdx++) {
+        column = columns[columnIdx];
+        valueAddr = column->getValue(rowIndex);
+        // TODO: how to convert double type to int64_t type ?
+        hash = column->isNull(rowIndex) ? 0 : HashUtil::hashValue(*((int64_t *)valueAddr));
+        result = HashUtil::getHash(result, hash);
+    }
+
+    return result;
+}
+
+int64_t JoinHashTables::getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount)
+{
+    return getJoinPosition(position, joinColumns, joinColumnsCount, allColumns, allColumnsCount, hashRow(position, joinColumns, joinColumnsCount));
+}
+
+int64_t JoinHashTables::getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount, int64_t rawHash)
+{
+    int32_t partition = HashUtil::getRawHashPartition(rawHash, partitionMask);
+    JoinHashTable *hashTable = (JoinHashTable *)(hashTables[partition]);
+    int32_t joinPosition = hashTable->getJoinPosition(position, joinColumns, joinColumnsCount, allColumns, allColumnsCount, rawHash);
+    if (joinPosition < 0) {
+        return joinPosition;
+    }
+
+    int64_t partitionedJoinPosition = encodePartitionedJoinPosition(partition, joinPosition);
+    return partitionedJoinPosition;
+}
+
+void *JoinHashTables::getBuildData(int64_t partitionedJoinPosition, int32_t outputCol)
+{
+    int32_t partition = decodePartition(partitionedJoinPosition);
+    int32_t joinPosition = decodeJoinPosition(partitionedJoinPosition);
+    JoinHashTable *hashTable = (JoinHashTable *)(hashTables[partition]);
+    return hashTable->getBuildData(joinPosition, outputCol);
+}
+
+int64_t JoinHashTables::encodePartitionedJoinPosition(int32_t partition, int32_t joinPosition)
+{
+    int64_t result = ((int64_t)joinPosition) << shiftSize;
+    result |= partition;
+    return result;
+}
+
+int32_t JoinHashTables::decodePartition(int64_t partitionedJoinPosition)
+{
+    int32_t result = (int32_t)(partitionedJoinPosition & partitionMask);
+    return result;
+}
+
+int32_t JoinHashTables::decodeJoinPosition(int64_t partitionedJoinPosition)
+{
+    uint64_t result = (uint64_t)partitionedJoinPosition;
+    result = result >> shiftSize;
+    return (int32_t)result;
+}
+
+JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, int64_t *addresses, int32_t addressesCount)
+{
+    positionLinks = new ArrayPositionLinks(addressesCount);
+    pagesHash = new PagesHash(addresses, addressesCount, pagesHashStrategy, positionLinks);
+}
+
+int32_t JoinHashTable::getNextJoinPosition(int32_t currentJoinPosition, int probePosition)
+{
+    if (positionLinks == NULL) {
+        return -1;
+    }
+
+    return positionLinks->next(currentJoinPosition);
+}
+
+int32_t JoinHashTable::getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount, int64_t rawHash)
+{
+    int32_t addressIndex = pagesHash->getAddressIndex(position, joinColumns, joinColumnsCount, rawHash);
+    return positionLinks->start(addressIndex);
+}
+
+void *JoinHashTable::getBuildData(int32_t joinPosition, int32_t outputCol)
+{
+    return pagesHash->getBuildData(joinPosition, outputCol);
+}
+
+PagesHash::PagesHash(int64_t *addresses, int32_t addressesCount, PagesHashStrategy *pagesHashStrategy, ArrayPositionLinks *positionLinks)
+{
+    this->pagesHashStrategy = pagesHashStrategy;
+    this->addresses = addresses;
+    this->addressesCount = addressesCount;
+
+    keySize = HashUtil::hashArraySize(addressesCount, 0.75f);
+    mask = keySize - 1;
+    key = new int32_t[keySize];
+    for (int32_t i = 0; i < keySize; i++) {
+        key[i] = -1;
+    }
+    positionToHashes = new int8_t[addressesCount];
+
+    int32_t positionsInStep = std::min(addressesCount + 1, CACHE_SIZE / (int32_t)sizeof(int32_t));
+    int64_t positionToFullHashes[positionsInStep];
+    int64_t hashCollisionsLocal = 0;
+
+    for (int32_t step = 0; step * positionsInStep <= addressesCount; step++) {
+        int32_t stepBeginPosition = step * positionsInStep;
+        int32_t stepEndPosition = std::min((step + 1) * positionsInStep, addressesCount);
+        int32_t stepSize = stepEndPosition - stepBeginPosition;
+
+        for (int32_t position = 0; position < stepSize; position++) {
+            int32_t realPosition = position + stepBeginPosition;
+            int64_t hash = getRawHash(realPosition);
+            positionToFullHashes[position] = hash;
+            positionToHashes[realPosition] = (int8_t) hash;
+        }
+
+        for (int32_t position = 0; position < stepSize; position++) {
+            int32_t realPosition = position + stepBeginPosition;
+            if (isPositionNull(realPosition)) {
+                continue;
+            }
+
+            int64_t hash = positionToFullHashes[position];
+            int32_t pos = HashUtil::getRawHashPosition(hash, mask);
+
+            // look for an empty slot or a slot containing this key
+            while (key[pos] != -1) {
+                int32_t currentKey = key[pos];
+                if (((int8_t) hash) == positionToHashes[currentKey] && positionEqualsPositionIgnoreNulls(currentKey, realPosition)) {
+                    // found a slot for this key
+                    // link the new key position to the current key position
+                    realPosition = positionLinks->link(realPosition, currentKey);
+
+                    // key[pos] updated outside of this loop
+                    break;
+                }
+                // increment position and mask to handler wrap around
+                pos = (pos + 1) & mask;
+                hashCollisionsLocal++;
+            }
+
+            key[pos] = realPosition;
+        }
+    }
+    hashCollisions = hashCollisionsLocal;
+}
+
+PagesHash::~PagesHash()
+{
+    delete[] key;
+    delete[] positionToHashes;
+}
+
+int32_t PagesHash::getAddressIndex(int probePosition, Column **joinColumns, int32_t joinColumnsCount, int64_t rawHash)
+{
+    int32_t pos = HashUtil::getRawHashPosition(rawHash, mask);
+
+    while (key[pos] != -1) {
+        if (positionEqualsCurrentRowIgnoreNulls(key[pos], (int8_t)rawHash, probePosition, joinColumns, joinColumnsCount)) {
+            return key[pos];
+        }
+
+        pos = (pos + 1) & mask;
+    }
+
+    return -1;
+}
+
+void *PagesHash::getBuildData(int32_t joinPosition, int32_t outputCol)
+{
+   int64_t address = addresses[joinPosition];
+   int32_t tableIndex = decodeSliceIndex(address);
+   int32_t rowIndex = decodePosition(address);
+   return pagesHashStrategy->getBuildColumns()[outputCol][tableIndex]->getValue(rowIndex);
+}
+
+int64_t PagesHash::getRawHash(int32_t position)
+{
+    int64_t address = addresses[position];
+    int32_t tableIndex = decodeSliceIndex(address);
+    int32_t rowIndex = decodePosition(address);
+
+    return pagesHashStrategy->hashPosition(tableIndex, rowIndex);
+}
+
+bool PagesHash::isPositionNull(int32_t position)
+{
+    int64_t address = addresses[position];
+    int32_t tableIndex = decodeSliceIndex(address);
+    int32_t rowIndex = decodePosition(address);
+
+    return pagesHashStrategy->isPositionNull(tableIndex, rowIndex);
+}
+
+bool PagesHash::positionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition)
+{
+    int64_t leftAddress = addresses[leftPosition];
+    int32_t leftTableIndex = decodeSliceIndex(leftAddress);
+    int32_t leftRowIndex = decodePosition(leftAddress);
+
+    int64_t rightAddress = addresses[rightPosition];
+    int32_t rightTableIndex = decodeSliceIndex(rightAddress);
+    int32_t rightRowIndex = decodePosition(rightAddress);
+
+    return pagesHashStrategy->positionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex, rightRowIndex);
+}
+
+bool PagesHash::positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount)
+{
+    if (positionToHashes[buildPosition] != rawHash) {
+        return false;
+    }
+
+    int64_t address = addresses[buildPosition];
+    int32_t tableIndex = decodeSliceIndex(address);
+    int32_t rowIndex = decodePosition(address);
+
+    return pagesHashStrategy->positionEqualsRowIgnoreNulls(tableIndex, rowIndex, probePosition, joinColumns, joinColumnsCount);
+}
+
+ArrayPositionLinks::ArrayPositionLinks(int32_t size)
+{
+    positionLinks = new int32_t[size];
+    this->size = size;
+    for (int32_t i = 0; i < size; i++) {
+        positionLinks[i] = -1;
+    }
+}
+
+ArrayPositionLinks::~ArrayPositionLinks()
+{
+    delete[] positionLinks;
+    positionLinks = NULL;
+    size = 0;
+}
+int32_t ArrayPositionLinks::link(int32_t left, int32_t right)
+{
+    positionLinks[left] = right;
+    return left;
+}
+
+int32_t ArrayPositionLinks::start(int32_t position)
+{
+    return position;
+}
+
+int32_t ArrayPositionLinks::next(int32_t position)
+{
+    return positionLinks[position];
+}
+
+PagesHashStrategy::PagesHashStrategy(Column ***columns, int32_t tableCount, int32_t columnCount, int32_t *hashCols, int32_t hashColsCount)
+{
+    this->buildColumns = columns;
+    this->buildTableCount = tableCount;
+    this->buildColumnCount = columnCount;
+    this->buildHashColsCount = hashColsCount;
+
+    this->buildHashColumns = (Column ***)malloc(hashColsCount * sizeof(Column **));
+    int32_t hashColumn;
+    for (int32_t i = 0; i < hashColsCount; i++) {
+        hashColumn = hashCols[i];
+        buildHashColumns[i] = columns[hashColumn];
+    }
+}
+
+PagesHashStrategy::~PagesHashStrategy()
+{
+    delete[] buildHashColumns;
+}
+
+int64_t PagesHashStrategy::hashPosition(int32_t tableIndex, int32_t rowIndex)
+{
+    int64_t result = 0;
+    Column *column;
+    int64_t hash;
+    void *valueAddr;
+
+    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+        column = buildHashColumns[columnIdx][tableIndex];
+        valueAddr = column->getValue(rowIndex);
+        hash = column->isNull(rowIndex) ? 0 : HashUtil::hashValue(*((int64_t *)valueAddr));
+        result = HashUtil::getHash(result, hash);
+    }
+    return result;
+}
+
+bool PagesHashStrategy::isPositionNull(int32_t tableIndex, int rowIndex)
+{
+    Column *column;
+    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+        column = buildHashColumns[columnIdx][tableIndex];
+        if (column->isNull(rowIndex)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool valueEqualsValueIgnoreNulls(ColumnType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex);
+
+bool PagesHashStrategy::positionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex)
+{
+    Column *leftColumn;
+    Column *rightColumn;
+    bool result = true;
+
+    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+        leftColumn = buildHashColumns[columnIdx][leftTableIndex];
+        rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+
+        ColumnType type = leftColumn->getType();
+        if (!valueEqualsValueIgnoreNulls(type, leftColumn->getData(), leftRowIndex, rightColumn->getData(), rightRowIndex))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool PagesHashStrategy::positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, Column **probeJoinColumns, int32_t probeJoinColumnsCount)
+{
+    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+        Column *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
+        Column *probeColumn = probeJoinColumns[columnIdx];
+
+        if (!valueEqualsValueIgnoreNulls(buildColumn->getType(), buildColumn->getData(), buildRowIndex, probeColumn->getData(), probePosition)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool valueEqualsValueIgnoreNulls(ColumnType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex)
+{
+    bool result;
+    switch (type)
+    {
+    case INT32:
+        result = (((int32_t *)leftData)[leftIndex] == ((int32_t *)rightData)[rightIndex]);
+        break;
+    case INT64:
+        result = (((int64_t *)leftData)[leftIndex] == ((int64_t *)rightData)[rightIndex]);
+        break;
+    case DOUBLE:
+        double *leftValues = (double *)leftData;
+        double *rightValues = (double *)rightData;
+        if (std::abs(leftValues[leftIndex] - rightValues[rightIndex]) < __DBL_EPSILON__) {
+            result = true;
+        }
+        else {
+            result = false;
+        }
+        break;
+    // default:
+    //     result = false;
+    //     break;
+    }
+
+    return result;
+}
