@@ -27,14 +27,26 @@ LogicalOperator logTrans(string op)
     else return LogicalOperator::INVALIDBIN;
 }
 
-FnType fnTrans(string op)
+FnType fnTrans(string fn)
 {
-    if (op == "BETWEEN") return FnType::BETWEEN;
-    else if (op == "IN") return FnType::IN;
-    else if (op == "COALESCE") return FnType::COALESCE;
-    else if (op == "substr") return FnType::SUBSTR;
+    if (fn == "BETWEEN") return FnType::BETWEEN;
+    else if (fn == "IN") return FnType::IN;
+    else if (fn == "COALESCE") return FnType::COALESCE;
+    else if (fn == "substr") return FnType::SUBSTR;
+    else if (fn == "CAST") return FnType::CAST;
     else return FnType::INVALIDFN;
 }
+
+ArithmeticOperator arithTrans(string op)
+{
+    if (op == "ADD") return ArithmeticOperator::ADD;
+    else if (op == "SUBTRACT") return ArithmeticOperator::SUB;
+    else if (op == "MULTIPLY") return ArithmeticOperator::MUL;
+    else if (op == "DIVIDE") return ArithmeticOperator::DIV;
+    else if (op == "MODULUS") return ArithmeticOperator::MOD;
+    else return ArithmeticOperator::INVALIDARITH;
+}
+
 
 bool hasComparisionOperator(string opStr) 
 {
@@ -47,12 +59,22 @@ bool hasComparisionOperator(string opStr)
 
 bool hasFunction(string fnStr)
 {
-    vector<string> allFns {"BETWEEN", "IN", "COALESCE", "substr"};
+    vector<string> allFns {"BETWEEN", "IN", "COALESCE", "substr", "CAST"};
     for (string fn : allFns) {
         if (fnStr.find(fn) != string::npos) return true;
     }
     return false;
 }
+
+bool hasArithmeticOperator(string opStr) 
+{
+    vector<string> allArithOps {"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS"};
+    for (string arithOp : allArithOps) {
+        if (opStr.find(arithOp) != string::npos) return true;
+    }
+    return false;
+}
+
 
 Expr *Parser::parseRowExpression(string input)
 {
@@ -66,8 +88,7 @@ Expr *Parser::parseRowExpression(string input)
     // -1 if unary operator, 0 if should be left, 1 if should be right
     int shouldBeRight = 0;
 
-    // copying the contents of the
-    // string to char arrayc
+    // copying the contents of the string to char_array
     strcpy(char_array, input.c_str());
     stack<Expr*> exprStack;
     int lastIdx = 0;
@@ -82,15 +103,26 @@ Expr *Parser::parseRowExpression(string input)
     #endif
     
 
-    // Special case: Top level expression is a ComparisionExpr or a FnExpr
     bool hasCmpOrFn = hasComparisionOperator(input) || hasFunction(input);
-    // cout << hasCmp << endl;
 
     bool hasNoAnd = input.find("AND(") == string::npos;
     bool hasNoOr = input.find("OR(") == string::npos;
     bool hasNoNot = (input.find("NOT(") == string::npos) && (input.find("not(") == string::npos);
+    bool hasNoBin = hasNoAnd && hasNoOr && hasNoNot;
 
-    if (hasNoAnd && hasNoOr && hasNoNot && hasCmpOrFn)
+    // Special case: Top level expression is an ArithmeticExpr
+    if (hasNoBin && !hasCmpOrFn) 
+    {
+        #ifdef DEBUG
+        std::cout << "Top level: ArithmeticExpr" << std::endl;
+        #endif
+
+        return generateArithmeticExpr(input);
+    }
+
+
+    // Special case: Top level expression is a ComparisionExpr or a FnExpr
+    if (hasNoBin && hasCmpOrFn)
     {
         #ifdef DEBUG
         std::cout << "Top level: ComparisionExpr or FnExpr" << std::endl;
@@ -112,14 +144,22 @@ Expr *Parser::parseRowExpression(string input)
         std::cout << "opStr:::"<< opStr << std::endl;
         #endif
 
-        string rest = stripped.substr(firstParen+1);
+        string rest = stripped.substr(firstParen);
         string result;
         int i = 0;
-        while(rest[i] != ')')
+        int parenCount = 0;
+        // respect parentheses of other expressions
+        while(i < rest.size())
         {
+            if (rest[i] == '(') parenCount++;
+            if (rest[i] == ')') parenCount--;
+            if (parenCount == 0) break;
             result.push_back(rest[i]);
             i++;
         }
+        result = result.substr(1);
+
+
         #ifdef DEBUG
         std::cout << "result:::"<< result  << std::endl;
         #endif
@@ -183,18 +223,10 @@ Expr *Parser::parseRowExpression(string input)
                 
                 Expr *parent = exprStack.top();
                 exprStack.pop();
-                string parentType = typeid(*parent).name();
-                #ifdef DEBUG
-                std::cout << "parent has type " << parentType<< std::endl;
-                #endif
-                if (parentType.find("Unary") != string::npos) {
-                    shouldBeRight = -1;
-                }
 
-                // #ifdef DEBUG
-                // // only using AND, OR for now
-                // std::cout << "retrieved parent " << ((parent->op == AND) ? "AND" : "OR") << " for opStr \"" << opStr << "\"" << std::endl; 
-                // #endif
+                ExprType parentType = parent->getType();
+                if (parentType == UNARY_E) shouldBeRight = -1;
+
 
                 // Simple logical operators
                 if (opStr == "AND" || opStr == "OR")
@@ -274,16 +306,21 @@ Expr *Parser::parseRowExpression(string input)
                     ComparisionOperator cmpOp = cmpTrans(opStr);
 
 
-                    i = i + 1;
                     ch = char_array[i];
                     int startIdx = i;
                     string result;
-                    while (ch != ')')
+                    int parenCount = 0;
+                    // respect parentheses of other expressions
+                    while(i < input.size())
                     {
-                        result.push_back(ch);
+                        if (char_array[i] == '(') parenCount++;
+                        if (char_array[i] == ')') parenCount--;
+                        if (parenCount == 0) break;
+                        result.push_back(char_array[i]);
                         i++;
-                        ch = char_array[i];
                     }
+                    result = result.substr(1);
+    
 
                     #ifdef DEBUG
                     std::cout << "result:::"<< result  << std::endl;
@@ -364,14 +401,7 @@ DataType getColType(string data)
             // Treat as string if the chars aren't digits
             if (!isdigit(data[i])) return STRINGD;
         }
-        // Treat as string if the column index doesn't fit in an integer
-        try {
-            int colVal = stoi(data.substr(1));
-            return COLUMND;
-        }
-        catch (std::out_of_range &e) {
-            return STRINGD;
-        }
+        return COLUMND;
     }
     // First check if int32 or int64
     bool isIntOrLong = true;
@@ -385,14 +415,9 @@ DataType getColType(string data)
         }
     }
     if (isIntOrLong) {
-        int intVal;
-        try {
-            intVal = stoi(data);
-            return INT32D;
-        }
-        catch (std::out_of_range &e) {
-            return INT64D;
-        }
+        long longVal = stol(data);
+        if (INT32_MIN <= longVal && longVal <= INT32_MAX) return INT32D;
+        return INT64D;
     }
 
     // Check if double
@@ -413,21 +438,42 @@ DataType getColType(string data)
     return DOUBLED;
 }
 
+Data Parser::generateData(string dataStr)
+{
+    DataType currDataType = getColType(dataStr);
+    Data currData;
+    currData.dataType = currDataType;
+    if (currDataType == STRINGD && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
+    dataStr = dataStr.substr(1, dataStr.size() - 2);
+    }
+    switch(currDataType)
+    {
+        case INT32D:
+            currData.intVal = stoi(dataStr);
+            break;
+        case INT64D:
+            currData.longVal = stol(dataStr);
+            break;
+        case DOUBLED: 
+            currData.doubleVal = stod(dataStr);
+            break;
+        case COLUMND:
+            currData.colVal = stoi(dataStr.substr(1));
+        case STRINGD: 
+            currData.stringVal = dataStr;
+            break;
+        case INVALIDDATAD:
+            currData.stringVal = "Invalid data";
+    }
+    return currData;
+}
+
 // Handles all ComparisionExprs, calls appropriate functions for between and in
 Expr* Parser::generateComparisionExpr(string exprStr, int startIdx, int endIdx, ComparisionOperator cmpOp)
 {
     #ifdef DEBUG
     std::cout << "exprStr:::"<< exprStr << ":::(" << startIdx << ", " << endIdx<<")"  << std::endl;
     #endif
-
-    // if (cmpOp == BETWEEN)
-    // {
-    //     return generateBetween(exprStr);
-    // }
-    // if (cmpOp == IN)
-    // {
-    //     return generateInExpr(exprStr);
-    // }
 
     int numbOfChars = endIdx - startIdx;
     string cmprStr = exprStr.substr(1);
@@ -447,105 +493,15 @@ Expr* Parser::generateComparisionExpr(string exprStr, int startIdx, int endIdx, 
     const auto strEnd = fieldData.find_last_not_of(" ");
     const auto strRange = strEnd - strBegin + 1;
     string fdata = fieldData.substr(strBegin, strRange);
-    DataType fdataType = getColType(fdata);
-    Data fDataO;
-    fDataO.dataType = fdataType;
 
     #ifdef DEBUG
-    std::cout << "fieldData:::"<< fdataType << ":::" << fdata << std::endl;
+    std::cout << "fdata:::" << fdata << std::endl;
     #endif
-
-    if (fdataType == STRINGD && fdata[0] == '\'' && fdata[fdata.size() - 1] == '\'') {
-        fdata = fdata.substr(1, fdata.size() - 2);
-    }
-
-    switch(fdataType)
-    {
-        case INT32D:
-            fDataO.intVal = stoi(fdata);
-            break;
-        case INT64D:
-            fDataO.longVal = stol(fdata);
-            break;
-        case DOUBLED: 
-            fDataO.doubleVal = stod(fdata);
-            break;
-        case COLUMND:
-            fDataO.colVal = stoi(fdata.substr(1));
-            break;
-        case STRINGD: 
-            fDataO.stringVal = fdata;
-            break;
-        case INVALIDDATAD:
-            fDataO.stringVal = "Invalid data";
-    }
-
-    expr->columnData = fDataO;
+    
+    expr->columnData = generateData(fdata);
     return expr;
 }
 
-// Handles BETWEEN(#x, y, z)
-// BetweenExpr* Parser::generateBetween(string exprStr)
-// {
-//     #ifdef DEBUG
-//     std::cout << "exprStr:::"<< exprStr << std::endl;
-//     #endif
-//     // remove spaces from exprStr
-//     exprStr.erase(remove(exprStr.begin(), exprStr.end(), ' '), exprStr.end());
-
-//     int firstComma = exprStr.find_first_of(",");
-//     string fieldIdx = exprStr.substr(1, firstComma);
-//     #ifdef DEBUG
-//     std::cout << "fieldIdx:::"<< fieldIdx  << std::endl;
-//     #endif
-//     string numbers = exprStr.substr(firstComma + 1);
-//     int secondComma = numbers.find_first_of(",");
-//     string lowerBound = numbers.substr(0, secondComma);
-//     string upperBound = numbers.substr(secondComma + 1);
-//     #ifdef DEBUG
-//     std::cout << "lowerBound:::"<< lowerBound  << std::endl;
-//     std::cout << "upperBound:::"<< upperBound  << std::endl;
-//     #endif
-
-//     DataType lbType = getColType(lowerBound);
-//     DataType ubType = getColType(upperBound);
-//     if (lbType != ubType) {
-//         std::cout << "Incompatible types " << lbType << " and " << ubType << std::endl;
-//     }
-//     if (lbType == STRING && lowerBound[0] == '\'' && lowerBound[lowerBound.size() - 1] == '\'') {
-//         lowerBound = lowerBound.substr(1, lowerBound.size() - 2);
-//     }
-//     if (ubType == STRING && upperBound[0] == '\'' && upperBound[upperBound.size() - 1] == '\'') {
-//         upperBound = upperBound.substr(1, upperBound.size() - 2);
-//     }
-//     // cout << lowerBound << "; " << upperBound;
-//     Data lowBound;
-//     Data upBound;
-//     lowBound.dataType = lbType;
-//     upBound.dataType = ubType;
-//     switch(lbType)
-//     {
-//         case INT32:
-//             lowBound.intVal = stoi(lowerBound);
-//             upBound.intVal = stoi(upperBound);
-//             break;
-//         case INT64:
-//             lowBound.longVal = stol(lowerBound);
-//             upBound.longVal = stol(upperBound);
-//             break;
-//         case DOUBLE: 
-//             lowBound.doubleVal = stod(lowerBound);
-//             upBound.doubleVal = stod(upperBound);
-//             break;
-//         default: 
-//             lowBound.stringVal = lowerBound;
-//             upBound.stringVal = upperBound;
-//             break;
-//     }
-
-//     return new BetweenExpr(stoi(fieldIdx), lowBound, upBound);
-
-// }
 
 Expr* Parser::generateFnExpr(string exprStr, FnType fnType)
 {
@@ -573,22 +529,9 @@ Expr* Parser::generateFnExpr(string exprStr, FnType fnType)
     }
     commaPositions.push_back(exprStr.size());
 
-    int colId = stoi(exprStr.substr(1, commaPositions[0]));
-    
-    // COALESCE; ex. COALESCE(#2, #3)
-    if (fnType == COALESCE) {
-        int colId2 = stoi(exprStr.substr(commaPositions[0] + 2, commaPositions[1] - commaPositions[0] - 1));
-        #ifdef DEBUG
-        std::cout << "coalesce columns:::" << colId << ", " << colId2 << std::endl;
-        #endif
-        vector<int> cols;
-        cols.push_back(colId);
-        cols.push_back(colId2);
-        return new CoalesceExpr(cols);
-    }
-
     // SUBSTR; ex. substr(#1, 1, 2)
     if (fnType == SUBSTR) {
+        int colId = stoi(exprStr.substr(1, commaPositions[0]));
         int startId = stoi(exprStr.substr(commaPositions[0] + 1, commaPositions[1] - commaPositions[0] - 1));
         int len = stoi(exprStr.substr(commaPositions[1] + 1, commaPositions[2] - commaPositions[1] - 1));
         #ifdef DEBUG
@@ -597,48 +540,98 @@ Expr* Parser::generateFnExpr(string exprStr, FnType fnType)
         return new SubstrExpr(colId, startId, len);
     }
 
+    if (fnType == CAST) {
+        Data val = generateData(exprStr);
+        return new CastExpr(val);
+    }
+
 
 
     #ifdef DEBUG
     std::cout << "number of elements in fn parameters:::" << numCommas<< std::endl;
-    std::cout << "columnIdx:::" << colId << std::endl;
     #endif
     
     for (int i = 1; i <= numCommas; i++) {
         string currVal = exprStr.substr(commaPositions[i-1]+1, commaPositions[i] - commaPositions[i-1] - 1);
-        DataType currDataType = getColType(currVal);
-        Data currData;
-        currData.dataType = currDataType;
-        if (currDataType == STRINGD && currVal[0] == '\'' && currVal[currVal.size() - 1] == '\'') {
-        currVal = currVal.substr(1, currVal.size() - 2);
-        }
-        switch(currDataType)
-        {
-            case INT32D:
-                currData.intVal = stoi(currVal);
-                break;
-            case INT64D:
-                currData.longVal = stol(currVal);
-                break;
-            case DOUBLED: 
-                currData.doubleVal = stod(currVal);
-                break;
-            case COLUMND:
-                currData.colVal = stoi(currVal.substr(1));
-            case STRINGD: 
-                currData.stringVal = currVal;
-                break;
-            case INVALIDDATAD:
-                currData.stringVal = "Invalid data";
-        }
-        arr.push_back(currData);
+        arr.push_back(generateData(currVal));
     }
     if (fnType == IN) {
-        Data col;
-        col.dataType = COLUMND;
-        col.colVal = colId;
-        return new InExpr(col, arr);
+        return new InExpr(parseRowExpression(exprStr.substr(0, commaPositions[0])), arr);
     }
-    if (fnType == BETWEEN && arr.size() == 2) return new BetweenExpr(colId, arr[0], arr[1]);
+    if (fnType == BETWEEN && arr.size() == 2) {
+        int colId = stoi(exprStr.substr(1, commaPositions[0]));
+        return new BetweenExpr(colId, arr[0], arr[1]);
+    }
+    // COALESCE; ex. COALESCE(#2, #3)
+    if (fnType == COALESCE) {
+        Data val1 = generateData(exprStr.substr(0, commaPositions[0]));
+        arr.insert(arr.begin(), val1);
+        return new CoalesceExpr(arr);
+    }
     return new BinaryExpr(INVALIDBIN, nullptr, nullptr);
+}
+
+
+// TODO
+Expr* Parser::generateArithmeticExpr(string exprStr)
+{
+    // remove spaces from exprStr
+    exprStr.erase(remove(exprStr.begin(), exprStr.end(), ' '), exprStr.end());
+    int numbOfChars = exprStr.size();
+    #ifdef DEBUG
+    std::cout << "exprStr:::"<< exprStr << "; size:::" << numbOfChars << std::endl;
+    #endif
+
+    // Number or column
+    bool isNumOrCol = !hasArithmeticOperator(exprStr);
+    if (isNumOrCol) {
+        #ifdef DEBUG
+        std::cout << "number or column found:::" << exprStr << std::endl;
+        #endif
+        
+        return new ArithmeticExpr(generateData(exprStr));
+    }
+
+    
+    // Binary arithmetic expression
+    #ifdef DEBUG
+    std::cout << "Binary arithmetic expression found" << std::endl;
+    #endif
+    // Find operator first
+    ArithmeticOperator aOp;
+    string inner = exprStr;
+    for (int i = 0; i < numbOfChars; i++) {
+        if (exprStr[i] == '(') {
+            aOp = arithTrans(exprStr.substr(0, i));
+            inner = exprStr.substr(i+1, numbOfChars - i - 2);
+            break;
+        }
+    }
+
+    #ifdef DEBUG
+    std::cout << "arithOp:::" << aOp << std::endl;
+    std::cout << "inner:::" << inner << std::endl;
+    #endif
+
+    int numInnerChars = inner.size();
+    // Ensure that parentheses are respected
+    int parenCount = 0;
+    for (int i = 0; i < numInnerChars; i++) {
+        if (inner[i] == '(') parenCount++;
+        if (inner[i] == ')') parenCount--;
+        if (inner[i] == ',' && parenCount == 0) {
+            // split at comma
+            string leftArith = inner.substr(0, i);
+            string rightArith = inner.substr(i+1, numInnerChars - i - 1);
+
+            #ifdef DEBUG
+            std::cout << "leftArith:::" << leftArith << std::endl;
+            std::cout << "rightArith:::" << rightArith << std::endl;
+            #endif
+
+            return new ArithmeticExpr(aOp, generateArithmeticExpr(leftArith), generateArithmeticExpr(rightArith));
+        }
+    }
+
+    return new ArithmeticExpr(INVALIDARITH, nullptr, nullptr);
 }

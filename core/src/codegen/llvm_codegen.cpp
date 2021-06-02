@@ -297,6 +297,7 @@ void LLVMCodeGen::generateBetweenExprFunc(BetweenExpr *bt_expr)
 
 bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data)
 {
+    // cout << c_expr->columnData.intVal << " " << data->intVal << endl;
     int32_t result;
      switch (c_expr->columnData.dataType)
     {
@@ -304,7 +305,7 @@ bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data
     case INT32D:
     {
         int32_t (*native_func)(int32_t, int32_t) = (int32_t(*)(int32_t, int32_t))_ee->getFunctionAddress(_func_name);
-        result = native_func(c_expr->columnData.intVal, data->intVal);
+        result = native_func(data->intVal, c_expr->columnData.intVal);
         break;
     }
        

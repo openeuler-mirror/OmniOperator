@@ -36,11 +36,13 @@ enum FnType
     BETWEEN, 
     COALESCE, 
     SUBSTR, 
+    CAST, 
     INVALIDFN
 };
 
 enum ArithmeticOperator
 {
+    VALUE, 
     ADD,
     SUB,
     MUL,
@@ -69,6 +71,7 @@ enum ExprType
     ARITHMETIC_E, 
     COALESCE_E, 
     SUBSTR_E, 
+    CAST_E, 
     INVALID_E
 };
 
@@ -106,7 +109,7 @@ public:
     std::string stringVal;
     int32_t colVal;
 
-    void printData(bool withTypes);
+    void printData();
 };
 
 
@@ -116,7 +119,7 @@ public:
     ComparisionOperator op;
     int32_t columnIdx;
     Data columnData;
-    
+    ~ComparisionExpr();
     ComparisionExpr();
     ComparisionExpr(ComparisionOperator cmpOp, int32_t colId, Data colData);
     void printExprTree();
@@ -141,10 +144,13 @@ class ArithmeticExpr : public Expr
 {
 public:
     ArithmeticOperator op;
+    bool isVal;
+    Data value;
     Expr *left;
     Expr *right;
     ArithmeticExpr();
     ~ArithmeticExpr();
+    ArithmeticExpr(Data val);
     ArithmeticExpr(ArithmeticOperator arithOp, Expr *leftExpr, Expr *rightExpr);
     void printExprTree();
     ExprType getType();
@@ -169,10 +175,10 @@ public:
 class InExpr : public Expr
 {
 public:
-    Data column;
+    Expr* column;
     std::vector<Data> arr;
     InExpr();
-    InExpr(Data col, std::vector<Data> vals);
+    InExpr(Expr* col, std::vector<Data> vals);
     void printExprTree();
     ExprType getType();
 };
@@ -181,9 +187,9 @@ public:
 class CoalesceExpr : public Expr
 {
 public:
-    std::vector<int> columnIds;
+    std::vector<Data> values;
     CoalesceExpr();
-    CoalesceExpr(std::vector<int> cols);
+    CoalesceExpr(std::vector<Data> vals);
     void printExprTree();
     ExprType getType();
 };
@@ -196,6 +202,18 @@ public:
     int length;
     SubstrExpr();
     SubstrExpr(int colId, int startId, int len);
+    void printExprTree();
+    ExprType getType();
+};
+
+class CastExpr : public Expr
+{
+public:
+    // int should be converted to double
+    // date string should be converted to int
+    Data value;
+    CastExpr();
+    CastExpr(Data val);
     void printExprTree();
     ExprType getType();
 };

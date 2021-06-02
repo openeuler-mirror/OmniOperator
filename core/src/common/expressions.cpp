@@ -37,6 +37,9 @@ ComparisionExpr::ComparisionExpr(ComparisionOperator cmpOp, int colId, Data colD
     columnData = colData;
 } 
 
+ComparisionExpr::~ComparisionExpr() {
+}
+
 ExprType ComparisionExpr::getType() {
     return ExprType::COMPARISION_E;
 }
@@ -62,7 +65,15 @@ ExprType UnaryExpr::getType() {
 ArithmeticExpr::ArithmeticExpr() {
 }
 
+ArithmeticExpr::ArithmeticExpr(Data val) {
+    isVal = true;
+    value = val;
+    left = nullptr;
+    right = nullptr;
+}
+
 ArithmeticExpr::ArithmeticExpr(ArithmeticOperator aOp, Expr *leftExpr, Expr *rightExpr){
+    isVal = false;
     op = aOp;
     left = leftExpr;
     right = rightExpr;
@@ -95,7 +106,7 @@ ExprType BetweenExpr::getType() {
 InExpr::InExpr() {
 }
 
-InExpr::InExpr(Data col, std::vector<Data> vals) {
+InExpr::InExpr(Expr* col, std::vector<Data> vals) {
     column = col;
     arr = vals;
 }
@@ -108,8 +119,8 @@ ExprType InExpr::getType() {
 CoalesceExpr::CoalesceExpr() {
 }
 
-CoalesceExpr::CoalesceExpr(std::vector<int> cols) {
-    columnIds = cols;
+CoalesceExpr::CoalesceExpr(std::vector<Data> vals) {
+    values = vals;
 }
 
 ExprType CoalesceExpr::getType() {
@@ -128,6 +139,18 @@ SubstrExpr::SubstrExpr(int colId, int startId, int len) {
 
 ExprType SubstrExpr::getType() {
     return ExprType::SUBSTR_E;
+}
+
+
+CastExpr::CastExpr() {
+}
+
+CastExpr::CastExpr(Data val) {
+    value = val;
+}
+
+ExprType CastExpr::getType() {
+    return ExprType::CAST_E;
 }
 
 
@@ -168,7 +191,8 @@ void UnaryExpr::printExprTree() {
     printf(")");
 }
 
-void Data::printData(bool printWithTypes) {
+void Data::printData() {
+    const bool printWithTypes = false;
     switch(dataType)
     {
         case INT32D:
@@ -222,19 +246,30 @@ void ComparisionExpr::printExprTree() {
             break;
     }
     printf("#%d, ", columnIdx);
-    columnData.printData(false);
+    columnData.printData();
     printf(")");
 }
 
 void BetweenExpr::printExprTree() {
     printf("Between(#%d, ", columnIdx);
-    lowerBound.printData(false);
+    lowerBound.printData();
     printf(", ");
-    upperBound.printData(false);
+    upperBound.printData();
     printf(")");
 }
 
 void ArithmeticExpr::printExprTree() {
+    if (isVal) {
+        #ifdef DEBUG
+        printf("ArithVal(");
+        #endif
+        value.printData();
+        #ifdef DEBUG
+        printf(")");
+        #endif
+
+        return;
+    }
     switch(op) {
         case ADD:
             printf("Arith(ADD, ");
@@ -262,24 +297,32 @@ void ArithmeticExpr::printExprTree() {
 
 void InExpr::printExprTree() {
     printf("In(");
-    column.printData(false);
+    column->printExprTree();
     printf(", ");
     for (int i = 0; i < arr.size() - 1; i++) {
-        arr[i].printData(false);
+        arr[i].printData();
         printf(", ");
     }
-    arr[arr.size() - 1].printData(false);
+    arr[arr.size() - 1].printData();
     printf(")");
 }
 
 void CoalesceExpr::printExprTree() {
     printf("Coalesce(");
-    for (int i = 0; i < columnIds.size() - 1; i++) {
-        printf("#%d, ", columnIds[i]);
+    for (int i = 0; i < values.size() - 1; i++) {
+        values[i].printData();
+        printf(", ");
     }
-    printf("#%d)", columnIds[columnIds.size() - 1]);
+    values[values.size() - 1].printData();
+    printf(")");
 }
 
 void SubstrExpr::printExprTree() {
     printf("Substr(#%d, %d, %d)", columnIdx, startIdx, length);
+}
+
+void CastExpr::printExprTree() {
+    printf("Cast(");
+    value.printData();
+    printf(")");
 }

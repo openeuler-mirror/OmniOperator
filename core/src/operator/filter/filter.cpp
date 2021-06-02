@@ -21,7 +21,7 @@ OmniFilterOperatorFactory::OmniFilterOperatorFactory(std::string expression, int
     std::cout << "parsing: " << expression << std::endl;
     Expr* parsedExpr = parserObject.parseRowExpression(expression);
     ComparisionExpr *c_expr =  (ComparisionExpr *) parsedExpr;
-    std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
+    // std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
     //TODO: replace the placeholder context
     Compiler *compiler = new Compiler(parsedExpr, inputTypes, vecCount);
@@ -102,9 +102,9 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
         {
             case INT32:{
                 Data actualData;
-                actualData.intVal = *((int32_t*) column->getValue(index);
+                actualData.intVal = *((int32_t*) column->getValue(index));
                 actualData.dataType = DataType::INT32D;
-                if (codeGen->executeComparisionExprFunc(expr, actualData))) {
+                if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
                     selectedRows[numSelectedRows++] = index;
                 }
                 break;
