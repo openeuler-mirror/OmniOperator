@@ -174,9 +174,9 @@ void test_sort(bool harden)
     int sortNullFirsts[] = {1, 1};
     int sortColCount = 2;
 
-    OmniSortOperatorFactory *sortOperatorFactory = OmniSortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-    OmniOperator *sortOperator = NULL;
+    omni::Operator *sortOperator = NULL;
     if (harden) {
         auto p_sortCols = ParamValue(sortCols, 2);
         auto p_sortColTypes = ParamValue(sortColTypes, 2);
@@ -212,13 +212,13 @@ void test_sort(bool harden)
         ms d = std::chrono::duration_cast<ms>(fs);
         std::cout << " create_jitter: " << d.count() << "ms\n";
 
-        auto sort = JITTER->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv");
+        auto sort = JITTER->lookup("_ZN29NativeSortOperatorFactory18createOperatorEv");
         auto t_lookup_func = Time::now();
         fs = t_lookup_func - t_created_jitter;
         d = std::chrono::duration_cast<ms>(fs);
         std::cout << " lookup func 1: " << d.count() << "ms\n";
 
-        auto func = (opt_module)(JITTER->lookup("_ZN29NativeOmniSortOperatorFactory18createOmniOperatorEv")->getAddress());
+        auto func = (opt_module)(JITTER->lookup("_ZN29NativeSortOperatorFactory18createOperatorEv")->getAddress());
         auto t_lookup_func2 = Time::now();
         fs = t_lookup_func2 - t_lookup_func;
         d = std::chrono::duration_cast<ms>(fs);

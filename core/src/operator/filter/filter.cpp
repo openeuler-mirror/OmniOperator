@@ -9,7 +9,7 @@
 
 using namespace std;
 
-OmniFilterOperatorFactory::OmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
 {
     this->inputTypes = inputTypes;
     this->vecCount = vecCount;
@@ -29,17 +29,17 @@ OmniFilterOperatorFactory::OmniFilterOperatorFactory(std::string expression, int
     delete compiler;
 }
 
-OmniFilterOperatorFactory::~OmniFilterOperatorFactory()
+FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 {
     delete this->filter;
 }
 
-omni::Operator * OmniFilterOperatorFactory::createOperator()
+omni::Operator * FilterAndProjectOperatorFactory::createOperator()
 {
-    return new OmniFilterOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
+    return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
 
-int32_t OmniFilterOperator::addInput(Table* data, int32_t rowCount)
+int32_t FilterAndProjectOperator::addInput(Table* data, int32_t rowCount)
 {
     int32_t *selectedRows = new int32_t[rowCount];
     int32_t numSelectedRows = this->filter->filter(data, rowCount, selectedRows);
@@ -52,7 +52,7 @@ int32_t OmniFilterOperator::addInput(Table* data, int32_t rowCount)
     return numSelectedRows;
 }
 
-int32_t OmniFilterOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount)
+int32_t FilterAndProjectOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount)
 {
     if (pageCount != 1) {
         std::cout << "ERROR: invalid page count " << pageCount << std::endl;
@@ -71,7 +71,7 @@ int32_t OmniFilterOperator::addInput(Table** data, int32_t* rowCount, int32_t pa
     return numSelectedRows;
 }
 
-int32_t OmniFilterOperator::getOutput(std::vector<Table*>& data)
+int32_t FilterAndProjectOperator::getOutput(std::vector<Table*>& data)
 {
     if (this->projectedVecs == nullptr) {
         return 0;

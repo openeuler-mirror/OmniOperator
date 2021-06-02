@@ -19,10 +19,10 @@ private:
     Expr* expr;
 };
 
-class OmniFilterOperator : public omni::Operator
+class FilterAndProjectOperator : public omni::Operator
 {
 public:
-    OmniFilterOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
+    FilterAndProjectOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
         : filter(filter), inputTypes(inputTypes), vecCount(vecCount), projectIndex(projectIndex), projectVecCount(projectVecCount)
     {
     }
@@ -48,12 +48,12 @@ public:
     Table *projectedVecs;
 };
 
-class OmniFilterOperatorFactory : public OperatorFactory
+class FilterAndProjectOperatorFactory : public OperatorFactory
 {
 public:
-    OmniFilterOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount);
+    FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount);
 
-    ~OmniFilterOperatorFactory() override;
+    ~FilterAndProjectOperatorFactory() override;
 
     omni::Operator* createOperator() override;
 

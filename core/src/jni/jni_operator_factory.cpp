@@ -262,6 +262,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAnd
     int32_t inputLength = (int32_t) jInputLength;
     jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
     int32_t projectLength = (int32_t) jProjectLength;
-    OmniFilterOperatorFactory *factory = new OmniFilterOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
+    FilterAndProjectOperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
     return (int64_t) factory;
 }
