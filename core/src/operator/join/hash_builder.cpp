@@ -122,6 +122,7 @@ int32_t HashBuilderOperator::addInput(Table **datas, int32_t *rowCounts, int32_t
 
 int32_t HashBuilderOperator::getOutput(std::vector<Table *>& outputTables)
 {
+    return 0;
 }
 
 int32_t *HashBuilderOperator::getSourceTypes()

@@ -1,0 +1,3 @@
+#cmakedefine DEBUG_OPERATOR
+#cmakedefine DEBUG_LEVEL_LOW
+#cmakedefine DEBUG_LEVEL_HIGH

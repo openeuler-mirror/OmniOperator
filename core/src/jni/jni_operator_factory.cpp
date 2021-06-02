@@ -12,7 +12,7 @@
 #include "../operator/filter/filter.h"
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
-#include "../util/debug.h"
+#include "config.h"
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
@@ -28,6 +28,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     JitContext *jitContext = operatorFactory->getJitContext();
     omniruntime::op::Operator *nativeOperator = NULL;
 
+#ifdef DEBUG_OPERATOR
+    nativeOperator = operatorFactory->createOperator();
+    JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
+#else
     if (jitContext == NULL) {
         nativeOperator = operatorFactory->createOperator();
         JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
@@ -37,7 +41,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
         nativeOperator = opModule(operatorFactory);
         JNI_DEBUG_LOG("JIT create omni operator finished, elapsed time: %ld ms.", END(start));
     }
-
+#endif
     return reinterpret_cast<int64_t>(nativeOperator);
 }
 

@@ -250,6 +250,8 @@ Constant *Hammer::to_scalar_llvm_value(ParamValue value) {
             //outs() << "creating fp64" << value.to_fp64() << " param value \n";
             llvmValue = ConstantFP::get(*context, APFloat(value.to_fp64()));
             break;
+        default:
+            break;
     }
     return llvmValue;
 }
@@ -338,7 +340,10 @@ Constant *Hammer::to_vector_llvm_value(std::string name, ParamValue value) {
             Constant *GEPIndices[] = {Zero, Zero};
             return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
+        default:
+            break;
     }
+    return NULL;
 }
 
 Constant *Hammer::to_array_llvm_value(std::string name, ParamValue value) {
@@ -404,7 +409,10 @@ Constant *Hammer::to_array_llvm_value(std::string name, ParamValue value) {
             Constant *GEPIndices[] = {Zero, Zero};
             return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
+        default:
+            break;
     }
+    return NULL;
 }
 } // end of namespace codegen
 } // end of namespace omniruntime

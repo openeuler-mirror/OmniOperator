@@ -86,7 +86,7 @@ void sortProcess()
     delete sortOperator;
 }
 
-int main(int argc, char **argv) {
+int main1(int argc, char **argv) {
     if (argc < 4) {
         std::cout << "Usage: program tablecount distinctvalue repeatcount" << std::endl;
         return 0;
@@ -148,4 +148,5 @@ int main(int argc, char **argv) {
     freeDataInColumn(g_inputTables, g_tableCount);
     freeInputTable(g_inputTables, g_tableCount);
     delete g_factory;
+    return 0;
 }

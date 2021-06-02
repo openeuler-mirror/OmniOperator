@@ -24,6 +24,7 @@ namespace op {
 
         int getStatus() { return status; }
 
+        void close() {}
     protected:
         int status;
     };

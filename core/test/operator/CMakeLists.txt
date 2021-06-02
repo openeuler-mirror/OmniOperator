@@ -1,10 +1,6 @@
-set(SOURCE_LINK data operator util)
-aux_source_directory(. TESTS_LIST)
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
+set(OP_TEST_TARGET optest)
+add_library(${OP_TEST_TARGET} ${OP_TESTS_LIST})
 
-add_executable(tests ${TESTS_LIST})
-
-target_link_libraries(tests ${GTEST_BOTH_LIBRARIES} ${SOURCE_LINK} pthread harden api operator memory)
-
-gtest_discover_tests(tests)
+# dependent library
+target_link_libraries(${OP_TEST_TARGET} jit jni vector operator memory codegen)

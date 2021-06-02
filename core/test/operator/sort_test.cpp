@@ -324,7 +324,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
     delete expectTable;
 }
 
-void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t repeatCount, Table **tables)
+void buildSortTestData1(int32_t tableCount, int32_t distinctValueCount, int32_t repeatCount, Table **tables)
 {
     uint32_t positionCount = distinctValueCount * repeatCount;
     int64_t *data1;
@@ -367,7 +367,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
     int32_t rowNum = distinctValue * repeatCount;
     Table **tables = (Table **)malloc(tableCount * sizeof(Table *));
 
-    buildSortTestData(tableCount, distinctValue, repeatCount, tables);
+    buildSortTestData1(tableCount, distinctValue, repeatCount, tables);
     std::cout<<"finish build sort data" << endl;
 
     int32_t rowCounts[tableCount];
