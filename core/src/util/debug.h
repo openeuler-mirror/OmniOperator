@@ -8,7 +8,7 @@ typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
 
 // define time 
-#if defined(JNI_DEBUG) || defined(OP_DEBUG)
+#ifdef DEBUG
 #define START() Time::now()
 #define END(t0) \
     ({ \
@@ -23,17 +23,6 @@ typedef std::chrono::duration<float> fsec;
 #endif
 
 // TODO define log level
-#ifdef JNI_DEBUG
-#define JNI_DEBUG_LOG(format, ...) printf("[%s][%s][%d]: " format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#else
-#define JNI_DEBUG_LOG(format, ...)
-#endif
-
-#ifdef OP_DEBUG
-#define OP_DEBUG_LOG(format, ...) printf("[%s][%s][%d]: " format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#else
-#define OP_DEBUG_LOG(format, ...)
-#endif
 
 #define DebugPrintval(x) \
 printf("[%s][%s][%d]:%s=%d\n", __FILE__, __FUNCTION__, __LINE__, #x, x)

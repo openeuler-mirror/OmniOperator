@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <stdint.h>
+#include <string>
 
 // place holder context class here
 class Context
@@ -26,9 +27,16 @@ enum ComparisionOperator
     LTE,
     GT,
     GTE, 
-    BETWEEN, 
-    IN,
     INVALIDCMP
+};
+
+enum FnType
+{
+    IN, 
+    BETWEEN, 
+    COALESCE, 
+    SUBSTR, 
+    INVALIDFN
 };
 
 enum ArithmeticOperator
@@ -41,10 +49,34 @@ enum ArithmeticOperator
     INVALIDARITH
 };
 
+enum DataType
+{
+    INT32D, 
+    INT64D, 
+    DOUBLED, 
+    STRINGD, 
+    COLUMND, 
+    INVALIDDATAD
+};
+
+enum ExprType
+{
+    COMPARISION_E, 
+    BINARY_E, 
+    UNARY_E, 
+    IN_E, 
+    BETWEEN_E, 
+    ARITHMETIC_E, 
+    COALESCE_E, 
+    SUBSTR_E, 
+    INVALID_E
+};
+
 
 class Expr
 {
     public:
+        virtual ExprType getType();
         virtual ~Expr() = default;
         virtual void printExprTree();
 };
@@ -60,6 +92,21 @@ public:
     ~BinaryExpr();
     BinaryExpr(LogicalOperator logOp, Expr *leftExpr, Expr *rightExpr);
     void printExprTree();
+    ExprType getType();
+};
+
+
+class Data
+{
+public:
+    DataType dataType;
+    int32_t intVal;
+    int64_t longVal;
+    double doubleVal;
+    std::string stringVal;
+    int32_t colVal;
+
+    void printData(bool withTypes);
 };
 
 
@@ -68,22 +115,12 @@ class ComparisionExpr : public Expr
 public:
     ComparisionOperator op;
     int32_t columnIdx;
-    int32_t columnData;
+    Data columnData;
+    
     ComparisionExpr();
-    ComparisionExpr(ComparisionOperator cmpOp, int colId, int colData);
+    ComparisionExpr(ComparisionOperator cmpOp, int32_t colId, Data colData);
     void printExprTree();
-};
-
-
-class BetweenExpr : public Expr
-{
-public:
-    int columnIdx;
-    int lowerBound;
-    int upperBound;
-    BetweenExpr();
-    BetweenExpr(int colId, int lb, int ub);
-    void printExprTree();
+    ExprType getType();
 };
 
 
@@ -96,6 +133,7 @@ public:
     ~UnaryExpr();
     UnaryExpr(LogicalOperator logOp, Expr *bodyexp);
     void printExprTree();
+    ExprType getType();
 };
 
 
@@ -109,16 +147,58 @@ public:
     ~ArithmeticExpr();
     ArithmeticExpr(ArithmeticOperator arithOp, Expr *leftExpr, Expr *rightExpr);
     void printExprTree();
+    ExprType getType();
 };
+
+
+class BetweenExpr : public Expr
+{
+public:
+    int32_t columnIdx;
+
+    Data lowerBound;
+    Data upperBound;
+
+    BetweenExpr();
+    BetweenExpr(int32_t colId, Data lowBound, Data upBound);
+    void printExprTree();
+    ExprType getType();
+};
+
 
 class InExpr : public Expr
 {
 public:
-    int columnIdx;
-    std::vector<int> arr;
+    Data column;
+    std::vector<Data> arr;
     InExpr();
-    InExpr(int colId, std::vector<int> vals);
+    InExpr(Data col, std::vector<Data> vals);
     void printExprTree();
+    ExprType getType();
 };
+
+
+class CoalesceExpr : public Expr
+{
+public:
+    std::vector<int> columnIds;
+    CoalesceExpr();
+    CoalesceExpr(std::vector<int> cols);
+    void printExprTree();
+    ExprType getType();
+};
+
+class SubstrExpr : public Expr
+{
+public:
+    int columnIdx;
+    int startIdx;
+    int length;
+    SubstrExpr();
+    SubstrExpr(int colId, int startId, int len);
+    void printExprTree();
+    ExprType getType();
+};
+
 
 #endif

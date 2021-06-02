@@ -26,15 +26,28 @@ class LLVMCodeGen
 public:
     LLVMCodeGen();
 
-    void generateFunc(std::string name, Expr* expr);
+    // Generate the functions
+    void generateFunc(string name, Expr* expr);
     
-    llvm::Value* generateComparisionBody(ComparisionExpr* expr, Value* left , Value* right);
+    void generateComparisionExprFunc(ComparisionExpr* expr);
 
+    void generateBinaryExprFunc(BinaryExpr* expr);
+
+    void generateInExprFunc(InExpr* expr);
+
+    void generateBetweenExprFunc(BetweenExpr* expr);
+
+    // compile the generated code
     void compile();
 
-    bool execute(Expr* expr, int32_t data);
+    // Execute the compiled functions
+    bool executeComparisionExprFunc(ComparisionExpr* expr, Data* data);
 
-    bool execute(int32_t arg0, int32_t arg1, int32_t arg2, int32_t arg3);
+    bool executeBinaryExprFunc(BinaryExpr* expr, Data** dataArr);
+
+    bool executeInExprFunc(InExpr* expr, Data* data);
+
+    bool executeBetweenExprFunc(BetweenExpr* expr, Data* data);
 
 private:
     std::string _func_name;

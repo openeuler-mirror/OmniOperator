@@ -15,7 +15,6 @@
 package nova.hetu.omniruntime.vector;
 
 import com.google.common.annotations.VisibleForTesting;
-import nova.hetu.omniruntime.NativeLibs;
 import sun.nio.ch.DirectBuffer;
 
 import java.nio.ByteBuffer;
@@ -39,7 +38,7 @@ public class OMVectorBase
     public static final int BOOLEAN_DATA_TYPE = 4;
 
     static {
-        NativeLibs.load();
+        System.loadLibrary("omruntime");
     }
 
     public OMVectorBase() {}

@@ -1,24 +1,52 @@
 package nova.hetu.omniruntime.operator;
 
-import com.google.common.collect.ImmutableList;
-import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
+import nova.hetu.omniruntime.operator.aggregator.JOmniHashAggregationOperator;
 import nova.hetu.omniruntime.vector.AggType;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static java.lang.String.format;
 
-public class OmniHashAggregationOperatorTest
-{
+public class OmniHashAggregationOperatorTest {
+    private Vec[][] generateOMVec(OMResult[] result, int[] outputTypes)
+    {
+        Vec[][] output = new Vec[result.length][outputTypes.length];
+        for (int i = 0; i < result.length; ++i) {
+            int length = result[i].getLength();
+
+            for (int idx = 0; idx < outputTypes.length; idx++) {
+                ByteBuffer vecData = result[i].getBuffers()[idx];
+                //TODO: Need Byte Order Configurable
+                vecData.order(ByteOrder.LITTLE_ENDIAN);
+                switch (outputTypes[idx]) {
+                    case 1:
+                        output[i][idx] = new IntVec(vecData, length);
+                        break;
+                    case 2:
+                        output[i][idx] = new LongVec(vecData, length);
+                        break;
+                    case 3:
+                        output[i][idx] = new DoubleVec(vecData, length);
+                        break;
+                    default:
+                        throw new IllegalArgumentException(String.format("Not Support Vec Type %s", outputTypes[idx]));
+                }
+            }
+        }
+        return output;
+    }
+
     @Test
     public void testExecuteAggMultiplePage()
     {
@@ -30,63 +58,61 @@ public class OmniHashAggregationOperatorTest
         VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
 
         VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
-        OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(
+        JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory factory = JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory.createJOmniHashAggregationOperatorFactory(
                 groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes
         );
         int rowNum = 40000;
         int pageCount = 10;
         int[] rowNums = new int[pageCount];
 
-        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
         List<Vec> inputData = new ArrayList<>();
         for (int i = 0; i < pageCount; i++) {
             inputData.addAll(build4Columns(rowNum));
-            VecBatch vecBatch = new VecBatch(build4Columns(rowNum).toArray(new Vec[4]), rowNum);
-            vecBatchList.add(vecBatch);
+            rowNums[i] = rowNum;
         }
 
-        OmniOperator omniOperator = factory.createOperator();
+        JOmniHashAggregationOperator omniOperator = (JOmniHashAggregationOperator)factory.createOmniOperator();
 
-        omniOperator.addInput(vecBatchList.build());
+        omniOperator.addInput(inputData, rowNums);
 
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
 
-        Iterator<VecBatch> output = omniOperator.getOutput();
-        VecBatch vecBatch = null;
-        while (output.hasNext()) {
-            vecBatch = output.next();
-            if (vecBatch.getVectors().length != aggOutputTypes.length) {
-                throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+        OMResult[] output = omniOperator.getOutput();
+        System.out.println("Native result OMResult number: " + output.length);
+        for (int i = 0; i < output.length; ++i) {
+            if (output[i].getBuffers().length != aggOutputTypes.length) {
+                throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", output[i].getBuffers().length, aggOutputTypes.length, output[i].getLength()));
             }
-            Assert.assertNotNull(vecBatch);
-            Assert.assertEquals(vecBatch.getVectors().length, 4);
-            Vec[] vectors = vecBatch.getVectors();
-            Assert.assertEquals(((LongVec) vectors[0]).get(0), 0);
-            Assert.assertEquals(((LongVec) vectors[1]).get(0), 0);
-            Assert.assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
-            Assert.assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
-            releaseVecMemory(vecBatch.getVectors());
+        }
+        Vec[][] result = generateOMVec(output, transformVecType(aggOutputTypes));
+        Assert.assertEquals(result[0].length, 4);
+        Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[0][1]).get(0), 0);
+        Assert.assertEquals(((LongVec)result[0][2]).get(0), rowNum * pageCount);
+        Assert.assertEquals(((LongVec)result[0][3]).get(0), rowNum * pageCount);
+
+        // release result memory
+        for (int i = 0; i < result.length; ++i) {
+            releaseVecMemory(result[i]);
         }
     }
 
-    private void releaseVecMemory(Vec[] vecs)
-    {
-        for (Vec vec : vecs) {
+    private void releaseVecMemory(Vec[] vecs) {
+        for (Vec vec: vecs) {
             vec.close();
         }
     }
 
     @Test
-    public void testExecuteAggMultipleThread()
-    {
+    public void testExecuteAggMultipleThread() {
         int pageCount = 10;
         int threadCount = 10;
         int rowNum = 100;
-        multiThreadExecution(threadCount, rowNum, pageCount);
+        multiThreadExecution(threadCount,rowNum, pageCount);
     }
 
-    private void multiThreadExecution(int threadCount, int rowNum, int pageCount)
+    private void multiThreadExecution( int threadCount, int rowNum, int pageCount)
     {
         CountDownLatch downLatch = new CountDownLatch(threadCount);
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
@@ -99,38 +125,41 @@ public class OmniHashAggregationOperatorTest
                     AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
                     VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
                     VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
-                    OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(
+                    JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory factory = JOmniHashAggregationOperator.JOmniHashAggregationOperatorFactory.createJOmniHashAggregationOperatorFactory(
                             groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes
                     );
 
+                    int[] rowNums = new int[pageCount];
+
                     List<Vec> inputData = new ArrayList<>();
-                    ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
                     for (int i = 0; i < pageCount; i++) {
                         inputData.addAll(build4Columns(rowNum));
-                        vecBatchList.add(new VecBatch(build4Columns(rowNum), rowNum));
+                        rowNums[i] = rowNum;
                     }
 
-                    OmniOperator omniOperator = factory.createOperator();
-                    omniOperator.addInput(vecBatchList.build());
+                    JOmniHashAggregationOperator omniOperator = (JOmniHashAggregationOperator)factory.createOmniOperator();
+                    omniOperator.addInput(inputData, rowNums);
                     // release input data memory
                     releaseVecMemory(inputData.toArray(new Vec[0]));
 
-                    Iterator<VecBatch> output = omniOperator.getOutput();
-                    while (output.hasNext()) {
-                        VecBatch vecBatch = output.next();
-                        if (vecBatch.getVectors().length != aggOutputTypes.length) {
-                            throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+
+                    OMResult[] output = omniOperator.getOutput();
+                    System.out.println("Native result OMResult number: " + output.length);
+                    for (int i = 0; i < output.length; ++i) {
+                        if (output[i].getBuffers().length != aggOutputTypes.length) {
+                            throw new IllegalArgumentException(format("output vec size error: result size: %s, outputTypes size: %s,rows: %s", output[i].getBuffers().length, aggOutputTypes.length, output[i].getLength()));
                         }
+                    }
+                    Vec[][] result = generateOMVec(output, transformVecType(aggOutputTypes));
+                    Assert.assertEquals(result[0].length, 4);
+                    Assert.assertEquals(((LongVec)result[0][0]).get(0), 0);
+                    Assert.assertEquals(((LongVec)result[0][1]).get(0), 0);
+                    Assert.assertEquals(((LongVec)result[0][2]).get(0), rowNum * pageCount);
+                    Assert.assertEquals(((LongVec)result[0][3]).get(0), rowNum * pageCount);
 
-                        Assert.assertNotNull(vecBatch);
-                        Assert.assertEquals(vecBatch.getVectors().length, 4);
-                        Vec[] vectors = vecBatch.getVectors();
-                        Assert.assertEquals(((LongVec) vectors[0]).get(0), 0);
-                        Assert.assertEquals(((LongVec) vectors[1]).get(0), 0);
-                        Assert.assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
-                        Assert.assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
-
-                        releaseVecMemory(vecBatch.getVectors());
+                    // release result memory
+                    for (int i = 0; i < result.length; ++i) {
+                        releaseVecMemory(result[i]);
                     }
                 }
                 finally {
@@ -144,12 +173,11 @@ public class OmniHashAggregationOperatorTest
             downLatch.await();
         }
         catch (InterruptedException ex) {
-            Assert.assertEquals(true, false);
+            Assert.assertEquals(true,false);
         }
     }
 
-    private List<Vec> build4Columns(int rowNum)
-    {
+    private List<Vec> build4Columns(int rowNum) {
         List<Vec> columns = new ArrayList<>();
 
         LongVec c1 = new LongVec(rowNum);
@@ -174,8 +202,7 @@ public class OmniHashAggregationOperatorTest
         return columns;
     }
 
-    private List<Vec> build2Columns(int rowNum)
-    {
+    private List<Vec> build2Columns(int rowNum) {
         List<Vec> columns = new ArrayList<>();
 
         LongVec c1 = new LongVec(rowNum);
