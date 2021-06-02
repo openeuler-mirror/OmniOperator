@@ -226,7 +226,8 @@ public class OmniFilterAndProjectOperatorTest {
 
         // Test multiple inputs
         op.addInput(makeInput(NUM_ROWS, col2));
-        res = op.getOutput().next();
+        Assert.assertTrue(op.getOutput().hasNext());
+	res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 668);
         res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         while (res1.hasRemaining()) {
