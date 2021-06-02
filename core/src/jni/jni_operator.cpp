@@ -147,7 +147,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     for (int32_t tableIdx = 0; tableIdx < tablesCount; tableIdx++) {
         delete outputTables[tableIdx];
     }
-    return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, 2);
+    return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->getStatus());
 }
 
 /*

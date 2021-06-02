@@ -255,6 +255,7 @@ int32_t SortOperator::getOutput(vector<Table *>& outputTables)
         position += rowCount;
         outputTables.push_back(table);
     }
+    status = 2;
     return 0;
 }
 
