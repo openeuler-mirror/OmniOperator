@@ -14,8 +14,10 @@ class Parser
 public:
     Expr *parseRowExpression(string input);
     Expr *generateComparisionExpr(string exprStr, int startIdx, int endIdx, ComparisionOperator cmpOp);
-    BetweenExpr *generateBetween(string exprStr);
-    InExpr *generateInExpr(string exprStr);
+    // BetweenExpr *generateBetween(string exprStr);
+    // InExpr *generateInExpr(string exprStr);
+    // CoalesceExpr *generateCoalesceExpr(string exprStr);
+    Expr *generateFnExpr(string exprStr, FnType fnType);
 };
 
 
