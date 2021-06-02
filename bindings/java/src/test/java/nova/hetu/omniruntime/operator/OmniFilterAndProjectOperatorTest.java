@@ -37,6 +37,7 @@ public class OmniFilterAndProjectOperatorTest {
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 2000);
         IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -65,6 +66,7 @@ public class OmniFilterAndProjectOperatorTest {
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1, col2));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 800);
         IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -96,6 +98,7 @@ public class OmniFilterAndProjectOperatorTest {
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1, col2));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 50);
         DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
@@ -128,6 +131,7 @@ public class OmniFilterAndProjectOperatorTest {
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1, col2));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 834);
         IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -154,6 +158,7 @@ public class OmniFilterAndProjectOperatorTest {
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 4999);
         DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
@@ -181,6 +186,7 @@ public class OmniFilterAndProjectOperatorTest {
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 20000);
         IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -209,6 +215,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
         op.addInput(makeInput(NUM_ROWS, col1));
 
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 500);
 
@@ -252,6 +259,8 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         op.addInput(makeInput(NUM_ROWS, col1, col2));
+
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 286);
         IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -284,6 +293,8 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         op.addInput(makeInput(NUM_ROWS, col1, col2, col3));
+
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 1000);
         IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -319,6 +330,8 @@ public class OmniFilterAndProjectOperatorTest {
         );
         OmniOperator op = factory.createOperator();
         op.addInput(makeInput(NUM_ROWS, col1, col2, col3, col4));
+
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 100);
         IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -355,6 +368,8 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         op.addInput(makeInput(NUM_ROWS, col1, col2, col3, col4, col5, col6));
+
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 543);
         IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -391,6 +406,8 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         op.addInput(makeInput(NUM_ROWS, col1, col2, col3, col4));
+
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 3498);
         LongBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
@@ -431,6 +448,8 @@ public class OmniFilterAndProjectOperatorTest {
         col2.set(2, 0);
 
         op.addInput(makeInput(NUM_ROWS, col1, col2));
+
+        Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 6);
         IntBuffer fib = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
@@ -459,6 +478,8 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         OmniOperator op = factory.createOperator();
+
+        Assert.assertTrue(op.getOutput().hasNext());
         op.addInput(makeInput(NUM_ROWS, col1));
         VecBatch res = op.getOutput().next();
         Assert.assertEquals(res.getRowCount(), 2000);
@@ -506,6 +527,7 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < 1000; i++) {
             Thread t = new Thread(() -> {
                 op.addInput(ImmutableList.copyOf(new VecBatch[] {new VecBatch(table, NUM_ROWS)}));
+                Assert.assertTrue(op.getOutput().hasNext());
                 VecBatch res = op.getOutput().next();
                 // System.out.println(res.getLength());
                 Assert.assertEquals(res.getRowCount(), 501);
