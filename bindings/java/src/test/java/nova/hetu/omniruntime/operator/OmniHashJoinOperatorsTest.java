@@ -15,6 +15,7 @@ import java.util.Iterator;
 
 public class OmniHashJoinOperatorsTest
 {
+    /*	
     @Test
     public void testInnerHashJoinOneColumn1()
     {
@@ -158,5 +159,5 @@ public class OmniHashJoinOperatorsTest
         long[] expected1 = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
         Assert.assertEquals(actual0, expected0);
         Assert.assertEquals(actual1, expected1);
-    }
+    }*/
 }
