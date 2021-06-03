@@ -46,7 +46,6 @@ int32_t FilterAndProjectOperator::addInput(Table* data, int32_t rowCount)
     Projection *projection = new Projection(this->inputTypes, this->vecCount, rowCount, this->projectIndex, this->projectVecCount);
     Table *projectedData = projection->project(selectedRows, numSelectedRows, data);
     this->projectedVecs = projectedData;
-
     delete[] selectedRows;
     delete projection;
     return numSelectedRows;
@@ -110,11 +109,21 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
                 break;
             }
             case INT64:{
-                // TODO: add Support for type
+                Data actualData;
+		actualData.longVal = *((int64_t*) column->getValue(index));
+		actualData.dataType = DataType::INT64D;
+		if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
+		    selectedRows[numSelectedRows++] = index;
+		}
                 break;
             }
             case DOUBLE:{
-                // TODO: add Support for type
+                Data actualData;
+		actualData.doubleVal = *((double*) column->getValue(index));
+		actualData.dataType = DataType::DOUBLED;
+		if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
+		    selectedRows[numSelectedRows++] = index;
+		}
                 break;
             }
             default:

@@ -448,9 +448,12 @@ Data Parser::generateData(string dataStr)
     }
     switch(currDataType)
     {
-        case INT32D:
-            currData.intVal = stoi(dataStr);
-            break;
+        case INT32D: {
+	    int v = stoi(dataStr);
+            currData.intVal = v;
+	    currData.longVal = v;
+	    currData.doubleVal = v;
+            break; }
         case INT64D:
             currData.longVal = stol(dataStr);
             break;

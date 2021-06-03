@@ -104,13 +104,13 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test(enabled = false)
+    @Test
     public void equalTo()
     {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
         int[] projectIndices = {2, 1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$EQUAL(#2, 50)",
+                "$operator$EQUAL(#1, 50)",
                 types,
                 projectIndices
         );
@@ -123,7 +123,7 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 100);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(NUM_ROWS, col1, col2));
+        op.addInput(makeInput(NUM_ROWS, col1, col2, col3));
 
         Assert.assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
@@ -131,7 +131,7 @@ public class OmniFilterAndProjectOperatorTest {
         DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
         LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         while (res0.hasRemaining()) {
-            Assert.assertEquals(res0.get(), 50);
+            Assert.assertEquals(res0.get(), 50.0);
             Assert.assertEquals(res1.get(), 50);
         }
     }
@@ -167,7 +167,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
     }
 
-    @Test(enabled = false)
+    @Test
     public void notEqualTo()
     {
         VecType[] types = {VecType.DOUBLE};
