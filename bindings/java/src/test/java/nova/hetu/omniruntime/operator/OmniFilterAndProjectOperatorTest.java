@@ -20,6 +20,33 @@ public class OmniFilterAndProjectOperatorTest {
     }
 
     @Test
+    public void doubles()
+    {
+        VecType[] types = {VecType.DOUBLE};
+        int[] projectIndices = {0};
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+            "$operator$LESS_THAN(#0, 1.0)",
+            types,
+            projectIndices
+        );
+        final int NUM_ROWS = 5000;
+        DoubleVec col1 = new DoubleVec(NUM_ROWS);
+        for (int i = 0; i < NUM_ROWS; i++) {
+            col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
+        }
+        OmniOperator op = factory.createOperator();
+        op.addInput(makeInput(NUM_ROWS, col1));
+
+        Assert.assertTrue(op.getOutput().hasNext());
+        VecBatch res = op.getOutput().next();
+        Assert.assertEquals(res.getRowCount(), 2500);
+        DoubleBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        while (res1.hasRemaining()) {
+            Assert.assertTrue(res1.get() < 1);
+        }
+    }
+
+    @Test
     public void lessThan()
     {
         VecType[] types = {VecType.INT};
