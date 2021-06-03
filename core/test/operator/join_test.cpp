@@ -54,7 +54,7 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
         buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->setJitContext(NULL);
-    HashBuilderOperator *hashBuilderOperator = (HashBuilderOperator *)hashBuilderFactory->createOmniOperator();
+    HashBuilderOperator *hashBuilderOperator = (HashBuilderOperator *)hashBuilderFactory->createOperator();
     hashBuilderOperator->addInput(buildTables, rowCounts, 1);
 
     int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
@@ -77,12 +77,12 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
         probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
         buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
     lookupJoinFactory->setJitContext(NULL);
-    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)lookupJoinFactory->createOmniOperator();
+    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)lookupJoinFactory->createOperator();
     lookupJoinOperator->addInput(probeTable, DATA_SIZE);
     std::vector<Table *> output;
     lookupJoinOperator->getOutput(output);
     EXPECT_EQ(output.size(), 1);
-    output[0]->printTable();
+    //output[0]->printTable();
 
     const int32_t EXPECTED_DATA_SIZE = 18;
     EXPECT_EQ(output[0]->getPositionCount(), EXPECTED_DATA_SIZE);
@@ -136,10 +136,10 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
         buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->setJitContext(NULL);
 
-    HashBuilderOperator *hashBuilderOperator0 = (HashBuilderOperator *)hashBuilderFactory->createOmniOperator();
+    HashBuilderOperator *hashBuilderOperator0 = (HashBuilderOperator *)hashBuilderFactory->createOperator();
     hashBuilderOperator0->addInput(buildTables0, rowCounts0, 1);
 
-    HashBuilderOperator *hashBuilderOperator1 = (HashBuilderOperator *)hashBuilderFactory->createOmniOperator();
+    HashBuilderOperator *hashBuilderOperator1 = (HashBuilderOperator *)hashBuilderFactory->createOperator();
     hashBuilderOperator1->addInput(buildTables1, rowCounts1, 1);
 
     int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
@@ -162,12 +162,12 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
         probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
         buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
     lookupJoinFactory->setJitContext(NULL);
-    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)lookupJoinFactory->createOmniOperator();
+    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)lookupJoinFactory->createOperator();
     lookupJoinOperator->addInput(probeTable, DATA_SIZE);
     std::vector<Table *> output;
     lookupJoinOperator->getOutput(output);
     EXPECT_EQ(output.size(), 1);
-    output[0]->printTable();
+    //output[0]->printTable();
 
     const int32_t EXPECTED_DATA_SIZE = 18;
     EXPECT_EQ(output[0]->getPositionCount(), EXPECTED_DATA_SIZE);

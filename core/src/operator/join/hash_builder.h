@@ -29,7 +29,7 @@ public:
         int32_t *buildHashCols,
         int32_t buildHashColsCount,
         int32_t operatorCount);
-    omni::Operator *createOmniOperator();
+    omni::Operator *createOperator();
     JoinHashTables *getHashTables()
     {
         return hashTables;

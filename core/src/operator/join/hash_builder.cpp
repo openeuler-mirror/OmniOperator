@@ -58,7 +58,7 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::createHashBuilderOperato
     return operatorFactory;
 }
 
-Operator *HashBuilderOperatorFactory::createOmniOperator()
+Operator *HashBuilderOperatorFactory::createOperator()
 {
     int32_t partitionIndex = operatorIndex++;
     HashBuilderOperator *hashBuilderOperator = new HashBuilderOperator(
@@ -122,4 +122,6 @@ int32_t HashBuilderOperator::getOutput(std::vector<Table *>& outputTables)
 }
 
 int32_t *HashBuilderOperator::getSourceTypes()
-{}
+{
+    return buildTypes;
+}

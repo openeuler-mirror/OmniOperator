@@ -33,7 +33,7 @@ public:
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
         int64_t hashBuilderFactoryAddr);
-    omni::Operator *createOmniOperator();
+    omni::Operator *createOperator();
 private:
     int32_t *probeTypes;      // all types for probe
     int32_t probeTypesCount;

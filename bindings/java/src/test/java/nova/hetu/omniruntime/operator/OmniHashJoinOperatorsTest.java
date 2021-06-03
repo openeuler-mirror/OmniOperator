@@ -15,7 +15,6 @@ import java.util.Iterator;
 
 public class OmniHashJoinOperatorsTest
 {
-    /*	
     @Test
     public void testInnerHashJoinOneColumn1()
     {
@@ -52,9 +51,8 @@ public class OmniHashJoinOperatorsTest
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
         int[] buildOutputTypes = {2};
-        long nativeHashBuilderOperatorFactory = hashBuilderOperatorFactory.getNativeOperatorFactory();
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, nativeHashBuilderOperatorFactory);
+                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
         lookupJoinOperator.addInput(ImmutableList.of(probeVecBatch));
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
@@ -89,7 +87,7 @@ public class OmniHashJoinOperatorsTest
         long[] buildData12 = {79, 70, 70, 70, 70, 70};
         LongVec buildVec11 = new LongVec(6);
         LongVec buildVec12 = new LongVec(6);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < buildData11.length; i++) {
             buildVec11.set(i, buildData11[i]);
             buildVec12.set(i, buildData12[i]);
         }
@@ -99,7 +97,7 @@ public class OmniHashJoinOperatorsTest
         long[] buildData22 = {79, 70, 70, 70};
         LongVec buildVec21 = new LongVec(4);
         LongVec buildVec22 = new LongVec(4);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < buildData21.length; i++) {
             buildVec21.set(i, buildData21[i]);
             buildVec22.set(i, buildData22[i]);
         }
@@ -131,9 +129,8 @@ public class OmniHashJoinOperatorsTest
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
         int[] buildOutputTypes = {2};
-        long nativeHashBuilderOperatorFactory = hashBuilderOperatorFactory.getNativeOperatorFactory();
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, nativeHashBuilderOperatorFactory);
+                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
         lookupJoinOperator.addInput(ImmutableList.of(probeVecBatch));
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
@@ -159,5 +156,5 @@ public class OmniHashJoinOperatorsTest
         long[] expected1 = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
         Assert.assertEquals(actual0, expected0);
         Assert.assertEquals(actual1, expected1);
-    }*/
+    }
 }

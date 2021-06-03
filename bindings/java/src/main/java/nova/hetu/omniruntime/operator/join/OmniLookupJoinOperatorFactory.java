@@ -19,14 +19,14 @@ public class OmniLookupJoinOperatorFactory
             int[] probeHashCols,
             int[] buildOutputCols,
             int[] buildOutputTypes,
-            long hashBuilderOperatorFactory)
+            OmniHashBuilderOperatorFactory hashBuilderOperatorFactory)
     {
         this.probeTypes = probeTypes;
         this.probeOutputCols = probeOutputCols;
         this.probeHashCols = probeHashCols;
         this.buildOutputCols = buildOutputCols;
         this.buildOutputTypes = buildOutputTypes;
-        this.hashBuilderOperatorFactory = hashBuilderOperatorFactory;
+        this.hashBuilderOperatorFactory = hashBuilderOperatorFactory.getNativeOperatorFactory();
     }
 
     @Override

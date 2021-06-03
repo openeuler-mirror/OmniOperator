@@ -93,7 +93,7 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::createLookupJoinOperatorFa
     return operatorFactory;
 }
 
-Operator *LookupJoinOperatorFactory::createOmniOperator()
+Operator *LookupJoinOperatorFactory::createOperator()
 {
     LookupJoinOperator *lookupJoinoperator = new LookupJoinOperator(
         probeTypes,
@@ -167,7 +167,10 @@ int32_t LookupJoinOperator::getOutput(std::vector<Table *>& outputTables)
 }
 
 int32_t *LookupJoinOperator::getSourceTypes()
-{}
+{
+    return probeTypes;
+}
+
 void LookupJoinOperator::processProbe()
 {
     if (joinProbe == NULL) {
@@ -203,7 +206,6 @@ bool LookupJoinOperator::advanceProbePosition()
 {
     if (!joinProbe->advanceNextPosition()) {
         // build output data
-        std::cout << "buid output" << std::endl;
         outputTable = outputBuilder->buildOutput(joinProbe, hashTables);
         return false;
     }

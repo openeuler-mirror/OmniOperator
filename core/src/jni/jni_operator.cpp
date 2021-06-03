@@ -143,6 +143,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
         (JNIEnv *env, jobject jObj, jlong jOperatorAddr)
 {
     JNI_DEBUG_LOG("close starting.");
+    auto start = START();
     omni::Operator *nativeOperator = (omni::Operator *)jOperatorAddr;
     delete nativeOperator;
     JNI_DEBUG_LOG("close finished, elapsed time: %ld ms.", END(start));
