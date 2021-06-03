@@ -1,12 +1,10 @@
 #ifndef __TYPE_H__
 #define __TYPE_H__
 
-namespace opt {
-    typedef enum ColumnType {
+typedef enum ColumnType {
         INT32 = 1,
         INT64,
         DOUBLE,
-    } ColumnType;
-};
+} ColumnType;
 
 #endif

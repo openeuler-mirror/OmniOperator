@@ -18,9 +18,11 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+
+namespace omniruntime {
+namespace codegen {
 using namespace llvm;
 using namespace llvm::orc;
-using namespace codegen;
 
 void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM) {
     conf.populate(FPM, MPM);
@@ -62,3 +64,5 @@ HardenOptimizer::operator()(ThreadSafeModule TSM,
 
     return std::move(TSM);
 }
+} // end of namespace codegen
+} // end of namespace omniruntime

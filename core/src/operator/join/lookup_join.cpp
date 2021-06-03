@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstring>
 
+namespace omniruntime {
+namespace op {
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(
     int32_t *probeTypes,
     int32_t probeTypesCount,
@@ -437,3 +439,5 @@ Table *LookupJoinOutputBuilder::buildOutput(JoinProbe *joinProbe, JoinHashTables
 
     return output;
 }
+} // end of op
+} // end of omniruntime

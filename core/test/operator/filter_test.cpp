@@ -5,6 +5,8 @@
 #include <cstring>
 #include <vector>
 
+using namespace omniruntime::op;
+
 Table* createInput(const int32_t NUM_ROWS,
                     const int32_t NUM_COLS,
                     int32_t* inputTypes,

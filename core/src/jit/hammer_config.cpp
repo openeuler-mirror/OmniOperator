@@ -4,7 +4,8 @@
 
 #include "hammer_config.h"
 
-using namespace codegen;
+namespace omniruntime {
+namespace codegen {
 
 void HammerConfig::to_conf(int n, bool *conf) {
     int k;
@@ -113,3 +114,5 @@ void HammerConfig::populate(legacy::FunctionPassManager &FPM, legacy::PassManage
 //        }
 //    }
 }
+} // end of namespace codegen
+} // end of namespace omniruntime

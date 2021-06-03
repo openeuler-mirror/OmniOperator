@@ -3,7 +3,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/IRReader/IRReader.h"
 
-using namespace codegen;
+using namespace omniruntime::codegen;
 //TEST(hammer, multi_module) {
 //    std::map<std::string, ParamValue *> testParam;
 //    Hammer hammer("test_data/multi-module/a.ll", testParam);

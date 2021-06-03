@@ -102,7 +102,7 @@
 //     delete result;
 //     return 1234;
 // }
-
+using namespace omniruntime::op;
 SortOperator *createSortOperator(
     int32_t *sourceTypes,
     int32_t typesCount,

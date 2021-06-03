@@ -9,15 +9,9 @@
 #include <stdint.h>
 #include <thread>
 
-using namespace omni;
-
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
-
-typedef struct Iterator
-{
-    std::unordered_map<uint64_t, std::vector<GroupByColumn>>::iterator groupIterator;
-    std::vector<std::unordered_map<uint64_t, std::vector<GroupByColumn>>::iterator> aggIterators;
-} HashGroupByIterator;
+namespace omniruntime {
+namespace op {
 
 class MultiChannelHash {
 public:
@@ -37,7 +31,7 @@ typedef struct HashPosition
 
 class HashAggregationOperatorFactory;
 
-class HashAggregationOperator : public omni::Operator
+class HashAggregationOperator : public Operator
 {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs)
@@ -68,19 +62,19 @@ public:
     {
         // delete map
         for (auto& item : groupedRows) {
-            for (auto& gc : item.second) {
-                switch (gc.type)
+            for (int32_t idx = 0; idx < item.second.size(); ++idx) {
+                switch (groupByCols[idx].type)
                 {
                     case INT32: {
-                        delete reinterpret_cast<int32_t*>(gc.val);
+                        delete reinterpret_cast<int32_t*>(item.second[idx].val);
                         break;
                     }
                     case INT64: {
-                        delete reinterpret_cast<int64_t*>(gc.val);
+                        delete reinterpret_cast<int64_t*>(item.second[idx].val);
                         break;
                     }
                     case DOUBLE: {
-                        delete reinterpret_cast<double*>(gc.val);
+                        delete reinterpret_cast<double*>(item.second[idx].val);
                         break;
                     }
                     default:
@@ -98,8 +92,9 @@ public:
     void inloop(Table* table, uint32_t rowIdx);
     void inloop(char** head, uint32_t offset, int32_t* types, int32_t colNum, int32_t* groupByColIdx, int32_t groupByColNum, int32_t* aggColIdx, int32_t aggColNum, int32_t* aggFuncTypes); 
     void postloop(Table* table);
-    void constructColumn(Table* table, uint32_t type, int32_t columnIdx, uint32_t outputColType);
-    void constructColumn(Table* table, int32_t* types, uint32_t groupByColSize, uint32_t aggColSize, int32_t tableRowSize, HashGroupByIterator& iterator);
+    void constructHashColumn(Table* table, int32_t* types, uint32_t groupByColSize, int32_t tableRowSize);
+    void constructAggColumn(Table* table, int32_t* types, uint32_t aggColSize, int32_t tableRowSize);
+    void allocateVec(Table* table, const int32_t* types, const int32_t startIndex, const int32_t colSize, const int64_t rowSize);
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();
     int32_t* getSourceTypes() override
@@ -110,7 +105,7 @@ public:
 private:
     friend class HashAggregationOperatorFactory;
     std::vector<Aggregator*> aggregators;
-    std::unordered_map<uint64_t, std::vector<GroupByColumn>> groupedRows;
+    std::unordered_map<uint64_t, std::vector<GroupBySlot>> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
     uint32_t* inputColTypes;
@@ -120,7 +115,7 @@ private:
 class HashAggregationOperatorFactory : public OperatorFactory
 {
 public:
-    omni::Operator* createOperator() override;
+    Operator* createOperator() override;
 
     HashAggregationOperatorFactory
     (PrepareContext groupByCol, PrepareContext groupByType, PrepareContext aggCol, PrepareContext aggType, PrepareContext aggFuncType)
@@ -139,4 +134,6 @@ private:
 
 typedef void (*jit_module)(HashAggregationOperator*, Table*);
 
+} // end of namespace op
+} // end of namespace omniruntimef
 #endif

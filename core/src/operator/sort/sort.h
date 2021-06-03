@@ -7,7 +7,8 @@
 
 #include <vector>
 
-using namespace omni;
+namespace omniruntime {
+namespace op {
 
 class SortOperatorFactory : public OperatorFactory {
 public:
@@ -33,7 +34,7 @@ public:
             int32_t *sortNullFirsts,
             int32_t sortColCount);
 
-    omni::Operator *createOperator();
+    Operator *createOperator();
 
     int32_t *getSourceTypes() { return sourceTypes; }
 
@@ -62,7 +63,7 @@ private:
     int32_t sortColCount;
 };
 
-class SortOperator : public omni::Operator {
+class SortOperator : public Operator {
 public:
     SortOperator(
             int32_t *sourceTypes,
@@ -119,5 +120,6 @@ void freeInputTable(Table **inputTables, int32_t inputTableCount);
 void freeOutputTable(std::vector<Table *> &outputTables);
 
 void freeDataInColumn(Table **tables, int32_t tableCount);
-
+} // end of namespace op
+} // end of namespace omniruntime
 #endif

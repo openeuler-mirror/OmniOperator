@@ -50,6 +50,26 @@ public final class OmniOperator
         }
     }
 
+    public int addInput(VecBatch vecBatch)
+    {
+        int totalVectorCount = vecBatch.getVectors().length;
+        LongVec addressVector = new LongVec(totalVectorCount);
+        IntVec rowCountVector = new IntVec(1);
+        try {
+            Vec[] vectors = vecBatch.getVectors();
+            for (int vecIdx = 0; vecIdx < vectors.length; vecIdx++) {
+                addressVector.set(vecIdx, vectors[vecIdx].getAddress());
+            }
+            rowCountVector.set(0, vecBatch.getRowCount());
+            addInput(nativeOperator, addressVector.getAddress(), totalVectorCount, rowCountVector.getAddress(), 1);
+            return 0;
+        }
+        finally {
+            addressVector.close();
+            rowCountVector.close();
+        }
+    }
+
     public Iterator<VecBatch> getOutput()
     {
         return outputIterator;

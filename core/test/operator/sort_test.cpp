@@ -7,6 +7,7 @@
 #include <iostream>
 #include <chrono>
 
+using namespace std;
 JitContext *createTestSortJitContext(
   int32_t *sourceTypes,
   int32_t typesCount,
@@ -17,7 +18,7 @@ JitContext *createTestSortJitContext(
   int32_t *sortNullFirsts,
   int32_t sortColsCount)
 {
-    using namespace codegen;
+    using namespace omniruntime::codegen;
     std::map<std::string, ParamValue *> testParam;
     std::list<Hammer *> deps = std::list<Hammer *>();
     int sortColTypes[sortColsCount];
@@ -42,9 +43,9 @@ JitContext *createTestSortJitContext(
     testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
     testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
 
-    testParam["_Z12allocColumnslPiS_ii@1"] = &p_sourceTypes;
-    testParam["_Z12allocColumnslPiS_ii@2"] = &p_outputCols;
-    testParam["_Z12allocColumnslPiS_ii@3"] = &p_outputColCount;
+    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@1"] = &p_sourceTypes;
+    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@2"] = &p_outputCols;
+    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@3"] = &p_outputColCount;
 
     testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@1"] = &p_outputCols;
     testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@2"] = &p_outputColCount;
@@ -64,7 +65,7 @@ JitContext *createTestSortJitContext(
 
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN19SortOperatorFactory14createOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op19SortOperatorFactory14createOperatorEv")->getAddress());
 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);;
@@ -75,6 +76,7 @@ JitContext *createTestSortJitContext(
 
 TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 {
+    using namespace omniruntime::op;
     // construct input data
     const int32_t DATA_SIZE = 100000;
      int32_t *data1 = new int32_t[DATA_SIZE];
@@ -194,6 +196,7 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 
 TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
 {
+    using namespace omniruntime::op;
     // construct input data
     const int32_t DATA_SIZE = 6;
     // prepare data
@@ -258,6 +261,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
 
 TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
 {
+    using namespace omniruntime::op;
     // construct input data
     const int32_t DATA_SIZE = 6;
     // prepare data
@@ -354,6 +358,7 @@ void buildSortTestData(int32_t tableCount, int32_t distinctValueCount, int32_t r
 
 TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
 {
+    using namespace omniruntime::op;
     printf("testOrderByTwoColumnPerf called\n");
 
     int32_t tableCount = 1;

@@ -9,6 +9,7 @@
 #include <thread>
 #include <cstdlib>
 
+using namespace std;
 long lrand()
 {
     if (sizeof(int) < sizeof(long)) {
@@ -17,116 +18,75 @@ long lrand()
     return rand();
 }
 
-Table** buildInput(int32_t pageNum, int32_t rowPerpage, int32_t cardinality)
+Table** buildInput(int32_t pageNum, int32_t colNum, int32_t rowPerpage, int32_t cardinality)
 {
     Table** input = new Table*[pageNum];
     for (int32_t i = 0; i < pageNum; ++i) {
-        Table* table = new Table(rowPerpage, 4);
-        int64_t* data1 = new int64_t[rowPerpage];
-        for (int32_t i = 0; i < rowPerpage; ++i) {
-            data1[i] = i % cardinality;
+        Table* table = new Table(rowPerpage, colNum);
+        for (int32_t c = 0; c < colNum; ++ c) {
+            int64_t* data = new int64_t[rowPerpage];
+            for (int32_t i = 0; i < rowPerpage; ++i) {
+                data[i] = i % cardinality;
+            }
+            Column* col = new Column(data, INT64, rowPerpage);
+            table->setColumn(col, INT64);
         }
-        Column* col1 = new Column(data1, INT64, rowPerpage);
-
-        int64_t* data2 = new int64_t[rowPerpage];
-        for (int32_t i = 0; i < rowPerpage; ++i) {
-            data2[i] = i % cardinality;
-        }
-        Column* col2 = new Column(data2, INT64, rowPerpage);
-
-        int64_t* data3 = new int64_t[rowPerpage];
-        for (int32_t i = 0; i < rowPerpage; ++i) {
-            data3[i] = 1;
-        }
-        Column* col3 = new Column(data3, INT64, rowPerpage);
-
-        int64_t* data4 = new int64_t[rowPerpage];
-        for (int32_t i = 0; i < rowPerpage; ++i) {
-            data4[i] = 1;
-        }
-        Column* col4 = new Column(data4, INT64, rowPerpage);
-
-        table->setColumn(col1, INT64);
-        table->setColumn(col2, INT64);
-        table->setColumn(col3, INT64);
-        table->setColumn(col4, INT64);
         input[i] = table;
     }
     return input;
 }
 
-void destroyInput(Table** input, int32_t pageNum)
+void destroyInput(Table** input, int32_t pageNum, int32_t colNum)
 {
     for (int32_t i = 0; i < pageNum; ++i) {
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(0)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(1)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(2)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(3)->getData());
+        for (int32_t c =0; c < colNum; ++c) {
+            delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(c)->getData());
+        }
         delete input[i];
     }
 }
 
 TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness)
 {
+    using namespace omniruntime::op;
     // create 10 pages
     const int PAGE_NUM = 10;
-    const int DATA_SIZE = 100;
+    const int ROW_SIZE = 100;
     const int CARDINALITY = 4;
-    Table** input = new Table*[PAGE_NUM];
-    for (int32_t i = 0; i < PAGE_NUM; ++i) {
-        Table* table = new Table(DATA_SIZE, 4);
-        int32_t* data1 = new int32_t[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data1[i] = i % CARDINALITY;
-        }
-        Column* col1 = new Column(data1, INT32, DATA_SIZE);
+    const int COLUMN_COUNT = 7; // groupby*2 + sum + avg + count + min + max
 
-        int64_t* data2 = new int64_t[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data2[i] = i % CARDINALITY;
-        }
-        Column* col2 = new Column(data2, INT64, DATA_SIZE);
-
-        int64_t* data3 = new int64_t[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data3[i] = 1;
-        }
-        Column* col3 = new Column(data3, INT64, DATA_SIZE);
-
-        int64_t* data4 = new int64_t[DATA_SIZE];
-        for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data4[i] = 1;
-        }
-        Column* col4 = new Column(data4, INT64, DATA_SIZE);
-
-        table->setColumn(col1, INT32);
-        table->setColumn(col2, INT64);
-        table->setColumn(col3, INT64);
-        table->setColumn(col4, INT64);
-        input[i] = table;
-    }
+    Table** input = buildInput(PAGE_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
     
-    ColumnIndex c0 = {0, INT32};
+    ColumnIndex c0 = {0, INT64};
     ColumnIndex c1 = {1, INT64};
     ColumnIndex c2 = {2, INT64};
     ColumnIndex c3 = {3, INT64};
-    std::vector<ColumnIndex> v1 = {c0, c1};
-    std::vector<ColumnIndex> v2 = {c2, c3};
+    ColumnIndex c4 = {4, INT64};
+    ColumnIndex c5 = {5, INT64};
+    ColumnIndex c6 = {6, INT64};
+    std::vector<ColumnIndex> groupByColumns = {c0, c1};
+    std::vector<ColumnIndex> aggregateColumns = {c2, c3, c4, c5, c6};
     std::vector<Aggregator*> aggs;
-    SumAggregator* sum1 = new SumAggregator(3);
-    SumAggregator* sum2 = new SumAggregator(3);
-    aggs.push_back(sum1);
-    aggs.push_back(sum2);
-    HashAggregationOperator* groupBy = new HashAggregationOperator(v1, v2, aggs);
+    SumAggregator* sumAgg = new SumAggregator(2);
+    AverageAggregator* avgAgg = new AverageAggregator(2);
+    CountAggregator* countAgg = new CountAggregator(2);
+    MinAggregator* minAgg = new MinAggregator(2);
+    MaxAggregator* maxAgg = new MaxAggregator(2);
+    aggs.push_back(sumAgg);
+    aggs.push_back(avgAgg);
+    aggs.push_back(countAgg);
+    aggs.push_back(minAgg);
+    aggs.push_back(maxAgg);
+    HashAggregationOperator* groupBy = new HashAggregationOperator(groupByColumns, aggregateColumns, aggs);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
-        groupBy->addInput(input[i], DATA_SIZE);
+        groupBy->addInput(input[i], ROW_SIZE);
     }
     
     std::vector<Table*> result;
     int32_t tableCount = groupBy->getOutput(result);
 
-    EXPECT_EQ(result[0]->getColumnNumber(), 4);
+    EXPECT_EQ(result[0]->getColumnNumber(), 7);
     EXPECT_EQ(result[0]->getPositionCount(), 4);
 
     for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
@@ -134,13 +94,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness)
         col->printColumn();
     }
     
-    for (int32_t i = 0; i < PAGE_NUM; ++i) {
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(0)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(1)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(2)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(3)->getData());
-        delete input[i];
-    }
+    destroyInput(input, PAGE_NUM, COLUMN_COUNT);
     
     for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
         Column* col = result[0]->getColumn(i);
@@ -151,6 +105,7 @@ TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness)
 
 TEST(NativeOmniHashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
 {
+    using namespace omniruntime::op;
     //FIXME INT32+INT64
     // create 10 pages
     const int PAGE_NUM = 10;
@@ -217,6 +172,7 @@ double total_cpu_time;
 double total_wall_time;
 void perfTest(int64_t moduleAddr, Table** input, int32_t pageNum, int32_t* rowCount)
 {
+    using namespace omniruntime::op;
     uint32_t* columnTypes1 = new uint32_t[input[0]->getColumnNumber()];
     for (int32_t i = 0; i < input[0]->getColumnNumber(); ++i) {
         columnTypes1[i] = (int32_t)input[0]->getColumnTypes()[i];
@@ -236,6 +192,7 @@ void perfTest(int64_t moduleAddr, Table** input, int32_t pageNum, int32_t* rowCo
 
 uint64_t prepare()
 {
+    using namespace omniruntime::codegen;
     uint32_t* groupCols = new uint32_t[2];
     groupCols[0] = 0;
     groupCols[1] = 1;
@@ -260,7 +217,6 @@ uint64_t prepare()
     PrepareContext aggFuncTypeContext = {aggFunType, 2};
     PrepareContext retTypesContext = {retTypes, 4};
 
-    using namespace codegen;
     std::map<std::string, ParamValue *> testParam;
     std::list<Hammer *> deps = std::list<Hammer *>();
     int32_t groupColNum = groupByColContext.len;
@@ -284,25 +240,25 @@ uint64_t prepare()
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@9"] = &p_agg_types;
+     testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
 
     testParam["processAgg@2"] =  &p_agg_types;
     testParam["processAgg@3"] =  &p_agg_num;
     testParam["processAgg@4"] =  &p_col_type;
 
-    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@2"] = &p_col_type;
-    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
-    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@2"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@3"] = &p_group_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@2"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@3"] = &p_agg_num;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
     Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
     Hammer hammer2("/opt/lib/ir/hash_groupby.ll", testParam);
     Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
-    
     hammer1.harden();
     hammer2.harden();
     hammer3.harden();
@@ -311,12 +267,13 @@ uint64_t prepare()
     deps.push_back(&hammer2);
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
+
+    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);
     jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
     std::cout << "after jit" << std::endl;
-    HashAggregationOperatorFactory* nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->setJitContext(jitContext); 
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -330,15 +287,16 @@ TEST(NativeOmniHashAggregationOperatorTest, PerfViaAPI_Multiple_Threads)
     int32_t pageNum = 20;
     int32_t rowPerPage = 100000;
     int32_t cardinality = 4;
+    int32_t columnNum = 4;
     
-    Table** input = buildInput(pageNum, rowPerPage, cardinality);
+    Table** input = buildInput(pageNum, columnNum, rowPerPage, cardinality);
     int32_t* rowCount = new int32_t[pageNum];
     for (int32_t i = 0; i < pageNum; i++) {
         rowCount[i] = rowPerPage;
     }
     uint64_t factoryObjAddr = prepare();
     std::cout << "after prepare" << std::endl;
-    int threadNums[] = {1, 8, 16, 32, 64};
+    int threadNums[] = {1, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
@@ -374,11 +332,12 @@ TEST(NativeOmniHashAggregationOperatorTest, PerfViaAPI_Multiple_Threads)
         std::this_thread::sleep_for(100ms);
     }
     delete[] rowCount;
-    destroyInput(input, pageNum);
+    destroyInput(input, pageNum, columnNum);
 }
 
 void perfTestOriginal(int64_t moduleAddr, Table** input)
 {
+    using namespace omniruntime::op;
     int32_t pageNum = 20;
     uint32_t* columnTypes1 = new uint32_t[input[0]->getColumnNumber()];
     for (int32_t i = 0; i < input[0]->getColumnNumber(); ++i) {
@@ -401,14 +360,16 @@ void perfTestOriginal(int64_t moduleAddr, Table** input)
 
 TEST(NativeOmniHashAggregationOperatorTest, Original_Multiple_Threads)
 {
+    using namespace omniruntime::op;
     const auto processor_count = std::thread::hardware_concurrency();
     std::cout << "core number: " << processor_count << std::endl;
 
     int32_t pageNum = 20;
     int32_t rowPerPage = 100000;
     int32_t cardinality = 4;
+    int32_t columnNum = 4;
     
-    Table** input = buildInput(pageNum, rowPerPage, cardinality);
+    Table** input = buildInput(pageNum, columnNum, rowPerPage, cardinality);
     
     uint32_t* groupCols = new uint32_t[2];
     groupCols[0] = 0;
@@ -436,7 +397,7 @@ TEST(NativeOmniHashAggregationOperatorTest, Original_Multiple_Threads)
     HashAggregationOperatorFactory* nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
     
-    int threadNums[] = {1, 8, 16, 32, 64};
+    int threadNums[] = {1, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
@@ -472,5 +433,5 @@ TEST(NativeOmniHashAggregationOperatorTest, Original_Multiple_Threads)
         std::this_thread::sleep_for(100ms);
     }
 
-    destroyInput(input, pageNum);
+    destroyInput(input, pageNum, columnNum);
 }

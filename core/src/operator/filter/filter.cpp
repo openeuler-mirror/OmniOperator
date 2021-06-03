@@ -7,6 +7,8 @@
 #include "../../common/expressions.h"
 #include "../../common/parser/parser.h"
 
+namespace omniruntime {
+namespace op {
 using namespace std;
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
@@ -34,7 +36,7 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
     delete this->filter;
 }
 
-omni::Operator * FilterAndProjectOperatorFactory::createOperator()
+Operator * FilterAndProjectOperatorFactory::createOperator()
 {
     return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
@@ -124,3 +126,5 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
     }
     return numSelectedRows;
 }
+} // end of op
+} // end of omniruntime

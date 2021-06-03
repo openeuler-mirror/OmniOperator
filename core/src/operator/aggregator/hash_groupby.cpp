@@ -10,8 +10,47 @@
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
 #include <sstream>
 #endif
+namespace omniruntime {
+namespace op {
 
-omni::Operator * HashAggregationOperatorFactory::createOperator()
+void HashAggregationOperator::allocateVec(Table* table, const int32_t* types, const int32_t startIndex, const int32_t colSize, const int64_t rowSize)
+{
+    if (table == nullptr || types == nullptr || colSize <= 0 || rowSize <= 0) {
+        DebugError("Input parameters are invalid: colSize = %d, rowSize = %ld", colSize, rowSize);
+        return;
+    }
+    for (int32_t i = 0; i < colSize; ++i) {
+        if (aggregators[i]->getType() == COUNT) {
+            int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowSize * sizeof(int64_t)));
+            table->setColumn(new Column(c, INT64, rowSize), INT64);
+            continue;
+        }
+        switch (types[startIndex + i])
+        {
+            case 1: {
+                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowSize * sizeof(int32_t)));
+                table->setColumn(new Column(c, INT32, rowSize), INT32);
+                break;
+            }
+           case 2: {
+                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowSize * sizeof(int64_t)));
+                table->setColumn(new Column(c, INT64, rowSize), INT64);
+                break;
+            }
+            case 3: {
+                double* c = reinterpret_cast<double*>(omni_allocate(rowSize * sizeof(double)));
+                table->setColumn(new Column(c, DOUBLE, rowSize), DOUBLE);
+                break;
+            }
+            default: {
+                DebugError("Type %d doesn't support", types[i]);
+                break;
+            }
+        }
+    }
+}
+
+Operator * HashAggregationOperatorFactory::createOperator()
 {
     std::vector<ColumnIndex> groupByIndex;
     std::vector<ColumnIndex> aggIndex;
@@ -29,18 +68,15 @@ omni::Operator * HashAggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    SumAggregator* agg = new SumAggregator(1);
-                    aggs.push_back(agg);
+                    aggs.push_back(new SumAggregator(1));
                     break;
                 }
                 case INT64: {
-                    SumAggregator* agg = new SumAggregator(2);
-                    aggs.push_back(agg);
+                    aggs.push_back(new SumAggregator(2));
                     break;
                 }
                 case DOUBLE: {
-                    SumAggregator* agg = new SumAggregator(3);
-                    aggs.push_back(agg);
+                    aggs.push_back(new SumAggregator(3));
                     break;
                 }
                 default: {
@@ -48,6 +84,92 @@ omni::Operator * HashAggregationOperatorFactory::createOperator()
                     break;
                 }
             }
+        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == AVG)
+        {
+            switch (this->aggTypeContext.context[i])
+            {
+                case INT32: {
+                    aggs.push_back(new AverageAggregator(1));
+                    break;
+                }
+                case INT64: {
+                    aggs.push_back(new AverageAggregator(2));
+                    break;
+                }
+                case DOUBLE: {
+                    aggs.push_back(new AverageAggregator(3));
+                    break;
+                }
+                default: {
+                    DebugError("No such type %d", this->aggTypeContext.context[i]);
+                    break;
+                }
+            }
+        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == MAX) 
+        {
+            switch (this->aggTypeContext.context[i])
+            {
+                case INT32: {
+                    aggs.push_back(new MaxAggregator(1));
+                    break;
+                }
+                case INT64: {
+                    aggs.push_back(new MaxAggregator(2));
+                    break;
+                }
+                case DOUBLE: {
+                    aggs.push_back(new MaxAggregator(3));
+                    break;
+                }
+                default: {
+                    DebugError("No such type %d", this->aggTypeContext.context[i]);
+                    break;
+                }
+            }
+        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == MIN)
+        {
+            switch (this->aggTypeContext.context[i])
+            {
+                case INT32: {
+                    aggs.push_back(new MinAggregator(1));
+                    break;
+                }
+                case INT64: {
+                    aggs.push_back(new MinAggregator(2));
+                    break;
+                }
+                case DOUBLE: {
+                    aggs.push_back(new MinAggregator(3));
+                    break;
+                }
+                default: {
+                    DebugError("No such type %d", this->aggTypeContext.context[i]);
+                    break;
+                }
+            }
+        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == COUNT)
+        {
+            switch (this->aggTypeContext.context[i])
+            {
+                case INT32: {
+                    aggs.push_back(new CountAggregator(1));
+                    break;
+                }
+                case INT64: {
+                    aggs.push_back(new CountAggregator(2));
+                    break;
+                }
+                case DOUBLE: {
+                    aggs.push_back(new CountAggregator(3));
+                    break;
+                }
+                default: {
+                    DebugError("No such type %d", this->aggTypeContext.context[i]);
+                    break;
+                }
+            }
+        }  else {
+            // UDAF
         }
     }
 
@@ -65,11 +187,11 @@ void HashAggregationOperator::inloop(Table* table, uint32_t rowIndex)
     // caculate hash value on group by column(s)
     uint64_t combinedHash = 0;
     MultiChannelHash hashFunc;
-    std::vector<GroupByColumn> groupByTuple;
+    std::vector<GroupBySlot> groupByTuple;
     for (auto c : this->groupByCols) {    
         ColumnType type = table->getColumn(c.idx)->getType();
         void* rowPtr = table->getColumn(c.idx)->getValue(rowIndex);
-        GroupByColumn groupCol = {type, rowPtr};
+        GroupBySlot groupCol = {rowPtr};
         groupByTuple.push_back(groupCol);
         uint64_t hash = 0;
         switch (type)
@@ -137,52 +259,21 @@ extern "C" void processAgg(uint64_t key,
         int32_t idx = aggIdx[i];
         int32_t type = types[idx];
         void* colPtr = head[idx];
-
-        switch (aggTypes[i])
-        {
-            case 0: { // sum
-                switch (type)
-                {
-                    case 1: {
-                        /* code */
-                        sumProcessInt32(reinterpret_cast<SumAggregator*>(aggs[i]), key, colPtr, offset);
-                        break;
-                    }
-                    case 2: {
-                        sumProcessInt64(reinterpret_cast<SumAggregator*>(aggs[i]), key, colPtr, offset);
-                        break;
-                    }
-                    case 3: {                        
-                        sumProcessDouble(reinterpret_cast<SumAggregator*>(aggs[i]), key, colPtr, offset);
-                        break;
-                    }
-                    default: {
-                        DebugError("No such type %d", type);
-                        break;
-                    }
-                }
-                break;
-            }
-            
-            default: {
-                DebugError("No such aggregator %d", aggTypes[i]);
-                break;
-            }
-        }
+        aggs[i]->process(key, colPtr, type, offset);        
     }
 }
 
-void HashAggregationOperator::inloop(char** head,
-                                                uint32_t offset, 
-                                                int32_t* types, 
-                                                int32_t colNum,  
-                                                int32_t* groupByColIdx,
-                                                int32_t groupByColNum,
-                                                int32_t* aggColIdx,
-                                                int32_t aggColNum,
-                                                int32_t* aggFuncTypes) 
+void HashAggregationOperator::inloop(char** head, 
+                                                                uint32_t offset, 
+                                                                int32_t* types, 
+                                                                int32_t colNum,  
+                                                                int32_t* groupByColIdx,
+                                                                int32_t groupByColNum,
+                                                                int32_t* aggColIdx,
+                                                                int32_t aggColNum,
+                                                                int32_t* aggFuncTypes) 
 {    
-    HashPosition combinedHash = {0, 0};
+    int64_t combineHashVal = 0;
     MultiChannelHash hashFunc;
     for (int32_t i = 0; i < groupByColNum; ++i) {    
         uint64_t hash = 0;
@@ -207,15 +298,16 @@ void HashAggregationOperator::inloop(char** head,
                 hash = hashDouble(*rowVal);
                 break;
             }
-            default:
+            default: {
+                DebugError("No such data type %d", types[idx]);
                 break;
+            }
         }
-        combinedHash.hashVal = hashFunc.combineHash(combinedHash.hashVal, hash);
-        combinedHash.offset = offset;
+        combineHashVal = hashFunc.combineHash(combineHashVal, hash);
     }
 
-    if (groupedRows.find(combinedHash.hashVal) == groupedRows.end()) {
-        std::vector<GroupByColumn> groupByTuple;
+    if (groupedRows.find(combineHashVal) == groupedRows.end()) {
+        std::vector<GroupBySlot> groupByTuple;
         for (int32_t i = 0; i < groupByColNum; ++i) {
             // copy col value to map
             void* rowPtr = nullptr;
@@ -223,37 +315,39 @@ void HashAggregationOperator::inloop(char** head,
             switch (types[idx])
             {
                 case 1: {
-                    int32_t* rowVal = reinterpret_cast<int32_t*>(head[idx]) + combinedHash.offset;
+                    int32_t* rowVal = reinterpret_cast<int32_t*>(head[idx]) + offset;
                     int32_t* copyVal = new int32_t;
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
                 case 2: {
-                    int64_t* rowVal = reinterpret_cast<int64_t*>(head[idx]) + combinedHash.offset;
+                    int64_t* rowVal = reinterpret_cast<int64_t*>(head[idx]) + offset;
                     int64_t* copyVal = new int64_t;
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
                 case 3: {
-                    double* rowVal = reinterpret_cast<double*>(head[idx]) + combinedHash.offset;
+                    double* rowVal = reinterpret_cast<double*>(head[idx]) + offset;
                     double* copyVal = new double;
                     *copyVal = *rowVal;
                     rowPtr = reinterpret_cast<void*>(copyVal);
                     break;
                 }
-                default:
+                default: {
+                    DebugError("No such data type %d", types[idx]);
                     break;
+                }
             }
-            GroupByColumn groupCol = {(ColumnType)types[idx], rowPtr};
+            GroupBySlot groupCol = {rowPtr};
             groupByTuple.push_back(groupCol);
         }
-        groupedRows.insert({combinedHash.hashVal, groupByTuple});
+        groupedRows.insert({combineHashVal, groupByTuple});
     }
     
     // processAgg(combinedHash.hashVal, aggregators, aggDataTypes, aggColIdx, (void**)head, offset);
-    processAgg(combinedHash.hashVal, aggregators, aggFuncTypes, aggColNum, types, aggColIdx, (void**)head, offset);
+    processAgg(combineHashVal, aggregators, aggFuncTypes, aggColNum, types, aggColIdx, (void**)head, offset);
 }
 
 int32_t HashAggregationOperator::addInput(Table* table, int32_t rowCount)
@@ -265,7 +359,7 @@ int32_t HashAggregationOperator::addInput(Table* table, int32_t rowCount)
     char** heads = table->getHeads();
     int32_t* columnTypes = reinterpret_cast<int32_t*>(table->getColumnTypes());
 
-    int32_t rowNum = table->getColumnNumber();
+    int32_t columnNum = table->getColumnNumber();
     int32_t groupColNum = this->groupByCols.size();
     int32_t* groupByColIdx = new int32_t[groupColNum];
     int32_t aggColNum = this->aggCols.size();
@@ -282,7 +376,7 @@ int32_t HashAggregationOperator::addInput(Table* table, int32_t rowCount)
         aggFuncTypes[i] = this->aggregators[i]->getType();
     }
     for (int32_t i = 0; i < rowCount; ++i) {
-        this->inloop(heads, i, columnTypes, rowNum, groupByColIdx, groupColNum, aggColIdx, aggColNum, aggFuncTypes);
+        this->inloop(heads, i, columnTypes, columnNum, groupByColIdx, groupColNum, aggColIdx, aggColNum, aggFuncTypes);
     }
     this->postloop(table);
     delete[] groupByColIdx;
@@ -299,70 +393,40 @@ int32_t HashAggregationOperator::addInput(Table** tables, int32_t* rowCount, int
     return 0;
 }
 
-typedef std::chrono::high_resolution_clock Time;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::duration<float> fsec;
-
-fsec g_total_execute_time;
-
-void HashAggregationOperator::constructColumn(Table* table,
-                                                        int32_t* types, 
-                                                        uint32_t groupByColSize, 
-                                                        uint32_t aggColSize, 
-                                                        int32_t tableRowSize, 
-                                                        HashGroupByIterator& iterator)
-                {
+// TODO currently we need to traverse ColumnNum * RowNum times to build the output.
+// The overhead need to be optimized.
+void HashAggregationOperator::constructHashColumn(Table* table, 
+                                                                                                            int32_t* types, 
+                                                                                                            uint32_t groupByColSize, 
+                                                                                                            int32_t tableRowSize)
+{
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncEntry;
 #endif
     // allocate all column memory first
-    for (int32_t i = 0; i < groupByColSize; ++i) {
-        switch (types[i])
-        {
-            case 1: {
-                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(tableRowSize * sizeof(int32_t)));
-                table->setColumn(new Column(c, INT32, tableRowSize), INT32);
-                break;
-            }
-           case 2: {
-                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(tableRowSize * sizeof(int64_t)));
-                table->setColumn(new Column(c, INT64, tableRowSize), INT64);
-                break;
-            }
-            case 3: {
-                double* c = reinterpret_cast<double*>(omni_allocate(tableRowSize * sizeof(double)));
-                table->setColumn(new Column(c, DOUBLE, tableRowSize), DOUBLE);
-                break;
-            }
-            default: {
-                DebugError("Type %d doesn't support", types[i]);
-                break;
-            }
-        }
-    }
+    allocateVec(table, types, 0, groupByColSize, tableRowSize);
+    
     // set value row by row
     int32_t rIdx = 0;
-    for (; rIdx < tableRowSize && iterator.groupIterator != groupedRows.end();) {
+    auto it = groupedRows.begin();
+    for (; rIdx < tableRowSize && it != groupedRows.end();) {
         for (int32_t i = 0; i < groupByColSize; ++i) {
             auto column = table->getColumn(i);
             switch (column->getType())
             {
                 case 1: {
                     int32_t* c = (int32_t*)column->getData();
-                    c[rIdx] = *(int32_t*)(iterator.groupIterator->second[i].val);
-                     /* code */
+                    c[rIdx] = *(int32_t*)(it->second[i].val);
                     break;
                 }
                 case 2: {
                     int64_t* c = (int64_t*)column->getData();
-                    c[rIdx] = *(int64_t*)(iterator.groupIterator->second[i].val);
-                     /* code */
+                    c[rIdx] = *(int64_t*)(it->second[i].val);
                     break;
                 }
                 case 3: {
                     double* c = (double*)column->getData();
-                    c[rIdx] = *(double*)(iterator.groupIterator->second[i].val);
-                     /* code */
+                    c[rIdx] = *(double*)(it->second[i].val);
                     break;
                 }
                 default: {
@@ -372,40 +436,90 @@ void HashAggregationOperator::constructColumn(Table* table,
             }
         }
         rIdx++;
-        iterator.groupIterator++;
+        it++;
     }
-    
+#ifdef DEBUG_LEVEL_HIGH
+    DebugFuncExit;
+#endif 
+}
+
+// TODO currently we need to traverse ColumnNum * RowNum times to build the output.
+// The overhead need to be optimized.
+void HashAggregationOperator::constructAggColumn(Table* table, 
+                                                                                        int32_t* types, 
+                                                                                        uint32_t aggColSize, 
+                                                                                        int32_t tableRowSize)
+{
+#ifdef DEBUG_LEVEL_HIGH
+    DebugFuncEntry;
+#endif
+    const int32_t groupByColSize = this->groupByCols.size();
+    allocateVec(table, types, groupByColSize, aggColSize, tableRowSize);
+
     for (int32_t i = 0; i < aggColSize; ++i){
-        switch (types[groupByColSize + i])
+        int32_t rIdx = 0;
+        auto resultIterator = this->aggregators[i]->getState().begin();
+        AggregateType aggType = this->aggregators[i]->getType();
+        auto col = table->getColumn(groupByColSize + i);
+        switch (aggType)
         {
-            case 1: {
-                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(tableRowSize * sizeof(int32_t)));
-                int32_t rIdx = 0;
-                for (; rIdx < tableRowSize && iterator.aggIterators[i] != aggregators[i]->getState().end(); ) {
-                    c[rIdx++] = *TypeUtil<int32_t>::cast(iterator.aggIterators[i]->second[0].val);
-                    iterator.aggIterators[i]++;
+            case SUM:
+            case COUNT:
+            case MIN:
+            case MAX: {
+                for (; rIdx < tableRowSize && resultIterator != aggregators[i]->getState().end(); ) {
+                    if (aggType == COUNT) {
+                        reinterpret_cast<int64_t*>(col->getData())[rIdx++] = resultIterator->second.count + 1;
+                    }else {
+                        switch (types[groupByColSize + i])
+                        {
+                            case 1:{
+                                reinterpret_cast<int32_t*>(col->getData())[rIdx++] = *static_cast<int32_t*>(resultIterator->second.val);
+                                break;
+                            }
+                            case 2:{
+                                reinterpret_cast<int64_t*>(col->getData())[rIdx++] = *static_cast<int64_t*>(resultIterator->second.val);
+                                break;
+                            }
+                            case 3:{
+                                reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<double*>(resultIterator->second.val);
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+                    }
+                    resultIterator++;
                 }
-                table->setColumn(new Column(c, INT32, tableRowSize), INT32);
                 break;
             }
-            case 2: {
-                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(tableRowSize * sizeof(int64_t)));
-                int32_t rIdx = 0;
-                for (; rIdx < tableRowSize && iterator.aggIterators[i] != aggregators[i]->getState().end(); ) {
-                    c[rIdx++] = *TypeUtil<int64_t>::cast(iterator.aggIterators[i]->second[0].val);
-                    iterator.aggIterators[i]++;
+            case AVG: {
+                for (; rIdx < tableRowSize && resultIterator != aggregators[i]->getState().end(); ) {
+                    if (resultIterator->second.count == 0) {
+                        DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                    }
+                    switch (types[groupByColSize + i])
+                        {
+                            case 1:{
+                                reinterpret_cast<int32_t*>(col->getData())[rIdx++] = *static_cast<int32_t*>(resultIterator->second.avgVal)
+                                / static_cast<double>(resultIterator->second.avgCnt);
+                                break;
+                            }
+                            case 2:{
+                                reinterpret_cast<int64_t*>(col->getData())[rIdx++] = *static_cast<int64_t*>(resultIterator->second.avgVal)
+                                / static_cast<double>(resultIterator->second.avgCnt);
+                                break;
+                            }
+                            case 3:{
+                                reinterpret_cast<double*>(col->getData())[rIdx++] =  *static_cast<double*>(resultIterator->second.avgVal) 
+                                / static_cast<double>(resultIterator->second.avgCnt);
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+                    resultIterator++;
                 }
-                table->setColumn(new Column(c, INT64, tableRowSize), INT64);
-                break;
-            }
-            case 3: {
-                double* c = reinterpret_cast<double*>(omni_allocate(tableRowSize * sizeof(double)));
-                int32_t rIdx = 0;
-                for (; rIdx < tableRowSize && iterator.aggIterators[i] != aggregators[i]->getState().end(); ) {
-                    c[rIdx++] = *TypeUtil<double>::cast(iterator.aggIterators[i]->second[0].val);
-                    iterator.aggIterators[i]++;
-                }
-                table->setColumn(new Column(c, DOUBLE, tableRowSize), DOUBLE);
                 break;
             }
             default:
@@ -479,18 +593,12 @@ int32_t HashAggregationOperator::getOutput(std::vector<Table*>& result)
     int32_t maxRowNum = MAX_TABLE_SIZE_IN_BYTES / rowSize;
     int32_t pageCount = std::ceil((double)this->groupedRows.size() / (double)maxRowNum);
     int32_t currentPosition = 0;
-    // Table** finalResult = new Table*[pageCount];
-    Iterator iterator;
-    iterator.groupIterator = groupedRows.begin();
-    for (auto& agg : aggregators)
-    {
-        iterator.aggIterators.push_back(agg->getState().begin());
-    } 
 
     for (int32_t i = 0; i < pageCount; ++i) {
         int32_t tableSize = std::min(maxRowNum, (int32_t)(this->groupedRows.size() - currentPosition));
         Table* table = new Table(tableSize, colSize);
-        constructColumn(table, types, gbSize, aggSize, tableSize, iterator);
+        constructHashColumn(table, types, gbSize, tableSize);
+        constructAggColumn(table, types, aggSize, tableSize);
         result.push_back(table);
         currentPosition += maxRowNum;
     }
@@ -505,80 +613,5 @@ int32_t HashAggregationOperator::getOutput(std::vector<Table*>& result)
     return pageCount;
 }
 
-void HashAggregationOperator::constructColumn(Table* table,
-                                                        uint32_t type,
-                                                        int32_t columnIdx,
-                                                        uint32_t outputColType) 
-{
-    if (outputColType == 0) {
-        uint32_t rowCount = this->groupedRows.size();
-        switch (type)
-        {
-            case INT32: {
-                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowCount * sizeof(int32_t)));
-                int32_t rIdx = 0;
-                for (auto& row : this->groupedRows) {
-                    c[rIdx++] = *TypeUtil<int32_t>::cast(row.second[columnIdx].val);
-                }
-                table->setColumn(new Column(c, INT32, rowCount), INT32);
-                break;
-            }
-            case INT64: {
-                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowCount * sizeof(int64_t)));
-                int32_t rIdx = 0;
-                for (auto& row : this->groupedRows) {
-                    c[rIdx++] = *TypeUtil<int64_t>::cast(row.second[columnIdx].val);
-                }
-                table->setColumn(new Column(c, INT64, rowCount), INT64);
-                break;
-            }
-            case DOUBLE: {
-                double* c = reinterpret_cast<double*>(omni_allocate(rowCount * sizeof(double)));
-                int32_t rIdx = 0;
-                for (auto& row : this->groupedRows) {
-                    c[rIdx++] = *TypeUtil<double>::cast(row.second[columnIdx].val);
-                }
-                table->setColumn(new Column(c, DOUBLE, rowCount), DOUBLE);
-                break;
-            }
-            default:
-                break;
-        }
-    }else if (outputColType == 1) {
-        std::unordered_map<uint64_t, std::vector<GroupByColumn>> rows = this->aggregators[columnIdx]->getState();
-        uint32_t rowCount = this->aggregators[columnIdx]->getState().size();
-        switch (type)
-        {
-            case INT32: {
-                int32_t* c = reinterpret_cast<int32_t*>(omni_allocate(rowCount * sizeof(int32_t)));
-                int32_t rIdx = 0;
-                for (auto& row : rows) {
-                    c[rIdx++] = *TypeUtil<int32_t>::cast(row.second[0].val);
-                }
-                table->setColumn(new Column(c, INT32, rowCount), INT32);
-                break;
-            }
-            case INT64: {
-                int64_t* c = reinterpret_cast<int64_t*>(omni_allocate(rowCount * sizeof(int64_t)));
-                int32_t rIdx = 0;
-                for (auto& row : rows) {
-                    c[rIdx++] = *TypeUtil<int64_t>::cast(row.second[0].val);
-                }
-                table->setColumn(new Column(c, INT64, rowCount), INT64);
-                break;
-            }
-            case DOUBLE: {
-                double* c = reinterpret_cast<double*>(omni_allocate(rowCount * sizeof(double)));
-                int32_t rIdx = 0;
-                for (auto& row : rows) {
-                    c[rIdx++] = *TypeUtil<double>::cast(row.second[0].val);
-                }
-                table->setColumn(new Column(c, DOUBLE, rowCount), DOUBLE);
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-}
+} // end of namespace op
+} // end of namespace omniruntime
