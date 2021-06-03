@@ -500,6 +500,8 @@ int32_t HashAggregationOperator::getOutput(std::vector<Table*>& result)
     os << std::this_thread::get_id();
     DebugPrint("Thread %s: end of getResult.", os.str().c_str());
 #endif
+    // set finished.
+    status = 2;
     return pageCount;
 }
 

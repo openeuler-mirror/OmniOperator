@@ -7,7 +7,7 @@
 namespace omni {
     class Operator {
     public:
-        Operator() {}
+        Operator() : status(0) {}
 
         virtual ~Operator() {}
 
@@ -20,6 +20,11 @@ namespace omni {
         virtual int32_t getOutput(std::vector<Table *> &data) = 0;
 
         virtual int32_t *getSourceTypes() = 0;
+
+        int getStatus() { return status; }
+
+    protected:
+        int status;
     };
 }
 #endif
