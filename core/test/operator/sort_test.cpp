@@ -1,14 +1,11 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/sort/sort.h"
 #include "../../src/jit/hammer.h"
+#include "../util/test_util.h"
 #include <time.h>
 #include <vector>
 #include <iostream>
 #include <chrono>
-
-bool tableMatch(Table *outputTables, Table *expectTable);
-bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber);
-bool columnMatch(Column *actualColumn, Column *expectColumn);
 
 JitContext *createTestSortJitContext(
   int32_t *sourceTypes,
@@ -106,7 +103,7 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -159,7 +156,7 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 //     int ascendings[1] = {false};
 //     int nullFirsts[1] = {true};
 
-//     SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+//     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
 //         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 //     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 //     operatorFactory->setJitContext(jitContext);     
@@ -222,7 +219,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -286,7 +283,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -378,7 +375,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
     int32_t ascendings[] = {1, 1};
     int32_t nullFirsts[] = {0, 0};
 
-    SortOperatorFactory *operatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = NULL;
@@ -414,80 +411,4 @@ TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
     freeInputTable(tables, tableCount);
     freeDataInColumn(&outputTables[0], outputTables.size());
     freeOutputTable(outputTables);
-}
-
-bool tableMatch(Table *outputTables, Table *expectTable)
-{
-    if (outputTables->getPositionCount() != expectTable->getPositionCount()) {
-        return false;
-    }
-
-    int32_t columnNumber = outputTables->getColumnNumber();
-    if (columnNumber != expectTable->getColumnNumber()) {
-        return false;
-    }
-
-    if (!typesMatch(outputTables->getColumnTypes(), expectTable->getColumnTypes(), columnNumber)) {
-        return false;
-    }
-
-    for (int32_t i = 0; i < columnNumber; i++) {
-        if (!columnMatch(outputTables->getColumn(i), expectTable->getColumn(i))) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber)
-{
-    for (int32_t i = 0; i < columnNumber; i++) {
-        if (actualTypes[i] != expectTypes[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool columnMatch(Column *actualColumn, Column *expectColumn)
-{
-    if (actualColumn->getType() != expectColumn->getType()) {
-        return false;
-    }
-
-    if (actualColumn->getSize() != expectColumn->getSize()) {
-        return false;
-    }
-
-    bool result = true;
-    for (int32_t i = 0; i < actualColumn->getSize(); i++) {
-        void *actualValue = actualColumn->getValue(i);
-        void *expectValue = expectColumn->getValue(i);
-        switch (actualColumn->getType()) {
-            case INT32: {
-                int32_t actual = *((int32_t *)actualValue);
-                int32_t expect = *((int32_t *)expectValue);
-                result = (actual == expect);
-                break; 
-            }
-            case INT64: {
-                int64_t actual = *((int64_t *)actualValue);
-                int64_t expect = *((int64_t *)expectValue);
-                result = (actual == expect);
-                break;
-            }
-            case DOUBLE: {
-                double actual = *((double *)actualValue);
-                double expect = *((double *)expectValue);
-                result = (actual == expect);
-                break;
-            }
-            default:
-                result = false;
-        }
-    }
-
-    return result;
 }

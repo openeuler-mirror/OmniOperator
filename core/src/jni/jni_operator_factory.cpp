@@ -10,6 +10,8 @@
 #include "../operator/sort/sort.h"
 #include "../operator/aggregator/hash_groupby.h"
 #include "../operator/filter/filter.h"
+#include "../operator/join/hash_builder.h"
+#include "../operator/join/lookup_join.h"
 #include "../util/debug.h"
 
 using namespace omni;
@@ -162,7 +164,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
     jint sortColsCount = env->GetArrayLength(jSortCols);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
-    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createSortOperatorFactory(
             sourceTypesArr,
             sourceTypesCount,
             outputColsArr,
@@ -264,4 +266,67 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAnd
     int32_t projectLength = (int32_t) jProjectLength;
     FilterAndProjectOperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
     return (int64_t) factory;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jBuildTypes, jintArray jBuildOutputCols, jintArray jBuildHashCols, jint jOperatorCount)
+{
+    JNI_DEBUG_LOG("create hash builder operator factory starting.");
+    auto start = START();
+    jint *buildTypesArr = env->GetIntArrayElements(jBuildTypes, JNI_FALSE);
+    jint *buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+    jint *buildHashColsArr = env->GetIntArrayElements(jBuildHashCols, JNI_FALSE);
+
+    jint buildTypesCount = env->GetArrayLength(jBuildTypes);
+    jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
+    jint buildHashColsCount = env->GetArrayLength(jBuildHashCols);
+
+    JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
+    HashBuilderOperatorFactory *hashBuilderOperatorFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
+            buildTypesArr,
+            buildTypesCount,
+            buildOutputColsArr,
+            buildOutputColsCount,
+            buildHashColsArr,
+            buildHashColsCount,
+            jOperatorCount);
+    JitContext *jitContext = NULL;
+    hashBuilderOperatorFactory->setJitContext(jitContext);
+    JNI_DEBUG_LOG("create hash builder operator factory finished, elapsed time: %ld ms.", END(start));
+    return (int64_t)hashBuilderOperatorFactory;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols,
+        jintArray jBuildOutputCols, jintArray jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
+{
+    JNI_DEBUG_LOG("create lookup join operator factory starting.");
+    auto start = START();
+    jint *probeTypesArr = env->GetIntArrayElements(jProbeTypes, JNI_FALSE);
+    jint *probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
+    jint *probeHashColsArr = env->GetIntArrayElements(jProbeHashCols, JNI_FALSE);
+    jint *buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+    jint *buildOutputTypesArr = env->GetIntArrayElements(jBuildOutputTypes, JNI_FALSE);
+
+    jint probeTypesCount = env->GetArrayLength(jProbeTypes);
+    jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
+    jint probeHashColsCount = env->GetArrayLength(jProbeHashCols);
+    jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
+
+    JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
+            probeTypesArr,
+            probeTypesCount,
+            probeOutputColsArr,
+            probeOutputColsCount,
+            probeHashColsArr,
+            probeHashColsCount,
+            buildOutputColsArr,
+            buildOutputTypesArr,
+            buildOutputColsCount,
+            jHashBuilderOperatorFactory);
+    JitContext *jitContext = NULL;
+    lookupJoinOperatorFactory->setJitContext(jitContext);
+    JNI_DEBUG_LOG("create lookup join operator factory finished, elapsed time: %ld ms.", END(start));
+    return (int64_t)lookupJoinOperatorFactory;
 }

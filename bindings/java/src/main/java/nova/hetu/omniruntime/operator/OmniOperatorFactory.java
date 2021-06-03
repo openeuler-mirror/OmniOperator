@@ -19,6 +19,11 @@ public abstract class OmniOperatorFactory
         NativeLibs.load();
     }
 
+    public long getNativeOperatorFactory()
+    {
+        return nativeOperatorFactory;
+    }
+
     public OmniOperator createOperator()
     {
         try {

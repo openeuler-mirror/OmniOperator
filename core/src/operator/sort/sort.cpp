@@ -10,22 +10,6 @@ using namespace std;
 
 int32_t DEFAULT_MAX_PAGE_SIZE_IN_BYTES = 1 * 1024 * 1024;
 
-int32_t getColTypeIdx(ColumnType type)
-{
-    if (type == INT32) {
-        return 1;
-    }
-    else if (type == INT64) {
-        return 2;
-    }
-    else if (type == DOUBLE) {
-        return 3;
-    }
-    else {
-        return 1;
-    }
-}
-
 int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount)
 {
     int32_t rowSize = 0;
@@ -134,7 +118,7 @@ SortOperatorFactory::~SortOperatorFactory()
     delete[] sortNullFirsts;
 }
 
-SortOperatorFactory * SortOperatorFactory::createOperatorFactory(
+SortOperatorFactory * SortOperatorFactory::createSortOperatorFactory(
     int32_t *sourceTypes,
     int32_t sourceTypeCount,
     int32_t *outputCols,
