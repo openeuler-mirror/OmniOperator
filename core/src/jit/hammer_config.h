@@ -22,9 +22,11 @@
 #ifndef JOY_HAMMERCONFIG_H
 #define JOY_HAMMERCONFIG_H
 
-using namespace llvm;
-
+namespace omniruntime {
 namespace codegen {
+
+    using namespace llvm;
+
     class HammerConfig {
     public:
         /**
@@ -71,6 +73,6 @@ namespace codegen {
         void init_module_pass();
     };
 
-}
-
+} // end of namespace codegen
+} // end of namespace omniruntime
 #endif //JOY_HAMMERCONFIG_H

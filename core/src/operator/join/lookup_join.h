@@ -5,7 +5,8 @@
 #include "../operator.h"
 #include "join_hash_table.h"
 
-using namespace omni;
+namespace omniruntime {
+namespace op {
 
 class LookupJoinOperatorFactory : public OperatorFactory
 {
@@ -33,7 +34,7 @@ public:
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
         int64_t hashBuilderFactoryAddr);
-    omni::Operator *createOperator();
+    Operator *createOperator();
 private:
     int32_t *probeTypes;      // all types for probe
     int32_t probeTypesCount;
@@ -50,7 +51,7 @@ private:
 class JoinProbe;
 class LookupJoinOutputBuilder;
 
-class LookupJoinOperator : public omni::Operator
+class LookupJoinOperator : public Operator
 {
 public:
     LookupJoinOperator(
@@ -135,5 +136,6 @@ private:
     std::vector<int32_t> probeIndex;
     std::vector<int64_t> buildIndex;
 };
-
+} // end of op
+} // end of omniruntime
 #endif

@@ -4,7 +4,8 @@
 #include "../pages_index.h"
 
 #include <algorithm>
-
+namespace omniruntime {
+namespace op {
 int32_t CACHE_SIZE = 131072; // 128KB
 
 int32_t numberOfTrailingZeros(int32_t value)
@@ -343,3 +344,5 @@ int32_t ArrayPositionLinks::next(int32_t position)
 {
     return positionLinks[position];
 }
+} // end of op
+} // end of omniruntime

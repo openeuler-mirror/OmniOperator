@@ -7,8 +7,6 @@
 
 #include "operator.h"
 
-using namespace omni;
-
 typedef struct JitContext {
     uintptr_t jitter;
     uintptr_t func;
@@ -20,7 +18,7 @@ public:
 
     virtual ~OperatorFactory() {}
 
-    virtual omni::Operator *createOperator() { return nullptr; };
+    virtual omniruntime::op::Operator *createOperator() { return nullptr; };
 
     virtual void setJitContext(JitContext *JitContext) {
         jitContext = JitContext;
@@ -34,6 +32,6 @@ private:
     JitContext *jitContext;
 };
 
-typedef omni::Operator *(*opt_module)(OperatorFactory *);
+typedef omniruntime::op::Operator *(*opt_module)(OperatorFactory *);
 
 #endif //__OMNI_OPERATOR_FACTORY_H__

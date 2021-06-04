@@ -7,8 +7,6 @@
 #include <vector>
 #include <iostream>
 
-using namespace opt;
-
 class Layout{};
 
 typedef struct ColumnIndex {

@@ -4,7 +4,8 @@
 #include "../vector/table.h"
 #include <vector>
 
-namespace omni {
+namespace omniruntime {
+namespace op {
     class Operator {
     public:
         Operator() : status(0) {}
@@ -26,5 +27,6 @@ namespace omni {
     protected:
         int status;
     };
+}
 }
 #endif

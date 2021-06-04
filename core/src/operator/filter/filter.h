@@ -7,7 +7,9 @@
 #include "../../util/debug.h"
 #include "../../codegen/llvm_codegen.h"
 
-
+namespace omniruntime {
+namespace op {
+    
 class Filter
 {
 public:
@@ -19,7 +21,7 @@ private:
     Expr* expr;
 };
 
-class FilterAndProjectOperator : public omni::Operator
+class FilterAndProjectOperator : public Operator
 {
 public:
     FilterAndProjectOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
@@ -55,7 +57,7 @@ public:
 
     ~FilterAndProjectOperatorFactory() override;
 
-    omni::Operator* createOperator() override;
+    Operator* createOperator() override;
 
 private:
     std::string expression;
@@ -65,5 +67,6 @@ private:
     int32_t projectVecCount;
     Filter *filter;
 };
-
+} // end of op
+} // end of omniruntime
 #endif

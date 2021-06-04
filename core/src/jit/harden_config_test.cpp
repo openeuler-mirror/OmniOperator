@@ -7,7 +7,7 @@
 #include "param_value.h"
 #include "hammer.h"
 
-using namespace codegen;
+using namespace omnirumtime::codegen;
 
 Table **buildData2(int PAGE_NUM, int DATA_SIZE, int *data_type, int column_count) {
     Table **input = new Table *[PAGE_NUM];

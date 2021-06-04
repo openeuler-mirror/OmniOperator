@@ -48,12 +48,14 @@ public class OmniHashAggregationOperatorTest
         OmniOperator omniOperator = factory.createOperator();
 
         omniOperator.addInput(vecBatchList.build());
+        VecBatch oneBatch = new VecBatch(build4Columns(rowNum).toArray(new Vec[4]), rowNum);
+        omniOperator.addInput(oneBatch);
 
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
 
         Iterator<VecBatch> output = omniOperator.getOutput();
-        VecBatch vecBatch = null;
+        VecBatch vecBatch;
         while (output.hasNext()) {
             vecBatch = output.next();
             if (vecBatch.getVectors().length != aggOutputTypes.length) {
@@ -64,8 +66,8 @@ public class OmniHashAggregationOperatorTest
             Vec[] vectors = vecBatch.getVectors();
             Assert.assertEquals(((LongVec) vectors[0]).get(0), 0);
             Assert.assertEquals(((LongVec) vectors[1]).get(0), 0);
-            Assert.assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
-            Assert.assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
+            Assert.assertEquals(((LongVec) vectors[2]).get(0), rowNum * (pageCount + 1));
+            Assert.assertEquals(((LongVec) vectors[3]).get(0), rowNum * (pageCount + 1));
             releaseVecMemory(vecBatch.getVectors());
         }
     }
@@ -144,7 +146,7 @@ public class OmniHashAggregationOperatorTest
             downLatch.await();
         }
         catch (InterruptedException ex) {
-            Assert.assertEquals(true, false);
+            Assert.assertTrue(false);
         }
     }
 

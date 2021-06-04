@@ -22,8 +22,8 @@
 #include <list>
 #include <string>
 
-using namespace codegen;
-using namespace llvm::orc;
+namespace omniruntime {
+namespace codegen {
 using namespace std;
 
 ExitOnError ExitOnErr;
@@ -406,3 +406,5 @@ Constant *Hammer::to_array_llvm_value(std::string name, ParamValue value) {
         }
     }
 }
+} // end of namespace codegen
+} // end of namespace omniruntime

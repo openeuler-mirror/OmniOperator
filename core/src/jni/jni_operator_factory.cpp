@@ -14,8 +14,6 @@
 #include "../operator/join/lookup_join.h"
 #include "../util/debug.h"
 
-using namespace omni;
-
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
  * Method:    createOperator
@@ -28,7 +26,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     auto start = START();
     OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
     JitContext *jitContext = operatorFactory->getJitContext();
-    omni::Operator *nativeOperator = NULL;
+    omniruntime::op::Operator *nativeOperator = NULL;
 
     if (jitContext == NULL) {
         nativeOperator = operatorFactory->createOperator();
@@ -70,7 +68,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
 
     // return prepareHashGroupBy(groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-    using namespace codegen;
+    using namespace omniruntime::codegen;
     std::map<std::string, ParamValue *> testParam;
     std::list<Hammer *> deps = std::list<Hammer *>();
     int32_t groupColNum = groupByColContext.len;
@@ -94,19 +92,20 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@3"] = &p_col_type;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@4"] = &p_col_count;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@6"] = &p_group_num;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@8"] = &p_agg_num;
-    testParam["_ZN27OmniHashAggregationOperator6inloopEPPcjPiiS2_iS2_iS2_@9"] = &p_agg_types;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
 
     testParam["processAgg@2"] =  &p_agg_types;
     testParam["processAgg@3"] =  &p_agg_num;
     testParam["processAgg@4"] =  &p_col_type;
 
-    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@2"] = &p_col_type;
-    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@3"] = &p_group_num;
-    testParam["_ZN27OmniHashAggregationOperator15constructColumnEP5TablePijjiR8Iterator@4"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@2"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@3"] = &p_group_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@2"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@3"] = &p_agg_num;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
     Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
@@ -121,12 +120,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
 
-    auto func = (opt_module)(jitter->lookup("_ZN30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);
     jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
 
-    HashAggregationOperatorFactory* nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     nativeOperatorFactory->setJitContext(jitContext);
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -164,7 +163,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
     jint sortColsCount = env->GetArrayLength(jSortCols);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
-    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createSortOperatorFactory(
+    omniruntime::op::SortOperatorFactory *sortOperatorFactory = omniruntime::op::SortOperatorFactory::createSortOperatorFactory(
             sourceTypesArr,
             sourceTypesCount,
             outputColsArr,
@@ -199,7 +198,7 @@ JitContext *createSortJitContext(
 {
     JNI_DEBUG_LOG("create jit sort context starting.");
     auto start = START();
-    using namespace codegen;
+    using namespace omniruntime::codegen;
     std::map<std::string, ParamValue *> testParam;
     std::list<Hammer *> deps = std::list<Hammer *>();
     int sortColTypes[sortColsCount];
@@ -224,9 +223,9 @@ JitContext *createSortJitContext(
     testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
     testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
 
-    testParam["_Z12allocColumnslPiS_ii@1"] = &p_sourceTypes;
-    testParam["_Z12allocColumnslPiS_ii@2"] = &p_outputCols;
-    testParam["_Z12allocColumnslPiS_ii@3"] = &p_outputColCount;
+    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@1"] = &p_sourceTypes;
+    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@2"] = &p_outputCols;
+    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@3"] = &p_outputColCount;
 
     testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@1"] = &p_outputCols;
     testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@2"] = &p_outputColCount;
@@ -238,6 +237,7 @@ JitContext *createSortJitContext(
     Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
     Hammer hammer2("/opt/lib/ir/pages_index.ll", testParam);
     Hammer hammer3("/opt/lib/ir/memory_pool.ll", testParam);
+
     hammer1.harden();
     hammer2.harden();
     hammer3.harden();
@@ -246,7 +246,7 @@ JitContext *createSortJitContext(
 
     HammerConfig hammerConfig;
     auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN19SortOperatorFactory14createOperatorEv")->getAddress());
+    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op19SortOperatorFactory14createOperatorEv")->getAddress());
 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(func);;
@@ -264,7 +264,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAnd
     int32_t inputLength = (int32_t) jInputLength;
     jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
     int32_t projectLength = (int32_t) jProjectLength;
-    FilterAndProjectOperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
+    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
     return (int64_t) factory;
 }
 
@@ -282,7 +282,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilder
     jint buildHashColsCount = env->GetArrayLength(jBuildHashCols);
 
     JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
-    HashBuilderOperatorFactory *hashBuilderOperatorFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
+    omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory = omniruntime::op::HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
             buildTypesArr,
             buildTypesCount,
             buildOutputColsArr,
@@ -314,7 +314,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinO
     jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
 
     JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
-    LookupJoinOperatorFactory *lookupJoinOperatorFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
+    omniruntime::op::LookupJoinOperatorFactory *lookupJoinOperatorFactory = omniruntime::op::LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
             probeTypesArr,
             probeTypesCount,
             probeOutputColsArr,

@@ -6,6 +6,7 @@
 #include <thread>
 #include <atomic>
 
+using namespace omniruntime::op;
 int g_tableCount;
 int g_distinctValue;
 int g_repeatCount;

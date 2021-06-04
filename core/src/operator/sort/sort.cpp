@@ -7,7 +7,8 @@
 #include <cstring>
 
 using namespace std;
-
+namespace omniruntime {
+namespace op {
 int32_t DEFAULT_MAX_PAGE_SIZE_IN_BYTES = 1 * 1024 * 1024;
 
 int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount)
@@ -140,7 +141,7 @@ SortOperatorFactory * SortOperatorFactory::createSortOperatorFactory(
     return operatorFactory;
 }
 
-omni::Operator * SortOperatorFactory::createOperator()
+Operator * SortOperatorFactory::createOperator()
 {
     SortOperator *sortOperator = new SortOperator(
         sourceTypes,
@@ -272,3 +273,5 @@ void freeDataInColumn(Table **tables, int32_t tableCount)
         }
     }
 }
+} // end of namespace op
+} // end of namespace omniruntime

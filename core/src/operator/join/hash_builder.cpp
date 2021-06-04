@@ -4,6 +4,9 @@
 #include <vector>
 #include <cstring>
 
+namespace omniruntime {
+namespace op {
+
 HashBuilderOperatorFactory::HashBuilderOperatorFactory(
         int32_t *buildTypes,
         int32_t buildTypesCount,
@@ -125,3 +128,5 @@ int32_t *HashBuilderOperator::getSourceTypes()
 {
     return buildTypes;
 }
+} // end of op
+} // end of omniruntime

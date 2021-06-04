@@ -28,7 +28,7 @@
 //         std::cout << "PROBE hash(" << probeData[i] << ") = " << hash << ", partition=" << partition << std::endl;
 //     }
 // }
-
+using namespace omniruntime::op;
 TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
 {
     // construct input data

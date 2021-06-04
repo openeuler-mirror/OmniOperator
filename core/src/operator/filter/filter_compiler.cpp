@@ -3,6 +3,9 @@
 #include "../../codegen/llvm_codegen.h"
 #include <cstring>
 
+namespace omniruntime {
+namespace op {
+
 using namespace std;
 
 bool testExpressionEvaluater(Table *table, int32_t index)
@@ -35,3 +38,5 @@ Filter *Compiler::compile()
     codeGenObj->compile();
     return new Filter(codeGenObj, expression);
 }
+} // end of op
+} // end of omniruntime

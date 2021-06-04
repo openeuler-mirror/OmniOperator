@@ -24,7 +24,8 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-using namespace codegen;
+namespace omniruntime {
+namespace codegen {
 using namespace llvm;
 using namespace llvm::orc;
 using namespace std;
@@ -74,3 +75,5 @@ std::unique_ptr<LLJIT> SortHammer::create_jitter(std::list<Hammer *> deps, CodeG
     }
     return nullptr;
 };
+} // end of namespace codegen
+} // end of namespace omniruntime

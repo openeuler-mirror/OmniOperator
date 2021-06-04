@@ -6,8 +6,11 @@
 #include <stdint.h>
 #include <shared_mutex>
 
-class ArrayPositionLinks;
 class PagesHashStrategy;
+namespace omniruntime {
+namespace op {
+
+class ArrayPositionLinks;
 class PagesHash;
 class JoinHashTable;
 
@@ -126,5 +129,6 @@ private:
     int32_t *positionLinks;
     int32_t size;
 };
-
+} // end of op
+} // end of omniruntime
 #endif
