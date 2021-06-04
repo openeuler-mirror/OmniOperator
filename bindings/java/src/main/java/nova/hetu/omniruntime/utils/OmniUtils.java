@@ -1,5 +1,6 @@
 package nova.hetu.omniruntime.utils;
 
+import nova.hetu.omniruntime.operator.WindowFunctionType;
 import nova.hetu.omniruntime.vector.AggType;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -56,5 +57,14 @@ public class OmniUtils
             aggTypeValue[idx] = aggTypes[idx].getValue();
         }
         return aggTypeValue;
+    }
+
+    public static int[] transformWindowFunctionType(WindowFunctionType[] windowFunctionTypes)
+    {
+        int[] res = new int[windowFunctionTypes.length];
+        for (int idx = 0; idx < windowFunctionTypes.length; idx++) {
+            res[idx] = windowFunctionTypes[idx].getValue();
+        }
+        return res;
     }
 }

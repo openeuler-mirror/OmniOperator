@@ -304,7 +304,7 @@ public class OmniFilterAndProjectOperatorTest
         }
     }
 
-    @Test
+    @Test(enabled = false)
     public void allTypes()
     {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};

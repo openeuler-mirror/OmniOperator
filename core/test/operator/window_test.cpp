@@ -235,8 +235,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     delete expectTable;
 }
 
-TEST(NativeOmniWindowOperatorTest, testRank)
-{
+TEST(NativeOmniWindowOperatorTest, testRank) {
     using namespace omniruntime::op;
     // construct input data
     const int32_t DATA_SIZE = 6;
@@ -245,7 +244,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
+    Table **tables = (Table **) malloc(1 * sizeof(Table *));
     tables[0] = new Table(DATA_SIZE, 3);
     Column *column0 = new Column(data0, INT32, DATA_SIZE);
     Column *column1 = new Column(data1, INT64, DATA_SIZE);
@@ -273,16 +272,24 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int32_t argumentChannels[0] = {};
 
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
-        outputCols, 3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
+                                                                                                outputCols, 3,
+                                                                                                windowFunctionTypes, 1,
+                                                                                                partitionCols, 0,
+                                                                                                preGroupedCols, 0,
+                                                                                                sortCols, ascendings,
+                                                                                                nullFirsts, 1,
+                                                                                                preSortedChannelPrefix,
+                                                                                                expectedPositions,
+                                                                                                allTypes, 4,
+                                                                                                argumentChannels, 0);
     JitContext *jitContext = NULL;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
     if (jitContext == NULL) {
-        windowOperator = (WindowOperator *)operatorFactory->createOperator();
+        windowOperator = (WindowOperator *) operatorFactory->createOperator();
     } else {
-        opt_module windowModule = (opt_module)(jitContext->func);
-        windowOperator = (WindowOperator *)windowModule(operatorFactory);
+        opt_module windowModule = (opt_module) (jitContext->func);
+        windowOperator = (WindowOperator *) windowModule(operatorFactory);
     }
 
     windowOperator->addInput(tables, rowCounts, 1);
