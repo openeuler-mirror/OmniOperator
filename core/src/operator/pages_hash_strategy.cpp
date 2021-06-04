@@ -108,7 +108,35 @@ bool PagesHashStrategy::positionEqualsRowIgnoreNulls(int32_t buildTableIndex, in
     return true;
 }
 
-bool valueEqualsValueIgnoreNulls(ColumnType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex)
+bool PagesHashStrategy::positionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex)
+{
+    Column *leftColumn;
+    Column *rightColumn;
+
+    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+        leftColumn = buildHashColumns[columnIdx][leftTableIndex];
+        rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+
+        ColumnType type = leftColumn->getType();
+        if (!valuePositionEqualsPosition(type, leftColumn, leftRowIndex, rightColumn, rightRowIndex))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool PagesHashStrategy::valuePositionEqualsPosition(ColumnType type, Column *leftColumn, int32_t leftRowIndex, Column *rightColumn, int32_t rightRowIndex)
+{
+    bool leftIsNull = leftColumn->isNull(leftRowIndex);
+    bool rightIsNull = rightColumn->isNull(rightRowIndex);
+    if (leftIsNull || rightIsNull) {
+        return leftIsNull && rightIsNull;
+    }
+    return valueEqualsValueIgnoreNulls(type, leftColumn->getData(), leftRowIndex, rightColumn->getData(), rightRowIndex);
+}
+
+bool PagesHashStrategy::valueEqualsValueIgnoreNulls(ColumnType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex)
 {
     bool result;
     switch (type)
