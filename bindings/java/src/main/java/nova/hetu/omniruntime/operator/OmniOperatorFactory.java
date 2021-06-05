@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutionException;
 
 public abstract class OmniOperatorFactory
 {
-    private final static Cache<Integer, Long> factorCache = CacheBuilder.newBuilder()
+    private static final Cache<Integer, Long> factorCache = CacheBuilder.newBuilder()
             .expireAfterAccess(java.time.Duration.ofHours(24))
             .maximumSize(100000)
             .build();

@@ -13,21 +13,24 @@
  */
 package nova.hetu.omniruntime.utils;
 
-public class OmniRuntimeException extends RuntimeException
+public class OmniRuntimeException
+        extends RuntimeException
 {
     private final OmniErrorType errorType;
-    public OmniRuntimeException(OmniErrorType errorType,String msg){
+
+    public OmniRuntimeException(OmniErrorType errorType, String msg)
+    {
         super(msg);
         this.errorType = errorType;
     }
 
-    public OmniRuntimeException(OmniErrorType errorType,String s, Throwable throwable)
+    public OmniRuntimeException(OmniErrorType errorType, String s, Throwable throwable)
     {
         super(s, throwable);
         this.errorType = errorType;
     }
 
-    public OmniRuntimeException(OmniErrorType errorType,Throwable throwable)
+    public OmniRuntimeException(OmniErrorType errorType, Throwable throwable)
     {
         super(throwable);
         this.errorType = errorType;

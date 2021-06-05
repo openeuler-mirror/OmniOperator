@@ -6,12 +6,13 @@ import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
+
+import static org.testng.Assert.assertEquals;
 
 public class OmniHashJoinOperatorsTest
 {
@@ -28,7 +29,7 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch buildVecBatch = new VecBatch(new Vec[] {buildVec1, buildVec2}, 10);
 
-        int[] buildTypes= {2, 2};
+        int[] buildTypes = {2, 2};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 1;
@@ -65,7 +66,7 @@ public class OmniHashJoinOperatorsTest
         output1.order(ByteOrder.LITTLE_ENDIAN);
 
         int len = resultVecBatch.getRowCount();
-        Assert.assertEquals(len, 18);
+        assertEquals(len, 18);
 
         long[] actual0 = new long[len];
         long[] actual1 = new long[len];
@@ -76,8 +77,8 @@ public class OmniHashJoinOperatorsTest
 
         long[] expected0 = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
         long[] expected1 = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
-        Assert.assertEquals(actual0, expected0);
-        Assert.assertEquals(actual1, expected1);
+        assertEquals(actual0, expected0);
+        assertEquals(actual1, expected1);
     }
 
     @Test
@@ -103,7 +104,7 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch buildVecBatch2 = new VecBatch(new Vec[] {buildVec21, buildVec22}, 4);
 
-        int[] buildTypes= {2, 2};
+        int[] buildTypes = {2, 2};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 2;
@@ -143,7 +144,7 @@ public class OmniHashJoinOperatorsTest
         output1.order(ByteOrder.LITTLE_ENDIAN);
 
         int len = resultVecBatch.getRowCount();
-        Assert.assertEquals(len, 18);
+        assertEquals(len, 18);
 
         long[] actual0 = new long[len];
         long[] actual1 = new long[len];
@@ -154,7 +155,7 @@ public class OmniHashJoinOperatorsTest
 
         long[] expected0 = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
         long[] expected1 = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
-        Assert.assertEquals(actual0, expected0);
-        Assert.assertEquals(actual1, expected1);
+        assertEquals(actual0, expected0);
+        assertEquals(actual1, expected1);
     }
 }

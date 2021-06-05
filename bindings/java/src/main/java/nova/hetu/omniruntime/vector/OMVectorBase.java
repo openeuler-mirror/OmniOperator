@@ -97,7 +97,7 @@ public class OMVectorBase
 
     private static native ByteBuffer concat(long leftAddr, long rightAddr, int leftSize, int rightSize);
 
-    public static native void invoke(String func_id, int[] d_types, ByteBuffer[] args);
+    public static native void invoke(String funcId, int[] dTypes, ByteBuffer[] args);
 
     public static native void copy(int dataType, long thisAddress, int thisSize, long otherAddress, int[] elementsToCopy, int offset, int length, int thisOffset);
 }

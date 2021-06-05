@@ -42,5 +42,22 @@ public class OmniSortOperatorFactory
         return Objects.hash(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts);
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        OmniSortOperatorFactory that = (OmniSortOperatorFactory) o;
+        return Objects.equals(sourceTypes, that.sourceTypes)
+                && Objects.equals(outputColumns, that.outputColumns)
+                && Objects.equals(sortColumns, that.sortColumns)
+                && Objects.equals(sortAscendings, that.sortAscendings)
+                && Objects.equals(sortNullFirsts, that.sortNullFirsts);
+    }
+
     private static native long createSortOperatorFactory(int[] sourceTypes, int[] outputCols, int[] sortCols, int[] ascendings, int[] nullFirsts);
 }

@@ -17,7 +17,8 @@ package nova.hetu.omniruntime.vector;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-public class VarcharVec extends VariableWidthVec
+public class VarcharVec
+        extends VariableWidthVec
 {
     public VarcharVec(int capacity, int elements)
     {
@@ -39,7 +40,7 @@ public class VarcharVec extends VariableWidthVec
         int capacity = 0;
         int[] newOffsets = new int[elementCount];
         int[] newLengths = new int[elementCount];
-        for (int i=0; i<elementCount; i++) {
+        for (int i = 0; i < elementCount; i++) {
             newOffsets[i] = offsets[i + startPosition] - offsets[startPosition];
             newLengths[i] = lengths[i + startPosition];
             capacity = capacity + lengths[i + startPosition];
@@ -53,7 +54,6 @@ public class VarcharVec extends VariableWidthVec
         return newVec;
     }
 
-
     public VariableWidthVec sliceByOffset(int startOff, int endOff)
     {
         int startIdx = Arrays.binarySearch(offsets, startOff); // has to start at the beginning of an element
@@ -63,12 +63,12 @@ public class VarcharVec extends VariableWidthVec
         int totalLength = endOff - startOff;
         while (currentPosition <= endOff) {
             currentPosition = currentPosition + lengths[curIdx];
-            elementCount ++;
-            curIdx ++;
+            elementCount++;
+            curIdx++;
         }
         int[] newOffsets = new int[elementCount];
         int[] lengths = new int[elementCount];
-        for (int i=0; i< elementCount; i++) {
+        for (int i = 0; i < elementCount; i++) {
             newOffsets[i] = offsets[startIdx + i] - startOff;
             lengths[i] = lengths[startIdx + i];
         }
@@ -124,7 +124,8 @@ public class VarcharVec extends VariableWidthVec
     {
         if (lengths[idx] == 0) {
             return "".getBytes();
-        } else {
+        }
+        else {
             byte[] output = new byte[lengths[idx]];
             int length = lengths[idx];
             int offset = offsets[idx];

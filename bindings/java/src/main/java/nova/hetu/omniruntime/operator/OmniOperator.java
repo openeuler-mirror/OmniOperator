@@ -86,7 +86,7 @@ public final class OmniOperator
     {
         private OmniResults results;
 
-        private int index = 0;
+        private int index;
 
         @Override
         public boolean hasNext()
