@@ -121,7 +121,7 @@ void LLVMCodeGen::generateComparisionExprFunc(ComparisionExpr *c_expr)
         // (int, int)
         std::vector<Type *> int64_param_type(2, Type::getInt64Ty(context));
         // int (*)(int, int)
-        prototype = FunctionType::get(Type::getInt32Ty(context), int64_param_type, false);
+        prototype = FunctionType::get(Type::getInt64Ty(context), int64_param_type, false);
         break;
     }     
     case DOUBLED:
@@ -129,7 +129,7 @@ void LLVMCodeGen::generateComparisionExprFunc(ComparisionExpr *c_expr)
         // (double, double)
         std::vector<Type *> double_param_type(2, Type::getDoubleTy(context));
         // int (*)(double, double)
-        prototype = FunctionType::get(Type::getInt32Ty(context), double_param_type, false);
+        prototype = FunctionType::get(Type::getDoubleTy(context), double_param_type, false);
         break;
     }
     case STRINGD:
@@ -149,7 +149,9 @@ void LLVMCodeGen::generateComparisionExprFunc(ComparisionExpr *c_expr)
         args.push_back(&arg);
     }
 
-    llvm::Value *result = builder.CreateSub(args[0], args[1], "result");
+    llvm::Value *result;
+    if (c_expr->columnData.dataType == DataType::DOUBLED) result = builder.CreateFSub(args[0], args[1], "result");
+    else result = builder.CreateSub(args[0], args[1], "result");
     builder.CreateRet(result);
 }
 
@@ -293,12 +295,13 @@ void LLVMCodeGen::generateBetweenExprFunc(BetweenExpr *bt_expr)
         // exec_engine->addModule(std::move(MODULE));
         cout << "Finalize module ..." << endl;
         _ee->finalizeObject();
+	_module->print(errs(), nullptr);
         this->funcAddr = _ee->getFunctionAddress(_func_name);
     }
 
 bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data)
 {
-    // cout << c_expr->columnData.intVal << " " << data->intVal << endl;
+    //cout << c_expr->columnData.doubleVal << " " << data->doubleVal << endl;
     int32_t result;
     //cout << c_expr->columnData.dataType <<endl;
      switch (data->dataType)
@@ -313,16 +316,18 @@ bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data
        
     case INT64D:
     {
-        int32_t (*native_func)(int64_t, int64_t) = (int32_t(*)(int64_t, int64_t))this->funcAddr;
-        result = native_func(c_expr->columnData.longVal, data->longVal);
-        break;
+        int64_t (*native_func)(int64_t, int64_t) = (int64_t(*)(int64_t, int64_t))this->funcAddr;
+        int64_t ans = native_func(data->longVal, c_expr->columnData.longVal);
+	result = ans == 0 ? 0 : ans < 0 ? -1 : 1;
+	//cout << data->longVal << " " << c_expr->columnData.longVal << endl;
+	break;
     }
         
     case DOUBLED:
     {
-        int32_t (*native_func)(double, double) = (int32_t(*)(double, double))this->funcAddr;
-        result = native_func(c_expr->columnData.doubleVal, data->doubleVal);
-        cout << result << endl;
+        double (*native_func)(double, double) = (double(*)(double, double))this->funcAddr;
+        double ans = native_func(data->doubleVal, c_expr->columnData.doubleVal);
+        result = ans == 0 ? 0 : ans < 0 ? -1 : 1;
 	break;
     }
         

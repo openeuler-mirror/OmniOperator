@@ -28,6 +28,32 @@ public class OmniFilterAndProjectOperatorTest
     }
 
     @Test
+    public void doubles()
+    {
+        VecType[] types = {VecType.DOUBLE};
+        int[] projectIndices = {0};
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$LESS_THAN(#0, 1.0)",
+                types,
+                projectIndices);
+        final int numRows = 5000;
+        DoubleVec col1 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
+        }
+        OmniOperator op = factory.createOperator();
+        op.addInput(makeInput(numRows, col1));
+
+        assertTrue(op.getOutput().hasNext());
+        VecBatch res = op.getOutput().next();
+        assertEquals(res.getRowCount(), 2500);
+        DoubleBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        while (res1.hasRemaining()) {
+            assertTrue(res1.get() < 1);
+        }
+    }
+
+    @Test
     public void lessThan()
     {
         VecType[] types = {VecType.INT};
@@ -89,7 +115,7 @@ public class OmniFilterAndProjectOperatorTest
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
         int[] projectIndices = {2, 1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-                "$operator$EQUAL(#2, 50)",
+                "$operator$EQUAL(#1, 50)",
                 types,
                 projectIndices);
         final int numRows = 5000;
@@ -101,7 +127,7 @@ public class OmniFilterAndProjectOperatorTest
             col3.set(i, i % 100);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1, col2));
+        op.addInput(makeInput(numRows, col1, col2, col3));
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
@@ -109,7 +135,7 @@ public class OmniFilterAndProjectOperatorTest
         DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
         LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         while (res0.hasRemaining()) {
-            assertEquals(res0.get(), 50);
+            assertEquals(res0.get(), 50.0);
             assertEquals(res1.get(), 50);
         }
     }
