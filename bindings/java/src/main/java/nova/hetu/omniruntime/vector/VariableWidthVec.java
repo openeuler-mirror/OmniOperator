@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class VariableWidthVec<T>
 {
-    protected int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
+    protected static final int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
     protected int[] offsets;
     protected int[] lengths;
     int lastOffsetPosition;

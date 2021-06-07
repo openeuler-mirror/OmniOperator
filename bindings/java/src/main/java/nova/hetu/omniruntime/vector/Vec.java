@@ -34,15 +34,15 @@ public abstract class Vec
 {
     protected OMVectorBase base = new OMVectorBase();
     //default memory offset is zero
-    protected int offset = 0;
+    protected int offset;
     protected OMChunk omniChunk;
     protected int size;
 
     protected boolean isWritable = true;
 
-    public Vec(int rowSize, int alloc_size)
+    public Vec(int rowSize, int allocSize)
     {
-        this.omniChunk = new OMChunk(OMVectorBase.allocate(alloc_size).order(ByteOrder.LITTLE_ENDIAN));
+        this.omniChunk = new OMChunk(OMVectorBase.allocate(allocSize).order(ByteOrder.LITTLE_ENDIAN));
         this.size = rowSize;
     }
 

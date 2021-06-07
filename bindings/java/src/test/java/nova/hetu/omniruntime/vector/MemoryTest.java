@@ -80,13 +80,14 @@ public class MemoryTest
     }
 
     @Test
-    public void testMemMultiFree() {
+    public void testMemMultiFree()
+    {
         LongVec v1 = new LongVec(1024);
         v1.set(0, 1000);
         long address = v1.getAddress();
         int count = 10;
-        for (int i = 0;i < count;i++) {
-           OMVectorBase.release(address);
+        for (int i = 0; i < count; i++) {
+            OMVectorBase.release(address);
         }
     }
 

@@ -51,5 +51,20 @@ public class OmniHashAggregationOperatorFactory
         return Objects.hash(groupByTypes, aggTypes, aggFunctionTypes);
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        OmniHashAggregationOperatorFactory that = (OmniHashAggregationOperatorFactory) o;
+        return Objects.equals(groupByTypes, that.groupByTypes)
+                && Objects.equals(aggTypes, that.aggTypes)
+                && Objects.equals(aggFunctionTypes, that.aggFunctionTypes);
+    }
+
     private static native long createHashAggregationOperatorFactory(int[] groupByChanel, int[] groupByTypes, int[] aggChannels, int[] aggTypes, int[] aggFunctionTypes, int[] aggOutputTypes);
 }

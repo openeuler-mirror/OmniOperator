@@ -35,5 +35,20 @@ public class OmniHashBuilderOperatorFactory
         return Objects.hash(buildTypes, buildOutputCols, buildHashCols);
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        OmniHashBuilderOperatorFactory that = (OmniHashBuilderOperatorFactory) o;
+        return Objects.equals(buildTypes, that.buildTypes)
+                && Objects.equals(buildOutputCols, that.buildOutputCols)
+                && Objects.equals(buildHashCols, that.buildHashCols);
+    }
+
     private static native long createHashBuilderOperatorFactory(int[] buildTypes, int[] buildOutputCols, int[] buildHashCols, int operatorCount);
 }

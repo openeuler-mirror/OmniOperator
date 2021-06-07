@@ -1,7 +1,9 @@
 package nova.hetu.omniruntime.vector;
 
-import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 
 public class VarcharVecTest
 {
@@ -25,10 +27,10 @@ public class VarcharVecTest
         vec.setData(thirdPosition, element3);
 
         vec.set(offsets, lengths);
-        Assert.assertEquals(third, new String(vec.getData(2)));
-        Assert.assertEquals(second, new String(vec.getData(1)));
-        Assert.assertEquals(first, new String(vec.getData(0)));
-        Assert.assertEquals(first, new String(vec.getDataAtOffset(0)));
+        assertEquals(third, new String(vec.getData(2)));
+        assertEquals(second, new String(vec.getData(1)));
+        assertEquals(first, new String(vec.getData(0)));
+        assertEquals(first, new String(vec.getDataAtOffset(0)));
     }
 
 //    @Test
@@ -45,11 +47,11 @@ public class VarcharVecTest
         vec.setData(element1.length + element2.length, element3);
 
         VarcharVec slice1 = (VarcharVec) vec.slice(0, 0);
-        Assert.assertEquals(first, new String(slice1.getData(0)));
+        assertEquals(first, new String(slice1.getData(0)));
         VarcharVec slice2 = (VarcharVec) vec.slice(1, 1);
-        Assert.assertEquals(second, new String(slice2.getData(0, slice2.capacity())));
+        assertEquals(second, new String(slice2.getData(0, slice2.capacity())));
         VarcharVec slice3 = (VarcharVec) vec.slice(1, 2);
-        Assert.assertEquals(second + third, new String(slice3.getData(0, slice3.capacity())));
+        assertEquals(second + third, new String(slice3.getData(0, slice3.capacity())));
     }
 
 //    @Test
@@ -64,11 +66,11 @@ public class VarcharVecTest
         vec.setData(1, "".getBytes());
 
         // test behaviours
-        Assert.assertNotEquals("", new String(vec.getDataAtOffset(0)));
-        Assert.assertNotEquals(null, new String(vec.getDataAtOffset(0)));
-        Assert.assertEquals(new byte[1], vec.getDataAtOffset(0));
-        Assert.assertEquals(new byte[1], vec.getData(0));
+        assertNotEquals("", new String(vec.getDataAtOffset(0)));
+        assertNotEquals(null, new String(vec.getDataAtOffset(0)));
+        assertEquals(new byte[1], vec.getDataAtOffset(0));
+        assertEquals(new byte[1], vec.getData(0));
         VarcharVec slice = (VarcharVec) vec.slice(0, 1);
-        Assert.assertEquals(new byte[1], slice.getData(0, 1));
+        assertEquals(new byte[1], slice.getData(0, 1));
     }
 }

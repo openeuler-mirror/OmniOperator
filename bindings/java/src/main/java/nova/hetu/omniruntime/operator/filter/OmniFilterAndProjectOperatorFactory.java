@@ -42,5 +42,20 @@ public class OmniFilterAndProjectOperatorFactory
         return Objects.hash(expression, inputTypes, projectIndices);
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        OmniFilterAndProjectOperatorFactory that = (OmniFilterAndProjectOperatorFactory) o;
+        return Objects.equals(expression, that.expression)
+                && Objects.equals(inputTypes, that.inputTypes)
+                && Objects.equals(projectIndices, that.projectIndices);
+    }
+
     private static native long createFilterAndProjectOperatorFactory(int[] inputTypes, int inputLength, String expression, int[] projectIndices, int projectLength);
 }

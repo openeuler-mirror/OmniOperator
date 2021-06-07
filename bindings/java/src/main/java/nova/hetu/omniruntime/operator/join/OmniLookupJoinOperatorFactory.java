@@ -46,5 +46,23 @@ public class OmniLookupJoinOperatorFactory
         return Objects.hash(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        OmniLookupJoinOperatorFactory that = (OmniLookupJoinOperatorFactory) o;
+        return hashBuilderOperatorFactory == that.hashBuilderOperatorFactory
+                && Objects.equals(probeTypes, that.probeTypes)
+                && Objects.equals(probeOutputCols, that.probeOutputCols)
+                && Objects.equals(probeHashCols, that.probeHashCols)
+                && Objects.equals(buildOutputCols, that.buildOutputCols)
+                && Objects.equals(buildOutputTypes, that.buildOutputTypes);
+    }
+
     private static native long createLookupJoinOperatorFactory(int[] probeTypes, int[] probeOutputCols, int[] probeHashCols, int[] buildOutputCols, int[] buildOutputTypes, long hashBuilderOperatorFactory);
 }

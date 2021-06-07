@@ -1,7 +1,8 @@
 package nova.hetu.omniruntime.vector;
 
-import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertEquals;
 
 public class IntVecTest
 {
@@ -15,9 +16,9 @@ public class IntVecTest
         }
 
         for (int i = 0; i < vec1.size(); i++) {
-            Assert.assertEquals(i, vec1.get(i));
+            assertEquals(i, vec1.get(i));
         }
-        Assert.assertEquals(true, vec1.close());
+        assertEquals(true, vec1.close());
     }
 
     @Test
@@ -29,19 +30,20 @@ public class IntVecTest
         }
         IntVec slice1 = vec1.slice(3, 5);
         for (int i = 0; i < slice1.size(); i++) {
-            Assert.assertEquals(i + 3, slice1.get(i));
+            assertEquals(i + 3, slice1.get(i));
         }
         IntVec slice2 = vec1.slice(0, vec1.size());
         for (int i = 0; i < slice2.size(); i++) {
-            Assert.assertEquals(i, slice2.get(i));
+            assertEquals(i, slice2.get(i));
         }
     }
 
     @Test
-    public void testZeroSizeAllocate() {
+    public void testZeroSizeAllocate()
+    {
         IntVec v1 = new IntVec(0);
         int[] values = new int[0];
-        v1.getData().asIntBuffer().put(values, 0 , values.length);
+        v1.getData().asIntBuffer().put(values, 0, values.length);
         v1.close();
     }
 }
