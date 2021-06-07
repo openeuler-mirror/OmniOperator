@@ -48,7 +48,6 @@ int32_t FilterAndProjectOperator::addInput(Table* data, int32_t rowCount)
     Projection *projection = new Projection(this->inputTypes, this->vecCount, rowCount, this->projectIndex, this->projectVecCount);
     Table *projectedData = projection->project(selectedRows, numSelectedRows, data);
     this->projectedVecs = projectedData;
-
     delete[] selectedRows;
     delete projection;
     return numSelectedRows;
@@ -59,7 +58,7 @@ int32_t FilterAndProjectOperator::addInput(Table** data, int32_t* rowCount, int3
     if (pageCount != 1) {
         std::cout << "ERROR: invalid page count " << pageCount << std::endl;
     }
-
+    
     int32_t pageRowCount = rowCount[0];
 
     int32_t *selectedRows = new int32_t[pageRowCount];
@@ -67,7 +66,7 @@ int32_t FilterAndProjectOperator::addInput(Table** data, int32_t* rowCount, int3
     Projection *projection = new Projection(this->inputTypes, this->vecCount, pageRowCount, this->projectIndex, this->projectVecCount);
     Table *projectedData = projection->project(selectedRows, numSelectedRows, data[0]);
     this->projectedVecs = projectedData;
-
+    
     delete[] selectedRows;
     delete projection;
     return numSelectedRows;
@@ -97,7 +96,6 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
     ComparisionExpr *c_expr =  (ComparisionExpr *) expr;
 
     Column *column = table->getColumn(c_expr->columnIdx);
-
     for (int index = 0; index < rowNumber; index++)
     {
         switch (column->getType())
@@ -106,17 +104,30 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
                 Data actualData;
                 actualData.intVal = *((int32_t*) column->getValue(index));
                 actualData.dataType = DataType::INT32D;
+		 c_expr->columnData.dataType = DataType::INT32D;
                 if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
                     selectedRows[numSelectedRows++] = index;
                 }
                 break;
             }
             case INT64:{
-                // TODO: add Support for type
+                Data actualData;
+		actualData.longVal = *((int64_t*) column->getValue(index));
+		actualData.dataType = DataType::INT64D;
+	        c_expr->columnData.dataType = DataType::INT64D;
+		if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
+		    selectedRows[numSelectedRows++] = index;
+		}
                 break;
             }
             case DOUBLE:{
-                // TODO: add Support for type
+                Data actualData;
+		actualData.doubleVal = *((double*) column->getValue(index));
+		actualData.dataType = DataType::DOUBLED;
+	        c_expr->columnData.dataType = DataType::DOUBLED;
+		if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
+		    selectedRows[numSelectedRows++] = index;
+		}
                 break;
             }
             default:
