@@ -6,6 +6,7 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -37,7 +38,7 @@ public class OmniSortOperatorTest
 
         VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2}, 8);
 
-        int[] sourceTypes = {1, 1};
+        VecType[] sourceTypes = {VecType.INT, VecType.INT};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -77,7 +78,7 @@ public class OmniSortOperatorTest
         long elapsed = System.currentTimeMillis() - start;
         System.out.println("buildVecs elapsed time : " + elapsed + " ms");
 
-        int[] sourceTypes = {1, 1};
+        VecType[] sourceTypes = {VecType.INT, VecType.INT};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -99,7 +100,7 @@ public class OmniSortOperatorTest
     {
         ImmutableList<VecBatch> vecs = buildVecs();
 
-        int[] sourceTypes = {2, 2};
+        VecType[] sourceTypes = {VecType.LONG, VecType.LONG};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};

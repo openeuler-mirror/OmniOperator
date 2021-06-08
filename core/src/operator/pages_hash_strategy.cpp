@@ -30,8 +30,32 @@ int64_t PagesHashStrategy::hashPosition(int32_t tableIndex, int32_t rowIndex)
 
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         column = buildHashColumns[columnIdx][tableIndex];
+        if (column->isNull(rowIndex)) {
+            continue;
+        }
         valueAddr = column->getValue(rowIndex);
-        hash = column->isNull(rowIndex) ? 0 : HashUtil::hashValue(*((int64_t *)valueAddr));
+        switch (column->getType()) {
+            case INT32: {
+                int32_t intValue = *((int32_t *)valueAddr);
+                hash = HashUtil::hashValue((int64_t)intValue);
+                break;
+            }
+            case INT64: {
+                int64_t int64Value = *((int64_t *)valueAddr);
+                hash = HashUtil::hashValue(int64Value);
+                break;
+            }
+            case DOUBLE: {
+                double doubleValue = *((double *)valueAddr);
+                hash = HashUtil::hashValue((int64_t)doubleValue);
+                break;
+            }
+            default: {
+                hash = 0;
+                break;
+            }
+        }
+
         result = HashUtil::getHash(result, hash);
     }
     return result;

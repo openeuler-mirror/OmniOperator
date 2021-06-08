@@ -49,6 +49,7 @@ JoinHashTables::JoinHashTables(int32_t hashTableCount)
 {
     hashTables = (int64_t *)malloc(hashTableCount * sizeof(int64_t));
     this->hashTableCount = hashTableCount;
+    this->hashTableSize = 0;
     this->partitionMask = hashTableCount - 1;
     this->shiftSize = numberOfTrailingZeros(hashTableCount) + 1;
 }
@@ -62,6 +63,7 @@ void JoinHashTables::addHashTable(int32_t partitionIndex, JoinHashTable *hashTab
 {
     std::lock_guard<std::shared_timed_mutex> writerLock(mutex);
     hashTables[partitionIndex] = (int64_t)hashTable;
+    hashTableSize++;
 }
 
 JoinHashTable *JoinHashTables::getHashTable(int32_t partitionIndex)
@@ -99,9 +101,32 @@ int64_t hashRow(int32_t rowIndex, Column **columns, int32_t columnCount)
 
     for (int32_t columnIdx = 0; columnIdx < columnCount; columnIdx++) {
         column = columns[columnIdx];
+        if (column->isNull(rowIndex)) {
+            continue;
+        }
         valueAddr = column->getValue(rowIndex);
-        // TODO: how to convert double type to int64_t type ?
-        hash = column->isNull(rowIndex) ? 0 : HashUtil::hashValue(*((int64_t *)valueAddr));
+        switch (column->getType()) {
+            case INT32: {
+                int32_t intValue = *((int32_t *)valueAddr);
+                hash = HashUtil::hashValue((int64_t)intValue);
+                break;
+            }
+            case INT64: {
+                int64_t int64Value = *((int64_t *)valueAddr);
+                hash = HashUtil::hashValue(int64Value);
+                break;
+            }
+            case DOUBLE: {
+                double doubleValue = *((double *)valueAddr);
+                hash = HashUtil::hashValue((int64_t)doubleValue);
+                break;
+            }
+            default: {
+                hash = 0;
+                break;
+            }
+        }
+
         result = HashUtil::getHash(result, hash);
     }
 

@@ -6,6 +6,7 @@ import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -29,7 +30,7 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch buildVecBatch = new VecBatch(new Vec[] {buildVec1, buildVec2}, 10);
 
-        int[] buildTypes = {2, 2};
+        VecType[] buildTypes = {VecType.LONG, VecType.LONG};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 1;
@@ -48,10 +49,10 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2}, 10);
 
-        int[] probeTypes = {2, 2};
+        VecType[] probeTypes = {VecType.LONG, VecType.LONG};
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
-        int[] buildOutputTypes = {2};
+        VecType[] buildOutputTypes = {VecType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
                 probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
@@ -104,7 +105,7 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch buildVecBatch2 = new VecBatch(new Vec[] {buildVec21, buildVec22}, 4);
 
-        int[] buildTypes = {2, 2};
+        VecType[] buildTypes = {VecType.LONG, VecType.LONG};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 2;
@@ -126,10 +127,10 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2}, 10);
 
-        int[] probeTypes = {2, 2};
+        VecType[] probeTypes = {VecType.LONG, VecType.LONG};
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
-        int[] buildOutputTypes = {2};
+        VecType[] buildOutputTypes = {VecType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
                 probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();

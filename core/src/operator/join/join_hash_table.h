@@ -38,6 +38,7 @@ private:
 
     int64_t *hashTables;  // actually, the type is JoinHashTable **
     int32_t hashTableCount;
+    int32_t hashTableSize;
     std::shared_timed_mutex mutex;
     int32_t partitionMask;
     int32_t shiftSize;

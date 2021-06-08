@@ -2,13 +2,15 @@ package nova.hetu.omniruntime.operator.sort;
 
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.utils.OmniUtils;
+import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
 
 public class OmniSortOperatorFactory
         extends OmniOperatorFactory<OmniSortOperatorFactory.Context>
 {
-    public OmniSortOperatorFactory(int[] sourceTypes,
+    public OmniSortOperatorFactory(VecType[] sourceTypes,
             int[] outputColumns,
             int[] sortColumns,
             int[] sortAscendings,
@@ -20,7 +22,8 @@ public class OmniSortOperatorFactory
     @Override
     protected long createNativeOperatorFactory(Context context)
     {
-        return createSortOperatorFactory(context.sourceTypes,
+        return createSortOperatorFactory(
+                OmniUtils.transformVecType(context.sourceTypes),
                 context.outputColumns,
                 context.sortColumns,
                 context.sortAscendings,
@@ -32,13 +35,13 @@ public class OmniSortOperatorFactory
     public static class Context
             extends OmniOperatorFactoryContext
     {
-        private final int[] sourceTypes;
+        private final VecType[] sourceTypes;
         private final int[] outputColumns;
         private final int[] sortColumns;
         private final int[] sortAscendings;
         private final int[] sortNullFirsts;
 
-        public Context(int[] sourceTypes,
+        public Context(VecType[] sourceTypes,
                 int[] outputColumns,
                 int[] sortColumns,
                 int[] sortAscendings,
