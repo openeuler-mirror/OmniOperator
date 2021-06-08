@@ -2,6 +2,8 @@ package nova.hetu.omniruntime.operator.join;
 
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.utils.OmniUtils;
+import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
 
@@ -10,7 +12,8 @@ import static java.util.Objects.requireNonNull;
 public class OmniHashBuilderOperatorFactory
         extends OmniOperatorFactory<OmniHashBuilderOperatorFactory.Context>
 {
-    public OmniHashBuilderOperatorFactory(int[] buildTypes,
+    public OmniHashBuilderOperatorFactory(
+            VecType[] buildTypes,
             int[] buildOutputCols,
             int[] buildHashCols,
             int operatorCount)
@@ -21,7 +24,8 @@ public class OmniHashBuilderOperatorFactory
     @Override
     protected long createNativeOperatorFactory(Context context)
     {
-        return createHashBuilderOperatorFactory(context.buildTypes,
+        return createHashBuilderOperatorFactory(
+                OmniUtils.transformVecType(context.buildTypes),
                 context.buildOutputCols,
                 context.buildHashCols,
                 context.operatorCount);
@@ -32,12 +36,12 @@ public class OmniHashBuilderOperatorFactory
     public static class Context
             extends OmniOperatorFactoryContext
     {
-        private final int[] buildTypes;
+        private final VecType[] buildTypes;
         private final int[] buildOutputCols;
         private final int[] buildHashCols;
         private final int operatorCount;
 
-        public Context(int[] buildTypes,
+        public Context(VecType[] buildTypes,
                 int[] buildOutputCols,
                 int[] buildHashCols,
                 int operatorCount)

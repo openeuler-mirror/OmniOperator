@@ -2,6 +2,8 @@ package nova.hetu.omniruntime.operator.join;
 
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.utils.OmniUtils;
+import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
 
@@ -10,11 +12,12 @@ import static java.util.Objects.requireNonNull;
 public class OmniLookupJoinOperatorFactory
         extends OmniOperatorFactory<OmniLookupJoinOperatorFactory.Context>
 {
-    public OmniLookupJoinOperatorFactory(int[] probeTypes,
+    public OmniLookupJoinOperatorFactory(
+            VecType[] probeTypes,
             int[] probeOutputCols,
             int[] probeHashCols,
             int[] buildOutputCols,
-            int[] buildOutputTypes,
+            VecType[] buildOutputTypes,
             OmniHashBuilderOperatorFactory hashBuilderOperatorFactory)
     {
         super(new Context(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory));
@@ -23,11 +26,12 @@ public class OmniLookupJoinOperatorFactory
     @Override
     protected long createNativeOperatorFactory(Context context)
     {
-        return createLookupJoinOperatorFactory(context.probeTypes,
+        return createLookupJoinOperatorFactory(
+                OmniUtils.transformVecType(context.probeTypes),
                 context.probeOutputCols,
                 context.probeHashCols,
                 context.buildOutputCols,
-                context.buildOutputTypes,
+                OmniUtils.transformVecType(context.buildOutputTypes),
                 context.hashBuilderOperatorFactory);
     }
 
@@ -36,18 +40,18 @@ public class OmniLookupJoinOperatorFactory
     public static class Context
             extends OmniOperatorFactoryContext
     {
-        private final int[] probeTypes;
+        private final VecType[] probeTypes;
         private final int[] probeOutputCols;
         private final int[] probeHashCols;
         private final int[] buildOutputCols;
-        private final int[] buildOutputTypes;
+        private final VecType[] buildOutputTypes;
         private final long hashBuilderOperatorFactory;
 
-        public Context(int[] probeTypes,
+        public Context(VecType[] probeTypes,
                 int[] probeOutputCols,
                 int[] probeHashCols,
                 int[] buildOutputCols,
-                int[] buildOutputTypes,
+                VecType[] buildOutputTypes,
                 OmniHashBuilderOperatorFactory hashBuilderOperatorFactory)
         {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
