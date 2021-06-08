@@ -1,6 +1,7 @@
 package nova.hetu.omniruntime.operator.aggregator;
 
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
+import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.utils.OmniUtils;
 import nova.hetu.omniruntime.vector.AggType;
 import nova.hetu.omniruntime.vector.VecType;
@@ -10,15 +11,8 @@ import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 public class OmniHashAggregationOperatorFactory
-        extends OmniOperatorFactory
+        extends OmniOperatorFactory<OmniHashAggregationOperatorFactory.Context>
 {
-    private int[] groupByChanel;
-    private VecType[] groupByTypes;
-    private int[] aggChannels;
-    private VecType[] aggTypes;
-    private AggType[] aggFunctionTypes;
-    private VecType[] aggOutputTypes;
-
     public OmniHashAggregationOperatorFactory(int[] groupByChanel,
             VecType[] groupByTypes,
             int[] aggChannels,
@@ -26,45 +20,66 @@ public class OmniHashAggregationOperatorFactory
             AggType[] aggFunctionTypes,
             VecType[] aggOutputTypes)
     {
-        this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
-        this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");
-        this.aggChannels = requireNonNull(aggChannels, "aggChannels");
-        this.aggTypes = requireNonNull(aggTypes, "aggTypes");
-        this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
-        this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
+        super(new Context(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes));
     }
 
     @Override
-    protected long createNativeOperatorFactory()
+    protected long createNativeOperatorFactory(Context context)
     {
-        return createHashAggregationOperatorFactory(groupByChanel,
-                OmniUtils.transformVecType(groupByTypes),
-                aggChannels,
-                OmniUtils.transformVecType(aggTypes),
-                OmniUtils.transformAggType(aggFunctionTypes),
-                OmniUtils.transformVecType(aggOutputTypes));
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(groupByTypes, aggTypes, aggFunctionTypes);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        OmniHashAggregationOperatorFactory that = (OmniHashAggregationOperatorFactory) o;
-        return Objects.equals(groupByTypes, that.groupByTypes)
-                && Objects.equals(aggTypes, that.aggTypes)
-                && Objects.equals(aggFunctionTypes, that.aggFunctionTypes);
+        return createHashAggregationOperatorFactory(context.groupByChanel,
+                OmniUtils.transformVecType(context.groupByTypes),
+                context.aggChannels,
+                OmniUtils.transformVecType(context.aggTypes),
+                OmniUtils.transformAggType(context.aggFunctionTypes),
+                OmniUtils.transformVecType(context.aggOutputTypes));
     }
 
     private static native long createHashAggregationOperatorFactory(int[] groupByChanel, int[] groupByTypes, int[] aggChannels, int[] aggTypes, int[] aggFunctionTypes, int[] aggOutputTypes);
+
+    public static class Context
+            extends OmniOperatorFactoryContext
+    {
+        private final int[] groupByChanel;
+        private final VecType[] groupByTypes;
+        private final int[] aggChannels;
+        private final VecType[] aggTypes;
+        private final AggType[] aggFunctionTypes;
+        private final VecType[] aggOutputTypes;
+
+        public Context(int[] groupByChanel,
+                VecType[] groupByTypes,
+                int[] aggChannels,
+                VecType[] aggTypes,
+                AggType[] aggFunctionTypes,
+                VecType[] aggOutputTypes)
+        {
+            this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
+            this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");
+            this.aggChannels = requireNonNull(aggChannels, "aggChannels");
+            this.aggTypes = requireNonNull(aggTypes, "aggTypes");
+            this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
+            this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(groupByTypes, aggTypes, aggFunctionTypes);
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            Context that = (Context) o;
+            return Objects.equals(groupByTypes, that.groupByTypes)
+                    && Objects.equals(aggTypes, that.aggTypes)
+                    && Objects.equals(aggFunctionTypes, that.aggFunctionTypes);
+        }
+    }
 }
