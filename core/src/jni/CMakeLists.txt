@@ -1,8 +1,11 @@
-# set(SOURCE_LINK data operator util memory)
-aux_source_directory(. API_LIST)
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} JNI_LIBS_SOURCE)
+set(JNI_TARGET jni)
+add_library(${JNI_TARGET} ${JNI_LIBS_SOURCE})
 
-include_directories($ENV{JAVA_HOME}/include)
-include_directories($ENV{JAVA_HOME}/include/linux)
-include_directories(/usr/include/llvm-12)
-include_directories(/usr/include/llvm-c-12)
-add_library(api ${API_LIST})
+# dependent include
+target_include_directories(${JNI_TARGET} PUBLIC $ENV{JAVA_HOME}/include)
+target_include_directories(${JNI_TARGET} PUBLIC $ENV{JAVA_HOME}/include/linux)
+target_include_directories(${JNI_TARGET} PUBLIC "${PROJECT_SOURCE_DIR}")
+
+# dependent library
+target_link_libraries(${JNI_TARGET} PUBLIC jit)

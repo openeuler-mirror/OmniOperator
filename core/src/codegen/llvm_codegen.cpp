@@ -136,7 +136,9 @@ void LLVMCodeGen::generateComparisionExprFunc(ComparisionExpr *c_expr)
     {
         // TODO:: Handle string type
         break;
-    }      
+    }
+        default:
+            break;
     }
 
     Function *func = Function::Create(prototype, Function::ExternalLinkage, _func_name, _module);
@@ -334,6 +336,8 @@ bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data
     case STRINGD:
         // TODO:: Handle string type
         break;
+        default:
+            break;
     }
        
     switch (c_expr->op)
@@ -385,6 +389,8 @@ bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data
         }
     case NEQ:
 	return result != 0;
+        default:
+            break;
     }
 
     return false;
