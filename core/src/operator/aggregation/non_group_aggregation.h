@@ -10,7 +10,11 @@ public:
     AggregationOperator(std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs) 
     : aggCols(aggCol), AggregationCommonOperator(aggs)
     {
-
+        sourceTypes = new int32_t[aggCol.size()];
+        int32_t idx = 0;
+        for (auto& c : aggCol) {
+            sourceTypes[idx++] = (int32_t)c.type;
+        }
     }
 
     virtual ~AggregationOperator() {}
@@ -31,14 +35,13 @@ public:
     Operator* createOperator() override;
 
     AggregationOperatorFactory
-    (PrepareContext aggCol, PrepareContext aggType, PrepareContext aggFuncType)
-    : aggColContext(aggCol), aggTypeContext(aggType), aggFuncTypeContext(aggFuncType)
+    (PrepareContext aggType, PrepareContext aggFuncType)
+    : aggTypeContext(aggType), aggFuncTypeContext(aggFuncType)
     { }
 
     ~AggregationOperatorFactory() override
     {}
 private:
-    PrepareContext aggColContext;
     PrepareContext aggTypeContext;
     PrepareContext aggFuncTypeContext;
 };

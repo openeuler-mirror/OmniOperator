@@ -8,8 +8,8 @@ Operator* AggregationOperatorFactory::createOperator()
     std::vector<ColumnIndex> aggIndex;
     std::vector<Aggregator*> aggs;
     
-    for (int32_t i = 0; i < this->aggColContext.len; ++i) {
-        ColumnIndex c = {this->aggColContext.context[i], (ColumnType)this->aggTypeContext.context[i]};
+    for (int32_t i = 0; i < this->aggTypeContext.len; ++i) {
+        ColumnIndex c = {static_cast<uint32_t>(i), (ColumnType)this->aggTypeContext.context[i]};
         aggIndex.push_back(c);
 
         if ((AggregateType)this->aggFuncTypeContext.context[i] == SUM) {
