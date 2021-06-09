@@ -5,4 +5,4 @@ g++ -g `ls *.cpp *.h` `llvm-config-12 --cxxflags --ldflags --libs` -lstdc++ -lgt
 # clang++ -O3 op_template.c `llvm-config --cxxflags --ldflags --libs` -o op
 # clang-12 -S -O3 -emit-llvm -fno-discard-value-names src/operator/op_template.cpp src/operator/op_template.h src/operator/aggregator.cpp src/operator/aggregator.h src/operator/hash_groupby.cpp src/operator/hash_group.h
 
-#clang++-12 -S -O3 -emit-llvm -fno-discard-value-names src/operator/op_template.cpp src/operator/op_template.h src/operator/aggregator.cpp src/operator/aggregator.h src/operator/hash_groupby.cpp src/operator/hash_groupby.h src/util/type_infer.h src/util/type_infer.h src/data/table.h src/data/table.cpp
+#clang++-12 -S -O3 -emit-llvm -fno-discard-value-names src/operator/op_template.cpp src/operator/op_template.h src/operator/aggregator.cpp src/operator/aggregator.h src/operator/hash_groupby.cpp src/operator/group_aggregation.h src/util/type_infer.h src/util/type_infer.h src/data/table.h src/data/table.cpp

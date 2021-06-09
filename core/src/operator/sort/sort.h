@@ -85,8 +85,6 @@ public:
 
     int32_t getOutput(std::vector<Table *> &outputTables) override;
 
-    int32_t *getSourceTypes() override { return sourceTypes; }
-
     int32_t getTypescount() { return typesCount; }
 
     int32_t *getOutputCols() { return outputCols; }
@@ -104,7 +102,6 @@ public:
     PagesIndex *getPagesIndex() { return pagesIndex; }
 
 private:
-    int32_t *sourceTypes;
     int32_t typesCount;
     int32_t *outputCols;
     int32_t outputColsCount;

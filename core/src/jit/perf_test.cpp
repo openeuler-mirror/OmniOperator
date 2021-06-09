@@ -1,7 +1,7 @@
 #include "hammer.h"
 #include "gtest/gtest.h"
 
-#include "../operator/aggregator/hash_groupby.h"
+#include "../operator/aggregation/group_aggregation.h"
 #include "../operator/sort/sort.h"
 
 using namespace omniruntime::codegen;

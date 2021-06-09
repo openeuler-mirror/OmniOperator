@@ -196,7 +196,7 @@ bool Hammer::eligible(CallInst &callInst) {
 //returns true if a function is eligible for hardening
 bool Hammer::eligible(Function &function) {
     if (function.getName().find("process") != string::npos
-        || function.getName().find("inloop") != string::npos
+        || function.getName().find("inLoop") != string::npos
         || function.getName().find("compareTo") != string::npos) {
         //outs() << "found function: " << func.getName() << "\n";
         function.removeFnAttr(Attribute::AttrKind::NoInline);

@@ -50,8 +50,9 @@ function(compile_ir SOURCE_FILE)
 endfunction()
 
 # add sources file, if you have new source need compile to ir file, pls add it here.
-set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregator/aggregator.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/operator/aggregator/hash_groupby.cpp
+set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/pages_index.cpp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp

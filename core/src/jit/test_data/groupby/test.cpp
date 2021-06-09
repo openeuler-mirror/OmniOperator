@@ -1,7 +1,7 @@
 //
 // Created by kkrazy on 2021-03-09.
 //
-#include "../../../operator/hash_groupby.h"
+#include "../../../operator/group_aggregation.h"
 
 int test_group_by() {
 
