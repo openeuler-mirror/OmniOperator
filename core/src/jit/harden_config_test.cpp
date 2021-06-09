@@ -3,7 +3,7 @@
 //
 
 #include "hammer_config.h"
-#include "../operator/aggregator/hash_groupby.h"
+#include "../operator/aggregation/group_aggregation.h"
 #include "param_value.h"
 #include "hammer.h"
 

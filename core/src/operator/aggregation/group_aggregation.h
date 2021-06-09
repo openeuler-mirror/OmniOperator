@@ -1,13 +1,7 @@
-#ifndef __HASH_GROUPBY_H__
-#define __HASH_GROUPBY_H__
+#ifndef __GROUP_AGGREGATION_H__
+#define __GROUP_AGGREGATION_H__
 
-#include "../operator_factory.h"
-#include "aggregator.h"
-#include "../../util/debug.h"
-
-#include <vector>
-#include <stdint.h>
-#include <thread>
+#include "aggregation.h"
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
@@ -31,11 +25,11 @@ typedef struct HashPosition
 
 class HashAggregationOperatorFactory;
 
-class HashAggregationOperator : public Operator
+class HashAggregationOperator : public AggregationCommonOperator
 {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol, std::vector<Aggregator*> aggs)
-    : groupByCols(groupByCol), aggCols(aggCol), aggregators(aggs)
+    : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(aggs)
     {
         int32_t colSize = groupByCol.size() + aggCol.size();
         sourceTypes = new int32_t[colSize];
@@ -55,7 +49,7 @@ public:
     int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
 
     HashAggregationOperator(std::vector<Aggregator*> aggregators)
-    : aggregators(aggregators)
+    : AggregationCommonOperator(aggregators)
     { }
 
     ~HashAggregationOperator()
@@ -88,28 +82,20 @@ public:
             delete agg;
         }
     }
-    void preloop(Table* table);
-    void inloop(Table* table, uint32_t rowIdx);
-    void inloop(char** head, uint32_t offset, int32_t* types, int32_t colNum, int32_t* groupByColIdx, int32_t groupByColNum, int32_t* aggColIdx, int32_t aggColNum, int32_t* aggFuncTypes); 
-    void postloop(Table* table);
+    void preLoop(Table* table);
+    void inLoop(char** head, uint32_t offset, int32_t* types, int32_t colNum, int32_t* groupByColIdx, int32_t groupByColNum, int32_t* aggColIdx, int32_t aggColNum, int32_t* aggFuncTypes); 
+    void postLoop(Table* table);
     void constructHashColumn(Table* table, int32_t* types, uint32_t groupByColSize, int32_t tableRowSize);
     void constructAggColumn(Table* table, int32_t* types, uint32_t aggColSize, int32_t tableRowSize);
-    void allocateVec(Table* table, const int32_t* types, const int32_t startIndex, const int32_t colSize, const int64_t rowSize);
     uint32_t* groupByColumnIndexes();
     uint32_t* aggColumnIndexes();
-    int32_t* getSourceTypes() override
-    {
-        return sourceTypes;
-    }
 
 private:
     friend class HashAggregationOperatorFactory;
-    std::vector<Aggregator*> aggregators;
     std::unordered_map<uint64_t, std::vector<GroupBySlot>> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
     uint32_t* inputColTypes;
-    int32_t* sourceTypes;
 };
 
 class HashAggregationOperatorFactory : public OperatorFactory
@@ -132,8 +118,7 @@ private:
     PrepareContext aggFuncTypeContext;
 };
 
-typedef void (*jit_module)(HashAggregationOperator*, Table*);
-
+typedef omniruntime::op::HashAggregationOperator *(*hashagg_module)(HashAggregationOperatorFactory*);
 } // end of namespace op
 } // end of namespace omniruntimef
 #endif

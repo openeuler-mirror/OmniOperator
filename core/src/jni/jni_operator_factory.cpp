@@ -8,7 +8,7 @@
 #include "../jit/hammer.h"
 #include "../operator/operator_factory.h"
 #include "../operator/sort/sort.h"
-#include "../operator/aggregator/hash_groupby.h"
+#include "../operator/aggregation/group_aggregation.h"
 #include "../operator/filter/filter.h"
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
@@ -96,15 +96,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inloopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
 
-    testParam["processAgg@2"] =  &p_agg_types;
-    testParam["processAgg@3"] =  &p_agg_num;
-    testParam["processAgg@4"] =  &p_col_type;
+    testParam["processAgg@2"] =  &p_agg_num;
+    testParam["processAgg@3"] =  &p_col_type;
 
     testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@2"] = &p_col_type;
     testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@3"] = &p_group_num;
@@ -113,7 +112,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
     Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/hash_groupby.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/group_aggregation.ll", testParam);
     Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
     hammer1.harden();
     hammer2.harden();

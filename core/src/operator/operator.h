@@ -20,13 +20,14 @@ namespace op {
 
         virtual int32_t getOutput(std::vector<Table *> &data) = 0;
 
-        virtual int32_t *getSourceTypes() = 0;
+        virtual int32_t *getSourceTypes() { return sourceTypes; }
 
         int getStatus() { return status; }
 
         void close() {}
     protected:
         int status;
+        int32_t* sourceTypes;
     };
 }
 }
