@@ -102,6 +102,5 @@ int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
 
     return this->codeGen->execute(data, rowNumber, selectedRows);
 }
-
-}
-}
+} // end of op
+} // end of omniruntime
