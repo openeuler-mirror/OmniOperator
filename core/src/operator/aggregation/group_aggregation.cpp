@@ -1,4 +1,6 @@
 #include "group_aggregation.h"
+#include "../../jit/annotation.h"
+#include "../optimization.h"
 #include <math.h>
 
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
@@ -144,6 +146,7 @@ void HashAggregationOperator::postLoop(Table* table)
 
 }
 
+SPECIALIZE(OMNIJIT_HASH_GROUPBY_PROCESS_AGG)
 extern "C" void processAgg(uint64_t key, 
                             std::vector<Aggregator*>& aggs, 
                             int32_t aggNum, 
@@ -165,6 +168,7 @@ extern "C" void processAgg(uint64_t key,
     }
 }
 
+SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
 void HashAggregationOperator::inLoop(char** head, 
                                     uint32_t offset, 
                                     int32_t* types, 
@@ -297,6 +301,7 @@ int32_t HashAggregationOperator::addInput(Table** tables, int32_t* rowCount, int
 
 // TODO currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
+SPECIALIZE(OMNIJIT_HASH_GROUPBY_HASH_COLUMN)
 void HashAggregationOperator::constructHashColumn(Table* table, 
                                                 int32_t* types, 
                                                 uint32_t groupByColSize, 
@@ -347,6 +352,7 @@ void HashAggregationOperator::constructHashColumn(Table* table,
 
 // TODO currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
+SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
 void HashAggregationOperator::constructAggColumn(Table* table, 
                                                 int32_t* types, 
                                                 uint32_t aggColSize, 

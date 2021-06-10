@@ -1,9 +1,11 @@
-set(HAMMER_LIST
-        hammer.cpp
-        hammer_config.cpp
-        harden_optimizer.cpp)
+set(JIT_LIST
+        jit.cpp
+        config.cpp
+        specialization.cpp
+        compiler/llvm_compiler.cpp
+        compiler/harden_optimizer.cpp)
 set(JIT_TARGET jit)
-add_library(${JIT_TARGET} ${HAMMER_LIST})
+add_library(${JIT_TARGET} ${JIT_LIST})
 
 # from command 'llvm-config-12 --cxxflags --ldflags --libs'
 target_include_directories(${JIT_TARGET} PUBLIC /usr/lib/llvm-12/include)

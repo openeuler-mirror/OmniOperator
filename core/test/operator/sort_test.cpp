@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/sort/sort.h"
-#include "../../src/jit/hammer.h"
+#include "../../src/jit/jit.h"
+#include "../../src/jit/specialization.h"
+#include "../../src/operator/optimization.h"
 #include "../util/test_util.h"
 #include <time.h>
 #include <vector>
@@ -18,9 +20,7 @@ JitContext *createTestSortJitContext(
   int32_t *sortNullFirsts,
   int32_t sortColsCount)
 {
-    using namespace omniruntime::codegen;
-    std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
+    using namespace omniruntime::jit;
     int sortColTypes[sortColsCount];
 
     for (int32_t i = 0; i < sortColsCount; ++i) {
@@ -37,39 +37,41 @@ JitContext *createTestSortJitContext(
     ParamValue p_sortNullFirsts = ParamValue(sortNullFirsts, sortColsCount);
     ParamValue p_sortColCount = ParamValue(&sortColsCount);
 
-    testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
-    testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
-    testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
-    testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
-    testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
+    Specialization *compareToSp = new Specialization();
+    compareToSp->addSpecializedParam(1, &p_sortCols);
+    compareToSp->addSpecializedParam(2, &p_sortColTypes);
+    compareToSp->addSpecializedParam(3, &p_sortAscendings);
+    compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
+    compareToSp->addSpecializedParam(5, &p_sortColCount);
 
-    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@1"] = &p_sourceTypes;
-    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@2"] = &p_outputCols;
-    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@3"] = &p_outputColCount;
+    Specialization *allocColumnsSp = new Specialization();
+    allocColumnsSp->addSpecializedParam(1, &p_sourceTypes);
+    allocColumnsSp->addSpecializedParam(2, &p_outputCols);
+    allocColumnsSp->addSpecializedParam(3, &p_outputColCount);
 
-    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@1"] = &p_outputCols;
-    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@2"] = &p_outputColCount;
-    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@4"] = &p_sourceTypes;
+    Specialization *getOutputSp = new Specialization();
+    getOutputSp->addSpecializedParam(1, &p_outputCols);
+    getOutputSp->addSpecializedParam(2, &p_outputColCount);
+    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
 
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+    std::map<std::string, Specialization> sortSps = {
+        {OMNIJIT_SORT_ALLOC_COLUMNS, *allocColumnsSp}
+    };
 
-    Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/pages_index.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/memory_pool.ll", testParam);
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
-    deps.push_back(&hammer2);
-    deps.push_back(&hammer3);
+    std::map<std::string, Specialization> pagesIndexSps = {
+        {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp},
+        {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp}
+    };
 
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op19SortOperatorFactory14createOperatorEv")->getAddress());
+    omniruntime::jit::Context *sortContext = new omniruntime::jit::Context("sort", sortSps, std::vector<std::string>(), std::vector<std::string>(), true);
+    omniruntime::jit::Context *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    omniruntime::jit::Context *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
+    auto createOperatorFunc = jit->specialize();
 
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);;
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);;
+    // jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
 
     return jitContext;
 }

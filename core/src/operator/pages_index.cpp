@@ -1,4 +1,6 @@
 #include "pages_index.h"
+#include "optimization.h"
+#include "../jit/annotation.h"
 
 #include <algorithm>
 
@@ -95,6 +97,7 @@ void PagesIndex::sort(
         to);
 }
 
+SPECIALIZE(OMNIJIT_PAGE_INDEX_GET_OUTPUT)
 void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length)
 {
     Column ***inputTables = this->columns;
@@ -214,6 +217,7 @@ int32_t compareDoubleValue(double *leftData, int32_t leftPosition, double *right
     }
 }
 
+SPECIALIZE(OMNIJIT_PAGE_INDEX_COMPARE_TO)
 int32_t compareTo(
     int64_t pagesIndexAddr,
     int32_t *sortCols,
