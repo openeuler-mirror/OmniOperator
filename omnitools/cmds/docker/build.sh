@@ -6,7 +6,6 @@
 
 set -eu
 
-
 OMNITOOLS_IMAGE="${OMNITOOLS_IMAGE:-blopeur/omnitools:latest}"
 DOCKER_COMPOSE_FILE="${DOCKER_COMPOSE_FILE:-./docker-compose.yml}"
 DOCKER_TAG="${DOCKER_TAG:-${OMNITOOLS_IMAGE}}"
@@ -27,9 +26,9 @@ main() {
       docker-compose -f "$DOCKER_COMPOSE_FILE" build
   elif [ -f "$DOCKER_FILE" ]; then
       _debug "found $DOCKER_FILE. building docker ..."
-      if head -n1 "$DOCKER_FILE" | grep -q "dockerfile:1.0.2-experimental"; then
-        export DOCKER_BUILDKIT=1
-      fi
+#      if head -n1 "$DOCKER_FILE" | grep -q "dockerfile:1.0.2-experimental"; then
+#        export DOCKER_BUILDKIT=1
+#      fi
       if  [ "$HTTP_PROXY" != "" ]; then
         _info "found proxy settings: HTTP_PROXY=$HTTP_PROXY"
       else
