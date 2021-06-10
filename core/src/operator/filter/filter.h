@@ -14,6 +14,7 @@ class Filter
 {
 public:
     Filter(LLVMCodeGen* codegen, Expr* expr);
+    ~Filter() {delete this->codeGen; delete this->expr;}
     int32_t filter(Table *table, int32_t rowNumber, int32_t *selectedRows);
 
 private:

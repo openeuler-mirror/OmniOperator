@@ -33,8 +33,9 @@ Compiler::Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount)
 
 Filter *Compiler::compile()
 {
-    LLVMCodeGen* codeGenObj = new LLVMCodeGen();
-    codeGenObj->generateFunc("comparisionFunc", expression);
+    vector<DataType>* datatypes = new vector<DataType>();
+    for (int32_t i = 0; i < vecCount; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
+    LLVMCodeGen* codeGenObj = new LLVMCodeGen("comparisionFunc", expression, datatypes);
     codeGenObj->compile();
     return new Filter(codeGenObj, expression);
 }

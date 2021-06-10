@@ -8,18 +8,22 @@
 #include <cstring>
 
 using namespace std;
+using namespace expressions;
+
+enum OperatorReturnType {
+    COMPARISON, 
+    LOGICAL, 
+    ARITHMETIC, 
+    INVALIDRETURNTYPE
+};
+
+
 
 class Parser
 {
 public:
-    Expr *parseRowExpression(string input);
-    Data generateData(string dataStr);
-    Expr *generateComparisionExpr(string exprStr, int startIdx, int endIdx, ComparisionOperator cmpOp);
-    // BetweenExpr *generateBetween(string exprStr);
-    // InExpr *generateInExpr(string exprStr);
-    // CoalesceExpr *generateCoalesceExpr(string exprStr);
-    Expr *generateFnExpr(string exprStr, FnType fnType);
-    Expr *generateArithmeticExpr(string exprStr);
+    Expr *parseRowExpression(string input, int32_t *inputTypes, int32_t veccount);
+    DataExpr* generateData(string dataStr, int32_t *inputTypes, int32_t vecCount);
 };
 
 
