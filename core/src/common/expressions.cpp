@@ -2,20 +2,100 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <algorithm>
+
+namespace expressions {
+
+// Helper function to get DataType from jint type
+DataType colTypeTrans(int32_t colType) {
+    switch(colType) {
+        case 1:
+            return DataType::INT32D;
+        case 2: 
+            return DataType::INT64D;
+        case 3:
+            return DataType::DOUBLED;
+        // not yet supported in table
+        case 4 :
+            return DataType::STRINGD;
+    }
+    return DataType::INVALIDDATAD;
+}
+
+std::string dataTypeString(DataType dt) {
+    switch(dt) {
+        case DataType::BOOLD: return "bool";
+        case DataType::DOUBLED: return "double";
+        case DataType::INT32D: return "int32";
+        case DataType::INT64D: return "int64";
+        case DataType::STRINGD: return "string";
+        case DataType::INVALIDDATAD: return "invalid";
+    }
+}
 
 
 ExprType Expr::getType() {
     return INVALID_E;
 }
 
-
-BinaryExpr::BinaryExpr() {
+DataType Expr::getExprDataType() {
+    return dataType;
 }
 
-BinaryExpr::BinaryExpr(LogicalOperator logOp, Expr *leftExpr, Expr *rightExpr){
-    op = logOp;
+
+DataExpr::DataExpr() {
+}
+
+ExprType DataExpr::getType() {
+    return ExprType::DATA_E;
+}
+
+// Helper constructors for different data types
+DataExpr::DataExpr(int32_t val) {
+    isColumn = false;
+    dataType = INT32D;
+    intVal = val;
+}
+DataExpr::DataExpr(int64_t val) {
+    isColumn = false;
+    dataType = INT64D;
+    longVal = val;
+}
+DataExpr::DataExpr(double val) {
+    isColumn = false;
+    dataType = DOUBLED;
+    doubleVal = val;
+}
+DataExpr::DataExpr(std::string val) {
+    isColumn = false;
+    dataType = STRINGD;
+    stringVal = val;
+}
+DataExpr::DataExpr(int32_t colIdx, DataType dt) {
+    isColumn = true;
+    // use magic numbers from jni wrapper
+    dataType = dt; // has already been translated
+    colVal = colIdx;
+}
+
+
+BinaryExpr::BinaryExpr() {
+    dataType = BOOLD;
+}
+
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr) {
+    op = bop;
     left = leftExpr;
     right = rightExpr;
+    // use the more encompassing DataType
+    dataType = std::max(leftExpr->getExprDataType(), rightExpr->getExprDataType());
+} 
+
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt) {
+    op = bop;
+    left = leftExpr;
+    right = rightExpr;
+    dataType = dt;
 } 
 
 BinaryExpr::~BinaryExpr() {
@@ -28,29 +108,19 @@ ExprType BinaryExpr::getType() {
 }
 
 
-ComparisionExpr::ComparisionExpr() {
+UnaryExpr::UnaryExpr() {
+    dataType = BOOLD;
 }
 
-ComparisionExpr::ComparisionExpr(ComparisionOperator cmpOp, int colId, Data colData) {
-    op = cmpOp;
-    columnIdx = colId;
-    columnData = colData;
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr){
+    op = uop;
+    exp = expr;
 } 
 
-ComparisionExpr::~ComparisionExpr() {
-}
-
-ExprType ComparisionExpr::getType() {
-    return ExprType::COMPARISION_E;
-}
-
-
-UnaryExpr::UnaryExpr() {
-}
-
-UnaryExpr::UnaryExpr(LogicalOperator logOp, Expr *expr){
-    op = logOp;
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataType dt) {
+    op = uop;
     exp = expr;
+    dataType = dt;
 } 
 
 UnaryExpr::~UnaryExpr() {
@@ -62,96 +132,30 @@ ExprType UnaryExpr::getType() {
 }
 
 
-ArithmeticExpr::ArithmeticExpr() {
+CallExpr::CallExpr() {
 }
 
-ArithmeticExpr::ArithmeticExpr(Data val) {
-    isVal = true;
-    value = val;
-    left = nullptr;
-    right = nullptr;
+CallExpr::~CallExpr() {
+    for (Expr* exp : arguments) {
+        delete exp;
+    }
 }
 
-ArithmeticExpr::ArithmeticExpr(ArithmeticOperator aOp, Expr *leftExpr, Expr *rightExpr){
-    isVal = false;
-    op = aOp;
-    left = leftExpr;
-    right = rightExpr;
-} 
-
-ArithmeticExpr::~ArithmeticExpr() {
-    delete left;
-    delete right;
+CallExpr::CallExpr(CallType ct, std::vector<Expr*> args){
+    callType = ct;
+    arguments = args;
 }
 
-ExprType ArithmeticExpr::getType() {
-    return ExprType::ARITHMETIC_E;
+CallExpr::CallExpr(CallType ct, std::vector<Expr*> args, DataType dt){
+    callType = ct;
+    arguments = args;
+    dataType = dt;
 }
 
-
-BetweenExpr::BetweenExpr() {
+ExprType CallExpr::getType() {
+    return ExprType::CALL_E;
 }
 
-BetweenExpr::BetweenExpr(int colId, Data lowBound, Data upBound) {
-    columnIdx = colId;
-    lowerBound = lowBound;
-    upperBound = upBound;
-}
-
-ExprType BetweenExpr::getType() {
-    return ExprType::BETWEEN_E;
-}
-
-
-InExpr::InExpr() {
-}
-
-InExpr::InExpr(Expr* col, std::vector<Data> vals) {
-    column = col;
-    arr = vals;
-}
-
-ExprType InExpr::getType() {
-    return ExprType::IN_E;
-}
-
-
-CoalesceExpr::CoalesceExpr() {
-}
-
-CoalesceExpr::CoalesceExpr(std::vector<Data> vals) {
-    values = vals;
-}
-
-ExprType CoalesceExpr::getType() {
-    return ExprType::COALESCE_E;
-}
-
-
-SubstrExpr::SubstrExpr() {
-}
-
-SubstrExpr::SubstrExpr(int colId, int startId, int len) {
-    columnIdx = colId;
-    startIdx = startId;
-    length = len;
-}
-
-ExprType SubstrExpr::getType() {
-    return ExprType::SUBSTR_E;
-}
-
-
-CastExpr::CastExpr() {
-}
-
-CastExpr::CastExpr(Data val) {
-    value = val;
-}
-
-ExprType CastExpr::getType() {
-    return ExprType::CAST_E;
-}
 
 
 // debugging Expr tree
@@ -161,116 +165,35 @@ void Expr::printExprTree() {
 void BinaryExpr::printExprTree() {
     switch(op) 
     {
+        // Comparison
+        case EQ:
+            printf("Cmp(EQ, ");
+            break;
+        case NEQ:
+            printf("Cmp(NEQ, ");
+            break;
+        case LT:
+            printf("Cmp(LT, ");
+            break;
+        case LTE:
+            printf("Cmp(LTE, ");
+            break;
+        case GT:
+            printf("Cmp(GT, ");
+            break;
+        case GTE:
+            printf("Cmp(GTE, ");
+            break;
+        
+        // Logical
         case AND:
             printf("Bin(AND, ");
             break;
         case OR:
             printf("Bin(OR, ");
             break;
-        default:
-            printf("invalid BinaryOperator %d", op);
-            break;
-    }
-    left->printExprTree();
-    printf(", ");
-    right->printExprTree();
-    printf(")");
-}
 
-void UnaryExpr::printExprTree() {
-    switch(op) 
-    {
-        case NOT:
-            printf("Un(NOT, ");
-            break;
-        default:
-            printf("invalid UnaryOperator %d", op);
-            break;
-    }
-    exp->printExprTree();
-    printf(")");
-}
-
-void Data::printData() {
-    const bool printWithTypes = false;
-    switch(dataType)
-    {
-        case INT32D:
-            if (printWithTypes) printf("i32_");
-            printf("%d", intVal);
-            break;
-        case INT64D:
-            if (printWithTypes) printf("i64_");
-            printf("%ld", longVal);
-            break;
-        case DOUBLED:
-            if (printWithTypes) printf("d64_");
-            printf("%f", doubleVal);
-            break;
-        case STRINGD:
-            if (printWithTypes) printf("s_");
-            printf("'%s'", stringVal.c_str());
-            break;
-        case COLUMND:
-            printf("#%d", colVal);
-            break;
-        default:
-            printf("invalid DataType %d", dataType);
-    }
-}
-
-
-void ComparisionExpr::printExprTree() {
-    switch(op) 
-    {
-        case EQ:
-            printf("Cmp(EQ, ");
-            break;
-        case LT:
-            printf("Cmp(LT, ");
-            break;
-        case GT:
-            printf("Cmp(GT, ");
-            break;
-        case LTE:
-            printf("Cmp(LTE, ");
-            break;
-        case GTE:
-            printf("Cmp(GTE, ");
-            break;
-        case NEQ:
-            printf("Cmp(NEQ, ");
-            break;
-        default:
-            printf("invalid ComparisionOperator %d(", op);
-            break;
-    }
-    printf("#%d, ", columnIdx);
-    columnData.printData();
-    printf(")");
-}
-
-void BetweenExpr::printExprTree() {
-    printf("Between(#%d, ", columnIdx);
-    lowerBound.printData();
-    printf(", ");
-    upperBound.printData();
-    printf(")");
-}
-
-void ArithmeticExpr::printExprTree() {
-    if (isVal) {
-        #ifdef DEBUG
-        printf("ArithVal(");
-        #endif
-        value.printData();
-        #ifdef DEBUG
-        printf(")");
-        #endif
-
-        return;
-    }
-    switch(op) {
+        // Arithmetic
         case ADD:
             printf("Arith(ADD, ");
             break;
@@ -287,7 +210,8 @@ void ArithmeticExpr::printExprTree() {
             printf("Arith(MOD, ");
             break;
         default:
-            printf("Invalid arithmetic operation");
+            printf("invalid BinaryOperator %d(", op);
+            break;
     }
     left->printExprTree();
     printf(", ");
@@ -295,34 +219,98 @@ void ArithmeticExpr::printExprTree() {
     printf(")");
 }
 
-void InExpr::printExprTree() {
-    printf("In(");
-    column->printExprTree();
-    printf(", ");
-    for (int i = 0; i < arr.size() - 1; i++) {
-        arr[i].printData();
-        printf(", ");
+void UnaryExpr::printExprTree() {
+    switch(op) 
+    {
+        case NOT:
+            printf("Unary(NOT, ");
+            break;
+        default:
+            printf("invalid UnaryOperator %d(", op);
+            break;
     }
-    arr[arr.size() - 1].printData();
+    exp->printExprTree();
     printf(")");
 }
 
-void CoalesceExpr::printExprTree() {
-    printf("Coalesce(");
-    for (int i = 0; i < values.size() - 1; i++) {
-        values[i].printData();
-        printf(", ");
+void DataExpr::printExprTree() {
+    const bool printWithTypes = false; // for debugging types
+    #ifdef DEBUG
+    std::cout << "Data" + dataTypeString(dataType) + "(";
+    #endif
+    if (isColumn) {
+        printf("#%d", colVal);
     }
-    values[values.size() - 1].printData();
+    else {
+        switch(dataType)
+        {
+            case INT32D:
+                if (printWithTypes) printf("i32_");
+                printf("%d", intVal);
+                break;
+            case INT64D:
+                if (printWithTypes) printf("i64_");
+                printf("%ld", longVal);
+                break;
+            case DOUBLED:
+                if (printWithTypes) printf("d64_");
+                printf("%f", doubleVal);
+                break;
+            case STRINGD:
+                if (printWithTypes) printf("s_");
+                printf("'%s'", stringVal.c_str());
+                break;
+            default:
+                printf("invalid DataType %d", dataType);
+        }
+    }
+    #ifdef DEBUG
     printf(")");
+    #endif
 }
 
-void SubstrExpr::printExprTree() {
-    printf("Substr(#%d, %d, %d)", columnIdx, startIdx, length);
+
+void CallExpr::printExprTree() {
+    switch(callType) {
+        case CallType::ABS: {
+            printf("Abs(");
+            break;
+        }
+        case CallType::BETWEEN: {
+            printf("Between(");
+            break;
+        }
+        case CallType::CAST: {
+            printf("Cast(");
+            break;
+        }
+        case CallType::COALESCE: {
+            printf("Coalesce(");
+            break;
+        }
+        case CallType::IF: {
+            printf("If(");
+            break;
+        }
+        case CallType::IN: {
+            printf("In(");
+            break;
+        }
+        case CallType::SUBSTR: {
+            printf("Substr(");
+            break;
+        }
+        default: {
+            printf("InvalidCall(");
+            break;
+        }
+    }
+
+    for (int i = 0; i < arguments.size(); i++) {
+        arguments[i]->printExprTree();
+        if (i == arguments.size() - 1) printf(")");
+        else printf(", ");
+    }
 }
 
-void CastExpr::printExprTree() {
-    printf("Cast(");
-    value.printData();
-    printf(")");
 }

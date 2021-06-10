@@ -2,7 +2,16 @@
 #define __LLVM_CODEGEN_H__
 
 #include "../common/expressions.h"
+#include "../common/parser/parser.h"
+
+#include <iostream>
+#include <string>
 #include <cstring>
+#include <memory>
+#include <vector>
+#include <cassert>
+#include <algorithm>
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
@@ -15,47 +24,56 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+using namespace orc;
 using namespace std;
+using namespace expressions;
 
 // Given an expression generates the function for it.
 class LLVMCodeGen
 {
+
 public:
-    LLVMCodeGen();
-
-    // Generate the functions
-    void generateFunc(string name, Expr* expr);
-    
-    void generateComparisionExprFunc(ComparisionExpr* expr);
-
-    void generateBinaryExprFunc(BinaryExpr* expr);
-
-    void generateInExprFunc(InExpr* expr);
-
-    void generateBetweenExprFunc(BetweenExpr* expr);
+    LLVMCodeGen(std::string name, Expr *expr, vector<DataType>* datatypes);
+    ~LLVMCodeGen();
 
     // compile the generated code
     void compile();
+    // todo: make this take a 2d array and return array of selected rows
+    int32_t execute(int64_t* data, int32_t nRows, int32_t* selected);
+    std::string dumpCode();
 
-    // Execute the compiled functions
-    bool executeComparisionExprFunc(ComparisionExpr* expr, Data* data);
-
-    bool executeBinaryExprFunc(BinaryExpr* expr, Data** dataArr);
-
-    bool executeInExprFunc(InExpr* expr, Data* data);
-
-    bool executeBetweenExprFunc(BetweenExpr* expr, Data* data);
 
 private:
-    std::string _func_name;
-    llvm::Module* _module;    
-    std::unique_ptr<llvm::ExecutionEngine> _ee;    
-    int64_t funcAddr;  
-};
 
-int simpleTest();
+    Value* parseExpr(Expr* root);
+    // Generate the functions
+    Function* generateFunc();
+    int64_t createWrapper(Function* filterFunc);
+
+    Value* createConstantInt(int32_t n);
+    Value* createConstantLong(int64_t n);
+    Value* createConstantDouble(double n);
+
+    std::string _func_name;
+    Expr* _expr;
+    vector<DataType>* datatypes;
+
+    int32_t (*_filter)(int64_t*, int32_t, int32_t*);
+    unique_ptr<LLVMContext> context;
+    unique_ptr<IRBuilder<>> builder;
+    unique_ptr<Module> _module;
+    map<string, Value*> args;
+    ExitOnError EOE;
+    unique_ptr<LLJIT> JIT;
+    ResourceTrackerSP rt;
+
+};
 
 #endif

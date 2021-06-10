@@ -6,6 +6,7 @@
 #include <thread>
 #include <atomic>
 
+using namespace omniruntime::op;
 int g_tableCount;
 int g_distinctValue;
 int g_repeatCount;
@@ -85,7 +86,7 @@ void sortProcess()
     delete sortOperator;
 }
 
-int main(int argc, char **argv) {
+int main1(int argc, char **argv) {
     if (argc < 4) {
         std::cout << "Usage: program tablecount distinctvalue repeatcount" << std::endl;
         return 0;
@@ -106,7 +107,7 @@ int main(int argc, char **argv) {
     int sortCols[] = {0, 1};
     int ascendings[] = {1, 1};
     int nullFirsts[] = {0, 0};
-    g_factory = SortOperatorFactory::createOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    g_factory = SortOperatorFactory::createSortOperatorFactory(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     int threadNums[] = {1, 8, 16, 32, 64, 100};
     for (int i = 0; i < 6; i++) {
@@ -147,4 +148,5 @@ int main(int argc, char **argv) {
     freeDataInColumn(g_inputTables, g_tableCount);
     freeInputTable(g_inputTables, g_tableCount);
     delete g_factory;
+    return 0;
 }

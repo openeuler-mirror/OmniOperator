@@ -33,4 +33,36 @@ void Table::printTable()
         }
         printf("\n");
     }
-} 
+}
+
+ColumnType getColumnType(int32_t colTypeIdx)
+{
+    if (colTypeIdx == 1) {
+        return INT32;
+    }
+    else if (colTypeIdx == 2) {
+        return INT64;
+    }
+    else if (colTypeIdx == 3) {
+        return DOUBLE;
+    }
+    else {
+        return INT32;
+    }
+}
+
+int32_t getColTypeIdx(ColumnType type)
+{
+    if (type == INT32) {
+        return 1;
+    }
+    else if (type == INT64) {
+        return 2;
+    }
+    else if (type == DOUBLE) {
+        return 3;
+    }
+    else {
+        return 1;
+    }
+}

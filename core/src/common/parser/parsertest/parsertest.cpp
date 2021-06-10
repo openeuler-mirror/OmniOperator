@@ -5,8 +5,19 @@
 using namespace std;
 
 
+string exprTypeString(ExprType et) {
+    switch (et) {
+        case ExprType::BINARY_E: return "binary";
+        case ExprType::UNARY_E: return "unary";
+        case ExprType::CALL_E: return "call";
+        case ExprType::DATA_E: return "data";
+        default: return "invalid";
+    }
+}
+
+
 int main() {
-    int numTests = 25;
+    int numTests = 33;
     vector<string> simpleTest(numTests);
     // ComparisionExpr, BinaryExpr
     simpleTest[0] = "$operator$LESS_THAN_OR_EQUAL(#0, 14)";
@@ -26,7 +37,7 @@ int main() {
     simpleTest[13] = "AND(AND($operator$GREATER_THAN(#3, 8766), $operator$LESS_THAN(#3, 9131)), AND(BETWEEN(#2, 0.05, 0.07), $operator$LESS_THAN(#0, 24.0)))";
     // Not
     simpleTest[14] = "NOT(BETWEEN(#2, 3, 10))";
-    simpleTest[15] = "OR(NOT(BETWEEN(#3, '4', '11')), $operator$LESS_THAN(#2, 3))";
+    simpleTest[15] = "OR(NOT(BETWEEN(#3, '4', '11')), $operator$EQUAL(#2, 'hello'))";
     simpleTest[16] = "not(AND(OR(not(BETWEEN(#2, 3, 10)), $operator$LESS_THAN(#4, 5)), not(BETWEEN(#6, 7, 9))))";
     // In
     simpleTest[17] = "IN(#4, 1, 2, 3, 4, 5, 6)";
@@ -36,11 +47,22 @@ int main() {
     simpleTest[20] = "IN(#3, 'AIR', 'RAIL', 'MAIL')";
     simpleTest[21] = "OR(AND($operator$EQUAL(#4, 2.34), IN(#3, 'A', 'B', 'C', 'D')), IN(#2, 1, 2, 3, 4, 5))";
     // COALESCE (ex. COALESCE(#2, #3))
-    simpleTest[22] = "COALESCE(#4, #6)";
-    simpleTest[23] = "AND(COALESCE(#2, #3), not(COALESCE(#4, #5)))";
+    simpleTest[22] = "COALESCE(#5, #6)";
+    simpleTest[23] = "AND(COALESCE(#2, #3), not(COALESCE(#4, 5)))";
     // SUBSTR
     simpleTest[24] = "substr(#2, 1, 2)";
-    // simpleTest[25] = "IN(substr(#1, 1, 2), '13', '31, '24, '42')"; // TODO: add support
+    simpleTest[25] = "AND($operator$GREATER_THAN(#13, #12), OR($operator$NOT_EQUAL(#2, 912), $operator$LESS_THAN_OR_EQUAL(#4, #5)))";
+    simpleTest[26] = "ADD(124.0, MULTIPLY(#14, 0.2))";
+    simpleTest[27] = "IN(substr(#1, 1, 2), '13', '31', '24', '42')";
+    // CAST
+    simpleTest[28] = "IN(CAST(#12), 1.0, 2.0, 3.0)";
+    // IF
+    simpleTest[29] = "IF(OR($operator$EQUAL(#0, 'abc'), $operator$EQUAL(#0, 'xyz')), 1, 0)";
+    // ABS and other functions
+    // TODO: fix this case
+    simpleTest[30] = "ADD(#1, DIVIDE(abs(SUBTRACT(#6, MULTIPLY(#7, 100))), #7))";
+    simpleTest[31] = "$operator$GREATER_THAN(IF($operator$GREATER_THAN(#6, 0), DIVIDE(abs(SUBTRACT(#5, #6)), #6), 0.0), 0.0)";
+    simpleTest[32] = "ADD(#1, 32)";
 
 
 
@@ -59,33 +81,48 @@ int main() {
     expected[11] = "Between(#0, 1, 12)";
     expected[12] = "Bin(AND, Between(#0, 1, 12), Between(#1, 10, 100))";
     expected[13] = "Bin(AND, Bin(AND, Cmp(GT, #3, 8766), Cmp(LT, #3, 9131)), Bin(AND, Between(#2, 0.050000, 0.070000), Cmp(LT, #0, 24.000000)))";
-    expected[14] = "Un(NOT, Between(#2, 3, 10))";
-    expected[15] = "Bin(OR, Un(NOT, Between(#3, '4', '11')), Cmp(LT, #2, 3))";
-    expected[16] = "Un(NOT, Bin(AND, Bin(OR, Un(NOT, Between(#2, 3, 10)), Cmp(LT, #4, 5)), Un(NOT, Between(#6, 7, 9))))";
+    expected[14] = "Unary(NOT, Between(#2, 3, 10))";
+    expected[15] = "Bin(OR, Unary(NOT, Between(#3, '4', '11')), Cmp(EQ, #2, 'hello'))";
+    expected[16] = "Unary(NOT, Bin(AND, Bin(OR, Unary(NOT, Between(#2, 3, 10)), Cmp(LT, #4, 5)), Unary(NOT, Between(#6, 7, 9))))";
     expected[17] = "In(#4, 1, 2, 3, 4, 5, 6)";
-    expected[18] = "Bin(AND, Un(NOT, In(#3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)), In(#4, '21', '22', '23', '24', '25'))";
+    expected[18] = "Bin(AND, Unary(NOT, In(#3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)), In(#4, '21', '22', '23', '24', '25'))";
     expected[19] = "Cmp(EQ, #4, 'brand34')";
     expected[20] = "In(#3, 'AIR', 'RAIL', 'MAIL')";
     expected[21] = "Bin(OR, Bin(AND, Cmp(EQ, #4, 2.340000), In(#3, 'A', 'B', 'C', 'D')), In(#2, 1, 2, 3, 4, 5))";
     expected[22] = "Coalesce(#4, #6)";
-    expected[23] = "Bin(AND, Coalesce(#2, #3), Un(NOT, Coalesce(#4, #5)))";
+    expected[23] = "Bin(AND, Coalesce(#2, #3), Unary(NOT, Coalesce(#4, 5)))";
     expected[24] = "Substr(#2, 1, 2)";
-    // expected[25] = "In(Substr(#1, 1, 2), '13, '31', '24', '42')";
+    expected[25] = "Bin(AND, Cmp(GT, #13, #12), Bin(OR, Cmp(NEQ, #2, 912), Cmp(LTE, #4, #5)))";
+    expected[26] = "Arith(ADD, 124.000000, Arith(MUL, #14, 0.200000))";
+    expected[27] = "In(Substr(#1, 1, 2), '13', '31', '24', '42')";
+    expected[28] = "In(Cast(#12), 1.000000, 2.000000, 3.000000)";
+    expected[29] = "If(Bin(OR, Cmp(EQ, #0, 'abc'), Cmp(EQ, #0, 'xyz')), 1, 0)";
+    expected[30] = "Arith(ADD, #1, Arith(DIV, Abs(Arith(SUB, #6, Arith(MUL, #7, 100))), #7))";
+    expected[31] = "Cmp(GT, If(Cmp(GT, #6, 0), Arith(DIV, Abs(Arith(SUB, #5, #6)), #6), 0.000000), 0.000000)";
+    expected[32] = "Arith(ADD, #1, 32)";
+
 
     Parser parserObj;
-    
-    // To test (cd to core/src/common): clang++-12 -g *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
-    // To test with debugging output (cd to core/src/common): clang++-12 -g -D DEBUG *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
+
+    // Sample types (does not look at tests above)
+    int32_t inputTypes[15] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
+    int32_t vecCount = 15;
+
+    // To test (cd to core/src/common): clang++ -g *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
+    // To test with debugging output (cd to core/src/common): clang++ -g -D DEBUG *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
 
     for (int i = 0; i < numTests; i++) {
-    //for (int i = 22; i <= 23; i++) {
+    //for (int i = 32; i <= 32; i++) {
         std::cout << "simpleTest[" << i << "]" << std::endl;
         std::cout << "RowExpression:::" << simpleTest[i] << std::endl;
-        Expr* result = parserObj.parseRowExpression(simpleTest[i]);
-        std::cout << "ExprType:::" << result->getType() << std::endl;
+        Expr* result = parserObj.parseRowExpression(simpleTest[i], inputTypes, vecCount);
+        std::cout << "ExprType:::" << exprTypeString(result->getType()) << std::endl;
+        std::cout << "DataType:::" << dataTypeString(result->getExprDataType()) << std::endl;
+        std::cout << "______________________________________" << std::endl;
         std::cout << " Final expression tree:::";
         result->printExprTree();
-        std::cout << std::endl << "Expect expression tree:::" << expected[i] << std::endl << std::endl;
+        std::cout << std::endl << "Expect expression tree:::" << expected[i] << std::endl;
+        std::cout << "______________________________________" << std::endl << std::endl;
         delete result;
     }
 }

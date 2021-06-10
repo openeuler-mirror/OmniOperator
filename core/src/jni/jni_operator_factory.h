@@ -39,6 +39,22 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory
         (JNIEnv *, jobject, jintArray, jint, jstring, jintArray, jint);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory
+ * Method:    createHashBuilderOperatorFactory
+ * Signature: ([I[I[II)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory
+  (JNIEnv *, jobject, jintArray, jintArray, jintArray, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory
+ * Method:    createLookupJoinOperatorFactory
+ * Signature: ([I[I[I[I[IJ)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory
+  (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jlong);
+
 #ifdef __cplusplus
 }
 #endif

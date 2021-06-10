@@ -3,6 +3,9 @@
 #include "../../codegen/llvm_codegen.h"
 #include <cstring>
 
+namespace omniruntime {
+namespace op {
+
 using namespace std;
 
 bool testExpressionEvaluater(Table *table, int32_t index)
@@ -30,8 +33,11 @@ Compiler::Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount)
 
 Filter *Compiler::compile()
 {
-    LLVMCodeGen* codeGenObj = new LLVMCodeGen();
-    codeGenObj->generateFunc("comparisionFunc", expression);
+    vector<DataType>* datatypes = new vector<DataType>();
+    for (int32_t i = 0; i < vecCount; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
+    LLVMCodeGen* codeGenObj = new LLVMCodeGen("comparisionFunc", expression, datatypes);
     codeGenObj->compile();
     return new Filter(codeGenObj, expression);
 }
+} // end of op
+} // end of omniruntime

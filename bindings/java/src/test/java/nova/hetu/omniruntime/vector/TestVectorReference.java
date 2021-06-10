@@ -14,8 +14,9 @@
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
-import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertEquals;
 
 public class TestVectorReference
 {
@@ -28,29 +29,29 @@ public class TestVectorReference
         }
         LongVec subVec1 = parent.slice(0, 10);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i, subVec1.get(i));
+            assertEquals(i, subVec1.get(i));
         }
-        Assert.assertEquals(false, subVec1.close());
+        assertEquals(false, subVec1.close());
 
         LongVec subVec2 = parent.slice(10, 20);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i + 10, subVec2.get(i));
+            assertEquals(i + 10, subVec2.get(i));
         }
-        Assert.assertEquals(false, subVec2.close());
+        assertEquals(false, subVec2.close());
 
         LongVec subVec3 = parent.slice(20, 30);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i + 20, subVec3.get(i));
+            assertEquals(i + 20, subVec3.get(i));
         }
-        Assert.assertEquals(false, subVec1.close());
+        assertEquals(false, subVec1.close());
 
         LongVec subVec4 = parent.slice(30, 40);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i + 30, subVec4.get(i));
+            assertEquals(i + 30, subVec4.get(i));
         }
-        Assert.assertEquals(false, subVec4.close());
+        assertEquals(false, subVec4.close());
 
-        Assert.assertEquals(true, parent.close());
+        assertEquals(true, parent.close());
     }
 
     @Test
@@ -62,26 +63,25 @@ public class TestVectorReference
         }
         IntVec subVec1 = parent.slice(0, 10);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i, subVec1.get(i));
+            assertEquals(i, subVec1.get(i));
         }
-        Assert.assertEquals(false, subVec1.close());
+        assertEquals(false, subVec1.close());
         IntVec subVec2 = parent.slice(10, 20);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i + 10, subVec2.get(i));
+            assertEquals(i + 10, subVec2.get(i));
         }
-        Assert.assertEquals(false, subVec2.close());
+        assertEquals(false, subVec2.close());
         IntVec subVec3 = parent.slice(20, 30);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i + 20, subVec3.get(i));
+            assertEquals(i + 20, subVec3.get(i));
         }
-        Assert.assertEquals(false, subVec3.close());
+        assertEquals(false, subVec3.close());
         IntVec subVec4 = parent.slice(30, 40);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals(i + 30, subVec4.get(i));
+            assertEquals(i + 30, subVec4.get(i));
         }
-        Assert.assertEquals(false, subVec4.close());
-
-        Assert.assertEquals(true, parent.close());
+        assertEquals(false, subVec4.close());
+        assertEquals(true, parent.close());
     }
 
     @Test
@@ -93,29 +93,29 @@ public class TestVectorReference
         }
         DoubleVec subVec1 = parent.slice(0, 10);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals((double) i / 3, subVec1.get(i));
+            assertEquals((double) i / 3, subVec1.get(i));
         }
-        Assert.assertEquals(false, subVec1.close());
+        assertEquals(false, subVec1.close());
 
         DoubleVec subVec2 = parent.slice(10, 20);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals((double) (i + 10) / 3, subVec2.get(i));
+            assertEquals((double) (i + 10) / 3, subVec2.get(i));
         }
-        Assert.assertEquals(false, subVec2.close());
+        assertEquals(false, subVec2.close());
 
         DoubleVec subVec3 = parent.slice(20, 30);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals((double) (i + 20) / 3, subVec3.get(i));
+            assertEquals((double) (i + 20) / 3, subVec3.get(i));
         }
-        Assert.assertEquals(false, subVec3.close());
+        assertEquals(false, subVec3.close());
 
         DoubleVec subVec4 = parent.slice(30, 40);
         for (int i = 0; i < 10; i++) {
-            Assert.assertEquals((double) (i + 30) / 3, subVec4.get(i));
+            assertEquals((double) (i + 30) / 3, subVec4.get(i));
         }
-        Assert.assertEquals(false, subVec4.close());
+        assertEquals(false, subVec4.close());
 
-        Assert.assertEquals(true, parent.close());
+        assertEquals(true, parent.close());
     }
 
     @Test
@@ -128,18 +128,18 @@ public class TestVectorReference
         //create sub slice
         DoubleVec slice1 = parent.slice(0, 20);
         //create parent before sub vec close.
-        Assert.assertEquals(false, parent.close());
+        assertEquals(false, parent.close());
         for (int i = 0; i < 20; i++) {
-            Assert.assertEquals((double) i / 3, slice1.get(i));
+            assertEquals((double) i / 3, slice1.get(i));
         }
 
         //create slice1 sub slice
         DoubleVec childSlice1 = slice1.slice(0, 5);
         for (int i = 0; i < 5; i++) {
-            Assert.assertEquals((double) i / 3, childSlice1.get(i));
+            assertEquals((double) i / 3, childSlice1.get(i));
         }
-        Assert.assertEquals(false, childSlice1.close());
-        Assert.assertEquals(true, slice1.close());
+        assertEquals(false, childSlice1.close());
+        assertEquals(true, slice1.close());
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class)

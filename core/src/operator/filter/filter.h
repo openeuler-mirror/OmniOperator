@@ -7,11 +7,14 @@
 #include "../../util/debug.h"
 #include "../../codegen/llvm_codegen.h"
 
-
+namespace omniruntime {
+namespace op {
+    
 class Filter
 {
 public:
     Filter(LLVMCodeGen* codegen, Expr* expr);
+    ~Filter() {delete this->codeGen; delete this->expr;}
     int32_t filter(Table *table, int32_t rowNumber, int32_t *selectedRows);
 
 private:
@@ -19,7 +22,7 @@ private:
     Expr* expr;
 };
 
-class FilterAndProjectOperator : public omni::Operator
+class FilterAndProjectOperator : public Operator
 {
 public:
     FilterAndProjectOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
@@ -55,7 +58,7 @@ public:
 
     ~FilterAndProjectOperatorFactory() override;
 
-    omni::Operator* createOperator() override;
+    Operator* createOperator() override;
 
 private:
     std::string expression;
@@ -65,5 +68,6 @@ private:
     int32_t projectVecCount;
     Filter *filter;
 };
-
+} // end of op
+} // end of omniruntime
 #endif

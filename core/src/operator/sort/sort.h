@@ -7,7 +7,8 @@
 
 #include <vector>
 
-using namespace omni;
+namespace omniruntime {
+namespace op {
 
 class SortOperatorFactory : public OperatorFactory {
 public:
@@ -23,7 +24,7 @@ public:
 
     ~SortOperatorFactory();
 
-    static SortOperatorFactory *createOperatorFactory(
+    static SortOperatorFactory *createSortOperatorFactory(
             int32_t *sourceTypes,
             int32_t sourceTypeCount,
             int32_t *outputCols,
@@ -33,7 +34,7 @@ public:
             int32_t *sortNullFirsts,
             int32_t sortColCount);
 
-    omni::Operator *createOperator();
+    Operator *createOperator();
 
     int32_t *getSourceTypes() { return sourceTypes; }
 
@@ -62,7 +63,7 @@ private:
     int32_t sortColCount;
 };
 
-class SortOperator : public omni::Operator {
+class SortOperator : public Operator {
 public:
     SortOperator(
             int32_t *sourceTypes,
@@ -84,8 +85,6 @@ public:
 
     int32_t getOutput(std::vector<Table *> &outputTables) override;
 
-    int32_t *getSourceTypes() override { return sourceTypes; }
-
     int32_t getTypescount() { return typesCount; }
 
     int32_t *getOutputCols() { return outputCols; }
@@ -103,7 +102,6 @@ public:
     PagesIndex *getPagesIndex() { return pagesIndex; }
 
 private:
-    int32_t *sourceTypes;
     int32_t typesCount;
     int32_t *outputCols;
     int32_t outputColsCount;
@@ -119,5 +117,6 @@ void freeInputTable(Table **inputTables, int32_t inputTableCount);
 void freeOutputTable(std::vector<Table *> &outputTables);
 
 void freeDataInColumn(Table **tables, int32_t tableCount);
-
+} // end of namespace op
+} // end of namespace omniruntime
 #endif

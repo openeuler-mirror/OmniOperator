@@ -478,7 +478,6 @@ public class BenchmarkVecWithPool
 
         public void close()
         {
-
         }
     }
 
@@ -494,20 +493,17 @@ public class BenchmarkVecWithPool
 
         public UnsafeLongVec(long address, int capacity)
         {
-
             this.address = address;
             this.capacity = capacity;
         }
 
         public void set(int idx, long value)
         {
-            assert idx < capacity;
             JvmUtils.unsafe.putLong(address + idx * Long.BYTES, value);
         }
 
         public long get(int idx)
         {
-            assert (idx < capacity);
             return JvmUtils.unsafe.getLong(address + idx * Long.BYTES);
         }
 

@@ -22,8 +22,8 @@
 #include <list>
 #include <string>
 
-using namespace codegen;
-using namespace llvm::orc;
+namespace omniruntime {
+namespace codegen {
 using namespace std;
 
 ExitOnError ExitOnErr;
@@ -196,7 +196,7 @@ bool Hammer::eligible(CallInst &callInst) {
 //returns true if a function is eligible for hardening
 bool Hammer::eligible(Function &function) {
     if (function.getName().find("process") != string::npos
-        || function.getName().find("inloop") != string::npos
+        || function.getName().find("inLoop") != string::npos
         || function.getName().find("compareTo") != string::npos) {
         //outs() << "found function: " << func.getName() << "\n";
         function.removeFnAttr(Attribute::AttrKind::NoInline);
@@ -249,6 +249,8 @@ Constant *Hammer::to_scalar_llvm_value(ParamValue value) {
         case ParamType::FP64:
             //outs() << "creating fp64" << value.to_fp64() << " param value \n";
             llvmValue = ConstantFP::get(*context, APFloat(value.to_fp64()));
+            break;
+        default:
             break;
     }
     return llvmValue;
@@ -338,7 +340,10 @@ Constant *Hammer::to_vector_llvm_value(std::string name, ParamValue value) {
             Constant *GEPIndices[] = {Zero, Zero};
             return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
+        default:
+            break;
     }
+    return NULL;
 }
 
 Constant *Hammer::to_array_llvm_value(std::string name, ParamValue value) {
@@ -404,5 +409,10 @@ Constant *Hammer::to_array_llvm_value(std::string name, ParamValue value) {
             Constant *GEPIndices[] = {Zero, Zero};
             return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
+        default:
+            break;
     }
+    return NULL;
 }
+} // end of namespace codegen
+} // end of namespace omniruntime

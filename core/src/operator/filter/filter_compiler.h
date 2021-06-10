@@ -6,6 +6,9 @@
 #include <cstring>
 #include <stdint.h>
 
+namespace omniruntime {
+namespace op {
+
 class Compiler
 {
 public:
@@ -28,5 +31,6 @@ private:
     int32_t *inputTypes;
     int32_t vecCount;
 };
-
+} // end of op
+} // end of omniruntime
 #endif

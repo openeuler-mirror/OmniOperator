@@ -4,6 +4,9 @@
 #include <vector>
 #include <stdint.h>
 #include <string>
+#include <map>
+
+namespace expressions {
 
 // place holder context class here
 class Context
@@ -11,67 +14,62 @@ class Context
     
 };
 
-enum LogicalOperator
+
+enum Operator
 {
-    AND,
+    // Comparison
+    EQ, 
+    NEQ, 
+    LT, 
+    LTE, 
+    GT, 
+    GTE, 
+    // Logical
+    AND, 
     OR, 
     NOT, 
-    INVALIDBIN
+    // Arithmetic
+    ADD, 
+    SUB, 
+    MUL, 
+    DIV, 
+    MOD, 
+    INVALIDOP
 };
 
-enum ComparisionOperator
+// For calling special forms and functions
+enum CallType
 {
-    EQ,
-    NEQ,
-    LT,
-    LTE,
-    GT,
-    GTE, 
-    INVALIDCMP
-};
-
-enum FnType
-{
+    // special forms
     IN, 
     BETWEEN, 
     COALESCE, 
+    IF, 
+    // functions
     SUBSTR, 
     CAST, 
-    INVALIDFN
+    ABS, 
+    INVALIDCALL
 };
 
-enum ArithmeticOperator
-{
-    VALUE, 
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    MOD, 
-    INVALIDARITH
-};
 
 enum DataType
 {
+    BOOLD, 
     INT32D, 
     INT64D, 
     DOUBLED, 
     STRINGD, 
-    COLUMND, 
     INVALIDDATAD
 };
 
+
 enum ExprType
 {
-    COMPARISION_E, 
+    DATA_E, 
     BINARY_E, 
     UNARY_E, 
-    IN_E, 
-    BETWEEN_E, 
-    ARITHMETIC_E, 
-    COALESCE_E, 
-    SUBSTR_E, 
-    CAST_E, 
+    CALL_E, // for special forms and functions
     INVALID_E
 };
 
@@ -79,144 +77,97 @@ enum ExprType
 class Expr
 {
     public:
+        DataType dataType; // dataType of returned value
+        DataType getExprDataType();
+
         virtual ExprType getType();
         virtual ~Expr() = default;
         virtual void printExprTree();
 };
 
 
-class BinaryExpr : public Expr
+class DataExpr : public Expr
 {
 public:
-    LogicalOperator op;
-    Expr *left;
-    Expr *right;
-    BinaryExpr();
-    ~BinaryExpr();
-    BinaryExpr(LogicalOperator logOp, Expr *leftExpr, Expr *rightExpr);
-    void printExprTree();
-    ExprType getType();
-};
-
-
-class Data
-{
-public:
-    DataType dataType;
+    bool isColumn;
     int32_t intVal;
     int64_t longVal;
     double doubleVal;
     std::string stringVal;
     int32_t colVal;
 
-    void printData();
-};
+    DataExpr();
+    DataExpr(int32_t val);
+    DataExpr(int64_t val); // might need explicit
+    DataExpr(double val);
+    DataExpr(std::string val);
+    DataExpr(int32_t val, DataType colType);
 
-
-class ComparisionExpr : public Expr
-{
-public:
-    ComparisionOperator op;
-    int32_t columnIdx;
-    Data columnData;
-    ~ComparisionExpr();
-    ComparisionExpr();
-    ComparisionExpr(ComparisionOperator cmpOp, int32_t colId, Data colData);
     void printExprTree();
     ExprType getType();
 };
+// Helper functions to create DataExprs
+// DataExpr* createDataInt32(int32_t val);
+// DataExpr* createDataInt64(int64_t val);
+// DataExpr* createDataDouble(double val);
+// DataExpr* createDataString(std::string val);
+// DataExpr* createDataColumn(int32_t colIdx);
+
+// Helper function to translate from jni type number to DataType
+DataType colTypeTrans(int32_t colType);
+
+// Helper function for printing out datatypes
+std::string dataTypeString(DataType dt);
 
 
 class UnaryExpr : public Expr
 {
 public:
-    LogicalOperator op;
+    Operator op;
     Expr *exp;
+
     UnaryExpr();
     ~UnaryExpr();
-    UnaryExpr(LogicalOperator logOp, Expr *bodyexp);
+    UnaryExpr(Operator logOp, Expr *bodyexp);
+    UnaryExpr(Operator uop, Expr *expr, DataType dt);
+
     void printExprTree();
     ExprType getType();
 };
 
 
-class ArithmeticExpr : public Expr
+class BinaryExpr : public Expr
 {
 public:
-    ArithmeticOperator op;
-    bool isVal;
-    Data value;
+    Operator op;
     Expr *left;
     Expr *right;
-    ArithmeticExpr();
-    ~ArithmeticExpr();
-    ArithmeticExpr(Data val);
-    ArithmeticExpr(ArithmeticOperator arithOp, Expr *leftExpr, Expr *rightExpr);
+
+    BinaryExpr();
+    ~BinaryExpr();
+    BinaryExpr(Operator op, Expr *leftExpr, Expr *rightExpr);
+    BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt);
+
     void printExprTree();
     ExprType getType();
 };
 
 
-class BetweenExpr : public Expr
+class CallExpr : public Expr
 {
 public:
-    int32_t columnIdx;
+    CallType callType;
+    std::vector<Expr*> arguments;
 
-    Data lowerBound;
-    Data upperBound;
-
-    BetweenExpr();
-    BetweenExpr(int32_t colId, Data lowBound, Data upBound);
+    CallExpr();
+    ~CallExpr();
+    CallExpr(CallType ct, std::vector<Expr*> args);
+    CallExpr(CallType ct, std::vector<Expr*> args, DataType dt);
+    
     void printExprTree();
     ExprType getType();
 };
 
-
-class InExpr : public Expr
-{
-public:
-    Expr* column;
-    std::vector<Data> arr;
-    InExpr();
-    InExpr(Expr* col, std::vector<Data> vals);
-    void printExprTree();
-    ExprType getType();
-};
-
-
-class CoalesceExpr : public Expr
-{
-public:
-    std::vector<Data> values;
-    CoalesceExpr();
-    CoalesceExpr(std::vector<Data> vals);
-    void printExprTree();
-    ExprType getType();
-};
-
-class SubstrExpr : public Expr
-{
-public:
-    int columnIdx;
-    int startIdx;
-    int length;
-    SubstrExpr();
-    SubstrExpr(int colId, int startId, int len);
-    void printExprTree();
-    ExprType getType();
-};
-
-class CastExpr : public Expr
-{
-public:
-    // int should be converted to double
-    // date string should be converted to int
-    Data value;
-    CastExpr();
-    CastExpr(Data val);
-    void printExprTree();
-    ExprType getType();
-};
-
+}
 
 #endif

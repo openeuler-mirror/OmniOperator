@@ -1,422 +1,330 @@
 #include "llvm_codegen.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/JITSymbol.h>
-#include <llvm/ExecutionEngine/SectionMemoryManager.h>
-#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
-#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
-#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
-#include <llvm/ExecutionEngine/MCJIT.h>
-#include <llvm/ADT/APFloat.h>
-#include <algorithm>
-#include <cctype>
-#include <cstdio>
-#include <cstdlib>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
-#include <iostream>
 
-using namespace std;
-using namespace llvm;
-
-static LLVMContext context;
-static IRBuilder<> builder(context);
-
-static StringRef cpu_name;
-static SmallVector<std::string, 10> cpu_attrs;
-
-JITSymbol dummy_lookup(const string &name)
-{
-    return JITSymbol(NULL);
+Value* LLVMCodeGen::createConstantInt(int32_t v) {
+    return ConstantInt::get(*context, APInt(32, v, true));
 }
 
-LLVMCodeGen::LLVMCodeGen()
-{
-    _module = new Module("Omniruntime Module", context);
-    // Initialization
-    LLVMInitializeNativeTarget();
-    InitializeNativeTargetAsmPrinter();
-    InitializeNativeTargetAsmParser();
-    InitializeNativeTargetDisassembler();
-
-    std::string builder_error;
-
-    std::unique_ptr<Module> MODULE;
-    MODULE.reset(_module);
-    auto opt_level = llvm::CodeGenOpt::None;
-    EngineBuilder engine_builder(std::move(MODULE));
-    TargetMachine *targetMarchine = engine_builder.selectTarget();
-    engine_builder.setEngineKind(EngineKind::JIT)
-        .setOptLevel(opt_level)
-        .setErrorStr(&builder_error);
-
-    _ee.reset(engine_builder.create(targetMarchine));
-    cout << "Build error:::" << builder_error << endl;
-    if (_ee == nullptr)
-    {
-        cout << "Execution engine is null" << endl;
-    }
+Value* LLVMCodeGen::createConstantLong(int64_t v) {
+    return ConstantInt::get(*context, APInt(64, v, true));
 }
 
-// Logic to generate the function.
-// TODO: Currently only supports comparision operator
-void LLVMCodeGen::generateFunc(std::string name, Expr *expr)
+Value* LLVMCodeGen::createConstantDouble(double v) {
+    return ConstantFP::get(*context, APFloat(v));
+}
+
+LLVMCodeGen::LLVMCodeGen(std::string name, Expr *expr, vector<DataType>* datatypes)
 {
     _func_name = name;
-    switch (expr->getType())
-    {
-    case COMPARISION_E:
-    {
-        ComparisionExpr *c_expr = (ComparisionExpr *)expr;
-        generateComparisionExprFunc(c_expr);
-        break;
-    }  
-    case BINARY_E:
-    {
-        BinaryExpr *b_expr = (BinaryExpr *)expr;
-        generateBinaryExprFunc(b_expr);
-        break;
-    }
-    case BETWEEN_E:
-        //TODO: Handle Between operator
-        break;
-    case IN_E:
-        // TODO: Handle IN operator
-        break;
-    default:
-        break;
-    }
+    _expr = expr;
+    this->datatypes = datatypes;
+
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+    // llvm::InitializeNativeTargetDisassembler();
+    JIT = EOE(LLJITBuilder().create());
+    
+    context = make_unique<LLVMContext>();
+    // Create module called the_module
+    _module = make_unique<Module>("the_module", *context);
+    _module->setDataLayout(JIT->getDataLayout());
+
+    builder = make_unique<IRBuilder<>>(*context);
 }
 
-void LLVMCodeGen::generateComparisionExprFunc(ComparisionExpr *c_expr)
-{
-    FunctionType *prototype;
-    switch (c_expr->columnData.dataType)
-    {
-
-    case INT32D:
-    {
-        // (int, int)
-        std::vector<Type *> int32_param_type(2, Type::getInt32Ty(context));
-        // int (*)(int, int)
-        prototype = FunctionType::get(Type::getInt32Ty(context), int32_param_type, false);
-        break;
-    }
-    case INT64D:
-    {
-        // (int, int)
-        std::vector<Type *> int64_param_type(2, Type::getInt64Ty(context));
-        // int (*)(int, int)
-        prototype = FunctionType::get(Type::getInt64Ty(context), int64_param_type, false);
-        break;
-    }     
-    case DOUBLED:
-    {
-        // (double, double)
-        std::vector<Type *> double_param_type(2, Type::getDoubleTy(context));
-        // int (*)(double, double)
-        prototype = FunctionType::get(Type::getDoubleTy(context), double_param_type, false);
-        break;
-    }
-    case STRINGD:
-    {
-        // TODO:: Handle string type
-        break;
-    }      
-    }
-
-    Function *func = Function::Create(prototype, Function::ExternalLinkage, _func_name, _module);
-    BasicBlock *body = BasicBlock::Create(context, "body", func);
-    builder.SetInsertPoint(body);
-
-    std::vector<Value *> args;
-    for (auto &arg : func->args())
-    {
-        args.push_back(&arg);
-    }
-
-    llvm::Value *result;
-    if (c_expr->columnData.dataType == DataType::DOUBLED) result = builder.CreateFSub(args[0], args[1], "result");
-    else result = builder.CreateSub(args[0], args[1], "result");
-    builder.CreateRet(result);
+LLVMCodeGen::~LLVMCodeGen() {
+    rt->remove();
+    delete this->datatypes;
 }
 
-void LLVMCodeGen::generateBinaryExprFunc(BinaryExpr *b_expr)
-{
-/*     ComparisionExpr *left_expr = (ComparisionExpr *)b_expr->left;
-    ComparisionExpr *right_expr = (ComparisionExpr *)b_expr->left;
-    FunctionType *prototype;
-    if (left_expr->columnData.dataType == right_expr->columnData.dataType)
-    {
-        switch (left_expr->columnData.dataType)
-        {
+int32_t LLVMCodeGen::execute(int64_t* data, int32_t nRows, int32_t* selected) {
+    return this->_filter(data, nRows, selected);
+}
 
-        case INT32:
-            // (int, int)
-            std::vector<Type *> param_type(4, Type::getInt32Ty(context));
-            // int (*)(int, int)
-            prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
-            break;
-        case INT64:
-            // (int, int)
-            std::vector<Type *> param_type(4, Type::getInt64Ty(context));
-            // int (*)(int, int)
-            prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
-            break;
-        case DOUBLE:
-            // (double, double)
-            std::vector<Type *> param_type(4, Type::getDoubleTy(context));
-            // int (*)(double, double)
-            prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
-            break;
-        case STRING:
-            // TODO:: Handle string type
-            break;
+Value* LLVMCodeGen::parseExpr(Expr* root) {
+    switch (root->getType()) {
+    case ExprType::BINARY_E: {
+        BinaryExpr* bExpr = (BinaryExpr*) root;
+        if (bExpr->left->getType() == ExprType::DATA_E || bExpr->right->getType() == ExprType::DATA_E) {
+            DataType biggerType = max(bExpr->left->getExprDataType(), bExpr->right->getExprDataType());
+            bExpr->left->dataType = biggerType;
+            bExpr->right->dataType = biggerType;
         }
-    }
-    else
-    {
-        std::vector<Type *> lparam_type;
-        std::vector<Type *> rparam_type;
-        std::vector<Type *> param_type;
-        switch (left_expr->columnData.dataType)
-        {
+        Value* left = this->parseExpr(bExpr->left);
+        Value* right = this->parseExpr(bExpr->right);
 
-        case INT32:
-            lparam_type.push_back(Type::getInt32Ty(context));
-            lparam_type.push_back(Type::getInt32Ty(context));
-            break;
-        case INT64:
-            lparam_type.push_back(Type::getInt64Ty(context));
-            lparam_type.push_back(Type::getInt64Ty(context));
-            break;
-        case DOUBLE:
-            lparam_type.push_back(Type::getDoubleTy(context));
-            lparam_type.push_back(Type::getDoubleTy(context));
-            break;
-        case STRING:
-            // TODO:: Handle string type
-            break;
+        if (bExpr->op == expressions::Operator::AND) {
+            return builder->CreateAnd(left, right, "logical_and");
+        }
+        if (bExpr->op == expressions::Operator::OR) {
+            return builder->CreateOr(left, right, "logical_or");
         }
 
-        switch (right_expr->columnData.dataType)
-        {
-
-        case INT32:
-            rparam_type.push_back(Type::getInt32Ty(context));
-            rparam_type.push_back(Type::getInt32Ty(context));
-            break;
-        case INT64:
-            rparam_type.push_back(Type::getInt64Ty(context));
-            rparam_type.push_back(Type::getInt64Ty(context));
-            break;
-        case DOUBLE:
-            rparam_type.push_back(Type::getDoubleTy(context));
-            rparam_type.push_back(Type::getDoubleTy(context));
-            break;
-        case STRING:
-            // TODO:: Handle string type
-            break;
+        // todo: Need a different case for strings
+        if (bExpr->left->getExprDataType() != DataType::DOUBLED) {
+            switch(bExpr->op) {
+            case LT:
+                return builder->CreateICmpSLT(left, right, "relational_lt");
+            case GT:
+                return builder->CreateICmpSGT(left, right, "relational_gt");
+            case LTE:
+                return builder->CreateICmpSLE(left, right, "relational_le");
+            case GTE:
+                return builder->CreateICmpSGE(left, right, "relational_ge");
+            case EQ:
+                return builder->CreateICmpEQ(left, right, "relational_eq");
+            case NEQ:
+                return builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq");
+            case ADD:
+                return builder->CreateAdd(left, right, "arithmetic_add");
+            case SUB:
+                return builder->CreateSub(left, right, "arithmetic_sub");
+            case MUL:
+                return builder->CreateMul(left, right, "arithmetic_mul");
+            case DIV:
+                return builder->CreateSDiv(left, right, "arithmetic_div");
+            case MOD:
+                return builder->CreateSRem(left, right, "arithmetic_mod");
+            }
+            cout << "Error: Binary operator not supported " << bExpr->op << endl;
         }
-        param_type.push_back(lparam_type.pop_back());
-        param_type.push_back(lparam_type.pop_back());
-        param_type.push_back(rparam_type.pop_back());
-        param_type.push_back(rparam_type.pop_back());
-        
-        prototype = FunctionType::get(Type::getInt32Ty(context), param_type, false);
-
-    }
-
-    Function *func = Function::Create(prototype, Function::ExternalLinkage, _func_name, _module);
-    BasicBlock *body = BasicBlock::Create(context, "body", func);
-    builder.SetInsertPoint(body);
-
-    std::vector<Value *> args;
-    for (auto &arg : func->args())
-    {
-        args.push_back(&arg);
-    }
-
-    llvm::Value *result = builder.CreateSub(args[0], args[1], "result");
-    builder.CreateRet(result); */
-}
-
-void LLVMCodeGen::generateInExprFunc(InExpr *in_expr)
-{
-}
-
-void LLVMCodeGen::generateBetweenExprFunc(BetweenExpr *bt_expr)
-{
-}
-
-
-    /* Value* LLVMCodeGen::generateComparisionBody(ComparisionExpr* c_expr, Value* left, Value* right)
-{
-    cout << "Generating comparision::" << left <<":" << right<<endl;
-    Value* temp;
-    switch(c_expr->op) {
+        // Assume double
+        switch(bExpr->op) {
         case LT:
-            temp = builder.CreateICmpULT(left, right, "cmplt");
-            break;
+            return builder->CreateFCmpULT(left, right, "frelational_lt");
         case GT:
-            temp = builder.CreateICmpUGT(left, right, "cmpgt");
-            break;
+            return builder->CreateFCmpUGT(left, right, "frelational_gt");
         case LTE:
-            temp = builder.CreateICmpULE(left, right, "cmplte");
-            break;
+            return builder->CreateFCmpULE(left, right, "frelational_le");
         case GTE:
-            temp = builder.CreateICmpUGE(left, right, "cmpgte");
-            break;   
+            return builder->CreateFCmpUGE(left, right, "frelational_ge");
         case EQ:
-            temp = builder.CreateICmpEQ(left, right, "cmpeq");
-            break;         
+            return builder->CreateFCmpUEQ(left, right, "farithmetic_eq");
+        case NEQ:
+            return builder->CreateNot(builder->CreateFCmpUEQ(left, right, "farithmetic_neq"));
+        case ADD:
+            return builder->CreateFAdd(left, right, "farithmetic_add");
+        case SUB:
+            return builder->CreateFSub(left, right, "farithmetic_sub");
+        case MUL:
+            return builder->CreateFMul(left, right, "farithmetic_mul");
+        case DIV:
+            return builder->CreateFDiv(left, right, "farithmetic_div");
+        }
+        cout << "Error: Unsupported double binary expr op " << bExpr->op << endl;
+        // default:
+        //     break;
     }
-    cout << "Generated expression::" << temp <<endl;
-    return temp;
-} */
-
-    void LLVMCodeGen::compile()
-    {
-        cout << "Compiling..." << endl;
-        // exec_engine->addModule(std::move(MODULE));
-        cout << "Finalize module ..." << endl;
-        _ee->finalizeObject();
-        this->funcAddr = _ee->getFunctionAddress(_func_name);
-    }
-
-bool LLVMCodeGen::executeComparisionExprFunc(ComparisionExpr* c_expr, Data* data)
-{
-    //cout << c_expr->columnData.doubleVal << " " << data->doubleVal << endl;
-    int32_t result;
-    //cout << c_expr->columnData.dataType <<endl;
-     switch (data->dataType)
-    {
-
-    case INT32D:
-    {
-        int32_t (*native_func)(int32_t, int32_t) = (int32_t(*)(int32_t, int32_t))this->funcAddr;
-        result = native_func(data->intVal, c_expr->columnData.intVal);
+    case ExprType::DATA_E: {
+        DataExpr* dEx = (DataExpr*) root;
+        if (dEx->isColumn) {
+            return this->args[to_string(dEx->colVal)];
+        }
+        switch (dEx->getExprDataType()) {
+        case DataType::INT32D: {
+            return this->createConstantInt(dEx->intVal);
+        }
+        case DataType::INT64D: {
+            return this->createConstantLong(dEx->longVal);
+        }
+        case DataType::DOUBLED: {
+            return this->createConstantDouble(dEx->doubleVal);
+        }
+        case DataType::STRINGD: {
+            cout << "Error: Unsupported datatype String" << endl;
+            break;
+        }
+        }
         break;
     }
-       
-    case INT64D:
-    {
-        int64_t (*native_func)(int64_t, int64_t) = (int64_t(*)(int64_t, int64_t))this->funcAddr;
-        result = native_func(data->longVal, c_expr->columnData.longVal);
+    default:
+        cout << "Error: Unsupported expr type " << root->getType() << endl;
         break;
     }
-        
-    case DOUBLED:
-    {
-        double (*native_func)(double, double) = (double(*)(double, double))this->funcAddr;
-        double ans = native_func(data->doubleVal, c_expr->columnData.doubleVal);
-        result = ans == 0 ? 0 : ans < 0 ? -1 : 1;
-	break;
+}
+
+// Logic to generate the filter function.
+Function* LLVMCodeGen::generateFunc()
+{   
+    // cout << "Generating function" << endl;
+    vector<Type*> args;
+    args.reserve(datatypes->size());
+    for (int32_t i = 0; i < datatypes->size(); i++) {
+        DataType type = datatypes->at(i);
+        // cout << "Adding argument of type " << type << endl;
+        switch (type) {
+            case DataType::INT32D:
+                args.push_back(Type::getInt32Ty(*context));
+                break;
+            case DataType::INT64D:
+                args.push_back(Type::getInt64Ty(*context));
+                break;
+            case DataType::DOUBLED:
+                args.push_back(Type::getDoubleTy(*context));
+                break;
+            case DataType::STRINGD:
+                // todo
+                cout << "Error: Unsupported string argument type" << endl;
+                break;
+            default:
+                cout << "Error: Unknown argument datatype " << type << endl;
+                break;
+        }
     }
-        
-    case STRINGD:
-        // TODO:: Handle string type
-        break;
+    
+    FunctionType *prototype = FunctionType::get(Type::getInt1Ty(*context), args, false);
+    Function *func = Function::Create(prototype, Function::ExternalLinkage, _func_name, _module.get());
+    // cout << "Created function declaration " << _func_name << endl;
+    int32_t idx = 0;
+    for (auto& arg : func->args()) {
+        arg.setName(to_string(idx++));
     }
-       
-    switch (c_expr->op)
-    {
-    case LT:
-        if (result < 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    case GT:
-        if (result > 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    case LTE:
-        if (result <= 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    case GTE:
-        if (result >= 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    case EQ:
-        if (result == 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    case NEQ:
-	return result != 0;
+    BasicBlock *body = BasicBlock::Create(*context, "FILTER_FUNC_BODY", func);
+    builder->SetInsertPoint(body);
+    for (auto& arg : func->args()) {
+        this->args[arg.getName().str()] = &arg;
     }
 
-    return false;
+    // cout << "Generating filter body" << endl;
+    Value* ret = this->parseExpr(_expr);
+    builder->CreateRet(ret);
+    verifyFunction(*func);
+    return func;
 }
 
-bool LLVMCodeGen::executeBinaryExprFunc(BinaryExpr* expr, Data** dataArr)
+void LLVMCodeGen::compile()
 {
-    return true;
+    Function* filterFunc = this->generateFunc();
+    int64_t address = this->createWrapper(filterFunc);
+    _filter = (int32_t (*)(int64_t*, int32_t, int32_t*)) (intptr_t) address;
 }
 
-bool LLVMCodeGen::executeInExprFunc(InExpr* expr, Data* data)
-{
-    return true;
+std::string LLVMCodeGen::dumpCode() {
+  std::string ir;
+  llvm::raw_string_ostream stream(ir);
+  _module->print(stream, nullptr);
+  cout<<" Generated code::" << ir;
+  return ir;
 }
 
-bool LLVMCodeGen::executeBetweenExprFunc(BetweenExpr* expr, Data* data)
-{
-    return true;
+int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
+    int32_t nArgs = this->datatypes->size();
+    vector<Type*> args;
+    Type* ptrArg = Type::getInt64PtrTy(*context);
+    args.push_back(ptrArg);
+    args.push_back(Type::getInt32Ty(*context));
+    args.push_back(Type::getInt32PtrTy(*context));
+    FunctionType* funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
+    Function* funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", _module.get());
+    BasicBlock* preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
+    BasicBlock* loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
+    BasicBlock* filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);
+    BasicBlock* incrementCounter = BasicBlock::Create(*context, "INCREMENT_COUNTER", funcDecl);
+    BasicBlock* endBlock = BasicBlock::Create(*context, "END_BLOCK", funcDecl);
+    // preprocessing
+    Argument* start = funcDecl->getArg(0);
+    start->setName("ARGS_ARRAY");
+    Argument* numRows = funcDecl->getArg(1);
+    numRows->setName("NUM_ROWS");
+    Argument* resultsArray = funcDecl->getArg(2);
+    resultsArray->setName("RESULTS");
+    Value* minusOne = createConstantInt(-1);
+    Value* zero = createConstantInt(0);
+    Value* one = createConstantInt(1);
+    vector<Value*> filterFuncArgs;
+    filterFuncArgs.reserve(nArgs);
+    Value* gep;
+    Value* elementAddr;
+    Value* elementPtr;
+    Value* elementValue;
+    DataType type;
+    CallInst* ret;
+    // pre loop body
+    builder->SetInsertPoint(preLoop);
+    // Pointer to the current row index to be processed.
+    AllocaInst* indexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "INDEX_COUNTER");
+    // Initialize row index to 0.
+    builder->CreateStore(zero, indexStore);
+    // Value of the current row index to be processed.
+    Value* curIndexVal;
+    // Temp value for next row index.
+    Value* nextIndexVal;
+    // Pointer to the index of the selected positions array to be filled next.
+    AllocaInst* selectedIndexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "SELECTED_INDEX_PTR");
+    // Initialize index to 0.
+    builder->CreateStore(zero, selectedIndexStore);
+    // Value of the selected positions index.
+    Value* selectedIndexVal;
+    // Address of the selected index for writing.
+    Value* selectedAddress;
+    // Temp value for next selected index.
+    Value* nextSelectedIndexVal;
+    builder->CreateBr(loopBody);
+    // loop body
+    builder->SetInsertPoint(loopBody);
+    // Get the value of the current row index to process.
+    curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
+    for (int32_t i = 0; i < nArgs; i++) {
+        // Find address of this column in the addresses array argument.
+        gep = builder->CreateGEP(start, createConstantInt(i));
+        // Load the address value.
+        elementAddr = builder->CreateLoad(gep);
+        type = this->datatypes->at(i);
+        // Convert the column address to array of proper datatype.
+        switch (type) {
+        case DataType::INT32D:
+            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt32PtrTy(*context));
+            break;
+        case DataType::INT64D:
+            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+            break;
+        case DataType::DOUBLED:
+            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getDoublePtrTy(*context));
+            break;
+        }
+        // Find the address of the row to be processed.
+        gep = builder->CreateGEP(elementPtr, curIndexVal);
+        // Value to be processed.
+        elementValue = builder->CreateLoad(gep);
+        // Pass to filter function's arguments.
+        filterFuncArgs.push_back(elementValue);
+    }
+    // Get the boolean response for this row from the filter function.
+    ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
+    // If true, add row index to selected array, otherwise, process next row.
+    builder->CreateCondBr(ret, filterPassed, incrementCounter);
+    // Add row index to results array
+    builder->SetInsertPoint(filterPassed);
+    // Get value of selected index.
+    selectedIndexVal = builder->CreateLoad(selectedIndexStore, "SELECTED_INDEX");
+    // Get address of selected index.
+    selectedAddress = builder->CreateGEP(resultsArray, selectedIndexVal, "SELECTED_ADDRESS");
+    // Set the selected value to the current row index.
+    builder->CreateStore(curIndexVal, selectedAddress);
+    // Increment the selected index.
+    nextSelectedIndexVal = builder->CreateAdd(selectedIndexVal, one, "NEXT_SELECTED_INDEX");
+    builder->CreateStore(nextSelectedIndexVal, selectedIndexStore);
+    // Increment counter and process next row.
+    builder->CreateBr(incrementCounter);
+    // Increment loop counter
+    builder->SetInsertPoint(incrementCounter);
+    // Increment counter.
+    nextIndexVal = builder->CreateAdd(curIndexVal, one, "NEXT_INDEX");
+    builder->CreateStore(nextIndexVal, indexStore);
+    // If there are rows remaining, repeat, otherwise, exit.
+    Value* cond = builder->CreateICmpSLT(nextIndexVal, numRows, "END_LOOP_COND");
+    builder->CreateCondBr(cond, loopBody, endBlock);
+    // Return results
+    builder->SetInsertPoint(endBlock);
+    // Return the filled in results.
+    nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
+    builder->CreateRet(nextSelectedIndexVal);
+    // _module->print(errs(), nullptr);
+    auto resTracker = JIT->getMainJITDylib().createResourceTracker();
+    auto threadSafeModule = ThreadSafeModule(move(_module), move(context));
+    EOE(JIT->addIRModule(resTracker, move(threadSafeModule)));
+    rt = resTracker;
+    // initModule();
+    auto sym = JIT->lookup("FILTER_WRAPPER");
+    return sym->getAddress();
 }
-/*
-int main()
-{
-    LLVMCodeGen codeGenObj;
-    Data data;
-    data.dataType = DataType::INT32D;
-    data.intVal = 2;
-    int32_t colIdx = 0;
-    ComparisionExpr left_expr (ComparisionOperator::LT, colIdx, data);
-    codeGenObj.generateFunc("test_func", &left_expr);
-    codeGenObj.compile();
-    Data actual;
-    actual.dataType = DataType::INT32D;
-    actual.intVal = 4;
-    cout << "Result:::" << codeGenObj.executeComparisionExprFunc(&left_expr, &actual);
-
-    return 0;
-}
-*/

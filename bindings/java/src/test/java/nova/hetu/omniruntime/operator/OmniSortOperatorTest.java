@@ -6,7 +6,7 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import org.testng.Assert;
+import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+
+import static org.testng.Assert.assertEquals;
 
 public class OmniSortOperatorTest
 {
@@ -25,29 +27,18 @@ public class OmniSortOperatorTest
     @Test
     public void testOrderByTwoColumn()
     {
+        int[] data1 = {5, 3, 2, 6, 1, 4, 7, 8};
+        int[] data2 = {5, 3, 2, 6, 1, 4, 7, 8};
         IntVec vec1 = new IntVec(8);
-        vec1.set(0, 5);
-        vec1.set(1, 3);
-        vec1.set(2, 2);
-        vec1.set(3, 6);
-        vec1.set(4, 1);
-        vec1.set(5, 4);
-        vec1.set(6, 7);
-        vec1.set(7, 8);
-
         IntVec vec2 = new IntVec(8);
-        vec2.set(0, 5);
-        vec2.set(1, 3);
-        vec2.set(2, 2);
-        vec2.set(3, 6);
-        vec2.set(4, 1);
-        vec2.set(5, 4);
-        vec2.set(6, 7);
-        vec2.set(7, 8);
+        for (int i = 0; i < 8; i++) {
+            vec1.set(i, data1[i]);
+            vec2.set(i, data2[i]);
+        }
 
         VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2}, 8);
 
-        int[] sourceTypes = {1, 1};
+        VecType[] sourceTypes = {VecType.INT, VecType.INT};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -75,8 +66,8 @@ public class OmniSortOperatorTest
         }
         int[] expected0 = {1, 2, 3, 4, 5, 6, 7, 8};
         int[] expected1 = {1, 2, 3, 4, 5, 6, 7, 8};
-        Assert.assertEquals(actual0, expected0);
-        Assert.assertEquals(actual1, expected1);
+        assertEquals(actual0, expected0);
+        assertEquals(actual1, expected1);
     }
 
     @Test
@@ -87,7 +78,7 @@ public class OmniSortOperatorTest
         long elapsed = System.currentTimeMillis() - start;
         System.out.println("buildVecs elapsed time : " + elapsed + " ms");
 
-        int[] sourceTypes = {1, 1};
+        VecType[] sourceTypes = {VecType.INT, VecType.INT};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -109,7 +100,7 @@ public class OmniSortOperatorTest
     {
         ImmutableList<VecBatch> vecs = buildVecs();
 
-        int[] sourceTypes = {2, 2};
+        VecType[] sourceTypes = {VecType.LONG, VecType.LONG};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};

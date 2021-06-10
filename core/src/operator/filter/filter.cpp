@@ -6,7 +6,10 @@
 #include "../projection/projection.h"
 #include "../../common/expressions.h"
 #include "../../common/parser/parser.h"
+#include "../../codegen/llvm_codegen.h"
 
+namespace omniruntime {
+namespace op {
 using namespace std;
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
@@ -19,8 +22,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
 
     Parser parserObject;
     std::cout << "parsing: " << expression << std::endl;
-    Expr* parsedExpr = parserObject.parseRowExpression(expression);
-    ComparisionExpr *c_expr =  (ComparisionExpr *) parsedExpr;
+    Expr* parsedExpr = parserObject.parseRowExpression(expression, inputTypes, vecCount);
     // std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
     //TODO: replace the placeholder context
@@ -34,7 +36,7 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
     delete this->filter;
 }
 
-omni::Operator * FilterAndProjectOperatorFactory::createOperator()
+Operator * FilterAndProjectOperatorFactory::createOperator()
 {
     return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
@@ -42,7 +44,10 @@ omni::Operator * FilterAndProjectOperatorFactory::createOperator()
 int32_t FilterAndProjectOperator::addInput(Table* data, int32_t rowCount)
 {
     int32_t *selectedRows = new int32_t[rowCount];
+    // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     int32_t numSelectedRows = this->filter->filter(data, rowCount, selectedRows);
+    // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    // std::cout << "TIME TAKEN = " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "[ns]" << std::endl;
     Projection *projection = new Projection(this->inputTypes, this->vecCount, rowCount, this->projectIndex, this->projectVecCount);
     Table *projectedData = projection->project(selectedRows, numSelectedRows, data);
     this->projectedVecs = projectedData;
@@ -56,7 +61,7 @@ int32_t FilterAndProjectOperator::addInput(Table** data, int32_t* rowCount, int3
     if (pageCount != 1) {
         std::cout << "ERROR: invalid page count " << pageCount << std::endl;
     }
-
+    
     int32_t pageRowCount = rowCount[0];
 
     int32_t *selectedRows = new int32_t[pageRowCount];
@@ -64,7 +69,7 @@ int32_t FilterAndProjectOperator::addInput(Table** data, int32_t* rowCount, int3
     Projection *projection = new Projection(this->inputTypes, this->vecCount, pageRowCount, this->projectIndex, this->projectVecCount);
     Table *projectedData = projection->project(selectedRows, numSelectedRows, data[0]);
     this->projectedVecs = projectedData;
-
+    
     delete[] selectedRows;
     delete projection;
     return numSelectedRows;
@@ -91,45 +96,12 @@ Filter::Filter(LLVMCodeGen* codeGen, Expr* expr)
 int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
 {
     int numSelectedRows = 0;
-    ComparisionExpr *c_expr =  (ComparisionExpr *) expr;
+    uint32_t nCols = table->getColumnNumber();
+    int64_t* data = new int64_t[nCols];
+    for (int32_t i = 0; i < nCols; i++) data[i] = (int64_t) table->getColumn(i)->getData();
 
-    Column *column = table->getColumn(c_expr->columnIdx);
+    return this->codeGen->execute(data, rowNumber, selectedRows);
+}
 
-    for (int index = 0; index < rowNumber; index++)
-    {
-        switch (column->getType())
-        {
-            case INT32:{
-                Data actualData;
-                actualData.intVal = *((int32_t*) column->getValue(index));
-                actualData.dataType = DataType::INT32D;
-                if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
-                    selectedRows[numSelectedRows++] = index;
-                }
-                break;
-            }
-            case INT64:{
-                Data actualData;
-		actualData.longVal = *((int64_t*) column->getValue(index));
-		actualData.dataType = DataType::INT64D;
-		if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
-		    selectedRows[numSelectedRows++] = index;
-		}
-                break;
-            }
-            case DOUBLE:{
-                Data actualData;
-		actualData.doubleVal = *((double*) column->getValue(index));
-		actualData.dataType = DataType::DOUBLED;
-		if (codeGen->executeComparisionExprFunc(c_expr, &actualData)) {
-		    selectedRows[numSelectedRows++] = index;
-		}
-                break;
-            }
-            default:
-                break;
-        }
-        
-    }
-    return numSelectedRows;
+}
 }

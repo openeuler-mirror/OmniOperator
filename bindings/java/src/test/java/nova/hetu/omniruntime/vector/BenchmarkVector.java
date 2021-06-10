@@ -570,7 +570,6 @@ public class BenchmarkVector
     @Benchmark
     public void testOmniCopy(BenchmarkData benchmarkData)
     {
-
         int[] selectedPositions = benchmarkData.selectedPositions;
 
         LongVec originalVec = benchmarkData.omniVecFilterCopyData;
@@ -603,7 +602,7 @@ public class BenchmarkVector
         LongVec longVec;
         ByteBuffer byteBuffer;
         long[] sampleData;
-        boolean cpuAffinity = false;
+        boolean cpuAffinity;
         AtomicInteger cpuUsed = new AtomicInteger(0);
         AtomicLong totalUsedTime = new AtomicLong(0);
 

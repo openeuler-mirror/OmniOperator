@@ -20,12 +20,12 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar.h"
 
-using namespace llvm;
-using namespace llvm::orc;
 
-namespace codegen
-{
-
+namespace omniruntime {
+namespace codegen {
+    using namespace llvm;
+    using namespace llvm::orc;
+    
     class Hammer
     {
     public:
@@ -78,6 +78,6 @@ namespace codegen
         Constant *to_vector_llvm_value(std::string name, ParamValue value);
         Constant *to_2darray_llvm_value(std::string name, ParamValue value);
     };
-
-}; // namespace codegen
+} // end of namespace codegen
+} // end of namespace omniruntime
 #endif

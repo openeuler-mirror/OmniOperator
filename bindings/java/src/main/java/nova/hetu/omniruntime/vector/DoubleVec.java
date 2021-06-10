@@ -36,12 +36,14 @@ public class DoubleVec
         super(buf, offset, size);
     }
 
-    public DoubleVec(ByteBuffer buffer, int length) {super(buffer, length);}
+    public DoubleVec(ByteBuffer buffer, int length)
+    {
+        super(buffer, length);
+    }
 
     @Override
     public DoubleVec slice(int startIdx, int endIdx)
     {
-
         return new DoubleVec(this.omniChunk, startIdx * Double.BYTES + offset, endIdx);
     }
 

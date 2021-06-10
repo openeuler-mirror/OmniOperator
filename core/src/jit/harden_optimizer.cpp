@@ -18,9 +18,11 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+
+namespace omniruntime {
+namespace codegen {
 using namespace llvm;
 using namespace llvm::orc;
-using namespace codegen;
 
 void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM) {
     conf.populate(FPM, MPM);
@@ -48,7 +50,7 @@ HardenOptimizer::operator()(ThreadSafeModule TSM,
 
     FPM.doInitialization();
     for (Function &F : M) {
-        if (F.getName().find("process") != std::string::npos || F.getName().find("inloop") != std::string::npos) {
+        if (F.getName().find("process") != std::string::npos || F.getName().find("inLoop") != std::string::npos) {
             FPM.run(F);
         }
     }
@@ -58,7 +60,9 @@ HardenOptimizer::operator()(ThreadSafeModule TSM,
     // dbgs() << "--- AFTER OPTIMIZATION ---\n" << M << "\n";
 
     int new_count = M.getInstructionCount();
-    // outs() << "\n " << M.getName() << " instruct count: original: " << original_count << " new:" << new_count;
+    outs() << "\n " << M.getName() << " instruct count: original: " << original_count << " new:" << new_count;
 
     return std::move(TSM);
 }
+} // end of namespace codegen
+} // end of namespace omniruntime

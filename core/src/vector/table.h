@@ -7,8 +7,6 @@
 #include <vector>
 #include <iostream>
 
-using namespace opt;
-
 class Layout{};
 
 typedef struct ColumnIndex {
@@ -187,4 +185,8 @@ private:
     uint32_t columnCount;
     uint32_t columnSize;
 };
+
+ColumnType getColumnType(int32_t colTypeIdx);
+int32_t getColTypeIdx(ColumnType type);
+
 #endif

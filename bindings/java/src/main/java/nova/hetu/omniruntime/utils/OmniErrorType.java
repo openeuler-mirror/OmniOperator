@@ -7,7 +7,8 @@ public enum OmniErrorType
     OMNI_NATIVE_ERROR(3);
 
     private int value;
-    OmniErrorType(int v){
+    OmniErrorType(int v)
+    {
         this.value = v;
     }
 

@@ -1,10 +1,10 @@
 #include "hammer.h"
 #include "gtest/gtest.h"
 
-#include "../operator/aggregator/hash_groupby.h"
+#include "../operator/aggregation/group_aggregation.h"
 #include "../operator/sort/sort.h"
 
-using namespace codegen;
+using namespace omniruntime::codegen;
 
 // Table **buildData(int PAGE_NUM, int DATA_SIZE, int *data_type, int column_count) {
 //     Table **input = new Table *[PAGE_NUM];
@@ -176,7 +176,7 @@ void test_sort(bool harden)
 
     SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-    omni::Operator *sortOperator = NULL;
+    omniruntime::op::Operator *sortOperator = NULL;
     if (harden) {
         auto p_sortCols = ParamValue(sortCols, 2);
         auto p_sortColTypes = ParamValue(sortColTypes, 2);
