@@ -50,8 +50,8 @@ void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *output
     Table *outputTable = (Table *)outputTableAddr;
     int32_t outputCol;
     int32_t columnTypeIdx;
-    void *data = NULL;
-    Column *column = NULL;
+    void *data = nullptr;
+    Column *column = nullptr;
     
     for (int32_t i = 0; i < outputColCount; i++) {
         outputCol = outputCols[i];
@@ -227,7 +227,7 @@ int32_t SortOperator::getOutput(vector<Table *>& outputTables)
     int32_t tableCount = getTableCount(positionCount, maxRowCount);
     outputTables.reserve(tableCount);
 
-    Table *table = NULL;
+    Table *table = nullptr;
     int32_t position = 0;
     int32_t rowCount = 0;
     for (int32_t i = 0; i < tableCount; i++) {

@@ -55,7 +55,7 @@ public class OmniHashBuilderOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(buildTypes, buildOutputCols, buildHashCols);
+            return Objects.hash(buildTypes, buildOutputCols, buildHashCols, operatorCount);
         }
 
         @Override

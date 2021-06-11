@@ -182,12 +182,12 @@ int32_t WindowOperator::addInput(Table **datas, int32_t *rowCounts, int32_t page
     pagesIndex->addTables(datas, rowCounts, pageCount);
     // right now we assume the pregroup and presort are null
     preGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,
-        pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
+        pagesIndex->getTypes(), pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
     unGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,
-        pagesIndex->getTypesCount(), partitionCols, partitionCount);
+        pagesIndex->getTypes(), pagesIndex->getTypesCount(), partitionCols, partitionCount);
     preSortedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,
-        pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
-    peerGroupHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount, pagesIndex->getTypesCount(),
+        pagesIndex->getTypes(), pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
+    peerGroupHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,pagesIndex->getTypes(), pagesIndex->getTypesCount(),
         originSortCols, originSortColCount);
     return 0;
 }

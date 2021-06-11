@@ -36,9 +36,9 @@ PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
 {
     this->types = types;
     this->typesCount = typesCount;
-    this->columns = NULL;
+    this->columns = nullptr;
     this->tablesCount = 0;
-    this->valueAddresses = NULL;
+    this->valueAddresses = nullptr;
     this->positionCount = 0;
 }
 
@@ -46,7 +46,7 @@ PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
 int32_t PagesIndex::addTables(Table **datas, int32_t *rowCounts, int32_t tableCount)
 {
     int32_t rowCount = 0;
-    Table *data = NULL;
+    Table *data = nullptr;
     int64_t valueAddress = 0;
     int32_t valueAddrIdx = 0;
 
@@ -104,9 +104,9 @@ void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t
     Table *outputTable = (Table *)outputTableAddr;
     int64_t *valueAddresses = this->valueAddresses;
 
-    Column *outputColumn = NULL;
+    Column *outputColumn = nullptr;
     int32_t outputCol = 0;
-    void *outputData = NULL;
+    void *outputData = nullptr;
     int colType = 0;
 
     for (int32_t j = 0; j < outputColsCount; j++) {
@@ -135,13 +135,13 @@ void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t
 
 PagesIndex::~PagesIndex()
 {
-    if (columns != NULL) {
+    if (columns != nullptr) {
         for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
             free(columns[colIdx]);
         }
         free(columns);
     }
-    if (valueAddresses != NULL) {
+    if (valueAddresses != nullptr) {
         free(valueAddresses);
     }
 }
@@ -435,8 +435,8 @@ void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Column *inputColumn = NULL;
-    int32_t *inputData = NULL;
+    Column *inputColumn = nullptr;
+    int32_t *inputData = nullptr;
     int32_t tableIndex = 0;
     int32_t position = 0;
 
@@ -462,8 +462,8 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Column *inputColumn = NULL;
-    int64_t *inputData = NULL;
+    Column *inputColumn = nullptr;
+    int64_t *inputData = nullptr;
     int32_t tableIndex = 0;
     int32_t position = 0;
 
@@ -490,8 +490,8 @@ void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t leng
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Column *inputColumn = NULL;
-    double *inputData = NULL;
+    Column *inputColumn = nullptr;
+    double *inputData = nullptr;
     int32_t tableIndex = 0;
     int32_t position = 0;
 

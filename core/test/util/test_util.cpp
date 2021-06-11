@@ -84,3 +84,21 @@ bool columnMatch(Column *actualColumn, Column *expectColumn)
 
     return result;
 }
+
+omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
+{
+    omniruntime::op::Operator *nativeOperator = nullptr;
+
+#ifdef DEBUG_OPERATOR
+    nativeOperator = operatorFactory->createOperator();
+#else
+    JitContext *jitContext = operatorFactory->getJitContext();
+    if (jitContext == nullptr) {
+        nativeOperator = operatorFactory->createOperator();
+    } else {
+        opt_module operatorModule = (opt_module) (jitContext->func);
+        nativeOperator = operatorModule(operatorFactory);
+    }
+#endif
+    return nativeOperator;
+}

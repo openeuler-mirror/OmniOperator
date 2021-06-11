@@ -11,27 +11,30 @@
 class PagesHashStrategy
 {
 public:
-    PagesHashStrategy(Column ***columns, int32_t tableCount, int32_t columnCount, int32_t *joinCols, int32_t joinColsCount);
+    PagesHashStrategy(Column ***columns, int32_t tableCount, int32_t *columnTypes, int32_t columnCount, int32_t *joinCols, int32_t joinColsCount);
     ~PagesHashStrategy();
     int64_t hashPosition(int32_t tableIndex, int32_t rowIndex);
     int64_t hashRow(int32_t rowIndex, Table *table);
     bool isPositionNull(int32_t tableIndex, int32_t rowIndex);
     bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex);
-    bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount);
+    bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, Column **joinColumns);
     bool positionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex);
     bool valuePositionEqualsPosition(ColumnType type, Column *leftColumn, int32_t leftRowIndex, Column *rightColumn, int32_t rightRowIndex);
     bool valueEqualsValueIgnoreNulls(ColumnType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex);
 
-        Column ***getBuildColumns()
+    Column ***getBuildColumns()
     {
         return buildColumns;
     }
 
 private:
+    int64_t hashPosition(int32_t tableIndex, int32_t rowIndex, int32_t *hashColTypes, int32_t hashColCount);
+    bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex, int32_t *hashColTypes, int32_t hashColCount);
+    bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, int64_t probeJoinColumnsAddr, int32_t *hashColTypes, int32_t hashColCount);
     Column ***buildColumns; // Column *[colCount][tableCount]
     int32_t buildTableCount;
     int32_t buildColumnCount; // column count
-    //int32_t *joinCols;
+    int32_t *buildHashColTypes; // build hash column types
     Column ***buildHashColumns; // Column *[join colCount][tableCount]
     int32_t buildHashColsCount; // join column count
 };

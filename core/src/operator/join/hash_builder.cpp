@@ -88,8 +88,6 @@ HashBuilderOperator::HashBuilderOperator(
 {
     this->buildTypes = buildTypes;
     this->buildTypesCount = buildTypesCount;
-    this->buildOutputCols = buildOutputCols;
-    this->buildOutputColsCount = buildOutputColsCount;
     this->buildHashCols = buildHashCols;
     this->buildHashColsCount = buildHashColsCount;
     this->hashTables = hashTables;
@@ -113,7 +111,7 @@ int32_t HashBuilderOperator::addInput(Table **datas, int32_t *rowCounts, int32_t
 
     // build JoinHashTable
     PagesHashStrategy *pagesHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
-        tableCount, pagesIndex->getTypesCount(), buildHashCols, buildHashColsCount);
+        tableCount, buildTypes, buildTypesCount, buildHashCols, buildHashColsCount);
     JoinHashTable *table = new JoinHashTable(pagesHashStrategy, pagesIndex->getValueAddresses(), pagesIndex->getPositionCount());
 
     hashTables->addHashTable(partitionIndex, table);
