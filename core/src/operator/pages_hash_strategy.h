@@ -18,7 +18,11 @@ public:
     bool isPositionNull(int32_t tableIndex, int32_t rowIndex);
     bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex);
     bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount);
-    Column ***getBuildColumns()
+    bool positionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex);
+    bool valuePositionEqualsPosition(ColumnType type, Column *leftColumn, int32_t leftRowIndex, Column *rightColumn, int32_t rightRowIndex);
+    bool valueEqualsValueIgnoreNulls(ColumnType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex);
+
+        Column ***getBuildColumns()
     {
         return buildColumns;
     }
@@ -26,7 +30,7 @@ public:
 private:
     Column ***buildColumns; // Column *[colCount][tableCount]
     int32_t buildTableCount;
-    int32_t buildColumnCount;  // column count
+    int32_t buildColumnCount; // column count
     //int32_t *joinCols;
     Column ***buildHashColumns; // Column *[join colCount][tableCount]
     int32_t buildHashColsCount; // join column count

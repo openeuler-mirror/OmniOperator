@@ -56,23 +56,26 @@ bool columnMatch(Column *actualColumn, Column *expectColumn)
             case INT32: {
                 int32_t actual = *((int32_t *)actualValue);
                 int32_t expect = *((int32_t *)expectValue);
-                result = (actual == expect);
+                result = (actual == expect) & result;
                 break;
             }
             case INT64: {
                 int64_t actual = *((int64_t *)actualValue);
                 int64_t expect = *((int64_t *)expectValue);
-                result = (actual == expect);
+                result = (actual == expect) & result;
                 break;
             }
             case DOUBLE: {
                 double actual = *((double *)actualValue);
                 double expect = *((double *)expectValue);
-                result = (actual == expect);
+                result = (actual == expect) & result;
                 break;
             }
             default:
                 result = false;
+        }
+        if (!result) {
+            return false;
         }
     }
 

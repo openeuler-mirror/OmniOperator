@@ -117,6 +117,11 @@ void freeInputTable(Table **inputTables, int32_t inputTableCount);
 void freeOutputTable(std::vector<Table *> &outputTables);
 
 void freeDataInColumn(Table **tables, int32_t tableCount);
+
+int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount);
+int32_t getTableCount(int32_t positionCount, int32_t maxRowCount);
+void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount);
+
 } // end of namespace op
 } // end of namespace omniruntime
 #endif
