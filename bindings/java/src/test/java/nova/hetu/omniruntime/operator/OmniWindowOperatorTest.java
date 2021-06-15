@@ -21,7 +21,7 @@ public class OmniWindowOperatorTest
     {
         VecType[] sourceTypes = {VecType.LONG, VecType.LONG};
         int[] outputChannels = {0, 1};
-        WindowFunctionType[] windowFunction = {WindowFunctionType.RANK};
+        WindowFunctionType[] windowFunction = {WindowFunctionType.WIN_RANK};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};

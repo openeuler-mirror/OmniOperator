@@ -136,15 +136,20 @@ WindowOperator::WindowOperator(int32_t *sourceTypes, int32_t typesCount, int32_t
     this->partition = nullptr;
 
     for (int32_t i = 0; i < windowFunctionCount; i++) {
-        switch (windowFunctionTypes[0]) {
-            case 0:
+        switch (windowFunctionTypes[i]) {
+            case WIN_ROW_NUMBER:
                 windowFunctions.push_back(new RowNumberFunction());
                 break;
-            case 1:
+            case WIN_RANK:
                 windowFunctions.push_back(new RankFunction());
                 break;
-            case 2:
-                windowFunctions.push_back(new AggregateWindowFunction(argumentChannels, argumentChannelsCount));
+            case WIN_SUM:
+            case WIN_COUNT:
+            case WIN_AVG:
+            case WIN_MAX:
+            case WIN_MIN:
+                windowFunctions.push_back(new AggregateWindowFunction(argumentChannels[i],
+                    windowFunctionTypes[i], sourceTypes[argumentChannels[i]]));
                 break;
             default:
                 break;

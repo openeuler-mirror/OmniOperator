@@ -1,6 +1,9 @@
+#include <cmath>
+#include <cfloat>
 #include "test_util.h"
 
 bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber);
+
 bool columnMatch(Column *actualColumn, Column *expectColumn);
 
 bool tableMatch(Table *outputTables, Table *expectTable)
@@ -68,7 +71,7 @@ bool columnMatch(Column *actualColumn, Column *expectColumn)
             case DOUBLE: {
                 double actual = *((double *)actualValue);
                 double expect = *((double *)expectValue);
-                result = (actual == expect) & result;
+                result = (std::fabs(actual - expect) <= DBL_EPSILON) & result;
                 break;
             }
             default:
