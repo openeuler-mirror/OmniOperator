@@ -6,6 +6,7 @@ import nova.hetu.omniruntime.utils.OmniUtils;
 import nova.hetu.omniruntime.vector.AggType;
 import nova.hetu.omniruntime.vector.VecType;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -64,7 +65,7 @@ public class OmniHashAggregationOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(groupByTypes, aggTypes, aggFunctionTypes);
+            return Objects.hash(Arrays.hashCode(groupByTypes), Arrays.hashCode(aggTypes), Arrays.hashCode(aggFunctionTypes));
         }
 
         @Override
@@ -77,9 +78,9 @@ public class OmniHashAggregationOperatorFactory
                 return false;
             }
             Context that = (Context) o;
-            return Objects.equals(groupByTypes, that.groupByTypes)
-                    && Objects.equals(aggTypes, that.aggTypes)
-                    && Objects.equals(aggFunctionTypes, that.aggFunctionTypes);
+            return Arrays.equals(groupByTypes, that.groupByTypes)
+                    && Arrays.equals(aggTypes, that.aggTypes)
+                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes);
         }
     }
 }
