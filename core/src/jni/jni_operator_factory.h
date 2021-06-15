@@ -32,6 +32,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
         (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray);
 
 /*
+ * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
+ * Method:    createAggregationOperatorFactory
+ * Signature: ([I[I[I[I)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory
+        (JNIEnv *, jobject, jintArray, jintArray);
+
+/*
  * Class:     nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory
  * Method:    createFilterAndProjectOperatorFactory
  * Signature: ([IILjava/lang/String;[II)J

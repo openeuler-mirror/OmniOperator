@@ -9,6 +9,7 @@
 #include "../operator/operator_factory.h"
 #include "../operator/sort/sort.h"
 #include "../operator/aggregation/group_aggregation.h"
+#include "../operator/aggregation/non_group_aggregation.h"
 #include "../operator/filter/filter.h"
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
@@ -46,9 +47,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 }
 
 /**
- * Return an NativeOmniHashAggregationFactory object address.
- *
- *
+ * Return an HashAggregationFactory object address.
  **/
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory
         (JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jintArray jGroupByType, jintArray jAggChannel, jintArray jAggType, jintArray jAggFuncType, jintArray jOutPutTye)
@@ -134,6 +133,55 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
+/**
+ * Return an AggregationFactory object address.
+ **/
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jAggType, jintArray jAggFuncType)
+{
+    JNI_DEBUG_LOG("create hashagg operator factory starting.");
+    auto start = START();
+    jint *aggTypes = env->GetIntArrayElements(jAggType, JNI_FALSE);
+    jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    size_t aggNum = (size_t)env->GetArrayLength(jAggType);
+
+    PrepareContext aggTypeContext = {(uint32_t*)aggTypes, aggNum};
+    PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
+    int32_t aggColNum = aggTypeContext.len;
+
+    using namespace omniruntime::codegen;
+    std::map<std::string, ParamValue *> testParam;
+    std::list<Hammer *> deps = std::list<Hammer *>();
+    
+    ParamValue p_col_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
+    ParamValue p_agg_num = ParamValue(&aggColNum);
+    ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
+
+    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@3"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@4"] = &p_col_type;   
+    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@5"] = &p_agg_types;
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
+    Hammer hammer2("/opt/lib/ir/non_group_aggregation.ll", testParam);
+    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
+    hammer1.harden();
+    hammer2.harden();
+    hammer3.harden();
+
+    deps.push_back(&hammer3);
+    deps.push_back(&hammer2);
+    HammerConfig hammerConfig;
+    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+
+    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op26AggregationOperatorFactory14createOperatorEv")->getAddress());
+    JitContext* jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(func);
+    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
+    nativeOperatorFactory->setJitContext(jitContext); 
+    return reinterpret_cast<uint64_t>(nativeOperatorFactory);
+}
 
 JitContext *createSortJitContext(
         int32_t *sourceTypes,

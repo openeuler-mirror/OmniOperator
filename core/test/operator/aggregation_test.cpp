@@ -506,11 +506,6 @@ void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, Table** input, int32
 TEST(AggregationOperatorTest, Perf_Original)
 {
     using namespace omniruntime::codegen;
-    uint32_t* aggCols = new uint32_t[4];
-    aggCols[0] = 0;
-    aggCols[1] = 1;
-    aggCols[2] = 2;
-    aggCols[3] = 3;
     uint32_t* aggTypes = new uint32_t[4];
     aggTypes[0] = 2;
     aggTypes[1] = 2;
@@ -522,21 +517,13 @@ TEST(AggregationOperatorTest, Perf_Original)
     aggFunType[1] = 0;
     aggFunType[2] = 0;
     aggFunType[3] = 0;
-    PrepareContext aggColContext = {aggCols, 4};
     PrepareContext aggTypeContext = {aggTypes, 4};
     PrepareContext aggFuncTypeContext = {aggFunType, 4};
 
-    std::map<std::string, ParamValue *> testParam;
     std::list<Hammer *> deps = std::list<Hammer *>();
-    int32_t aggColNum = aggColContext.len;
-    int32_t colNum = aggColContext.len;
-    int32_t* colTypes = new int32_t[colNum];
-    
-    for (int i = 0; i < aggColNum; ++i) {
-        colTypes[aggColContext.context[i]] = aggTypeContext.context[i];
-    }
+    int32_t aggColNum = aggTypeContext.len;
 
-    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggColContext, aggTypeContext, aggFuncTypeContext);
+    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
     int64_t factoryAddr = reinterpret_cast<int64_t>(nativeOperatorFactory);
     const auto processor_count = std::thread::hardware_concurrency();
     std::cout << "core number: " << processor_count << std::endl;
@@ -581,11 +568,6 @@ TEST(AggregationOperatorTest, Perf_Original)
 uint64_t prepare_nogroup()
 {
     using namespace omniruntime::codegen;
-    uint32_t* aggCols = new uint32_t[4];
-    aggCols[0] = 0;
-    aggCols[1] = 1;
-    aggCols[2] = 2;
-    aggCols[3] = 3;
     uint32_t* aggTypes = new uint32_t[4];
     aggTypes[0] = 2;
     aggTypes[1] = 2;
@@ -597,29 +579,20 @@ uint64_t prepare_nogroup()
     aggFunType[1] = 0;
     aggFunType[2] = 0;
     aggFunType[3] = 0;
-    PrepareContext aggColContext = {aggCols, 4};
     PrepareContext aggTypeContext = {aggTypes, 4};
     PrepareContext aggFuncTypeContext = {aggFunType, 4};
 
     std::map<std::string, ParamValue *> testParam;
     std::list<Hammer *> deps = std::list<Hammer *>();
-    int32_t aggColNum = aggColContext.len;
-    int32_t colNum = aggColContext.len;
-    int32_t* colTypes = new int32_t[colNum];
+    int32_t aggColNum = aggTypeContext.len;
+    int32_t colNum = aggTypeContext.len;
     
-    for (int i = 0; i < aggColNum; ++i) {
-        colTypes[aggColContext.context[i]] = aggTypeContext.context[i];
-    }
-
-    ParamValue p_col_type = ParamValue(colTypes, colNum);
-    ParamValue p_col_count = ParamValue(&colNum);
-    ParamValue p_aggColIdx = ParamValue((int32_t*)aggColContext.context, aggColNum);
     ParamValue p_agg_num = ParamValue(&aggColNum);
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@3"] = &p_col_count;
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@4"] = &p_col_type;   
+    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@3"] = &p_agg_num;
+    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@4"] = &p_agg_data_type;   
     testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@5"] = &p_agg_types;
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
     llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
@@ -640,7 +613,7 @@ uint64_t prepare_nogroup()
     jitContext->func = reinterpret_cast<uintptr_t>(func);
     jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
     std::cout << "after jit" << std::endl;
-    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggColContext, aggTypeContext, aggFuncTypeContext);
+    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->setJitContext(jitContext); 
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
