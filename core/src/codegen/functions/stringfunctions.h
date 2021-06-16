@@ -9,8 +9,8 @@
 #include <cassert>
 #include <algorithm>
 #include <regex>
-#include <re2/re2.h>
-#include <re2/stringpiece.h>
+// #include <re2/re2.h>
+// #include <re2/stringpiece.h>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
