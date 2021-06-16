@@ -3,6 +3,8 @@
 
 #include "../common/expressions.h"
 #include "../common/parser/parser.h"
+#include "./functions/mathfunctions.h"
+#include "./functions/stringfunctions.h"
 
 #include <iostream>
 #include <string>
@@ -51,20 +53,27 @@ public:
 
 
 private:
+    void registerFunc(void* funcAddr, string funcName, llvm::Type* retType, vector<Type*> paramTypes);
+    void registerFunctions();
 
     Value* parseExpr(Expr* root, map<string, Value*>& args);
     // Generate the functions
     Function* generateFunc();
     int64_t createWrapper(Function* filterFunc);
 
+    Value* createConstantBool(bool v);
     Value* createConstantInt(int32_t n);
     Value* createConstantLong(int64_t n);
     Value* createConstantDouble(double n);
+    Type* toLLVMType(DataType t);
 
+    Value* stringEq(Value* LHS, Value* RHS);
+    Value* stringCmp(Value *LHS, Value *RHS);
     Function* createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse);
+    Value* funcCodegen(FuncExpr* fExpr, map<string, Value*>& args);
 
     std::string _func_name;
-    Expr* _expr;
+    Expr* _expr = nullptr;
     vector<DataType>* datatypes;
 
     int32_t (*_filter)(int64_t*, int32_t, int32_t*);

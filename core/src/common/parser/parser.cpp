@@ -7,11 +7,66 @@
 #include <algorithm>
 using namespace std;
 
+using namespace expressions;
+
+
+// Update with function return type every time a new function is added
+DataType funcRetTypeMap(string fnName, vector<Expr*> args) {
+    if (fnName == "CAST") {
+        if (args[0]->dataType == STRINGD) return INT32D;
+        else return DOUBLED;
+    }
+    if (fnName == "substr") return STRINGD;
+    if (fnName == "CONCAT") return STRINGD;
+    if (fnName == "abs") return args[0]->dataType;
+    if (fnName == "LIKE") return BOOLD;
+    return INVALIDDATAD;
+}
+
+// Update with conditions every time a new function is added
+bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes) {
+    if (fnName == "CAST" && args.size() == 1) {
+        return true;
+    }
+    if (fnName == "substr" && args.size() == 3) {
+        if (!checkTypes) return true;
+
+        if (args[0]->dataType == STRINGD && 
+        (args[1]->dataType == INT32D || args[1]->dataType == INT64D) && 
+        (args[2]->dataType == INT32D || args[2]->dataType == INT64D)) {
+            return true;
+        }
+    }
+    if (fnName == "CONCAT" && args.size() == 2) {
+        if (!checkTypes) return true;
+        
+        if (args[0]->dataType == STRINGD && args[1]->dataType == STRINGD) {
+            return true;
+        }
+    }
+    if (fnName == "abs" && args.size() == 1) {
+        if (!checkTypes) return true;
+        
+        if (args[0]->dataType == INT32D || args[0]->dataType == INT32D || args[0]->dataType == INT32D) {
+            return true;
+        }
+    }
+    if (fnName == "LIKE" && args.size() == 2) {
+        if (!checkTypes) return true;
+        
+        // Assuming that like patterns are represented with strings
+        if (args[0]->dataType == STRINGD && args[0]->dataType == STRINGD) {
+            return true;
+        }
+    }
+    return false;
+}
+
 string operatorPrefix = "$operator$";
 Operator opTrans(string op)
 {
     // Comparison operators
-    if (op == operatorPrefix + "EQUAL") return Operator::EQ;
+    if (op == operatorPrefix + "EQUAL" || op == "EQUAL") return Operator::EQ;
     else if (op == operatorPrefix + "LESS_THAN" || op == "LESS_THAN") return Operator::LT;
     else if (op == operatorPrefix + "LESS_THAN_OR_EQUAL" || op == "LESS_THAN_OR_EQUAL") return Operator::LTE;
     else if (op == operatorPrefix + "GREATER_THAN_OR_EQUAL" || op == "GREATER_THAN_OR_EQUAL") return Operator::GTE;
@@ -49,20 +104,6 @@ OperatorReturnType getBinaryOperatorType(string opStr)
     }
     return OperatorReturnType::INVALIDRETURNTYPE;
 }
-// For functions and special forms
-CallType callTrans(string fn)
-{
-    if (fn == "BETWEEN") return CallType::BETWEEN;
-    else if (fn == "IN") return CallType::IN;
-    else if (fn == "COALESCE") return CallType::COALESCE;
-    else if (fn == "IF") return CallType::IF;
-    else if (fn == "substr") return CallType::SUBSTR;
-    else if (fn == "CAST") return CallType::CAST;
-    else if (fn == "abs") return CallType::ABS;
-    else return CallType::INVALIDCALL;
-}
-
-
 
 bool isUnaryOperator(string opStr)
 {
@@ -77,8 +118,25 @@ bool isUnaryOperator(string opStr)
 
 Expr *Parser::parseRowExpression(string input, int32_t *inputTypes, int32_t vecCount)
 {
-    // remove spaces from input
-    input.erase(remove(input.begin(), input.end(), ' '), input.end());
+    // remove spaces from input but not from inside strings
+    string newinput = "";
+    bool isInString = false;
+    for (int i = 0; i < input.size(); i++) {
+        if (input[i] == '\'') {
+            isInString = !isInString;
+            newinput.push_back(input[i]);
+        }
+        else {
+            if (input[i] == ' ') {
+                if (isInString) {
+                    newinput.push_back(input[i]);
+                }
+            }
+            else newinput.push_back(input[i]);
+        }
+    }
+    input = newinput;
+
 
     int firstParenInd = input.find("(");
     // Check if it is just data (i.e. 123, #4, 34.4)
@@ -126,26 +184,20 @@ Expr *Parser::parseRowExpression(string input, int32_t *inputTypes, int32_t vecC
         return new UnaryExpr(opTrans(opStr), args[0], BOOLD); // only handling NOT for now
     }
 
-    // Default to CallExpr
-    CallType ct = callTrans(opStr);
-
-    // special forms
-    if (ct == CallType::IN || ct == CallType::BETWEEN) return new CallExpr(ct, args, BOOLD);
-    if (ct == CallType::COALESCE) return new CallExpr(ct, args, args[0]->getExprDataType());
-    if (ct == CallType::IF) return new CallExpr(ct, args, args[1]->getExprDataType()); // dataType of true branch
-    // functions
-    if (ct == CallType::SUBSTR) return new CallExpr(ct, args, STRINGD);
-    if (ct == CallType::CAST) {
-        // uses next highest DataType
-        if (args[0]->getExprDataType() == BOOLD) return new CallExpr(ct, args, INT32D); 
-        else if (args[0]->getExprDataType() == INT32D) return new CallExpr(ct, args, INT64D); 
-        else if (args[0]->getExprDataType() == INT64D) return new CallExpr(ct, args, DOUBLED); 
-        // Default to string
-        else return new CallExpr(ct, args, STRINGD); 
+    // Special form
+    // Special forms are IN, BETWEEN, IF, COALESCE
+    if (opStr == "BETWEEN") return new BetweenExpr(args[0], args[1], args[2]);
+    if (opStr == "IN") return new InExpr(args);
+    if (opStr == "COALESCE") return new CoalesceExpr(args[0], args[1]);
+    if (opStr == "IF") return new IfExpr(args[0], args[1], args[2]);
+    
+    // Function
+    // Check that the signature matches
+    if (funcDeclMatch(opStr, args, false)) {
+        return new FuncExpr(opStr, args, funcRetTypeMap(opStr, args));
     }
-    if (ct == CallType::ABS) return new CallExpr(ct, args, args[0]->getExprDataType());
-    // Default to INVALIDCALL
-    return new CallExpr(ct, args, INVALIDDATAD);
+    // default to false
+    return new DataExpr(false);
 }
 
 // Helper functions for generateComparisionExpr to find the correct data type 
@@ -204,7 +256,12 @@ DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecC
 {
     #ifdef DEBUG
     // std::cout << "generating data:::" << dataStr << std::endl;
-    #endif
+    #endif    
+    // Case with boolean true/false
+    if (dataStr == "true") return new DataExpr(true);
+    if (dataStr == "false") return new DataExpr(false);
+
+    // Other cases
     DataType currDataType = getDataType(dataStr, inputTypes, vecCount);
     // Case with normal string format (ex. 'hello')
     if (currDataType == STRINGD && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
@@ -224,11 +281,10 @@ DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecC
         case BOOLD:
             return new DataExpr(stoi(dataStr));
         case INT32D: {
-            DataExpr* de = new DataExpr(stoi(dataStr));
-            de->longVal = de->intVal;
-            de->doubleVal = de->intVal;
-            return de;
-        }
+            DataExpr* e = new DataExpr(stoi(dataStr));
+            e->longVal = e->intVal;
+            e->doubleVal = e->intVal;
+            return e; }
         case INT64D:
             return new DataExpr(stol(dataStr));
         case DOUBLED: 
