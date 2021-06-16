@@ -190,7 +190,7 @@ void AggregationOperator::constructColumn(Table* table, int32_t* types, uint32_t
             case MIN:
             case MAX: {
                 if (aggType == COUNT) {
-                    reinterpret_cast<int64_t*>(col->getData())[0] = state.count + 1;
+                    reinterpret_cast<int64_t*>(col->getData())[0] = state.count;
                 }else {
                     switch (types[colIdx])
                     {
@@ -216,26 +216,7 @@ void AggregationOperator::constructColumn(Table* table, int32_t* types, uint32_t
                 if (state.count == 0) {
                     DebugError("Divisor is zero! column index = %d", colIdx);
                 }
-                switch (types[colIdx])
-                {
-                    case 1:{
-                        reinterpret_cast<double*>(col->getData())[0] = *static_cast<int32_t*>(state.avgVal)
-                        / static_cast<double>(state.avgCnt);
-                        break;
-                    }
-                    case 2:{
-                        reinterpret_cast<double*>(col->getData())[0] = *static_cast<int64_t*>(state.avgVal)
-                        / static_cast<double>(state.avgCnt);
-                        break;
-                    }
-                    case 3:{
-                        reinterpret_cast<double*>(col->getData())[0] =  *static_cast<double*>(state.avgVal) 
-                        / static_cast<double>(state.avgCnt);
-                        break;
-                    }
-                    default:
-                        break;
-                }
+                reinterpret_cast<double*>(col->getData())[0] = *static_cast<double*>(state.avgVal);
                 break;
             }
             default: {

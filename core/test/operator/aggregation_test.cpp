@@ -478,6 +478,50 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     }
 }
 
+TEST(AggregatorTest, avg_correctness_test)
+{
+    using namespace omniruntime::op;
+    // create 10 pages
+    const int PAGE_NUM = 10;
+    const int ROW_SIZE = 100;
+    const int CARDINALITY = 100;
+    const int COLUMN_COUNT = 1;
+    Table** input = buildInput(PAGE_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
+
+    ColumnIndex c0 = {0, INT64};
+    std::vector<ColumnIndex> aggregateColumns = {c0};
+    std::vector<Aggregator*> aggs;
+    AverageAggregator* avgAgg = new AverageAggregator(2);
+    aggs.push_back(avgAgg);
+    AggregationOperator* aggregate = new AggregationOperator(aggregateColumns, aggs);
+
+    for (int32_t i = 0; i < PAGE_NUM; ++i) {
+        aggregate->addInput(input[i], ROW_SIZE);
+    }
+    
+    std::vector<Table*> result;
+    int32_t tableCount = aggregate->getOutput(result);
+
+    EXPECT_EQ(result[0]->getColumnNumber(), 1);
+    EXPECT_EQ(result[0]->getPositionCount(), 1);
+
+    string aggNames[] = {"avg"};
+
+    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
+        Column* col = result[0]->getColumn(i);
+        std::cout << aggNames[i] << " ";
+        col->printColumn();
+    }
+    
+    destroyInput(input, PAGE_NUM, COLUMN_COUNT);
+    
+    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
+        Column* col = result[0]->getColumn(i);
+        delete[] reinterpret_cast<int64_t*>(col->getData());
+        delete col;
+    }
+}
+
 void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, Table** input, int32_t pageNum, int32_t* rowCount)
 {
     using namespace omniruntime::op;
