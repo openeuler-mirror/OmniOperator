@@ -41,17 +41,90 @@ int32_t LLVMCodeGen::execute(int64_t* data, int32_t nRows, int32_t* selected) {
     return this->_filter(data, nRows, selected);
 }
 
-Value* LLVMCodeGen::parseExpr(Expr* root) {
+Function* LLVMCodeGen::createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse) {
+    vector<Type*> args;
+    args.reserve(datatypes->size());
+    for (int32_t i = 0; i < datatypes->size(); i++) {
+        DataType type = datatypes->at(i);
+        switch (type) {
+            case DataType::INT32D:
+                args.push_back(Type::getInt32Ty(*context));
+                break;
+            case DataType::INT64D:
+                args.push_back(Type::getInt64Ty(*context));
+                break;
+            case DataType::DOUBLED:
+                args.push_back(Type::getDoubleTy(*context));
+                break;
+            case DataType::BOOLD:
+                args.push_back(Type::getInt1Ty(*context));
+                break;
+            case DataType::STRINGD:
+                // todo
+                cout << "Error: Unsupported string argument type" << endl;
+                break;
+            default:
+                cout << "Error: Unknown argument datatype " << type << endl;
+                break;
+        }
+    }
+    Type* retTypePtr;
+    switch (retType) {
+    case INT32D:
+        retTypePtr = Type::getInt32Ty(*context);
+        break;
+    case INT64D:
+        retTypePtr = Type::getInt64Ty(*context);
+        break;
+    case DOUBLED:
+        retTypePtr = Type::getDoubleTy(*context);
+        break;
+    case BOOLD:
+        retTypePtr = Type::getInt1Ty(*context);
+        break;
+    }
+    FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
+    Function *func = Function::Create(prototype, Function::ExternalLinkage, "IF_CONDITIONAL", _module.get());
+
+    int32_t idx = 0;
+    for (auto& arg : func->args()) {
+        arg.setName(to_string(idx++));
+    }
+
+    BasicBlock* conditionalCheck = BasicBlock::Create(*context, "CONDITIONAL_CHECK", func);
+    BasicBlock* trueBlock = BasicBlock::Create(*context, "TRUE_BLOCK", func);
+    BasicBlock* falseBlock = BasicBlock::Create(*context, "FALSE_BLOCK", func);
+
+    map<string, Value*> fArgs;
+    for (auto& arg : func->args()) {
+        fArgs[arg.getName().str()] = &arg;
+    }
+
+    builder->SetInsertPoint(conditionalCheck);
+    Value* evCond = this->parseExpr(cond, fArgs);
+    Value* evTrue = this->parseExpr(ifTrue, fArgs);
+    Value* evFalse = this->parseExpr(ifFalse, fArgs);
+    builder->CreateCondBr(evCond, trueBlock, falseBlock);
+    builder->SetInsertPoint(trueBlock);
+    builder->CreateRet(evTrue);
+    builder->SetInsertPoint(falseBlock);
+    builder->CreateRet(evFalse);
+
+    verifyFunction(*func);
+    return func;
+}
+
+Value* LLVMCodeGen::parseExpr(Expr* root, map<string, Value*>& args) {
     switch (root->getType()) {
     case ExprType::BINARY_E: {
         BinaryExpr* bExpr = (BinaryExpr*) root;
         if (bExpr->left->getType() == ExprType::DATA_E || bExpr->right->getType() == ExprType::DATA_E) {
-            DataType biggerType = max(bExpr->left->getExprDataType(), bExpr->right->getExprDataType());
+            DataType biggerType = std::max(bExpr->left->getExprDataType(), bExpr->right->getExprDataType());
             bExpr->left->dataType = biggerType;
             bExpr->right->dataType = biggerType;
         }
-        Value* left = this->parseExpr(bExpr->left);
-        Value* right = this->parseExpr(bExpr->right);
+        Value* left = this->parseExpr(bExpr->left, args);
+        Value* right = this->parseExpr(bExpr->right, args);
 
         if (bExpr->op == expressions::Operator::AND) {
             return builder->CreateAnd(left, right, "logical_and");
@@ -118,7 +191,7 @@ Value* LLVMCodeGen::parseExpr(Expr* root) {
     case ExprType::DATA_E: {
         DataExpr* dEx = (DataExpr*) root;
         if (dEx->isColumn) {
-            return this->args[to_string(dEx->colVal)];
+            return args[to_string(dEx->colVal)];
         }
         switch (dEx->getExprDataType()) {
         case DataType::INT32D: {
@@ -134,6 +207,31 @@ Value* LLVMCodeGen::parseExpr(Expr* root) {
             cout << "Error: Unsupported datatype String" << endl;
             break;
         }
+        }
+        break;
+    }
+    case ExprType::CALL_E: {
+        CallExpr* ce = (CallExpr*) root;
+        switch (ce->callType) {
+        case IF: {
+            BasicBlock* currentBlock = builder->GetInsertBlock();
+            DataType retType = ce->arguments[1]->getExprDataType();
+            Expr* cond = ce->arguments[0];
+            Expr* ifTrue = ce->arguments[1];
+            Expr* ifFalse = ce->arguments[2];
+
+            Function* conditionalFunc = createConditional(retType, cond, ifTrue, ifFalse);
+            builder->SetInsertPoint(currentBlock);
+            vector<Value*> passArgs;
+            for (map<string, Value*>::iterator i = args.begin() ; i != args.end() ; i ++ ) {
+                Value* a = i->second;
+                passArgs.push_back(a);
+            }
+            CallInst* condCall = builder->CreateCall(conditionalFunc, passArgs, "EVAL_IF");
+            return condCall;
+        }
+        default:
+            cout << "Error: Unsupported call type " << ce->callType << endl;
         }
         break;
     }
@@ -181,12 +279,13 @@ Function* LLVMCodeGen::generateFunc()
     }
     BasicBlock *body = BasicBlock::Create(*context, "FILTER_FUNC_BODY", func);
     builder->SetInsertPoint(body);
+    map<string, Value*> fArgs;
     for (auto& arg : func->args()) {
-        this->args[arg.getName().str()] = &arg;
+        fArgs[arg.getName().str()] = &arg;
     }
 
     // cout << "Generating filter body" << endl;
-    Value* ret = this->parseExpr(_expr);
+    Value* ret = this->parseExpr(_expr, fArgs);
     builder->CreateRet(ret);
     verifyFunction(*func);
     return func;
@@ -319,7 +418,7 @@ int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
     // Return the filled in results.
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
-    // _module->print(errs(), nullptr);
+    _module->print(errs(), nullptr);
     auto resTracker = JIT->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = ThreadSafeModule(move(_module), move(context));
     EOE(JIT->addIRModule(resTracker, move(threadSafeModule)));

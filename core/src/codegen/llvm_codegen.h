@@ -52,7 +52,7 @@ public:
 
 private:
 
-    Value* parseExpr(Expr* root);
+    Value* parseExpr(Expr* root, map<string, Value*>& args);
     // Generate the functions
     Function* generateFunc();
     int64_t createWrapper(Function* filterFunc);
@@ -60,6 +60,8 @@ private:
     Value* createConstantInt(int32_t n);
     Value* createConstantLong(int64_t n);
     Value* createConstantDouble(double n);
+
+    Function* createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse);
 
     std::string _func_name;
     Expr* _expr;
@@ -69,7 +71,6 @@ private:
     unique_ptr<LLVMContext> context;
     unique_ptr<IRBuilder<>> builder;
     unique_ptr<Module> _module;
-    map<string, Value*> args;
     ExitOnError EOE;
     unique_ptr<LLJIT> JIT;
     ResourceTrackerSP rt;

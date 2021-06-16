@@ -23,6 +23,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     Parser parserObject;
     std::cout << "parsing: " << expression << std::endl;
     Expr* parsedExpr = parserObject.parseRowExpression(expression, inputTypes, vecCount);
+    parsedExpr->printExprTree();
     // std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
     //TODO: replace the placeholder context
