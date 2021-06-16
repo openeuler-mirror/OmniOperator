@@ -170,7 +170,7 @@ void CountAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
         case 1: 
         case 2: 
         case 3: {
-            nonGroupState = {0};
+            nonGroupState.count = 1;
             break; 
         }
         default: {
@@ -178,6 +178,7 @@ void CountAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
             break;
         }
     }
+    initiated = true;
 }
 
 void CountAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t offset)
@@ -219,57 +220,26 @@ void CountAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t o
     }
 }
 
-void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset)
-{
-    switch (type)
-    {
-        case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *(static_cast<int32_t*>(groupSlot.avgVal)) += *rowVal;
-            groupSlot.avgCnt++;
-            break;
-        }
-        case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *(static_cast<int64_t*>(groupSlot.avgVal)) += *rowVal;
-            groupSlot.avgCnt++;
-            break;
-        }
-        case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *(static_cast<double*>(groupSlot.avgVal)) += *rowVal;
-            groupSlot.avgCnt++;
-            break;
-        }
-        default: {
-            DebugError("No such data type %d", type);
-            break;
-        }
-    }
-}
-
 void AverageAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
 {
+    double* val = new double;
     switch (type) 
     {
         case 1: {
             int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            int32_t* val = new int32_t;
-            *val = *rowVal;
+            *val = *rowVal / 1.0;
             nonGroupState = {{val, 1}};
             break; 
         }
         case 2: {
             int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            int64_t* val = new int64_t;
-            *val = *rowVal;
+            *val = *rowVal / 1.0;
             nonGroupState = {{val, 1}};
             break; 
         }
         case 3: {
             double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            double* val = new double;
-            *val = *rowVal;
+            *val = *rowVal / 1.0;
             nonGroupState = {{val, 1}};
             break; 
         }
@@ -288,25 +258,22 @@ void AverageAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t off
         initiate(colPtr, type, offset);
         return;
     }
-
+    double* currentVal = static_cast<double*>(nonGroupState.avgVal);
     switch (type)
     {
         case 1: {
             int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *(static_cast<int32_t*>(nonGroupState.val)) += *rowVal;
-            nonGroupState.avgCnt++;
+            *currentVal = (*rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         case 2: {
             int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *(static_cast<int64_t*>(nonGroupState.avgVal)) += *rowVal;
-            nonGroupState.avgCnt++;
+            *currentVal = (*rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         case 3: {
             double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *(static_cast<double*>(nonGroupState.avgVal)) += *rowVal;
-            nonGroupState.avgCnt++;
+            *currentVal = (*rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         default: {
@@ -318,30 +285,55 @@ void AverageAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t off
 
 void AverageAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t offset)
 {
+    double* val = new double;
     switch (type)
     {
         case 1: {
             int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            int32_t* val = new int32_t;
-            *val = *rowVal;
+            *val = *rowVal / 1.0;
             GroupBySlot slot = {{val, 1}};
             groupState.insert({key, slot});
             break;
         }
         case 2: {
             int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            int64_t* val = new int64_t;
-            *val = *rowVal;
+            *val = *rowVal / 1.0;
             GroupBySlot slot = {{val, 1}};
             groupState.insert({key, slot});
             break;
         }
         case 3: {
             double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            double* val = new double;
-            *val = *rowVal;
+            *val = *rowVal / 1.0;
             GroupBySlot slot = {{val, 1}};
             groupState.insert({key, slot});
+            break;
+        }
+        default: {
+            DebugError("No such data type %d", type);
+            break;
+        }
+    }
+}
+
+void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset)
+{
+    double* currentVal = static_cast<double*>(groupSlot.avgVal);
+    switch (type)
+    {
+        case 1: {
+            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
+            *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            break;
+        }
+        case 2: {
+            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
+            *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            break;
+        }
+        case 3: {
+            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
+            *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
             break;
         }
         default: {
@@ -385,20 +377,23 @@ void MinAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
     switch (type) 
     {
         case 1: {
+            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
             int32_t* val = new int32_t;
-            *val = INT32_MAX;
+            *val = *rowVal;
             nonGroupState = {val};
             break; 
         }
         case 2: {
+            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
             int64_t* val = new int64_t;
-            *val = INT64_MAX;
+            *val = *rowVal;
             nonGroupState = {val};
             break; 
         }
         case 3: {
+            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             double* val = new double;
-            *val = __DBL_MAX__;
+            *val = *rowVal;
             nonGroupState = {val};
             break; 
         }
@@ -508,25 +503,28 @@ void MaxAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t t
 
 void MaxAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
 {
-    switch (type) 
+    switch (type)
     {
         case 1: {
+            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
             int32_t* val = new int32_t;
-            *val = INT32_MIN;
+            *val = *rowVal;
             nonGroupState = {val};
-            break; 
+            break;
         }
         case 2: {
+            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
             int64_t* val = new int64_t;
-            *val = INT64_MIN;
+            *val = *rowVal;
             nonGroupState = {val};
-            break; 
+            break;
         }
         case 3: {
+            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             double* val = new double;
-            *val = __DBL_MIN__;
+            *val = *rowVal;
             nonGroupState = {val};
-            break; 
+            break;
         }
         default: {
             DebugError("No such data type %d", type);
@@ -605,3 +603,4 @@ void MaxAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t off
 
 } // end of namespace op
 } // end of namespace omniruntime
+

@@ -400,26 +400,7 @@ void HashAggregationOperator::constructAggColumn(Table* table,
                     if (resultIterator->second.count == 0) {
                         DebugError("Divisor is zero! key = %ld", resultIterator->first);
                     }
-                    switch (types[groupByColSize + i])
-                        {
-                            case 1:{
-                                reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<int32_t*>(resultIterator->second.avgVal)
-                                / static_cast<double>(resultIterator->second.avgCnt);
-                                break;
-                            }
-                            case 2:{
-                                reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<int64_t*>(resultIterator->second.avgVal)
-                                / static_cast<double>(resultIterator->second.avgCnt);
-                                break;
-                            }
-                            case 3:{
-                                reinterpret_cast<double*>(col->getData())[rIdx++] =  *static_cast<double*>(resultIterator->second.avgVal) 
-                                / static_cast<double>(resultIterator->second.avgCnt);
-                                break;
-                            }
-                            default:
-                                break;
-                        }
+                    reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<double*>(resultIterator->second.avgVal);
                     resultIterator++;
                 }
                 break;
