@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <regex>
 // Need to install re2 library from github.com/google/re2/wiki/Install and run "sudo ldconfig"
-#include <re2/re2.h>
-#include <re2/stringpiece.h>
+// #include <re2/re2.h>
+// #include <re2/stringpiece.h>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -64,7 +64,11 @@ extern "C" DLLEXPORT bool likeExt(int64_t str, int64_t regexToMatch) {
     string S = string(Sp);
     string R = string(Rp);
     // Using re2 library
-    return RE2::FullMatch(S, R);
+    // return RE2::FullMatch(S, R);
+
+    // Using std regex library
+    regex Re = regex(R);
+    return regex_match(S, Re);
 }
 
 
