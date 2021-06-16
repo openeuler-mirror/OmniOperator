@@ -7,17 +7,21 @@ using namespace std;
 
 string exprTypeString(ExprType et) {
     switch (et) {
+        case ExprType::DATA_E: return "data";
         case ExprType::BINARY_E: return "binary";
         case ExprType::UNARY_E: return "unary";
-        case ExprType::CALL_E: return "call";
-        case ExprType::DATA_E: return "data";
+        case ExprType::IN_E: return "in";
+        case ExprType::IF_E: return "if";
+        case ExprType::BETWEEN_E: return "between";
+        case ExprType::COALESCE_E: return "coalesce";
+        case ExprType::FUNC_E: return "function";
         default: return "invalid";
     }
 }
 
 
 int main() {
-    int numTests = 33;
+    int numTests = 32;
     vector<string> simpleTest(numTests);
     // ComparisionExpr, BinaryExpr
     simpleTest[0] = "$operator$LESS_THAN_OR_EQUAL(#0, 14)";
@@ -47,7 +51,7 @@ int main() {
     simpleTest[20] = "IN(#3, 'AIR', 'RAIL', 'MAIL')";
     simpleTest[21] = "OR(AND($operator$EQUAL(#4, 2.34), IN(#3, 'A', 'B', 'C', 'D')), IN(#2, 1, 2, 3, 4, 5))";
     // COALESCE (ex. COALESCE(#2, #3))
-    simpleTest[22] = "COALESCE(#5, #6)";
+    simpleTest[22] = "COALESCE(#4, #6)";
     simpleTest[23] = "AND(COALESCE(#2, #3), not(COALESCE(#4, 5)))";
     // SUBSTR
     simpleTest[24] = "substr(#2, 1, 2)";
@@ -62,7 +66,6 @@ int main() {
     // TODO: fix this case
     simpleTest[30] = "ADD(#1, DIVIDE(abs(SUBTRACT(#6, MULTIPLY(#7, 100))), #7))";
     simpleTest[31] = "$operator$GREATER_THAN(IF($operator$GREATER_THAN(#6, 0), DIVIDE(abs(SUBTRACT(#5, #6)), #6), 0.0), 0.0)";
-    simpleTest[32] = "ADD(#1, 32)";
 
 
 
@@ -98,8 +101,7 @@ int main() {
     expected[28] = "In(Cast(#12), 1.000000, 2.000000, 3.000000)";
     expected[29] = "If(Bin(OR, Cmp(EQ, #0, 'abc'), Cmp(EQ, #0, 'xyz')), 1, 0)";
     expected[30] = "Arith(ADD, #1, Arith(DIV, Abs(Arith(SUB, #6, Arith(MUL, #7, 100))), #7))";
-    expected[31] = "Cmp(GT, If(Cmp(GT, #6, 0), Arith(DIV, Abs(Arith(SUB, #5, #6)), #6), 0.000000), 0.000000)";
-    expected[32] = "Arith(ADD, #1, 32)";
+    expected[31] = "Cmp(GT, If(Cmp(GT, #6, 0), Arith(DIV, abs(Arith(SUB, #5, #6)), #6), 0.000000), 0.000000)";
 
 
     Parser parserObj;
@@ -112,12 +114,12 @@ int main() {
     // To test with debugging output (cd to core/src/common): clang++ -g -D DEBUG *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
 
     for (int i = 0; i < numTests; i++) {
-    //for (int i = 32; i <= 32; i++) {
+    //for (int i = 24; i <= 31; i++) {
         std::cout << "simpleTest[" << i << "]" << std::endl;
         std::cout << "RowExpression:::" << simpleTest[i] << std::endl;
         Expr* result = parserObj.parseRowExpression(simpleTest[i], inputTypes, vecCount);
         std::cout << "ExprType:::" << exprTypeString(result->getType()) << std::endl;
-        std::cout << "DataType:::" << dataTypeString(result->getExprDataType()) << std::endl;
+        // std::cout << "DataType:::" << dataTypeString(result->dataType) << std::endl;
         std::cout << "______________________________________" << std::endl;
         std::cout << " Final expression tree:::";
         result->printExprTree();
