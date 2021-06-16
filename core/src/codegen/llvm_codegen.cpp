@@ -1,4 +1,52 @@
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <memory>
+#include <vector>
+#include <cassert>
+#include <ctime>
+#include <regex>
+
 #include "llvm_codegen.h"
+#include "../common/expressions.h"
+#include "../common/parser/parser.h"
+#include "./functions/mathfunctions.h"
+#include "./functions/stringfunctions.h"
+
+
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+
+using namespace llvm;
+using namespace orc;
+
+unique_ptr<LLVMContext> context;
+unique_ptr<IRBuilder<>> builder;
+unique_ptr<Module> _module;
+ExitOnError EOE;
+unique_ptr<LLJIT> JIT;
+ResourceTrackerSP rt;
+std::string _func_name;
+
+Value* LLVMCodeGen::createConstantBool(bool v) {
+    return ConstantInt::get(*context, APInt(1, v));
+}
 
 
 using namespace llvm;
@@ -578,6 +626,7 @@ Value* LLVMCodeGen::parseExpr(Expr* root, map<string, Value*>& args) {
             return this->createConstantBool(false);
         }
     }
+    return createConstantInt(0);
 }
 
 
@@ -760,3 +809,183 @@ int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
     auto sym = JIT->lookup("FILTER_WRAPPER");
     return sym->getAddress();
 }
+
+
+
+
+void simpleTest1(int argc, char** argv) {  
+    // string unparsed = "$operator$GREATER_THAN(#0, 0)";
+    string unparsed = "AND($operator$GREATER_THAN_OR_EQUAL(ADD(#0, 2), 4), AND($operator$LESS_THAN(#1, 4), $operator$EQUAL(#2, 2)))";
+
+
+    DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
+    Parser parser{};
+    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
+    expr->printExprTree();
+    cout << ":::type:::" << expr->getType();
+    cout << endl;
+    
+    int32_t v1[1] = {atoi(argv[1])};
+    int32_t v2[1] = {atoi(argv[2])};
+    int32_t v3[1] = {atoi(argv[3])};
+    int64_t* vals = new int64_t[3];
+    vals[0] = (int64_t) v1;
+    vals[1] = (int64_t) v2;
+    vals[2] = (int64_t) v3;
+    int32_t *selected = new int32_t[1];
+    cout << v1[0] << " " << v2[0] << " " << v3[0] << endl;
+
+    string testname = "simpleTest1";
+    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
+    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+
+    cout << "codegen created!" << endl; 
+    lc->compile();
+    cout << "codegen compiled!" << endl;
+    // lc.dumpCode();
+
+    int32_t result = lc->execute(vals, 1, selected);
+    cout << result << endl; // number of rows that passed filter
+
+    delete[] vals;
+    delete[] selected;
+    delete lc;
+    delete expr;
+}
+
+void simpleTest2(int argc, char** argv) {
+    // string unparsed = "IN(#0, 1, 2, 3, 4, 5)";
+    // string unparsed = "IF($operator$GREATER_THAN(#0, 100), $operator$GREATER_THAN(#0, 200), $operator$LESS_THAN(#0, 0))";
+    // string unparsed = "BETWEEN(#1, #0, #2)";
+    // string unparsed = "$operator$EQUAL(abs(#0), #1)";
+    string unparsed = "AND($operator$EQUAL(abs(#0), abs(#2)), $operator$EQUAL(abs(#0), abs(#1)))";
+
+    DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
+    Parser parser{};
+    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
+    expr->printExprTree();
+    cout << ":::type:::" << expr->getType();
+    cout << endl;
+    
+    int32_t v1[1] = {atoi(argv[1])};
+    int32_t v2[1] = {atoi(argv[2])};
+    int32_t v3[1] = {atoi(argv[3])};
+    int64_t* vals = new int64_t[3];
+    vals[0] = (int64_t) v1;
+    vals[1] = (int64_t) v2;
+    vals[2] = (int64_t) v3;
+    int32_t *selected = new int32_t[1];
+    cout << v1[0] << " " << v2[0] << " " << v3[0] << endl;
+
+    string testname = "simpleTest2";
+    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
+    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+
+    cout << "codegen created!" << endl; 
+    lc->compile();
+    cout << "codegen compiled!" << endl;
+    // lc.dumpCode();
+
+    int32_t result = lc->execute(vals, 1, selected);
+    cout << result << endl; // number of rows that passed filter
+
+    // TODO: fix all memory leaks
+    delete[] vals;
+    delete[] selected;
+    delete lc;
+    delete expr;
+}
+
+// For testing different types
+void simpleTest3(int argc, char** argv) {
+    // string unparsed = "$operator$EQUAL(abs(CAST(#0)), abs(CAST(#1)))";
+    string unparsed = "$operator$GREATER_THAN(CAST(#1), #2)";
+
+    DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
+    Parser parser{};
+    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
+    expr->printExprTree();
+    cout << ":::type:::" << expr->getType();
+    cout << endl;
+    
+    int32_t v1[1] = {atoi(argv[1])};
+    int64_t v2[1] = {atol(argv[2])};
+    double v3[1] = {atof(argv[3])};
+    int64_t* vals = new int64_t[3];
+    vals[0] = (int64_t) v1;
+    vals[1] = (int64_t) v2;
+    vals[2] = (int64_t) v3;
+    int32_t *selected = new int32_t[1];
+    cout << v1[0] << " " << v2[0] << " " << v3[0] << endl;
+
+    string testname = "simpleTest3";
+    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
+    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+
+    cout << "codegen created!" << endl; 
+    lc->compile();
+    cout << "codegen compiled!" << endl;
+    // lc.dumpCode();
+
+    int32_t result = lc->execute(vals, 1, selected);
+    cout << result << endl; // number of rows that passed filter
+
+    delete[] vals;
+    delete[] selected;
+    delete lc;
+    delete expr;
+}
+
+void stringTest1(int argc, char** argv) {
+    // string unparsed = "$operator$EQUAL('hello world', 'hello worldjdflskgj')";
+    // string unparsed = "$operator$EQUAL(#1, #2)";
+    // string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
+    // string unparsed = "$operator$EQUAL(substr(#1, 0, 5), #2)";
+    // string unparsed = "$operator$EQUAL(CONCAT(#1, #2), 'helloworld')";
+    // string unparsed = "IN(substr(#2, 0, 2), '12', '21', '13', '31', '34', '43')";
+    // string unparsed = "$operator$GREATER_THAN(CAST(#2), #0)";
+    string unparsed = "LIKE(#2, '%hello%world%')";
+    
+
+    DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
+    Parser parser{};
+    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
+    expr->printExprTree();
+    cout << ":::type:::" << expr->getType();
+    cout << endl;
+    
+    int32_t v1[1] = {atoi(argv[1])};
+    int64_t v2[1] = {(int64_t)(argv[2])};
+    int64_t v3[1] = {(int64_t)(argv[3])};
+    int64_t* vals = new int64_t[3];
+    vals[0] = (int64_t) v1;
+    vals[1] = (int64_t) v2;
+    vals[2] = (int64_t) v3;
+    int32_t *selected = new int32_t[1];
+    cout << v1[0] << " " << v2[0] << " " << v3[0] << endl;
+
+    string testname = "stringTest1";
+    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
+    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+
+    cout << "codegen created!" << endl; 
+    lc->compile();
+    cout << "codegen compiled!" << endl;
+
+    int32_t result = lc->execute(vals, 1, selected);
+    cout << result << endl;
+
+    // TODO: fix all memory leaks
+    delete[] vals;
+    delete[] selected;
+    delete lc;
+}
+
+// To run any tests use following command: 
+// clang++ codegen/*.cpp codegen/functions/*.cpp common/expressions.cpp common/parser/*.cpp -DCMAKE_BUILD_TYPE=Debug -g -O3 -rdynamic -frtti -lre2 `llvm-config --cxxflags --ldflags --system-libs --libs` -o llvm_codegen
+// int main(int argc, char** argv) {
+//     // simpleTest1(argc, argv);
+//     // simpleTest2(argc, argv);
+//     // simpleTest3(argc, argv);
+//     stringTest1(argc, argv);
+// }

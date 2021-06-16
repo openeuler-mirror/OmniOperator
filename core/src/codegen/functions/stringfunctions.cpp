@@ -65,7 +65,6 @@ extern "C" DLLEXPORT int64_t substrWithStartExt(int64_t str, int32_t startIdx) {
 
 extern "C" DLLEXPORT int64_t substrExt(int64_t str, int32_t startIdx, int32_t length) {
     char* s = (char*) str;
-
 	char *ret = reinterpret_cast<char*>(malloc(length + 1));
 	for (int i = 0; i < length; i++) {
 		ret[i] = s[startIdx + i];
