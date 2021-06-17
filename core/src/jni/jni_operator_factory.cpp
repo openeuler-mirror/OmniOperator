@@ -11,6 +11,7 @@
 #include "../operator/aggregation/group_aggregation.h"
 #include "../operator/aggregation/non_group_aggregation.h"
 #include "../operator/filter/filter.h"
+#include "../operator/window/window.h"
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
 #include "config.h"
@@ -305,6 +306,64 @@ JitContext *createSortJitContext(
 
     JNI_DEBUG_LOG("create jit sort context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jSourceTypes,jintArray jOutputChannels,jintArray jWindowFunction, jintArray jPartitionChannels,jintArray JPreGroupedChannels,jintArray jSortChannels,jintArray jSortOrder,jintArray jSortNullFirsts,jint preSortedChannelPrefix,jint expectedPositions,jintArray jArgumentChannels,jintArray jWindowFunctionReturnType)
+{
+    jint *sourceTypes=env->GetIntArrayElements(jSourceTypes,JNI_FALSE);
+    jint *outputChannels=env->GetIntArrayElements(jOutputChannels,JNI_FALSE);
+    jint *windowFunction=env->GetIntArrayElements(jWindowFunction,JNI_FALSE);
+    jint *partitionChannels=env->GetIntArrayElements(jPartitionChannels,JNI_FALSE);
+    jint *preGroupedChannels=env->GetIntArrayElements(JPreGroupedChannels,JNI_FALSE);
+    jint *sortChannels=env->GetIntArrayElements(jSortChannels,JNI_FALSE);
+    jint *sortOrder=env->GetIntArrayElements(jSortOrder,JNI_FALSE);
+    jint *sortNullFirsts=env->GetIntArrayElements(jSortNullFirsts,JNI_FALSE);
+    jint *argumentChannels = env->GetIntArrayElements(jArgumentChannels, JNI_FALSE);
+    jint *windowFunctionReturnType = env->GetIntArrayElements(jWindowFunctionReturnType, JNI_FALSE);
+
+    jint sourceTypeCount = env->GetArrayLength(jSourceTypes);
+    jint outputColsCount=env->GetArrayLength(jOutputChannels);
+    jint windowFunctionCount=env->GetArrayLength(jWindowFunction);
+    jint partitionCount=env->GetArrayLength(jPartitionChannels);
+    jint preGroupedCount=env->GetArrayLength(JPreGroupedChannels);
+    jint sortColCount=env->GetArrayLength(jSortChannels);
+    jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
+    jint windowFunctionReturnTypeCount = env->GetArrayLength(jWindowFunctionReturnType);
+
+    int32_t allCount=sourceTypeCount+windowFunctionReturnTypeCount;
+    int32_t *allTypes = new int32_t[allCount];
+    for (int i = 0; i <sourceTypeCount ; ++i) {
+        allTypes[i] = sourceTypes[i];
+    }
+    for (int i = sourceTypeCount; i < allCount; ++i) {
+        allTypes[i] = windowFunctionReturnType[i - sourceTypeCount];
+    }
+
+    omniruntime::op::WindowOperatorFactory *windowOperatorFactory =new omniruntime::op::WindowOperatorFactory(
+                    sourceTypes,
+                    sourceTypeCount,
+                    outputChannels,
+                    outputColsCount,
+                    windowFunction,
+                    windowFunctionCount,
+                    partitionChannels,
+                    partitionCount,
+                    preGroupedChannels,
+                    preGroupedCount,
+                    sortChannels,
+                    sortOrder,
+                    sortNullFirsts,
+                    sortColCount,
+                    preSortedChannelPrefix,
+                    expectedPositions,
+                    allTypes,
+                    allCount,
+                    argumentChannels,
+                    argumentChannelsCount
+                    );
+    windowOperatorFactory->setJitContext(NULL);
+    return (int64_t) windowOperatorFactory;
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory
