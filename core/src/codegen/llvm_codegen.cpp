@@ -418,7 +418,7 @@ int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
     // Return the filled in results.
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
-    _module->print(errs(), nullptr);
+    // _module->print(errs(), nullptr);
     auto resTracker = JIT->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = ThreadSafeModule(move(_module), move(context));
     EOE(JIT->addIRModule(resTracker, move(threadSafeModule)));
