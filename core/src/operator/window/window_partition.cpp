@@ -47,7 +47,6 @@ void WindowPartition::processNextRow(Table *table, int32_t index, int32_t *sourc
     currentPosition++;
 }
 
-
 bool positionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partitionHashStrategy, int leftPosition,
     int rightPosition)
 {

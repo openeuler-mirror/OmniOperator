@@ -1,4 +1,6 @@
+#include <cstring>
 #include "window_function.h"
+#include "../../util/debug.h"
 
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t size)
 {
@@ -59,30 +61,137 @@ void RowNumberFunction::processRow(Column *column, int32_t index, bool newPeerGr
 
 AggregateWindowFunction::~AggregateWindowFunction()
 {
-    delete[] argumentChannels;
 }
 
-AggregateWindowFunction::AggregateWindowFunction(int32_t *argumentChannels, int32_t argumentChannelsCount)
+AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, int32_t dataType)
 {
-    this->argumentChannels = new int32_t[argumentChannelsCount];
+    int32_t intByteLen = sizeof(int32_t);
+    this->argumentChannels = argumentChannels;
+    this->aggregationType = aggregationType;
+    this->dataType = dataType;
 }
 
 void AggregateWindowFunction::reset(WindowIndex *windowIndex)
 {
     this->windowIndex = windowIndex;
+    resetAccumulator();
 }
 
 void AggregateWindowFunction::processRow(Column *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
     int32_t frameStart, int32_t frameEnd)
 {
-    Column ***leftColumns = windowIndex->getPagesIndex()->getColumns();
-    int64_t leftValueAddress = windowIndex->getPagesIndex()->getValueAddresses()[0];
-    int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
-    int32_t leftColumnPosition = decodePosition(leftValueAddress);
-
-    Column *tempColumn = leftColumns[argumentChannels[0]][leftColumnIndex];
-
-    if (!tempColumn->isNull(leftColumnPosition)) {
-        column->setValue(index, tempColumn->getValue(leftColumnPosition));
+    if (frameStart < 0) {
+        resetAccumulator();
+    } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
+        // same or expanding frame
+        accumulate(currentEnd + 1, frameEnd);
+        currentEnd = frameEnd;
+    } else {
+        // different frame
+        resetAccumulator();
+        accumulate(frameStart, frameEnd);
+        currentStart = frameStart;
+        currentEnd = frameEnd;
     }
-};
+    evaluateFinal(aggregator, column, index);
+}
+omniruntime::op::Aggregator *createAccumulator(int32_t aggregationType, int32_t dataType)
+{
+    switch (aggregationType) {
+        case WIN_SUM:
+            return new omniruntime::op::SumAggregator(dataType);
+        case WIN_COUNT:
+            return new omniruntime::op::CountAggregator(dataType);
+        case WIN_AVG:
+            return new omniruntime::op::AverageAggregator(dataType);
+        case WIN_MAX:
+            return new omniruntime::op::MaxAggregator(dataType);
+        case WIN_MIN:
+            return new omniruntime::op::MinAggregator(dataType);
+        default:
+            break;
+    }
+}
+
+void AggregateWindowFunction::resetAccumulator()
+{
+    if (currentStart >= 0) {
+        aggregator = createAccumulator(aggregationType, dataType);
+        currentStart = -1;
+        currentEnd = -1;
+    }
+}
+
+void AggregateWindowFunction::evaluateFinal(omniruntime::op::Aggregator *pAggregator, Column *pColumn, int32_t index)
+{
+    auto state = pAggregator->getNonGroupState();
+    switch (aggregationType) {
+        case WIN_SUM:
+        case WIN_MAX:
+        case WIN_MIN:
+            pColumn->setValue(index, state.val);
+            break;
+        case WIN_COUNT:
+            pColumn->setValue(index, (void *)(&state.count));
+            break;
+        case WIN_AVG:
+            pColumn->setValue(index, state.avgVal);
+            break;
+        default:
+            break;
+    }
+}
+
+void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
+{
+    Column ***leftColumns = windowIndex->getPagesIndex()->getColumns();
+    void *res = nullptr;
+    switch (dataType) {
+        case INT32: {
+            int32_t *ptr = new int32_t[end - start + 1];
+            res = (void *)(ptr);
+            break;
+        }
+        case INT64: {
+            int64_t *ptr = new int64_t[end - start + 1];
+            res = (void *)(ptr);
+            break;
+        }
+        case DOUBLE: {
+            double *ptr = new double[end - start + 1];
+            res = (void *)(ptr);
+            break;
+        }
+        default:
+            break;
+    }
+    for (int32_t position = start; position <= end; ++position) {
+        int64_t leftValueAddress = windowIndex->getPagesIndex()->getValueAddresses()[position];
+        int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
+        int32_t leftColumnPosition = decodePosition(leftValueAddress);
+        Column *tempColumn = leftColumns[argumentChannels][leftColumnIndex];
+        if (!tempColumn->isNull(leftColumnPosition)) {
+            void *actualValue = tempColumn->getValue(leftColumnPosition);
+            switch (tempColumn->getType()) {
+                case INT32: {
+                    int32_t actual = *((int32_t *)actualValue);
+                    ((int32_t *)res)[position - start] = actual;
+                    break;
+                }
+                case INT64: {
+                    int64_t actual = *((int64_t *)actualValue);
+                    ((int64_t *)res)[position - start] = actual;
+                    break;
+                }
+                case DOUBLE: {
+                    double actual = *((double *)actualValue);
+                    ((double *)res)[position - start] = actual;
+                    break;
+                }
+                default:
+                    break;
+            }
+            aggregator->processNonGroup(res, dataType, position - start);
+        }
+    }
+}

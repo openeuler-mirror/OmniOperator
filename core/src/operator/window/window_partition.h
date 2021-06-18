@@ -22,7 +22,7 @@ public:
         this->end = end;
     }
 
-    ~Range(){}
+    ~Range() {}
 
     int32_t getStart()
     {
@@ -40,6 +40,7 @@ public:
     WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd, int32_t *outputChannels,
         int32_t outputChannelsCount, vector<WindowFunction *> &windowFunctions,
         PagesHashStrategy *peerGroupHashStrategy);
+
     ~WindowPartition();
 
     int32_t getPartitionEnd()
@@ -60,7 +61,7 @@ public:
     {
         int32_t rowPosition = currentPosition - partitionStart;
         int32_t endPosition = partitionEnd - partitionStart - 1;
-        return new Range(0, endPosition);
+        return new Range(0, peerGroupEnd - partitionStart - 1);
     }
 
 private:
@@ -79,4 +80,5 @@ private:
 
 bool positionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partitionHashStrategy, int leftPosition,
     int rightPosition);
+
 #endif
