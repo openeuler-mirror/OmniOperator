@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 
+namespace omniruntime {
 namespace expressions {
 
 // Helper function to get DataType from jint type
@@ -46,6 +47,10 @@ DataType Expr::getExprDataType() {
 DataExpr::DataExpr() {
 }
 
+DataExpr::~DataExpr() {
+    if (dataType == STRINGD && !isColumn) delete stringVal;
+}
+
 ExprType DataExpr::getType() {
     return ExprType::DATA_E;
 }
@@ -71,7 +76,7 @@ DataExpr::DataExpr(double val) {
     dataType = DOUBLED;
     doubleVal = val;
 }
-DataExpr::DataExpr(std::string val) {
+DataExpr::DataExpr(std::string* val) {
     isColumn = false;
     dataType = STRINGD;
     stringVal = val;
@@ -351,7 +356,7 @@ void DataExpr::printExprTree() {
                 break;
             case STRINGD:
                 if (printWithTypes) printf("s_");
-                printf("'%s'", stringVal.c_str());
+                printf("'%s'", stringVal->c_str());
                 break;
             default:
                 printf("invalid DataType %d", dataType);
@@ -409,4 +414,5 @@ void FuncExpr::printExprTree() {
     }
 }
 
+}
 }
