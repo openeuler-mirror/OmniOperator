@@ -1,5 +1,9 @@
 #include "mathfunctions.h"
 #include <iostream>
+<<<<<<< HEAD
+=======
+
+>>>>>>> Clean function codegen and fix memory leaks involving strings
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)

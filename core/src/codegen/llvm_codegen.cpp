@@ -1,40 +1,9 @@
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <memory>
-#include <vector>
-#include <cassert>
-#include <ctime>
-#include <regex>
-
 #include "llvm_codegen.h"
-#include "../common/expressions.h"
-#include "../common/parser/parser.h"
-#include "./functions/mathfunctions.h"
-#include "./functions/stringfunctions.h"
 
-
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace orc;
+using namespace omniruntime::expressions;
 
 unique_ptr<LLVMContext> context;
 unique_ptr<IRBuilder<>> builder;

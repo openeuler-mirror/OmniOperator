@@ -62,11 +62,12 @@ bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes) {
     return false;
 }
 
+
 string operatorPrefix = "$operator$";
 Operator opTrans(string op)
 {
     // Comparison operators
-    if (op == operatorPrefix + "EQUAL" || op == "EQUAL") return Operator::EQ;
+    if (op == operatorPrefix + "EQUAL") return Operator::EQ;
     else if (op == operatorPrefix + "LESS_THAN" || op == "LESS_THAN") return Operator::LT;
     else if (op == operatorPrefix + "LESS_THAN_OR_EQUAL" || op == "LESS_THAN_OR_EQUAL") return Operator::LTE;
     else if (op == operatorPrefix + "GREATER_THAN_OR_EQUAL" || op == "GREATER_THAN_OR_EQUAL") return Operator::GTE;
