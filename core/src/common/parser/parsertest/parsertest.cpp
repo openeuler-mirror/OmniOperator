@@ -23,6 +23,8 @@ TEST (ParserTest, ParseTest) {
     int32_t inputTypes[15] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
     int32_t vecCount = 15;
     int numTests = 34;
+
+
     vector<string> simpleTest(numTests);
     // ComparisionExpr, BinaryExpr
     simpleTest[0] = "$operator$LESS_THAN_OR_EQUAL(#0, 14)";
@@ -68,8 +70,9 @@ TEST (ParserTest, ParseTest) {
     simpleTest[30] = "ADD(#1, DIVIDE(abs(SUBTRACT(#6, MULTIPLY(#7, 100))), #7))";
     simpleTest[31] = "$operator$GREATER_THAN(IF($operator$GREATER_THAN(#6, 0), DIVIDE(abs(SUBTRACT(#5, #6)), #6), 0.0), 0.0)";
     simpleTest[32] = "CAST('1994-01-01')";
-    // simpleTest[33] = "LIKE(#2, '%green%')";
-    simpleTest[33] = "3000000000";
+    simpleTest[33] = "LIKE(#2, '%green%')";
+
+
     vector<string> expected(numTests);
     expected[0] = "Cmp(LTE, #0, 14)";
     expected[1] = "Bin(AND, Cmp(GTE, #2, 14), Cmp(LTE, #1, 12))";
@@ -103,8 +106,10 @@ TEST (ParserTest, ParseTest) {
     expected[29] = "If(Bin(OR, Cmp(EQ, #0, 'abc'), Cmp(EQ, #0, 'xyz')), 1, 0)";
     expected[30] = "Arith(ADD, #1, Arith(DIV, Abs(Arith(SUB, #6, Arith(MUL, #7, 100))), #7))";
     expected[31] = "Cmp(GT, If(Cmp(GT, #6, 0), Arith(DIV, abs(Arith(SUB, #5, #6)), #6), 0.000000), 0.000000)";
-    expected[32] = "true";
-    expected[33] = "Like(#2, '.*green.*')";
+    expected[32] = "CAST('1994-01-01')";
+    expected[33] = "LIKE(#2, '.*green.*')";
+
+
     for (int i = 0; i < numTests; i++) {
     // for (int i = 32; i <= 32; i++) {
         std::cout << "simpleTest[" << i << "]" << std::endl;
