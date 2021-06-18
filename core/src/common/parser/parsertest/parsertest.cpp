@@ -1,10 +1,9 @@
+#include "gtest/gtest.h"
 #include "../parser.h"
 #include <stdio.h>
 #include <iostream>
 #include <cstring>
 using namespace std;
-
-
 string exprTypeString(ExprType et) {
     switch (et) {
         case ExprType::DATA_E: return "data";
@@ -18,10 +17,12 @@ string exprTypeString(ExprType et) {
         default: return "invalid";
     }
 }
-
-
-int main() {
-    int numTests = 32;
+TEST (ParserTest, ParseTest) {
+    Parser parserObj;
+    // Sample types (does not look at tests above)
+    int32_t inputTypes[15] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
+    int32_t vecCount = 15;
+    int numTests = 34;
     vector<string> simpleTest(numTests);
     // ComparisionExpr, BinaryExpr
     simpleTest[0] = "$operator$LESS_THAN_OR_EQUAL(#0, 14)";
@@ -57,7 +58,7 @@ int main() {
     simpleTest[24] = "substr(#2, 1, 2)";
     simpleTest[25] = "AND($operator$GREATER_THAN(#13, #12), OR($operator$NOT_EQUAL(#2, 912), $operator$LESS_THAN_OR_EQUAL(#4, #5)))";
     simpleTest[26] = "ADD(124.0, MULTIPLY(#14, 0.2))";
-    simpleTest[27] = "IN(substr(#1, 1, 2), '13', '31', '24', '42')";
+    simpleTest[27] = "IN(substr(#1, 1, 2), '13', '31 sjdf;lkfdsj  djfsldk', '24', '42')";
     // CAST
     simpleTest[28] = "IN(CAST(#12), 1.0, 2.0, 3.0)";
     // IF
@@ -66,9 +67,9 @@ int main() {
     // TODO: fix this case
     simpleTest[30] = "ADD(#1, DIVIDE(abs(SUBTRACT(#6, MULTIPLY(#7, 100))), #7))";
     simpleTest[31] = "$operator$GREATER_THAN(IF($operator$GREATER_THAN(#6, 0), DIVIDE(abs(SUBTRACT(#5, #6)), #6), 0.0), 0.0)";
-
-
-
+    simpleTest[32] = "CAST('1994-01-01')";
+    // simpleTest[33] = "LIKE(#2, '%green%')";
+    simpleTest[33] = "3000000000";
     vector<string> expected(numTests);
     expected[0] = "Cmp(LTE, #0, 14)";
     expected[1] = "Bin(AND, Cmp(GTE, #2, 14), Cmp(LTE, #1, 12))";
@@ -97,29 +98,20 @@ int main() {
     expected[24] = "Substr(#2, 1, 2)";
     expected[25] = "Bin(AND, Cmp(GT, #13, #12), Bin(OR, Cmp(NEQ, #2, 912), Cmp(LTE, #4, #5)))";
     expected[26] = "Arith(ADD, 124.000000, Arith(MUL, #14, 0.200000))";
-    expected[27] = "In(Substr(#1, 1, 2), '13', '31', '24', '42')";
+    expected[27] = "In(substr(#1, 1, 2), '13', '31 sjdf;lkfdsj  djfsldk', '24', '42')";
     expected[28] = "In(Cast(#12), 1.000000, 2.000000, 3.000000)";
     expected[29] = "If(Bin(OR, Cmp(EQ, #0, 'abc'), Cmp(EQ, #0, 'xyz')), 1, 0)";
     expected[30] = "Arith(ADD, #1, Arith(DIV, Abs(Arith(SUB, #6, Arith(MUL, #7, 100))), #7))";
     expected[31] = "Cmp(GT, If(Cmp(GT, #6, 0), Arith(DIV, abs(Arith(SUB, #5, #6)), #6), 0.000000), 0.000000)";
-
-
-    Parser parserObj;
-
-    // Sample types (does not look at tests above)
-    int32_t inputTypes[15] = {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3};
-    int32_t vecCount = 15;
-
-    // To test (cd to core/src/common): clang++ -g *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
-    // To test with debugging output (cd to core/src/common): clang++ -g -D DEBUG *.cpp parser/*.cpp parser/parsertest/*.cpp -o parsetest
-
+    expected[32] = "true";
+    expected[33] = "Like(#2, '.*green.*')";
     for (int i = 0; i < numTests; i++) {
-    //for (int i = 24; i <= 31; i++) {
+    // for (int i = 32; i <= 32; i++) {
         std::cout << "simpleTest[" << i << "]" << std::endl;
         std::cout << "RowExpression:::" << simpleTest[i] << std::endl;
         Expr* result = parserObj.parseRowExpression(simpleTest[i], inputTypes, vecCount);
         std::cout << "ExprType:::" << exprTypeString(result->getType()) << std::endl;
-        // std::cout << "DataType:::" << dataTypeString(result->dataType) << std::endl;
+        std::cout << "DataType:::" << dataTypeString(result->dataType) << std::endl;
         std::cout << "______________________________________" << std::endl;
         std::cout << " Final expression tree:::";
         result->printExprTree();
