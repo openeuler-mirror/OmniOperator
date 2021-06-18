@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 
+namespace omniruntime {
 namespace expressions {
 
 // place holder context class here
@@ -84,15 +85,16 @@ public:
     int32_t intVal;
     int64_t longVal;
     double doubleVal;
-    std::string stringVal;
+    std::string* stringVal;
     int32_t colVal;
 
     DataExpr();
+    ~DataExpr();
     DataExpr(bool val);
     DataExpr(int32_t val);
     DataExpr(int64_t val);
     DataExpr(double val);
-    DataExpr(std::string val);
+    DataExpr(std::string* val);
     DataExpr(int32_t val, DataType colType);
 
     void printExprTree();
@@ -217,5 +219,6 @@ public:
     ExprType getType();
 };
 
+}
 }
 #endif

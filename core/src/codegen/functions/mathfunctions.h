@@ -2,13 +2,9 @@
 #define __MATHFUNCTIONS_H__
 
 #include <iostream>
-#include <string>
-#include <cstring>
-#include <memory>
-#include <vector>
-#include <cassert>
-#include <algorithm>
 
+
+// All extern functions go here temporarily
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else

@@ -5,6 +5,7 @@
 #include "../common/parser/parser.h"
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
+#include "./func_registry.h"
 
 #include <iostream>
 #include <string>
@@ -35,7 +36,7 @@
 using namespace llvm;
 using namespace orc;
 using namespace std;
-using namespace expressions;
+using namespace omniruntime::expressions;
 
 // Given an expression generates the function for it.
 class LLVMCodeGen
@@ -45,6 +46,11 @@ public:
     LLVMCodeGen(std::string name, Expr *expr, vector<DataType>* datatypes);
     ~LLVMCodeGen();
 
+    void registerFunctionFromSignature(FunctionSignature func_signature);
+    // Should be private
+    void registerFunc(void* funcAddr, string funcName, llvm::Type* retType, vector<Type*> paramTypes);
+    void registerFunctions();
+
     // compile the generated code
     void compile();
     // todo: make this take a 2d array and return array of selected rows
@@ -53,37 +59,61 @@ public:
 
 
 private:
-    void registerFunc(void* funcAddr, string funcName, llvm::Type* retType, vector<Type*> paramTypes);
-    void registerFunctions();
-
-    Value* parseExpr(Expr* root, map<string, Value*>& args);
-    // Generate the functions
-    Function* generateFunc();
-    int64_t createWrapper(Function* filterFunc);
-
     Value* createConstantBool(bool v);
     Value* createConstantInt(int32_t n);
     Value* createConstantLong(int64_t n);
     Value* createConstantDouble(double n);
     Type* toLLVMType(DataType t);
+    
+    // Parsing different kinds of expressions
+    Value* parseDataExpr(DataExpr* dExpr, map<string, Value*>& args);
+    Value* parseBinaryExpr(BinaryExpr* bExpr, map<string, Value*>& args);
+    Value* parseUnaryExpr(UnaryExpr* uExpr, map<string, Value*>& args);
+    Value* parseIfExpr(IfExpr* ifExpr, map<string, Value*>& args);
+    Value* parseInExpr(InExpr* inExpr, map<string, Value*>& args);
+    Value* parseBetweenExpr(BetweenExpr* btExpr, map<string, Value*>& args);
+    Value* parseCoalesceExpr(CoalesceExpr* cExpr, map<string, Value*>& args);
+    Value* parseFuncExpr(FuncExpr* fExpr, map<string, Value*>& args);
 
-    Value* stringEq(Value* LHS, Value* RHS);
+    // Calls the above methods
+    Value* parseExpr(Expr* root, map<string, Value*>& args);
+
+    // Generate the functions
+    Function* generateFunc();
+    int64_t createWrapper(Function* filterFunc);
+
+    // Helper functions for generating IR for operators and special forms
     Value* stringCmp(Value *LHS, Value *RHS);
     Function* createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse);
-    Value* funcCodegen(FuncExpr* fExpr, map<string, Value*>& args);
+    
+
 
     std::string _func_name;
     Expr* _expr = nullptr;
     vector<DataType>* datatypes;
 
     int32_t (*_filter)(int64_t*, int32_t, int32_t*);
+    
     unique_ptr<LLVMContext> context;
     unique_ptr<IRBuilder<>> builder;
     unique_ptr<Module> _module;
-    ExitOnError EOE;
+    ExitOnError EOE; 
     unique_ptr<LLJIT> JIT;
     ResourceTrackerSP rt;
 
+
+    // List of functions
+    const string strCompareExt_str = "strCompareExt"; 
+    const string likeExt_str = "likeExt";
+    const string abs_int32_str = "abs_int32";
+    const string abs_int64_str = "abs_int64";
+    const string abs_double_str = "abs_double";
+    const string substrExt_str = "substrExt";
+    const string substrWithStartExt_str = "substrWithStartExt";
+    const string concatStrExt_str = "concatStrExt";
+    const string cast_int32_str = "cast_int32";
+    const string cast_int64_str = "cast_int64";
+    const string cast_string_str = "cast_string";
 };
 
 #endif

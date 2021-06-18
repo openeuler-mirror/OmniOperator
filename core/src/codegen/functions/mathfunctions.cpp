@@ -1,11 +1,6 @@
 #include "mathfunctions.h"
 #include <iostream>
-#include <string>
-#include <cstring>
-#include <memory>
-#include <vector>
-#include <cassert>
-#include <algorithm>
+
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
