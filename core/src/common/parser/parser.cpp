@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <iostream>
 #include <cstring>
-#include <stack> // std::stack
+#include <stack> 
 #include <algorithm>
 using namespace std;
 
-using namespace expressions;
+using namespace omniruntime::expressions;
 
 
 // Update with function return type every time a new function is added
@@ -28,12 +28,12 @@ bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes) {
     if (fnName == "CAST" && args.size() == 1) {
         return true;
     }
-    if (fnName == "substr" && args.size() == 3) {
+    if (fnName == "substr" && (args.size() == 2 || args.size() == 3)) {
         if (!checkTypes) return true;
 
         if (args[0]->dataType == STRINGD && 
         (args[1]->dataType == INT32D || args[1]->dataType == INT64D) && 
-        (args[2]->dataType == INT32D || args[2]->dataType == INT64D)) {
+        (args.size() == 2 || (args[2]->dataType == INT32D || args[2]->dataType == INT64D))) {
             return true;
         }
     }
@@ -62,11 +62,12 @@ bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes) {
     return false;
 }
 
+
 string operatorPrefix = "$operator$";
 Operator opTrans(string op)
 {
     // Comparison operators
-    if (op == operatorPrefix + "EQUAL" || op == "EQUAL") return Operator::EQ;
+    if (op == operatorPrefix + "EQUAL") return Operator::EQ;
     else if (op == operatorPrefix + "LESS_THAN" || op == "LESS_THAN") return Operator::LT;
     else if (op == operatorPrefix + "LESS_THAN_OR_EQUAL" || op == "LESS_THAN_OR_EQUAL") return Operator::LTE;
     else if (op == operatorPrefix + "GREATER_THAN_OR_EQUAL" || op == "GREATER_THAN_OR_EQUAL") return Operator::GTE;
@@ -84,7 +85,6 @@ Operator opTrans(string op)
     else if (op == operatorPrefix + "MODULUS" || op == "MODULUS") return Operator::MOD;
     else return Operator::INVALIDOP;
 }
-
 
 OperatorReturnType getBinaryOperatorType(string opStr) 
 {
@@ -229,7 +229,7 @@ DataType getDataType(string data, int32_t* inputTypes, int32_t vecCount)
         }
     }
     if (isIntOrLong) {
-        long longVal = stol(data);
+        int64_t longVal = stol(data);
         if (INT32_MIN <= longVal && longVal <= INT32_MAX) return INT32D;
         return INT64D;
     }
@@ -251,11 +251,23 @@ DataType getDataType(string data, int32_t* inputTypes, int32_t vecCount)
 
     return DOUBLED;
 }
+// Helper function to turn all % to .* for regex wildcard matching
+string* fixString(string dataStr) {
+    string* fixedStr = new string("");
+    for (int i = 0; i < dataStr.size(); i++) {
+        if (dataStr[i] == '%') {
+            fixedStr->push_back('.');
+            fixedStr->push_back('*');
+        }
+        else fixedStr->push_back(dataStr[i]);
+    }
+    return fixedStr;
+}
 
 DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecCount)
 {
     #ifdef DEBUG
-    // std::cout << "generating data:::" << dataStr << std::endl;
+    std::cout << "generating data:::" << dataStr << std::endl;
     #endif    
     // Case with boolean true/false
     if (dataStr == "true") return new DataExpr(true);
@@ -263,9 +275,12 @@ DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecC
 
     // Other cases
     DataType currDataType = getDataType(dataStr, inputTypes, vecCount);
+    #ifdef DEBUG
+    cout << "currDataType: " << currDataType << endl;
+    #endif
     // Case with normal string format (ex. 'hello')
     if (currDataType == STRINGD && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
-        return new DataExpr(dataStr.substr(1, dataStr.size() - 2));
+        return new DataExpr(fixString(dataStr.substr(1, dataStr.size() - 2)));
     }
     // Case with column
     if (dataStr[0] == '#') {
@@ -289,8 +304,9 @@ DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecC
             return new DataExpr(stol(dataStr));
         case DOUBLED: 
             return new DataExpr(stod(dataStr));
-        case STRINGD: 
-            return new DataExpr(dataStr);
+        case STRINGD: {
+            return new DataExpr(fixString(dataStr));
+        }
         default:
             // create string data with value "Invalid data"
             return new DataExpr("Invalid data"); 
