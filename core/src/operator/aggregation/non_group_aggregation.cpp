@@ -1,4 +1,6 @@
 #include "non_group_aggregation.h"
+#include "../../jit/annotation.h"
+#include "../optimization.h"
 
 namespace omniruntime {
 namespace op {
@@ -164,7 +166,7 @@ int32_t AggregationOperator::addInput(Table** tables, int32_t* rowCount, int32_t
     return 0;
 }
 
-
+SPECIALIZE(OMNIJIT_NON_GROUP_INLOOP)
 void AggregationOperator::inLoop(char** vecPtrs, uint32_t offset, int32_t colNum, int32_t* aggDataType, int32_t* aggFuncType)
 {
     for (int32_t aggIdx = 0; aggIdx < colNum; ++aggIdx) {

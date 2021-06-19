@@ -5,7 +5,9 @@
 #include <time.h>
 #include <vector>
 #include <iostream>
-#include "../../src/jit/hammer.h"
+#include "../../src/jit/jit.h"
+#include "../../src/jit/specialization.h"
+#include "../../src/operator/optimization.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/SourceMgr.h"
 #include <thread>
@@ -288,7 +290,7 @@ void perfTest(int64_t moduleAddr, Table** input, int32_t pageNum, int32_t* rowCo
 
 uint64_t prepare_group()
 {
-    using namespace omniruntime::codegen;
+    using namespace omniruntime::jit;
     using namespace omniruntime::op;
     uint32_t* groupCols = new uint32_t[2];
     groupCols[0] = 0;
@@ -314,8 +316,6 @@ uint64_t prepare_group()
     PrepareContext aggFuncTypeContext = {aggFunType, 2};
     PrepareContext retTypesContext = {retTypes, 4};
 
-    std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
     int32_t colNum = groupByColContext.len + aggColContext.len;
@@ -337,40 +337,44 @@ uint64_t prepare_group()
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@5"] = &p_groupByColIdx;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@7"] = &p_aggColIdx;    
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
+    Specialization *inloopSp = new Specialization();
+    inloopSp->addSpecializedParam(3, &p_col_type);
+    inloopSp->addSpecializedParam(4, &p_col_count);
+    inloopSp->addSpecializedParam(5, &p_groupByColIdx);
+    inloopSp->addSpecializedParam(6, &p_group_num);
+    inloopSp->addSpecializedParam(7, &p_aggColIdx);
+    inloopSp->addSpecializedParam(8, &p_agg_num);
+    inloopSp->addSpecializedParam(9, &p_agg_types);
 
-    testParam["processAgg@2"] = &p_agg_num;
-    testParam["processAgg@3"] = &p_col_type;
-    testParam["processAgg@4"] = &p_aggColIdx;
+    Specialization *processAggSp = new Specialization();
+    processAggSp->addSpecializedParam(2, &p_agg_num);
+    processAggSp->addSpecializedParam(3, &p_col_type);
+    processAggSp->addSpecializedParam(4, &p_aggColIdx);
 
-    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@2"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@3"] = &p_group_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@2"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@3"] = &p_agg_num;
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/group_aggregation.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
+    Specialization *hashColumnSp = new Specialization();
+    hashColumnSp->addSpecializedParam(2, &p_col_type);
+    hashColumnSp->addSpecializedParam(3, &p_group_num);
 
-    deps.push_back(&hammer3);
-    deps.push_back(&hammer2);
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    Specialization *aggColumnSp = new Specialization();
+    aggColumnSp->addSpecializedParam(2, &p_col_type);
+    aggColumnSp->addSpecializedParam(3, &p_agg_num);
 
-    auto func = (hashagg_module)(jitter->lookup("_ZN11omniruntime2op30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
+    std::map<std::string, Specialization> hashGroupbySps = {
+        {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
+        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
+        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
+        {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
+    };
+
+    omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
+    omniruntime::jit::Context *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    omniruntime::jit::Context *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto createOperatorFunc = jit->specialize();
+
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    // jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
     std::cout << "after jit" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
@@ -498,7 +502,7 @@ TEST(AggregatorTest, avg_correctness_test)
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
         aggregate->addInput(input[i], ROW_SIZE);
     }
-    
+
     std::vector<Table*> result;
     int32_t tableCount = aggregate->getOutput(result);
 
@@ -512,9 +516,9 @@ TEST(AggregatorTest, avg_correctness_test)
         std::cout << aggNames[i] << " ";
         col->printColumn();
     }
-    
+
     destroyInput(input, PAGE_NUM, COLUMN_COUNT);
-    
+
     for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
         Column* col = result[0]->getColumn(i);
         delete[] reinterpret_cast<int64_t*>(col->getData());
@@ -549,7 +553,11 @@ void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, Table** input, int32
 
 TEST(AggregationOperatorTest, Perf_Original)
 {
-    using namespace omniruntime::codegen;
+    uint32_t* aggCols = new uint32_t[4];
+    aggCols[0] = 0;
+    aggCols[1] = 1;
+    aggCols[2] = 2;
+    aggCols[3] = 3;
     uint32_t* aggTypes = new uint32_t[4];
     aggTypes[0] = 2;
     aggTypes[1] = 2;
@@ -564,7 +572,6 @@ TEST(AggregationOperatorTest, Perf_Original)
     PrepareContext aggTypeContext = {aggTypes, 4};
     PrepareContext aggFuncTypeContext = {aggFunType, 4};
 
-    std::list<Hammer *> deps = std::list<Hammer *>();
     int32_t aggColNum = aggTypeContext.len;
 
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
@@ -611,7 +618,12 @@ TEST(AggregationOperatorTest, Perf_Original)
 
 uint64_t prepare_nogroup()
 {
-    using namespace omniruntime::codegen;
+    using namespace omniruntime::jit;
+    uint32_t* aggCols = new uint32_t[4];
+    aggCols[0] = 0;
+    aggCols[1] = 1;
+    aggCols[2] = 2;
+    aggCols[3] = 3;
     uint32_t* aggTypes = new uint32_t[4];
     aggTypes[0] = 2;
     aggTypes[1] = 2;
@@ -626,36 +638,31 @@ uint64_t prepare_nogroup()
     PrepareContext aggTypeContext = {aggTypes, 4};
     PrepareContext aggFuncTypeContext = {aggFunType, 4};
 
-    std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
     int32_t aggColNum = aggTypeContext.len;
     int32_t colNum = aggTypeContext.len;
-    
+
     ParamValue p_agg_num = ParamValue(&aggColNum);
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@3"] = &p_agg_num;
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@4"] = &p_agg_data_type;   
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@5"] = &p_agg_types;
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/non_group_aggregation.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
+    auto *inloopSp = new Specialization();
+    inloopSp->addSpecializedParam(3, &p_agg_num);
+    inloopSp->addSpecializedParam(4, &p_agg_data_type);
+    inloopSp->addSpecializedParam(5, &p_agg_types);
 
-    deps.push_back(&hammer3);
-    deps.push_back(&hammer2);
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    std::map<std::string, Specialization> nonGroupSps = {
+        {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
+    };
 
-    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op26AggregationOperatorFactory14createOperatorEv")->getAddress());
+    auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation", nonGroupSps, std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto createOperatorFunc = jit->specialize();
+
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    // jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
     std::cout << "after jit" << std::endl;
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
@@ -708,7 +715,7 @@ TEST(AggregationOperatorTest, Perf_Codegen)
 
 TEST(HashAggregationOperatorTest, compare_perf)
 {
-    using namespace omniruntime::codegen;
+    using namespace omniruntime::jit;
     using namespace omniruntime::op;
     uint32_t* groupCols = new uint32_t[2];
     groupCols[0] = 0;
@@ -734,8 +741,6 @@ TEST(HashAggregationOperatorTest, compare_perf)
     PrepareContext aggFuncTypeContext = {aggFunType, 2};
     PrepareContext retTypesContext = {retTypes, 4};
 
-    std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
     int32_t colNum = groupByColContext.len + aggColContext.len;
@@ -757,35 +762,34 @@ TEST(HashAggregationOperatorTest, compare_perf)
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@5"] = &p_groupByColIdx;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@7"] = &p_aggColIdx;    
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
+    auto *inloopSp = new Specialization();
+    inloopSp->addSpecializedParam(3, &p_col_type);
+    inloopSp->addSpecializedParam(4, &p_col_count);
+    inloopSp->addSpecializedParam(5, &p_groupByColIdx);
+    inloopSp->addSpecializedParam(6, &p_group_num);
+    inloopSp->addSpecializedParam(7, &p_aggColIdx);
+    inloopSp->addSpecializedParam(8, &p_agg_num);
+    inloopSp->addSpecializedParam(9, &p_agg_types);
 
-    testParam["processAgg@2"] = &p_agg_num;
-    testParam["processAgg@3"] = &p_col_type;
-    testParam["processAgg@4"] = &p_aggColIdx;
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/group_aggregation.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
+    auto *processAggSp = new Specialization();
+    processAggSp->addSpecializedParam(2, &p_agg_num);
+    processAggSp->addSpecializedParam(3, &p_col_type);
+    processAggSp->addSpecializedParam(4, &p_aggColIdx);
 
-    deps.push_back(&hammer3);
-    deps.push_back(&hammer2);
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    std::map<std::string, Specialization> hashGroupbySps = {
+        {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
+        {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
+    };
+
+    auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto createOperatorFunc = jit->specialize();
+
      // ------------------------------------------Create operator--------------------------------------------
-    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     std::cout << "after jit" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
     std::cout << "after create factory" << std::endl;
