@@ -109,10 +109,10 @@ private:
     int32_t allCount;
     PagesIndex *pagesIndex;
     Table *pendingInput;
-    PagesHashStrategy *preGroupedPartitionHashStrategy;
-    PagesHashStrategy *unGroupedPartitionHashStrategy;
-    PagesHashStrategy *preSortedPartitionHashStrategy;
-    PagesHashStrategy *peerGroupHashStrategy;
+    PagesHashStrategy *preGroupedPartitionHashStrategy= nullptr;
+    PagesHashStrategy *unGroupedPartitionHashStrategy= nullptr;
+    PagesHashStrategy *preSortedPartitionHashStrategy= nullptr;
+    PagesHashStrategy *peerGroupHashStrategy= nullptr;
     WindowPartition *partition;
     vector<WindowFunction *> windowFunctions;
 };

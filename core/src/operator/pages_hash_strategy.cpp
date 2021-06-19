@@ -8,11 +8,16 @@ PagesHashStrategy::PagesHashStrategy(Column ***columns, int32_t tableCount, int3
     this->buildColumnCount = columnCount;
     this->buildHashColsCount = hashColsCount;
 
-    this->buildHashColumns = (Column ***)malloc(hashColsCount * sizeof(Column **));
-    int32_t hashColumn;
-    for (int32_t i = 0; i < hashColsCount; i++) {
-        hashColumn = hashCols[i];
-        buildHashColumns[i] = columns[hashColumn];
+    if(hashColsCount==0){
+        this->buildHashColumns= nullptr;
+    }
+    else{
+        this->buildHashColumns = (Column ***)malloc(hashColsCount * sizeof(Column **));
+        int32_t hashColumn;
+        for (int32_t i = 0; i < hashColsCount; i++) {
+            hashColumn = hashCols[i];
+            buildHashColumns[i] = columns[hashColumn];
+        }
     }
 }
 
