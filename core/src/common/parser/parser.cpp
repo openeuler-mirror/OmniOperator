@@ -7,28 +7,48 @@
 #include <algorithm>
 using namespace std;
 
+string operatorPrefix = "$operator$";
 Operator opTrans(string op)
 {
     // Comparison operators
-    if (op == "$operator$EQUAL") return Operator::EQ;
-    else if (op == "$operator$LESS_THAN") return Operator::LT;
-    else if (op == "$operator$LESS_THAN_OR_EQUAL") return Operator::LTE;
-    else if (op == "$operator$GREATER_THAN_OR_EQUAL") return Operator::GTE;
-    else if (op == "$operator$GREATER_THAN") return Operator::GT;
-    else if (op == "$operator$NOT_EQUAL") return Operator::NEQ;
+    if (op == operatorPrefix + "EQUAL") return Operator::EQ;
+    else if (op == operatorPrefix + "LESS_THAN" || op == "LESS_THAN") return Operator::LT;
+    else if (op == operatorPrefix + "LESS_THAN_OR_EQUAL" || op == "LESS_THAN_OR_EQUAL") return Operator::LTE;
+    else if (op == operatorPrefix + "GREATER_THAN_OR_EQUAL" || op == "GREATER_THAN_OR_EQUAL") return Operator::GTE;
+    else if (op == operatorPrefix + "GREATER_THAN" || op == "GREATER_THAN") return Operator::GT;
+    else if (op == operatorPrefix + "NOT_EQUAL" || op == "NOT_EQUAL") return Operator::NEQ;
     // Logical operators
     else if (op == "AND") return Operator::AND;
     else if (op == "OR") return Operator::OR;
     else if (op == "NOT" || op == "not") return Operator::NOT;
     // Arithmetic
-    else if (op == "ADD") return Operator::ADD;
-    else if (op == "SUBTRACT") return Operator::SUB;
-    else if (op == "MULTIPLY") return Operator::MUL;
-    else if (op == "DIVIDE") return Operator::DIV;
-    else if (op == "MODULUS") return Operator::MOD;
+    else if (op == operatorPrefix + "ADD" || op == "ADD") return Operator::ADD;
+    else if (op == operatorPrefix + "SUBTRACT" || op == "SUBTRACT") return Operator::SUB;
+    else if (op == operatorPrefix + "MULTIPLY" || op == "MULTIPLY") return Operator::MUL;
+    else if (op == operatorPrefix + "DIVIDE" || op == "DIVIDE") return Operator::DIV;
+    else if (op == operatorPrefix + "MODULUS" || op == "MODULUS") return Operator::MOD;
     else return Operator::INVALIDOP;
 }
 
+
+OperatorReturnType getBinaryOperatorType(string opStr) 
+{
+    vector<string> allCmpOps {operatorPrefix + "LESS_THAN", operatorPrefix + "LESS_THAN_OR_EQUAL", operatorPrefix + "GREATER_THAN", operatorPrefix + "GREATER_THAN_OR_EQUAL", operatorPrefix + "EQUAL", operatorPrefix + "NOT_EQUAL", 
+    "LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "EQUAL", "NOT_EQUAL"};
+    vector<string> allLogOps {"AND", "OR"};
+    vector<string> allArithOps {operatorPrefix + "ADD", operatorPrefix + "SUBTRACT", operatorPrefix + "MULTIPLY", operatorPrefix + "DIVIDE", operatorPrefix + "MODULUS", 
+    "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULULS"};
+    for (string cmpOp : allCmpOps) {
+        if (opStr == cmpOp) return OperatorReturnType::COMPARISON;
+    }
+    for (string logOp : allLogOps) {
+        if (opStr == logOp) return OperatorReturnType::LOGICAL;
+    }
+    for (string arithOp : allArithOps) {
+        if (opStr == arithOp) return OperatorReturnType::ARITHMETIC;
+    }
+    return OperatorReturnType::INVALIDRETURNTYPE;
+}
 // For functions and special forms
 CallType callTrans(string fn)
 {
@@ -43,22 +63,6 @@ CallType callTrans(string fn)
 }
 
 
-OperatorReturnType getBinaryOperatorType(string opStr) 
-{
-    vector<string> allCmpOps {"$operator$LESS_THAN", "$operator$LESS_THAN_OR_EQUAL", "$operator$GREATER_THAN", "$operator$GREATER_THAN_OR_EQUAL", "$operator$EQUAL", "$operator$NOT_EQUAL"};
-    vector<string> allLogOps {"AND", "OR"};
-    vector<string> allArithOps {"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS"};
-    for (string cmpOp : allCmpOps) {
-        if (opStr == cmpOp) return OperatorReturnType::COMPARISON;
-    }
-    for (string logOp : allLogOps) {
-        if (opStr == logOp) return OperatorReturnType::LOGICAL;
-    }
-    for (string arithOp : allArithOps) {
-        if (opStr == arithOp) return OperatorReturnType::ARITHMETIC;
-    }
-    return OperatorReturnType::INVALIDRETURNTYPE;
-}
 
 bool isUnaryOperator(string opStr)
 {

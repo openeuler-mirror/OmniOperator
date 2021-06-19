@@ -304,7 +304,7 @@ public class OmniFilterAndProjectOperatorTest
         }
     }
 
-    @Test
+    @Test(enabled = false)
     public void allTypes()
     {
         VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
@@ -573,5 +573,32 @@ public class OmniFilterAndProjectOperatorTest
         }
         catch (Exception e) {
         }
+    }
+
+    @Test
+    public void conditional()
+    {
+        VecType[] types = {VecType.INT, VecType.INT, VecType.INT};
+        int[] projectIndices = {0, 1, 2};
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "AND(IF($operator$EQUAL(#0, 0), $operator$LESS_THAN(#1, 3), $operator$EQUAL(#1, 4)), $operator$GREATER_THAN(#2, 3))",
+                types,
+                projectIndices);
+        final int numRows = 10000;
+        IntVec col1 = new IntVec(numRows);
+        IntVec col2 = new IntVec(numRows);
+        IntVec col3 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1.set(i, i % 2);
+            col2.set(i, i % 5);
+            col3.set(i, i % 10);
+        }
+
+        OmniOperator op = factory.createOperator();
+
+        op.addInput(makeInput(numRows, col1, col2, col3));
+        assertTrue(op.getOutput().hasNext());
+        VecBatch res = op.getOutput().next();
+        assertEquals(res.getRowCount(), 2000);
     }
 }

@@ -578,7 +578,7 @@ TEST (FilterTest, ArithmeticAdd) {
     int32_t projectIndices[PROJECT_COUNT] = {0};
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN(ADD(#0, 1), 4)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN($operator$ADD(#0, 1), 4)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
@@ -608,7 +608,7 @@ TEST (FilterTest, ArithmeticSubtract) {
     int32_t projectIndices[PROJECT_COUNT] = {0, 1};
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN(0, SUBTRACT(#0, 5))", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN(0, $operator$SUBTRACT(#0, 5))", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
     std::vector<Table*> ret;
@@ -638,7 +638,7 @@ TEST (FilterTest, ArithmeticMultiply) {
     int32_t projectIndices[PROJECT_COUNT] = {0, 1};
     Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
-    std::string expr = "AND($operator$EQUAL(0, MULTIPLY(#0, #0)), $operator$GREATER_THAN(7, MULTIPLY(2, #1)))";
+    std::string expr = "AND($operator$EQUAL(0, $operator$MULTIPLY(#0, #0)), $operator$GREATER_THAN(7, $operator$MULTIPLY(2, #1)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
     op->addInput(t, NUM_ROWS);
@@ -651,6 +651,66 @@ TEST (FilterTest, ArithmeticMultiply) {
         EXPECT_EQ(val0, 0);
         EXPECT_TRUE(val1 * 2 < 7);
     }
+}
+
+TEST (FilterTest, Conditional) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 10000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int32_t* col2 = new int32_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 2;
+        col2[i] = 50;
+        col3[i] = 100;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "$operator$EQUAL(IF($operator$EQUAL(#0, 0), $operator$ADD(#1, 5), #2), 55)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t, NUM_ROWS);
+    std::vector<Table*> ret;
+    int32_t numReturned = op->getOutput(ret);
+    EXPECT_EQ(numReturned, 5000);
+}
+
+TEST (FilterTest, Conditional2) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 10000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int32_t* col2 = new int32_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 2;
+        col2[i] = i % 5;
+        col3[i] = i % 10;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "AND(IF($operator$EQUAL(#0, 0), $operator$LESS_THAN(#1, 3), $operator$EQUAL(#1, 4)), $operator$GREATER_THAN(#2, 3))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t, NUM_ROWS);
+    std::vector<Table*> ret;
+    int32_t numReturned = op->getOutput(ret);
+    EXPECT_EQ(numReturned, 2000);
 }
 
 TEST (FilterTest, DISABLED_ArithmeticDivide) {
