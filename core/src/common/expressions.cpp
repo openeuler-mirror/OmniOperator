@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 
+namespace omniruntime {
 namespace expressions {
 
 // Helper function to get DataType from jint type
@@ -46,11 +47,20 @@ DataType Expr::getExprDataType() {
 DataExpr::DataExpr() {
 }
 
+DataExpr::~DataExpr() {
+    if (dataType == STRINGD && !isColumn) delete stringVal;
+}
+
 ExprType DataExpr::getType() {
     return ExprType::DATA_E;
 }
 
 // Helper constructors for different data types
+DataExpr::DataExpr(bool val) {
+    isColumn = false;
+    dataType = BOOLD;
+    boolVal = val;
+}
 DataExpr::DataExpr(int32_t val) {
     isColumn = false;
     dataType = INT32D;
@@ -66,7 +76,7 @@ DataExpr::DataExpr(double val) {
     dataType = DOUBLED;
     doubleVal = val;
 }
-DataExpr::DataExpr(std::string val) {
+DataExpr::DataExpr(std::string* val) {
     isColumn = false;
     dataType = STRINGD;
     stringVal = val;
@@ -132,28 +142,110 @@ ExprType UnaryExpr::getType() {
 }
 
 
-CallExpr::CallExpr() {
+InExpr::InExpr() {
+    dataType = BOOLD;
 }
 
-CallExpr::~CallExpr() {
+InExpr::~InExpr() {
     for (Expr* exp : arguments) {
         delete exp;
     }
 }
 
-CallExpr::CallExpr(CallType ct, std::vector<Expr*> args){
-    callType = ct;
+InExpr::InExpr(std::vector<Expr*> args) {
+    dataType = BOOLD;
     arguments = args;
 }
 
-CallExpr::CallExpr(CallType ct, std::vector<Expr*> args, DataType dt){
-    callType = ct;
+ExprType InExpr::getType() {
+    return ExprType::IN_E;
+}
+
+
+BetweenExpr::BetweenExpr() {
+    dataType = BOOLD;
+}
+
+BetweenExpr::~BetweenExpr() {
+    delete value;
+    delete lowerBound;
+    delete upperBound;
+}
+
+BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound) {
+    dataType = BOOLD;
+    value = val;
+    lowerBound = lowBound;
+    upperBound = upBound;
+}
+
+ExprType BetweenExpr::getType() {
+    return ExprType::BETWEEN_E;
+}
+
+
+IfExpr::IfExpr() {
+}
+
+IfExpr::~IfExpr() {
+    delete condition;
+    delete trueExpr;
+    delete falseExpr;
+}
+
+IfExpr::IfExpr(Expr* cond, Expr* texp, Expr* fexp) {
+    dataType = texp->dataType;
+    condition = cond;
+    trueExpr = texp;
+    falseExpr = fexp;
+}
+
+ExprType IfExpr::getType() {
+    return ExprType::IF_E;
+}
+
+
+CoalesceExpr::CoalesceExpr() {
+}
+
+CoalesceExpr::~CoalesceExpr() {
+    delete value1;
+    delete value2;
+}
+
+CoalesceExpr::CoalesceExpr(Expr* val1, Expr* val2) {
+    dataType = val1->dataType;
+    value1 = val1;
+    value2 = val2;
+}
+
+ExprType CoalesceExpr::getType() {
+    return ExprType::COALESCE_E;
+}
+
+
+FuncExpr::FuncExpr() {
+}
+
+FuncExpr::~FuncExpr() {
+    for (Expr* exp : arguments) {
+        delete exp;
+    }
+}
+
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args){
+    funcName = fnName;
+    arguments = args;
+}
+
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt){
+    funcName = fnName;
     arguments = args;
     dataType = dt;
 }
 
-ExprType CallExpr::getType() {
-    return ExprType::CALL_E;
+ExprType FuncExpr::getType() {
+    return ExprType::FUNC_E;
 }
 
 
@@ -244,6 +336,12 @@ void DataExpr::printExprTree() {
     else {
         switch(dataType)
         {
+            case BOOLD: {
+                if (printWithTypes) printf("bool_");
+                if (boolVal) printf("true");
+                else printf("false");
+                break;
+            }
             case INT32D:
                 if (printWithTypes) printf("i32_");
                 printf("%d", intVal);
@@ -258,7 +356,7 @@ void DataExpr::printExprTree() {
                 break;
             case STRINGD:
                 if (printWithTypes) printf("s_");
-                printf("'%s'", stringVal.c_str());
+                printf("'%s'", stringVal->c_str());
                 break;
             default:
                 printf("invalid DataType %d", dataType);
@@ -269,42 +367,45 @@ void DataExpr::printExprTree() {
     #endif
 }
 
-
-void CallExpr::printExprTree() {
-    switch(callType) {
-        case CallType::ABS: {
-            printf("Abs(");
-            break;
-        }
-        case CallType::BETWEEN: {
-            printf("Between(");
-            break;
-        }
-        case CallType::CAST: {
-            printf("Cast(");
-            break;
-        }
-        case CallType::COALESCE: {
-            printf("Coalesce(");
-            break;
-        }
-        case CallType::IF: {
-            printf("If(");
-            break;
-        }
-        case CallType::IN: {
-            printf("In(");
-            break;
-        }
-        case CallType::SUBSTR: {
-            printf("Substr(");
-            break;
-        }
-        default: {
-            printf("InvalidCall(");
-            break;
-        }
+void InExpr::printExprTree() {
+    printf("In(");
+    for (int i = 0; i < arguments.size(); i++) {
+        arguments[i]->printExprTree();
+        if (i == arguments.size() - 1) printf(")");
+        else printf(", ");
     }
+}
+
+void BetweenExpr::printExprTree() {
+    printf("Between(");
+    value->printExprTree();
+    printf(", ");
+    lowerBound->printExprTree();
+    printf(", ");
+    upperBound->printExprTree();
+    printf(")");
+}
+
+void IfExpr::printExprTree() {
+    printf("If(");
+    condition->printExprTree();
+    printf(", ");
+    trueExpr->printExprTree();
+    printf(", ");
+    falseExpr->printExprTree();
+    printf(")");
+}
+
+void CoalesceExpr::printExprTree() {
+    printf("Coalesce(");
+    value1->printExprTree();
+    printf(", ");
+    value2->printExprTree();
+    printf(")");
+}
+
+void FuncExpr::printExprTree() {
+    printf("%s(", funcName.c_str());
 
     for (int i = 0; i < arguments.size(); i++) {
         arguments[i]->printExprTree();
@@ -313,4 +414,5 @@ void CallExpr::printExprTree() {
     }
 }
 
+}
 }

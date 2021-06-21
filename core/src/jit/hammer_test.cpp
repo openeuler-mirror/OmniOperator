@@ -1,7 +1,7 @@
-#include "./omni_jit.h"
-#include "gtest/gtest.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/IRReader/IRReader.h"
+// #include "./hammer.h"
+// #include "gtest/gtest.h"
+// #include "llvm/Support/SourceMgr.h"
+// #include "llvm/IRReader/IRReader.h"
 
 // using namespace omniruntime::codegen;
 // //TEST(hammer, multi_module) {
