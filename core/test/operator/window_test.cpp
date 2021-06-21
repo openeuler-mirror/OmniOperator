@@ -354,7 +354,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int32_t expectedPositions = 10000;
 
     int32_t allTypes[5] = {1, 2, 3, 2, 2};
-    int32_t argumentChannels[0] = {};
+    int32_t argumentChannels[2] = {-1,-1};
 
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
                                                                                                 outputCols, 3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
