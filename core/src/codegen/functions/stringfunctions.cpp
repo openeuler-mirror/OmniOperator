@@ -6,13 +6,6 @@
 #include <cassert>
 #include <algorithm>
 #include <regex>
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// Need to install re2 library from github.com/google/re2/wiki/Install and run "sudo ldconfig"
->>>>>>> Use std regex library
-=======
->>>>>>> Clean function codegen and fix memory leaks involving strings
 // #include <re2/re2.h>
 // #include <re2/stringpiece.h>
 
@@ -45,39 +38,11 @@ extern "C" DLLEXPORT bool likeExt(int64_t str, int64_t regexToMatch) {
     string S = string(Sp);
     string R = string(Rp);
     // Using re2 library
-<<<<<<< HEAD
-<<<<<<< HEAD
     //return RE2::FullMatch(S, R);
-=======
-    // return RE2::FullMatch(S, R);
->>>>>>> Use std regex library
-=======
-    //return RE2::FullMatch(S, R);
->>>>>>> Clean function codegen and fix memory leaks involving strings
 
     // Using std regex library
     regex Re = regex(R);
     return regex_match(S, Re);
-<<<<<<< HEAD
-}
-
-
-extern "C" DLLEXPORT int64_t substrWithStartExt(int64_t str, int32_t startIdx) {
-    char* s = (char*) str;
-    int32_t length = 0;
-    while (s[length + startIdx] != '\0') {
-        length++;
-    }
-
-    char* ret = reinterpret_cast<char*>(malloc(length+1));
-    for (int i = 0; i < length; i++) {
-        ret[i] = s[startIdx + i];
-    }
-    ret[length] = '\0';
-    stringsToFree.push_back(ret);
-    return (int64_t)(ret);
-=======
->>>>>>> Use std regex library
 }
 
 
