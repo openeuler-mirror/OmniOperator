@@ -13,12 +13,14 @@ WindowPartition::WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart,
     this->outputChannels = outputChannels;
     this->outputChannelsCount = outputChannelsCount;
     this->peerGroupHashStrategy = peerGroupHashStrategy;
+    this->currentPosition = partitionStart;
+    this->peerGroupStart = 0;
+    this->peerGroupEnd = 0;
     this->windowFunctions = windowFunctions;
     this->windowIndex = new WindowIndex(pagesIndex, partitionStart, partitionEnd);
     for (auto i = 0; i < this->windowFunctions.size(); ++i) {
         windowFunctions[i]->reset(windowIndex);
     }
-    this->currentPosition = partitionStart;
     updatePeerGroup();
 }
 

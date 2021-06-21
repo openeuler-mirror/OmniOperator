@@ -148,8 +148,8 @@ WindowOperator::WindowOperator(int32_t *sourceTypes, int32_t typesCount, int32_t
             case WIN_AVG:
             case WIN_MAX:
             case WIN_MIN:
-                windowFunctions.push_back(new AggregateWindowFunction(argumentChannels[i],
-                    windowFunctionTypes[i], sourceTypes[argumentChannels[i]]));
+                windowFunctions.push_back(new AggregateWindowFunction(argumentChannels[i], windowFunctionTypes[i],
+                    sourceTypes[argumentChannels[i]]));
                 break;
             default:
                 break;
@@ -169,6 +169,9 @@ WindowOperator::~WindowOperator()
     delete peerGroupHashStrategy;
     delete pendingInput;
     delete partition;
+    for (auto w : windowFunctions) {
+        delete w;
+    }
 }
 
 int32_t WindowOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
