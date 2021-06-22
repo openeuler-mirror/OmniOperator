@@ -24,11 +24,14 @@ namespace omniruntime {
                 bool loaded = this->compiler->loadOperatorTemplate(context.getJitTemplate(), context.isDependency());
                 if (!loaded) {
                     std::cout << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
+                    return 0;
                 }
+                std::cout << "Loaded template: " << context.getJitTemplate() << std::endl;
 
                 for (auto &specializationPair : context.getSpecializations()) {
                     this->compiler->addSpecialization(specializationPair.first, specializationPair.second);
                 }
+                std::cout << "Added specializations" << std::endl;
             }
             return this->compiler->specializeAndCompile();
         }

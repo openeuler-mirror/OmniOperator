@@ -46,7 +46,7 @@ namespace omniruntime {
             auto module = llvm::parseIRFile(templatePath, error, *context);
 
             if (!module) {
-                error.print("error loadding module", llvm::errs());
+                error.print("error loading module", llvm::errs());
                 // FIXME: proper error handling using exceptions?
                 return false;
             }
@@ -70,9 +70,19 @@ namespace omniruntime {
 
         void LLVMCompiler::loadExtraLibraries() {
             using namespace llvm::sys;
+
+            bool loaded = false;
             // TODO: find a better way to load this lib, it differs on different platform
-//            DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-            DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+            loaded = DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+//            loaded = DynamicLibrary::LoadLibraryPermanently("/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/libstdc++.so");
+//            loaded = DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-redhat-linux/4.8.5/libstdc++.so");
+            if (!loaded) {
+                llvm::errs() << "Failed to load c++ lib\n";
+            }
+            loaded = DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+            if (!loaded) {
+                llvm::errs() << "Failed to load jemalloc lib\n";
+            }
         }
 
         uint64_t LLVMCompiler::specializeAndCompile() {
@@ -82,17 +92,18 @@ namespace omniruntime {
             auto jit = compileModules();
             if (jit) {
                 if (this->createOperatorSymbol.empty()) {
-                    outs() << "Error: CreateOperator function not found yet\n";
+                    llvm::errs() << "Error: CreateOperator function not found yet\n";
                     return 0;
                 }
 
-                if (auto func = jit->lookup(this->createOperatorSymbol)) {
+                auto func = jit->lookup(this->createOperatorSymbol);
+                if (func) {
                     jitter = jit.release();
-                    outs() << "Found createOperator symbol: " << this->createOperatorSymbol << "\n";
+                    llvm::outs() << "Found createOperator symbol: " << this->createOperatorSymbol << "\n";
                     return func->getAddress();
                 } else {
-                    outs() << "Error: Cannot lookup the jitted createOperator method " << this->createOperatorSymbol
-                           << "\n";
+                    llvm::errs() << "Error: Cannot lookup the jitted createOperator method " << this->createOperatorSymbol
+                           << ", error: " << toString(func.takeError()) << "\n";
                     return 0;
                 }
             }
@@ -132,7 +143,7 @@ namespace omniruntime {
             if (this->specializations.count(specializationId) == 0) {
                 return false;
             }
-            outs() << "hardening: " << function->getName().str() << "\n";
+            llvm::outs() << "hardening: " << function->getName().str() << "\n";
             Specialization specialization = this->specializations.at(specializationId);
 
             int count = 0;
@@ -182,16 +193,18 @@ namespace omniruntime {
             JITTER->getIRTransformLayer().setTransform(HardenOptimizer(CodeGenOpt::Default));
             // JITTER->getIRTransformLayer().setTransform(OptimizationTransform());
 
-            //enable loading commom libraries available in the current process
+            // enable loading common libraries available in the current process
             JITTER->getMainJITDylib().addGenerator(
                     ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(
                             JITTER->getDataLayout().getGlobalPrefix())));
 
             for (auto &module : this->modules) {
-                outs() << "addIRModule: " << module->getName() << "\n";
+                std::string moduleName = module->getName().str();
+                outs() << "addIRModule: " << moduleName << "\n";
                 auto err = JITTER->addIRModule(
                         ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
                 if (err) {
+                    errs() << "Error: failed adding IR Module " << moduleName << "\n";
                     return nullptr;
                 }
             }
@@ -432,8 +445,7 @@ namespace omniruntime {
                         if (index != llvm::StringRef::npos) {
                             StringRef specializationId = annotation.substr(0, index);
                             annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
-                            outs() << "Found annotated function " << specializationId << ", " << FUNC->getName()
-                                   << "\n";
+                            outs() << "Found annotated function " << specializationId << ", " << FUNC->getName() << "\n";
                         }
                     }
                 }

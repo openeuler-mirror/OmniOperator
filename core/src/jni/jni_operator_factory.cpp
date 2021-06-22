@@ -181,7 +181,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggre
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
-    nativeOperatorFactory->setJitContext(jitContext); 
+    nativeOperatorFactory->setJitContext(jitContext);
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
@@ -294,9 +294,12 @@ JitContext *createSortJitContext(
         {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp}
     };
 
-    auto *sortContext = new omniruntime::jit::Context("sort", sortSps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(), std::vector<std::string>());
+    auto *sortContext = new omniruntime::jit::Context("sort", sortSps, std::vector<std::string>(),
+                                                      std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+                                                            std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(),
+                                                            std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
     auto createOperatorFunc = jit->specialize();
 
