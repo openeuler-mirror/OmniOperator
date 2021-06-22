@@ -14,6 +14,7 @@
 #include "../operator/window/window.h"
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
+#include "../operator/topn/topn.h"
 #include "../operator/optimization.h"
 #include "config.h"
 
@@ -389,6 +390,50 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
             );
     windowOperatorFactory->setJitContext(jitContext);
     return (int64_t) windowOperatorFactory;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
+{
+    using namespace omniruntime::jit;
+    jint *sourceTypes=env->GetIntArrayElements(jSourceTypes,JNI_FALSE);
+    jint *sortCols=env->GetIntArrayElements(jSortCols,JNI_FALSE);
+    jint *sortAsc=env->GetIntArrayElements(jSortAsc, JNI_FALSE);
+    jint *sortNullFirsts=env->GetIntArrayElements(jSortNullFirsts,JNI_FALSE);
+    int32_t n = (int32_t) jN;
+
+    jint sourceTypesCount = env->GetArrayLength(jSourceTypes);
+    jint sortColCount = env->GetArrayLength(jSortCols);
+
+    omniruntime::op::TopNOperatorFactory *topNOperatorFactory =new omniruntime::op::TopNOperatorFactory(
+            sourceTypes,
+            sourceTypesCount,
+            n,
+            sortCols,
+            sortAsc,
+            sortNullFirsts,
+            sortColCount
+    );
+
+    ParamValue p_sourceTypes = ParamValue(sourceTypes, sourceTypesCount);
+    ParamValue p_sortColCount= ParamValue(&sortColCount);
+
+    auto * topNCompareSp=new Specialization();
+    topNCompareSp->addSpecializedParam(4, &p_sortColCount);
+    topNCompareSp->addSpecializedParam(5, &p_sourceTypes);
+
+    std::map<string,Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
+
+    auto *topNContext=new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string>(),std::vector<std::string>(),true);
+
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*topNContext});
+
+    auto createOperatorFunc = jit->specialize();
+    JitContext *jitContext = new JitContext;
+    jitContext->func = createOperatorFunc;
+
+    topNOperatorFactory->setJitContext(jitContext);
+    return (int64_t) topNOperatorFactory;
 }
 
 JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
