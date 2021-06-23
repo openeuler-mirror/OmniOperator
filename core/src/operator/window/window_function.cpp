@@ -2,11 +2,11 @@
 #include "window_function.h"
 #include "../../util/debug.h"
 
-WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t size)
+WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
 {
     this->pagesIndex = pagesIndex;
     this->start = start;
-    this->size = size;
+    this->size = end - start;
 };
 
 WindowIndex::~WindowIndex() {}
@@ -182,7 +182,7 @@ void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
             break;
     }
     for (int32_t position = start; position <= end; ++position) {
-        int64_t leftValueAddress = windowIndex->getPagesIndex()->getValueAddresses()[position];
+        int64_t leftValueAddress = windowIndex->getPagesIndex()->getValueAddresses()[position + windowIndex->getStart()];
         int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
         int32_t leftColumnPosition = decodePosition(leftValueAddress);
         Column *tempColumn = leftColumns[argumentChannels][leftColumnIndex];

@@ -26,6 +26,16 @@ public:
         return pagesIndex;
     }
 
+    int32_t getStart()
+    {
+        return start;
+    }
+
+    int32_t getSize()
+    {
+        return size;
+    }
+
 private:
     PagesIndex *pagesIndex;
     int32_t start;
