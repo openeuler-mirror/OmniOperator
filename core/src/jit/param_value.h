@@ -28,15 +28,15 @@ namespace omniruntime {
 
             ParamValue(int *v, int size) : value(v), size(size), type(ParamType::INT32) {}
 
-            ParamValue(int *v) : value(v), size(1), type(ParamType::INT32) {}
+            ParamValue(int *v) : value(v), size(-1), type(ParamType::INT32) {}
 
             ParamValue(long *v, int size) : value(v), size(size), type(ParamType::INT64) {}
 
-            ParamValue(long *v) : value(v), size(1), type(ParamType::INT64) {}
+            ParamValue(long *v) : value(v), size(-1), type(ParamType::INT64) {}
 
             ParamValue(double *v, int size) : value(v), size(size), type(ParamType::FP64) {}
 
-            ParamValue(double *v) : value(v), size(1), type(ParamType::FP64) {}
+            ParamValue(double *v) : value(v), size(-1), type(ParamType::FP64) {}
 
             ParamValue(std::vector<int> *v) : value(v), size(v->size()), type(ParamType::INT32), vector(true) {}
 
@@ -46,42 +46,46 @@ namespace omniruntime {
             ParamValue(void *v, int size, ParamType type) : value(v), size(size), type(type) {}
 
             std::vector<int> *to_int32_vec() {
-                assert(size > 1 && type == INT32 && vector);
+                assert(size >= 0 && type == INT32 && vector);
                 return (std::vector<int> *) value;
             }
 
             int *to_int32_array() {
-                assert(size > 1 && type == INT32);
+                assert(size >= 0 && type == INT32);
                 return (int *) value;
             };
 
             int to_int32() {
-                assert(size == 1 && type == INT32);
+                assert(size == -1 && type == INT32);
                 return *(int *) value;
             };
 
             long *to_int64_array() {
-                assert(size > 1 && type == INT64);
+                assert(size >= 0 && type == INT64);
                 return (long *) value;
             };
 
             long to_int64() {
-                assert(size == 1 && type == INT64);
+                assert(size == -1 && type == INT64);
                 return *(long *) value;
             };
 
             double *to_fp64_array() {
-                assert(size > 1 && type == FP64);
+                assert(size >= 0 && type == FP64);
                 return (double *) value;
             };
 
             double to_fp64() {
-                assert(size == 1 && type == FP64);
+                assert(size == -1 && type == FP64);
                 return *(double *) value;
             };
 
             std::list<ParamValue> *to_param_list() {
                 return (std::list<ParamValue> *) value;
+            }
+
+            bool isScalar() {
+                return size == -1;
             }
         };
     }
