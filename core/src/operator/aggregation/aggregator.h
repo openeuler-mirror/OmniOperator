@@ -30,7 +30,8 @@ typedef union GroupBySlot {
 class Aggregator {
 public:
     // Initiate this aggregator, such as setting default values for states.
-    Aggregator(AggregateType ty, int32_t dataTy) : type(ty), dataType(dataTy), initiated(false) { }
+    Aggregator(AggregateType ty, int32_t dataTy)
+    : type(ty), dataType(dataTy), initiated(false){ }
     virtual ~Aggregator() {
         if (type == COUNT) {
             //do nothing
@@ -90,7 +91,7 @@ protected:
 
 class SumAggregator : public Aggregator {
 public:
-    SumAggregator(int32_t ty) : Aggregator(SUM, ty) 
+    SumAggregator(int32_t ty) : Aggregator(SUM, ty)
     {
         // initiate non-grouping state
         // int32_t* val = new int32_t;
@@ -107,7 +108,7 @@ public:
 
 class AverageAggregator : public Aggregator {
 public:
-    AverageAggregator(int32_t ty) : Aggregator(AVG, ty) 
+    AverageAggregator(int32_t ty) : Aggregator(AVG, ty)
     {
         // initiate non-grouping state
         // nonGroupState = {0};
@@ -122,7 +123,7 @@ public:
 
 class CountAggregator : public Aggregator {
 public:
-    CountAggregator(int32_t ty) : Aggregator(COUNT, ty) 
+    CountAggregator(int32_t ty) : Aggregator(COUNT, ty)
     {
         // nonGroup = {0};
     }

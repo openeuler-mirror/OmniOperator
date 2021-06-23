@@ -158,7 +158,7 @@ extern "C" void processAgg(uint64_t key,
         void* colPtr = head[idx];
         auto groupIter = aggs[i]->getGroupState().find(key);
         if (groupIter != aggs[i]->getGroupState().end()) {
-            aggs[i]->processGroup(groupIter->second, colPtr, type, offset);      
+            aggs[i]->processGroup(groupIter->second, colPtr, type, offset);
         }else { // insert a new GroupBySlot as a state
             aggs[i]->insert(key, colPtr, type, offset);
         }
@@ -357,50 +357,63 @@ void HashAggregationOperator::constructAggColumn(Table* table,
 #endif
     const int32_t groupByColSize = this->groupByCols.size();
     allocateVec(table, types, groupByColSize, true, aggColSize, tableRowSize);
-
-    for (int32_t i = 0; i < aggColSize; ++i){
+    for (int32_t aggIndex = 0, dataIndex = 0; aggIndex < aggColSize; ++aggIndex, ++dataIndex){
         int32_t rIdx = 0;
-        auto resultIterator = this->aggregators[i]->getGroupState().begin();
-        AggregateType aggType = this->aggregators[i]->getType();
-        auto col = table->getColumn(groupByColSize + i);
+        auto resultIterator = this->aggregators[aggIndex]->getGroupState().begin();
+        AggregateType aggType = this->aggregators[aggIndex]->getType();
+        auto col = table->getColumn(groupByColSize + dataIndex);
         switch (aggType)
         {
             case SUM:
-            case COUNT:
             case MIN:
             case MAX: {
-                for (; rIdx < tableRowSize && resultIterator != aggregators[i]->getGroupState().end(); ) {
-                    if (aggType == COUNT) {
-                        reinterpret_cast<int64_t*>(col->getData())[rIdx++] = resultIterator->second.count + 1;
-                    }else {
-                        switch (types[groupByColSize + i])
-                        {
-                            case 1:{
-                                reinterpret_cast<int32_t*>(col->getData())[rIdx++] = *static_cast<int32_t*>(resultIterator->second.val);
-                                break;
-                            }
-                            case 2:{
-                                reinterpret_cast<int64_t*>(col->getData())[rIdx++] = *static_cast<int64_t*>(resultIterator->second.val);
-                                break;
-                            }
-                            case 3:{
-                                reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<double*>(resultIterator->second.val);
-                                break;
-                            }
-                            default:
-                                break;
+                for (; rIdx < tableRowSize && resultIterator != aggregators[aggIndex]->getGroupState().end(); ) {
+                    switch (types[groupByColSize + aggIndex])
+                    {
+                        case 1:{
+                            reinterpret_cast<int32_t*>(col->getData())[rIdx++] = *static_cast<int32_t*>(resultIterator->second.val);
+                            break;
                         }
+                        case 2:{
+                            reinterpret_cast<int64_t*>(col->getData())[rIdx++] = *static_cast<int64_t*>(resultIterator->second.val);
+                            break;
+                        }
+                        case 3:{
+                            reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<double*>(resultIterator->second.val);
+                            break;
+                        }
+                        default:
+                            break;
                     }
                     resultIterator++;
                 }
                 break;
             }
-            case AVG: {
-                for (; rIdx < tableRowSize && resultIterator != aggregators[i]->getGroupState().end(); ) {
+            case COUNT: {
+                for (; rIdx < tableRowSize && resultIterator != aggregators[aggIndex]->getGroupState().end(); ) {
+                    reinterpret_cast<int64_t*>(col->getData())[rIdx++] = resultIterator->second.count + 1;
+                    resultIterator++;
+                }
+                break;
+            }
+            case AVG: { // TODO process intermediate vectors
+                        // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise double vector.
+                for (; rIdx < tableRowSize && resultIterator != aggregators[aggIndex]->getGroupState().end(); ) {
                     if (resultIterator->second.count == 0) {
                         DebugError("Divisor is zero! key = %ld", resultIterator->first);
                     }
-                    reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<double*>(resultIterator->second.avgVal);
+                    switch (outputPartial) {
+                        case 0: {
+                            reinterpret_cast<double*>(col->getData())[rIdx++] = *static_cast<double*>(resultIterator->second.avgVal);
+                            break;
+                        }
+                        case 1: {
+                            // construct row type vector
+                            break;
+                        }
+                        default:
+                            break;
+                    }
                     resultIterator++;
                 }
                 break;

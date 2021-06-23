@@ -27,13 +27,13 @@ public class OmniHashAggregationOperatorTest
         int[] groupByChanel = {0, 1};
         VecType[] groupByTypes = {VecType.LONG, VecType.LONG};
         int[] aggChannels = {2, 3};
-        VecType[] aggTypes = {VecType.LONG, VecType.LONG};
-        AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM};
-        VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+        VecType[] aggTypes = {VecType.LONG, VecType.DOUBLE};
+        AggType[] aggFunctionTypes = {AggType.SUM, AggType.COUNT};
+        VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.DOUBLE};
 
         VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(
-                groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes);
+                groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
         int rowNum = 40000;
         int pageCount = 10;
         int[] rowNums = new int[pageCount];
@@ -65,6 +65,11 @@ public class OmniHashAggregationOperatorTest
             assertNotNull(vecBatch);
             assertEquals(vecBatch.getVectors().length, 4);
             Vec[] vectors = vecBatch.getVectors();
+            for (int i = 0; i < vectors[0].size(); ++i) {
+                for (int j = 0; j < vectors.length; ++j) {
+                    System.out.println(((LongVec)vectors[j]).get(i));
+                }
+            }
             assertEquals(((LongVec) vectors[0]).get(0), 0);
             assertEquals(((LongVec) vectors[1]).get(0), 0);
             assertEquals(((LongVec) vectors[2]).get(0), rowNum * (pageCount + 1));
@@ -103,7 +108,7 @@ public class OmniHashAggregationOperatorTest
                     VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
                     VecType[] inputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
                     OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(
-                            groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes);
+                            groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
                     List<Vec> inputData = new ArrayList<>();
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();

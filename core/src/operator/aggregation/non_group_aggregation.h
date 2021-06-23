@@ -29,14 +29,14 @@ private:
     std::vector<ColumnIndex> aggCols;
 };
 
-class AggregationOperatorFactory : public OperatorFactory
+class AggregationOperatorFactory : public AggregationCommonOperatorFactory
 {
 public:
     Operator* createOperator() override;
 
     AggregationOperatorFactory
-    (PrepareContext aggType, PrepareContext aggFuncType)
-    : aggTypeContext(aggType), aggFuncTypeContext(aggFuncType)
+    (PrepareContext aggType, PrepareContext aggFuncType, bool inputRaw, bool outputPartial)
+    : aggTypeContext(aggType), aggFuncTypeContext(aggFuncType), AggregationCommonOperatorFactory(inputRaw, outputPartial)
     { }
 
     ~AggregationOperatorFactory() override

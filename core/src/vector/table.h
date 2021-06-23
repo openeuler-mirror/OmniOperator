@@ -148,6 +148,10 @@ public:
     }
     Layout getLayout();
     void setColumn(Column* column, ColumnType type) {
+        if (columnSize >= columnCount) {
+            // TODO error
+            return;
+        }
         types[columnSize] = type;
         columnSize++;
         data.push_back(column);

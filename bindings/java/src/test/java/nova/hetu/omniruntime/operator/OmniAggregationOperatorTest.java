@@ -28,7 +28,7 @@ public class OmniAggregationOperatorTest
         AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM, AggType.SUM, AggType.SUM};
         VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(
-                aggTypes, aggFunctionTypes, aggOutputTypes);
+                aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
         List<Vec> inputData = new ArrayList<>();
         ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
@@ -82,7 +82,7 @@ public class OmniAggregationOperatorTest
                     AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM, AggType.SUM, AggType.SUM};
                     VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(
-                            aggTypes, aggFunctionTypes, aggOutputTypes);
+                            aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
                     List<Vec> inputData = new ArrayList<>();
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();

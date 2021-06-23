@@ -19,9 +19,11 @@ public class OmniHashAggregationOperatorFactory
             int[] aggChannels,
             VecType[] aggTypes,
             AggType[] aggFunctionTypes,
-            VecType[] aggOutputTypes)
+            VecType[] aggOutputTypes,
+            boolean inputRaw,
+            boolean outputPartial)
     {
-        super(new Context(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes));
+        super(new Context(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, inputRaw, outputPartial));
     }
 
     @Override
@@ -32,10 +34,19 @@ public class OmniHashAggregationOperatorFactory
                 context.aggChannels,
                 OmniUtils.transformVecType(context.aggTypes),
                 OmniUtils.transformAggType(context.aggFunctionTypes),
-                OmniUtils.transformVecType(context.aggOutputTypes));
+                OmniUtils.transformVecType(context.aggOutputTypes),
+                context.inputRaw,
+                context.outputPartial);
     }
 
-    private static native long createHashAggregationOperatorFactory(int[] groupByChanel, int[] groupByTypes, int[] aggChannels, int[] aggTypes, int[] aggFunctionTypes, int[] aggOutputTypes);
+    private static native long createHashAggregationOperatorFactory(int[] groupByChanel,
+                                                                    int[] groupByTypes,
+                                                                    int[] aggChannels,
+                                                                    int[] aggTypes,
+                                                                    int[] aggFunctionTypes,
+                                                                    int[] aggOutputTypes,
+                                                                    boolean inputRaw,
+                                                                    boolean outputPartial);
 
     public static class Context
             extends OmniOperatorFactoryContext
@@ -46,13 +57,17 @@ public class OmniHashAggregationOperatorFactory
         private final VecType[] aggTypes;
         private final AggType[] aggFunctionTypes;
         private final VecType[] aggOutputTypes;
+        private final boolean inputRaw;
+        private final boolean outputPartial;
 
         public Context(int[] groupByChanel,
                 VecType[] groupByTypes,
                 int[] aggChannels,
                 VecType[] aggTypes,
                 AggType[] aggFunctionTypes,
-                VecType[] aggOutputTypes)
+                VecType[] aggOutputTypes,
+                boolean inputRaw,
+                boolean outputPartial)
         {
             this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
             this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");
@@ -60,6 +75,8 @@ public class OmniHashAggregationOperatorFactory
             this.aggTypes = requireNonNull(aggTypes, "aggTypes");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
             this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
+            this.inputRaw = requireNonNull(inputRaw, "inputRaw");
+            this.outputPartial = requireNonNull(outputPartial, "outputPartial");
         }
 
         @Override

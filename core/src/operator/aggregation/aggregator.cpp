@@ -319,6 +319,7 @@ void AverageAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t
 void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset)
 {
     double* currentVal = static_cast<double*>(groupSlot.avgVal);
+    int64_t currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
     switch (type)
     {
         case 1: {
@@ -334,6 +335,10 @@ void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32
         case 3: {
             double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            break;
+        }
+        case 4: {
+            // row type
             break;
         }
         default: {

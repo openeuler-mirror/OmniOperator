@@ -5,6 +5,7 @@ typedef enum ColumnType {
         INT32 = 1,
         INT64,
         DOUBLE,
+        ROWTYPE,
 } ColumnType;
 
 #endif

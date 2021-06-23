@@ -186,38 +186,48 @@ void AggregationOperator::constructColumn(Table* table, int32_t* types, uint32_t
         auto col = table->getColumn(colIdx);
         switch(aggType) {
             case SUM:
-            case COUNT:
             case MIN:
             case MAX: {
-                if (aggType == COUNT) {
-                    reinterpret_cast<int64_t*>(col->getData())[0] = state.count;
-                }else {
-                    switch (types[colIdx])
-                    {
-                        case 1:{
-                            reinterpret_cast<int32_t*>(col->getData())[0] = *static_cast<int32_t*>(state.val);
-                            break;
-                        }
-                        case 2:{
-                            reinterpret_cast<int64_t*>(col->getData())[0] = *static_cast<int64_t*>(state.val);
-                            break;
-                        }
-                        case 3:{
-                            reinterpret_cast<double*>(col->getData())[0] = *static_cast<double*>(state.val);
-                            break;
-                        }
-                        default:
-                            break;
+                switch (types[colIdx])
+                {
+                    case 1:{
+                        reinterpret_cast<int32_t*>(col->getData())[0] = *static_cast<int32_t*>(state.val);
+                        break;
                     }
+                    case 2:{
+                        reinterpret_cast<int64_t*>(col->getData())[0] = *static_cast<int64_t*>(state.val);
+                        break;
+                    }
+                    case 3:{
+                        reinterpret_cast<double*>(col->getData())[0] = *static_cast<double*>(state.val);
+                        break;
+                    }
+                    default:
+                        break;
                 }
                 break;
             }
-            case AVG: {
+            case COUNT: {
+                reinterpret_cast<int64_t*>(col->getData())[0] = state.count;
+                break;
+            }
+            case AVG: { // TODO process intermediate vectors
                 if (state.count == 0) {
                     DebugError("Divisor is zero! column index = %d", colIdx);
                 }
-                reinterpret_cast<double*>(col->getData())[0] = *static_cast<double*>(state.avgVal);
-                break;
+                switch (outputPartial) {
+                    case 0: {
+                        reinterpret_cast<double*>(col->getData())[0] = *static_cast<double*>(state.avgVal);
+                        break;
+                    }
+                    case 1: {
+                        // construct row type vector
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
             }
             default: {
                 DebugError("Not support %d aggregate type!", aggType);

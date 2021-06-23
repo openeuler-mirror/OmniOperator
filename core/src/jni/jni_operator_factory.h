@@ -29,7 +29,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
  * Signature: ([I[I[I[I[I[I)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory
-        (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray);
+        (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
@@ -37,7 +37,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
  * Signature: ([I[I[I[I)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory
-        (JNIEnv *, jobject, jintArray, jintArray);
+        (JNIEnv *, jobject, jintArray, jintArray, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory
