@@ -8,7 +8,7 @@
 #include <cstring>
 
 using namespace std;
-using namespace expressions;
+using namespace omniruntime::expressions;
 
 enum OperatorReturnType {
     COMPARISON, 

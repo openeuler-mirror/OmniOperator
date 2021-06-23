@@ -8,7 +8,6 @@
 #include "operator.h"
 
 typedef struct JitContext {
-    uintptr_t jitter;
     uintptr_t func;
 } JitContext;
 

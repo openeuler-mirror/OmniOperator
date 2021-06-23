@@ -5,7 +5,7 @@
 #include "jni_operator_factory.h"
 #include "../memory/memory_pool.h"
 #include "../jit/param_value.h"
-#include "../jit/hammer.h"
+#include "../jit/jit.h"
 #include "../operator/operator_factory.h"
 #include "../operator/sort/sort.h"
 #include "../operator/aggregation/group_aggregation.h"
@@ -14,7 +14,11 @@
 #include "../operator/window/window.h"
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
+#include "../operator/optimization.h"
 #include "config.h"
+
+using omniruntime::jit::ParamValue;
+using omniruntime::jit::Specialization;
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
@@ -81,9 +85,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
 
     // return prepareHashGroupBy(groupByColContext,groupByTypeContext,aggColContext,aggTypeContext,aggFuncTypeContext, outPutTypeContext);
-    using namespace omniruntime::codegen;
-    std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
+    using namespace omniruntime::jit;
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
     int32_t colNum = groupByColContext.len + aggColContext.len;
@@ -105,45 +107,42 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@3"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@4"] = &p_col_count;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@6"] = &p_group_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@8"] = &p_agg_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator6inLoopEPPcjPiiS4_iS4_iS4_@9"] = &p_agg_types;
+    auto *inloopSp = new Specialization();
+    inloopSp->addSpecializedParam(3, &p_col_type);
+    inloopSp->addSpecializedParam(4, &p_col_count);
+    inloopSp->addSpecializedParam(6, &p_group_num);
+    inloopSp->addSpecializedParam(8, &p_agg_num);
+    inloopSp->addSpecializedParam(9, &p_agg_types);
 
-    testParam["processAgg@2"] =  &p_agg_num;
-    testParam["processAgg@3"] =  &p_col_type;
+    auto *processAggSp = new Specialization();
+    processAggSp->addSpecializedParam(2, &p_agg_num);
+    processAggSp->addSpecializedParam(3, &p_col_type);
 
-    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@2"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator19constructHashColumnEP5TablePiji@3"] = &p_group_num;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@2"] = &p_col_type;
-    testParam["_ZN11omniruntime2op23HashAggregationOperator18constructAggColumnEP5TablePiji@3"] = &p_agg_num;
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/group_aggregation.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
+    auto *hashColumnSp = new Specialization();
+    hashColumnSp->addSpecializedParam(2, &p_col_type);
+    hashColumnSp->addSpecializedParam(3, &p_group_num);
 
-    deps.push_back(&hammer3);
-    deps.push_back(&hammer2);
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    auto *aggColumnSp = new Specialization();
+    aggColumnSp->addSpecializedParam(2, &p_col_type);
+    aggColumnSp->addSpecializedParam(3, &p_agg_num);
 
-    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op30HashAggregationOperatorFactory14createOperatorEv")->getAddress());
+    std::map<std::string, Specialization> hashGroupbySps = {
+        {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
+        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
+        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
+        {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
+    };
+
+    auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto createOperatorFunc = jit->specialize();
+
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext,
-                                                                                                                                 groupByTypeContext,
-                                                                                                                                 aggColContext,
-                                                                                                                                 aggTypeContext,
-                                                                                                                                 aggFuncTypeContext,
-                                                                                                                                 inputRaw,
-                                                                                                                                 outputPartial);
+    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
     nativeOperatorFactory->setJitContext(jitContext);
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -165,37 +164,33 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggre
     PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
     int32_t aggColNum = aggTypeContext.len;
 
-    using namespace omniruntime::codegen;
+    using namespace omniruntime::jit;
     std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
-    
+
     ParamValue p_col_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_num = ParamValue(&aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@3"] = &p_agg_num;
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@4"] = &p_col_type;   
-    testParam["_ZN11omniruntime2op19AggregationOperator6inLoopEPPcjPiS4_@5"] = &p_agg_types;
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-    Hammer hammer1("/opt/lib/ir/memory_pool.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/non_group_aggregation.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/aggregator.ll", testParam);
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
+    auto *inloopSp = new Specialization();
+    inloopSp->addSpecializedParam(3, &p_agg_num);
+    inloopSp->addSpecializedParam(4, &p_col_type);
+    inloopSp->addSpecializedParam(5, &p_agg_types);
 
-    deps.push_back(&hammer3);
-    deps.push_back(&hammer2);
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
+    std::map<std::string, Specialization> nonGroupSps = {
+            {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
+    };
 
-    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op26AggregationOperatorFactory14createOperatorEv")->getAddress());
+    auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation", nonGroupSps, std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto createOperatorFunc = jit->specialize();
+
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
-    nativeOperatorFactory->setJitContext(jitContext); 
+    nativeOperatorFactory->setJitContext(jitContext);
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
@@ -265,9 +260,7 @@ JitContext *createSortJitContext(
 {
     JNI_DEBUG_LOG("create jit sort context starting.");
     auto start = START();
-    using namespace omniruntime::codegen;
-    std::map<std::string, ParamValue *> testParam;
-    std::list<Hammer *> deps = std::list<Hammer *>();
+    using namespace omniruntime::jit;
     int sortColTypes[sortColsCount];
 
     for (int32_t i = 0; i < sortColsCount; ++i) {
@@ -284,40 +277,43 @@ JitContext *createSortJitContext(
     ParamValue p_sortNullFirsts = ParamValue(sortNullFirsts, sortColsCount);
     ParamValue p_sortColCount = ParamValue(&sortColsCount);
 
-    testParam["_Z9compareTolPiS_S_S_iii@1"] = &p_sortCols;
-    testParam["_Z9compareTolPiS_S_S_iii@2"] = &p_sortColTypes;
-    testParam["_Z9compareTolPiS_S_S_iii@3"] = &p_sortAscendings;
-    testParam["_Z9compareTolPiS_S_S_iii@4"] = &p_sortNullFirsts;
-    testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
+    auto *compareToSp = new Specialization();
+    compareToSp->addSpecializedParam(1, &p_sortCols);
+    compareToSp->addSpecializedParam(2, &p_sortColTypes);
+    compareToSp->addSpecializedParam(3, &p_sortAscendings);
+    compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
+    compareToSp->addSpecializedParam(5, &p_sortColCount);
 
-    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@1"] = &p_sourceTypes;
-    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@2"] = &p_outputCols;
-    testParam["_ZN11omniruntime2op12allocColumnsElPiS1_ii@3"] = &p_outputColCount;
+    auto *allocColumnsSp = new Specialization();
+    allocColumnsSp->addSpecializedParam(1, &p_sourceTypes);
+    allocColumnsSp->addSpecializedParam(2, &p_outputCols);
+    allocColumnsSp->addSpecializedParam(3, &p_outputColCount);
 
-    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@1"] = &p_outputCols;
-    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@2"] = &p_outputColCount;
-    testParam["_ZN10PagesIndex9getOutputEPiilS0_ii@4"] = &p_sourceTypes;
+    auto *getOutputSp = new Specialization();
+    getOutputSp->addSpecializedParam(1, &p_outputCols);
+    getOutputSp->addSpecializedParam(2, &p_outputColCount);
+    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
 
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+    std::map<std::string, Specialization> sortSps = {
+        {OMNIJIT_SORT_ALLOC_COLUMNS, *allocColumnsSp}
+    };
 
-    Hammer hammer1("/opt/lib/ir/sort.ll", testParam);
-    Hammer hammer2("/opt/lib/ir/pages_index.ll", testParam);
-    Hammer hammer3("/opt/lib/ir/memory_pool.ll", testParam);
+    std::map<std::string, Specialization> pagesIndexSps = {
+        {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp},
+        {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp}
+    };
 
-    hammer1.harden();
-    hammer2.harden();
-    hammer3.harden();
-    deps.push_back(&hammer2);
-    deps.push_back(&hammer3);
-
-    HammerConfig hammerConfig;
-    auto jitter = hammer1.create_jitter(deps, hammerConfig);
-    auto func = (opt_module)(jitter->lookup("_ZN11omniruntime2op19SortOperatorFactory14createOperatorEv")->getAddress());
+    auto *sortContext = new omniruntime::jit::Context("sort", sortSps, std::vector<std::string>(),
+                                                      std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+                                                            std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(),
+                                                            std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
+    auto createOperatorFunc = jit->specialize();
 
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(func);;
-    jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);;
 
     JNI_DEBUG_LOG("create jit sort context finished, elapsed time: %ld ms.", END(start));
     return jitContext;

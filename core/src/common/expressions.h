@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 
+namespace omniruntime {
 namespace expressions {
 
 // place holder context class here
@@ -37,20 +38,6 @@ enum Operator
     INVALIDOP
 };
 
-// For calling special forms and functions
-enum CallType
-{
-    // special forms
-    IN, 
-    BETWEEN, 
-    COALESCE, 
-    IF, 
-    // functions
-    SUBSTR, 
-    CAST, 
-    ABS, 
-    INVALIDCALL
-};
 
 
 enum DataType
@@ -69,7 +56,11 @@ enum ExprType
     DATA_E, 
     BINARY_E, 
     UNARY_E, 
-    CALL_E, // for special forms and functions
+    IN_E, 
+    BETWEEN_E, 
+    IF_E, 
+    COALESCE_E, 
+    FUNC_E,
     INVALID_E
 };
 
@@ -90,28 +81,26 @@ class DataExpr : public Expr
 {
 public:
     bool isColumn;
+    bool boolVal;
     int32_t intVal;
     int64_t longVal;
     double doubleVal;
-    std::string stringVal;
+    std::string* stringVal;
     int32_t colVal;
 
     DataExpr();
+    ~DataExpr();
+    DataExpr(bool val);
     DataExpr(int32_t val);
-    DataExpr(int64_t val); // might need explicit
+    DataExpr(int64_t val);
     DataExpr(double val);
-    DataExpr(std::string val);
+    DataExpr(std::string* val);
     DataExpr(int32_t val, DataType colType);
 
     void printExprTree();
     ExprType getType();
 };
-// Helper functions to create DataExprs
-// DataExpr* createDataInt32(int32_t val);
-// DataExpr* createDataInt64(int64_t val);
-// DataExpr* createDataDouble(double val);
-// DataExpr* createDataString(std::string val);
-// DataExpr* createDataColumn(int32_t colIdx);
+
 
 // Helper function to translate from jni type number to DataType
 DataType colTypeTrans(int32_t colType);
@@ -153,21 +142,83 @@ public:
 };
 
 
-class CallExpr : public Expr
+class InExpr : public Expr
 {
 public:
-    CallType callType;
+    // first element of arguments is the value to be compared to every other argument
     std::vector<Expr*> arguments;
 
-    CallExpr();
-    ~CallExpr();
-    CallExpr(CallType ct, std::vector<Expr*> args);
-    CallExpr(CallType ct, std::vector<Expr*> args, DataType dt);
+    InExpr();
+    ~InExpr();
+    InExpr(std::vector<Expr*> args);
+
+    void printExprTree();
+    ExprType getType();
+};
+
+
+class BetweenExpr : public Expr
+{
+public:
+    Expr* value;
+    Expr* lowerBound;
+    Expr* upperBound;
+
+    BetweenExpr();
+    ~BetweenExpr();
+    BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound);
+
+    void printExprTree();
+    ExprType getType();
+};
+
+
+class IfExpr : public Expr
+{
+public:
+    Expr* condition;
+    Expr* trueExpr;
+    Expr* falseExpr;
+
+    IfExpr();
+    ~IfExpr();
+    IfExpr(Expr* cond, Expr* texp, Expr* fexp);
+
+    void printExprTree();
+    ExprType getType();
+};
+
+
+class CoalesceExpr : public Expr
+{
+public:
+    Expr* value1;
+    Expr* value2;
+
+    CoalesceExpr();
+    ~CoalesceExpr();
+    CoalesceExpr(Expr* val1, Expr* val2);
+
+    void printExprTree();
+    ExprType getType();
+};
+
+
+class FuncExpr : public Expr
+{
+public:
+    std::string funcName;
+    std::vector<Expr*> arguments;
+
+    FuncExpr();
+    ~FuncExpr();
+    FuncExpr(std::string fnName, std::vector<Expr*> args);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
     
     void printExprTree();
     ExprType getType();
 };
 
 }
-
+}
 #endif

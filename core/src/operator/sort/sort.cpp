@@ -2,6 +2,8 @@
 #include "../../util/type_infer.h"
 #include "../../util/debug.h"
 #include "../../memory/memory_pool.h"
+#include "../../jit/annotation.h"
+#include "../optimization.h"
 #include <iostream>
 #include <algorithm>
 #include <cstring>
@@ -42,6 +44,7 @@ int32_t getTableCount(int32_t positionCount, int32_t maxRowCount)
     return ((positionCount + maxRowCount - 1) / maxRowCount);
 }
 
+SPECIALIZE(OMNIJIT_SORT_ALLOC_COLUMNS)
 void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount)
 {
     Table *outputTable = (Table *)outputTableAddr;

@@ -11,7 +11,19 @@ WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t size)
 
 WindowIndex::~WindowIndex() {}
 
+RankingWindowFunction::RankingWindowFunction()
+{
+    this->currentPeerGroupStart = 0;
+    this->currentPosition = 0;
+}
+
 RankingWindowFunction::~RankingWindowFunction() {}
+
+RankFunction::RankFunction()
+{
+    this->rank = 0;
+    this->count = 1;
+}
 
 void RankingWindowFunction::processRow(Column *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
     int32_t frameStart, int32_t frameEnd)
@@ -59,16 +71,17 @@ void RowNumberFunction::processRow(Column *column, int32_t index, bool newPeerGr
     column->setValue(index, &value);
 }
 
-AggregateWindowFunction::~AggregateWindowFunction()
-{
-}
+AggregateWindowFunction::~AggregateWindowFunction() {}
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, int32_t dataType)
 {
-    int32_t intByteLen = sizeof(int32_t);
+    this->windowIndex = nullptr;
     this->argumentChannels = argumentChannels;
     this->aggregationType = aggregationType;
+    this->currentStart = 0;
+    this->currentEnd = 0;
     this->dataType = dataType;
+    this->aggregator = nullptr;
 }
 
 void AggregateWindowFunction::reset(WindowIndex *windowIndex)
@@ -144,6 +157,9 @@ void AggregateWindowFunction::evaluateFinal(omniruntime::op::Aggregator *pAggreg
 
 void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
 {
+    if (start > end) {
+        return;
+    }
     Column ***leftColumns = windowIndex->getPagesIndex()->getColumns();
     void *res = nullptr;
     switch (dataType) {
