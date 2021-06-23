@@ -59,12 +59,8 @@ public:
         JoinHashTables *hashTables,
         int32_t partitionIndex);
     ~HashBuilderOperator();
-    int32_t addInput(Table* data, int32_t rowCount) override
-    {
-        return 0;
-    }
-    int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
-    int32_t getOutput(std::vector<Table *>& outputTables) override;
+    int32_t addInput(VectorBatch *vecBatch) override;
+    int32_t getOutput(std::vector<VectorBatch *>& outputPages) override;
     int32_t *getSourceTypes() override;
 private:
     int32_t *buildTypes;
@@ -74,6 +70,7 @@ private:
     PagesIndex *pagesIndex;
     int32_t partitionIndex;
     JoinHashTables *hashTables;
+    vector<VectorBatch *> inputVecBatches;
 };
 } // end of op
 } // end of omniruntime

@@ -1,11 +1,12 @@
 package nova.hetu.omniruntime.operator.sort;
 
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.utils.OmniUtils;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
+
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 public class OmniSortOperatorFactory
         extends OmniOperatorFactory<OmniSortOperatorFactory.Context>
@@ -23,7 +24,7 @@ public class OmniSortOperatorFactory
     protected long createNativeOperatorFactory(Context context)
     {
         return createSortOperatorFactory(
-                OmniUtils.transformVecType(context.sourceTypes),
+                toNativeConstants(context.sourceTypes),
                 context.outputColumns,
                 context.sortColumns,
                 context.sortAscendings,

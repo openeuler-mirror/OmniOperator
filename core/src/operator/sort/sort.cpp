@@ -2,6 +2,8 @@
 #include "../../util/type_infer.h"
 #include "../../util/debug.h"
 #include "../../memory/memory_pool.h"
+#include "../../vector/vector_common.h"
+#include "../status.h"
 #include "../../jit/annotation.h"
 #include "../optimization.h"
 #include <iostream>
@@ -39,45 +41,9 @@ int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t output
     return maxRowCount;
 }
 
-int32_t getTableCount(int32_t positionCount, int32_t maxRowCount)
+int32_t getPageCount(int32_t positionCount, int32_t maxRowCount)
 {
     return ((positionCount + maxRowCount - 1) / maxRowCount);
-}
-
-SPECIALIZE(OMNIJIT_SORT_ALLOC_COLUMNS)
-void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount)
-{
-    Table *outputTable = (Table *)outputTableAddr;
-    int32_t outputCol;
-    int32_t columnTypeIdx;
-    void *data = nullptr;
-    Column *column = nullptr;
-    
-    for (int32_t i = 0; i < outputColCount; i++) {
-        outputCol = outputCols[i];
-        columnTypeIdx = sourceTypes[outputCol];
-        switch (columnTypeIdx)
-        {
-        case 1:
-            data = omni_allocate(positionCount * sizeof(int32_t));
-            column = new Column(data, INT32, positionCount);
-            outputTable->setColumn(column, INT32);
-            break;
-        case 2:
-            data = omni_allocate(positionCount * sizeof(int64_t));
-            column = new Column(data, INT64, positionCount);
-            outputTable->setColumn(column, INT64);
-            break;
-        case 3:
-            data = omni_allocate(positionCount * sizeof(double));
-            column = new Column(data, DOUBLE, positionCount);
-            outputTable->setColumn(column, DOUBLE);
-            break;    
-        default:
-            printf("unsupported type.");
-            break;
-        }
-    }
 }
 
 SortOperatorFactory::SortOperatorFactory(
@@ -185,19 +151,17 @@ SortOperator::~SortOperator()
     delete pagesIndex;
 }
 
-int32_t SortOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
+int32_t SortOperator::addInput(VectorBatch *vecBatch)
 {
-    if (pageCount <= 0) {
-        return 0;
-    }
-
-    pagesIndex->addTables(datas, rowCounts, pageCount);
+    inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
 // return error code
-int32_t SortOperator::getOutput(vector<Table *>& outputTables)
+int32_t SortOperator::getOutput(vector<VectorBatch *>& outputPages)
 {
+    pagesIndex->addVecBatches(inputVecBatches);
+
     int32_t positionCount = pagesIndex->getPositionCount();
     if (positionCount <= 0) {
         return 0;
@@ -224,57 +188,29 @@ int32_t SortOperator::getOutput(vector<Table *>& outputTables)
 
     // next, get output
     int32_t maxRowCount = getMaxRowCount(sourceTypes, outputCols, outputColsCount);
-    int32_t tableCount = getTableCount(positionCount, maxRowCount);
-    outputTables.reserve(tableCount);
+    int32_t vecBatchCount = getPageCount(positionCount, maxRowCount);
+    outputPages.reserve(vecBatchCount);
 
-    Table *table = nullptr;
+    VectorBatch *vecBatch = nullptr;
+    int32_t outputTypes[outputColsCount];
+    for (int colIdx = 0; colIdx < outputColsCount; ++colIdx) {
+        outputTypes[colIdx] = sourceTypes[outputCols[colIdx]];
+    }
     int32_t position = 0;
     int32_t rowCount = 0;
-    for (int32_t i = 0; i < tableCount; i++) {
+    for (int32_t i = 0; i < vecBatchCount; i++) {
         rowCount = min(maxRowCount, positionCount - position);
-        table = new Table(rowCount, outputColsCount);
-
         auto start = START();
-        allocColumns((int64_t)table, sourceTypes, outputCols, outputColsCount, rowCount);
         OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
-        pagesIndex->getOutput(outputCols, outputColsCount, (int64_t)table, sourceTypes, position, rowCount);
+        vecBatch = new VectorBatch(outputTypes, outputColsCount, rowCount);
+        pagesIndex->getOutput(outputCols, outputColsCount, vecBatch, sourceTypes, position, rowCount);
         OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));
-
         position += rowCount;
-        outputTables.push_back(table);
+        outputPages.push_back(vecBatch);
     }
-    status = 2;
+    setStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
-void freeInputTable(Table **inputTables, int32_t inputTableCount)
-{
-    for (int32_t tableIdx = 0; tableIdx < inputTableCount; tableIdx++) {
-        delete inputTables[tableIdx];
-    }
-    delete inputTables;
-}
-
-void freeOutputTable(vector<Table *>& outputTables)
-{
-    int32_t tablesCount = outputTables.size();
-    for (int32_t tableIdx = 0; tableIdx < tablesCount; tableIdx++) {
-        delete outputTables[tableIdx];
-    }
-}
-
-void freeDataInColumn(Table **tables, int32_t tableCount)
-{
-    Table *table;
-    int32_t columnCount = 0;
-
-    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-        table = tables[tableIdx];
-        columnCount = table->getColumnNumber();
-        for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
-            free(table->getColumn(colIdx)->getData());
-        }
-    }
-}
 } // end of namespace op
 } // end of namespace omniruntime

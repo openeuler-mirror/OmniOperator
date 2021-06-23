@@ -1,14 +1,14 @@
 package nova.hetu.omniruntime.operator.aggregator;
 
+import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.utils.OmniUtils;
-import nova.hetu.omniruntime.vector.AggType;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 public class OmniAggregationOperatorFactory
             extends OmniOperatorFactory<OmniAggregationOperatorFactory.Context>
@@ -24,9 +24,9 @@ public class OmniAggregationOperatorFactory
     protected long createNativeOperatorFactory(Context context)
     {
         return createAggregationOperatorFactory(
-                OmniUtils.transformVecType(context.aggTypes),
-                OmniUtils.transformAggType(context.aggFunctionTypes),
-                OmniUtils.transformVecType(context.aggOutputTypes));
+                toNativeConstants(context.aggTypes),
+                toNativeConstants(context.aggFunctionTypes),
+                toNativeConstants(context.aggOutputTypes));
     }
 
     private static native long createAggregationOperatorFactory(int[] aggTypes, int[] aggFunctionTypes, int[] aggOutputTypes);

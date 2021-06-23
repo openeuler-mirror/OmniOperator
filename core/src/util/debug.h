@@ -2,6 +2,8 @@
 #define __DEBUG_H__
 
 #include <chrono>
+#include <stdexcept>
+#include "../../config.h"
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::milliseconds ms;
@@ -65,4 +67,17 @@ printf("[%s][%s][%d]:Func Exit\n", __FILE__, __FUNCTION__, __LINE__)
     }while(0);
 
 // #define OPTIMIZATION_BY_THREAD
+#endif
+
+#ifdef DEBUG
+#ifndef ASSERT
+#define ASSERT(condition) \
+    do { \
+        if(!(condition)){ \
+            throw runtime_error(#condition" is not match!"); \
+        } \
+    }while(0)
+#endif
+#else
+#define ASSERT(condition)
 #endif

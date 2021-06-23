@@ -11,30 +11,29 @@ public class DoubleVecTest
             throws Exception
     {
         DoubleVec vec1 = new DoubleVec(1024);
-        for (int i = 0; i < vec1.size(); i++) {
+        for (int i = 0; i < vec1.getSize(); i++) {
             vec1.set(i, (double) i / 3);
         }
 
-        for (int i = 0; i < vec1.size(); i++) {
+        for (int i = 0; i < vec1.getSize(); i++) {
             System.out.println(((double) i / 3 + " " + vec1.get(i)));
         }
-        assertEquals(true, vec1.close());
     }
 
     @Test
     public void testSlice()
     {
         DoubleVec vec1 = new DoubleVec(10);
-        for (int i = 0; i < vec1.size(); i++) {
+        for (int i = 0; i < vec1.getSize(); i++) {
             vec1.set(i, (double) i / 2);
         }
         DoubleVec slice1 = vec1.slice(3, 5);
-        for (int i = 0; i < slice1.size(); i++) {
+        for (int i = 0; i < slice1.getSize(); i++) {
             assertEquals(vec1.get(i + 3), slice1.get(i));
         }
 
-        DoubleVec slice2 = vec1.slice(0, vec1.size());
-        for (int i = 0; i < slice2.size(); i++) {
+        DoubleVec slice2 = vec1.slice(0, vec1.getSize());
+        for (int i = 0; i < slice2.getSize(); i++) {
             assertEquals(vec1.get(i), slice2.get(i));
         }
     }
@@ -44,7 +43,7 @@ public class DoubleVecTest
     {
         DoubleVec v1 = new DoubleVec(0);
         double[] values = new double[0];
-        v1.getData().asDoubleBuffer().put(values, 0, values.length);
+        v1.getValues().asDoubleBuffer().put(values, 0, values.length);
         v1.close();
     }
 }

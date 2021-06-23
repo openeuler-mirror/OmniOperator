@@ -1,7 +1,8 @@
 #ifndef __OMNI_OPERATOR_H__
 #define __OMNI_OPERATOR_H__
 
-#include "../vector/table.h"
+#include "../vector/vector_batch.h"
+#include "status.h"
 #include <vector>
 
 namespace omniruntime {
@@ -12,21 +13,21 @@ namespace op {
 
         virtual ~Operator() {}
 
-        // TBD addInput return ErrNo
-        virtual int32_t addInput(Table *data, int32_t rowCount) = 0;
+        virtual int32_t addInput(VectorBatch *vecBatch) = 0;
 
-        // orderby needs an array to sort
-        virtual int32_t addInput(Table **data, int32_t *rowCount, int32_t pageCount) = 0;
-
-        virtual int32_t getOutput(std::vector<Table *> &data) = 0;
+        virtual int32_t getOutput(std::vector<VectorBatch *> &data) = 0;
 
         virtual int32_t *getSourceTypes() { return sourceTypes; }
 
         int getStatus() { return status; }
 
+        void setStatus(OmniStatus status) { this->status = status; };
+
         void close() {}
-    protected:
+
+    private:
         int status;
+    protected:
         int32_t* sourceTypes;
     };
 }

@@ -1,10 +1,10 @@
 package nova.hetu.omniruntime;
 
-public class NativeLibs
+public class OmniLibs
 {
     private static final String OMNI_RUNTIME = "omruntime";
 
-    private NativeLibs()
+    private OmniLibs()
     {
     }
 

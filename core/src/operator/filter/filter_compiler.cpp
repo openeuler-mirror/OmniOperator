@@ -8,21 +8,21 @@ namespace op {
 
 using namespace std;
 
-bool testExpressionEvaluater(Table *table, int32_t index)
-{
-    Column *column = table->getColumn(0);
-    switch (column->getType())
-    {
-    case INT32:
-        return *((int32_t*) column->getValue(index)) % 2 == 0;
-    case INT64:
-        return *((int64_t*) column->getValue(index)) % 2 == 0;
-    case DOUBLE:
-        return *((double*) column->getValue(index)) > 10;
-    default:
-        break;
-    }
-}
+//bool testExpressionEvaluater(VectorBatch *vecBatch, int32_t index)
+//{
+//    Vector *column = vecBatch->getColumn(0);
+//    switch (column->getType())
+//    {
+//    case OMNI_VEC_TYPE_INT:
+//        return *((int32_t*) column->getValue(index)) % 2 == 0;
+//    case OMNI_VEC_TYPE_LONG:
+//        return *((int64_t*) column->getValue(index)) % 2 == 0;
+//    case OMNI_VEC_TYPE_DOUBLE:
+//        return *((double*) column->getValue(index)) > 10;
+//    default:
+//        break;
+//    }
+//}
 
 Compiler::Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount)
 {

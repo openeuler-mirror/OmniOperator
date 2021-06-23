@@ -1,18 +1,18 @@
 package nova.hetu.omniruntime.operator;
 
-import com.google.common.collect.ImmutableList;
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
 public class OmniHashJoinOperatorsTest
@@ -28,16 +28,17 @@ public class OmniHashJoinOperatorsTest
             buildVec1.set(i, buildData1[i]);
             buildVec2.set(i, buildData2[i]);
         }
-        VecBatch buildVecBatch = new VecBatch(new Vec[] {buildVec1, buildVec2}, 10);
+        VecBatch buildVecBatch = new VecBatch(new Vec[] {buildVec1, buildVec2});
 
-        VecType[] buildTypes = {VecType.LONG, VecType.LONG};
+        VecType[] buildTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
                 buildOutputCols, buildJoinCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
-        hashBuilderOperator.addInput(ImmutableList.of(buildVecBatch));
+        hashBuilderOperator.addInput(buildVecBatch);
+        hashBuilderOperator.getOutput();
 
         long[] probeData1 = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
         long[] probeData2 = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
@@ -47,22 +48,22 @@ public class OmniHashJoinOperatorsTest
             probeVec1.set(i, probeData1[i]);
             probeVec2.set(i, probeData2[i]);
         }
-        VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2}, 10);
+        VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2});
 
-        VecType[] probeTypes = {VecType.LONG, VecType.LONG};
+        VecType[] probeTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
-        VecType[] buildOutputTypes = {VecType.LONG};
+        VecType[] buildOutputTypes = {OMNI_VEC_TYPE_LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
                 probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
-        lookupJoinOperator.addInput(ImmutableList.of(probeVecBatch));
+        lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
 
         results.hasNext();
         VecBatch resultVecBatch = results.next();
-        ByteBuffer output0 = resultVecBatch.getVectors()[0].getData();
-        ByteBuffer output1 = resultVecBatch.getVectors()[1].getData();
+        ByteBuffer output0 = resultVecBatch.getVectors()[0].getValues();
+        ByteBuffer output1 = resultVecBatch.getVectors()[1].getValues();
         output0.order(ByteOrder.LITTLE_ENDIAN);
         output1.order(ByteOrder.LITTLE_ENDIAN);
 
@@ -93,7 +94,7 @@ public class OmniHashJoinOperatorsTest
             buildVec11.set(i, buildData11[i]);
             buildVec12.set(i, buildData12[i]);
         }
-        VecBatch buildVecBatch1 = new VecBatch(new Vec[] {buildVec11, buildVec12}, 6);
+        VecBatch buildVecBatch1 = new VecBatch(new Vec[] {buildVec11, buildVec12});
 
         long[] buildData21 = {2, 2, 4, 5};
         long[] buildData22 = {79, 70, 70, 70};
@@ -103,19 +104,21 @@ public class OmniHashJoinOperatorsTest
             buildVec21.set(i, buildData21[i]);
             buildVec22.set(i, buildData22[i]);
         }
-        VecBatch buildVecBatch2 = new VecBatch(new Vec[] {buildVec21, buildVec22}, 4);
+        VecBatch buildVecBatch2 = new VecBatch(new Vec[] {buildVec21, buildVec22});
 
-        VecType[] buildTypes = {VecType.LONG, VecType.LONG};
+        VecType[] buildTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 2;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
                 buildOutputCols, buildJoinCols, operatorCount);
         OmniOperator hashBuilderOperator1 = hashBuilderOperatorFactory.createOperator();
-        hashBuilderOperator1.addInput(ImmutableList.of(buildVecBatch1));
+        hashBuilderOperator1.addInput(buildVecBatch1);
+        hashBuilderOperator1.getOutput();
 
         OmniOperator hashBuilderOperator2 = hashBuilderOperatorFactory.createOperator();
-        hashBuilderOperator2.addInput(ImmutableList.of(buildVecBatch2));
+        hashBuilderOperator2.addInput(buildVecBatch2);
+        hashBuilderOperator2.getOutput();
 
         long[] probeData1 = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
         long[] probeData2 = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
@@ -125,22 +128,22 @@ public class OmniHashJoinOperatorsTest
             probeVec1.set(i, probeData1[i]);
             probeVec2.set(i, probeData2[i]);
         }
-        VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2}, 10);
+        VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2});
 
-        VecType[] probeTypes = {VecType.LONG, VecType.LONG};
+        VecType[] probeTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
-        VecType[] buildOutputTypes = {VecType.LONG};
+        VecType[] buildOutputTypes = {OMNI_VEC_TYPE_LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
                 probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
-        lookupJoinOperator.addInput(ImmutableList.of(probeVecBatch));
+        lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
 
         results.hasNext();
         VecBatch resultVecBatch = results.next();
-        ByteBuffer output0 = resultVecBatch.getVectors()[0].getData();
-        ByteBuffer output1 = resultVecBatch.getVectors()[1].getData();
+        ByteBuffer output0 = resultVecBatch.getVectors()[0].getValues();
+        ByteBuffer output1 = resultVecBatch.getVectors()[1].getValues();
         output0.order(ByteOrder.LITTLE_ENDIAN);
         output1.order(ByteOrder.LITTLE_ENDIAN);
 

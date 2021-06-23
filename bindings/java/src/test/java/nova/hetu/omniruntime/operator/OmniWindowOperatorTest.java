@@ -1,17 +1,18 @@
 package nova.hetu.omniruntime.operator;
 
-import com.google.common.collect.ImmutableList;
+import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.constants.WindowFunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
 public class OmniWindowOperatorTest
@@ -19,7 +20,7 @@ public class OmniWindowOperatorTest
     @Test
     public void testRank()
     {
-        VecType[] sourceTypes = {VecType.LONG, VecType.LONG};
+        VecType[] sourceTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] outputChannels = {0, 1};
         WindowFunctionType[] windowFunction = {WindowFunctionType.WIN_RANK};
         int[] partitionChannels = {0};
@@ -30,17 +31,17 @@ public class OmniWindowOperatorTest
         int preSortedChannelPrefix = 0;
         int expectedPositions = 10000;
         int[] argumentChannels = {};
-        VecType[] windowFunctionReturnType = {VecType.LONG};
+        VecType[] windowFunctionReturnType = {OMNI_VEC_TYPE_LONG};
         OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
-        ImmutableList<VecBatch> vecBatches = buildData();
+        VecBatch vecBatch = buildData();
 
-        omniOperator.addInput(vecBatches);
+        omniOperator.addInput(vecBatch);
         Iterator<VecBatch> output = omniOperator.getOutput();
         if (output.hasNext()) {
-            VecBatch vecBatch = output.next();
-            Vec[] vectors = vecBatch.getVectors();
+            VecBatch outputVecBatch = output.next();
+            Vec[] vectors = outputVecBatch.getVectors();
             assertEquals(((LongVec) vectors[0]).get(0), 1);
             assertEquals(((LongVec) vectors[0]).get(1), 1);
             assertEquals(((LongVec) vectors[0]).get(2), 1);
@@ -59,9 +60,8 @@ public class OmniWindowOperatorTest
         }
     }
 
-    private ImmutableList<VecBatch> buildData()
+    private VecBatch buildData()
     {
-        ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
         List<Vec> columns = new ArrayList<>();
         int rowNum = 5;
         LongVec longVec1 = new LongVec(rowNum);
@@ -78,8 +78,6 @@ public class OmniWindowOperatorTest
         longVec2.set(4, 6);
         columns.add(longVec1);
         columns.add(longVec2);
-        VecBatch vecBatch = new VecBatch(columns, rowNum);
-        vecBatchList.add(vecBatch);
-        return vecBatchList.build();
+        return new VecBatch(columns);
     }
 }

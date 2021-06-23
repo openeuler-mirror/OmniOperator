@@ -7,6 +7,8 @@ const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
 namespace op {
 
+typedef std::unordered_map<uint64_t, std::vector<GroupBySlot>>::iterator RowIterator;
+
 class MultiChannelHash {
 public:
     MultiChannelHash() : result(0){}
@@ -42,11 +44,9 @@ public:
         }
     }
 
-    int32_t addInput(Table* data, int32_t rowCount) override;
+    int32_t addInput(VectorBatch *data) override;
 
-    int32_t getOutput(std::vector<Table*>& data) override;
-
-    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
+    int32_t getOutput(std::vector<VectorBatch*>& data) override;
 
     HashAggregationOperator(std::vector<Aggregator*> aggregators)
     : AggregationCommonOperator(aggregators)
@@ -59,15 +59,15 @@ public:
             for (int32_t idx = 0; idx < item.second.size(); ++idx) {
                 switch (groupByCols[idx].type)
                 {
-                    case INT32: {
+                    case OMNI_VEC_TYPE_INT: {
                         delete reinterpret_cast<int32_t*>(item.second[idx].val);
                         break;
                     }
-                    case INT64: {
+                    case OMNI_VEC_TYPE_LONG: {
                         delete reinterpret_cast<int64_t*>(item.second[idx].val);
                         break;
                     }
-                    case DOUBLE: {
+                    case OMNI_VEC_TYPE_DOUBLE: {
                         delete reinterpret_cast<double*>(item.second[idx].val);
                         break;
                     }
@@ -82,14 +82,20 @@ public:
             delete agg;
         }
     }
-    void preLoop(Table* table);
-    void inLoop(char** head, uint32_t offset, int32_t* types, int32_t colNum, int32_t* groupByColIdx, int32_t groupByColNum, int32_t* aggColIdx, int32_t aggColNum, int32_t* aggFuncTypes); 
-    void postLoop(Table* table);
-    void constructHashColumn(Table* table, int32_t* types, uint32_t groupByColSize, int32_t tableRowSize);
-    void constructAggColumn(Table* table, int32_t* types, uint32_t aggColSize, int32_t tableRowSize);
-    uint32_t* groupByColumnIndexes();
-    uint32_t* aggColumnIndexes();
+            void preLoop(VectorBatch *vecBatch);
 
+            void inLoop(Vector **vectors, uint32_t offset, int32_t *types, int32_t colNum, int32_t *groupByColIdx,
+                        int32_t groupByColNum, int32_t *aggColIdx, int32_t aggColNum, int32_t *aggFuncTypes);
+
+            void postLoop(VectorBatch *vecBatch);
+
+        private:
+            int32_t getRowSize(int32_t *types);
+
+            void fillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
+                                    RowIterator &rowIterator, int32_t rowCount);
+
+            void fillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount);
 private:
     friend class HashAggregationOperatorFactory;
     std::unordered_map<uint64_t, std::vector<GroupBySlot>> groupedRows;

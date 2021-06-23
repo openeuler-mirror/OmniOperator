@@ -2,7 +2,6 @@
 #define __SORT_H__
 
 #include "../operator_factory.h"
-#include "../../vector/type.h"
 #include "../pages_index.h"
 
 #include <vector>
@@ -77,13 +76,9 @@ public:
 
     ~SortOperator();
 
-    int32_t addInput(Table *data, int32_t rowCount) override {
-        return 0;
-    }
+    int32_t addInput(VectorBatch *vecBatch) override;
 
-    int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
-
-    int32_t getOutput(std::vector<Table *> &outputTables) override;
+    int32_t getOutput(std::vector<VectorBatch *> &outputPages) override;
 
     int32_t getTypescount() { return typesCount; }
 
@@ -110,17 +105,11 @@ private:
     int32_t *sortNullFirsts;
     int32_t sortColCount;
     PagesIndex *pagesIndex;
+    vector<VectorBatch *> inputVecBatches;
 };
 
-void freeInputTable(Table **inputTables, int32_t inputTableCount);
-
-void freeOutputTable(std::vector<Table *> &outputTables);
-
-void freeDataInColumn(Table **tables, int32_t tableCount);
-
 int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount);
-int32_t getTableCount(int32_t positionCount, int32_t maxRowCount);
-void allocColumns(int64_t outputTableAddr, int32_t *sourceTypes, int32_t *outputCols, int32_t outputColCount, int32_t positionCount);
+int32_t getPageCount(int32_t positionCount, int32_t maxRowCount);
 
 } // end of namespace op
 } // end of namespace omniruntime

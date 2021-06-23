@@ -18,13 +18,13 @@ public:
     }
 
     virtual ~AggregationOperator() {}
-    int32_t addInput(Table* data, int32_t rowCount) override;
-    int32_t getOutput(std::vector<Table*>& data) override;
-    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
-    inline void inLoop(char** vecPtrs, uint32_t offset, int32_t colNum, int32_t* aggDataType, int32_t* aggFuncType);
-    inline void preLoop(Table* data) {}
-    inline void postLoop(Table* data) {}
-    void constructColumn(Table* table, int32_t* types, uint32_t aggColSize);
+    int32_t addInput(VectorBatch *vecBatch) override;
+    int32_t getOutput(std::vector<VectorBatch*>& data) override;
+    inline void inLoop(Vector **vectors, uint32_t offset, int32_t colNum, int32_t* aggDataType, int32_t* aggFuncType);
+    inline void preLoop(VectorBatch *vecBatch) {}
+    inline void postLoop(VectorBatch *vecBatch) {}
+
+    void fillResultVectors(VectorBatch *vecBatch);
 private:
     std::vector<ColumnIndex> aggCols;
 };

@@ -3,7 +3,6 @@
 
 #include "../operator_factory.h"
 #include "../operator.h"
-#include "../../vector/table.h"
 #include "../../util/debug.h"
 #include "../../codegen/llvm_codegen.h"
 
@@ -15,8 +14,7 @@ class Filter
 public:
     Filter(LLVMCodeGen* codegen, Expr* expr);
     ~Filter() {delete this->codeGen; delete this->expr;}
-    int32_t filter(Table *table, int32_t rowNumber, int32_t *selectedRows);
-
+    int32_t filter(VectorBatch *vecBatch, int32_t *selectedRows);
 private:
     LLVMCodeGen *codeGen;
     Expr* expr;
@@ -30,11 +28,9 @@ public:
     {
     }
 
-    int32_t addInput(Table* data, int32_t rowCount) override;
+    int32_t addInput(VectorBatch *vecBatch) override;
 
-    int32_t getOutput(std::vector<Table*>& data) override;
-
-    int32_t addInput(Table** data, int32_t* rowCount, int32_t pageCount) override;
+    int32_t getOutput(std::vector<VectorBatch*>& data) override;
 
     int32_t getVecCount() { return this->vecCount; }
 
@@ -48,7 +44,7 @@ public:
     int32_t vecCount;
     int32_t *projectIndex;
     int32_t projectVecCount;
-    Table *projectedVecs;
+    VectorBatch *projectedVecs;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory

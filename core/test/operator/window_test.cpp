@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <chrono>
+#include <src/vector/vector_helper.h>
 
 TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 {
@@ -17,14 +18,16 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 3);
-    Column *column0 = new Column(data0, INT32, DATA_SIZE);
-    Column *column1 = new Column(data1, INT64, DATA_SIZE);
-    Column *column2 = new Column(data2, DOUBLE, DATA_SIZE);
-    tables[0]->setColumn(column0, INT32);
-    tables[0]->setColumn(column1, INT64);
-    tables[0]->setColumn(column2, DOUBLE);
+    VectorBatch *vecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
+    column0->setValues(0, data0, DATA_SIZE);
+    LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
+    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);
+    vecBatch->setVector(0, column0);
+    vecBatch->setVector(1, column1);
+    vecBatch->setVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -47,41 +50,44 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
         outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = nullptr;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
-    if (jitContext == NULL) {
+    if (jitContext == nullptr) {
         windowOperator = (WindowOperator *)operatorFactory->createOperator();
     } else {
         opt_module windowModule = (opt_module)(jitContext->func);
         windowOperator = (WindowOperator *)windowModule(operatorFactory);
     }
 
-    windowOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    windowOperator->getOutput(outputTables);
+    windowOperator->addInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->getOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
-    Column *expectCol1 = new Column(expectData1, INT32, DATA_SIZE);
+    IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
+    expectCol1->setValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {3, 0, 4, 1, 5, 2};
-    Column *expectCol2 = new Column(expectData2, INT64, DATA_SIZE);
+    LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
+    expectCol2->setValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1, 4.4};
-    Column *expectCol3 = new Column(expectData3, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol3->setValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
-    Column *expectCol4 = new Column(expectData4, INT64, DATA_SIZE);
-    Table *expectTable = new Table(DATA_SIZE, 4);
-    expectTable->setColumn(expectCol1, INT32);
-    expectTable->setColumn(expectCol2, INT64);
-    expectTable->setColumn(expectCol3, DOUBLE);
-    expectTable->setColumn(expectCol4, INT64);
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
+    LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
+    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    VectorBatch *expectVecBatch = new VectorBatch(4);
+    expectVecBatch->setVector(0, expectCol1);
+    expectVecBatch->setVector(1, expectCol2);
+    expectVecBatch->setVector(2, expectCol3);
+    expectVecBatch->setVector(3, expectCol4);
+    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete windowOperator;
     delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-    delete expectTable;
+    VectorHelper::freeVecBatch(vecBatch);
+    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::freeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRowNumber)
@@ -94,14 +100,16 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 3);
-    Column *column0 = new Column(data0, INT32, DATA_SIZE);
-    Column *column1 = new Column(data1, INT64, DATA_SIZE);
-    Column *column2 = new Column(data2, DOUBLE, DATA_SIZE);
-    tables[0]->setColumn(column0, INT32);
-    tables[0]->setColumn(column1, INT64);
-    tables[0]->setColumn(column2, DOUBLE);
+    VectorBatch *vecBatch= new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
+    column0->setValues(0, data0, DATA_SIZE);
+    LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
+    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);;
+    vecBatch->setVector(0, column0);
+    vecBatch->setVector(1, column1);
+    vecBatch->setVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -124,38 +132,40 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
         outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 0,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = nullptr;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
-    if (jitContext == NULL) {
+    if (jitContext == nullptr) {
         windowOperator = (WindowOperator *)operatorFactory->createOperator();
     } else {
         opt_module windowModule = (opt_module)(jitContext->func);
         windowOperator = (WindowOperator *)windowModule(operatorFactory);
     }
 
-    windowOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    windowOperator->getOutput(outputTables);
+    windowOperator->addInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->getOutput(outputVecBatches);
 
     double expectData1[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
-    Column *expectCol1 = new Column(expectData1, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol1 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol1->setValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
-    Column *expectCol2 = new Column(expectData2, INT64, DATA_SIZE);
+    LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
+    expectCol2->setValues(0, expectData2, DATA_SIZE);
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
-    Column *expectCol3 = new Column(expectData3, INT64, DATA_SIZE);
-    Table *expectTable = new Table(DATA_SIZE, 3);
-    expectTable->setColumn(expectCol1, DOUBLE);
-    expectTable->setColumn(expectCol2, INT64);
-    expectTable->setColumn(expectCol3, INT64);
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
+    LongVector *expectCol3 = new LongVector(nullptr, DATA_SIZE);
+    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    VectorBatch *expectVecBatch = new VectorBatch(3);
+    expectVecBatch->setVector(0, expectCol1);
+    expectVecBatch->setVector(1, expectCol2);
+    expectVecBatch->setVector(2, expectCol3);
+    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete windowOperator;
     delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-    delete expectTable;
+    VectorHelper::freeVecBatch(vecBatch);
+    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::freeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRankPartition)
@@ -168,14 +178,17 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 3);
-    Column *column0 = new Column(data0, INT32, DATA_SIZE);
-    Column *column1 = new Column(data1, INT64, DATA_SIZE);
-    Column *column2 = new Column(data2, DOUBLE, DATA_SIZE);
-    tables[0]->setColumn(column0, INT32);
-    tables[0]->setColumn(column1, INT64);
-    tables[0]->setColumn(column2, DOUBLE);
+    VectorBatch **vecBatches = (VectorBatch **)malloc(1 * sizeof(VectorBatch *));
+    VectorBatch *vecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
+    column0->setValues(0, data0, DATA_SIZE);
+    LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
+    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);;
+    vecBatch->setVector(0, column0);
+    vecBatch->setVector(1, column1);
+    vecBatch->setVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -198,41 +211,45 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
         outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = nullptr;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
-    if (jitContext == NULL) {
+    if (jitContext == nullptr) {
         windowOperator = (WindowOperator *)operatorFactory->createOperator();
     } else {
         opt_module windowModule = (opt_module)(jitContext->func);
         windowOperator = (WindowOperator *)windowModule(operatorFactory);
     }
 
-    windowOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    windowOperator->getOutput(outputTables);
+    windowOperator->addInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->getOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
-    Column *expectCol1 = new Column(expectData1, INT32, DATA_SIZE);
+    IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
+    expectCol1->setValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
-    Column *expectCol2 = new Column(expectData2, INT64, DATA_SIZE);
+    LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
+    expectCol2->setValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
-    Column *expectCol3 = new Column(expectData3, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol3->setValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 2, 1, 2};
-    Column *expectCol4 = new Column(expectData4, INT64, DATA_SIZE);
-    Table *expectTable = new Table(DATA_SIZE, 4);
-    expectTable->setColumn(expectCol1, INT32);
-    expectTable->setColumn(expectCol2, INT64);
-    expectTable->setColumn(expectCol3, DOUBLE);
-    expectTable->setColumn(expectCol4, INT64);
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
+    LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
+    expectCol4->setValues(0, expectData4, DATA_SIZE);
+
+    VectorBatch *expectVecBatch = new VectorBatch(4);
+    expectVecBatch->setVector(0, expectCol1);
+    expectVecBatch->setVector(1, expectCol2);
+    expectVecBatch->setVector(2, expectCol3);
+    expectVecBatch->setVector(3, expectCol4);
+    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete windowOperator;
     delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-    delete expectTable;
+    VectorHelper::freeVecBatch(vecBatch);
+    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::freeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRank) {
@@ -244,14 +261,16 @@ TEST(NativeOmniWindowOperatorTest, testRank) {
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **) malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 3);
-    Column *column0 = new Column(data0, INT32, DATA_SIZE);
-    Column *column1 = new Column(data1, INT64, DATA_SIZE);
-    Column *column2 = new Column(data2, DOUBLE, DATA_SIZE);
-    tables[0]->setColumn(column0, INT32);
-    tables[0]->setColumn(column1, INT64);
-    tables[0]->setColumn(column2, DOUBLE);
+    VectorBatch *vecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
+    column0->setValues(0, data0, DATA_SIZE);
+    LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
+    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);;
+    vecBatch->setVector(0, column0);
+    vecBatch->setVector(1, column1);
+    vecBatch->setVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -272,51 +291,46 @@ TEST(NativeOmniWindowOperatorTest, testRank) {
     int32_t argumentChannels[0] = {};
 
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
-                                                                                                outputCols, 3,
-                                                                                                windowFunctionTypes, 1,
-                                                                                                partitionCols, 0,
-                                                                                                preGroupedCols, 0,
-                                                                                                sortCols, ascendings,
-                                                                                                nullFirsts, 1,
-                                                                                                preSortedChannelPrefix,
-                                                                                                expectedPositions,
-                                                                                                allTypes, 4,
-                                                                                                argumentChannels, 0);
-    JitContext *jitContext = NULL;
+        outputCols, 3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
+    JitContext *jitContext = nullptr;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
-    if (jitContext == NULL) {
-        windowOperator = (WindowOperator *) operatorFactory->createOperator();
+    if (jitContext == nullptr) {
+        windowOperator = (WindowOperator *)operatorFactory->createOperator();
     } else {
-        opt_module windowModule = (opt_module) (jitContext->func);
-        windowOperator = (WindowOperator *) windowModule(operatorFactory);
+        opt_module windowModule = (opt_module)(jitContext->func);
+        windowOperator = (WindowOperator *)windowModule(operatorFactory);
     }
 
-    windowOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    windowOperator->getOutput(outputTables);
+    windowOperator->addInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->getOutput(outputVecBatches);
 
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
-    Column *expectCol1 = new Column(expectData1, INT64, DATA_SIZE);
+    LongVector *expectCol1 = new LongVector(nullptr, DATA_SIZE);
+    expectCol1->setValues(0, expectData1, DATA_SIZE);
     double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
-    Column *expectCol2 = new Column(expectData2, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol2 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol2->setValues(0, expectData2, DATA_SIZE);
     int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
-    Column *expectCol3 = new Column(expectData3, INT32, DATA_SIZE);
+    IntVector *expectCol3 = new IntVector(nullptr, DATA_SIZE);
+    expectCol3->setValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 1, 3, 4, 5, 6};
-    Column *expectCol4 = new Column(expectData4, INT64, DATA_SIZE);
-    Table *expectTable = new Table(DATA_SIZE, 4);
-    expectTable->setColumn(expectCol1, INT64);
-    expectTable->setColumn(expectCol2, DOUBLE);
-    expectTable->setColumn(expectCol3, INT32);
-    expectTable->setColumn(expectCol4, INT64);
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
+    LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
+    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    VectorBatch *expectVecBatch = new VectorBatch(4);
+    expectVecBatch->setVector(0, expectCol1);
+    expectVecBatch->setVector(1, expectCol2);
+    expectVecBatch->setVector(2, expectCol3);
+    expectVecBatch->setVector(3, expectCol4);
+    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete windowOperator;
     delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-    delete expectTable;
+    VectorHelper::freeVecBatch(vecBatch);
+    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::freeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
@@ -329,14 +343,16 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 3);
-    Column *column0 = new Column(data0, INT32, DATA_SIZE);
-    Column *column1 = new Column(data1, INT64, DATA_SIZE);
-    Column *column2 = new Column(data2, DOUBLE, DATA_SIZE);
-    tables[0]->setColumn(column0, INT32);
-    tables[0]->setColumn(column1, INT64);
-    tables[0]->setColumn(column2, DOUBLE);
+    VectorBatch *vecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
+    column0->setValues(0, data0, DATA_SIZE);
+    LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
+    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);
+    vecBatch->setVector(0, column0);
+    vecBatch->setVector(1, column1);
+    vecBatch->setVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -359,44 +375,48 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
                                                                                                 outputCols, 3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
                                                                                                 preSortedChannelPrefix, expectedPositions, allTypes, 5, argumentChannels, 0);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = nullptr;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
-    if (jitContext == NULL) {
+    if (jitContext == nullptr) {
         windowOperator = (WindowOperator *)operatorFactory->createOperator();
     } else {
         opt_module windowModule = (opt_module)(jitContext->func);
         windowOperator = (WindowOperator *)windowModule(operatorFactory);
     }
 
-    windowOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    windowOperator->getOutput(outputTables);
+    windowOperator->addInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->getOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
-    Column *expectCol1 = new Column(expectData1, INT32, DATA_SIZE);
+    IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
+    expectCol1->setValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
-    Column *expectCol2 = new Column(expectData2, INT64, DATA_SIZE);
+    LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
+    expectCol2->setValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
-    Column *expectCol3 = new Column(expectData3, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol3->setValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 2, 1, 2};
-    Column *expectCol4 = new Column(expectData4, INT64, DATA_SIZE);
+    LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
+    expectCol4->setValues(0, expectData4, DATA_SIZE);
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
-    Column *expectCol5 = new Column(expectData5, INT64, DATA_SIZE);
-    Table *expectTable = new Table(DATA_SIZE, 5);
-    expectTable->setColumn(expectCol1, INT32);
-    expectTable->setColumn(expectCol2, INT64);
-    expectTable->setColumn(expectCol3, DOUBLE);
-    expectTable->setColumn(expectCol4, INT64);
-    expectTable->setColumn(expectCol5, INT64);
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
+    LongVector *expectCol5 = new LongVector(nullptr, DATA_SIZE);
+    expectCol5->setValues(0, expectData5, DATA_SIZE);
+    VectorBatch *expectVecBatch = new VectorBatch(5);
+    expectVecBatch->setVector(0, expectCol1);
+    expectVecBatch->setVector(1, expectCol2);
+    expectVecBatch->setVector(2, expectCol3);
+    expectVecBatch->setVector(3, expectCol4);
+    expectVecBatch->setVector(4, expectCol5);
+    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete windowOperator;
     delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-    delete expectTable;
+    VectorHelper::freeVecBatch(vecBatch);
+    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::freeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
@@ -409,14 +429,16 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
     int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    Table **tables = (Table **)malloc(1 * sizeof(Table *));
-    tables[0] = new Table(DATA_SIZE, 3);
-    Column *column0 = new Column(data0, INT32, DATA_SIZE);
-    Column *column1 = new Column(data1, INT64, DATA_SIZE);
-    Column *column2 = new Column(data2, DOUBLE, DATA_SIZE);
-    tables[0]->setColumn(column0, INT32);
-    tables[0]->setColumn(column1, INT64);
-    tables[0]->setColumn(column2, DOUBLE);
+    VectorBatch *vecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
+    column0->setValues(0, data0, DATA_SIZE);
+    LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
+    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);
+    vecBatch->setVector(0, column0);
+    vecBatch->setVector(1, column1);
+    vecBatch->setVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -438,51 +460,58 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
 
     WindowOperatorFactory *operatorFactory = WindowOperatorFactory::createWindowOperatorFactory(sourceTypes, 3,
                                                                                                 outputCols, 3, windowFunctionTypes, 5, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,preSortedChannelPrefix, expectedPositions, allTypes, 8, argumentChannels, 5);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = nullptr;
     operatorFactory->setJitContext(jitContext);
     WindowOperator *windowOperator;
-    if (jitContext == NULL) {
+    if (jitContext == nullptr) {
         windowOperator = (WindowOperator *)operatorFactory->createOperator();
     } else {
         opt_module windowModule = (opt_module)(jitContext->func);
         windowOperator = (WindowOperator *)windowModule(operatorFactory);
     }
 
-    windowOperator->addInput(tables, rowCounts, 1);
-    vector<Table *> outputTables;
-    windowOperator->getOutput(outputTables);
+    windowOperator->addInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    windowOperator->getOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
-    Column *expectCol1 = new Column(expectData1, INT32, DATA_SIZE);
+    IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
+    expectCol1->setValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
-    Column *expectCol2 = new Column(expectData2, INT64, DATA_SIZE);
+    LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
+    expectCol2->setValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
-    Column *expectCol3 = new Column(expectData3, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol3->setValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {5, 9, 12, 14, 15, 15};
-    Column *expectCol4 = new Column(expectData4, INT64, DATA_SIZE);
+    LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
+    expectCol4->setValues(0, expectData4, DATA_SIZE);
     int64_t expectData5[DATA_SIZE] = {1, 2, 3, 4, 5, 6};
-    Column *expectCol5 = new Column(expectData5, INT64, DATA_SIZE);
+    LongVector *expectCol5 = new LongVector(nullptr, DATA_SIZE);
+    expectCol5->setValues(0, expectData5, DATA_SIZE);
     double expectData6[DATA_SIZE] = {5.0, 4.5, 4.0, 3.5, 3.0, 2.5};
-    Column *expectCol6 = new Column(expectData6, DOUBLE, DATA_SIZE);
+    DoubleVector *expectCol6 = new DoubleVector(nullptr, DATA_SIZE);
+    expectCol6->setValues(0, expectData6, DATA_SIZE);
     int32_t expectData7[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
-    Column *expectCol7 = new Column(expectData7, INT32, DATA_SIZE);
+    IntVector *expectCol7 = new IntVector(nullptr, DATA_SIZE);
+    expectCol7->setValues(0, expectData7, DATA_SIZE);
     int64_t expectData8[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
-    Column *expectCol8 = new Column(expectData8, INT64, DATA_SIZE);
-    Table *expectTable = new Table(DATA_SIZE, 8);
-    expectTable->setColumn(expectCol1, INT32);
-    expectTable->setColumn(expectCol2, INT64);
-    expectTable->setColumn(expectCol3, DOUBLE);
-    expectTable->setColumn(expectCol4, INT64);
-    expectTable->setColumn(expectCol5, INT64);
-    expectTable->setColumn(expectCol6, DOUBLE);
-    expectTable->setColumn(expectCol7, INT32);
-    expectTable->setColumn(expectCol8, INT64);
-    EXPECT_TRUE(tableMatch(outputTables[0], expectTable));
+    LongVector *expectCol8 = new LongVector(nullptr, DATA_SIZE);
+    expectCol8->setValues(0, expectData8, DATA_SIZE);
+    VectorBatch *expectVecBatch = new VectorBatch(8);
+    expectVecBatch->setVector(0, expectCol1);
+    expectVecBatch->setVector(1, expectCol2);
+    expectVecBatch->setVector(2, expectCol3);
+    expectVecBatch->setVector(3, expectCol4);
+    expectVecBatch->setVector(4, expectCol5);
+    expectVecBatch->setVector(5, expectCol6);
+    expectVecBatch->setVector(6, expectCol7);
+    expectVecBatch->setVector(7, expectCol8);
+    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete windowOperator;
     delete operatorFactory;
-    freeInputTable(tables, 1);
-    freeDataInColumn(&outputTables[0], outputTables.size());
-    freeOutputTable(outputTables);
-    delete expectTable;
+    VectorHelper::freeVecBatch(vecBatch);
+    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::freeVecBatches(outputVecBatches);
 }

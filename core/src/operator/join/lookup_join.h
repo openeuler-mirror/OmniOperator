@@ -66,9 +66,8 @@ public:
         int32_t buildOutputColsCount,
         JoinHashTables *hashTables);
     ~LookupJoinOperator();
-    int32_t addInput(Table* data, int32_t rowCount) override;
-    int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
-    int32_t getOutput(std::vector<Table *>& outputTables) override;
+    int32_t addInput(VectorBatch* data) override;
+    int32_t getOutput(std::vector<VectorBatch *>& outputPages) override;
     int32_t *getSourceTypes() override;
 private:
     void processProbe();
@@ -87,7 +86,7 @@ private:
     int32_t buildOutputColsCount;
     JoinHashTables *hashTables;
     JoinProbe *joinProbe;
-    Table *outputTable;
+    VectorBatch *outputVecBatch;
     int32_t partitionedJoinPosition; //the addressIndex combined partition for build, it is encoded by ((addressIndex << shiftSize) | partition)
     LookupJoinOutputBuilder *outputBuilder;
 };
@@ -95,13 +94,13 @@ private:
 class JoinProbe
 {
 public:
-    JoinProbe(Table *input, int32_t *hashCols, int32_t hashColsCount, int32_t positionCount);
+    JoinProbe(VectorBatch *input, int32_t *hashCols, int32_t hashColsCount);
     ~JoinProbe();
     int32_t getPosition()
     {
         return position;
     }
-    Column **getProbeAllColumns()
+    Vector **getProbeAllColumns()
     {
         return probeAllColumns;
     }
@@ -111,10 +110,10 @@ public:
 private:
     bool currentRowContainsNull();
 
-    Column **probeAllColumns;
+    Vector **probeAllColumns;
     int32_t probeAllColsCount;
     int32_t positionCount;
-    Column **probeHashColumns; // Column *[join column count]
+    Vector **probeHashColumns; // Vector *[join column count]
     int32_t probeHashColsCount;
     int32_t position;
 };
@@ -125,7 +124,7 @@ public:
     LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols, int32_t *buildOutputTypes, int32_t buildOutputColsCount);
     ~LookupJoinOutputBuilder() {}
     void appendRow(int32_t probePosition, int64_t partitionedJoinPosition);
-    Table *buildOutput(JoinProbe *joinProbe, JoinHashTables *hashTables);
+    VectorBatch *buildOutput(JoinProbe *joinProbe, JoinHashTables *hashTables);
 
 private:
     int32_t *probeOutputCols;

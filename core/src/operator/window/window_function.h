@@ -1,7 +1,6 @@
 #ifndef __WINDOW_FUNCTION_H__
 #define __WINDOW_FUNCTION_H__
 
-#include "../../vector/table.h"
 #include "../pages_index.h"
 #include "../aggregation/aggregator.h"
 #include <vector>
@@ -47,17 +46,17 @@ public:
     WindowFunction() {};
     ~WindowFunction() {};
     virtual void reset(WindowIndex *windowIndex) {};
-    virtual void processRow(Column *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+    virtual void processRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
         int32_t frameStart, int32_t frameEnd) {};
 };
 
 class RankingWindowFunction : public WindowFunction {
 public:
     void reset(WindowIndex *windowIndex) override;
-    void processRow(Column *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
+    void processRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
         int32_t frameEnd) override;
     virtual void reset() {};
-    virtual void processRow(Column *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    virtual void processRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPosition) {};
     RankingWindowFunction();
     ~RankingWindowFunction();
@@ -75,7 +74,7 @@ public:
     RankFunction();
     ~RankFunction();
     void reset() override;
-    void processRow(Column *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    void processRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPosition) override;
 
 private:
@@ -87,7 +86,7 @@ class RowNumberFunction : public RankingWindowFunction {
 public:
     RowNumberFunction() {};
     ~RowNumberFunction() {};
-    void processRow(Column *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+    void processRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPosition) override;
 };
 
@@ -96,7 +95,7 @@ public:
     AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, int32_t dataType);
     ~AggregateWindowFunction();
     void reset(WindowIndex *windowIndex) override;
-    void processRow(Column *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
+    void processRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
         int32_t frameEnd) override;
     void resetAccumulator();
 
@@ -109,7 +108,7 @@ private:
     int32_t dataType;
     omniruntime::op::Aggregator *aggregator;
 
-    void evaluateFinal(omniruntime::op::Aggregator *pAggregator, Column *pColumn, int32_t index);
+    void evaluateFinal(omniruntime::op::Aggregator *pAggregator, Vector *pColumn, int32_t index);
     void accumulate(int32_t start, int32_t end);
 };
 #endif

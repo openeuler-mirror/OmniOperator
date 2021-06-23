@@ -25,7 +25,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     bufCls = createGlobalClassRef(env, "java/nio/ByteBuffer");
     vecBatchCls = createGlobalClassRef(env,"nova/hetu/omniruntime/vector/VecBatch");
-    vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "([Ljava/nio/ByteBuffer;[II)V");
+    vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J)V");
     omniResultsCls = createGlobalClassRef(env,"nova/hetu/omniruntime/operator/OmniResults");
     omniResultsInitMethodId = env->GetMethodID(omniResultsCls, "<init>", "([Lnova/hetu/omniruntime/vector/VecBatch;I)V");
     return JNI_VERSION;

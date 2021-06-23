@@ -16,7 +16,7 @@ DataType colTypeTrans(int32_t colType) {
             return DataType::INT64D;
         case 3:
             return DataType::DOUBLED;
-        // not yet supported in table
+        // not yet supported in vecBatch
         case 4 :
             return DataType::STRINGD;
     }

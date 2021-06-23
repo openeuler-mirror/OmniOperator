@@ -1,13 +1,13 @@
 package nova.hetu.omniruntime.operator.join;
 
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.utils.OmniUtils;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 public class OmniHashBuilderOperatorFactory
         extends OmniOperatorFactory<OmniHashBuilderOperatorFactory.Context>
@@ -25,7 +25,7 @@ public class OmniHashBuilderOperatorFactory
     protected long createNativeOperatorFactory(Context context)
     {
         return createHashBuilderOperatorFactory(
-                OmniUtils.transformVecType(context.buildTypes),
+                toNativeConstants(context.buildTypes),
                 context.buildOutputCols,
                 context.buildHashCols,
                 context.operatorCount);

@@ -1,79 +1,72 @@
-/*
- * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package nova.hetu.omniruntime.vector;
-
-import nova.hetu.omniruntime.utils.OmniErrorType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
+
 public class LongVec
-        extends Vec
+        extends FixedWidthVec
 {
+    private static final int BYTES = Long.BYTES;
+
     public LongVec(int size)
     {
-        super(size, size * Long.BYTES);
+        super(size * BYTES, size, OMNI_VEC_TYPE_LONG);
     }
 
-    public LongVec(ByteBuffer buffer, int size)
+    public LongVec(VecAllocator allocator, int size)
     {
-        super(buffer, size);
+        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG);
     }
 
-    private LongVec(OMChunk buf, int offset, int size)
+    protected LongVec(long nativeVector)
     {
-        super(buf, offset, size);
+        super(nativeVector);
     }
 
-    public void set(int idx, long value)
+    private LongVec(LongVec vector, int offset, int length)
     {
-        if (isWritable) {
-            this.getData().putLong(idx * Long.BYTES + offset, value);
-        }
-        else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
-        }
+        super(vector, offset, length);
+    }
+
+    /**
+     * This constructor of vector is just for shuffle compilation to pass, it will be removed later
+     * @param data data of vector
+     * @param capacityInBytes size in bytes of data
+     */
+    @Deprecated
+    public LongVec(ByteBuffer data, int capacityInBytes)
+    {
+        super(capacityInBytes, data.limit(), OMNI_VEC_TYPE_LONG);
+    }
+
+    public long get(int index)
+    {
+        return getValues().getLong((index + getOffset()) * BYTES);
+    }
+
+    public void set(int index, long value)
+    {
+        getValues().putLong((index + getOffset()) * BYTES, value);
     }
 
     public void put(long[] values, int offset, int start, int length)
     {
-        if (isWritable) {
-            LongBuffer buffer = getData().asLongBuffer();
-            buffer.position(offset);
-            buffer.put(values, start, length);
-        }
-        else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
-        }
+        LongBuffer buffer = getValues().asLongBuffer();
+        buffer.position(offset);
+        buffer.put(values, start, length);
     }
 
     @Override
-    public LongVec slice(int startIdx, int endIdx)
+    public LongVec slice(int start, int end)
     {
-        return new LongVec(this.omniChunk, startIdx * Long.BYTES + offset, endIdx - startIdx);
-    }
-
-    public long get(int idx)
-    {
-        return this.getData().getLong(idx * Long.BYTES + offset);
+        return new LongVec(this, start + getOffset(), end - start);
     }
 
     @Override
-    public VecType getType()
+    public LongVec copy()
     {
-        return VecType.LONG;
+        return null;
     }
 }
