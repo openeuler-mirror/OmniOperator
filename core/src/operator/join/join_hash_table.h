@@ -91,7 +91,7 @@ private:
     int64_t getRawHash(int32_t position);
     bool isPositionNull(int32_t position);
     bool positionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition);
-    bool positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount);
+    bool positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns);
 
     PagesHashStrategy *pagesHashStrategy;
     int64_t *addresses;

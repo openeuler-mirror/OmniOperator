@@ -117,8 +117,8 @@ LookupJoinOperator::LookupJoinOperator(
     this->buildOutputTypes = buildOutputTypes;
     this->buildOutputColsCount = buildOutputColsCount;
     this->hashTables = hashTables;
-    this->joinProbe = NULL;
-    this->outputTable = NULL;
+    this->joinProbe = nullptr;
+    this->outputTable = nullptr;
     this->partitionedJoinPosition = -1;
     this->outputBuilder = new LookupJoinOutputBuilder(probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes, buildOutputColsCount);
 }
@@ -148,10 +148,10 @@ int32_t LookupJoinOperator::addInput(Table **datas, int32_t *rowCounts, int32_t 
 
 int32_t LookupJoinOperator::getOutput(std::vector<Table *>& outputTables)
 {
-    if (outputTable != NULL) {
+    if (outputTable != nullptr) {
         Table *result = outputTable;
         outputTables.push_back(result);
-        outputTable = NULL;
+        outputTable = nullptr;
     }
 
     return 0;
@@ -164,7 +164,7 @@ int32_t *LookupJoinOperator::getSourceTypes()
 
 void LookupJoinOperator::processProbe()
 {
-    if (joinProbe == NULL) {
+    if (joinProbe == nullptr) {
         return;
     }
 
@@ -321,7 +321,7 @@ Column *buildProbeDOUBLEColumn(double *allData, int32_t *probeIndex, int32_t pos
 Column *buildBuildINT32Column(JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t positionCount)
 {
     int64_t partitionedJoinPosition;
-    void *dataAddr = NULL;
+    void *dataAddr = nullptr;
 
     int32_t *outputData = (int32_t *)omni_allocate(positionCount * sizeof(int32_t));
     for (int32_t rowIdx = 0; rowIdx < positionCount; rowIdx++) {
@@ -337,7 +337,7 @@ Column *buildBuildINT32Column(JoinHashTables *hashTables, int32_t outputCol, int
 Column *buildBuildINT64Column(JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t positionCount)
 {
     int64_t partitionedJoinPosition;
-    void *dataAddr = NULL;
+    void *dataAddr = nullptr;
 
     int64_t *outputData = (int64_t *)omni_allocate(positionCount * sizeof(int64_t));
     for (int32_t rowIdx = 0; rowIdx < positionCount; rowIdx++) {
@@ -353,7 +353,7 @@ Column *buildBuildINT64Column(JoinHashTables *hashTables, int32_t outputCol, int
 Column *buildBuildDOUBLEColumn(JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t positionCount)
 {
     int64_t partitionedJoinPosition;
-    void *dataAddr = NULL;
+    void *dataAddr = nullptr;
 
     double *outputData = (double *)omni_allocate(positionCount * sizeof(double));
     for (int32_t rowIdx = 0; rowIdx < positionCount; rowIdx++) {
@@ -394,7 +394,7 @@ Table *LookupJoinOutputBuilder::buildOutput(JoinProbe *joinProbe, JoinHashTables
             probeColumn = buildProbeDOUBLEColumn((double *)(column->getData()), &probeIndex[0], positionCount);
             break;
         default:
-            return NULL;
+            return nullptr;
         }
         output->setColumn(probeColumn, type);
     }
@@ -422,7 +422,7 @@ Table *LookupJoinOutputBuilder::buildOutput(JoinProbe *joinProbe, JoinHashTables
             output->setColumn(buildColumn, DOUBLE);
             break;
         default:
-            return NULL;
+            return nullptr;
         }
     }
 

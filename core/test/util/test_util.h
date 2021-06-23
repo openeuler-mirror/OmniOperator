@@ -2,9 +2,12 @@
 #define __TEST_UTIL_H__
 
 #include "../../src/vector/table.h"
+#include "../../src/operator/operator.h"
+#include "../../src/operator/operator_factory.h"
 #include <time.h>
 
 bool tableMatch(Table *outputTables, Table *expectTable);
+omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory);
 
 class Timer
 {

@@ -187,7 +187,7 @@ JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, int64_t *addr
 
 int32_t JoinHashTable::getNextJoinPosition(int32_t currentJoinPosition, int probePosition)
 {
-    if (positionLinks == NULL) {
+    if (positionLinks == nullptr) {
         return -1;
     }
 
@@ -277,7 +277,7 @@ int32_t PagesHash::getAddressIndex(int probePosition, Column **joinColumns, int3
     int32_t pos = HashUtil::getRawHashPosition(rawHash, mask);
 
     while (key[pos] != -1) {
-        if (positionEqualsCurrentRowIgnoreNulls(key[pos], (int8_t)rawHash, probePosition, joinColumns, joinColumnsCount)) {
+        if (positionEqualsCurrentRowIgnoreNulls(key[pos], (int8_t)rawHash, probePosition, joinColumns)) {
             return key[pos];
         }
 
@@ -326,7 +326,7 @@ bool PagesHash::positionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t 
     return pagesHashStrategy->positionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex, rightRowIndex);
 }
 
-bool PagesHash::positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount)
+bool PagesHash::positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns)
 {
     if (positionToHashes[buildPosition] != rawHash) {
         return false;
@@ -336,7 +336,7 @@ bool PagesHash::positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_
     int32_t tableIndex = decodeSliceIndex(address);
     int32_t rowIndex = decodePosition(address);
 
-    return pagesHashStrategy->positionEqualsRowIgnoreNulls(tableIndex, rowIndex, probePosition, joinColumns, joinColumnsCount);
+    return pagesHashStrategy->positionEqualsRowIgnoreNulls(tableIndex, rowIndex, probePosition, joinColumns);
 }
 
 ArrayPositionLinks::ArrayPositionLinks(int32_t size)
@@ -351,7 +351,7 @@ ArrayPositionLinks::ArrayPositionLinks(int32_t size)
 ArrayPositionLinks::~ArrayPositionLinks()
 {
     delete[] positionLinks;
-    positionLinks = NULL;
+    positionLinks = nullptr;
     size = 0;
 }
 int32_t ArrayPositionLinks::link(int32_t left, int32_t right)

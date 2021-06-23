@@ -69,8 +69,6 @@ public:
 private:
     int32_t *buildTypes;
     int32_t buildTypesCount;
-    int32_t *buildOutputCols;
-    int32_t buildOutputColsCount;
     int32_t *buildHashCols;
     int32_t buildHashColsCount;
     PagesIndex *pagesIndex;

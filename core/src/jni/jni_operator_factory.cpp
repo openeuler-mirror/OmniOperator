@@ -249,7 +249,7 @@ JitContext *createSortJitContext(
         int32_t *sortNullFirsts,
         int32_t sortColsCount)
 {
-    JNI_DEBUG_LOG("create jit sort context starting.");
+    JNI_DEBUG_LOG("create sort jit context starting.");
     auto start = START();
     using namespace omniruntime::jit;
     int sortColTypes[sortColsCount];
@@ -304,9 +304,9 @@ JitContext *createSortJitContext(
     auto createOperatorFunc = jit->specialize();
 
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    JNI_DEBUG_LOG("create jit sort context finished, elapsed time: %ld ms.", END(start));
+    JNI_DEBUG_LOG("create sort jit context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
 
@@ -380,6 +380,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAnd
     return (int64_t) factory;
 }
 
+JitContext *createHashBuilderJitContext(
+        int32_t *buildTypes,
+        int32_t buildTypesCount,
+        int32_t *buildOutputCols,
+        int32_t buildOutputColsCount,
+        int32_t *buildHashCols,
+        int32_t buildHashColsCount,
+        int32_t operatorCount);
+
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory
         (JNIEnv *env, jobject jObj, jintArray jBuildTypes, jintArray jBuildOutputCols, jintArray jBuildHashCols, jint jOperatorCount)
 {
@@ -402,11 +411,79 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilder
             buildHashColsArr,
             buildHashColsCount,
             jOperatorCount);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = createHashBuilderJitContext(
+            buildTypesArr,
+            buildTypesCount,
+            buildOutputColsArr,
+            buildOutputColsCount,
+            buildHashColsArr,
+            buildHashColsCount,
+            jOperatorCount);
     hashBuilderOperatorFactory->setJitContext(jitContext);
     JNI_DEBUG_LOG("create hash builder operator factory finished, elapsed time: %ld ms.", END(start));
     return (int64_t)hashBuilderOperatorFactory;
 }
+
+JitContext *createHashBuilderJitContext(
+        int32_t *buildTypes,
+        int32_t buildTypesCount,
+        int32_t *buildOutputCols,
+        int32_t buildOutputColsCount,
+        int32_t *buildHashCols,
+        int32_t buildHashColsCount,
+        int32_t operatorCount)
+{
+    JNI_DEBUG_LOG("create hash builder jit context starting.");
+    auto start = START();
+
+    int32_t *hashColTypes = new int32_t[buildHashColsCount];
+    for (int32_t i = 0; i < buildHashColsCount; i++) {
+        hashColTypes[i] = buildTypes[buildHashCols[i]];
+    }
+
+    using namespace omniruntime::jit;
+    ParamValue p_hashColTypes = ParamValue(hashColTypes, buildHashColsCount);
+    ParamValue p_hashColCount = ParamValue(&buildHashColsCount);
+
+    auto *hashPositionSp = new Specialization();
+    hashPositionSp->addSpecializedParam(3, &p_hashColTypes);
+    hashPositionSp->addSpecializedParam(4, &p_hashColCount);
+
+    auto *positionEqualsPositionIgnoreNullsSp = new Specialization();
+    positionEqualsPositionIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
+    positionEqualsPositionIgnoreNullsSp->addSpecializedParam(6, &p_hashColCount);
+
+    std::map<std::string, Specialization> hashStrategySps = {
+        {OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp},
+        {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp}
+    };
+
+    auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*hashBuilderContext, *pagesIndexContext, *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext});
+    auto createOperatorFunc = jit->specialize();
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+   
+    JNI_DEBUG_LOG("create hash builder jit context finished, elapsed time: %ld ms.", END(start));
+    return jitContext;
+}
+
+JitContext *createLookupJoinJitContext(
+        int32_t *probeTypes,
+        int32_t probeTypesCount,
+        int32_t *probeOutputCols,
+        int32_t probeOutputColsCount,
+        int32_t *probeHashCols,
+        int32_t probeHashColsCount,
+        int32_t *buildOutputCols,
+        int32_t *buildOutputTypes,
+        int32_t buildOutputColsCount,
+        int64_t hashBuilderFactoryAddr);
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory
         (JNIEnv *env, jobject jObj, jintArray jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols,
@@ -437,8 +514,65 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinO
             buildOutputTypesArr,
             buildOutputColsCount,
             jHashBuilderOperatorFactory);
-    JitContext *jitContext = NULL;
+    JitContext *jitContext = createLookupJoinJitContext(
+            probeTypesArr,
+            probeTypesCount,
+            probeOutputColsArr,
+            probeOutputColsCount,
+            probeHashColsArr,
+            probeHashColsCount,
+            buildOutputColsArr,
+            buildOutputTypesArr,
+            buildOutputColsCount,
+            jHashBuilderOperatorFactory);
     lookupJoinOperatorFactory->setJitContext(jitContext);
     JNI_DEBUG_LOG("create lookup join operator factory finished, elapsed time: %ld ms.", END(start));
     return (int64_t)lookupJoinOperatorFactory;
+}
+
+JitContext *createLookupJoinJitContext(
+        int32_t *probeTypes,
+        int32_t probeTypesCount,
+        int32_t *probeOutputCols,
+        int32_t probeOutputColsCount,
+        int32_t *probeHashCols,
+        int32_t probeHashColsCount,
+        int32_t *buildOutputCols,
+        int32_t *buildOutputTypes,
+        int32_t buildOutputColsCount,
+        int64_t hashBuilderFactoryAddr)
+{
+    JNI_DEBUG_LOG("create lookup join jit context starting.");
+    auto start = START();
+    int32_t *hashColTypes = new int32_t[probeHashColsCount];
+    for (int32_t i = 0; i < probeHashColsCount; i++) {
+        hashColTypes[i] = probeTypes[probeHashCols[i]];
+    }
+
+    using namespace omniruntime::jit;
+    ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
+    ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
+
+    auto *positionEqualsRowIgnoreNullsSp = new Specialization();
+    positionEqualsRowIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
+    positionEqualsRowIgnoreNullsSp->addSpecializedParam(6, &p_hashColCount);
+
+    std::map<std::string, Specialization> hashStrategySps = {
+        {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS, *positionEqualsRowIgnoreNullsSp}
+    };
+
+    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*lookupJoinContext, *joinHashTableContext, *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext});
+    auto createOperatorFunc = jit->specialize();
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    JNI_DEBUG_LOG("create lookup join jit context finished, elapsed time: %ld ms.", END(start));
+    return jitContext;
 }
