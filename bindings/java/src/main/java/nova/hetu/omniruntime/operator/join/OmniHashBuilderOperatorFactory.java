@@ -5,6 +5,7 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.utils.OmniUtils;
 import nova.hetu.omniruntime.vector.VecType;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -55,7 +56,7 @@ public class OmniHashBuilderOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(buildTypes, buildOutputCols, buildHashCols, operatorCount);
+            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildHashCols), operatorCount);
         }
 
         @Override
@@ -68,9 +69,10 @@ public class OmniHashBuilderOperatorFactory
                 return false;
             }
             Context that = (Context) o;
-            return Objects.equals(buildTypes, that.buildTypes)
-                    && Objects.equals(buildOutputCols, that.buildOutputCols)
-                    && Objects.equals(buildHashCols, that.buildHashCols);
+            return Arrays.equals(buildTypes, that.buildTypes)
+                    && Arrays.equals(buildOutputCols, that.buildOutputCols)
+                    && Arrays.equals(buildHashCols, that.buildHashCols)
+                    && operatorCount == that.operatorCount;
         }
     }
 }

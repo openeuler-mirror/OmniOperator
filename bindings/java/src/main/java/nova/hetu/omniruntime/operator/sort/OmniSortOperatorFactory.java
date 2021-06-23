@@ -5,6 +5,7 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.utils.OmniUtils;
 import nova.hetu.omniruntime.vector.VecType;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 public class OmniSortOperatorFactory
@@ -57,7 +58,7 @@ public class OmniSortOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts);
+            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns), Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -70,11 +71,11 @@ public class OmniSortOperatorFactory
                 return false;
             }
             Context that = (Context) o;
-            return Objects.equals(sourceTypes, that.sourceTypes)
-                    && Objects.equals(outputColumns, that.outputColumns)
-                    && Objects.equals(sortColumns, that.sortColumns)
-                    && Objects.equals(sortAscendings, that.sortAscendings)
-                    && Objects.equals(sortNullFirsts, that.sortNullFirsts);
+            return Arrays.equals(sourceTypes, that.sourceTypes)
+                    && Arrays.equals(outputColumns, that.outputColumns)
+                    && Arrays.equals(sortColumns, that.sortColumns)
+                    && Arrays.equals(sortAscendings, that.sortAscendings)
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
 }

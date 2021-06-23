@@ -5,6 +5,7 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.utils.OmniUtils;
 import nova.hetu.omniruntime.vector.VecType;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -53,7 +54,7 @@ public class OmniFilterAndProjectOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, inputTypes, projectIndices);
+            return Objects.hash(expression, Arrays.hashCode(inputTypes), Arrays.hashCode(projectIndices));
         }
 
         @Override
@@ -67,8 +68,8 @@ public class OmniFilterAndProjectOperatorFactory
             }
             Context that = (Context) o;
             return Objects.equals(expression, that.expression)
-                    && Objects.equals(inputTypes, that.inputTypes)
-                    && Objects.equals(projectIndices, that.projectIndices);
+                    && Arrays.equals(inputTypes, that.inputTypes)
+                    && Arrays.equals(projectIndices, that.projectIndices);
         }
     }
 }
