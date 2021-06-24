@@ -150,8 +150,8 @@ LLVMCodeGen::LLVMCodeGen(std::string name, Expr *expr, vector<DataType>* datatyp
 }
 
 LLVMCodeGen::~LLVMCodeGen() {
-    auto ignore = rt->remove();
-    if (ignore) cerr << "Error while removing rt" << endl;
+    EOE(rt->remove());
+
     delete this->datatypes;
 }
 
@@ -784,12 +784,7 @@ int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
     auto threadSafeModule = ThreadSafeModule(move(_module), move(context));
     EOE(JIT->addIRModule(resTracker, move(threadSafeModule)));
     rt = resTracker;
-    // initModule();
-    auto sym = JIT->lookup("FILTER_WRAPPER");
-    if (sym) {
-        // cerr << "Found FILTER_WRAPPER in JIT" << endl;
-    }
-    else cerr << "Could not find FILTER_WRAPPER in JIT" << endl;
 
-    return sym->getAddress();
+    auto sym = cantFail(JIT->lookup("FILTER_WRAPPER"));
+    return sym.getAddress();
 }
