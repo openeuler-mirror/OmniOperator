@@ -1,0 +1,16 @@
+//
+// Created by root on 6/8/21.
+//
+
+#ifndef OMNI_RUNTIME_VECTOR_TYPE_H
+#define OMNI_RUNTIME_VECTOR_TYPE_H
+
+typedef enum {
+    OMNI_VEC_TYPE_INT = 1,
+    OMNI_VEC_TYPE_LONG = 2,
+    OMNI_VEC_TYPE_DOUBLE = 3,
+    OMNI_VEC_TYPE_BOOLEAN = 4,
+    OMNI_VEC_TYPE_SHORT = 5,
+    OMNI_VEC_TYPE_VARCHAR = 100,
+} VecType;
+#endif //OMNI_RUNTIME_VECTOR_TYPE_H

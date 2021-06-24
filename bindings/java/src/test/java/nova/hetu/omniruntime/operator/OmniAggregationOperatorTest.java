@@ -1,12 +1,12 @@
 package nova.hetu.omniruntime.operator;
 
 import com.google.common.collect.ImmutableList;
+import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
-import nova.hetu.omniruntime.vector.AggType;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import static java.lang.String.format;
+import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
@@ -24,9 +26,9 @@ public class OmniAggregationOperatorTest
     @Test
     public void testExecuteAggMultiplePage()
     {
-        VecType[] aggTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
-        AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM, AggType.SUM, AggType.SUM};
-        VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+        VecType[] aggTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+        VecType[] aggOutputTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(
                 aggTypes, aggFunctionTypes, aggOutputTypes);
 
@@ -36,11 +38,13 @@ public class OmniAggregationOperatorTest
         int pageCount = 10;
         for (int i = 0; i < pageCount; i++) {
             inputData.addAll(build4Columns(rowNum));
-            vecBatchList.add(new VecBatch(build4Columns(rowNum), rowNum));
+            vecBatchList.add(new VecBatch(build4Columns(rowNum)));
         }
 
         OmniOperator omniOperator = factory.createOperator();
-        omniOperator.addInput(vecBatchList.build());
+        for (VecBatch vecBatch : vecBatchList.build()) {
+            omniOperator.addInput(vecBatch);
+        }
         // release input data memory
         releaseVecMemory(inputData.toArray(new Vec[0]));
 
@@ -78,9 +82,9 @@ public class OmniAggregationOperatorTest
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    VecType[] aggTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
-                    AggType[] aggFunctionTypes = {AggType.SUM, AggType.SUM, AggType.SUM, AggType.SUM};
-                    VecType[] aggOutputTypes = {VecType.LONG, VecType.LONG, VecType.LONG, VecType.LONG};
+                    VecType[] aggTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+                    AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+                    VecType[] aggOutputTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(
                             aggTypes, aggFunctionTypes, aggOutputTypes);
 
@@ -88,11 +92,14 @@ public class OmniAggregationOperatorTest
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
                     for (int i = 0; i < pageCount; i++) {
                         inputData.addAll(build4Columns(rowNum));
-                        vecBatchList.add(new VecBatch(build4Columns(rowNum), rowNum));
+                        vecBatchList.add(new VecBatch(build4Columns(rowNum)));
                     }
 
                     OmniOperator omniOperator = factory.createOperator();
-                    omniOperator.addInput(vecBatchList.build());
+                    for (VecBatch vecBatch : vecBatchList.build()) {
+                        omniOperator.addInput(vecBatch);
+                    }
+
                     // release input data memory
                     releaseVecMemory(inputData.toArray(new Vec[0]));
 

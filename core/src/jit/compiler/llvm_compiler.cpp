@@ -46,7 +46,7 @@ namespace omniruntime {
             auto module = llvm::parseIRFile(templatePath, error, *context);
 
             if (!module) {
-                error.print("error loading module", llvm::errs());
+                error.print("error loadding module", llvm::errs());
                 // FIXME: proper error handling using exceptions?
                 return false;
             }
@@ -82,6 +82,10 @@ namespace omniruntime {
             loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
             if (!loaded) {
                 llvm::errs() << "Failed to load jemalloc lib\n";
+            }
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/opt/lib/libvector.so");
+            if (!loaded) {
+                llvm::errs() << "Failed to load vector lib\n";
             }
         }
 
@@ -247,6 +251,8 @@ namespace omniruntime {
                     //outs() << "creating fp64" << value.to_fp64() << " param value \n";
                     llvmValue = ConstantFP::get(*context, APFloat(value.to_fp64()));
                     break;
+                default:
+                    break;
             }
             return llvmValue;
         }
@@ -340,6 +346,8 @@ namespace omniruntime {
                     Constant *GEPIndices[] = {Zero, Zero};
                     return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
+                default:
+                    return nullptr;
             }
         }
 
@@ -409,6 +417,8 @@ namespace omniruntime {
                     Constant *GEPIndices[] = {Zero, Zero};
                     return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
+                default:
+                    return nullptr;
             }
         }
 

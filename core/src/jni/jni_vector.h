@@ -2,29 +2,172 @@
 // Created by root on 5/26/21.
 //
 #include <jni.h>
-#ifndef OMNI_RUNTIME_JNI_VECTOR_H
-#define OMNI_RUNTIME_JNI_VECTOR_H
+#ifndef __JNI_VECTOR_H__
+#define __JNI_VECTOR_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*
- * Class:     nova_hetu_omniruntime_vector_OMVectorBase
- * Method:    allocate
- * Signature: (I)Ljava/nio/ByteBuffer;
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    newVectorNative
+ * Signature: (IIIJ)J
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_OMVectorBase_allocate
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative
+  (JNIEnv *, jclass, jint, jint, jint, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    sliceVectorNative
+ * Signature: (JII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative
+  (JNIEnv *, jclass, jlong, jint, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    freeVectorNative
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getAllocatorNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getAllocatorNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getCapacityInBytesNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getCapacityInBytesNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getSizeNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getSizeNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getOffsetNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getOffsetNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    setValueCountNative
+ * Signature: (JI)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setValueCountNative
+  (JNIEnv *, jclass, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getTypeNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getValuesNative
+ * Signature: (J)Ljava/nio/ByteBuffer;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    getValueNullsNative
+ * Signature: (J)Ljava/nio/ByteBuffer;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VariableWidthVec
+ * Method:    getValueOffsetsNative
+ * Signature: (J)Ljava/nio/ByteBuffer;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative
+  (JNIEnv *, jclass, jlong);  
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    newAllocatorNative
+ * Signature: (Ljava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newAllocatorNative
+  (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    freeAllocatorNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_freeAllocatorNative
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecAllocator
+ * Method:    getGlobalAllocatorNative
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalAllocatorNative
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecBatch
+ * Method:    newVectorBatchNative
+ * Signature: (I)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative
         (JNIEnv *, jclass, jint);
 
 /*
- * Class:     nova_hetu_omniruntime_vector_OMVectorBase
- * Method:    release
+ * Class:     nova_hetu_omniruntime_vector_VecBatch
+ * Method:    freeVectorBatchNative
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_OMVectorBase_release
-(JNIEnv *, jclass, jlong);
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative
+        (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecBatch
+ * Method:    getVectorCountNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_getVectorCountNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecBatch
+ * Method:    setVectorNative
+ * Signature: (JIJ)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_setVectorNative
+        (JNIEnv *, jclass, jlong, jint, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_VecBatch
+ * Method:    getVectorNative
+ * Signature: (JI)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_getVectorNative
+        (JNIEnv *, jclass, jlong, jint);
 #ifdef __cplusplus
 }
 #endif
-#endif //OMNI_RUNTIME_JNI_VECTOR_H
+#endif //__JNI_VECTOR_H__

@@ -2,17 +2,17 @@
 // Created by root on 5/26/21.
 //
 #include <jni.h>
-#ifndef OMNI_RUNTIME_OPERATOR_FACTORY_H
-#define OMNI_RUNTIME_OPERATOR_FACTORY_H
+#ifndef __JNI_OPERATOR_FACTORY_H__
+#define __JNI_OPERATOR_FACTORY_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
- * Method:    createOperator
+ * Method:    createOperatorNative
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperator
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative
         (JNIEnv *, jobject, jlong);
 
 /*
@@ -73,4 +73,4 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinO
 #ifdef __cplusplus
 }
 #endif
-#endif //OMNI_RUNTIME_OPERATOR_FACTORY_H
+#endif //__JNI_OPERATOR_FACTORY_H__

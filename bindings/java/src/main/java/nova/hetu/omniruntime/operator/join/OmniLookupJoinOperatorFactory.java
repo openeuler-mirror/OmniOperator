@@ -1,13 +1,13 @@
 package nova.hetu.omniruntime.operator.join;
 
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.utils.OmniUtils;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 public class OmniLookupJoinOperatorFactory
         extends OmniOperatorFactory<OmniLookupJoinOperatorFactory.Context>
@@ -27,11 +27,11 @@ public class OmniLookupJoinOperatorFactory
     protected long createNativeOperatorFactory(Context context)
     {
         return createLookupJoinOperatorFactory(
-                OmniUtils.transformVecType(context.probeTypes),
+                toNativeConstants(context.probeTypes),
                 context.probeOutputCols,
                 context.probeHashCols,
                 context.buildOutputCols,
-                OmniUtils.transformVecType(context.buildOutputTypes),
+                toNativeConstants(context.buildOutputTypes),
                 context.hashBuilderOperatorFactory);
     }
 

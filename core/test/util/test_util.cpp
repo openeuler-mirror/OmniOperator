@@ -2,27 +2,26 @@
 #include <cfloat>
 #include "test_util.h"
 
-bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber);
+bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
+bool columnMatch(Vector *actualColumn, Vector *expectColumn);
 
-bool columnMatch(Column *actualColumn, Column *expectColumn);
-
-bool tableMatch(Table *outputTables, Table *expectTable)
+bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
-    if (outputTables->getPositionCount() != expectTable->getPositionCount()) {
+    if (outputPages->getRowCount() != expectPage->getRowCount()) {
         return false;
     }
 
-    int32_t columnNumber = outputTables->getColumnNumber();
-    if (columnNumber != expectTable->getColumnNumber()) {
+    int32_t columnNumber = outputPages->getVectorCount();
+    if (columnNumber != expectPage->getVectorCount()) {
         return false;
     }
 
-    if (!typesMatch(outputTables->getColumnTypes(), expectTable->getColumnTypes(), columnNumber)) {
+    if (!typesMatch(outputPages->getVectorTypes(), expectPage->getVectorTypes(), columnNumber)) {
         return false;
     }
 
     for (int32_t i = 0; i < columnNumber; i++) {
-        if (!columnMatch(outputTables->getColumn(i), expectTable->getColumn(i))) {
+        if (!columnMatch(outputPages->getVector(i), expectPage->getVector(i))) {
             return false;
         }
     }
@@ -30,7 +29,7 @@ bool tableMatch(Table *outputTables, Table *expectTable)
     return true;
 }
 
-bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t columnNumber)
+bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber)
 {
     for (int32_t i = 0; i < columnNumber; i++) {
         if (actualTypes[i] != expectTypes[i]) {
@@ -41,7 +40,7 @@ bool typesMatch(ColumnType *actualTypes, ColumnType *expectTypes, int32_t column
     return true;
 }
 
-bool columnMatch(Column *actualColumn, Column *expectColumn)
+bool columnMatch(Vector *actualColumn, Vector *expectColumn)
 {
     if (actualColumn->getType() != expectColumn->getType()) {
         return false;
@@ -53,24 +52,22 @@ bool columnMatch(Column *actualColumn, Column *expectColumn)
 
     bool result = true;
     for (int32_t i = 0; i < actualColumn->getSize(); i++) {
-        void *actualValue = actualColumn->getValue(i);
-        void *expectValue = expectColumn->getValue(i);
         switch (actualColumn->getType()) {
-            case INT32: {
-                int32_t actual = *((int32_t *)actualValue);
-                int32_t expect = *((int32_t *)expectValue);
+            case OMNI_VEC_TYPE_INT: {
+                int32_t actual = ((IntVector *)actualColumn)->getValue(i);
+                int32_t expect = ((IntVector *)expectColumn)->getValue(i);
                 result = (actual == expect) & result;
                 break;
             }
-            case INT64: {
-                int64_t actual = *((int64_t *)actualValue);
-                int64_t expect = *((int64_t *)expectValue);
+            case OMNI_VEC_TYPE_LONG: {
+                int64_t actual = ((LongVector *)actualColumn)->getValue(i);
+                int64_t expect = ((LongVector *)expectColumn)->getValue(i);
                 result = (actual == expect) & result;
                 break;
             }
-            case DOUBLE: {
-                double actual = *((double *)actualValue);
-                double expect = *((double *)expectValue);
+            case OMNI_VEC_TYPE_DOUBLE: {
+                double actual = ((DoubleVector *)expectColumn)->getValue(i);
+                double expect = ((DoubleVector *)expectColumn)->getValue(i);
                 result = (std::fabs(actual - expect) <= DBL_EPSILON) & result;
                 break;
             }

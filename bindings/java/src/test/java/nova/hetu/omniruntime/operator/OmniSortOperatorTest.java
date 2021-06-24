@@ -1,12 +1,12 @@
 package nova.hetu.omniruntime.operator;
 
 import com.google.common.collect.ImmutableList;
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -16,6 +16,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
 public class OmniSortOperatorTest
@@ -36,9 +38,9 @@ public class OmniSortOperatorTest
             vec2.set(i, data2[i]);
         }
 
-        VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2}, 8);
+        VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2});
 
-        VecType[] sourceTypes = {VecType.INT, VecType.INT};
+        VecType[] sourceTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -47,13 +49,13 @@ public class OmniSortOperatorTest
         OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
                 sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
-        sortOperator.addInput(ImmutableList.of(vecBatch));
+        sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
 
         results.hasNext();
         VecBatch resultVecBatch = results.next();
-        ByteBuffer output0 = resultVecBatch.getVectors()[0].getData();
-        ByteBuffer output1 = resultVecBatch.getVectors()[1].getData();
+        ByteBuffer output0 = resultVecBatch.getVectors()[0].getValues();
+        ByteBuffer output1 = resultVecBatch.getVectors()[1].getValues();
         int len = resultVecBatch.getRowCount();
 
         int[] actual0 = new int[len];
@@ -78,7 +80,7 @@ public class OmniSortOperatorTest
         long elapsed = System.currentTimeMillis() - start;
         System.out.println("buildVecs elapsed time : " + elapsed + " ms");
 
-        VecType[] sourceTypes = {VecType.INT, VecType.INT};
+        VecType[] sourceTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -89,7 +91,9 @@ public class OmniSortOperatorTest
 
         start = System.currentTimeMillis();
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
-        sortOperator.addInput(vecs);
+        for (VecBatch vec : vecs) {
+            sortOperator.addInput(vec);
+        }
         sortOperator.getOutput();
         elapsed = System.currentTimeMillis() - start;
         System.out.println("getResult elapsed time : " + elapsed + " ms");
@@ -100,7 +104,7 @@ public class OmniSortOperatorTest
     {
         ImmutableList<VecBatch> vecs = buildVecs();
 
-        VecType[] sourceTypes = {VecType.LONG, VecType.LONG};
+        VecType[] sourceTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -114,7 +118,9 @@ public class OmniSortOperatorTest
             Thread thread = new Thread(() -> {
                 try {
                     OmniOperator sortOperator = sortOperatorFactory.createOperator();
-                    sortOperator.addInput(vecs);
+                    for (VecBatch vec : vecs) {
+                        sortOperator.addInput(vec);
+                    }
                     sortOperator.getOutput();
                 }
                 finally {
@@ -149,7 +155,7 @@ public class OmniSortOperatorTest
             }
             vecs.add(longVec1);
             vecs.add(longVec2);
-            VecBatch vecBatch = new VecBatch(new Vec[] {longVec1, longVec2}, positionCount);
+            VecBatch vecBatch = new VecBatch(new Vec[] {longVec1, longVec2});
             vecBatchList.add(vecBatch);
         }
         return vecBatchList.build();

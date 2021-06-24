@@ -20,25 +20,27 @@
 using omniruntime::jit::ParamValue;
 using omniruntime::jit::Specialization;
 
+using namespace omniruntime::op;
+
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
- * Method:    createOperator
+ * Method:    createOperatorNative
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperator
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative
         (JNIEnv *env, jobject jObj, jlong jNativeFactoryObj)
 {
     JNI_DEBUG_LOG("create omni operator starting.");
     auto start = START();
     OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
     JitContext *jitContext = operatorFactory->getJitContext();
-    omniruntime::op::Operator *nativeOperator = NULL;
+    omniruntime::op::Operator *nativeOperator = nullptr;
 
 #ifdef DEBUG_OPERATOR
     nativeOperator = operatorFactory->createOperator();
     JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
 #else
-    if (jitContext == NULL) {
+    if (jitContext == nullptr) {
         nativeOperator = operatorFactory->createOperator();
         JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
     }
@@ -119,8 +121,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
 
     std::map<std::string, Specialization> hashGroupbySps = {
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
-        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
-        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
+        // TODO: open this optimization
+//        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
+//        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
         {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
     };
 
@@ -285,21 +288,14 @@ JitContext *createSortJitContext(
     getOutputSp->addSpecializedParam(2, &p_outputColCount);
     getOutputSp->addSpecializedParam(4, &p_sourceTypes);
 
-    std::map<std::string, Specialization> sortSps = {
-        {OMNIJIT_SORT_ALLOC_COLUMNS, *allocColumnsSp}
-    };
-
     std::map<std::string, Specialization> pagesIndexSps = {
         {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp},
         {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp}
     };
 
-    auto *sortContext = new omniruntime::jit::Context("sort", sortSps, std::vector<std::string>(),
-                                                      std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
-                                                            std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(),
-                                                            std::vector<std::string>());
+    auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
     auto createOperatorFunc = jit->specialize();
 
@@ -364,7 +360,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
                     argumentChannels,
                     argumentChannelsCount
                     );
-    windowOperatorFactory->setJitContext(NULL);
+    windowOperatorFactory->setJitContext(nullptr);
     return (int64_t) windowOperatorFactory;
 }
 
@@ -468,7 +464,7 @@ JitContext *createHashBuilderJitContext(
     auto createOperatorFunc = jit->specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-   
+
     JNI_DEBUG_LOG("create hash builder jit context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }

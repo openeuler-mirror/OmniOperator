@@ -12,9 +12,9 @@ void quickSort(int64_t pagesIndexAddr,
                int32_t sortColCount,
                int32_t from,
                int32_t to);
-void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData);
-void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData);
-void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData);
+void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Vector ** inputVecBatch, int32_t *outputData);
+void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Vector ** inputVecBatch, int64_t *outputData);
+void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Vector ** inputVecBatch, double *outputData);
 
 int64_t encodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset)
 {
@@ -37,43 +37,41 @@ PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
     this->types = types;
     this->typesCount = typesCount;
     this->columns = nullptr;
-    this->tablesCount = 0;
     this->valueAddresses = nullptr;
     this->positionCount = 0;
 }
 
 // return error number
-int32_t PagesIndex::addTables(Table **datas, int32_t *rowCounts, int32_t tableCount)
+int32_t PagesIndex::addVecBatches(vector<VectorBatch *> &vecBatches)
 {
-    int32_t rowCount = 0;
-    Table *data = nullptr;
-    int64_t valueAddress = 0;
-    int32_t valueAddrIdx = 0;
+    int32_t vecBatchCount = vecBatches.size();
+    int32_t columnCount = this->typesCount;
 
-    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-        this->positionCount += rowCounts[tableIdx];
+    for (int vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+        this->positionCount += vecBatches[vecBatchIdx]->getRowCount();
     }
-    this->valueAddresses = (int64_t *)malloc(this->positionCount * sizeof(int64_t));
-    this->columns = (Column ***)malloc(this->typesCount * sizeof(Column **));
-    for (int32_t i = 0; i < this->typesCount; i++) {
-        this->columns[i] = (Column **)malloc(tableCount * sizeof(Column *));
+    this->valueAddresses = new int64_t[this->positionCount];
+
+    this->columns = new Vector **[columnCount];
+    for (int colIdx = 0; colIdx < columnCount; ++colIdx) {
+        this->columns[colIdx] = new Vector *[vecBatchCount];
     }
 
-    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-        data = datas[tableIdx];
-        for (int32_t colIdx = 0; colIdx < this->typesCount; colIdx++) {
-            this->columns[colIdx][tableIdx] = data->getColumn(colIdx);
-        }
-
-        rowCount = rowCounts[tableIdx];
+    int32_t valueIndex = 0;
+    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+        VectorBatch *vecBatch = vecBatches[vecBatchIdx];
+        int32_t rowCount = vecBatch->getRowCount();
+        // generate value address.
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            valueAddress = encodeSyntheticAddress(tableIdx, rowIdx);
-            this->valueAddresses[valueAddrIdx] = valueAddress;
-            valueAddrIdx++;
+            int64_t valueAddress = encodeSyntheticAddress(vecBatchIdx, rowIdx);
+            this->valueAddresses[valueIndex++] = valueAddress;
         }
 
+        // put vectors to a collector.
+        for (int32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
+            this->columns[colIdx][vecBatchIdx] = vecBatch->getVector(colIdx);
+        }
     }
-
     return 0;
 }
 
@@ -98,34 +96,33 @@ void PagesIndex::sort(
 }
 
 SPECIALIZE(OMNIJIT_PAGE_INDEX_GET_OUTPUT)
-void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t outputTableAddr, int32_t *sourceTypes, int32_t offset, int32_t length)
+void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch* outputVecBatch, int32_t *sourceTypes, int32_t offset, int32_t length)
 {
-    Column ***inputTables = this->columns;
-    Table *outputTable = (Table *)outputTableAddr;
+    Vector ***inputVecBatches = this->columns;
     int64_t *valueAddresses = this->valueAddresses;
 
-    Column *outputColumn = nullptr;
+    Vector *outputColumn = nullptr;
     int32_t outputCol = 0;
     void *outputData = nullptr;
     int colType = 0;
 
     for (int32_t j = 0; j < outputColsCount; j++) {
-        outputColumn = outputTable->getColumn(j);
+        outputColumn = outputVecBatch->getVector(j);
         outputCol = outputCols[j];
-        outputData = outputColumn->getData();
+        outputData = outputColumn->getValues();
         colType = sourceTypes[outputCol];
-        Column **inputTable = inputTables[outputCol];
+        Vector **inputVecBatch = inputVecBatches[outputCol];
 
         switch (colType)
         {
         case 1:
-            setInt32ColumnValues(valueAddresses, offset, length, inputTable, (int32_t *)outputData);
+            setInt32ColumnValues(valueAddresses, offset, length, inputVecBatch, (int32_t *)outputData);
             break;
         case 2:
-            setInt64ColumnValues(valueAddresses, offset, length, inputTable, (int64_t *)outputData);
+            setInt64ColumnValues(valueAddresses, offset, length, inputVecBatch, (int64_t *)outputData);
             break;
         case 3:
-            setDoubleColumnValues(valueAddresses, offset, length, inputTable, (double *)outputData);
+            setDoubleColumnValues(valueAddresses, offset, length, inputVecBatch, (double *)outputData);
             break;
         default:
             break;
@@ -135,14 +132,15 @@ void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, int64_t
 
 PagesIndex::~PagesIndex()
 {
-    if (columns != nullptr) {
-        for (int32_t colIdx = 0; colIdx < typesCount; colIdx++) {
-            free(columns[colIdx]);
+    if (this->columns != nullptr){
+        for (int32_t colIdx = 0; colIdx < this->typesCount; ++colIdx) {
+            delete[] this->columns[colIdx];
         }
-        free(columns);
+        delete[] this->columns;
     }
-    if (valueAddresses != nullptr) {
-        free(valueAddresses);
+
+    if (this->valueAddresses != nullptr) {
+        delete[] this->valueAddresses;
     }
 }
 
@@ -230,7 +228,7 @@ int32_t compareTo(
 {
     PagesIndex *pagesIndex = (PagesIndex *)pagesIndexAddr;
     int64_t *valueAddresses = pagesIndex->getValueAddresses();
-    Column ***columns = pagesIndex->getColumns();
+    Vector ***columns = pagesIndex->getColumns();
 
     int64_t leftValueAddress = valueAddresses[leftPosition];
     int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
@@ -248,13 +246,13 @@ int32_t compareTo(
     int compare = 0;
     for (int32_t i = 0; i < sortColCount; i++) {
         int32_t sortCol = sortCols[i];
-        Column *leftColumn = columns[sortCol][leftColumnIndex];
-        void *leftData = leftColumn->getData();
-        int32_t *leftNulls = leftColumn->getNulls();
+        Vector *leftColumn = columns[sortCol][leftColumnIndex];
+        void *leftData = leftColumn->getValues();
+        void *leftNulls = leftColumn->getValueNulls();
         int32_t colType = sortColTypes[i];
-        Column *rightColumn;
+        Vector *rightColumn;
         void *rightData;
-        int32_t *rightNulls;
+        void *rightNulls;
 
         if (isSameColumn) {
             rightColumn = leftColumn;
@@ -263,8 +261,8 @@ int32_t compareTo(
         }
         else {
             rightColumn = columns[sortCol][rightColumnIndex];
-            rightData = rightColumn->getData();
-            rightNulls = rightColumn->getNulls();
+            rightData = rightColumn->getValues();
+            rightNulls = rightColumn->getValueNulls();
         }
 
         // compare = compareNull(leftNulls, leftColumnPosition, rightNulls, rightColumnPosition, sortNullFirsts[i]);
@@ -431,13 +429,13 @@ void quickSort(int64_t pagesIndexAddr,
     }
 }
 
-void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int32_t *outputData)
+void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch, int32_t *outputData)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Column *inputColumn = nullptr;
+    Vector *inputColumn = nullptr;
     int32_t *inputData = nullptr;
-    int32_t tableIndex = 0;
+    int32_t pageIndex = 0;
     int32_t position = 0;
 
     int32_t start = offset;
@@ -445,12 +443,12 @@ void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     int32_t outputIndex = 0;
     for (int32_t i = start; i < end; i++) {
         valueAddress = valueAddresses[i];
-        tableIndex = decodeSliceIndex(valueAddress);
+        pageIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
-        if (preTableIndex != tableIndex) {
-            inputColumn = inputTable[tableIndex];
-            inputData = (int32_t *)(inputColumn->getData());
-            preTableIndex = tableIndex;
+        if (preTableIndex != pageIndex) {
+            inputColumn = inputVecBatch[pageIndex];
+            inputData = (int32_t *)(inputColumn->getValues());
+            preTableIndex = pageIndex;
         }
 
         outputData[outputIndex] = inputData[position];
@@ -458,13 +456,13 @@ void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     }
 }
 
-void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, int64_t *outputData)
+void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch, int64_t *outputData)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Column *inputColumn = nullptr;
+    Vector *inputColumn = nullptr;
     int64_t *inputData = nullptr;
-    int32_t tableIndex = 0;
+    int32_t pageIndex = 0;
     int32_t position = 0;
 
     int32_t start = offset;
@@ -472,13 +470,13 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     int32_t outputIndex = 0;
     for (int32_t i = start; i < end; i++) {
         valueAddress = valueAddresses[i];
-        tableIndex = decodeSliceIndex(valueAddress);
+        pageIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
 
-        if (preTableIndex != tableIndex) {
-            inputColumn = inputTable[tableIndex];
-            inputData = (int64_t *)(inputColumn->getData());
-            preTableIndex = tableIndex;
+        if (preTableIndex != pageIndex) {
+            inputColumn = inputVecBatch[pageIndex];
+            inputData = (int64_t *)(inputColumn->getValues());
+            preTableIndex = pageIndex;
         }
 
         outputData[outputIndex] = inputData[position];
@@ -486,13 +484,13 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
     }
 }
 
-void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Column **inputTable, double *outputData)
+void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch, double *outputData)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Column *inputColumn = nullptr;
+    Vector *inputColumn = nullptr;
     double *inputData = nullptr;
-    int32_t tableIndex = 0;
+    int32_t pageIndex = 0;
     int32_t position = 0;
 
     int32_t start = offset;
@@ -500,12 +498,12 @@ void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t leng
     int32_t outputIndex = 0;
     for (int32_t i = start; i < end; i++) {
         valueAddress = valueAddresses[i];
-        tableIndex = decodeSliceIndex(valueAddress);
+        pageIndex = decodeSliceIndex(valueAddress);
         position = decodePosition(valueAddress);
-        if (preTableIndex != tableIndex) {
-            inputColumn = inputTable[tableIndex];
-            inputData = (double *)(inputColumn->getData());
-            preTableIndex = tableIndex;
+        if (preTableIndex != pageIndex) {
+            inputColumn = inputVecBatch[pageIndex];
+            inputData = (double *)(inputColumn->getValues());
+            preTableIndex = pageIndex;
         }
 
         outputData[outputIndex] = inputData[position];

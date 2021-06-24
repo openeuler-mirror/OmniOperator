@@ -2,25 +2,33 @@
 // Created by root on 5/26/21.
 //
 #include <jni.h>
-#ifndef OMNI_RUNTIME_OPERATOR_H
-#define OMNI_RUNTIME_OPERATOR_H
+
+#ifndef __JNI_OPERATOR_H__
+#define __JNI_OPERATOR_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperator
- * Method:    addInput
- * Signature: (JJIJI)I
- */
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
-        (JNIEnv *, jobject, jlong, jlong, jint, jlong, jint);
-/*
- * Class:     nova_hetu_omniruntime_operator_OmniOperator
- * Method:    getOutput
+ * Method:    getOutputNative
  * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutput
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    addInputNative
+ * Signature: (JJIJI)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInputNative
+        (JNIEnv *, jobject, jlong, jlong);
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    getOutputNative
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
+ */
+
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative
         (JNIEnv *, jobject, jlong);
 
 /*
@@ -34,4 +42,4 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 #ifdef __cplusplus
 }
 #endif
-#endif //OMNI_RUNTIME_OPERATOR_H
+#endif //__JNI_OPERATOR_H__

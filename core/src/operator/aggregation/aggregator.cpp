@@ -1,7 +1,7 @@
 #include "aggregator.h"
 #include "../../util/debug.h"
-#include "../../memory/memory_pool.h"
- 
+#include "../../vector/vector_common.h"
+
 namespace omniruntime {
 namespace op {
 
@@ -25,18 +25,15 @@ void SumAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t t
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *((int32_t*)(groupSlot.val)) += *rowVal;
+            *((int32_t*)(groupSlot.val)) += ((IntVector *)colPtr)->getValue(offset);
             break; 
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *((int64_t*)(groupSlot.val)) += *rowVal;
+            *((int64_t*)(groupSlot.val)) += ((LongVector *)colPtr)->getValue(offset);
             break; 
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *((double*)(groupSlot.val)) += *rowVal;
+            *((double*)(groupSlot.val)) += ((DoubleVector *)colPtr)->getValue(offset);
             break; 
         }
         default: {
@@ -51,23 +48,20 @@ void SumAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
     switch (type) 
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
             int32_t* val = new int32_t;
-            *val = *rowVal;
+            *val = ((IntVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break; 
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
             int64_t* val = new int64_t;
-            *val = *rowVal;
+            *val = ((LongVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break; 
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             double* val = new double;
-            *val = *rowVal;
+            *val = ((DoubleVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break; 
         }
@@ -90,18 +84,15 @@ void SumAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t offset)
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *((int32_t*)nonGroupState.val) += *rowVal;
+            *((int32_t*)nonGroupState.val) += ((IntVector *)colPtr)->getValue(offset);
             break; 
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *((int64_t*)nonGroupState.val) += *rowVal;
+            *((int64_t*)nonGroupState.val) += ((LongVector *)colPtr)->getValue(offset);
             break; 
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *((double*)nonGroupState.val) += *rowVal;
+            *((double*)nonGroupState.val) += ((DoubleVector *)colPtr)->getValue(offset);
             break; 
         }
         default: {
@@ -116,25 +107,22 @@ void SumAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t off
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
             int32_t* val = new int32_t;
-            *val = *rowVal;
+            *val = ((IntVector *)colPtr)->getValue(offset);
             GroupBySlot slot = {val};
             groupState.insert({key, slot});
             break; 
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
             int64_t* val = new int64_t;
-            *val = *rowVal;
+            *val = ((LongVector *)colPtr)->getValue(offset);
             GroupBySlot slot = {val};
             groupState.insert({key, slot});
             break; 
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             double* val = new double;
-            *val = *rowVal;
+            *val = ((DoubleVector *)colPtr)->getValue(offset);
             GroupBySlot slot = {val};
             groupState.insert({key, slot});
             break; 
@@ -223,23 +211,23 @@ void CountAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t o
 void AverageAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
 {
     double* val = new double;
-    switch (type) 
+    switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *val = *rowVal / 1.0;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
+            *val = rowVal / 1.0;
             nonGroupState = {{val, 1}};
             break; 
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *val = *rowVal / 1.0;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
+            *val = rowVal / 1.0;
             nonGroupState = {{val, 1}};
             break; 
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *val = *rowVal / 1.0;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
+            *val = rowVal / 1.0;
             nonGroupState = {{val, 1}};
             break; 
         }
@@ -262,18 +250,18 @@ void AverageAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t off
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *currentVal = (*rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
+            *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *currentVal = (*rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
+            *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *currentVal = (*rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
+            *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         default: {
@@ -289,22 +277,22 @@ void AverageAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *val = *rowVal / 1.0;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
+            *val = rowVal / 1.0;
             GroupBySlot slot = {{val, 1}};
             groupState.insert({key, slot});
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *val = *rowVal / 1.0;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
+            *val = rowVal / 1.0;
             GroupBySlot slot = {{val, 1}};
             groupState.insert({key, slot});
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *val = *rowVal / 1.0;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
+            *val = rowVal / 1.0;
             GroupBySlot slot = {{val, 1}};
             groupState.insert({key, slot});
             break;
@@ -322,18 +310,18 @@ void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
-            *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
+            *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
-            *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
+            *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
-            *currentVal = (*rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
+            *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
             break;
         }
         default: {
@@ -348,21 +336,21 @@ void MinAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t t
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
             int32_t* leftVal = reinterpret_cast<int32_t*>(groupSlot.val);
-            *leftVal = cmp_int(*leftVal, *rowVal) == -1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
             int64_t* leftVal = reinterpret_cast<int64_t*>(groupSlot.val);
-            *leftVal = cmp_int64(*leftVal, *rowVal) == -1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int64(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
             double* leftVal = reinterpret_cast<double*>(groupSlot.val);
-            *leftVal = cmp_double(*leftVal, *rowVal) == -1 ? *leftVal : *rowVal;
+            *leftVal = cmp_double(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
             break;
         }
         default: {
@@ -377,23 +365,20 @@ void MinAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
     switch (type) 
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
             int32_t* val = new int32_t;
-            *val = *rowVal;
+            *val = ((IntVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break; 
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
             int64_t* val = new int64_t;
-            *val = *rowVal;
+            *val = ((LongVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break; 
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             double* val = new double;
-            *val = *rowVal;
+            *val = ((DoubleVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break; 
         }
@@ -416,21 +401,21 @@ void MinAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t offset)
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
             int32_t* leftVal = reinterpret_cast<int32_t*>(nonGroupState.val);
-            *leftVal = cmp_int(*leftVal, *rowVal) == -1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
             int64_t* leftVal = reinterpret_cast<int64_t*>(nonGroupState.val);
-            *leftVal = cmp_int64(*leftVal, *rowVal) == -1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int64(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
             double* leftVal = reinterpret_cast<double*>(nonGroupState.val);
-            *leftVal = cmp_double(*leftVal, *rowVal) == -1 ? *leftVal : *rowVal;
+            *leftVal = cmp_double(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
             break;
         }
         default: {
@@ -477,21 +462,21 @@ void MaxAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t t
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
             int32_t* leftVal = reinterpret_cast<int32_t*>(groupSlot.val);
-            *leftVal = cmp_int(*leftVal, *rowVal) == 1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
             int64_t* leftVal = reinterpret_cast<int64_t*>(groupSlot.val);
-            *leftVal = cmp_int64(*leftVal, *rowVal) == 1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int64(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
             double* leftVal = reinterpret_cast<double*>(groupSlot.val);
-            *leftVal = cmp_double(*leftVal, *rowVal) == 1 ? *leftVal : *rowVal;
+            *leftVal = cmp_double(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
             break;
         }
         default: {
@@ -506,23 +491,20 @@ void MaxAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
             int32_t* val = new int32_t;
-            *val = *rowVal;
+            *val = ((IntVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
             int64_t* val = new int64_t;
-            *val = *rowVal;
+            *val = ((LongVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
             double* val = new double;
-            *val = *rowVal;
+            *val = ((DoubleVector *)colPtr)->getValue(offset);
             nonGroupState = {val};
             break;
         }
@@ -545,21 +527,21 @@ void MaxAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t offset)
     switch (type)
     {
         case 1: {
-            int32_t* rowVal = reinterpret_cast<int32_t*>(colPtr) + offset;
+            int32_t rowVal = ((IntVector *)colPtr)->getValue(offset);
             int32_t* leftVal = reinterpret_cast<int32_t*>(nonGroupState.val);
-            *leftVal = cmp_int(*leftVal, *rowVal) == 1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
             break;
         }
         case 2: {
-            int64_t* rowVal = reinterpret_cast<int64_t*>(colPtr) + offset;
+            int64_t rowVal = ((LongVector *)colPtr)->getValue(offset);
             int64_t* leftVal = reinterpret_cast<int64_t*>(nonGroupState.val);
-            *leftVal = cmp_int64(*leftVal, *rowVal) == 1 ? *leftVal : *rowVal;
+            *leftVal = cmp_int64(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
             break;
         }
         case 3: {
-            double* rowVal = reinterpret_cast<double*>(colPtr) + offset;
+            double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
             double* leftVal = reinterpret_cast<double*>(nonGroupState.val);
-            *leftVal = cmp_double(*leftVal, *rowVal) == 1 ? *leftVal : *rowVal;
+            *leftVal = cmp_double(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
             break;
         }
         default: {

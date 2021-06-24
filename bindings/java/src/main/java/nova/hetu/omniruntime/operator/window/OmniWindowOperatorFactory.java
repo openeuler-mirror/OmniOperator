@@ -1,13 +1,14 @@
 package nova.hetu.omniruntime.operator.window;
 
+import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.constants.WindowFunctionType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.operator.WindowFunctionType;
-import nova.hetu.omniruntime.utils.OmniUtils;
-import nova.hetu.omniruntime.vector.VecType;
 
 import java.util.Arrays;
 import java.util.Objects;
+
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 public class OmniWindowOperatorFactory
         extends OmniOperatorFactory<OmniWindowOperatorFactory.Context>
@@ -35,9 +36,9 @@ public class OmniWindowOperatorFactory
     protected long createNativeOperatorFactory(Context context)
     {
         return createWindowOperatorFactory(
-                OmniUtils.transformVecType(context.sourceTypes),
+                toNativeConstants(context.sourceTypes),
                 context.outputChannels,
-                OmniUtils.transformWindowFunctionType(context.windFunction),
+                toNativeConstants(context.windFunction),
                 context.partitionChannels,
                 context.preGroupedChannels,
                 context.sortChannels,
@@ -46,7 +47,7 @@ public class OmniWindowOperatorFactory
                 context.preSortedChannelPrefix,
                 context.expectedPositions,
                 context.argumentChannels,
-                OmniUtils.transformVecType(context.windowFunctionReturnType));
+                toNativeConstants(context.windowFunctionReturnType));
     }
 
     public static class Context

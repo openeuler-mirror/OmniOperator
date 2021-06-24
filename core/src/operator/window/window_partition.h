@@ -2,7 +2,6 @@
 #define __WINDOW_PARTITION_H__
 
 #include "../operator_factory.h"
-#include "../../vector/table.h"
 #include "../pages_index.h"
 #include "window_function.h"
 #include "../pages_hash_strategy.h"
@@ -53,7 +52,7 @@ public:
         return currentPosition < partitionEnd;
     }
 
-    void processNextRow(Table *table, int32_t index, int32_t *sourceTypes, int32_t typesCount);
+    void processNextRow(VectorBatch *vecBatch, int32_t index, int32_t *sourceTypes, int32_t typesCount);
 
     void updatePeerGroup();
 

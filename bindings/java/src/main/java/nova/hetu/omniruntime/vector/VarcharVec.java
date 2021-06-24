@@ -1,210 +1,118 @@
-/*
- * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package nova.hetu.omniruntime.vector;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
+import nova.hetu.omniruntime.utils.OmniErrorType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
+
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
 
 public class VarcharVec
         extends VariableWidthVec
 {
-    public VarcharVec(int capacity, int elements)
+    private static final byte[] emptyByteArray = new byte[] {};
+
+    private int lastOffsetPosition;
+    private int capacityInBytes;
+
+    public VarcharVec(int capacityInBytes, int size)
     {
-        super(capacity, elements);
+        super(capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR);
+        this.capacityInBytes = capacityInBytes;
+        lastOffsetPosition = -1;
     }
 
-    public VarcharVec(ByteBuffer buffer, int[] offsets, int[] lengths)
+    public VarcharVec(VecAllocator allocator, int capacityInBytes, int size)
     {
-        super(buffer);
-        this.offsets = offsets;
-        this.lengths = lengths;
-        this.capacity = buffer.capacity();
+        super(allocator, capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR);
+        lastOffsetPosition = -1;
     }
 
-    @Override
-    public VariableWidthVec slice(int startPosition, int endPosition)
+    private VarcharVec(VarcharVec vector, int offset, int length)
     {
-        int elementCount = endPosition - startPosition;
-        int capacity = 0;
-        int[] newOffsets = new int[elementCount];
-        int[] newLengths = new int[elementCount];
-        for (int i = 0; i < elementCount; i++) {
-            newOffsets[i] = offsets[i + startPosition] - offsets[startPosition];
-            newLengths[i] = lengths[i + startPosition];
-            capacity = capacity + lengths[i + startPosition];
+        super(vector, offset, length);
+    }
+
+    protected VarcharVec(long nativeVector)
+    {
+        super(nativeVector);
+    }
+
+    public byte[] getValue(int index)
+    {
+        checkIndex(index);
+        final int actualIndex = index + getOffset();
+        // check is null
+        if (getValueNulls() != null && !getValueNulls().get(actualIndex)) {
+            return null;
         }
-        VarcharVec newVec = new VarcharVec(capacity, elementCount);
-        this.data.position(offsets[startPosition]);
-        byte[] region = new byte[capacity];
-        this.data.get(region, 0, capacity);
-        newVec.setData(region);
-        newVec.set(newOffsets, newLengths);
-        return newVec;
+
+        final int startOffset = getValueOffset(index);
+        final int dataLen = getValueOffset(index + 1) - startOffset;
+        final byte[] data = new byte[dataLen];
+        getData(startOffset, data, 0, data.length);
+        return data;
     }
 
-    public VariableWidthVec sliceByOffset(int startOff, int endOff)
+    private void getData(int startOffset, byte[] dst, int start, int length)
     {
-        int startIdx = Arrays.binarySearch(offsets, startOff); // has to start at the beginning of an element
-        int curIdx = startIdx;
-        int elementCount = 0;
-        int currentPosition = startOff;
-        int totalLength = endOff - startOff;
-        while (currentPosition <= endOff) {
-            currentPosition = currentPosition + lengths[curIdx];
-            elementCount++;
-            curIdx++;
+        if (startOffset > capacityInBytes - length) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, String.format("startOffset: %d, length: %d (expected: range(0, %d))",
+                    startOffset, length, capacityInBytes));
         }
-        int[] newOffsets = new int[elementCount];
-        int[] lengths = new int[elementCount];
-        for (int i = 0; i < elementCount; i++) {
-            newOffsets[i] = offsets[startIdx + i] - startOff;
-            lengths[i] = lengths[startIdx + i];
+        getValues().position(startOffset);
+        getValues().get(dst, start, length);
+    }
+
+    public void setValue(int index, byte[] value)
+    {
+        checkIndex(index);
+        if (!isWritable()) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "this vector is not support written.");
         }
-        VarcharVec newVec = new VarcharVec(totalLength, elementCount);
-        this.data.position(startIdx);
-        byte[] region = new byte[totalLength];
-        this.data.get(region, 0, totalLength);
-        newVec.setData(region);
-        newVec.set(newOffsets, lengths);
-        return newVec;
-    }
-
-    public int[] getOffsets()
-    {
-        return this.offsets;
-    }
-
-    public int[] getLengths()
-    {
-        return this.lengths;
-    }
-
-    public int getLength(int position)
-    {
-        int startIdx = Arrays.binarySearch(offsets, position);
-        return lengths[startIdx];
-    }
-
-    public void set(int idx, int offset, int length)
-    {
-        this.offsets[idx] = offset;
-        this.lengths[idx] = length;
-    }
-
-    public void set(int[] offsets, int[] lengths)
-    {
-        this.offsets = offsets;
-        this.lengths = lengths;
-    }
-
-    public void setData(byte[] data)
-    {
-        this.data.put(data, 0, data.length);
-    }
-
-    public void setData(int position, byte[] data)
-    {
-        this.data.position(position);
-        this.data.put(data, 0, data.length);
-    }
-
-    public byte[] getData(int idx)
-    {
-        if (lengths[idx] == 0) {
-            return "".getBytes();
+        final int actualIndex = index + getOffset();
+        fillSlots(actualIndex);
+        if (getValueNulls() != null) {
+            getValueNulls().set(actualIndex);
         }
-        else {
-            byte[] output = new byte[lengths[idx]];
-            int length = lengths[idx];
-            int offset = offsets[idx];
-            this.data.position(offset);
-            this.data.get(output, 0, length);
-            return output;
+        setData(actualIndex, value, 0, value.length);
+        lastOffsetPosition = actualIndex;
+    }
+
+    private void checkIndex(int index)
+    {
+        if (index < 0 || index >= getSize() - getOffset()) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "the actual index is not valid:index="
+                    + index + ",offset=" + getOffset() + ",elementCount=" + getSize());
         }
     }
 
-    public byte[] getDataAtOffset(int position)
+    private void fillSlots(int index)
     {
-        int idx = Arrays.binarySearch(offsets, position);
-        byte[] output = new byte[lengths[idx]];
-        int length = lengths[idx];
-        int offset = offsets[idx];
-        this.data.position(offset);
-        this.data.get(output, 0, length);
-        return output;
+        for (int i = lastOffsetPosition + 1; i < index; i++) {
+            setData(i, emptyByteArray, 0, emptyByteArray.length);
+        }
+        lastOffsetPosition = index - 1;
     }
 
-    public byte[] getData(int idx, int length)
+    private void setData(int index, byte[] data, int start, int length)
     {
-        byte[] output = new byte[length];
-        int offset = offsets[idx];
-        this.data.position(offset);
-        this.data.get(output, 0, length);
-        return output;
-    }
-
-    @Override
-    public Vec hash()
-    {
-        return null;
+        final int startOffset = getValueOffset(index);
+        if (startOffset > capacityInBytes - length) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, String.format("startOffset: %d, length: %d (expected: range(0, %d))",
+                    startOffset, length, capacityInBytes));
+        }
+        setValueOffset(index + 1, startOffset + data.length);
+        getValues().position(startOffset);
+        getValues().put(data, start, length);
     }
 
     @Override
-    public Vec mul(int other)
+    public Vec slice(int start, int end)
     {
-        return null;
+        return new VarcharVec(this, start + getOffset(), end - start);
     }
 
     @Override
-    public Vec mmul(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public Vec filter()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec groupby()
-    {
-        return null;
-    }
-
-    @Override
-    public Vec concat(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public Vec join(Vec other)
-    {
-        return null;
-    }
-
-    @Override
-    public VecType getType()
-    {
-        return VecType.DOUBLE;
-    }
-
-    @Override
-    public ByteBuffer getData()
+    public Vec copy()
     {
         return null;
     }

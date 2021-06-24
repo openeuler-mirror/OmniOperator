@@ -1,69 +1,198 @@
-/*
- * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.utils.OmniErrorType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
+import nova.hetu.omniruntime.OmniLibs;
+import nova.hetu.omniruntime.constants.VecType;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
+import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/**
- * wrapper of the off-heap values to be used by blocks, this is also the place to implement vectorized operations.
- * each subclass implements its own vectorized operation as appropriate
- * <p>
- * The design purpose is to enable:
- * 1. SIMD
- * 2. method fusion (e.g. function invocation is merged into 1 single function
- * <p>
- * Each supported data type will subclass this class to create the type specific operations
- */
+import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
+
+@NotThreadSafe
 public abstract class Vec
+        implements Closeable
 {
-    protected OMVectorBase base = new OMVectorBase();
-    //default memory offset is zero
-    protected int offset;
-    protected OMChunk omniChunk;
-    protected int size;
+    /**
+     * The specialized vector allocator.
+     */
+    private final VecAllocator allocator;
 
-    protected boolean isWritable = true;
+    /**
+     * The native vector address.
+     */
+    private final long nativeVector;
 
-    public Vec(int rowSize, int allocSize)
+    /**
+     * The {@link VecType} of this vector
+     */
+    private final VecType type;
+
+    /**
+     * The capacity in bytes of this vector.
+     */
+    private final int capacityInBytes;
+
+    /**
+     * The actual number of value.
+     */
+    private int size;
+
+    /**
+     * When a vector has been sliced,
+     * this value will point to where is the new slice {@link Vec} start.
+     */
+    private final int offset;
+
+    /**
+     * The value buffer.
+     */
+    private final ByteBuffer values;
+
+    /**
+     * The nulls of vector, it is a bitmap.
+     */
+    private final ValueNulls valueNulls;
+
+    /**
+     * When a vector has been sliced.
+     * The current vector and sliced vector are unwritable.
+     */
+    private boolean isWritable = true;
+
+    private boolean isCloseable = true;
+
+    static {
+        OmniLibs.load();
+    }
+
+    private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, VecType type, boolean isWritable)
     {
-        this.omniChunk = new OMChunk(OMVectorBase.allocate(allocSize).order(ByteOrder.LITTLE_ENDIAN));
-        this.size = rowSize;
+        this.allocator = allocator;
+        this.capacityInBytes = capacityInBytes;
+        this.size = size;
+        this.type = type;
+        this.offset = offset;
+        this.nativeVector = nativeVector;
+        this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
+        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector));
+        this.isWritable = isWritable;
     }
 
     /**
-     * For native execute result return to java ByteBuffer data.
+     * The routine will use the specialized vector allocator to allocate
+     * new vector.
      *
-     * @param data
-     * @param length
+     * @param capacityInBytes the capacity in bytes of vector.
+     * @param size the actual number of value of vector.
+     * @param type the type of this vector.
+     * @param allocator the specialized vector allocator.
      */
-    public Vec(ByteBuffer data, int length)
+    public Vec(VecAllocator allocator, int capacityInBytes, int size, VecType type)
     {
-        this.omniChunk = new OMChunk(data);
-        this.size = length;
+        this(allocator,
+                newVectorNative(capacityInBytes, size, type.getValue(), allocator.getNativeAllocator()),
+                capacityInBytes,
+                size,
+                0,
+                type,
+                true);
     }
 
-    public Vec(OMChunk buf, int offset, int length)
+    /**
+     * Ihe routine will use GLOBAL memory pool
+     * when there is no specialized vector allocator.
+     *
+     * @param capacityInBytes the number of value of vector.
+     * @param size the actual number of value of vector.
+     * @param type the type of this vector.
+     */
+    public Vec(int capacityInBytes, int size, VecType type)
     {
-        this.omniChunk = new OMChunk(buf);
-        this.size = length;
-        this.offset = offset;
-        this.isWritable = false;
+        this(GLOBAL_VECTOR_ALLOCATOR, capacityInBytes, size, type);
+    }
+
+    /**
+     * The routine is just for slicing vector operator.
+     *
+     * @param vec the vector need to be sliced.
+     * @param offset When a vector has been sliced, this value will point to where is the new slice {@link Vec} start.
+     * @param length the number of value.
+     */
+    protected Vec(Vec vec, int offset, int length)
+    {
+        this(vec.allocator,
+                sliceVectorNative(vec.nativeVector, offset, length),
+                vec.getCapacityInBytes(),
+                length,
+                offset,
+                vec.getType(),
+                false);
+    }
+
+    protected Vec(long nativeVector)
+    {
+        this.allocator = new VecAllocator(getAllocatorNative(nativeVector));
+        this.capacityInBytes = getCapacityInBytesNative(nativeVector);
+        this.size = getSizeNative(nativeVector);
+        this.type = new VecType(getTypeNative(nativeVector));
+        this.offset = getOffsetNative(nativeVector);
+        this.nativeVector = nativeVector;
+        this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
+        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector));
+    }
+
+    public long getNativeVector()
+    {
+        return nativeVector;
+    }
+
+    public int getSize()
+    {
+        return size;
+    }
+
+    public void setSize(int size)
+    {
+        this.size = size;
+        setValueCountNative(nativeVector, size);
+    }
+
+    public int getCapacityInBytes()
+    {
+        return capacityInBytes;
+    }
+
+    public int getOffset()
+    {
+        return offset;
+    }
+
+    public VecType getType()
+    {
+        return type;
+    }
+
+    public ByteBuffer getValues()
+    {
+        return values;
+    }
+
+    public ValueNulls getValueNulls()
+    {
+        return valueNulls;
+    }
+
+    public boolean isNull(int index)
+    {
+        return valueNulls.get(index);
+    }
+
+    public void setNull(int index)
+    {
+        valueNulls.set(index);
     }
 
     public boolean isWritable()
@@ -71,157 +200,45 @@ public abstract class Vec
         return isWritable;
     }
 
-    public void setWritable(boolean writable)
-    {
-        isWritable = writable;
-    }
+    public abstract Vec slice(int start, int end);
 
-    /**
-     * Creates a vector from a slice of the underlying buffer.
-     *
-     * @param startIdx
-     * @param endIdx
-     * @return
-     */
-    public Vec slice(int startIdx, int endIdx)
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default slice()");
-    }
+    public abstract Vec copy();
 
-    /**
-     * returns the hash of all elements in the vec
-     * This is an example of in-situ operations that can be implemented enabling SIMD
-     *
-     * @return
-     */
-    public Vec hash()
+    @Override
+    public void close()
     {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default hash()");
-    }
-
-    /**
-     * Another potential SIMD in-situ operation
-     *
-     * @param other
-     * @return
-     */
-    public Vec mul(int other)
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default mul()");
-    }
-
-    /**
-     * Another potential SIMD in-situ operation
-     *
-     * @param other
-     * @return
-     */
-    public Vec mmul(Vec other)
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default mmul()");
-    }
-
-    /**
-     * Another potential SIMD in-situ operation
-     *
-     * @return
-     */
-    public Vec filter()
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default filter()");
-    }
-
-    /**
-     * Another potential SIMD in-situ operation
-     */
-    public Vec groupby(/** how to pass in group by parameters? the columns to be used for group by */)
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default groupby()");
-    }
-
-    /**
-     * Another potential SIMD in-situ operation
-     *
-     * @param other
-     * @return
-     */
-    public Vec join(Vec other /** how to pass in the join conditions? might require many other columns*/)
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default join()");
-    }
-
-    /**
-     * Another potential SIMD in-situ operation
-     *
-     * @param other
-     * @return
-     */
-    public Vec concat(Vec other)
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default concat()");
-    }
-
-    public int size()
-    {
-        return size;
-    }
-
-    public int capacity()
-    {
-        if (omniChunk == null) {
-            return 0;
-        }
-        //Todo:now since we use the reference count a ByteBuffer,so this may not accuracy of calculate the capacity.
-        return getData().capacity();
-//        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDIFINED, "OmniVec not default capacity()");
-    }
-
-    public int remaining()
-    {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "OmniVec not default remaining()");
-    }
-
-    public void copy(Vec other, int[] elementsToCopy, int offset, int length, int thisOffset)
-    {
-        OMVectorBase.copy(this.getType().getValue(), this.getAddress(), this.size, other.getAddress(), elementsToCopy, offset, length, thisOffset);
-    }
-
-    public abstract VecType getType();
-
-    public ByteBuffer getData()
-    {
-        if (omniChunk == null) {
-            return null;
-        }
-        return this.omniChunk.getData();
-    }
-
-    public long getAddress()
-    {
-        if (omniChunk == null) {
-            return 0;
-        }
-        return this.omniChunk.getAddress() + offset;
-    }
-
-    public boolean close()
-    {
-        if (omniChunk == null) {
-            return true;
-        }
-        return this.omniChunk.release();
-    }
-
-    //For OmniFilter result selected row size
-    public void setSize(int size)
-    {
-        this.size = size;
-    }
-
-    public void setClosable(boolean isClosable)
-    {
-        if (omniChunk != null) {
-            omniChunk.setReleasable(isClosable);
+        if (isCloseable) {
+            freeVectorNative(this.allocator.getNativeAllocator(), this.nativeVector);
         }
     }
+
+    public void setClosable(boolean isCloseable)
+    {
+        this.isCloseable = isCloseable;
+    }
+
+    /**
+     * |type|size|offset|isNullable|isVariable|data|nulls|valueOffsets|
+     **/
+    private static native long newVectorNative(int capacityInBytes, int size, int type, long allocator);
+
+    private static native long sliceVectorNative(long nativeVector, int offset, int length);
+
+    private static native void freeVectorNative(long allocator, long nativeVector);
+
+    private static native long getAllocatorNative(long nativeVector);
+
+    private static native int getCapacityInBytesNative(long nativeVector);
+
+    private static native int getSizeNative(long nativeVector);
+
+    private static native int getOffsetNative(long nativeVector);
+
+    private static native int setValueCountNative(long nativeVector, int valueCount);
+
+    protected static native int getTypeNative(long nativeVector);
+
+    private static native ByteBuffer getValuesNative(long nativeVector);
+
+    private static native ByteBuffer getValueNullsNative(long nativeVector);
 }

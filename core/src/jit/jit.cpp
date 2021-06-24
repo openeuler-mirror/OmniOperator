@@ -37,6 +37,8 @@ namespace omniruntime {
         }
 
         std::vector<std::string> Jit::getAppliedOptimizations() {
+            std::vector<std::string> temp;
+            return temp;
         }
     }
 }

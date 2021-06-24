@@ -1,7 +1,6 @@
 #ifndef __HASH_UTIL_H__
 #define __HASH_UTIL_H__
 
-#include "../vector/table.h"
 #include <stdint.h>
 
 class HashUtil
@@ -14,7 +13,7 @@ public:
     static int64_t getHash(int64_t previousHashValue, int64_t value);
 
     /*
-     * it is used to get position for rawHash when reading or writing join hash table
+     * it is used to get position for rawHash when reading or writing join hash vecBatch
      */
     static int32_t getRawHashPosition(int64_t rawHash, int64_t mask);
 

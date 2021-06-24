@@ -2,7 +2,7 @@ package nova.hetu.omniruntime.operator;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import nova.hetu.omniruntime.NativeLibs;
+import nova.hetu.omniruntime.OmniLibs;
 
 import java.util.concurrent.ExecutionException;
 
@@ -16,7 +16,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext>
     private long nativeOperatorFactory;
 
     static {
-        NativeLibs.load();
+        OmniLibs.load();
     }
 
     public long getNativeOperatorFactory()
@@ -36,12 +36,12 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext>
 
     public OmniOperator createOperator()
     {
-        long nativeOperator = createOperator(nativeOperatorFactory);
+        long nativeOperator = createOperatorNative(nativeOperatorFactory);
         return new OmniOperator(nativeOperator);
     }
 
     protected abstract long createNativeOperatorFactory(T context);
 
     // createOperator
-    private static native long createOperator(long factoryAddress);
+    private static native long createOperatorNative(long factoryAddress);
 }

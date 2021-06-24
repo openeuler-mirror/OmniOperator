@@ -1,5 +1,4 @@
 #include "hash_util.h"
-#include "../vector/table.h"
 #include <stdint.h>
 #include <math.h>
 

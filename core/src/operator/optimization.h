@@ -25,10 +25,6 @@
 #define OMNIJIT_PAGE_INDEX_COMPARE_TO "page-index-compare-to"
 #endif
 
-#ifndef OMNIJIT_SORT_ALLOC_COLUMNS
-#define OMNIJIT_SORT_ALLOC_COLUMNS "sort-alloc-columns"
-#endif
-
 #ifndef OMNIJIT_PAGE_INDEX_GET_OUTPUT
 #define OMNIJIT_PAGE_INDEX_GET_OUTPUT "page-index-get-output"
 #endif
