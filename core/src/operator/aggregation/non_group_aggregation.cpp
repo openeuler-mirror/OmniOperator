@@ -1,8 +1,8 @@
 #include "non_group_aggregation.h"
-#include "../../vector/vector_common.h"
-#include "../status.h"
 #include "../../jit/annotation.h"
 #include "../optimization.h"
+#include "../../vector/vector_common.h"
+#include "../status.h"
 
 namespace omniruntime {
 namespace op {
@@ -146,6 +146,7 @@ int32_t AggregationOperator::addInput(VectorBatch* vecBatch)
     int32_t *vectorTypes = (int32_t *)vecBatch->getVectorTypes();
 
     int32_t* aggFuncTypes = new int32_t[aggColNum];
+    
     for (int32_t i = 0; i < aggColNum; ++i) {
         aggFuncTypes[i] = this->aggregators[i]->getType();
     }
@@ -160,7 +161,7 @@ int32_t AggregationOperator::addInput(VectorBatch* vecBatch)
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncExit;
 #endif
-    return 0;
+    return 0;    
 }
 
 SPECIALIZE(OMNIJIT_NON_GROUP_INLOOP)
@@ -175,44 +176,44 @@ void AggregationOperator::inLoop(Vector** vectors, uint32_t offset, int32_t colN
 
 void AggregationOperator::fillResultVectors(VectorBatch* vecBatch)
 {
+    // set result value
     int32_t vectorCount = vecBatch->getVectorCount();
     for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
         AggregateType aggType = this->aggregators[colIdx]->getType();
         auto state = this->aggregators[colIdx]->getNonGroupState();
-        auto col = vecBatch->getVector(colIdx);
+        auto vector = vecBatch->getVector(colIdx);
         switch(aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
-            case OMNI_AGGREGATION_TYPE_COUNT:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                if (aggType == OMNI_AGGREGATION_TYPE_COUNT) {
-                    ((LongVector *)col)->setValue(0, state.count);
-                }else {
-                    switch (col->getType())
-                    {
-                        case 1:{
-                            ((IntVector *)col)->setValue(0, *static_cast<int32_t*>(state.val));
-                            break;
-                        }
-                        case 2:{
-                            ((LongVector *)col)->setValue(0, *static_cast<int64_t*>(state.val));
-                            break;
-                        }
-                        case 3:{
-                            ((DoubleVector *)col)->setValue(0, *static_cast<double*>(state.val));
-                            break;
-                        }
-                        default:
-                            break;
+                switch (vector->getType())
+                {
+                    case 1:{
+                        ((IntVector*)vector)->setValue(0, *static_cast<int32_t*>(state.val));
+                        break;
                     }
+                    case 2:{
+                        ((LongVector*)vector)->setValue(0, *static_cast<int64_t*>(state.val));
+                        break;
+                    }
+                    case 3:{
+                        ((DoubleVector*)vector)->setValue(0, *static_cast<double*>(state.val));
+                        break;
+                    }
+                    default:
+                        break;
                 }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_COUNT: {
+                ((LongVector*)vector)->setValue(0, state.count);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
                 if (state.count == 0) {
                     DebugError("Divisor is zero! column index = %d", colIdx);
                 }
-                ((DoubleVector *)col)->setValue(0, *static_cast<double*>(state.avgVal));
+                ((DoubleVector*)vector)->setValue(0, *reinterpret_cast<double*>(state.avgVal));
                 break;
             }
             default: {
@@ -230,8 +231,16 @@ int AggregationOperator::getOutput(std::vector<VectorBatch*>& result)
 
     int32_t* types = new int32_t[colSize];
     int32_t idx = 0;
-    for (auto& i : aggCols) {
-        types[idx++] = i.type;
+    for (int32_t i = 0; i < colSize; ++i) {
+        if (aggregators[i]->getType() == OMNI_AGGREGATION_TYPE_COUNT) {
+            types[i] = 2;
+            continue;
+        }
+        if (aggregators[i]->getType() == OMNI_AGGREGATION_TYPE_AVG) {
+            types[i] = 3;
+            continue;
+        }
+        types[i] = aggCols[i].type;
     }
 
     VectorBatch* vecBatch = new VectorBatch(types, colSize, 1);

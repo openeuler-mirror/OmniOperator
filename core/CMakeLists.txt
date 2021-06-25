@@ -10,6 +10,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_INSTALL_PREFIX /opt/lib)
+set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 
 # compile library
@@ -22,7 +23,6 @@ add_subdirectory(test)
 # configure file
 configure_file(
         "${PROJECT_SOURCE_DIR}/config.h.in"
-
         "${PROJECT_SOURCE_DIR}/config.h"
 )
 

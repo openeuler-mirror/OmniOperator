@@ -34,7 +34,7 @@ public class OmniHashAggregationOperatorTest
 
         VecType[] inputTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(
-                groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes);
+                groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
         int rowNum = 40000;
         int pageCount = 10;
         int[] rowNums = new int[pageCount];
@@ -99,7 +99,7 @@ public class OmniHashAggregationOperatorTest
                     VecType[] aggOutputTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
                     VecType[] inputTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
                     OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(
-                            groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes);
+                            groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
                     List<Vec> inputData = new ArrayList<>();
                     OmniOperator omniOperator = factory.createOperator();
@@ -121,8 +121,8 @@ public class OmniHashAggregationOperatorTest
                         assertNotNull(vecBatch);
                         assertEquals(vecBatch.getVectors().length, 4);
                         Vec[] vectors = vecBatch.getVectors();
-                        assertEquals(((LongVec) vectors[0]).get(0), 0);
-                        assertEquals(((LongVec) vectors[1]).get(0), 0);
+                        assertEquals(((LongVec) vectors[0]).get(0), 1);
+                        assertEquals(((LongVec) vectors[1]).get(0), 1);
                         assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
                         assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
 

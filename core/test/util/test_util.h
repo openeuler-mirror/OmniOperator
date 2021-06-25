@@ -8,6 +8,8 @@
 
 bool vecBatchMatch(VectorBatch *outputTables, VectorBatch *expectTable);
 
+void printVecBatch(VectorBatch* vecBatch);
+
 omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory);
 
 class Timer {

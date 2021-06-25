@@ -57,7 +57,16 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
  * Return an HashAggregationFactory object address.
  **/
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory
-        (JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jintArray jGroupByType, jintArray jAggChannel, jintArray jAggType, jintArray jAggFuncType, jintArray jOutPutTye)
+        (JNIEnv *env,
+         jobject jObj,
+         jintArray jGroupByChannel,
+         jintArray jGroupByType,
+         jintArray jAggChannel,
+         jintArray jAggType,
+         jintArray jAggFuncType,
+         jintArray jOutPutTye,
+         jboolean inputRaw,
+         jboolean outputPartial)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
@@ -136,7 +145,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext);
+    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
     nativeOperatorFactory->setJitContext(jitContext);
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
@@ -146,7 +155,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
  * Return an AggregationFactory object address.
  **/
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory
-        (JNIEnv *env, jobject jObj, jintArray jAggType, jintArray jAggFuncType)
+        (JNIEnv *env, jobject jObj, jintArray jAggType, jintArray jAggFuncType, jboolean inputRaw, jboolean outputPartial)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
@@ -183,7 +192,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggre
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext);
+    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
     nativeOperatorFactory->setJitContext(jitContext);
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
