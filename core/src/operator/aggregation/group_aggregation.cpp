@@ -27,15 +27,15 @@ Operator * HashAggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new SumAggregator(1));
+                    aggs.push_back(new SumAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new SumAggregator(2));
+                    aggs.push_back(new SumAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new SumAggregator(3));
+                    aggs.push_back(new SumAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -48,15 +48,15 @@ Operator * HashAggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new AverageAggregator(1));
+                    aggs.push_back(new AverageAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new AverageAggregator(2));
+                    aggs.push_back(new AverageAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new AverageAggregator(3));
+                    aggs.push_back(new AverageAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -69,15 +69,15 @@ Operator * HashAggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new MaxAggregator(1));
+                    aggs.push_back(new MaxAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new MaxAggregator(2));
+                    aggs.push_back(new MaxAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new MaxAggregator(3));
+                    aggs.push_back(new MaxAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -90,15 +90,15 @@ Operator * HashAggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new MinAggregator(1));
+                    aggs.push_back(new MinAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new MinAggregator(2));
+                    aggs.push_back(new MinAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new MinAggregator(3));
+                    aggs.push_back(new MinAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -111,15 +111,15 @@ Operator * HashAggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new CountAggregator(1));
+                    aggs.push_back(new CountAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new CountAggregator(2));
+                    aggs.push_back(new CountAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new CountAggregator(3));
+                    aggs.push_back(new CountAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -363,11 +363,11 @@ void HashAggregationOperator::constructAggColumn(Table* table,
 #endif
     const int32_t groupByColSize = this->groupByCols.size();
     allocateVec(table, types, groupByColSize, true, aggColSize, tableRowSize);
-    for (int32_t aggIndex = 0, dataIndex = 0; aggIndex < aggColSize; ++aggIndex, ++dataIndex){
+    for (int32_t aggIndex = 0; aggIndex < aggColSize; ++aggIndex){
         int32_t rIdx = 0;
         auto resultIterator = this->aggregators[aggIndex]->getGroupState().begin();
         AggregateType aggType = this->aggregators[aggIndex]->getType();
-        auto col = table->getColumn(groupByColSize + dataIndex);
+        auto col = table->getColumn(groupByColSize + aggIndex);
         switch (aggType)
         {
             case SUM:
@@ -397,7 +397,7 @@ void HashAggregationOperator::constructAggColumn(Table* table,
             }
             case COUNT: {
                 for (; rIdx < tableRowSize && resultIterator != aggregators[aggIndex]->getGroupState().end(); ) {
-                    reinterpret_cast<int64_t*>(col->getData())[rIdx++] = resultIterator->second.count + 1;
+                    reinterpret_cast<int64_t*>(col->getData())[rIdx++] = resultIterator->second.count;
                     resultIterator++;
                 }
                 break;
@@ -424,8 +424,10 @@ void HashAggregationOperator::constructAggColumn(Table* table,
                 }
                 break;
             }
-            default:
+            default: {
+                DebugError("No such aggregate type %d\n", aggType);
                 break;
+            }
         }
     }   
 #ifdef DEBUG_LEVEL_HIGH
@@ -512,7 +514,7 @@ int32_t HashAggregationOperator::getOutput(std::vector<Table*>& result)
 #endif
     // set finished.
     status = 2;
-    return pageCount;
+    return status;
 }
 
 } // end of namespace op

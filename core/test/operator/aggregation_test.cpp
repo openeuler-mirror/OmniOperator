@@ -19,6 +19,8 @@ const int32_t PAGE_NUM = 10;
 const int32_t ROW_PER_PAGE = 10000000;
 const int32_t CARDINALITY = 4;
 const int32_t COLUMN_NUM = 4;
+const bool INPUT_MODE = true;
+const bool OUTPUT_MODE = false;
 
 long lrand()
 {
@@ -64,9 +66,11 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     const int ROW_SIZE = 100;
     const int CARDINALITY = 4;
     const int COLUMN_COUNT = 7; // groupby*2 + sum + avg + count + min + max
+    string aggNames[] = {"group", "group", "sum", "avg", "count", "min", "max"};
 
     Table** input = buildInput(PAGE_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
-    
+
+    // First stage
     ColumnIndex c0 = {0, INT64};
     ColumnIndex c1 = {1, INT64};
     ColumnIndex c2 = {2, INT64};
@@ -74,43 +78,115 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     ColumnIndex c4 = {4, INT64};
     ColumnIndex c5 = {5, INT64};
     ColumnIndex c6 = {6, INT64};
-    std::vector<ColumnIndex> groupByColumns = {c0, c1};
-    std::vector<ColumnIndex> aggregateColumns = {c2, c3, c4, c5, c6};
-    std::vector<Aggregator*> aggs;
-    SumAggregator* sumAgg = new SumAggregator(2);
-    AverageAggregator* avgAgg = new AverageAggregator(2);
-    CountAggregator* countAgg = new CountAggregator(2);
-    MinAggregator* minAgg = new MinAggregator(2);
-    MaxAggregator* maxAgg = new MaxAggregator(2);
-    aggs.push_back(sumAgg);
-    aggs.push_back(avgAgg);
-    aggs.push_back(countAgg);
-    aggs.push_back(minAgg);
-    aggs.push_back(maxAgg);
-    HashAggregationOperator* groupBy = new HashAggregationOperator(groupByColumns, aggregateColumns, aggs);
+    std::vector<ColumnIndex> groupByColumns1 = {c0, c1};
+    std::vector<ColumnIndex> aggregateColumns1 = {c2, c3, c4, c5, c6};
+    std::vector<Aggregator*> aggs1;
+    SumAggregator* sumAgg1 = new SumAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    AverageAggregator* avgAgg1 = new AverageAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    CountAggregator* countAgg1 = new CountAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    MinAggregator* minAgg1 = new MinAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    MaxAggregator* maxAgg1 = new MaxAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    aggs1.push_back(sumAgg1);
+    aggs1.push_back(avgAgg1);
+    aggs1.push_back(countAgg1);
+    aggs1.push_back(minAgg1);
+    aggs1.push_back(maxAgg1);
+    HashAggregationOperator* groupBy1 = new HashAggregationOperator(groupByColumns1, aggregateColumns1, aggs1);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
-        groupBy->addInput(input[i], ROW_SIZE);
+        groupBy1->addInput(input[i], ROW_SIZE);
     }
-    
-    std::vector<Table*> result;
-    int32_t tableCount = groupBy->getOutput(result);
 
-    EXPECT_EQ(result[0]->getColumnNumber(), 7);
-    EXPECT_EQ(result[0]->getPositionCount(), 4);
+    std::vector<Table*> result1;
+    groupBy1->getOutput(result1);
+    delete groupBy1;
 
-    string aggNames[] = {"group", "group", "sum", "avg_val", "avg_cnt", "count", "min", "max"};
+    ColumnIndex c7 = {0, INT64};
+    ColumnIndex c8 = {1, INT64};
+    ColumnIndex c9 = {2, INT64};
+    ColumnIndex c10 = {3, INT64};
+    ColumnIndex c11 = {4, INT64};
+    ColumnIndex c12 = {5, INT64};
+    ColumnIndex c13 = {6, INT64};
+    groupByColumns1 = {c7, c8};
+    aggregateColumns1 = {c9, c10, c11, c12, c13};
+    sumAgg1 = new SumAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    avgAgg1 = new AverageAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    countAgg1 = new CountAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    minAgg1 = new MinAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    maxAgg1 = new MaxAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    aggs1.clear();
+    aggs1.push_back(sumAgg1);
+    aggs1.push_back(avgAgg1);
+    aggs1.push_back(countAgg1);
+    aggs1.push_back(minAgg1);
+    aggs1.push_back(maxAgg1);
+    HashAggregationOperator* groupBy2 = new HashAggregationOperator(groupByColumns1, aggregateColumns1, aggs1);
 
-    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
-        Column* col = result[0]->getColumn(i);
+    for (int32_t i = 0; i < PAGE_NUM; ++i) {
+        groupBy2->addInput(input[i], ROW_SIZE);
+    }
+
+    int32_t tableCount2 = groupBy2->getOutput(result1);
+    delete groupBy2;
+    for (int32_t tIdx = 0; tIdx < result1.size(); ++tIdx) {
+        for (int32_t i = 0; i < result1[tIdx]->getColumnNumber(); ++i) {
+            Column *col = result1[tIdx]->getColumn(i);
+            std::cout << aggNames[i] << " ";
+            col->printColumn();
+        }
+    }
+
+    // Second stage
+    ColumnIndex c14 = {0, INT64};
+    ColumnIndex c15 = {1, INT64};
+    ColumnIndex c16 = {2, INT64};
+    ColumnIndex c17 = {3, INT64};
+    ColumnIndex c18 = {4, INT64};
+    ColumnIndex c19 = {5, INT64};
+    ColumnIndex c20 = {6, INT64};
+    std::vector<ColumnIndex> groupByColumns2 = {c14, c15};
+    std::vector<ColumnIndex> aggregateColumns2 = {c16, c17, c18, c19, c20};
+    std::vector<Aggregator*> aggs2;
+    SumAggregator* sumAgg2 = new SumAggregator(2, false, false);
+    AverageAggregator* avgAgg2 = new AverageAggregator(2, false, false);
+    CountAggregator* countAgg2 = new CountAggregator(2, false, false);
+    MinAggregator* minAgg2 = new MinAggregator(2, false, false);
+    MaxAggregator* maxAgg2 = new MaxAggregator(2, false, false);
+    aggs2.push_back(sumAgg2);
+    aggs2.push_back(avgAgg2);
+    aggs2.push_back(countAgg2);
+    aggs2.push_back(minAgg2);
+    aggs2.push_back(maxAgg2);
+    HashAggregationOperator* groupBy3 = new HashAggregationOperator(groupByColumns2, aggregateColumns2, aggs2);
+
+    for (int32_t i = 0; i < result1.size(); ++i) {
+        groupBy3->addInput(result1[i], result1[i]->getPositionCount());
+    }
+
+    for (int32_t i = 0; i < result1[0]->getColumnNumber(); ++i) {
+        Column* col = result1[0]->getColumn(i);
+        delete[] reinterpret_cast<int64_t*>(col->getData());
+        delete col;
+    }
+
+    std::vector<Table*> result2;
+    groupBy3->getOutput(result2);
+    delete groupBy3;
+
+    EXPECT_EQ(result2[0]->getColumnNumber(), 7);
+    EXPECT_EQ(result2[0]->getPositionCount(), 4);
+
+    for (int32_t i = 0; i < result2[0]->getColumnNumber(); ++i) {
+        Column* col = result2[0]->getColumn(i);
         std::cout << aggNames[i] << " ";
         col->printColumn();
     }
     
     destroyInput(input, PAGE_NUM, COLUMN_COUNT);
     
-    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
-        Column* col = result[0]->getColumn(i);
+    for (int32_t i = 0; i < result2[0]->getColumnNumber(); ++i) {
+        Column* col = result2[0]->getColumn(i);
         delete[] reinterpret_cast<int64_t*>(col->getData());
         delete col;
     }
@@ -146,8 +222,8 @@ TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
     std::vector<ColumnIndex> v1 = {c0, c1};
     std::vector<ColumnIndex> v2 = {c0, c1};
     std::vector<Aggregator*> aggs;
-    SumAggregator* sum1 = new SumAggregator(1);
-    SumAggregator* sum2 = new SumAggregator(2);
+    SumAggregator* sum1 = new SumAggregator(1, INPUT_MODE, OUTPUT_MODE);
+    SumAggregator* sum2 = new SumAggregator(2, INPUT_MODE, OUTPUT_MODE);
     aggs.push_back(sum1);
     aggs.push_back(sum2);
     HashAggregationOperator* groupBy = new HashAggregationOperator(v1, v2, aggs);
@@ -433,7 +509,7 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     const int ROW_SIZE = 100;
     const int CARDINALITY = 4;
     const int COLUMN_COUNT = 5; // groupby*2 + sum + avg + count + min + max
-
+    string aggNames[] = {"sum", "avg", "count", "min", "max"};
     Table** input = buildInput(PAGE_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
     
     ColumnIndex c0 = {0, INT64};
@@ -443,40 +519,99 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     ColumnIndex c4 = {4, INT64};
     std::vector<ColumnIndex> aggregateColumns = {c0, c1, c2, c3, c4};
     std::vector<Aggregator*> aggs;
-    SumAggregator* sumAgg = new SumAggregator(2);
-    AverageAggregator* avgAgg = new AverageAggregator(2);
-    CountAggregator* countAgg = new CountAggregator(2);
-    MinAggregator* minAgg = new MinAggregator(2);
-    MaxAggregator* maxAgg = new MaxAggregator(2);
+    SumAggregator* sumAgg = new SumAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    AverageAggregator* avgAgg = new AverageAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    CountAggregator* countAgg = new CountAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    MinAggregator* minAgg = new MinAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    MaxAggregator* maxAgg = new MaxAggregator(2, INPUT_MODE, OUTPUT_MODE);
     aggs.push_back(sumAgg);
     aggs.push_back(avgAgg);
     aggs.push_back(countAgg);
     aggs.push_back(minAgg);
     aggs.push_back(maxAgg);
-    AggregationOperator* aggregate = new AggregationOperator(aggregateColumns, aggs);
+    AggregationOperator* aggregate1 = new AggregationOperator(aggregateColumns, aggs);
 
     for (int32_t i = 0; i < PAGE_NUM; ++i) {
-        aggregate->addInput(input[i], ROW_SIZE);
+        aggregate1->addInput(input[i], ROW_SIZE);
     }
     
     std::vector<Table*> result;
-    int32_t tableCount = aggregate->getOutput(result);
+    int32_t tableCount1 = aggregate1->getOutput(result);
+    delete aggregate1;
 
-    EXPECT_EQ(result[0]->getColumnNumber(), 5);
-    EXPECT_EQ(result[0]->getPositionCount(), 1);
+    ColumnIndex c5 = {0, INT64};
+    ColumnIndex c6 = {1, INT64};
+    ColumnIndex c7 = {2, INT64};
+    ColumnIndex c8 = {3, INT64};
+    ColumnIndex c9 = {4, INT64};
+    aggregateColumns = {c5, c6, c7, c8, c9};
+    aggs.clear();
+    sumAgg = new SumAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    avgAgg = new AverageAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    countAgg = new CountAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    minAgg = new MinAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    maxAgg = new MaxAggregator(2, INPUT_MODE, OUTPUT_MODE);
+    aggs.push_back(sumAgg);
+    aggs.push_back(avgAgg);
+    aggs.push_back(countAgg);
+    aggs.push_back(minAgg);
+    aggs.push_back(maxAgg);
+    AggregationOperator* aggregate2 = new AggregationOperator(aggregateColumns, aggs);
 
-    string aggNames[] = {"sum", "avg", "count", "min", "max"};
+    for (int32_t i = 0; i < PAGE_NUM; ++i) {
+        aggregate2->addInput(input[i], ROW_SIZE);
+    }
+    int32_t tableCount2 = aggregate1->getOutput(result);
+    delete aggregate2;
 
-    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
-        Column* col = result[0]->getColumn(i);
+    // Second stage
+    ColumnIndex c10 = {0, INT64};
+    ColumnIndex c11 = {1, INT64};
+    ColumnIndex c12 = {2, INT64};
+    ColumnIndex c13 = {3, INT64};
+    ColumnIndex c14 = {4, INT64};
+    aggregateColumns = {c10, c11, c12, c13, c14};
+    std::vector<Aggregator*> aggs1;
+    sumAgg = new SumAggregator(2, false, false);
+    avgAgg = new AverageAggregator(2, false, false);
+    countAgg = new CountAggregator(2, false, false);
+    minAgg = new MinAggregator(2, false, false);
+    maxAgg = new MaxAggregator(2, false, false);
+    aggs1.push_back(sumAgg);
+    aggs1.push_back(avgAgg);
+    aggs1.push_back(countAgg);
+    aggs1.push_back(minAgg);
+    aggs1.push_back(maxAgg);
+    AggregationOperator* aggregate3 = new AggregationOperator(aggregateColumns, aggs1);
+
+    for (int32_t i = 0; i < result.size(); ++i) {
+        aggregate3->addInput(result[i], result[i]->getPositionCount());
+    }
+
+    for (int32_t tIdx = 0; tIdx < tableCount1 + tableCount2; ++tIdx) {
+        for (int32_t i = 0; i < result[tIdx]->getColumnNumber(); ++i) {
+            Column *col = result[tIdx]->getColumn(i);
+            delete[] reinterpret_cast<int64_t *>(col->getData());
+            delete col;
+        }
+    }
+
+    std::vector<Table*> result1;
+    int32_t tableCount3 = aggregate1->getOutput(result1);
+    delete aggregate3;
+    EXPECT_EQ(result1[0]->getPositionCount(), 1);
+    EXPECT_EQ(result1[0]->getColumnNumber(), 5);
+
+    for (int32_t i = 0; i < result1[0]->getColumnNumber(); ++i) {
+        Column* col = result1[0]->getColumn(i);
         std::cout << aggNames[i] << " ";
         col->printColumn();
     }
     
     destroyInput(input, PAGE_NUM, COLUMN_COUNT);
     
-    for (int32_t i = 0; i < result[0]->getColumnNumber(); ++i) {
-        Column* col = result[0]->getColumn(i);
+    for (int32_t i = 0; i < result1[0]->getColumnNumber(); ++i) {
+        Column* col = result1[0]->getColumn(i);
         delete[] reinterpret_cast<int64_t*>(col->getData());
         delete col;
     }
@@ -495,7 +630,7 @@ TEST(AggregatorTest, avg_correctness_test)
     ColumnIndex c0 = {0, INT64};
     std::vector<ColumnIndex> aggregateColumns = {c0};
     std::vector<Aggregator*> aggs;
-    AverageAggregator* avgAgg = new AverageAggregator(2);
+    AverageAggregator* avgAgg = new AverageAggregator(2, INPUT_MODE, OUTPUT_MODE);
     aggs.push_back(avgAgg);
     AggregationOperator* aggregate = new AggregationOperator(aggregateColumns, aggs);
 
@@ -553,7 +688,6 @@ void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, Table** input, int32
 
 TEST(AggregationOperatorTest, Perf_Original)
 {
-    using namespace omniruntime::codegen;
     uint32_t* aggTypes = new uint32_t[4];
     aggTypes[0] = 2;
     aggTypes[1] = 2;

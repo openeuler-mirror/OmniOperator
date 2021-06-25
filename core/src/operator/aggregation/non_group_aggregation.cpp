@@ -18,15 +18,15 @@ Operator* AggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new SumAggregator(1));
+                    aggs.push_back(new SumAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new SumAggregator(2));
+                    aggs.push_back(new SumAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new SumAggregator(3));
+                    aggs.push_back(new SumAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -39,15 +39,15 @@ Operator* AggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new AverageAggregator(1));
+                    aggs.push_back(new AverageAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new AverageAggregator(2));
+                    aggs.push_back(new AverageAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new AverageAggregator(3));
+                    aggs.push_back(new AverageAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -60,15 +60,15 @@ Operator* AggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new MaxAggregator(1));
+                    aggs.push_back(new MaxAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new MaxAggregator(2));
+                    aggs.push_back(new MaxAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new MaxAggregator(3));
+                    aggs.push_back(new MaxAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -81,15 +81,15 @@ Operator* AggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new MinAggregator(1));
+                    aggs.push_back(new MinAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new MinAggregator(2));
+                    aggs.push_back(new MinAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new MinAggregator(3));
+                    aggs.push_back(new MinAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -102,15 +102,15 @@ Operator* AggregationOperatorFactory::createOperator()
             switch (this->aggTypeContext.context[i])
             {
                 case INT32: {
-                    aggs.push_back(new CountAggregator(1));
+                    aggs.push_back(new CountAggregator(1, inputRaw, outputPartial));
                     break;
                 }
                 case INT64: {
-                    aggs.push_back(new CountAggregator(2));
+                    aggs.push_back(new CountAggregator(2, inputRaw, outputPartial));
                     break;
                 }
                 case DOUBLE: {
-                    aggs.push_back(new CountAggregator(3));
+                    aggs.push_back(new CountAggregator(3, inputRaw, outputPartial));
                     break;
                 }
                 default: {
@@ -229,7 +229,7 @@ void AggregationOperator::constructColumn(Table* table, int32_t* types, uint32_t
                     default:
                         break;
                 }
-
+                break;
             }
             default: {
                 DebugError("Not support %d aggregate type!", aggType);

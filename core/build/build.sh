@@ -5,18 +5,18 @@ find . -type f ! -name 'build.sh' -delete
 if [ $# != 0 ] ; then
   if [ $1 = 'debug' ] && [ $2 = 'low' ];then
     echo "-- Enable low level debug"
-    cmake ../ -DDEBUG_LEVEL_LOW=ON
+    cmake ../ -DDEBUG_LEVEL_LOW=ON -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'debug' ] && [ $2 = 'high' ];then
     echo "-- Enable high level debug"
-    cmake ../ -DDEBUG_LEVEL_HIGH=ON
+    cmake ../ -DDEBUG_LEVEL_HIGH=ON -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'debug' ] && [ $2 = 'op' ];then
     echo "-- Enable native operator debug"
-    cmake ../ -DDEBUG_OPERATOR=ON
+    cmake ../ -DDEBUG_OPERATOR=ON -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'release' ];then
-    cmake ../
+    cmake ../ -DCMAKE_BUILD_TYPE=Release
   fi
 else
-  cmake ../
+  cmake ../ -DCMAKE_BUILD_TYPE=Release
 fi
 make clean
 make -j4
