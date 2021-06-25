@@ -104,15 +104,22 @@ private:
     uint32_t* inputColTypes;
 };
 
-class HashAggregationOperatorFactory : public OperatorFactory
+class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory
 {
 public:
     Operator* createOperator() override;
 
     HashAggregationOperatorFactory
-    (PrepareContext groupByCol, PrepareContext groupByType, PrepareContext aggCol, PrepareContext aggType, PrepareContext aggFuncType)
-    : groupByColContext(groupByCol), groupByTypeContext(groupByType), aggColContext(aggCol), aggTypeContext(aggType), aggFuncTypeContext(aggFuncType)
-    { }
+    (PrepareContext groupByCol, PrepareContext groupByType, PrepareContext aggCol, PrepareContext aggType, PrepareContext aggFuncType, bool inputRaw, bool outputPartial) :
+    groupByColContext(groupByCol),
+    groupByTypeContext(groupByType),
+    aggColContext(aggCol),
+    aggTypeContext(aggType),
+    aggFuncTypeContext(aggFuncType),
+    AggregationCommonOperatorFactory(inputRaw, outputPartial)
+    {
+
+    }
 
     ~HashAggregationOperatorFactory() override
     {}

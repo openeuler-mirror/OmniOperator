@@ -40,7 +40,8 @@ typedef union GroupBySlot {
 class Aggregator {
 public:
     // Initiate this aggregator, such as setting default values for states.
-    Aggregator(AggregateType ty, int32_t dataTy) : type(ty), dataType(dataTy), initiated(false) { }
+    Aggregator(AggregateType ty, int32_t dataTy, bool inputRaw = true, bool outputParitial = false)
+    : type(ty), dataType(dataTy), initiated(false), inputRaw(inputRaw), outputPartial(outputParitial){ }
     virtual ~Aggregator() {
         if (type == OMNI_AGGREGATION_TYPE_COUNT) {
             //do nothing
@@ -96,11 +97,14 @@ protected:
     // state for non-grouping aggregate
     GroupBySlot nonGroupState;
     bool initiated;
+    bool inputRaw;
+    bool outputPartial;
 };
 
 class SumAggregator : public Aggregator {
 public:
-    SumAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty)
+    SumAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty) { }
+    SumAggregator(int32_t ty, bool inputRaw, bool outputPartial) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty, inputRaw, outputPartial)
     {
         // initiate non-grouping state
         // int32_t* val = new int32_t;
@@ -117,7 +121,8 @@ public:
 
 class AverageAggregator : public Aggregator {
 public:
-    AverageAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty)
+    AverageAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty) { }
+    AverageAggregator(int32_t ty, bool inputRaw, bool outputPartial) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty, inputRaw, outputPartial)
     {
         // initiate non-grouping state
         // nonGroupState = {0};
@@ -132,7 +137,8 @@ public:
 
 class CountAggregator : public Aggregator {
 public:
-    CountAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty)
+    CountAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty) { }
+    CountAggregator(int32_t ty, bool inputRaw, bool outputPartial) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty, inputRaw, outputPartial)
     {
         // nonGroup = {0};
     }
@@ -146,7 +152,8 @@ public:
 
 class MinAggregator : public Aggregator {
 public:
-    MinAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty) {}
+    MinAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty) { }
+    MinAggregator(int32_t ty, bool inputRaw, bool outputPartial) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty, inputRaw, outputPartial) {}
     ~MinAggregator() { }
     void processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset) override;
     void processNonGroup(void* colPtr, int32_t type, uint32_t offset) override;
@@ -157,7 +164,8 @@ public:
 
 class MaxAggregator : public Aggregator {
 public:
-    MaxAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty) {}
+    MaxAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty) { }
+    MaxAggregator(int32_t ty, bool inputRaw, bool outputPartial) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty, inputRaw, outputPartial) {}
     ~MaxAggregator() { }
     void processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset) override;
     void processNonGroup(void* colPtr, int32_t type, uint32_t offset) override;

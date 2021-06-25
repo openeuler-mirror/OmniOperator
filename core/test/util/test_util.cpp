@@ -99,3 +99,34 @@ omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
 #endif
     return nativeOperator;
 }
+
+void printVecBatch(VectorBatch* vecBatch)
+{
+    int32_t vectorCount = vecBatch->getVectorCount();
+    for (int32_t rowIdx = 0; rowIdx < vecBatch->getVector(0)->getSize(); ++rowIdx) {
+        for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
+            auto vecType = vecBatch->getVector(colIdx)->getType();
+            auto vector = vecBatch->getVector(colIdx);
+            switch (vecType) {
+                case OMNI_VEC_TYPE_INT: {
+                    IntVector* vec = (IntVector*)vector;
+                    std::cout << vec->getValue(rowIdx) << "   ";
+                    break;
+                }
+                case OMNI_VEC_TYPE_LONG: {
+                    LongVector* vec = (LongVector*)vector;
+                    std::cout << vec->getValue(rowIdx) << "   ";
+                    break;
+                }
+                case OMNI_VEC_TYPE_DOUBLE: {
+                    DoubleVector* vec = (DoubleVector*)vector;
+                    std::cout << vec->getValue(rowIdx) << "   ";
+                    break;
+                }
+                default:
+                    DebugError("Error vector type %d", vecType);
+            }
+        }
+        std::cout << std::endl;
+    }
+}

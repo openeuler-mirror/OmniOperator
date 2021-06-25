@@ -136,36 +136,24 @@ void SumAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t off
 
 void CountAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset)
 {
-    switch (type)
-    {
-        case 1: 
-        case 2: 
-        case 3: {
-            groupSlot.count++;
-            break; 
-        }
-        default: {
-            DebugError("No such data type %d", type);
-            break;
-        }
+    if (inputRaw) {
+        groupSlot.count++;
+    } else {
+        groupSlot.count += ((LongVector*)colPtr)->getValue(offset);
     }
 }
 
 void CountAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
 {
-    switch (type)
-    {
-        case 1: 
-        case 2: 
-        case 3: {
-            nonGroupState.count = 1;
-            break; 
-        }
-        default: {
-            DebugError("No such data type %d", type);
-            break;
-        }
+    if (type != 2) {
+        DebugError("Count column type %d is not long!", type);
     }
+    if (inputRaw) {
+        nonGroupState.count = 1;
+        initiated = true;
+        return;
+    }
+    nonGroupState.count = ((LongVector*)colPtr)->getValue(offset);
     initiated = true;
 }
 
@@ -175,37 +163,26 @@ void CountAggregator::processNonGroup(void* colPtr, int32_t type, uint32_t offse
         initiate(colPtr, type, offset);
         return;
     }
-    switch (type)
-    {
-        case 1: 
-        case 2: 
-        case 3: {
-            nonGroupState.count++;
-            break; 
-        }
-        default: {
-            DebugError("No such data type %d", type);
-            break;
-        }
+    if (inputRaw) {
+        nonGroupState.count++;
+    } else {
+        nonGroupState.count += *(reinterpret_cast<int64_t*>(colPtr) + offset);
     }
 }
 
 void CountAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t offset)
 {
-    switch (type)
-    {
-        case 1: 
-        case 2: 
-        case 3: {
-            GroupBySlot slot = {0};
-            groupState.insert({key, slot});
-            break; 
-        }
-        default: {
-            DebugError("No such data type %d", type);
-            break;
-        }
+    if (type != 2) {
+        DebugError("Count column type %d is not long!", type);
     }
+    GroupBySlot slot;
+    if (inputRaw) {
+        slot.count = 1;
+        groupState.insert({key, slot});
+        return;
+    }
+    slot.count = ((LongVector*)colPtr)->getValue(offset);
+    groupState.insert({key, slot});
 }
 
 void AverageAggregator::initiate(void* colPtr, int32_t type, uint32_t offset)
@@ -307,6 +284,7 @@ void AverageAggregator::insert(int64_t key, void* colPtr, int32_t type, uint32_t
 void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset)
 {
     double* currentVal = static_cast<double*>(groupSlot.avgVal);
+    int64_t currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
     switch (type)
     {
         case 1: {
@@ -322,6 +300,10 @@ void AverageAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32
         case 3: {
             double rowVal = ((DoubleVector *)colPtr)->getValue(offset);
             *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            break;
+        }
+        case 4: {
+            // row type
             break;
         }
         default: {

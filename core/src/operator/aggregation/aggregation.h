@@ -11,16 +11,27 @@
 #include <thread>
 
 namespace omniruntime {
-    namespace op {
+namespace op {
 
 class AggregationCommonOperator : public Operator {
 public:
-    AggregationCommonOperator(std::vector<Aggregator*> aggs) : aggregators(aggs) {}
+    AggregationCommonOperator(std::vector<Aggregator*> aggs) : aggregators(aggs) { }
     virtual ~AggregationCommonOperator() {}
 protected:
     std::vector<Aggregator*> aggregators;
+    int inputRaw;
+    int outputPartial;
 };
 
+class AggregationCommonOperatorFactory : public OperatorFactory {
+public:
+    AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial) : inputRaw(inputRaw), outputPartial(outputPartial) {}
+    virtual ~AggregationCommonOperatorFactory() {}
+
+protected:
+    int inputRaw;
+    int outputPartial;
+};
 }
 }
 #endif
