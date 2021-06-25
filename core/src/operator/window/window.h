@@ -2,7 +2,6 @@
 #define __WINDOW_H__
 
 #include "../operator_factory.h"
-#include "../../vector/table.h"
 #include "../pages_index.h"
 #include "window_partition.h"
 
@@ -63,25 +62,21 @@ public:
 
     ~WindowOperator();
 
-    int32_t addInput(Table *data, int32_t rowCount) override
-    {
-        return 0;
-    }
-    int32_t addInput(Table **datas, int32_t *rowCounts, int32_t pageCount) override;
-    int32_t getOutput(std::vector<Table *> &outputTables) override;
+    int32_t addInput(VectorBatch *vecBatch) override;
+    int32_t getOutput(std::vector<VectorBatch *> &outputPages) override;
     int32_t *getSourceTypes() override
     {
         return sourceTypes;
     }
     bool processPendingInput();
-    Table *updatePagesIndex(Table *page);
+    VectorBatch *updatePagesIndex(VectorBatch *vecBatch);
     void sortPagesIndexIfNecessary();
     void finishPagesIndex();
     PagesIndex *getPagesIndex()
     {
         return pagesIndex;
     }
-    Table *getPendingInput()
+    VectorBatch *getPendingInput()
     {
         return pendingInput;
     }
@@ -108,13 +103,14 @@ private:
     int32_t *allTypes;
     int32_t allCount;
     PagesIndex *pagesIndex;
-    Table *pendingInput;
+    VectorBatch *pendingInput;
     PagesHashStrategy *preGroupedPartitionHashStrategy = nullptr;
     PagesHashStrategy *unGroupedPartitionHashStrategy = nullptr;
     PagesHashStrategy *preSortedPartitionHashStrategy = nullptr;
     PagesHashStrategy *peerGroupHashStrategy = nullptr;
     WindowPartition *partition;
     vector<WindowFunction *> windowFunctions;
+    vector<VectorBatch *> inputVecBatches;
 };
 
 int32_t findGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);

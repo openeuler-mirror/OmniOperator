@@ -1,54 +1,72 @@
 package nova.hetu.omniruntime.vector;
 
-import java.nio.ByteBuffer;
+import nova.hetu.omniruntime.utils.BitMapHelper;
+
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_BOOLEAN;
 
 public class BooleanVec
-        extends Vec
+        extends FixedWidthVec
 {
+    private static final int BYTES = 0;
+    private static final int FALSE = 0;
+    private static final int TRUE = 1;
+
     public BooleanVec(int size)
     {
-        super(size, size);
+        super(BitMapHelper.computeSizeInBytes(size), size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
-    public BooleanVec(ByteBuffer buffer, int length)
+    public BooleanVec(VecAllocator allocator, int size)
     {
-        super(buffer, length);
+        super(allocator, BitMapHelper.computeSizeInBytes(size), size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
-    public void set(int idx)
+    protected BooleanVec(long nativeVector)
     {
-        this.getData().put(idx, (byte) 1);
+        super(nativeVector);
     }
 
-    public void unset(int idx)
+    private BooleanVec(BooleanVec vector, int offset, int length)
     {
-        this.getData().put(idx, (byte) 0);
+        super(vector, offset, length);
+    }
+
+    /**
+     * in the specified position, set the corresponding value
+     *
+     * @param index position of element
+     * @param value 0 is false, others are true
+     */
+    public void set(int index, int value)
+    {
+        int newIndex = index + getOffset();
+        getValueNulls().set(newIndex);
+        if (value != FALSE) {
+            BitMapHelper.set(getValues(), newIndex);
+        }
+        else {
+            BitMapHelper.unset(getValues(), newIndex);
+        }
+    }
+
+    public boolean get(int index)
+    {
+        int newIndex = index + getOffset();
+        if (isNull(newIndex)) {
+            return false;
+        }
+        return BitMapHelper.get(getValues(), newIndex) == TRUE;
     }
 
     @Override
     public BooleanVec slice(int startIdx, int endIdx)
     {
-        byte[] regionData = new byte[endIdx - startIdx];
-        BooleanVec newVec = new BooleanVec(endIdx - startIdx);
-        this.getData().position(startIdx);
-        this.getData().get(regionData, 0, regionData.length);
-        newVec.getData().put(regionData);
-        return newVec;
-    }
-
-    public int get(int idx)
-    {
-        return this.getData().get(idx);
-    }
-
-    public boolean isSet(int idx)
-    {
-        return this.getData().get(idx) != 0;
+        return new BooleanVec(this, startIdx, endIdx - startIdx);
     }
 
     @Override
-    public VecType getType()
+    public Vec copy()
     {
-        return VecType.BOOLEAN;
+        return null;
     }
 }

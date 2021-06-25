@@ -1,36 +1,38 @@
 package nova.hetu.omniruntime.operator;
 
 import com.google.common.collect.ImmutableList;
+import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
-import nova.hetu.omniruntime.vector.VecType;
 import org.testng.annotations.Test;
 
-import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 public class OmniFilterAndProjectOperatorTest
 {
-    private ImmutableList<VecBatch> makeInput(int nRows, Vec...cols)
+    private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols)
     {
-        return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols, nRows)});
+        return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols)});
     }
 
     @Test
     public void doubles()
     {
-        VecType[] types = {VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN(#0, 1.0)",
@@ -42,12 +44,14 @@ public class OmniFilterAndProjectOperatorTest
             col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1));
+        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2500);
-        DoubleBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        DoubleBuffer res1 = res.getVectors()[0].getValues().asDoubleBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() < 1);
         }
@@ -56,7 +60,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void lessThan()
     {
-        VecType[] types = {VecType.INT};
+        VecType[] types = {OMNI_VEC_TYPE_INT};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN(#0, 2000)",
@@ -68,12 +72,14 @@ public class OmniFilterAndProjectOperatorTest
             col1.set(i, i);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1));
+        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
-        IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res1 = res.getVectors()[0].getValues().asIntBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() < 2000);
         }
@@ -82,7 +88,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void greaterThan()
     {
-        VecType[] types = {VecType.INT, VecType.LONG};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG};
         int[] projectIndices = {0, 1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN(#0, 20)",
@@ -96,13 +102,15 @@ public class OmniFilterAndProjectOperatorTest
             col2.set(i, 3000000000L);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1, col2));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 800);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        LongBuffer res1 = res.getVectors()[1].getValues().asLongBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() > 20);
             assertEquals(res1.get(), 3000000000L);
@@ -112,7 +120,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void equalTo()
     {
-        VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {1, 2};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$EQUAL(#1, 50)",
@@ -127,13 +135,15 @@ public class OmniFilterAndProjectOperatorTest
             col3.set(i, i % 100);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1, col2, col3));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 50);
-        DoubleBuffer res0 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
-        LongBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        DoubleBuffer res0 = res.getVectors()[1].getValues().asDoubleBuffer();
+        LongBuffer res1 = res.getVectors()[0].getValues().asLongBuffer();
         while (res0.hasRemaining()) {
             assertEquals(res0.get(), 50.0);
             assertEquals(res1.get(), 50);
@@ -143,7 +153,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void greaterThanOrEqualTo()
     {
-        VecType[] types = {VecType.INT, VecType.INT};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
         int[] projectIndices = {1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN_OR_EQUAL(#1, 30)",
@@ -161,12 +171,14 @@ public class OmniFilterAndProjectOperatorTest
             col2.set(i, v);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1, col2));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 834);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() >= 30);
         }
@@ -175,7 +187,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void notEqualTo()
     {
-        VecType[] types = {VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$NOT_EQUAL(#0, 0)",
@@ -187,12 +199,14 @@ public class OmniFilterAndProjectOperatorTest
             col1.set(i, i);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1));
+        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 4999);
-        DoubleBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        DoubleBuffer res0 = res.getVectors()[0].getValues().asDoubleBuffer();
         double cnt = 1;
         while (res0.hasRemaining()) {
             assertEquals(res0.get(), cnt++);
@@ -202,7 +216,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void allPass()
     {
-        VecType[] types = {VecType.INT};
+        VecType[] types = {OMNI_VEC_TYPE_INT};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$EQUAL(#0, 9348)",
@@ -214,12 +228,14 @@ public class OmniFilterAndProjectOperatorTest
             col1.set(i, 9348);
         }
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1));
+        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 20000);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
         while (res0.hasRemaining()) {
             assertEquals(res0.get(), 9348);
         }
@@ -228,7 +244,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void multipleInputs()
     {
-        VecType[] types = {VecType.INT};
+        VecType[] types = {OMNI_VEC_TYPE_INT};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$LESS_THAN_OR_EQUAL(#0, 4)",
@@ -242,23 +258,27 @@ public class OmniFilterAndProjectOperatorTest
             col1.set(i, i % 10);
             col2.set(i, i % 6 + 1);
         }
-        op.addInput(makeInput(numRows, col1));
+        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 500);
 
-        IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res1 = res.getVectors()[0].getValues().asIntBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() <= 4);
         }
 
         // Test multiple inputs
-        op.addInput(makeInput(numRows, col2));
+        for (VecBatch vecBatch : makeInput(numRows, col2)) {
+            op.addInput(vecBatch);
+        }
         assertTrue(op.getOutput().hasNext());
         res = op.getOutput().next();
         assertEquals(res.getRowCount(), 668);
-        res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        res1 = res.getVectors()[0].getValues().asIntBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() <= 4);
         }
@@ -268,7 +288,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void negativeValues()
     {
-        VecType[] types = {VecType.INT, VecType.LONG};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG};
         int[] projectIndices = {0, 1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND($operator$LESS_THAN_OR_EQUAL(#0, -1), $operator$LESS_THAN_OR_EQUAL(#1, -1))",
@@ -291,13 +311,15 @@ public class OmniFilterAndProjectOperatorTest
             col2.set(i, val2);
         }
 
-        op.addInput(makeInput(numRows, col1, col2));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 286);
-        IntBuffer res1 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res2 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        IntBuffer res1 = res.getVectors()[0].getValues().asIntBuffer();
+        LongBuffer res2 = res.getVectors()[1].getValues().asLongBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() < 0);
             assertTrue(res2.get() < 0);
@@ -307,7 +329,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test(enabled = false)
     public void allTypes()
     {
-        VecType[] types = {VecType.INT, VecType.LONG, VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {0, 1, 2};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND($operator$EQUAL(#0, 0), AND($operator$EQUAL(#1, 3000000000), $operator$GREATER_THAN_OR_EQUAL(#2, 0.4)))",
@@ -324,14 +346,16 @@ public class OmniFilterAndProjectOperatorTest
             col3.set(i, i % 10 / 10D);
         }
 
-        op.addInput(makeInput(numRows, col1, col2, col3));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 1000);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-        DoubleBuffer res2 = res.getVectors()[2].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        LongBuffer res1 = res.getVectors()[1].getValues().asLongBuffer();
+        DoubleBuffer res2 = res.getVectors()[2].getValues().asDoubleBuffer();
         while (res1.hasRemaining()) {
             assertEquals(res0.get(), 0);
             assertEquals(res1.get(), (long) 3e9);
@@ -342,7 +366,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test(enabled = false)
     public void compileTest()
     {
-        VecType[] types = {VecType.INT, VecType.INT, VecType.DOUBLE, VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {0};
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
@@ -361,12 +385,14 @@ public class OmniFilterAndProjectOperatorTest
                 types,
                 projectIndices);
         OmniOperator op = factory.createOperator();
-        op.addInput(makeInput(numRows, col1, col2, col3, col4));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 100);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() < 24);
         }
@@ -375,7 +401,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void logicalOperators1()
     {
-        VecType[] types = {VecType.INT, VecType.INT, VecType.INT, VecType.LONG, VecType.DOUBLE, VecType.LONG};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG};
         int[] projectIndices = {0, 2, 4, 5};
         String s = "OR($operator$GREATER_THAN_OR_EQUAL(#5, 52), AND($operator$LESS_THAN(#4, 50.8), AND(AND($operator$GREATER_THAN(#2, 4800), $operator$LESS_THAN_OR_EQUAL(#1, 9990)), AND($operator$NOT_EQUAL(#0, 1), $operator$EQUAL(#3, 3000000000)))))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
@@ -399,15 +425,17 @@ public class OmniFilterAndProjectOperatorTest
             col6.set(i, i % 55);
         }
 
-        op.addInput(makeInput(numRows, col1, col2, col3, col4, col5, col6));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4, col5, col6)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 543);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        IntBuffer res2 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        DoubleBuffer res4 = res.getVectors()[2].getData().order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
-        LongBuffer res5 = res.getVectors()[3].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res2 = res.getVectors()[1].getValues().asIntBuffer();
+        DoubleBuffer res4 = res.getVectors()[2].getValues().asDoubleBuffer();
+        LongBuffer res5 = res.getVectors()[3].getValues().asLongBuffer();
         while (res0.hasRemaining()) {
             assertTrue((res0.get() != 1 && res2.get() > 4800 && res4.get() < 50.8) || res5.get() >= 52);
         }
@@ -416,7 +444,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void logicalOperators2()
     {
-        VecType[] types = {VecType.INT, VecType.INT, VecType.LONG, VecType.LONG};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] projectIndices = {3, 2, 1, 0};
         String s = "AND(OR($operator$LESS_THAN(#0, 50), $operator$EQUAL(#1, -12)), OR($operator$LESS_THAN_OR_EQUAL(#2, -3000000000), $operator$GREATER_THAN_OR_EQUAL(#3, 0)))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
@@ -436,15 +464,17 @@ public class OmniFilterAndProjectOperatorTest
             col4.set(i, i % 9 - 4);
         }
 
-        op.addInput(makeInput(numRows, col1, col2, col3, col4));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 3498);
-        LongBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-        LongBuffer res1 = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
-        IntBuffer res2 = res.getVectors()[2].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        IntBuffer res3 = res.getVectors()[3].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        LongBuffer res0 = res.getVectors()[0].getValues().asLongBuffer();
+        LongBuffer res1 = res.getVectors()[1].getValues().asLongBuffer();
+        IntBuffer res2 = res.getVectors()[2].getValues().asIntBuffer();
+        IntBuffer res3 = res.getVectors()[3].getValues().asIntBuffer();
         while (res0.hasRemaining()) {
             long v0 = res0.get();
             long v1 = res1.get();
@@ -458,7 +488,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void logicalOperators3()
     {
-        VecType[] types = {VecType.INT, VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {1, 0};
         String expr = "AND($operator$NOT_EQUAL(#1, 0), OR(OR(OR($operator$EQUAL(#0, 1), $operator$EQUAL(#0, 2)), $operator$EQUAL(#0, 3)), OR(OR(OR($operator$EQUAL(55, #0), $operator$EQUAL(5, #0)), $operator$EQUAL(#0, 8)), $operator$EQUAL(#0, 13))))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
@@ -483,12 +513,14 @@ public class OmniFilterAndProjectOperatorTest
         col1.set(7, 13);
         col2.set(2, 0);
 
-        op.addInput(makeInput(numRows, col1, col2));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+            op.addInput(vecBatch);
+        }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 6);
-        IntBuffer fib = res.getVectors()[1].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer fib = res.getVectors()[1].getValues().asIntBuffer();
         assertEquals(fib.get(), 1);
         assertEquals(fib.get(), 2);
         assertEquals(fib.get(), 3);
@@ -500,7 +532,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void arithmeticAdd()
     {
-        VecType[] types = {VecType.INT};
+        VecType[] types = {OMNI_VEC_TYPE_INT};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "$operator$GREATER_THAN(ADD(#0, 1), 4)",
@@ -514,11 +546,13 @@ public class OmniFilterAndProjectOperatorTest
 
         OmniOperator op = factory.createOperator();
 
-        op.addInput(makeInput(numRows, col1));
+        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+            op.addInput(vecBatch);
+        }
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
-        IntBuffer res0 = res.getVectors()[0].getData().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() + 1 > 4);
         }
@@ -547,7 +581,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void multithreadTest()
     {
-        VecType[] types = {VecType.INT, VecType.INT, VecType.DOUBLE, VecType.DOUBLE};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_DOUBLE};
         int[] projectIndices = {0, 1, 2, 3};
         String s = "$operator$LESS_THAN_OR_EQUAL(#0, 500)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
@@ -559,7 +593,7 @@ public class OmniFilterAndProjectOperatorTest
         for (int i = 0; i < 1000; i++) {
             Thread t = new Thread(() -> {
                 OmniOperator op = factory.createOperator();
-                op.addInput(ImmutableList.copyOf(new VecBatch[] {new VecBatch(table, numRows)}));
+                op.addInput(new VecBatch(table));
                 assertTrue(op.getOutput().hasNext());
                 VecBatch res = op.getOutput().next();
                 // System.out.println(res.getLength());
@@ -578,7 +612,7 @@ public class OmniFilterAndProjectOperatorTest
     @Test
     public void conditional()
     {
-        VecType[] types = {VecType.INT, VecType.INT, VecType.INT};
+        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
         int[] projectIndices = {0, 1, 2};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND(IF($operator$EQUAL(#0, 0), $operator$LESS_THAN(#1, 3), $operator$EQUAL(#1, 4)), $operator$GREATER_THAN(#2, 3))",
@@ -596,7 +630,9 @@ public class OmniFilterAndProjectOperatorTest
 
         OmniOperator op = factory.createOperator();
 
-        op.addInput(makeInput(numRows, col1, col2, col3));
+        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3)) {
+            op.addInput(vecBatch);
+        }
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);

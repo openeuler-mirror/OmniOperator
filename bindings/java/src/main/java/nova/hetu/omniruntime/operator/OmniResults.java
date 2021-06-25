@@ -1,8 +1,12 @@
 package nova.hetu.omniruntime.operator;
 
+import nova.hetu.omniruntime.constants.Status;
 import nova.hetu.omniruntime.vector.VecBatch;
 
+import java.io.Closeable;
+
 public class OmniResults
+        implements Closeable
 {
     private final VecBatch[] vecBatches;
 
@@ -11,7 +15,7 @@ public class OmniResults
     public OmniResults(VecBatch[] vecBatches, int status)
     {
         this.vecBatches = vecBatches;
-        this.status = Status.values()[status];
+        this.status = new Status(status);
     }
 
     public VecBatch[] getVecBatches()
@@ -24,10 +28,11 @@ public class OmniResults
         return status;
     }
 
-    public enum Status
+    @Override
+    public void close()
     {
-        NORMAL,
-        ERROR,
-        FINISHED,
+        for (VecBatch vecBatch : vecBatches) {
+            vecBatch.close();
+        }
     }
 }

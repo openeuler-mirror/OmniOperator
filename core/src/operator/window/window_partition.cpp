@@ -29,7 +29,7 @@ WindowPartition::~WindowPartition()
     delete windowIndex;
 }
 
-void WindowPartition::processNextRow(Table *table, int32_t index, int32_t *sourceTypes, int32_t typesCount)
+void WindowPartition::processNextRow(VectorBatch *vecBatch, int32_t index, int32_t *sourceTypes, int32_t typesCount)
 {
     int32_t channel = outputChannelsCount;
 
@@ -40,7 +40,7 @@ void WindowPartition::processNextRow(Table *table, int32_t index, int32_t *sourc
 
     for (int32_t i = 0; i < windowFunctions.size(); i++) {
         Range *range = getFrameRange();
-        windowFunctions[i]->processRow(table->getColumn(channel), index, peerGroupStart - partitionStart,
+        windowFunctions[i]->processRow(vecBatch->getVector(channel), index, peerGroupStart - partitionStart,
             peerGroupEnd - partitionStart - 1, range->getStart(), range->getEnd());
         channel++;
         delete range;

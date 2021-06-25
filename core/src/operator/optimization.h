@@ -25,12 +25,20 @@
 #define OMNIJIT_PAGE_INDEX_COMPARE_TO "page-index-compare-to"
 #endif
 
-#ifndef OMNIJIT_SORT_ALLOC_COLUMNS
-#define OMNIJIT_SORT_ALLOC_COLUMNS "sort-alloc-columns"
-#endif
-
 #ifndef OMNIJIT_PAGE_INDEX_GET_OUTPUT
 #define OMNIJIT_PAGE_INDEX_GET_OUTPUT "page-index-get-output"
+#endif
+
+#ifndef OMNIJIT_HASH_STRATEGY_HASH_POSITION
+#define OMNIJIT_HASH_STRATEGY_HASH_POSITION "hash-strategy-hash-position"
+#endif
+
+#ifndef OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS
+#define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS "hash-strategy-position-equals-position-ignore-nulls"
+#endif
+
+#ifndef OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS
+#define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS "hash-strategy-position-equals-row-ignore-nulls"
 #endif
 
 #endif

@@ -1,11 +1,13 @@
 add_subdirectory(operator)
 add_subdirectory(util)
+add_subdirectory(vector)
 
 # configure
 set(OM_TEST_TARGET omtest)
 set(MY_LINK
         optest
         testutil
+        vectest
         )
 
 # find gtest package

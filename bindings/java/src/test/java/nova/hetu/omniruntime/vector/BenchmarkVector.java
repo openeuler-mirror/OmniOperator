@@ -84,7 +84,7 @@ public class BenchmarkVector
             long[] sampleData = benchmarkData.sampleData;
             LongVec omnivec = benchmarkData.longVec;
             for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
-                omnivec.getData().asLongBuffer().put(sampleData, 0, sampleData.length);
+                omnivec.getValues().asLongBuffer().put(sampleData, 0, sampleData.length);
             }
         }, data);
     }
@@ -483,61 +483,62 @@ public class BenchmarkVector
         testHeapCopy(benchmarkData);
     }
 
-    @Benchmark
-    @Threads(1)
-    public void test_omnicopy_filter_copy_001(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(2)
-    public void test_omnicopy_filter_copy_002(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(4)
-    public void test_omnicopy_filter_copy_004(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(8)
-    public void test_omnicopy_filter_copy_008(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(16)
-    public void test_omnicopy_filter_copy_016(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(32)
-    public void test_omnicopy_filter_copy_032(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(64)
-    public void test_omnicopy_filter_copy_064(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
-
-    @Benchmark
-    @Threads(128)
-    public void test_omnicopy_filter_copy_128(BenchmarkData benchmarkData)
-    {
-        testOmniCopy(benchmarkData);
-    }
+    // TODO: to support copy region
+//    @Benchmark
+//    @Threads(1)
+//    public void test_omnicopy_filter_copy_001(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(2)
+//    public void test_omnicopy_filter_copy_002(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(4)
+//    public void test_omnicopy_filter_copy_004(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(8)
+//    public void test_omnicopy_filter_copy_008(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(16)
+//    public void test_omnicopy_filter_copy_016(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(32)
+//    public void test_omnicopy_filter_copy_032(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(64)
+//    public void test_omnicopy_filter_copy_064(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
+//
+//    @Benchmark
+//    @Threads(128)
+//    public void test_omnicopy_filter_copy_128(BenchmarkData benchmarkData)
+//    {
+//        testOmniCopy(benchmarkData);
+//    }
 
     @Benchmark
     public void createLongVecDirect(BenchmarkData benchmarkData)
@@ -553,7 +554,7 @@ public class BenchmarkVector
     public void getLongValues(BenchmarkData benchmarkData)
     {
         LongVec longVec = benchmarkData.getLongVec();
-        for (int i = 0; i < longVec.size(); i++) {
+        for (int i = 0; i < longVec.getSize(); i++) {
             longVec.get(i);
         }
     }
@@ -567,18 +568,19 @@ public class BenchmarkVector
         }
     }
 
-    @Benchmark
-    public void testOmniCopy(BenchmarkData benchmarkData)
-    {
-        int[] selectedPositions = benchmarkData.selectedPositions;
-
-        LongVec originalVec = benchmarkData.omniVecFilterCopyData;
-
-        for (int i = 0; i < 10; i++) {
-            LongVec newVec = new LongVec(selectedPositions.length);
-            originalVec.copy(newVec, selectedPositions, 0, selectedPositions.length, 0);
-        }
-    }
+    // TODO: to support copy region
+//    @Benchmark
+//    public void testOmniCopy(BenchmarkData benchmarkData)
+//    {
+//        int[] selectedPositions = benchmarkData.selectedPositions;
+//
+//        LongVec originalVec = benchmarkData.omniVecFilterCopyData;
+//
+//        for (int i = 0; i < 10; i++) {
+//            LongVec newVec = new LongVec(selectedPositions.length);
+//            originalVec.copy(newVec, selectedPositions, 0, selectedPositions.length, 0);
+//        }
+//    }
 
     @Benchmark
     public void testHeapCopy(BenchmarkData benchmarkData)

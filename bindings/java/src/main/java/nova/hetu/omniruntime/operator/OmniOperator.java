@@ -1,83 +1,38 @@
 package nova.hetu.omniruntime.operator;
 
-import com.google.common.collect.ImmutableList;
-import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.LongVec;
-import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
-import java.io.Closeable;
 import java.util.Iterator;
 
-import static nova.hetu.omniruntime.operator.OmniResults.Status.NORMAL;
+import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
 public final class OmniOperator
-        implements Closeable
+        implements AutoCloseable
 {
     protected final long nativeOperator;
 
-    private VecBatchIterator outputIterator = new VecBatchIterator();
+    private VecBatchIterator outputIterator;
 
     protected OmniOperator(long nativeOperator)
     {
         this.nativeOperator = nativeOperator;
     }
 
-    public int addInput(ImmutableList<VecBatch> vecBatches)
-    {
-        if (vecBatches.isEmpty()) {
-            return 0;
-        }
-        int totalVectorCount = vecBatches.size() * vecBatches.get(0).getVectors().length;
-        LongVec addressVector = new LongVec(totalVectorCount);
-        IntVec rowCountVector = new IntVec(vecBatches.size());
-        try {
-            for (int batchIdx = 0; batchIdx < vecBatches.size(); batchIdx++) {
-                Vec[] vectors = vecBatches.get(batchIdx).getVectors();
-                int vecCount = vectors.length;
-                for (int vecIdx = 0; vecIdx < vecCount; vecIdx++) {
-                    int index = batchIdx * vecCount + vecIdx;
-                    addressVector.set(index, vectors[vecIdx].getAddress());
-                }
-                rowCountVector.set(batchIdx, vecBatches.get(batchIdx).getRowCount());
-            }
-            addInput(nativeOperator, addressVector.getAddress(), totalVectorCount, rowCountVector.getAddress(), vecBatches.size());
-            return 0;
-        }
-        finally {
-            addressVector.close();
-            rowCountVector.close();
-        }
-    }
-
     public int addInput(VecBatch vecBatch)
     {
-        int totalVectorCount = vecBatch.getVectors().length;
-        LongVec addressVector = new LongVec(totalVectorCount);
-        IntVec rowCountVector = new IntVec(1);
-        try {
-            Vec[] vectors = vecBatch.getVectors();
-            for (int vecIdx = 0; vecIdx < vectors.length; vecIdx++) {
-                addressVector.set(vecIdx, vectors[vecIdx].getAddress());
-            }
-            rowCountVector.set(0, vecBatch.getRowCount());
-            addInput(nativeOperator, addressVector.getAddress(), totalVectorCount, rowCountVector.getAddress(), 1);
-            return 0;
-        }
-        finally {
-            addressVector.close();
-            rowCountVector.close();
-        }
+        return addInputNative(nativeOperator, vecBatch.getNativeVectorBatch());
     }
 
     public Iterator<VecBatch> getOutput()
     {
+        if (outputIterator == null) {
+            outputIterator = new VecBatchIterator();
+        }
         return outputIterator;
     }
 
     public void close()
     {
-        // TODO: free output vectory
         closeNative(nativeOperator);
     }
 
@@ -87,6 +42,11 @@ public final class OmniOperator
         private OmniResults results;
 
         private int index;
+
+        public VecBatchIterator()
+        {
+            advanced();
+        }
 
         @Override
         public boolean hasNext()
@@ -109,21 +69,21 @@ public final class OmniOperator
         private void advanced()
         {
             index = 0;
-            results = getOutput(nativeOperator);
+            results = getOutputNative(nativeOperator);
         }
 
         private boolean isFinished()
         {
             // TODO: Handle error.
-            return results.getStatus() != NORMAL;
+            return !OMNI_STATUS_NORMAL.equals(results.getStatus());
         }
     }
 
     // addInput
-    private static native int addInput(long operatorAddress, long vecAddress, int vecNum, long rowCountAddress, int rowCountNum);
+    private static native int addInputNative(long nativeOperator, long nativeVectorBatch);
 
     // getOutput
-    private static native OmniResults getOutput(long nativeOperator);
+    private static native OmniResults getOutputNative(long nativeOperator);
 
     // close
     private static native void closeNative(long nativeOperator);

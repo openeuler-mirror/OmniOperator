@@ -2,8 +2,8 @@
 // Created by root on 5/27/21.
 //
 #include <jni.h>
-#ifndef OMNI_RUNTIME_JNI_COMMON_DEF_H
-#define OMNI_RUNTIME_JNI_COMMON_DEF_H
+#ifndef __JNI_COMMON_DEF_H__
+#define __JNI_COMMON_DEF_H__
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,4 +18,4 @@ extern jmethodID omniResultsInitMethodId;
 }
 #endif
 
-#endif //OMNI_RUNTIME_JNI_COMMON_DEF_H
+#endif //__JNI_COMMON_DEF_H__

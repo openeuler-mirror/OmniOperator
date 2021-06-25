@@ -64,6 +64,8 @@ void LLVMCodeGen::registerFunc(void* funcAddr, string funcName, llvm::Type *retT
 
     auto s = absoluteSymbols({{Mangle(funcName), JITEvaluatedSymbol(pointerToJITTargetAddress(funcAddr), JITSymbolFlags::Exported)}});
     auto ign = jd.define(s);
+    if (ign) cerr << "Error while defining absolute symbol in jd" << endl;
+
 
     llvm::FunctionType* ft = llvm::FunctionType::get(retType, paramTypes, false);
     Function* fn = llvm::Function::Create(ft, Function::ExternalLinkage, funcName, _module.get());
@@ -148,7 +150,8 @@ LLVMCodeGen::LLVMCodeGen(std::string name, Expr *expr, vector<DataType>* datatyp
 }
 
 LLVMCodeGen::~LLVMCodeGen() {
-    auto ignore = rt->remove();
+    EOE(rt->remove());
+
     delete this->datatypes;
 }
 
@@ -405,14 +408,39 @@ Value* LLVMCodeGen::parseInExpr(InExpr* iExpr, map<string, Value*>& args) {
 
 
 Value* LLVMCodeGen::parseBetweenExpr(BetweenExpr* bExpr, map<string, Value*>& args) {
+
+    DataType biggerType = std::max(std::max(bExpr->lowerBound->getExprDataType(),
+                                            bExpr->upperBound->getExprDataType()),
+                                   bExpr->value->getExprDataType());
+    bExpr->lowerBound->dataType = biggerType;
+    bExpr->upperBound->dataType = biggerType;
+    bExpr->value->dataType = biggerType;
+
     llvm::Value *val = parseExpr(bExpr->value, args);
     llvm::Value *lowerVal = parseExpr(bExpr->lowerBound, args);
     llvm::Value *upperVal = parseExpr(bExpr->upperBound, args);
 
-    llvm::Value *cmpleft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
-    llvm::Value *cmpright = builder->CreateICmpSLE(val, upperVal, "between_cmpright");
-    llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
-    return result;
+    if (bExpr->value->getExprDataType() == DataType::INT32D || bExpr->value->getExprDataType() == DataType::INT64D) {
+        llvm::Value *cmpleft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
+        llvm::Value *cmpright = builder->CreateICmpSLE(val, upperVal, "between_cmpright");
+        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        return result;
+    }
+    else if (bExpr->value->getExprDataType() == DOUBLED) {
+        llvm::Value *cmpleft = builder->CreateFCmpULE(lowerVal, val, "between_cmpleft");
+        llvm::Value *cmpright = builder->CreateFCmpULE(val, upperVal, "between_cmpright");
+        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        return result;
+    }
+    else if (bExpr->value->getExprDataType() == STRINGD) {
+        llvm::Value *cmpleft = builder->CreateICmpSLE(this->stringCmp(lowerVal, val), createConstantInt(0));
+        llvm::Value *cmpright = builder->CreateICmpSLE(this->stringCmp(val, upperVal), createConstantInt(0));
+        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        return result;
+    }
+
+    std::cout << "Error: unsupported data type for between" << std::endl;
+    return this->createConstantBool(false);
 }
 
 
@@ -756,7 +784,7 @@ int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
     auto threadSafeModule = ThreadSafeModule(move(_module), move(context));
     EOE(JIT->addIRModule(resTracker, move(threadSafeModule)));
     rt = resTracker;
-    // initModule();
-    auto sym = JIT->lookup("FILTER_WRAPPER");
-    return sym->getAddress();
+
+    auto sym = cantFail(JIT->lookup("FILTER_WRAPPER"));
+    return sym.getAddress();
 }

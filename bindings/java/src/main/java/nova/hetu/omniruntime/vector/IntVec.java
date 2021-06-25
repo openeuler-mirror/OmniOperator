@@ -1,79 +1,60 @@
-/*
- * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.utils.OmniErrorType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
-
-import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
+
 public class IntVec
-        extends Vec
+        extends FixedWidthVec
 {
+    private static final int BYTES = Integer.BYTES;
+
     public IntVec(int size)
     {
-        super(size, size * Integer.BYTES);
+        super(size * BYTES, size, OMNI_VEC_TYPE_INT);
     }
 
-    public IntVec(ByteBuffer buffer, int length)
+    public IntVec(VecAllocator allocator, int size)
     {
-        super(buffer, length);
+        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT);
     }
 
-    private IntVec(OMChunk buf, int offset, int size)
+    protected IntVec(long nativeVector)
     {
-        super(buf, offset, size);
+        super(nativeVector);
     }
 
-    public void set(int idx, int value)
+    private IntVec(IntVec vector, int offset, int length)
     {
-        if (isWritable) {
-            this.getData().putInt(idx * Integer.BYTES + offset, value);
-        }
-        else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
-        }
+        super(vector, offset, length);
+    }
+
+    public int get(int index)
+    {
+        return getValues().getInt((index + getOffset()) * BYTES);
+    }
+
+    public void set(int index, int value)
+    {
+        getValues().putInt((index + getOffset()) * BYTES, value);
     }
 
     public void put(int[] values, int offset, int start, int length)
     {
-        if (isWritable) {
-            IntBuffer buffer = getData().asIntBuffer();
-            buffer.position(offset);
-            buffer.put(values, start, length);
-        }
-        else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
-        }
+        IntBuffer buffer = getValues().asIntBuffer();
+        buffer.position(offset);
+        buffer.put(values, start, length);
     }
 
     @Override
-    public IntVec slice(int startIdx, int endIdx)
+    public IntVec slice(int start, int end)
     {
-        return new IntVec(this.omniChunk, startIdx * Integer.BYTES + offset, endIdx - startIdx);
-    }
-
-    public int get(int idx)
-    {
-        return this.getData().getInt(idx * Integer.BYTES + offset);
+        return new IntVec(this, start + getOffset(), end - start);
     }
 
     @Override
-    public VecType getType()
+    public IntVec copy()
     {
-        return VecType.INT;
+        return null;
     }
 }

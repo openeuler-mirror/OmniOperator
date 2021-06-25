@@ -2,6 +2,8 @@
 #include "../pages_hash_strategy.h"
 #include "../hash_util.h"
 #include "../pages_index.h"
+#include "../../vector/vector_common.h"
+#include "../../vector/vector_helper.h"
 
 #include <algorithm>
 namespace omniruntime {
@@ -92,32 +94,30 @@ int64_t JoinHashTables::getNextJoinPosition(int64_t currentJoinPosition, int32_t
     return partitionedJoinPosition;
 }
 
-int64_t hashRow(int32_t rowIndex, Column **columns, int32_t columnCount)
+int64_t hashRow(int32_t rowIndex, Vector **columns, int32_t columnCount)
 {
     int64_t result = 0;
-    Column *column;
+    Vector *column;
     int64_t hash;
-    void *valueAddr;
 
     for (int32_t columnIdx = 0; columnIdx < columnCount; columnIdx++) {
         column = columns[columnIdx];
-        if (column->isNull(rowIndex)) {
+        if (column->isValueNull(rowIndex)) {
             continue;
         }
-        valueAddr = column->getValue(rowIndex);
         switch (column->getType()) {
-            case INT32: {
-                int32_t intValue = *((int32_t *)valueAddr);
+            case OMNI_VEC_TYPE_INT: {
+                int32_t intValue = ((IntVector *)column)->getValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)intValue);
                 break;
             }
-            case INT64: {
-                int64_t int64Value = *((int64_t *)valueAddr);
+            case OMNI_VEC_TYPE_LONG: {
+                int64_t int64Value = ((LongVector *)column)->getValue(rowIndex);
                 hash = HashUtil::hashValue(int64Value);
                 break;
             }
-            case DOUBLE: {
-                double doubleValue = *((double *)valueAddr);
+            case OMNI_VEC_TYPE_DOUBLE: {
+                double doubleValue = ((DoubleVector *)column)->getValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)doubleValue);
                 break;
             }
@@ -133,12 +133,12 @@ int64_t hashRow(int32_t rowIndex, Column **columns, int32_t columnCount)
     return result;
 }
 
-int64_t JoinHashTables::getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount)
+int64_t JoinHashTables::getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount)
 {
     return getJoinPosition(position, joinColumns, joinColumnsCount, allColumns, allColumnsCount, hashRow(position, joinColumns, joinColumnsCount));
 }
 
-int64_t JoinHashTables::getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount, int64_t rawHash)
+int64_t JoinHashTables::getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash)
 {
     int32_t partition = HashUtil::getRawHashPartition(rawHash, partitionMask);
     JoinHashTable *hashTable = (JoinHashTable *)(hashTables[partition]);
@@ -151,12 +151,12 @@ int64_t JoinHashTables::getJoinPosition(int32_t position, Column **joinColumns, 
     return partitionedJoinPosition;
 }
 
-void *JoinHashTables::getBuildData(int64_t partitionedJoinPosition, int32_t outputCol)
+void JoinHashTables::getBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol)
 {
     int32_t partition = decodePartition(partitionedJoinPosition);
     int32_t joinPosition = decodeJoinPosition(partitionedJoinPosition);
     JoinHashTable *hashTable = (JoinHashTable *)(hashTables[partition]);
-    return hashTable->getBuildData(joinPosition, outputCol);
+    hashTable->getBuildValue(value, joinPosition, outputCol);
 }
 
 int64_t JoinHashTables::encodePartitionedJoinPosition(int32_t partition, int32_t joinPosition)
@@ -187,22 +187,22 @@ JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, int64_t *addr
 
 int32_t JoinHashTable::getNextJoinPosition(int32_t currentJoinPosition, int probePosition)
 {
-    if (positionLinks == NULL) {
+    if (positionLinks == nullptr) {
         return -1;
     }
 
     return positionLinks->next(currentJoinPosition);
 }
 
-int32_t JoinHashTable::getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount, int64_t rawHash)
+int32_t JoinHashTable::getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash)
 {
     int32_t addressIndex = pagesHash->getAddressIndex(position, joinColumns, joinColumnsCount, rawHash);
     return positionLinks->start(addressIndex);
 }
 
-void *JoinHashTable::getBuildData(int32_t joinPosition, int32_t outputCol)
+void JoinHashTable::getBuildValue(void *value, int32_t joinPosition, int32_t outputCol)
 {
-    return pagesHash->getBuildData(joinPosition, outputCol);
+    pagesHash->getBuildValue(value, joinPosition, outputCol);
 }
 
 PagesHash::PagesHash(int64_t *addresses, int32_t addressesCount, PagesHashStrategy *pagesHashStrategy, ArrayPositionLinks *positionLinks)
@@ -272,12 +272,12 @@ PagesHash::~PagesHash()
     delete[] positionToHashes;
 }
 
-int32_t PagesHash::getAddressIndex(int probePosition, Column **joinColumns, int32_t joinColumnsCount, int64_t rawHash)
+int32_t PagesHash::getAddressIndex(int probePosition, Vector **joinColumns, int32_t joinColumnsCount, int64_t rawHash)
 {
     int32_t pos = HashUtil::getRawHashPosition(rawHash, mask);
 
     while (key[pos] != -1) {
-        if (positionEqualsCurrentRowIgnoreNulls(key[pos], (int8_t)rawHash, probePosition, joinColumns, joinColumnsCount)) {
+        if (positionEqualsCurrentRowIgnoreNulls(key[pos], (int8_t)rawHash, probePosition, joinColumns)) {
             return key[pos];
         }
 
@@ -287,30 +287,31 @@ int32_t PagesHash::getAddressIndex(int probePosition, Column **joinColumns, int3
     return -1;
 }
 
-void *PagesHash::getBuildData(int32_t joinPosition, int32_t outputCol)
+void PagesHash::getBuildValue(void *value, int32_t joinPosition, int32_t outputCol)
 {
    int64_t address = addresses[joinPosition];
-   int32_t tableIndex = decodeSliceIndex(address);
+   int32_t vecBatchIndex = decodeSliceIndex(address);
    int32_t rowIndex = decodePosition(address);
-   return pagesHashStrategy->getBuildColumns()[outputCol][tableIndex]->getValue(rowIndex);
+
+   VectorHelper::getValue(pagesHashStrategy->getBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
 }
 
 int64_t PagesHash::getRawHash(int32_t position)
 {
     int64_t address = addresses[position];
-    int32_t tableIndex = decodeSliceIndex(address);
+    int32_t vecBatchIndex = decodeSliceIndex(address);
     int32_t rowIndex = decodePosition(address);
 
-    return pagesHashStrategy->hashPosition(tableIndex, rowIndex);
+    return pagesHashStrategy->hashPosition(vecBatchIndex, rowIndex);
 }
 
 bool PagesHash::isPositionNull(int32_t position)
 {
     int64_t address = addresses[position];
-    int32_t tableIndex = decodeSliceIndex(address);
+    int32_t vecBatchIndex = decodeSliceIndex(address);
     int32_t rowIndex = decodePosition(address);
 
-    return pagesHashStrategy->isPositionNull(tableIndex, rowIndex);
+    return pagesHashStrategy->isPositionNull(vecBatchIndex, rowIndex);
 }
 
 bool PagesHash::positionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition)
@@ -326,17 +327,17 @@ bool PagesHash::positionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t 
     return pagesHashStrategy->positionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex, rightRowIndex);
 }
 
-bool PagesHash::positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount)
+bool PagesHash::positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Vector **joinColumns)
 {
     if (positionToHashes[buildPosition] != rawHash) {
         return false;
     }
 
     int64_t address = addresses[buildPosition];
-    int32_t tableIndex = decodeSliceIndex(address);
+    int32_t vecBatchIndex = decodeSliceIndex(address);
     int32_t rowIndex = decodePosition(address);
 
-    return pagesHashStrategy->positionEqualsRowIgnoreNulls(tableIndex, rowIndex, probePosition, joinColumns, joinColumnsCount);
+    return pagesHashStrategy->positionEqualsRowIgnoreNulls(vecBatchIndex, rowIndex, probePosition, joinColumns);
 }
 
 ArrayPositionLinks::ArrayPositionLinks(int32_t size)
@@ -351,7 +352,7 @@ ArrayPositionLinks::ArrayPositionLinks(int32_t size)
 ArrayPositionLinks::~ArrayPositionLinks()
 {
     delete[] positionLinks;
-    positionLinks = NULL;
+    positionLinks = nullptr;
     size = 0;
 }
 int32_t ArrayPositionLinks::link(int32_t left, int32_t right)

@@ -42,41 +42,22 @@ Operator * FilterAndProjectOperatorFactory::createOperator()
     return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
 }
 
-int32_t FilterAndProjectOperator::addInput(Table* data, int32_t rowCount)
+int32_t FilterAndProjectOperator::addInput(VectorBatch* vecBatch)
 {
-    int32_t *selectedRows = new int32_t[rowCount];
+    int32_t *selectedRows = new int32_t[vecBatch->getRowCount()];
     // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    int32_t numSelectedRows = this->filter->filter(data, rowCount, selectedRows);
+    int32_t numSelectedRows = this->filter->filter(vecBatch, selectedRows);
     // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     // std::cout << "TIME TAKEN = " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "[ns]" << std::endl;
-    Projection *projection = new Projection(this->inputTypes, this->vecCount, rowCount, this->projectIndex, this->projectVecCount);
-    Table *projectedData = projection->project(selectedRows, numSelectedRows, data);
+    Projection *projection = new Projection(this->inputTypes, this->vecCount, vecBatch->getRowCount(), this->projectIndex, this->projectVecCount);
+    VectorBatch *projectedData = projection->project(selectedRows, numSelectedRows, vecBatch);
     this->projectedVecs = projectedData;
     delete[] selectedRows;
     delete projection;
     return numSelectedRows;
 }
 
-int32_t FilterAndProjectOperator::addInput(Table** data, int32_t* rowCount, int32_t pageCount)
-{
-    if (pageCount != 1) {
-        std::cout << "ERROR: invalid page count " << pageCount << std::endl;
-    }
-    
-    int32_t pageRowCount = rowCount[0];
-
-    int32_t *selectedRows = new int32_t[pageRowCount];
-    int32_t numSelectedRows = this->filter->filter(data[0], pageRowCount, selectedRows);
-    Projection *projection = new Projection(this->inputTypes, this->vecCount, pageRowCount, this->projectIndex, this->projectVecCount);
-    Table *projectedData = projection->project(selectedRows, numSelectedRows, data[0]);
-    this->projectedVecs = projectedData;
-    
-    delete[] selectedRows;
-    delete projection;
-    return numSelectedRows;
-}
-
-int32_t FilterAndProjectOperator::getOutput(std::vector<Table*>& data)
+int32_t FilterAndProjectOperator::getOutput(std::vector<VectorBatch*>& data)
 {
     if (this->projectedVecs == nullptr) {
         return 0;
@@ -84,8 +65,8 @@ int32_t FilterAndProjectOperator::getOutput(std::vector<Table*>& data)
 
     data.push_back(this->projectedVecs);
     // this->projectedVecs = nullptr;
-    // TODO: cleanup memory in old tables
-    return projectedVecs->getPositionCount();
+    // TODO: cleanup memory in old vecBatches
+    return projectedVecs->getRowCount();
 }
 
 Filter::Filter(LLVMCodeGen* codeGen, Expr* expr)
@@ -94,14 +75,15 @@ Filter::Filter(LLVMCodeGen* codeGen, Expr* expr)
     this->expr = expr;
 }
 
-int32_t Filter::filter(Table *table, int32_t rowNumber, int32_t *selectedRows)
+int32_t Filter::filter(VectorBatch *vecBatch, int32_t *selectedRows)
 {
-    int numSelectedRows = 0;
-    uint32_t nCols = table->getColumnNumber();
+    uint32_t nCols = vecBatch->getVectorCount();
     int64_t* data = new int64_t[nCols];
-    for (int32_t i = 0; i < nCols; i++) data[i] = (int64_t) table->getColumn(i)->getData();
+    for (int32_t i = 0; i < nCols; i++) {
+        data[i] = (int64_t) vecBatch->getVector(i)->getValues();
+    }
 
-    return this->codeGen->execute(data, rowNumber, selectedRows);
+    return this->codeGen->execute(data, vecBatch->getRowCount(), selectedRows);
 }
 } // end of op
 } // end of omniruntime

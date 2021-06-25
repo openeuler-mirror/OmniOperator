@@ -157,7 +157,7 @@ void inloop(int size, int id, row??) {
 
 #### PROBLEMS:
 
-1. class method will have a `this` parameter added, parameter offset need to be added by 1, should change to use `parameter name` instead
+1. class method will have a `this` parameter added, parameter positionOffset need to be added by 1, should change to use `parameter name` instead
 2. `LLVM ERROR: Cannot emit physreg copy instruction` --> indicate wrong parameter type
 
 

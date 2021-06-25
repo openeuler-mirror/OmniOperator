@@ -1,82 +1,60 @@
-/*
- * Copyright (C) 2018-2020. Huawei Technologies Co., Ltd. All rights reserved.
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.utils.OmniErrorType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
-
-import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 
-/**
- * Representing a floating point number
- */
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
+
 public class DoubleVec
-        extends Vec
+        extends FixedWidthVec
 {
+    private static final int BYTES = Double.BYTES;
+
     public DoubleVec(int size)
     {
-        super(size, size * Double.BYTES);
+        super(size * BYTES, size, OMNI_VEC_TYPE_DOUBLE);
     }
 
-    private DoubleVec(OMChunk buf, int offset, int size)
+    public DoubleVec(VecAllocator allocator, int size)
     {
-        super(buf, offset, size);
+        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_DOUBLE);
     }
 
-    public DoubleVec(ByteBuffer buffer, int length)
+    protected DoubleVec(long nativeVector)
     {
-        super(buffer, length);
+        super(nativeVector);
     }
 
-    @Override
-    public DoubleVec slice(int startIdx, int endIdx)
+    private DoubleVec(DoubleVec vector, int offset, int length)
     {
-        return new DoubleVec(this.omniChunk, startIdx * Double.BYTES + offset, endIdx);
+        super(vector, offset, length);
     }
 
-    public double get(int idx)
+    public double get(int index)
     {
-        return this.getData().getDouble(idx * Double.BYTES + offset);
+        return getValues().getDouble((index + getOffset()) * BYTES);
     }
 
-    public void set(int idx, double value)
+    public void set(int index, double value)
     {
-        if (isWritable) {
-            this.getData().putDouble(idx * Double.BYTES + offset, value);
-        }
-        else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
-        }
+        getValues().putDouble((index + getOffset()) * BYTES, value);
     }
 
     public void put(double[] values, int offset, int start, int length)
     {
-        if (isWritable) {
-            DoubleBuffer buffer = getData().asDoubleBuffer();
-            buffer.position(offset);
-            buffer.put(values, start, length);
-        }
-        else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Not support set api");
-        }
+        DoubleBuffer buffer = getValues().asDoubleBuffer();
+        buffer.position(offset);
+        buffer.put(values, start, length);
     }
 
     @Override
-    public VecType getType()
+    public DoubleVec slice(int start, int end)
     {
-        return VecType.DOUBLE;
+        return new DoubleVec(this, start + getOffset(), end - start);
+    }
+
+    @Override
+    public DoubleVec copy()
+    {
+        return null;
     }
 }

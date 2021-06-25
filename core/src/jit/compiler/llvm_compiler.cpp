@@ -46,7 +46,7 @@ namespace omniruntime {
             auto module = llvm::parseIRFile(templatePath, error, *context);
 
             if (!module) {
-                error.print("error loading module", llvm::errs());
+                error.print("error loadding module", llvm::errs());
                 // FIXME: proper error handling using exceptions?
                 return false;
             }
@@ -73,15 +73,19 @@ namespace omniruntime {
 
             bool loaded = false;
             // TODO: find a better way to load this lib, it differs on different platform
-            loaded = DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-//            loaded = DynamicLibrary::LoadLibraryPermanently("/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/libstdc++.so");
-//            loaded = DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-redhat-linux/4.8.5/libstdc++.so");
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+//            loaded = !DynamicLibrary::LoadLibraryPermanently("/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/libstdc++.so");
+//            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-redhat-linux/4.8.5/libstdc++.so");
             if (!loaded) {
                 llvm::errs() << "Failed to load c++ lib\n";
             }
-            loaded = DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
             if (!loaded) {
                 llvm::errs() << "Failed to load jemalloc lib\n";
+            }
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/opt/lib/libvector.so");
+            if (!loaded) {
+                llvm::errs() << "Failed to load vector lib\n";
             }
         }
 
@@ -102,8 +106,9 @@ namespace omniruntime {
                     llvm::outs() << "Found createOperator symbol: " << this->createOperatorSymbol << "\n";
                     return func->getAddress();
                 } else {
-                    llvm::errs() << "Error: Cannot lookup the jitted createOperator method " << this->createOperatorSymbol
-                           << ", error: " << toString(func.takeError()) << "\n";
+                    llvm::errs() << "Error: Cannot lookup the jitted createOperator method "
+                                 << this->createOperatorSymbol
+                                 << ", error: " << toString(func.takeError()) << "\n";
                     return 0;
                 }
             }
@@ -218,7 +223,7 @@ namespace omniruntime {
         LLVMCompiler::to_llvm_value(const std::string &name, ParamValue value, const std::unique_ptr<Module> &module) {
             if (value.type == ParamType::ARRAY2D) {
                 return to_2darray_llvm_value(name, value, module);
-            } else if (value.size == 1) { //scalar type
+            } else if (value.isScalar()) {
                 return to_scalar_llvm_value(value);
             } else { //array type
                 if (value.vector) {
@@ -245,6 +250,8 @@ namespace omniruntime {
                 case ParamType::FP64:
                     //outs() << "creating fp64" << value.to_fp64() << " param value \n";
                     llvmValue = ConstantFP::get(*context, APFloat(value.to_fp64()));
+                    break;
+                default:
                     break;
             }
             return llvmValue;
@@ -339,6 +346,8 @@ namespace omniruntime {
                     Constant *GEPIndices[] = {Zero, Zero};
                     return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
+                default:
+                    return nullptr;
             }
         }
 
@@ -408,6 +417,8 @@ namespace omniruntime {
                     Constant *GEPIndices[] = {Zero, Zero};
                     return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
+                default:
+                    return nullptr;
             }
         }
 
@@ -445,7 +456,8 @@ namespace omniruntime {
                         if (index != llvm::StringRef::npos) {
                             StringRef specializationId = annotation.substr(0, index);
                             annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
-                            outs() << "Found annotated function " << specializationId << ", " << FUNC->getName() << "\n";
+                            outs() << "Found annotated function " << specializationId << ", " << FUNC->getName()
+                                   << "\n";
                         }
                     }
                 }

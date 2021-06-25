@@ -55,6 +55,14 @@ set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/pages_index.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/join/join_hash_table.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/pages_hash_strategy.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/hash_util.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/window/window.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_function.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_partition.cpp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp
         )
 foreach (SOURCE_FILE ${SOURCE_FILES})

@@ -6,10 +6,10 @@
 
 using namespace omniruntime::codegen;
 
-// Table **buildData(int PAGE_NUM, int DATA_SIZE, int *data_type, int column_count) {
-//     Table **input = new Table *[PAGE_NUM];
-//     for (int32_t i = 0; i < PAGE_NUM; ++i) {
-//         Table *table = new Table(DATA_SIZE, 2);
+// VectorBatch **buildData(int VEC_BATCH_NUM, int DATA_SIZE, int *data_type, int column_count) {
+//     VectorBatch **input = new VectorBatch *[VEC_BATCH_NUM];
+//     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
+//         VectorBatch *vecBatch = new VectorBatch(DATA_SIZE, 2);
 
 //         for (int j = 0; j < column_count; j++) {
 //             if (data_type[j] == 1) //INT32
@@ -19,8 +19,8 @@ using namespace omniruntime::codegen;
 //                     data1[i] = i % 3;
 //                 }
 
-//                 Column *col1 = new Column(data1, ColumnType::INT32, DATA_SIZE);
-//                 table->setColumn(col1, ColumnType::INT32);
+//                 Vector *col1 = new Vector(data1, VecType::INT32, DATA_SIZE);
+//                 vecBatch->setColumn(col1, VecType::INT32);
 //             }
 //             if (data_type[j] == 2) //INT64
 //             {
@@ -29,11 +29,11 @@ using namespace omniruntime::codegen;
 //                     data1[i] = i % 3;
 //                 }
 
-//                 Column *col1 = new Column(data1, ColumnType::INT64, DATA_SIZE);
-//                 table->setColumn(col1, ColumnType::INT64);
+//                 Vector *col1 = new Vector(data1, VecType::INT64, DATA_SIZE);
+//                 vecBatch->setColumn(col1, VecType::INT64);
 //             }
 //         }
-//         input[i] = table;
+//         input[i] = vecBatch;
 //     }
 
 //     int32_t *data2 = new int32_t[DATA_SIZE];
@@ -42,7 +42,7 @@ using namespace omniruntime::codegen;
 //     }
 
 //     int rowCounts[1] = {DATA_SIZE};
-//     Table *datas[1]; 
+//     Table *datas[1];
 //     Table *table = new Table(DATA_SIZE, 2);
 //     Column *column1 = new Column(data1, ColumnType::INT32, DATA_SIZE);
 //     Column *column2 = new Column(data2, ColumnType::INT32, DATA_SIZE);
@@ -65,7 +65,7 @@ using namespace omniruntime::codegen;
 
 //     SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
 //         sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-//     omniruntime::op::Operator *sortOperator = NULL;
+//     omniruntime::op::Operator *sortOperator = nullptr;
 //     if (harden) {
 //         auto p_sortCols = ParamValue(sortCols, 2);
 //         auto p_sortColTypes = ParamValue(sortColTypes, 2);
@@ -80,7 +80,7 @@ using namespace omniruntime::codegen;
 //         testParam["_Z9compareTolPiS_S_S_iii@5"] = &p_sortColCount;
 
 //         std::list < Hammer * > deps = std::list<Hammer *>();
-        
+
 //         auto start = Time::now();
 //         llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
 //         llvm::sys::DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
@@ -142,13 +142,13 @@ void test_sort(bool harden) {
     }
 
     int rowCounts[1] = {DATA_SIZE};
-    Table *datas[1];
-    Table *table = new Table(DATA_SIZE, 2);
-    Column *column1 = new Column(data1, ColumnType::INT32, DATA_SIZE);
-    Column *column2 = new Column(data2, ColumnType::INT32, DATA_SIZE);
-    table->setColumn(column1, ColumnType::INT32);
-    table->setColumn(column2, ColumnType::INT32);
-    datas[0] = table;
+    VectorBatch *datas[1];
+    VectorBatch *vecBatch = new VectorBatch(DATA_SIZE, 2);
+    Vector *column1 = new Vector(data1, VecType::INT32, DATA_SIZE);
+    Vector *column2 = new Vector(data2, VecType::INT32, DATA_SIZE);
+    vecBatch->setColumn(column1, VecType::INT32);
+    vecBatch->setColumn(column2, VecType::INT32);
+    datas[0] = vecBatch;
 
     typedef std::chrono::high_resolution_clock Time;
     typedef std::chrono::milliseconds ms;
@@ -164,7 +164,7 @@ void test_sort(bool harden) {
 
     SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
             sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
-    omniruntime::op::Operator *sortOperator = NULL;
+    omniruntime::op::Operator *sortOperator = nullptr;
     if (harden) {
         auto p_sortCols = ParamValue(sortCols, 2);
         auto p_sortColTypes = ParamValue(sortColTypes, 2);
@@ -209,9 +209,9 @@ void test_sort(bool harden) {
     }
 
     sortOperator->addInput(datas, rowCounts, 1);
-    vector<Table *> outputTables;
+    vector<VectorBatch *> outputPages;
     auto t1 = Time::now();
-    sortOperator->getOutput(outputTables);
+    sortOperator->getOutput(outputPages);
     auto t0 = Time::now();
     fsec fs1 = t0 - t1;
     ms d1 = std::chrono::duration_cast<ms>(fs1);
@@ -219,7 +219,7 @@ void test_sort(bool harden) {
 
     delete[] data1;
     delete[] data2;
-    delete table;
+    delete vecBatch;
 }
 
 TEST(JitPerf, test_sort_original) {

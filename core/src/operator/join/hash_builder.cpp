@@ -88,8 +88,6 @@ HashBuilderOperator::HashBuilderOperator(
 {
     this->buildTypes = buildTypes;
     this->buildTypesCount = buildTypesCount;
-    this->buildOutputCols = buildOutputCols;
-    this->buildOutputColsCount = buildOutputColsCount;
     this->buildHashCols = buildHashCols;
     this->buildHashColsCount = buildHashColsCount;
     this->hashTables = hashTables;
@@ -102,26 +100,23 @@ HashBuilderOperator::~HashBuilderOperator()
 
 }
 
-int32_t HashBuilderOperator::addInput(Table **datas, int32_t *rowCounts, int32_t tableCount)
+int32_t HashBuilderOperator::addInput(VectorBatch *vecBatch)
 {
-    if (tableCount <= 0) {
-        return 0;
-    }
-
-    // add tables into PagesIndex
-    pagesIndex->addTables(datas, rowCounts, tableCount);
-
-    // build JoinHashTable
-    PagesHashStrategy *pagesHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
-        tableCount, pagesIndex->getTypesCount(), buildHashCols, buildHashColsCount);
-    JoinHashTable *table = new JoinHashTable(pagesHashStrategy, pagesIndex->getValueAddresses(), pagesIndex->getPositionCount());
-
-    hashTables->addHashTable(partitionIndex, table);
+    inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
-int32_t HashBuilderOperator::getOutput(std::vector<Table *>& outputTables)
+int32_t HashBuilderOperator::getOutput(std::vector<VectorBatch *>& outputPages)
 {
+    // add vecBatches into PagesIndex
+    pagesIndex->addVecBatches(inputVecBatches);
+
+    // build JoinHashTable
+    PagesHashStrategy *pagesHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
+        buildTypes, buildTypesCount, buildHashCols, buildHashColsCount);
+    JoinHashTable *joinHashTable = new JoinHashTable(pagesHashStrategy, pagesIndex->getValueAddresses(), pagesIndex->getPositionCount());
+
+    hashTables->addHashTable(partitionIndex, joinHashTable);
     return 0;
 }
 

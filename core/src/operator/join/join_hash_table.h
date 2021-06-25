@@ -1,7 +1,7 @@
 #ifndef __JOIN_HASH_TABLE_H__
 #define __JOIN_HASH_TABLE_H__
 
-#include "../../vector/table.h"
+#include "../../vector/vector.h"
 
 #include <stdint.h>
 #include <shared_mutex>
@@ -27,9 +27,9 @@ public:
     JoinHashTable *getHashTable(int32_t partitionIndex);
     bool isJoinPositionEligible();
     int64_t getNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition);
-    int64_t getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount);
-    int64_t getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount, int64_t rawHash);
-    void *getBuildData(int64_t partitionedJoinPosition, int32_t outputCol);
+    int64_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount);
+    int64_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash);
+    void getBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol);
 
 private:
     int64_t encodePartitionedJoinPosition(int32_t partition, int32_t joinPosition);
@@ -60,11 +60,11 @@ public:
         return positionLinks;
     }
 
-    int64_t getJoinPosition(int32_t position, Column **joinColumns, Column **allColumns);
-    int64_t getJoinPosition(int32_t position, Column **joinColumns, Column **allColumns, int64_t rawHash);
+    int64_t getJoinPosition(int32_t position, Vector **joinColumns, Vector **allColumns);
+    int64_t getJoinPosition(int32_t position, Vector **joinColumns, Vector **allColumns, int64_t rawHash);
     int32_t getNextJoinPosition(int32_t currentJoinPosition, int probePosition);
-    int32_t getJoinPosition(int32_t position, Column **joinColumns, int32_t joinColumnsCount, Column **allColumns, int32_t allColumnsCount, int64_t rawHash);
-    void *getBuildData(int32_t joinPosition, int32_t outputCol);
+    int32_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash);
+    void getBuildValue(void *value, int32_t joinPosition, int32_t outputCol);
 
 private:
     PagesHash *pagesHash;
@@ -84,14 +84,14 @@ public:
     {
         return keySize;
     }
-    int32_t getAddressIndex(int probePosition, Column **joinColumns, int32_t joinColumnsCount, int64_t rawHash);
-    void *getBuildData(int32_t joinPosition, int32_t outputCol);
+    int32_t getAddressIndex(int probePosition, Vector **joinColumns, int32_t joinColumnsCount, int64_t rawHash);
+    void getBuildValue(void *value, int32_t joinPosition, int32_t outputCol);
 
 private:
     int64_t getRawHash(int32_t position);
     bool isPositionNull(int32_t position);
     bool positionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition);
-    bool positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Column **joinColumns, int32_t joinColumnsCount);
+    bool positionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition, Vector **joinColumns);
 
     PagesHashStrategy *pagesHashStrategy;
     int64_t *addresses;

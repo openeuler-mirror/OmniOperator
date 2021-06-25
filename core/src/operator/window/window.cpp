@@ -1,5 +1,6 @@
 #include "window.h"
 #include "../sort/sort.h"
+#include "../status.h"
 #include <cstring>
 
 using namespace std;
@@ -174,26 +175,26 @@ WindowOperator::~WindowOperator()
     }
 }
 
-int32_t WindowOperator::addInput(Table **datas, int32_t *rowCounts, int32_t pageCount)
+int32_t WindowOperator::addInput(VectorBatch *vecBatch)
 {
-    if (pageCount <= 0) {
-        return 0;
-    }
-    pagesIndex->addTables(datas, rowCounts, pageCount);
-    // right now we assume the pregroup and presort are null
-    preGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,
-        pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
-    unGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,
-        pagesIndex->getTypesCount(), partitionCols, partitionCount);
-    preSortedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount,
-        pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
-    peerGroupHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pageCount, pagesIndex->getTypesCount(),
-        originSortCols, originSortColCount);
+    inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
-int32_t WindowOperator::getOutput(vector<Table *> &outputTables)
+int32_t WindowOperator::getOutput(vector<VectorBatch *> &outputPages)
 {
+    pagesIndex->addVecBatches(inputVecBatches);
+
+    // right now we assume the pregroup and presort are null
+    preGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
+                                                           pagesIndex->getTypes(), pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
+    unGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
+                                                           pagesIndex->getTypes(), pagesIndex->getTypesCount(), partitionCols, partitionCount);
+    preSortedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
+                                                           pagesIndex->getTypes(), pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
+    peerGroupHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pagesIndex->getTypes(), pagesIndex->getTypesCount(),
+                                                  originSortCols, originSortColCount);
+
     int32_t positionCount = pagesIndex->getPositionCount();
     int32_t finalOutputColsCount = 0;
     if (positionCount <= 0) {
@@ -215,17 +216,21 @@ int32_t WindowOperator::getOutput(vector<Table *> &outputTables)
 
     // next, get output
     int32_t maxRowCount = getMaxRowCount(allTypes, finalOutputCols, finalOutputColsCount);
-    int32_t tableCount = getTableCount(positionCount, maxRowCount);
-    outputTables.reserve(tableCount);
+    int32_t outputPageCount = getPageCount(positionCount, maxRowCount);
+    outputPages.reserve(outputPageCount);
 
-    Table *table = NULL;
+    int32_t outputTypes[finalOutputColsCount];
+    for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
+        outputTypes[colIdx] = allTypes[finalOutputCols[colIdx]];
+    }
+
+    VectorBatch *vecBatch = nullptr;
     int32_t position = 0;
     int32_t rowCount = 0;
-    for (int32_t i = 0; i < tableCount; i++) {
+    for (int32_t i = 0; i < outputPageCount; i++) {
         rowCount = min(maxRowCount, positionCount - position);
-        table = new Table(rowCount, finalOutputColsCount);
-        allocColumns((int64_t)table, allTypes, finalOutputCols, finalOutputColsCount, rowCount);
-        pagesIndex->getOutput(outputCols, outputColsCount, (int64_t)table, sourceTypes, position, rowCount);
+        vecBatch = new VectorBatch(outputTypes, finalOutputColsCount, rowCount);
+        pagesIndex->getOutput(outputCols, outputColsCount, vecBatch, sourceTypes, position, rowCount);
         for (int32_t j = 0; j < rowCount; j++) {
             if (partition == nullptr || !partition->hasNext()) {
                 int partitionStart = partition == nullptr ? 0 : partition->getPartitionEnd();
@@ -238,13 +243,13 @@ int32_t WindowOperator::getOutput(vector<Table *> &outputTables)
                 partition = new WindowPartition(pagesIndex, partitionStart, partitionEnd, outputCols, outputColsCount,
                     windowFunctions, peerGroupHashStrategy);
             }
-            partition->processNextRow(table, j, allTypes, typesCount);
+            partition->processNextRow(vecBatch, j, allTypes, typesCount);
         }
 
         position += rowCount;
-        outputTables.push_back(table);
+        outputPages.push_back(vecBatch);
     }
-    status = 2;
+    setStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-rm -rf ../cmake-build-debug
 find . -type f ! -name 'build.sh' -delete
 if [ $# != 0 ] ; then
   if [ $1 = 'debug' ] && [ $2 = 'low' ];then
@@ -11,9 +10,9 @@ if [ $# != 0 ] ; then
     cmake ../ -DDEBUG_LEVEL_HIGH=ON -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'debug' ] && [ $2 = 'op' ];then
     echo "-- Enable native operator debug"
-    cmake ../ -DDEBUG_OPERATOR=ON -DCMAKE_BUILD_TYPE=Debug
+    cmake ../ -DDEBUG_OPERATOR=ON  -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'release' ];then
-    cmake ../ -DCMAKE_BUILD_TYPE=Release
+    cmake ../  -DCMAKE_BUILD_TYPE=Release
   fi
 else
   cmake ../ -DCMAKE_BUILD_TYPE=Release

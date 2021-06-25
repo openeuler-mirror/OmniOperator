@@ -28,10 +28,7 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
-import sun.nio.ch.DirectBuffer;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -119,7 +116,7 @@ public class BenchmarkVecWithPool
         for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
             LongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_Vec_Page_like_q1(pageSize);
             for (int i = 0; i < vecs.length; i++) {
-                for (int j = 0; j < vecs[i].size(); j++) {
+                for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
                 }
             }
@@ -135,7 +132,7 @@ public class BenchmarkVecWithPool
         for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
             HeapLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_heap_Page_like_q1(pageSize);
             for (int i = 0; i < vecs.length; i++) {
-                for (int j = 0; j < vecs[i].size(); j++) {
+                for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
                 }
             }
@@ -151,7 +148,7 @@ public class BenchmarkVecWithPool
         for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
             UnsafeLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_unsafevec_Page_like_q1(pageSize);
             for (int i = 0; i < vecs.length; i++) {
-                for (int j = 0; j < vecs[i].size(); j++) {
+                for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
                 }
             }
@@ -167,7 +164,7 @@ public class BenchmarkVecWithPool
         for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
             LongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_Vec_Page_like_q1(pageSize);
             for (int i = 0; i < vecs.length; i++) {
-                for (int j = 0; j < vecs[i].size(); j++) {
+                for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
                 }
             }
@@ -183,7 +180,7 @@ public class BenchmarkVecWithPool
         for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
             HeapLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_heap_Page_like_q1(pageSize);
             for (int i = 0; i < vecs.length; i++) {
-                for (int j = 0; j < vecs[i].size(); j++) {
+                for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
                 }
             }
@@ -199,7 +196,7 @@ public class BenchmarkVecWithPool
         for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
             UnsafeLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_unsafevec_Page_like_q1(pageSize);
             for (int i = 0; i < vecs.length; i++) {
-                for (int j = 0; j < vecs[i].size(); j++) {
+                for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
                 }
             }
@@ -377,22 +374,6 @@ public class BenchmarkVecWithPool
             return new LongVec[] {key1, key2, value1, value2};
         }
 
-        public LongVecWithNoFinalize[] builderGroupBy_2C_Sum_2C_Vec_with_no_finalize_Page_like_q1(int pageSize)
-        {
-            LongVecWithNoFinalize key1 = new LongVecWithNoFinalize(pageSize);
-            LongVecWithNoFinalize key2 = new LongVecWithNoFinalize(pageSize);
-            LongVecWithNoFinalize value1 = new LongVecWithNoFinalize(pageSize);
-            LongVecWithNoFinalize value2 = new LongVecWithNoFinalize(pageSize);
-            for (int i = 0; i < pageSize; i++) {
-                key1.set(i, i);
-                key2.set(i, i);
-                value1.set(i, i);
-                value2.set(i, i);
-            }
-
-            return new LongVecWithNoFinalize[] {key1, key2, value1, value2};
-        }
-
         public HeapLongVec[] builderGroupBy_2C_Sum_2C_heap_Page_like_q1(int pageSize)
         {
             HeapLongVec key1 = new HeapLongVec(pageSize);
@@ -443,13 +424,6 @@ public class BenchmarkVecWithPool
                 vec.close();
             }
         }
-
-        public void release(LongVecWithNoFinalize[] inputs)
-        {
-            for (LongVecWithNoFinalize vec : inputs) {
-                vec.close();
-            }
-        }
     }
 
     public class HeapLongVec
@@ -471,7 +445,7 @@ public class BenchmarkVecWithPool
             return this.values[idx];
         }
 
-        public int size()
+        public int getSize()
         {
             return values.length;
         }
@@ -507,7 +481,7 @@ public class BenchmarkVecWithPool
             return JvmUtils.unsafe.getLong(address + idx * Long.BYTES);
         }
 
-        public int size()
+        public int getSize()
         {
             return capacity;
         }
@@ -520,38 +494,6 @@ public class BenchmarkVecWithPool
         public long getAddress()
         {
             return address;
-        }
-    }
-
-    public class LongVecWithNoFinalize
-    {
-        private ByteBuffer buffer;
-        private int capacity;
-
-        public LongVecWithNoFinalize(int capacity)
-        {
-            this.capacity = capacity;
-            this.buffer = OMVectorBase.allocate(capacity * Long.BYTES).order(ByteOrder.LITTLE_ENDIAN);
-        }
-
-        public void set(int idx, long value)
-        {
-            buffer.putLong(idx * Long.BYTES, value);
-        }
-
-        public long get(int idx)
-        {
-            return buffer.getLong(idx * Long.BYTES);
-        }
-
-        public int size()
-        {
-            return capacity;
-        }
-
-        public void close()
-        {
-            OMVectorBase.release(((DirectBuffer) buffer).address());
         }
     }
 }

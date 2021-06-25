@@ -20,6 +20,7 @@
 *.ll
 *.cbp
 *.lock
+*.log
 
 */dependency-reduced-pom.xml
 */.idea

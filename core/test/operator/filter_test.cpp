@@ -5,29 +5,35 @@
 #include <cstring>
 #include <vector>
 #include <chrono>
+#include "../../src/vector/vector_common.h"
+#include "../../src/vector/vector_helper.h"
 
 using namespace omniruntime::op;
 
-using namespace omniruntime::op;
-
-using namespace omniruntime::op;
-
-Table* createInput(const int32_t NUM_ROWS,
+VectorBatch* createInput(const int32_t NUM_ROWS,
                     const int32_t NUM_COLS,
                     int32_t* inputTypes,
                     int64_t* allData)
 {
-    Table* t = new Table(NUM_ROWS, NUM_COLS);
-    for (int i = 0; i < NUM_COLS; i++) {
-        void* data = (void*) allData[i];
-        ColumnType columnType = static_cast<ColumnType>(inputTypes[i]);
-        Column* col = new Column(data, columnType, NUM_ROWS);
-        t->setColumn(col, columnType);
+    VectorBatch *vecBatch = new VectorBatch(inputTypes, NUM_COLS, NUM_ROWS);
+    for (int i = 0; i < NUM_COLS; ++i) {
+        switch (inputTypes[i]) {
+            case OMNI_VEC_TYPE_INT:
+                ((IntVector *)vecBatch->getVector(i))->setValues(0, (int32_t *)allData[i], NUM_ROWS);
+                break;
+            case OMNI_VEC_TYPE_LONG:
+                ((LongVector *)vecBatch->getVector(i))->setValues(0, (int64_t *)allData[i], NUM_ROWS);
+                break;
+            case OMNI_VEC_TYPE_DOUBLE:
+                ((DoubleVector *)vecBatch->getVector(i))->setValues(0, (double *)allData[i], NUM_ROWS);
+                break;
+        }
+
     }
-    return t;
+    return vecBatch;
 }
 
-bool checkOutput(Table* t, const int32_t NUM_ROWS, bool (*filter)(Table*, int32_t)) {
+bool checkOutput(VectorBatch* t, const int32_t NUM_ROWS, bool (*filter)(VectorBatch*, int32_t)) {
     for (int32_t i = 0; i < NUM_ROWS; i++) {
         if (!filter(t, i)) {
             return false;
@@ -37,48 +43,48 @@ bool checkOutput(Table* t, const int32_t NUM_ROWS, bool (*filter)(Table*, int32_
 }
 
 // Expects 1 column of type int32
-bool filter1(Table* t, int32_t index) {
-    return *((int32_t*) t->getColumn(0)->getValue(index)) <= 4;
+bool filter1(VectorBatch* t, int32_t index) {
+    return ((IntVector *)t->getVector(0))->getValue(index) <= 4;
 }
 
 // Expects 2 columns of type int32, int64
-bool filter2(Table* t, int32_t index) {
-    int32_t val1 = *((int32_t*) t->getColumn(0)->getValue(index));
-    int64_t val2 = *((int64_t*) t->getColumn(1)->getValue(index));
+bool filter2(VectorBatch* t, int32_t index) {
+    int32_t val1 = ((IntVector *)t->getVector(0))->getValue(index);
+    int64_t val2 = ((LongVector *)t->getVector(1))->getValue(index);
     // true if both values are negative
     return val1 < 0 && val2 < 0;
 }
 
 // Expects 3 columns of type int32, int64, double
-bool filter3(Table* t, int32_t index) {
-    int32_t val1 = *((int32_t*) t->getColumn(0)->getValue(index));
-    int64_t val2 = *((int64_t*) t->getColumn(1)->getValue(index));
-    double val3 = *((double*) t->getColumn(2)->getValue(index));
+bool filter3(VectorBatch* t, int32_t index) {
+    int32_t val1 = ((IntVector *)t->getVector(0))->getValue(index);
+    int64_t val2 = ((LongVector *)t->getVector(1))->getValue(index);
+    double val3 = ((DoubleVector *)t->getVector(2))->getValue(index);
     // first val is multiple of 3, second val = 3 billion, third val >= 0.4.
     return val1 % 3 == 0 && val2 == (int64_t) 3e9 && val3 >= 0.4;
 }
 
-bool filter4(Table* t, int32_t index) {
-    int32_t val0 = *((int32_t*) t->getColumn(0)->getValue(index));
-    int32_t val2 = *((int32_t*) t->getColumn(1)->getValue(index));
-    double val4 = *((double*) t->getColumn(2)->getValue(index));
-    int64_t val5 = *((int64_t*) t->getColumn(3)->getValue(index));
+bool filter4(VectorBatch* t, int32_t index) {
+    int32_t val0 = ((IntVector *)t->getVector(0))->getValue(index);
+    int32_t val2 = ((IntVector *)t->getVector(1))->getValue(index);
+    double val4 = ((DoubleVector *)t->getVector(2))->getValue(index);
+    int64_t val5 = ((LongVector *)t->getVector(3))->getValue(index);
     return (val0 != 1 && val2 > 4800 && val4 < 50.8) || val5 >= 52;
 }
 
-bool filter5(Table* t, int32_t index) {
-    int32_t val0 = *((int32_t*) t->getColumn(0)->getValue(index));
-    double val2 = *((double*) t->getColumn(2)->getValue(index));
-    double val3 = *((double*) t->getColumn(3)->getValue(index));
+bool filter5(VectorBatch* t, int32_t index) {
+    int32_t val0 = ((IntVector *)t->getVector(0))->getValue(index);
+    double val2 = ((DoubleVector *)t->getVector(2))->getValue(index);
+    double val3 = ((DoubleVector *)t->getVector(3))->getValue(index);
     return val0 < 24 && val2 >= 0.05 && val2 <= 0.07 && val3 > 9766 && val3 < 9131;
 }
 
-bool filter6(Table* t, int32_t index) {
+bool filter6(VectorBatch* t, int32_t index) {
     // project order reversed
-    int64_t val0 = *((int64_t*) t->getColumn(0)->getValue(index));
-    int64_t val1 = *((int64_t*) t->getColumn(1)->getValue(index));
-    int32_t val2 = *((int32_t*) t->getColumn(2)->getValue(index));
-    int32_t val3 = *((int32_t*) t->getColumn(3)->getValue(index));
+    int64_t val0 = ((LongVector *)t->getVector(0))->getValue(index);
+    int64_t val1 = ((LongVector *)t->getVector(1))->getValue(index);
+    int32_t val2 = ((IntVector *)t->getVector(2))->getValue(index);
+    int32_t val3 = ((IntVector *)t->getVector(3))->getValue(index);
     return (val0 >= 0 || val1 <= -3e9) && (val2 == -12 || val3 < 50);
 }
 
@@ -95,19 +101,21 @@ TEST (FilterTest, LessThan) {
     int64_t allData[NUM_COLS] = {(int64_t) col1};
     const int32_t PROJECT_COUNT = 1;
     int32_t projectIndices[PROJECT_COUNT] = {0};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN(#0, 2000)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
 
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
+        int32_t val = ((IntVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_TRUE(val < 2000);
     }
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, GreaterThan) {
@@ -126,21 +134,23 @@ TEST (FilterTest, GreaterThan) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
     const int32_t PROJECT_COUNT = 2;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN(#0, 20)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
 
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 800);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
-        int64_t val1 = *((int64_t*) ret[0]->getColumn(1)->getValue(i));
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->getVector(1))->getValue(i);
         EXPECT_TRUE(val0 > 20);
         EXPECT_EQ(val1, (int64_t) 3e9);
     }
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, EqualTo) {
@@ -160,21 +170,23 @@ TEST (FilterTest, EqualTo) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col3, (int64_t) col2};
     const int32_t PROJECT_COUNT = 2;
     int32_t projectIndices[PROJECT_COUNT] = {2, 1};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$EQUAL(#2, 50.0)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
 
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 50);
     for (int32_t i = 0; i < numReturned; i++) {
-        double val0 = *((double*) ret[0]->getColumn(0)->getValue(i));
-        int64_t val1 = *((int32_t*) ret[0]->getColumn(1)->getValue(i));
+        double val0 = ((DoubleVector *)ret[0]->getVector(0))->getValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->getVector(1))->getValue(i);
         EXPECT_EQ(val0, 50);
         EXPECT_EQ(val0, val1);
     }
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, GreaterThanOrEqualTo) {
@@ -194,19 +206,20 @@ TEST (FilterTest, GreaterThanOrEqualTo) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
     const int32_t PROJECT_COUNT = 1;
     int32_t projectIndices[PROJECT_COUNT] = {1};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN_OR_EQUAL(#1, 30)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 834);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_TRUE(val0 >= 30);
     }
-
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, NotEqualTo) {
@@ -222,20 +235,22 @@ TEST (FilterTest, NotEqualTo) {
     int64_t allData[NUM_COLS] = {(int64_t) col1};
     const int32_t PROJECT_COUNT = 1;
     int32_t projectIndices[PROJECT_COUNT] = {0};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$NOT_EQUAL(#0, 0)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
 
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 4999);
     double cnt = 1;
     for (int32_t i = 0; i < numReturned; i++) {
-        double val0 = *((double*) ret[0]->getColumn(0)->getValue(i));
+        double val0 = ((DoubleVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, cnt++);
     }
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, AllPass) {
@@ -251,17 +266,17 @@ TEST (FilterTest, AllPass) {
     int64_t allData[NUM_COLS] = {(int64_t) col1};
     const int32_t PROJECT_COUNT = 1;
     int32_t projectIndices[PROJECT_COUNT] = {0};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$EQUAL(#0, 9348)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
 
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 20000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, 9348);
     }
 }
@@ -281,20 +296,22 @@ TEST (FilterTest, MultipleInputs) {
     int64_t allData[NUM_COLS] = {(int64_t) data1};
     const int32_t PROJECT_COUNT = 1;
     int32_t projectIndices[PROJECT_COUNT] = {0};
-    std::vector<Table*> ret;
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN_OR_EQUAL(#0, 4)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
 
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter1));
     EXPECT_EQ(numReturned, 500);
 
+    VectorHelper::freeVecBatch(in1);
+
     allData[0] = (int64_t) data2;
-    Table* in2 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(in2, NUM_ROWS);
+    VectorBatch* in2 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    op->addInput(in2);
     numReturned = op->getOutput(ret);
     EXPECT_TRUE(checkOutput(ret[1], numReturned, filter1));
     EXPECT_EQ(numReturned, 668);
@@ -304,11 +321,8 @@ TEST (FilterTest, MultipleInputs) {
     delete[] data1;
     delete[] data2;
     delete factory;
-    delete in1;
-    delete in2;
-    delete ret[0];
-    delete ret[1];
-
+    VectorHelper::freeVecBatch(in2);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, NegativeValues) {
@@ -329,13 +343,13 @@ TEST (FilterTest, NegativeValues) {
     int64_t allData[NUM_COLS] = {(int64_t) data1, (int64_t) data2};
     const int32_t PROJECT_COUNT = 2;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1};
-    std::vector<Table*> ret;
+    std::vector<VectorBatch*> ret;
 
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("AND($operator$LESS_THAN_OR_EQUAL(#0, -1), $operator$LESS_THAN_OR_EQUAL(#1, -1))", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter2));
     // Both values are negative for every multiple of 35.
@@ -346,8 +360,8 @@ TEST (FilterTest, NegativeValues) {
     delete[] data1;
     delete[] data2;
     delete factory;
-    delete in1;
-    delete ret[0];
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, AllTypes) {
@@ -371,14 +385,14 @@ TEST (FilterTest, AllTypes) {
     int64_t allData[NUM_COLS] = {(int64_t) data1, (int64_t) data2, (int64_t) data3};
     const int32_t PROJECT_COUNT = 3;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
-    std::vector<Table*> ret;
+    std::vector<VectorBatch*> ret;
 
-    Table* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* in1 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
     std::string expr = "AND($operator$EQUAL(#0, 0), AND($operator$EQUAL(#1, 3000000000), $operator$GREATER_THAN_OR_EQUAL(#2, 0.4)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
     // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    op->addInput(in1, NUM_ROWS);
+    op->addInput(in1);
     // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     // std::cout << "TIME TAKEN FOR FILTER: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
     int32_t numReturned = op->getOutput(ret);
@@ -391,23 +405,23 @@ TEST (FilterTest, AllTypes) {
     delete[] data2;
     delete[] data3;
     delete factory;
-    delete in1;
-    delete ret[0];
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
 }
 
-TEST (FilterTest, DISABLED_Compile) {
-    // simple unit test
-    std::string filterExpression = "AND(AND($operator$GREATER_THAN(#3, 8766), $operator$LESS_THAN(#3, 9131)), AND($operator$BETWEEN(#2, 0.05, 0.07), $operator$LESS_THAN(#0, 24.0)))";
+TEST (FilterTest, Compile) {
+    // TPCH 6
+    std::string filterExpression = "AND(AND($operator$GREATER_THAN(#3, 8766), $operator$LESS_THAN(#3, 9131)), AND(BETWEEN(#2, 0.05, 0.07), $operator$LESS_THAN(#0, 24.0)))";
 
     const int32_t NUM_COLS = 4;
     int32_t *inputTypes = new int32_t[NUM_COLS];
-    inputTypes[0] = 1;
+    inputTypes[0] = 3;
     inputTypes[1] = 1;
     inputTypes[2] = 3;
     inputTypes[3] = 3;
     
-    const int32_t DATA_SIZE = 1000;
-    int32_t *data1 = new int32_t[DATA_SIZE];
+    const int32_t DATA_SIZE = 10000;
+    double *data1 = new double[DATA_SIZE];
     int32_t *data2 = new int32_t[DATA_SIZE];
     double *data3 = new double[DATA_SIZE];
     double *data4 = new double[DATA_SIZE];
@@ -421,15 +435,15 @@ TEST (FilterTest, DISABLED_Compile) {
     int64_t datas[4] = {(int64_t)data1, (int64_t)data2, (int64_t)data3, (int64_t)data4};
     int32_t *projectIdx = new int32_t[1];
     projectIdx[0] = 0;
-    Table* t = createInput(DATA_SIZE, NUM_COLS, inputTypes, datas);
+    VectorBatch* t = createInput(DATA_SIZE, NUM_COLS, inputTypes, datas);
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpression, inputTypes, NUM_COLS, projectIdx, 1);
     omniruntime::op::Operator *op = factory->createOperator();
-    op->addInput(t, DATA_SIZE);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numSelectedRows = op->getOutput(ret);
     EXPECT_EQ(numSelectedRows, 100);
-    EXPECT_TRUE(checkOutput(ret[0], DATA_SIZE, filter5));
+    // EXPECT_TRUE(checkOutput(ret[0], DATA_SIZE, filter5));
     
     // op->close();
     delete[] inputTypes;
@@ -438,9 +452,9 @@ TEST (FilterTest, DISABLED_Compile) {
     delete[] data3;
     delete[] data4;
     delete[] projectIdx;
-    delete t;
     delete factory;
-    delete ret[0];
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, LogicalOperators1) {
@@ -473,16 +487,17 @@ TEST (FilterTest, LogicalOperators1) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4, (int64_t) col5, (int64_t) col6};
     const int32_t PROJECT_COUNT = 4;
     int32_t projectIndices[PROJECT_COUNT] = {0, 2, 4, 5};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 543);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter4));
-
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, LogicalOperators2) {
@@ -509,16 +524,17 @@ TEST (FilterTest, LogicalOperators2) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4};
     const int32_t PROJECT_COUNT = 4;
     int32_t projectIndices[PROJECT_COUNT] = {3, 2, 1, 0};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 3498);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter6));
-
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, LogicalOperators3) {
@@ -547,20 +563,22 @@ TEST (FilterTest, LogicalOperators3) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
     const int32_t PROJECT_COUNT = 2;
     int32_t projectIndices[PROJECT_COUNT] = {1, 0};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 6);
     for (int32_t i = 0; i < 6; i++) {
-        double val0 = *((double*) ret[0]->getColumn(0)->getValue(i));
-        int32_t val1 = *((int32_t*) ret[0]->getColumn(1)->getValue(i));
+        double val0 = ((DoubleVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->getVector(1))->getValue(i);
         EXPECT_TRUE(val0 != 0);
         EXPECT_TRUE(val1 == col1[i + 2]);
     }
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, ArithmeticAdd) {
@@ -576,18 +594,20 @@ TEST (FilterTest, ArithmeticAdd) {
     int64_t allData[NUM_COLS] = {(int64_t) col1};
     const int32_t PROJECT_COUNT = 1;
     int32_t projectIndices[PROJECT_COUNT] = {0};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN($operator$ADD(#0, 1), 4)", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_TRUE(val0 + 1 > 4);
     }
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, ArithmeticSubtract) {
@@ -606,18 +626,20 @@ TEST (FilterTest, ArithmeticSubtract) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
     const int32_t PROJECT_COUNT = 2;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN(0, $operator$SUBTRACT(#0, 5))", inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 4000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_TRUE(0 < val0 - 5);
     }
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, ArithmeticMultiply) {
@@ -636,21 +658,23 @@ TEST (FilterTest, ArithmeticMultiply) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
     const int32_t PROJECT_COUNT = 2;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     std::string expr = "AND($operator$EQUAL(0, $operator$MULTIPLY(#0, #0)), $operator$GREATER_THAN(7, $operator$MULTIPLY(2, #1)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = *((int32_t*) ret[0]->getColumn(0)->getValue(i));
-        int64_t val1 = *((int64_t*) ret[0]->getColumn(1)->getValue(i));
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->getVector(1))->getValue(i);
         EXPECT_EQ(val0, 0);
         EXPECT_TRUE(val1 * 2 < 7);
     }
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, Conditional) {
@@ -672,15 +696,17 @@ TEST (FilterTest, Conditional) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
     const int32_t PROJECT_COUNT = 3;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     std::string expr = "$operator$EQUAL(IF($operator$EQUAL(#0, 0), $operator$ADD(#1, 5), #2), 55)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 5000);
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, Conditional2) {
@@ -702,15 +728,17 @@ TEST (FilterTest, Conditional2) {
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
     const int32_t PROJECT_COUNT = 3;
     int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
-    Table* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
     std::string expr = "AND(IF($operator$EQUAL(#0, 0), $operator$LESS_THAN(#1, 3), $operator$EQUAL(#1, 4)), $operator$GREATER_THAN(#2, 3))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->createOperator();
-    op->addInput(t, NUM_ROWS);
-    std::vector<Table*> ret;
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 2000);
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, DISABLED_ArithmeticDivide) {
