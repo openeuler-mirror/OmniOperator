@@ -315,6 +315,10 @@ JitContext *createSortJitContext(
     return jitContext;
 }
 
+JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
+                                       int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
+                                       int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount);
+
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory
         (JNIEnv *env, jobject jObj, jintArray jSourceTypes,jintArray jOutputChannels,jintArray jWindowFunction, jintArray jPartitionChannels,jintArray JPreGroupedChannels,jintArray jSortChannels,jintArray jSortOrder,jintArray jSortNullFirsts,jint preSortedChannelPrefix,jint expectedPositions,jintArray jArgumentChannels,jintArray jWindowFunctionReturnType)
 {
@@ -369,8 +373,106 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
                     argumentChannels,
                     argumentChannelsCount
                     );
-    windowOperatorFactory->setJitContext(nullptr);
+    JitContext *jitContext = createWindowJitContext(
+            windowOperatorFactory->getSourceTypes(),
+            windowOperatorFactory->getTypesCount(),
+            windowOperatorFactory->getOutputCols(),
+            windowOperatorFactory->getOutputColsCount(),
+            windowOperatorFactory->getPartitionCols(),
+            windowOperatorFactory->getPartitionCount(),
+            windowOperatorFactory->getSortCols(),
+            windowOperatorFactory->getSortAscendings(),
+            windowOperatorFactory->getSortNullFirsts(),
+            windowOperatorFactory->getSortColCount(),
+            windowOperatorFactory->getAllTypes(),
+            windowOperatorFactory->getAllCount()
+            );
+    windowOperatorFactory->setJitContext(jitContext);
     return (int64_t) windowOperatorFactory;
+}
+
+JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
+                                   int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
+                                   int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount)
+{
+    using namespace omniruntime::jit;
+    int32_t finalSortColsCount = sortColsCount + partitionCount;
+    int32_t finalSortCols[finalSortColsCount];
+    int32_t finalSortAscendings[finalSortColsCount];
+    int32_t finalSortNullFirsts[finalSortColsCount];
+    for (int32_t i = 0; i < partitionCount; i++) {
+        finalSortCols[i] = partitionCols[i];
+        finalSortAscendings[i] = true;
+        finalSortNullFirsts[i] = false;
+    }
+    for (int32_t i = partitionCount; i < partitionCount + sortColsCount; i++) {
+        finalSortCols[i] = sortCols[i - partitionCount];
+        finalSortAscendings[i] = sortAscendings[i - partitionCount];
+        finalSortNullFirsts[i] = sortNullFirsts[i - partitionCount];
+    }
+
+    int32_t finalSortColTypes[finalSortColsCount];
+    for (int32_t i = 0; i < finalSortColsCount; i++) {
+        finalSortColTypes[i] = sourceTypes[finalSortCols[i]];
+    }
+    int32_t finalOutputCols[allCount];
+    int32_t finalOutputColsCount = 0;
+    for (int32_t i = 0; i < outputColsCount; i++) {
+        finalOutputCols[finalOutputColsCount] = outputCols[i];
+        finalOutputColsCount++;
+    }
+    for (int32_t i = typesCount; i < allCount; i++) {
+        finalOutputCols[finalOutputColsCount] = i;
+        finalOutputColsCount++;
+    }
+
+    ParamValue p_sortCols = ParamValue(finalSortCols, finalSortColsCount);
+    ParamValue p_sortColTypes = ParamValue(finalSortColTypes, finalSortColsCount);
+    ParamValue p_sortAscendings = ParamValue(finalSortAscendings, finalSortColsCount);
+    ParamValue p_sortNullFirsts = ParamValue(finalSortNullFirsts, finalSortColsCount);
+    ParamValue p_sortColCount = ParamValue(&finalSortColsCount);
+
+    ParamValue p_sourceTypes = ParamValue(sourceTypes, typesCount);
+    ParamValue p_outputCols = ParamValue(outputCols, outputColsCount);
+    ParamValue p_outputColCount = ParamValue(&outputColsCount);
+
+    auto *compareToSp = new Specialization();
+    compareToSp->addSpecializedParam(1, &p_sortCols);
+    compareToSp->addSpecializedParam(2, &p_sortColTypes);
+    compareToSp->addSpecializedParam(3, &p_sortAscendings);
+    compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
+    compareToSp->addSpecializedParam(5, &p_sortColCount);
+    auto *getOutputSp = new Specialization();
+    getOutputSp->addSpecializedParam(1, &p_outputCols);
+    getOutputSp->addSpecializedParam(2, &p_outputColCount);
+    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
+    std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
+                                                            { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
+    auto *windowContext = new omniruntime::jit::Context("window", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *aggContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *windowFunctionContext = new omniruntime::jit::Context("window_function",
+        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *windowPartitionContext = new omniruntime::jit::Context("window_partition",
+        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy",
+        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(),
+        std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowContext, *sortContext, *aggContext,
+        *windowFunctionContext, *windowPartitionContext, *hashUtilContext, *pagesHashStrategyContext,
+        *memoryPoolContext, *pagesIndexContext });
+    auto createOperatorFunc = jit->specialize();
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    return jitContext;
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory
