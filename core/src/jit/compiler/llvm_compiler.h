@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <vector>
+#include <set>
 
 namespace omniruntime {
     namespace jit {
@@ -37,7 +38,7 @@ namespace omniruntime {
 
             static void loadExtraLibraries();
 
-            std::unique_ptr<llvm::orc::LLJIT> compileModules();
+            std::unique_ptr<llvm::orc::LLJIT> compileModules(std::set<std::string> &specializedModules);
 
             bool specializeModule(const std::unique_ptr<llvm::Module> &module);
 

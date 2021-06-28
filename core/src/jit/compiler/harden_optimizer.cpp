@@ -31,10 +31,7 @@ namespace omniruntime {
                                     const MaterializationResponsibility &) {
 
             Module &M = *TSM.getModuleUnlocked();
-            if (M.getName().find("__standard_lib") != std::string::npos ||
-                M.getName().find("aggregator") != std::string::npos ||
-                M.getName().find("sort_api") != std::string::npos ||
-                M.getName().find("test") != std::string::npos || M.getName().find("memory_pool") != std::string::npos) {
+            if (this->specializedModules.count(M.getName().str()) == 0) {
                 return std::move(TSM);
             }
             int original_count = M.getInstructionCount();
@@ -49,10 +46,7 @@ namespace omniruntime {
 
             FPM.doInitialization();
             for (Function &F : M) {
-                if (F.getName().find("process") != std::string::npos ||
-                    F.getName().find("inloop") != std::string::npos) {
-                    FPM.run(F);
-                }
+                FPM.run(F);
             }
             FPM.doFinalization();
             MPM.run(M);
