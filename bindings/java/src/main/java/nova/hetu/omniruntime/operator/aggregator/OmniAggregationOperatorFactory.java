@@ -11,13 +11,13 @@ import static java.util.Objects.requireNonNull;
 import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 public class OmniAggregationOperatorFactory
-            extends OmniOperatorFactory<OmniAggregationOperatorFactory.Context>
+        extends OmniOperatorFactory<OmniAggregationOperatorFactory.Context>
 {
     public OmniAggregationOperatorFactory(VecType[] aggTypes,
-                                          AggType[] aggFunctionTypes,
-                                          VecType[] aggOutputTypes,
-                                          boolean inputRaw,
-                                          boolean outputPartial)
+            AggType[] aggFunctionTypes,
+            VecType[] aggOutputTypes,
+            boolean inputRaw,
+            boolean outputPartial)
     {
         super(new Context(aggTypes, aggFunctionTypes, aggOutputTypes, inputRaw, outputPartial));
     }
@@ -45,10 +45,10 @@ public class OmniAggregationOperatorFactory
         private final boolean outputPartial;
 
         public Context(VecType[] aggTypes,
-                       AggType[] aggFunctionTypes,
-                       VecType[] aggOutputTypes,
-                       boolean inputRaw,
-                       boolean outputPartial)
+                AggType[] aggFunctionTypes,
+                VecType[] aggOutputTypes,
+                boolean inputRaw,
+                boolean outputPartial)
         {
             this.aggTypes = requireNonNull(aggTypes, "aggTypes");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");

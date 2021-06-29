@@ -40,13 +40,13 @@ public class OmniHashAggregationOperatorFactory
     }
 
     private static native long createHashAggregationOperatorFactory(int[] groupByChanel,
-                                                                    int[] groupByTypes,
-                                                                    int[] aggChannels,
-                                                                    int[] aggTypes,
-                                                                    int[] aggFunctionTypes,
-                                                                    int[] aggOutputTypes,
-                                                                    boolean inputRaw,
-                                                                    boolean outputPartial);
+            int[] groupByTypes,
+            int[] aggChannels,
+            int[] aggTypes,
+            int[] aggFunctionTypes,
+            int[] aggOutputTypes,
+            boolean inputRaw,
+            boolean outputPartial);
 
     public static class Context
             extends OmniOperatorFactoryContext
