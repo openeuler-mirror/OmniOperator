@@ -4,6 +4,7 @@ import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -66,7 +67,7 @@ public class OmniLookupJoinOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
+            return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols), Arrays.hashCode(probeHashCols), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes), hashBuilderOperatorFactory);
         }
 
         @Override
@@ -80,11 +81,11 @@ public class OmniLookupJoinOperatorFactory
             }
             Context that = (Context) o;
             return hashBuilderOperatorFactory == that.hashBuilderOperatorFactory
-                    && Objects.equals(probeTypes, that.probeTypes)
-                    && Objects.equals(probeOutputCols, that.probeOutputCols)
-                    && Objects.equals(probeHashCols, that.probeHashCols)
-                    && Objects.equals(buildOutputCols, that.buildOutputCols)
-                    && Objects.equals(buildOutputTypes, that.buildOutputTypes);
+                    && Arrays.equals(probeTypes, that.probeTypes)
+                    && Arrays.equals(probeOutputCols, that.probeOutputCols)
+                    && Arrays.equals(probeHashCols, that.probeHashCols)
+                    && Arrays.equals(buildOutputCols, that.buildOutputCols)
+                    && Arrays.equals(buildOutputTypes, that.buildOutputTypes);
         }
     }
 }
