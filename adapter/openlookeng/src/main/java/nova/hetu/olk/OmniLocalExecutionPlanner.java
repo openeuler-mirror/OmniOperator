@@ -76,7 +76,6 @@ import io.prestosql.operator.OutputFactory;
 import io.prestosql.operator.PagesIndex;
 import io.prestosql.operator.PartitionFunction;
 import io.prestosql.operator.PartitionedLookupSourceFactory;
-import io.prestosql.operator.PartitionedOutputOperator;
 import io.prestosql.operator.ReuseExchangeOperator;
 import io.prestosql.operator.ScanFilterAndProjectOperator;
 import io.prestosql.operator.SourceOperatorFactory;
@@ -146,6 +145,7 @@ import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.statestore.StateStoreProvider;
 import io.prestosql.statestore.listener.StateStoreListenerManager;
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
+import nova.hetu.olk.operator.PartitionedOutputOmniOperator;
 import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
 import nova.hetu.olk.operator.HashBuilderOmniOperator;
@@ -393,19 +393,21 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         //     partitionFunction, partitionChannels, partitionConstants, partitioningScheme.isReplicateNullsAndAny(),
         //     nullChannel, outputBuffer, pageProducers, maxPagePartitioningBufferSize,
         //     partitioningScheme.getBucketToPartition().get());
-
-        OutputFactory partitionedOutput = new PartitionedOutputOperator.PartitionedOutputFactory(
-            partitionFunction,
-            partitionChannels,
-            partitionConstants,
-            partitioningScheme.isReplicateNullsAndAny(),
-            nullChannel,
-            outputBuffer,
-            pageProducers,
-            maxPagePartitioningBufferSize);
+        boolean isHashPrecomputed = partitioningScheme.getHashColumn().isPresent();
 
         return plan(taskContext, stageExecutionDescriptor, plan, outputLayout, types, partitionedSourceOrder,
-            pageProducers, partitionedOutput);
+            pageProducers, new PartitionedOutputOmniOperator.PartitionedOutputOmniFactory(
+                        partitionFunction,
+                        partitionChannels,
+                        partitionConstants,
+                        partitioningScheme.isReplicateNullsAndAny(),
+                        nullChannel,
+                        outputBuffer,
+                        pageProducers,
+                        maxPagePartitioningBufferSize,
+                        partitioningScheme.getBucketToPartition().get(),
+                        isHashPrecomputed,
+                        partitionChannelTypes));
     }
 
     @Override

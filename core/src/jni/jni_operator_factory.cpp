@@ -460,6 +460,7 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
         finalSortAscendings[i] = sortAscendings[i - partitionCount];
         finalSortNullFirsts[i] = sortNullFirsts[i - partitionCount];
     }
+
     int32_t finalSortColTypes[finalSortColsCount];
     for (int32_t i = 0; i < finalSortColsCount; i++) {
         finalSortColTypes[i] = sourceTypes[finalSortCols[i]];
@@ -474,14 +475,17 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
         finalOutputCols[finalOutputColsCount] = i;
         finalOutputColsCount++;
     }
+
     ParamValue p_sortCols = ParamValue(finalSortCols, finalSortColsCount);
     ParamValue p_sortColTypes = ParamValue(finalSortColTypes, finalSortColsCount);
     ParamValue p_sortAscendings = ParamValue(finalSortAscendings, finalSortColsCount);
     ParamValue p_sortNullFirsts = ParamValue(finalSortNullFirsts, finalSortColsCount);
     ParamValue p_sortColCount = ParamValue(&finalSortColsCount);
+
     ParamValue p_sourceTypes = ParamValue(sourceTypes, typesCount);
     ParamValue p_outputCols = ParamValue(outputCols, outputColsCount);
     ParamValue p_outputColCount = ParamValue(&outputColsCount);
+
     auto *compareToSp = new Specialization();
     compareToSp->AddSpecializedParam(0, &p_sortCols);
     compareToSp->AddSpecializedParam(1, &p_sortColTypes);
@@ -661,31 +665,49 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     return (int64_t)lookupJoinOperatorFactory;
 }
 
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory(
-    JNIEnv *env, jobject jObj, jstring jSourceTypes, jboolean jReplicatesAnyRow, jint jNullChannel,
-    jintArray jPartitionChannels, jint jPartitionCount, jintArray jBucketToPartition)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOperatorFactory_createPartitionedOutputOperatorFactory
+    (JNIEnv *env, jobject jObj, jstring jSourceTypes, jboolean jReplicatesAnyRow, jint jNullChannel,
+    jintArray jPartitionChannels, jint jPartitionCount, jintArray jBucketToPartition, jboolean isHashPrecomputed,
+    jstring jHashChannelTypes, jintArray jHashChannels)
 {
     JNI_DEBUG_LOG("create partitionedoutput operator factory starting.");
     auto start = START();
     auto sourceTypesArrCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *partitionChannelsArr = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
     jint *bucketToPartitionArr = env->GetIntArrayElements(jBucketToPartition, JNI_FALSE);
+    auto bucketToPartitionArrPtr = env->GetStringUTFChars(jHashChannelTypes, JNI_FALSE);
+    jint *hashChannels = env->GetIntArrayElements(jHashChannels, JNI_FALSE);
 
     auto sourceVecTypes = Deserialize(sourceTypesArrCharPtr);
+    auto hashChannelVecTypes = Deserialize(bucketToPartitionArrPtr);
     jint sourceTypesCount = sourceVecTypes.GetSize();
     jint partitionChannelsCount = env->GetArrayLength(jPartitionChannels);
     jint bucketToPartitionCount = env->GetArrayLength(jBucketToPartition);
+    jint hashChannelTypesCount = hashChannelVecTypes.GetSize();
+    jint hashChannelCount = env->GetArrayLength(jHashChannels);
 
-    auto sourceTypesArr = const_cast<int32_t *>(sourceVecTypes.GetIds());
+    auto hashChannelTypesArr = const_cast<int32_t *>(hashChannelVecTypes.GetIds());
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
-        omniruntime::op::PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypesArr,
-        sourceTypesCount, jReplicatesAnyRow, jNullChannel, partitionChannelsArr, partitionChannelsCount,
-        jPartitionCount, bucketToPartitionArr, bucketToPartitionCount);
+        omniruntime::op::PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+            sourceVecTypes,
+            sourceTypesCount,
+            jReplicatesAnyRow,
+            jNullChannel,
+            partitionChannelsArr,
+            partitionChannelsCount,
+            jPartitionCount,
+            bucketToPartitionArr,
+            bucketToPartitionCount,
+            isHashPrecomputed,
+            hashChannelTypesArr,
+            hashChannelTypesCount,
+            hashChannels,
+            hashChannelCount);
     JNI_DEBUG_LOG("create partitionedoutput operator factory finished, elapsed time: %ld ms.", END(start));
     partitionedOutputOperatorFactory->SetJitContext(nullptr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesArrCharPtr);
+    env->ReleaseStringUTFChars(jHashChannelTypes, bucketToPartitionArrPtr);
     return (int64_t)partitionedOutputOperatorFactory;
 }
 

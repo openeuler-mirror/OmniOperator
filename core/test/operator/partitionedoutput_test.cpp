@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/partitionedoutput/partitionedoutput.h"
 #include "../util/test_util.h"
+#include "../../src/vector/vector_helper.h"
 #include "../../src/vector/vector_common.h"
 #include <vector>
 #include <chrono>
@@ -13,105 +14,258 @@ using namespace omniruntime::vec;
 using namespace std;
 
 TEST (PartitionedOutputOperatorTest, TestOnePartitionedOutput) {
-    const int32_t DATA_SIZE = 100;
-    int32_t *data1 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data1[i] = i;
-    }
+    const int32_t DATA_SIZE = 6;
+    VecTypes buildTypes(std::vector<VecType>({ IntVecType(), IntVecType(), IntVecType() }));
+    int buildData1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData1, buildData1);
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
 
-    int32_t *data2 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data2[i] = i;
-    }
-    int32_t *data0 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data0[i] = i;
-    }
-    VectorBatch *vecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    IntVector *column1 = new IntVector(nullptr, DATA_SIZE);
-    IntVector *column2 = new IntVector(nullptr, DATA_SIZE);
-    column0->SetValues(0, data0, DATA_SIZE);
-    column1->SetValues(0, data1, DATA_SIZE);
-    column2->SetValues(0, data2, DATA_SIZE);
-    vecBatch->SetVector(0, column1);
-    vecBatch->SetVector(1, column2);
-    vecBatch->SetVector(2, column0);
-
-    int32_t sourceTypes[3] = {1, 1, 1};
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = {0};
     int32_t partitionCount = 1;
     int32_t bucketToPartition[1] = {0};
+    int32_t hashChannelTypes[1] = {0};
+    int32_t hashChannelTypesCount = 1;
+    int32_t hashChannels[1] = {0};
+    int32_t hashChannelsCount = 1;
+
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
             PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
                     sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 1, partitionCount,
-                    bucketToPartition, 1);
-    PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
+                    bucketToPartition, 1, true, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    partitionedOutputOperatorFactory->SetJitContext(nullptr);
+    PartitionedOutputOperator *partitionedOperator = static_cast<PartitionedOutputOperator *> (partitionedOutputOperatorFactory->CreateOperator());
+
     partitionedOperator->AddInput(vecBatch);
 
-    EXPECT_EQ(partitionedOperator->getVectorBatches().size(), 1);
-    EXPECT_EQ(partitionedOperator->getVectorBatches()[0]->GetRowCount(), 100); // 111 row
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6); // 111 row
 
-    delete[]data0;
-    delete[]data1;
-    delete[]data2;
+    int32_t expectData0[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
+    int32_t expectData1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
+    VecTypes expectedTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, DATA_SIZE, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
     delete partitionedOperator;
-    delete partitionedOutputOperatorFactory;
-    vecBatch->ReleaseAllVectors();
-    delete vecBatch;
+    DeleteOperatorFactory(partitionedOutputOperatorFactory);
 }
 
 TEST (PartitionedOutputOperatorTest, TestMultiPartitionedOutput) {
-    const int32_t DATA_SIZE = 101;
-    int32_t *data1 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data1[i] = i;
-    }
+    const int32_t DATA_SIZE = 7;
+    VecTypes buildTypes(std::vector<VecType>({ IntVecType(), IntVecType(), IntVecType() }));
+    int buildData1[DATA_SIZE] = {0, 1, 2, 3, 4, 5, 6};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData1, buildData1);
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
 
-    int32_t *data2 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data2[i] = i;
-    }
-    int32_t *data0 = new int32_t[DATA_SIZE];
-    for (int32_t i = 0; i < DATA_SIZE; ++i) {
-        data0[i] = i;
-    }
-    VectorBatch *vecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    IntVector *column1 = new IntVector(nullptr, DATA_SIZE);
-    IntVector *column2 = new IntVector(nullptr, DATA_SIZE);
-    column0->SetValues(0, data0, DATA_SIZE);
-    column1->SetValues(0, data1, DATA_SIZE);
-    column2->SetValues(0, data2, DATA_SIZE);
-    vecBatch->SetVector(0, column1);
-    vecBatch->SetVector(1, column2);
-    vecBatch->SetVector(2, column0);
-
-    int32_t sourceTypes[3] = {1, 1, 1};
     bool replicatesAnyRow = false;
     int32_t nullChannel = -1;
     int32_t partitionChannels[1] = {0};
-    int32_t partitionCount = 2;
+    int32_t partitionCount = 1;
     int32_t bucketToPartition[2] = {0, 1};
+    int32_t hashChannelTypes[1] = {0};
+    int32_t hashChannelTypesCount = 1;
+    int32_t hashChannels[1] = {0};
+    int32_t hashChannelsCount = 1;
     PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
             PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
                     sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 1, partitionCount,
-                    bucketToPartition,
-                    2);
+                    bucketToPartition, 2, true, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
     PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
     partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+    EXPECT_EQ(outputVecBatch.size(), 2);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 4); // 4 row
+    EXPECT_EQ(outputVecBatch[1]->GetRowCount(), 3); // 3 row
 
-    EXPECT_EQ(partitionedOperator->getVectorBatches().size(), 2);
-    EXPECT_EQ(partitionedOperator->getVectorBatches()[0]->GetRowCount(), 51); // 111 row
-    EXPECT_EQ(partitionedOperator->getVectorBatches()[1]->GetRowCount(), 50); // 111 row
+    int32_t expectData0[DATA_SIZE] = {0, 2, 4, 6};
+    int32_t expectData1[DATA_SIZE] = {1, 3, 5};
+    VecTypes expectedTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 4, expectData0, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+    VectorBatch *expectVecBatch1 = CreateVectorBatch(expectedTypes, 3, expectData1, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[1], expectVecBatch1));
 
-    delete[]data0;
-    delete[]data1;
-    delete[]data2;
     delete partitionedOutputOperatorFactory;
     delete partitionedOperator;
-    vecBatch->ReleaseAllVectors();
-    delete vecBatch;
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch);
+}
+
+TEST (PartitionedOutputOperatorTest, TestHashIntPartitionedOutput) {
+    const int32_t DATA_SIZE = 6;
+    VecTypes buildTypes(std::vector<VecType>({ IntVecType(), IntVecType(), IntVecType() }));
+    int buildData1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData1, buildData1);
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType() }));
+
+    bool replicatesAnyRow = false;
+    int32_t nullChannel = -1;
+    int32_t partitionChannels[2] = {0, 1};
+    int32_t partitionCount = 2;
+    int32_t bucketToPartition[1] = {0};
+    int32_t hashChannelTypes[2] = {1, 1};
+    int32_t hashChannelTypesCount = 2;
+    int32_t hashChannels[2] = {0, 1};
+    int32_t hashChannelsCount = 2;
+    bool isHashPrecomputed = false;
+
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+            PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+                    sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 2, partitionCount,
+                    bucketToPartition, 1, isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
+    partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6); // 6 row
+    int32_t expectData0[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
+    VecTypes expectedTypes(std::vector<VecType>({ IntVecType() }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, DATA_SIZE, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    delete partitionedOperator;
+    delete partitionedOutputOperatorFactory;
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST (PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput) {
+    const int32_t DATA_SIZE = 3;
+    VecTypes buildTypes(std::vector<VecType>({ VarcharVecType(3), VarcharVecType(3) }));
+    std::string buildData1[DATA_SIZE] = {"abc", "de", "f"};
+    std::string buildData2[DATA_SIZE] = {"def", "bc", "a"};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData2);
+
+    bool isHashPrecomputed = false;
+
+    VecTypes sourceTypes(std::vector<VecType>({ VarcharVecType(3) }));
+    bool replicatesAnyRow = false;
+    int32_t nullChannel = -1;
+    int32_t partitionChannels[1] = {0};
+    int32_t partitionCount = 1;
+    int32_t bucketToPartition[1] = {0};
+    int32_t hashChannelTypes[1] = {15};
+    int32_t hashChannelTypesCount = 1;
+    int32_t hashChannels[1] = {0};
+    int32_t hashChannelsCount = 1;
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+            PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+                    sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 1, partitionCount,
+                    bucketToPartition, 1, isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
+    partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 4 row
+    string expectData0[3] = {"abc", "de", "f"};
+    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(3) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    delete partitionedOutputOperatorFactory;
+    delete partitionedOperator;
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+}
+
+TEST (PartitionedOutputOperatorTest, TestNullPartitionedOutput) {
+    const int32_t DATA_SIZE = 3;
+    VecTypes buildTypes(std::vector<VecType>({ VarcharVecType(3), VarcharVecType(3) }));
+    std::string buildData1[DATA_SIZE] = {"abc", "de", "f"};
+    std::string buildData2[DATA_SIZE] = {"def", "bc", "a"};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData2);
+    vecBatch->GetVector(0)->SetValueNull(0);
+
+    bool isHashPrecomputed = false;
+    VecTypes sourceTypes(std::vector<VecType>({ VarcharVecType(3) }));
+    bool replicatesAnyRow = false;
+    int32_t nullChannel = -1;
+    int32_t partitionChannels[1] = {0};
+    int32_t partitionCount = 1;
+    int32_t bucketToPartition[1] = {0};
+    int32_t hashChannelTypes[1] = {15};
+    int32_t hashChannelTypesCount = 1;
+    int32_t hashChannels[1] = {0};
+    int32_t hashChannelsCount = 1;
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+            PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+                    sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 1, partitionCount,
+                    bucketToPartition, 1, isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
+    partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
+    string expectData0[3] = {"abc", "de", "f"};
+    int32_t expectData1[DATA_SIZE] = {1, 3, 5};
+    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(3) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    delete partitionedOutputOperatorFactory;
+    delete partitionedOperator;
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+}
+
+TEST (PartitionedOutputOperatorTest, TestDecimalPartitionedOutput) {
+    const int32_t DATA_SIZE = 3;
+    VecTypes buildTypes(std::vector<VecType>({ Decimal64VecType(2,0), Decimal64VecType(2,0) }));
+    int64_t buildData1[DATA_SIZE] = {11, 22, 33};
+    int64_t buildData2[DATA_SIZE] = {33, 22, 111};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData2);
+    vecBatch->GetVector(0)->SetValueNull(0);
+
+    bool isHashPrecomputed = false;
+
+    VecTypes sourceTypes(std::vector<VecType>({ Decimal64VecType(2, 0) }));
+    bool replicatesAnyRow = false;
+    int32_t nullChannel = -1;
+    int32_t partitionChannels[1] = {0};
+    int32_t partitionCount = 1;
+    int32_t bucketToPartition[1] = {0};
+    int32_t hashChannelTypes[1] = {6};
+    int32_t hashChannelTypesCount = 1;
+    int32_t hashChannels[1] = {0};
+    int32_t hashChannelsCount = 1;
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+            PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+                    sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 1, partitionCount,
+                    bucketToPartition, 1, isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
+    partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
+    int64_t expectData0[3] = {11, 22, 33};
+    VecTypes expectedTypes(std::vector<VecType>({ Decimal64VecType(2,0) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    delete partitionedOutputOperatorFactory;
+    delete partitionedOperator;
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
 }

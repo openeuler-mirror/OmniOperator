@@ -101,11 +101,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
 /*
  * Class:     nova_hetu_omniruntime_operator_partitionedoutput_PartitionedOutputOperatorFactory
  * Method:    CreatePartitionedOutputOperatorFactory
- * Signature: ([IZI[II[I)J
+ * Signature: ([IZI[II[IZ[I[I)J
  */
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory(
-    JNIEnv *env, jobject, jstring, jboolean, jint, jintArray, jint, jintArray);
+Java_nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOperatorFactory_createPartitionedOutputOperatorFactory
+(JNIEnv *env, jobject, jstring, jboolean, jint, jintArray, jint, jintArray, jboolean, jstring, jintArray);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_union_UnionOperatorFactory
