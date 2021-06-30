@@ -63,7 +63,7 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::createHashBuilderOperato
 
 Operator *HashBuilderOperatorFactory::createOperator()
 {
-    int32_t partitionIndex = operatorIndex++;
+    int32_t partitionIndex = operatorIndex++ % hashTables->getHashTableCount();
     HashBuilderOperator *hashBuilderOperator = new HashBuilderOperator(
         buildTypes,
         buildTypesCount,
@@ -115,14 +115,20 @@ int32_t HashBuilderOperator::getOutput(std::vector<VectorBatch *>& outputPages)
     PagesHashStrategy *pagesHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
         buildTypes, buildTypesCount, buildHashCols, buildHashColsCount);
     JoinHashTable *joinHashTable = new JoinHashTable(pagesHashStrategy, pagesIndex->getValueAddresses(), pagesIndex->getPositionCount());
-
+    //joinHashTable->printHashTable(partitionIndex);
     hashTables->addHashTable(partitionIndex, joinHashTable);
+    setStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
 int32_t *HashBuilderOperator::getSourceTypes()
 {
     return buildTypes;
+}
+
+void HashBuilderOperator::close()
+{
+    hashTables->clear(partitionIndex);
 }
 } // end of op
 } // end of omniruntime

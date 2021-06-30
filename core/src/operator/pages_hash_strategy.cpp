@@ -12,7 +12,7 @@ PagesHashStrategy::PagesHashStrategy(Vector ***columns, int32_t *columnTypes, in
     this->buildHashColsCount = hashColsCount;
     this->buildHashColTypes = new int32_t[hashColsCount];
 
-    if(hashColsCount==0){
+    if(hashColsCount == 0) {
         this->buildHashColumns= nullptr;
     }
     else{
@@ -32,27 +32,20 @@ PagesHashStrategy::~PagesHashStrategy()
     delete[] buildHashColumns;
 }
 
-int64_t PagesHashStrategy::hashPosition(int32_t pageIndex, int32_t rowIndex)
-{
-    return hashPosition(pageIndex, rowIndex, buildHashColTypes, buildHashColsCount);
-}
-
-//SPECIALIZE(OMNIJIT_HASH_STRATEGY_HASH_POSITION)
-int64_t PagesHashStrategy::hashPosition(int32_t tableIndex, int32_t rowIndex, int32_t *hashColTypes, int32_t hashColCount)
+SPECIALIZE(OMNIJIT_HASH_STRATEGY_HASH_POSITION)
+int64_t hashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashColumns, int32_t *hashColTypes, int32_t hashColCount)
 {
     int64_t result = 0;
     Vector *column;
     int64_t hash;
-    void *valueAddr;
-    int32_t columnType;
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
-        column = buildHashColumns[columnIdx][tableIndex];
+        column = buildHashColumns[columnIdx][vecBatchIdx];
         if (column->isValueNull(rowIndex)) {
             continue;
         }
-        columnType = hashColTypes[columnIdx];
-        switch (columnType) {
+
+        switch (hashColTypes[columnIdx]) {
             case OMNI_VEC_TYPE_INT: {
                 int32_t intValue = ((IntVector *)column)->getValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)intValue);
@@ -115,34 +108,43 @@ bool doubleValueEqualsIgnoreNulls(double *leftData, int32_t leftIndex, double *r
     }
 }
 
-bool PagesHashStrategy::positionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex)
-{
-    return positionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex, rightRowIndex, buildHashColTypes, buildHashColsCount);
-}
-
-//SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
-bool PagesHashStrategy::positionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex, int32_t *hashColTypes, int32_t hashColCount)
+SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
+bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex,
+                                       int32_t leftRowIndex,
+                                       int32_t rightTableIndex,
+                                       int32_t rightRowIndex,
+                                       Vector ***buildHashColumns,
+                                       int32_t *hashColTypes,
+                                       int32_t hashColCount)
 {
     Vector *leftColumn;
     Vector *rightColumn;
-    int32_t columnType;
     bool result;
+    bool isSame = leftTableIndex == rightTableIndex;
+    void *leftValues;
+    void *rightValues;
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+        leftValues = leftColumn->getValues();
+        if (isSame) {
+            rightValues = leftValues;
+        }
+        else {
+            rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+            rightValues = rightColumn->getValues();
+        }
 
-        columnType = hashColTypes[columnIdx];
-        switch (columnType)
+        switch (hashColTypes[columnIdx])
         {
             case 1:
-                result = intValueEqualsIgnoreNulls((int32_t *)(leftColumn->getValues()), leftRowIndex, (int32_t *)(rightColumn->getValues()), rightRowIndex);
+                result = intValueEqualsIgnoreNulls((int32_t *)leftValues, leftRowIndex, (int32_t *)rightValues, rightRowIndex);
                 break;
             case 2:
-                result = int64ValueEqualsIgnoreNulls((int64_t *)(leftColumn->getValues()), leftRowIndex, (int64_t *)(rightColumn->getValues()), rightRowIndex);
+                result = int64ValueEqualsIgnoreNulls((int64_t *)leftValues, leftRowIndex, (int64_t *)rightValues, rightRowIndex);
                 break;
             case 3:
-                result = doubleValueEqualsIgnoreNulls((double *)(leftColumn->getValues()), leftRowIndex, (double *)(rightColumn->getValues()), rightRowIndex);
+                result = doubleValueEqualsIgnoreNulls((double *)leftValues, leftRowIndex, (double *)rightValues, rightRowIndex);
                 break;
             default:
                 result = false;
@@ -155,24 +157,22 @@ bool PagesHashStrategy::positionEqualsPositionIgnoreNulls(int32_t leftTableIndex
     return true;
 }
 
-bool PagesHashStrategy::positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, Vector **probeJoinColumns)
-{
-    return positionEqualsRowIgnoreNulls(buildTableIndex, buildRowIndex, probePosition, (int64_t)probeJoinColumns, buildHashColTypes, buildHashColsCount);
-}
-
-//SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
-bool PagesHashStrategy::positionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition, int64_t probeJoinColumnsAddr, int32_t *hashColTypes, int32_t hashColCount)
+SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
+bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex,
+                                  int32_t buildRowIndex,
+                                  int32_t probePosition,
+                                  Vector **probeJoinColumns,
+                                  Vector ***buildHashColumns,
+                                  int32_t *hashColTypes,
+                                  int32_t hashColCount)
 {
     bool result;
-    int32_t columnType;
-    Vector **probeJoinColumns = (Vector **)probeJoinColumnsAddr;
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
 
-        columnType = hashColTypes[columnIdx];
-        switch (columnType) {
+        switch (hashColTypes[columnIdx]) {
             case 1:
                 result = intValueEqualsIgnoreNulls((int32_t *)(buildColumn->getValues()), buildRowIndex, (int32_t *)(probeColumn->getValues()), probePosition);
                 break;

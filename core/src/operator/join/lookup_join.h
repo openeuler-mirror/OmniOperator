@@ -41,11 +41,13 @@ private:
     int32_t *probeOutputCols; // output columns for probe
     int32_t probeOutputColsCount;
     int32_t *probeHashCols;   // join columns for probe
+    int32_t *probeHashColTypes;
     int32_t probeHashColsCount;
     int32_t *buildOutputCols; // output columns for build
     int32_t *buildOutputTypes; // output column types for build
     int32_t buildOutputColsCount;
     JoinHashTables *hashTables;
+    int32_t rowSize;
 };
 
 class JoinProbe;
@@ -60,11 +62,13 @@ public:
         int32_t *probeOutputCols,
         int32_t probeOutputColsCount,
         int32_t *probeHashCols,
+        int32_t *probeHashColTypes,
         int32_t probeHashColsCount,
         int32_t *buildOutputCols,
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
-        JoinHashTables *hashTables);
+        JoinHashTables *hashTables,
+        int32_t outputRowSize);
     ~LookupJoinOperator();
     int32_t addInput(VectorBatch* data) override;
     int32_t getOutput(std::vector<VectorBatch *>& outputPages) override;
@@ -80,13 +84,13 @@ private:
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
     int32_t *probeHashCols;
+    int32_t *probeHashColTypes;
     int32_t probeHashColsCount;
     int32_t *buildOutputCols;
     int32_t *buildOutputTypes;
     int32_t buildOutputColsCount;
     JoinHashTables *hashTables;
     JoinProbe *joinProbe;
-    VectorBatch *outputVecBatch;
     int32_t partitionedJoinPosition; //the addressIndex combined partition for build, it is encoded by ((addressIndex << shiftSize) | partition)
     LookupJoinOutputBuilder *outputBuilder;
 };
@@ -94,7 +98,7 @@ private:
 class JoinProbe
 {
 public:
-    JoinProbe(VectorBatch *input, int32_t *hashCols, int32_t hashColsCount);
+    JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes, int32_t hashColsCount);
     ~JoinProbe();
     int32_t getPosition()
     {
@@ -114,6 +118,7 @@ private:
     int32_t probeAllColsCount;
     int32_t positionCount;
     Vector **probeHashColumns; // Vector *[join column count]
+    int32_t *probeHashColTypes;
     int32_t probeHashColsCount;
     int32_t position;
 };
@@ -121,19 +126,29 @@ private:
 class LookupJoinOutputBuilder
 {
 public:
-    LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols, int32_t *buildOutputTypes, int32_t buildOutputColsCount);
+    LookupJoinOutputBuilder(
+        int32_t *probeTypes,
+        int32_t *probeOutputCols,
+        int32_t probeOutputColsCount,
+        int32_t *buildOutputCols,
+        int32_t *buildOutputTypes,
+        int32_t buildOutputColsCount,
+        int32_t outputRowSize);
     ~LookupJoinOutputBuilder() {}
     void appendRow(int32_t probePosition, int64_t partitionedJoinPosition);
-    VectorBatch *buildOutput(JoinProbe *joinProbe, JoinHashTables *hashTables);
+    void buildOutput(JoinProbe *joinProbe, JoinHashTables *hashTables, std::vector<VectorBatch *>& outputTables);
 
 private:
+    int32_t *probeTypes;
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
     int32_t *buildOutputCols;
     int32_t *buildOutputTypes;
     int32_t buildOutputColsCount;
+    int32_t outputRowSize;
     std::vector<int32_t> probeIndex;
     std::vector<int64_t> buildIndex;
+    bool isSequentialProbeIndices;
 };
 } // end of op
 } // end of omniruntime

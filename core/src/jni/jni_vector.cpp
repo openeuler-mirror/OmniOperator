@@ -3,6 +3,7 @@
 //
 #include <stdint.h>
 #include <src/vector/vector_common.h>
+#include <src/vector/dictionary_vector.h>
 #include "../util/debug.h"
 #include "jni_vector.h"
 #include "../memory/memory_pool.h"
@@ -119,7 +120,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setValueCountNative
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector) {
     Vector *nativeVector = transformVector(jNativeVector);
-    return nativeVector->getReference()->getType();
+    return nativeVector->getType();
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative
@@ -197,6 +198,31 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_getVectorNative
         (JNIEnv *env, jclass jcls, jlong jVecBatchAddress, jint jVecIndex) {
     VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
     return (int64_t) vecBatch->getVector(jVecIndex);
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = transformVector(jNativeVector);
+    Vector *dictionary = reinterpret_cast<DictionaryVector *>(nativeVector)->getDictionary();
+    return reinterpret_cast<jlong>(dictionary);
+}
+
+JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getIdsNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = transformVector(jNativeVector);
+    DictionaryVector *dictionaryVector = reinterpret_cast<DictionaryVector *>(nativeVector);
+    int32_t *ids = dictionaryVector->getIds();
+    int32_t idsCount = dictionaryVector->getIdsCount();
+
+    jintArray jResult = env->NewIntArray(idsCount);
+    jint *result = env->GetIntArrayElements(jResult, nullptr);
+    for (int32_t i = 0; i < idsCount; i++) {
+        result[i] = ids[i];
+    }
+    env->ReleaseIntArrayElements(jResult, result, 0);
+    return jResult;
 }
 
 Vector *transformVector(long vectorAddr) {

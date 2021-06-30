@@ -62,6 +62,7 @@ public:
     int32_t addInput(VectorBatch *vecBatch) override;
     int32_t getOutput(std::vector<VectorBatch *>& outputPages) override;
     int32_t *getSourceTypes() override;
+    void close() override;
 private:
     int32_t *buildTypes;
     int32_t buildTypesCount;

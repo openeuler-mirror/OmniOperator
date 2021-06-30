@@ -5,6 +5,7 @@
 #include "status.h"
 #include <vector>
 
+const int32_t MAX_VEC_BATCH_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
 namespace op {
     class Operator {
@@ -23,7 +24,7 @@ namespace op {
 
         void setStatus(OmniStatus status) { this->status = status; };
 
-        void close() {}
+        virtual void close() {}
 
     private:
         int status;
