@@ -24,19 +24,24 @@ public class DoubleVec
         super(nativeVector);
     }
 
-    private DoubleVec(DoubleVec vector, int offset, int length)
+    private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+    }
+
+    private DoubleVec(DoubleVec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
     }
 
     public double get(int index)
     {
-        return getValues().getDouble((index + getOffset()) * BYTES);
+        return getValues().getDouble((index + offset) * BYTES);
     }
 
     public void set(int index, double value)
     {
-        getValues().putDouble((index + getOffset()) * BYTES, value);
+        getValues().putDouble(index * BYTES, value);
     }
 
     public void put(double[] values, int offset, int start, int length)
@@ -49,12 +54,24 @@ public class DoubleVec
     @Override
     public DoubleVec slice(int start, int end)
     {
-        return new DoubleVec(this, start + getOffset(), end - start);
+        return new DoubleVec(this, start, end - start, true);
     }
 
     @Override
     public DoubleVec copy()
     {
         return null;
+    }
+
+    @Override
+    public DoubleVec copyPositions(int[] positions, int offset, int length)
+    {
+        return new DoubleVec(this, positions, offset, length);
+    }
+
+    @Override
+    public DoubleVec copyRegion(int positionOffset, int length)
+    {
+        return new DoubleVec(this, positionOffset, length, false);
     }
 }

@@ -11,27 +11,34 @@
 VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
 
 TEST(LongVector, sliceVector) {
-    /**
-     * LongVector *vector = new LongVector(allocator, 1024, 256, OMNI_VEC_TYPE_LONG);
-     * vector->setValue(0, 1);
-     * long value = vector->getValue(0);
-     * delete vector;
-     */
     VectorAllocator *allocator = manager.getOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    LongVector *vector = new LongVector(allocator, 256);
+    LongVector *originalVector = new LongVector(allocator, 10);
+    for (int i = 0; i < originalVector->getSize(); i++) {
+        originalVector->setValue(i, i * 2);
+    }
 
-    LongVector *sliceVector = vector->slice(10, 20);
-    EXPECT_EQ(sliceVector->getPositionOffset(), 10);
-    EXPECT_EQ(sliceVector->getSize(), 20);
-    EXPECT_EQ(sliceVector->getReference()->getRef(), 2);
+    int offset = 3;
+    LongVector *slice1 = originalVector->slice(offset, 4);
+    EXPECT_EQ(slice1->getPositionOffset(), offset);
+    EXPECT_EQ(slice1->getSize(), 4);
+    EXPECT_EQ(slice1->getReference()->getRef(), 2);
+    for (int i = 0; i < slice1->getSize(); i++) {
+        EXPECT_EQ(slice1->getValue(i), originalVector->getValue(i + offset));
+    }
 
-    delete vector;
+    LongVector *slice2 = slice1->slice(1, 2);
+    for (int i = 0; i < slice2->getSize(); i++) {
+        EXPECT_EQ(slice2->getValue(i), originalVector->getValue(i + offset + 1));
+    }
 
-    EXPECT_EQ(sliceVector->getReference()->getRef(), 1);
+    delete originalVector;
+    EXPECT_EQ(slice1->getReference()->getRef(), 2);
 
-    delete sliceVector;
+    delete slice1;
+    EXPECT_EQ(slice2->getReference()->getRef(), 1);
+    delete slice2;
 
     manager.deleteAllocator(&allocator);
 }
@@ -50,6 +57,31 @@ TEST(LongVector, setAndGetValue) {
         EXPECT_EQ(vector->getValue(i), i * 2);
     }
     delete vector;
+    manager.deleteAllocator(&allocator);
+}
+
+// Test setValues
+TEST(LongVector, setValues) {
+    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != NULL);
+
+    const int size = 5;
+    int64_t values[size] = {1, 3, 4, 6, 7};
+    int64_t *p = values;
+    LongVector *longVector1 = new LongVector(allocator, size);
+    longVector1->setValues(0, p, size);
+    for (int i = 0; i < size; i++) {
+        EXPECT_EQ(longVector1->getValue(i), values[i]);
+    }
+        
+    LongVector *longVector2 = new LongVector(allocator, size);
+    longVector2->setValues(1, p + 2, 3);
+    for (int i = 0; i < 3; i++) {
+        EXPECT_EQ(longVector2->getValue(i + 1), values[i + 2]);
+    }
+
+    delete longVector1;
+    delete longVector2;
     manager.deleteAllocator(&allocator);
 }
 
@@ -150,6 +182,8 @@ TEST(LongVector, setValueNull) {
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             vector->setValueNull(i);
+        } else {
+            vector->setValue(i, i);
         }
     }
     for (int i = 0; i < 256; i++) {
@@ -160,6 +194,53 @@ TEST(LongVector, setValueNull) {
         }
     }
     delete vector;
+    manager.deleteAllocator(&allocator);
+}
+
+// Test is copyPosition
+TEST(LongVector, copyPositions) {
+    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
+    VectorAllocator *allocator = manager.getOrCreateAllocator("longVector");
+    EXPECT_TRUE(allocator != nullptr);
+
+    LongVector *originalVector = new LongVector(allocator, 4);
+    for (int i = 0; i < originalVector->getSize(); i++) {
+        originalVector->setValue(i, i);
+    }
+
+    int *possions = new int[2];
+    possions[0] = 1;
+    possions[1] = 3;
+    LongVector* copyPostionVector = originalVector->copyPositions(possions, 0, 2);
+
+    for (int i = 0; i < copyPostionVector->getSize(); i++) {
+        EXPECT_EQ(copyPostionVector->getValue(i), originalVector->getValue(possions[i]));
+    }
+
+    delete originalVector;
+    delete copyPostionVector;
+    manager.deleteAllocator(&allocator);
+}
+
+// Test is copyRegion
+TEST(LongVector, copyRegion) {
+    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
+    VectorAllocator *allocator = manager.getOrCreateAllocator("longVector");
+    EXPECT_TRUE(allocator != NULL);
+
+    LongVector *originalVector = new LongVector(allocator, 4);
+    for (int i = 0; i < 4; i++) {
+        originalVector->setValue(i, i * 2);
+    }
+
+    LongVector *copyRegionVector = originalVector->copyRegion(2, 2);
+
+    for (int i = 0; i < copyRegionVector->getSize(); i++) {
+        EXPECT_EQ(copyRegionVector->getValue(i), originalVector->getValue(i + 2));
+    }
+
+    delete originalVector;
+    delete copyRegionVector;
     manager.deleteAllocator(&allocator);
 }
 

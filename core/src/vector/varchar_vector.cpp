@@ -5,71 +5,44 @@
 VarcharVector::VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size) :
         VariableWidthVector(allocator, capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR) {}
 
-int VarcharVector::getValue(int index, char **dst) {
-    ASSERT(index >= 0);
-    int actualIndex = index + getPositionOffset();
-    ASSERT(actualIndex < getSize());
-    // check is null
-    // if (isValueNull(actualIndex)) {
-    //     dst = nullptr;
-    //     return -1;
-    // }
-
-    int startOffset = getValueOffset(actualIndex);
-    int dataLen =  getValueOffset(actualIndex + 1) - startOffset;
-    *dst = new char[dataLen];
-    getData(startOffset, *dst, 0, dataLen);
-    return dataLen;
-}
-
-void VarcharVector::setValue(int index, char *value, int length) {
-    ASSERT(index >= 0);
-    int actualIndex = index + getPositionOffset();
-    ASSERT(actualIndex < getSize());
-    
-    fillSlots(actualIndex);
-    setValueNullBitMap(actualIndex);
-    setData(actualIndex, value, 0, length);
-    lastOffsetPosition = actualIndex;
-}
-
 VarcharVector *VarcharVector::slice(int positionOffset, int length) {
     return new VarcharVector(this, length, positionOffset);
 }
 
 VarcharVector *VarcharVector::copyPositions(int *positions, int offset, int length) {
-    ASSERT(length < getSize());
+    ASSERT(length <= getSize());
     int totalDataLen = 0;
     for (int i = 0; i < length; i++) {
-        int position = positions[offset + i] + getPositionOffset();
+        int position = positions[offset + i] + positionOffset;
         totalDataLen += getValueOffset(position + 1) - getValueOffset(position);
     }
     VarcharVector *vector = new VarcharVector(getAllocator(), totalDataLen, length);
     for (int i = 0; i < length; i++) {
-        int position = positions[offset + i] + getPositionOffset();
+        int position = positions[offset + i] + positionOffset;
         int startOffset = getValueOffset(position);
         int dataLen =  getValueOffset(position + 1) - startOffset;
         char *data = reinterpret_cast<char *>(valuesAddress);
         vector->setValue(i, data + startOffset, dataLen);
+        vector->setValueNulls(i, ((bool *) valueNullsAddress) + position, 1);
     }
     return vector;
 }
 
 VarcharVector *VarcharVector::copyRegion(int positionOffset, int length) {
-    ASSERT(length < getSize());
-    int totalDataLen = 0;
-    for (int i = 0; i < length; i++) {
-        int position = positionOffset + i + getPositionOffset();
-        totalDataLen += getValueOffset(position + 1) - getValueOffset(position);
-    }
+    ASSERT(length <= getSize());
+    
+    int newPosition = positionOffset + this->positionOffset;
+    int startOffset = getValueOffset(newPosition);
+    int totalDataLen = getValueOffset(newPosition + length) - getValueOffset(newPosition);
 
     VarcharVector *vector = new VarcharVector(getAllocator(), totalDataLen, length);
-    for (int i = 0; i < length; i++) {
-        int position = positionOffset + i + getPositionOffset();
-        int startOffset = getValueOffset(position);
-        int dataLen =  getValueOffset(position + 1) - startOffset;
-        char *data = reinterpret_cast<char *>(valuesAddress);
-        vector->setValue(i, data + startOffset, dataLen);
+    std::memcpy(reinterpret_cast<char *>(vector->getValues()), (reinterpret_cast<char *>(valuesAddress)) + startOffset, totalDataLen);
+    vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset + this->positionOffset, length);
+    
+    // copy offset
+    int32_t *offsets = reinterpret_cast<int32_t *>(vector->getValueOffsets());
+    for (int32_t i = 1; i <= length; i++) {
+        offsets[i] =  getValueOffset(newPosition + i) - getValueOffset(newPosition);
     }
     return vector;
 }
@@ -83,7 +56,10 @@ void VarcharVector::getData(int startOffset, char* dst, int start, int length) {
     std::memcpy(dst + start, data + startOffset, length);
 }
 
-void VarcharVector::setData(int index, char* value, int start, int length) {
+void VarcharVector::setData(int index, const char* value, int start, int length) {
+    if (value == nullptr) {
+        return;
+    }
     int startOffset = getValueOffset(index);
     ASSERT(startOffset + length <= getReference()->getCapacityInBytes());
     setValueOffset(index + 1, startOffset + length);

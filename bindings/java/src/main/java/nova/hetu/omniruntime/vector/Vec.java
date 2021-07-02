@@ -33,7 +33,7 @@ public abstract class Vec
     /**
      * The capacity in bytes of this vector.
      */
-    private final int capacityInBytes;
+    protected int capacityInBytes;
 
     /**
      * The actual number of value.
@@ -44,7 +44,7 @@ public abstract class Vec
      * When a vector has been sliced,
      * this value will point to where is the new slice {@link Vec} start.
      */
-    private final int offset;
+    protected final int offset;
 
     /**
      * The value buffer.
@@ -77,7 +77,7 @@ public abstract class Vec
         this.offset = offset;
         this.nativeVector = nativeVector;
         this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
-        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector));
+        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
         this.isWritable = isWritable;
     }
 
@@ -115,21 +115,44 @@ public abstract class Vec
     }
 
     /**
-     * The routine is just for slicing vector operator.
+     * The routine is just for slicing and copyRegion vector operator.
      *
-     * @param vec the vector need to be sliced.
-     * @param offset When a vector has been sliced, this value will point to where is the new slice {@link Vec} start.
+     * @param vec the vector need to be sliced or copyRegion
+     * @param offset When a vector has been sliced or copyRegion, this value will point to where is the new slice {@link Vec} start.
      * @param length the number of value.
+     * @param isSlice Whether the current vector is sliced
      */
-    protected Vec(Vec vec, int offset, int length)
+    protected Vec(Vec vec, int offset, int length, boolean isSlice)
     {
         this(vec.allocator,
-                sliceVectorNative(vec.nativeVector, offset, length),
+                isSlice ? sliceVectorNative(vec.nativeVector, offset, length) : copyRegionNative(vec.nativeVector, offset, length),
                 vec.getCapacityInBytes(),
                 length,
-                offset,
+                isSlice ? offset + vec.getOffset() : 0,
                 vec.getType(),
-                false);
+                !isSlice);
+        if (!isSlice) {
+            capacityInBytes = getValues().capacity();
+        }
+    }
+
+    /**
+     * The routine is just for copyPosition vector operator.
+     * @param vec the vector need to be copy.
+     * @param positions the original vector positions
+     * @param offset offset of positions in the input parameter
+     * @param length number of elements copied
+     */
+    protected Vec(Vec vec, int[] positions, int offset, int length)
+    {
+        this(vec.allocator,
+                copyPositionsNative(vec.nativeVector, positions, offset, length),
+                0,
+                length,
+                0,
+                vec.getType(),
+                true);
+        capacityInBytes = getValues().capacity();
     }
 
     protected Vec(long nativeVector)
@@ -141,7 +164,7 @@ public abstract class Vec
         this.offset = getOffsetNative(nativeVector);
         this.nativeVector = nativeVector;
         this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
-        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector));
+        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     public long getNativeVector()
@@ -187,12 +210,12 @@ public abstract class Vec
 
     public boolean isNull(int index)
     {
-        return valueNulls.get(index);
+        return valueNulls.get(index + offset);
     }
 
     public void setNull(int index)
     {
-        valueNulls.set(index);
+        valueNulls.set(index + offset);
     }
 
     public boolean isWritable()
@@ -200,9 +223,13 @@ public abstract class Vec
         return isWritable;
     }
 
-    public abstract Vec slice(int start, int end);
+    public abstract Vec slice(int start, int length);
 
     public abstract Vec copy();
+
+    public abstract Vec copyPositions(int[] positions, int offset, int length);
+
+    public abstract Vec copyRegion(int positionOffset, int length);
 
     @Override
     public void close()
@@ -223,6 +250,10 @@ public abstract class Vec
     private static native long newVectorNative(int capacityInBytes, int size, int type, long allocator);
 
     private static native long sliceVectorNative(long nativeVector, int offset, int length);
+
+    private static native long copyPositionsNative(long nativeVector, int[] positions, int offset, int length);
+
+    private static native long copyRegionNative(long nativeVector, int positionOffset, int length);
 
     private static native void freeVectorNative(long allocator, long nativeVector);
 

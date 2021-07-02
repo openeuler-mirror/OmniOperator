@@ -41,9 +41,16 @@ public abstract class DecimalVec
         this.scale = getScale(nativeVector);
     }
 
-    protected DecimalVec(DecimalVec vector, int offset, int length)
+    protected DecimalVec(DecimalVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+        this.precision = vector.precision;
+        this.scale = vector.scale;
+    }
+
+    protected DecimalVec(DecimalVec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
         this.precision = vector.precision;
         this.scale = vector.scale;
     }
@@ -63,22 +70,15 @@ public abstract class DecimalVec
     protected void set(int index, BigDecimal value, int typeLength)
     {
         checkPrecisionAndScale(value);
-        final int newOffset = index + getOffset();
-        getValueNulls().set(newOffset);
-        writeBigDecimalToBuf(value, newOffset, typeLength);
+        getValueNulls().set(index);
+        writeBigDecimalToBuf(value, index, typeLength);
     }
 
     public abstract BigDecimal get(int index);
 
     protected BigDecimal get(int index, int typeLength)
     {
-        int newIndex = index + getOffset();
-        if (!getValueNulls().get(index + getOffset())) {
-            return null;
-        }
-        else {
-            return getBigDecimalFromBuf(newIndex, typeLength);
-        }
+        return getBigDecimalFromBuf(index + offset, typeLength);
     }
 
     private BigDecimal getBigDecimalFromBuf(int index, int typeLength)

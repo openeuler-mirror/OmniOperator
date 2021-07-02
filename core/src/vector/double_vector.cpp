@@ -18,19 +18,20 @@ DoubleVector *DoubleVector::slice(int positionOffset, int length) {
 }
 
 DoubleVector *DoubleVector::copyPositions(int *positions, int offset, int length) {
-    ASSERT(offset + length < getSize());
+    ASSERT(length <= getSize());
     DoubleVector *vector = new DoubleVector(getAllocator(), length);
     for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];
         vector->setValue(i, getValue(position));
+        vector->setValueNulls(i, ((bool *) valueNullsAddress) + position + positionOffset, 1);
     }
     return vector;
 }
 
 DoubleVector *DoubleVector::copyRegion(int positionOffset, int length) {
-    ASSERT(positionOffset + length < getSize());
+    ASSERT(positionOffset + length <= getSize());
     DoubleVector *vector = new DoubleVector(getAllocator(), length);
-    vector->setValues(0, (double *) valuesAddress + positionOffset, length);
-    vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset, length);
+    vector->setValues(0, (double *) valuesAddress + positionOffset + this->positionOffset, length);
+    vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset + this->positionOffset, length);
     return vector;
 }

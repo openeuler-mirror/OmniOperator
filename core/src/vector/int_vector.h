@@ -10,7 +10,7 @@ public:
     // inline for high performance.
     int32_t getValue(int index){
         ASSERT(index < getSize());
-        return ((int32_t *) valuesAddress)[index];
+        return ((int32_t *) valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.

@@ -24,19 +24,19 @@ public class ShortVec
         super(nativeVector);
     }
 
-    private ShortVec(ShortVec vector, int offset, int length)
+    private ShortVec(ShortVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
     }
 
     public short get(int index)
     {
-        return getValues().getShort((index + getOffset()) * BYTES);
+        return getValues().getShort((index + offset) * BYTES);
     }
 
     public void set(int index, short value)
     {
-        getValues().putShort((index + getOffset()) * BYTES, value);
+        getValues().putShort(index * BYTES, value);
     }
 
     public void put(short[] values, int offset, int start, int length)
@@ -49,11 +49,23 @@ public class ShortVec
     @Override
     public ShortVec slice(int start, int end)
     {
-        return new ShortVec(this, start + getOffset(), end - start);
+        return new ShortVec(this, start, end - start, true);
     }
 
     @Override
     public ShortVec copy()
+    {
+        return null;
+    }
+
+    @Override
+    public ShortVec copyPositions(int[] positions, int offset, int length)
+    {
+        return null;
+    }
+
+    @Override
+    public ShortVec copyRegion(int positionOffset, int length)
     {
         return null;
     }

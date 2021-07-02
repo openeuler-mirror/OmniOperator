@@ -10,7 +10,7 @@ public:
     // inline for high performance.
     double getValue(int index){
         ASSERT(index < getSize());
-        return ((double *) valuesAddress)[index];
+        return ((double *) valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.

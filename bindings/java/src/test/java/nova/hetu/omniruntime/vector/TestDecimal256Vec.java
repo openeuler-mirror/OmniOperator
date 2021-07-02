@@ -6,7 +6,7 @@ import java.math.BigInteger;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-public class Decimal256VecTest
+public class TestDecimal256Vec
 {
     //    @Test
     public void testSetAndGetDecimal()

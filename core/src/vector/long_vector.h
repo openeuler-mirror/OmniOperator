@@ -2,6 +2,7 @@
 #define __LONG_VECTOR__H__
 
 #include "fixed_width_vector.h"
+#include <limits>
 
 class LongVector : public FixedWidthVector<int64_t> {
 public:
@@ -10,8 +11,8 @@ public:
     // inline for high performance.
     int64_t getValue(int index){
         ASSERT(index < getSize());
-        return ((int64_t *)valuesAddress)[index];
-    };
+        return ((int64_t *)valuesAddress)[index + positionOffset];
+    }
 
     // inline for high performance.
     void setValue(int index, int64_t value){

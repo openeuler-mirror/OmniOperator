@@ -28,18 +28,31 @@ TEST(IntVector, sliceVector) {
     VectorAllocator *allocator = manager.getOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    IntVector *vector = new IntVector(allocator, 256);
+    IntVector *originalVector = new IntVector(allocator, 10);
+    for (int i = 0; i < originalVector->getSize(); i++) {
+        originalVector->setValue(i, i * 2);
+    }
 
-    IntVector *sliceVector = vector->slice(10, 20);
-    EXPECT_EQ(sliceVector->getPositionOffset(), 10);
-    EXPECT_EQ(sliceVector->getSize(), 20);
-    EXPECT_EQ(sliceVector->getReference()->getRef(), 2);
+    int offset = 3;
+    IntVector *slice1 = originalVector->slice(offset, 4);
+    EXPECT_EQ(slice1->getPositionOffset(), offset);
+    EXPECT_EQ(slice1->getSize(), 4);
+    EXPECT_EQ(slice1->getReference()->getRef(), 2);
+    for (int i = 0; i < slice1->getSize(); i++) {
+        EXPECT_EQ(slice1->getValue(i), originalVector->getValue(i + offset));
+    }
 
-    delete vector;
+    IntVector *slice2 = slice1->slice(1, 2);
+    for (int i = 0; i < slice2->getSize(); i++) {
+        EXPECT_EQ(slice2->getValue(i), originalVector->getValue(i + offset + 1));
+    }
 
-    EXPECT_EQ(sliceVector->getReference()->getRef(), 1);
+    delete originalVector;
+    EXPECT_EQ(slice1->getReference()->getRef(), 2);
 
-    delete sliceVector;
+    delete slice1;
+    EXPECT_EQ(slice2->getReference()->getRef(), 1);
+    delete slice2;
 
     manager.deleteAllocator(&allocator);
 }
@@ -59,6 +72,32 @@ TEST(IntVector, setAndGetValue) {
         EXPECT_EQ(vector->getValue(i), i * 2);
     }
     delete vector;
+    manager.deleteAllocator(&allocator);
+}
+
+// Test setValues
+TEST(IntVector, setValues) {
+    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
+    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != NULL);
+
+    const int size = 5;
+    int32_t values[size] = {1, 3, 4, 6, 7};
+    int32_t *p = values;
+    IntVector *intVector1 = new IntVector(allocator, size);
+    intVector1->setValues(0, p, size);
+    for (int i = 0; i < size; i++) {
+        EXPECT_EQ(intVector1->getValue(i), values[i]);
+    }
+    
+    IntVector *intVector2 = new IntVector(allocator, size);
+    intVector2->setValues(1, p + 2, 3);
+    for (int i = 0; i < 3; i++) {
+        EXPECT_EQ(intVector2->getValue(i + 1), values[i + 2]);
+    }
+
+    delete intVector1;
+    delete intVector2;
     manager.deleteAllocator(&allocator);
 }
 
@@ -165,6 +204,8 @@ TEST(IntVector, setValueNull) {
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             vector->setValueNull(i);
+        } else {
+            vector->setValue(i, i);
         }
     }
     for (int i = 0; i < 256; i++) {
@@ -178,7 +219,60 @@ TEST(IntVector, setValueNull) {
     manager.deleteAllocator(&allocator);
 }
 
-// Test is not writable
+// Test is copyPosition
+TEST(IntVector, copyPositions) {
+    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
+    VectorAllocator *allocator = manager.getOrCreateAllocator("intVector");
+    EXPECT_TRUE(allocator != nullptr);
 
-// Test multi thread
+    IntVector *originalVector = new IntVector(allocator, 4);
+    for (int i = 0; i < originalVector->getSize(); i++) {
+        originalVector->setValue(i, i);
+    }
+
+    int *possions = new int[2];
+    possions[0] = 1;
+    possions[1] = 3;
+    IntVector* copyPostionVector = originalVector->copyPositions(possions, 0, 2);
+
+    for (int i = 0; i < copyPostionVector->getSize(); i++) {
+        EXPECT_EQ(copyPostionVector->getValue(i), originalVector->getValue(possions[i]));
+    }
+
+    delete originalVector;
+    delete copyPostionVector;
+    manager.deleteAllocator(&allocator);
+}
+
+// Test is copyRegion
+TEST(IntVector, copyRegion) {
+    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
+    VectorAllocator *allocator = manager.getOrCreateAllocator("intVector");
+    EXPECT_TRUE(allocator != NULL);
+
+    IntVector *originalVector = new IntVector(allocator, 4);
+    for (int i = 0; i < 4; i++) {
+        originalVector->setValue(i, i * 2);
+    }
+
+    IntVector *copyRegionVector = originalVector->copyRegion(2, 2);
+
+    for (int i = 0; i < copyRegionVector->getSize(); i++) {
+        EXPECT_EQ(copyRegionVector->getValue(i), originalVector->getValue(i + 2));
+    }
+
+    delete originalVector;
+    delete copyRegionVector;
+    manager.deleteAllocator(&allocator);
+}
+
+TEST(IntVector, jniFreeVector) {
+    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
+    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+
+   IntVector *oritianlVector = new IntVector(allocator, 256);
+    Vector *vector = (Vector *) oritianlVector;
+    delete vector;
+}
 

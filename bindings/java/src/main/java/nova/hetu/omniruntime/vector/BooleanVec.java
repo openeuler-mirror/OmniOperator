@@ -1,24 +1,20 @@
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.utils.BitMapHelper;
-
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_BOOLEAN;
 
 public class BooleanVec
         extends FixedWidthVec
 {
-    private static final int BYTES = 0;
-    private static final int FALSE = 0;
-    private static final int TRUE = 1;
+    private static final int BYTES = 1;
 
     public BooleanVec(int size)
     {
-        super(BitMapHelper.computeSizeInBytes(size), size, OMNI_VEC_TYPE_BOOLEAN);
+        super(size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
     public BooleanVec(VecAllocator allocator, int size)
     {
-        super(allocator, BitMapHelper.computeSizeInBytes(size), size, OMNI_VEC_TYPE_BOOLEAN);
+        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
     protected BooleanVec(long nativeVector)
@@ -26,47 +22,59 @@ public class BooleanVec
         super(nativeVector);
     }
 
-    private BooleanVec(BooleanVec vector, int offset, int length)
+    private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
     }
 
-    /**
-     * in the specified position, set the corresponding value
-     *
-     * @param index position of element
-     * @param value 0 is false, others are true
-     */
-    public void set(int index, int value)
+    private BooleanVec(BooleanVec vector, int[] positions, int offset, int length)
     {
-        int newIndex = index + getOffset();
-        getValueNulls().set(newIndex);
-        if (value != FALSE) {
-            BitMapHelper.set(getValues(), newIndex);
+        super(vector, positions, offset, length);
+    }
+
+    public void set(int index, boolean value)
+    {
+        if (value) {
+            getValues().put(index, (byte) 1);
         }
         else {
-            BitMapHelper.unset(getValues(), newIndex);
+            getValues().put(index, (byte) 0);
         }
     }
 
     public boolean get(int index)
     {
-        int newIndex = index + getOffset();
-        if (isNull(newIndex)) {
-            return false;
+        return getValues().get((index + offset) * BYTES) == 1;
+    }
+
+    public void put(boolean[] values, int offset, int start, int length)
+    {
+        for (int i = 0; i < length; i++) {
+            set(i + offset, values[i + start]);
         }
-        return BitMapHelper.get(getValues(), newIndex) == TRUE;
     }
 
     @Override
     public BooleanVec slice(int startIdx, int endIdx)
     {
-        return new BooleanVec(this, startIdx, endIdx - startIdx);
+        return new BooleanVec(this, startIdx, endIdx - startIdx, true);
     }
 
     @Override
     public Vec copy()
     {
         return null;
+    }
+
+    @Override
+    public BooleanVec copyPositions(int[] positions, int offset, int length)
+    {
+        return new BooleanVec(this, positions, offset, length);
+    }
+
+    @Override
+    public BooleanVec copyRegion(int positionOffset, int length)
+    {
+        return new BooleanVec(this, positionOffset, length, false);
     }
 }

@@ -35,17 +35,33 @@ public:
 
     void *getValueNulls();
 
-    bool isValueNull(int index);
+    void *getValueOffsets();
 
-    void setValueNull(int index);
+    bool isValueNull(int index) {
+        ASSERT(index < size);
+        ASSERT(valueNullsAddress != nullptr);
+        return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
+    }
+
+    void setValueNull(int index) {
+        ASSERT(index < size);
+        ASSERT(valueNullsAddress != nullptr);
+        (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
+    }
 
     void setValueNulls(int startIndex, bool *nulls, int length);
 
     void setValueNullBitMap(int startIndex);
 
-    int getValueOffset(int index);
+    int getValueOffset(int index) {
+        ASSERT(index < size + 1);
+        return ((int32_t *) (valueOffsetsAddress))[index];
+    }
 
-    void setValueOffset(int index, int valueOffset);
+    void setValueOffset(int index, int valueOffset) {
+        ASSERT(index < size + 1);
+        ((int32_t *) (valueOffsetsAddress))[index] = valueOffset;
+    }
 
     virtual Vector *slice(int positionOffset, int length) = 0;
 
@@ -57,9 +73,9 @@ protected:
     void *valuesAddress;
     void *valueNullsAddress;
     void *valueOffsetsAddress;
+    int positionOffset = 0;
 private:
     int size;
-    int positionOffset;
     VectorReference *reference;
     VectorAllocator *allocator;
 };

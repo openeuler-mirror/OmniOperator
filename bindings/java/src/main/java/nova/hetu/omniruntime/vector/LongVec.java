@@ -25,9 +25,14 @@ public class LongVec
         super(nativeVector);
     }
 
-    private LongVec(LongVec vector, int offset, int length)
+    private LongVec(LongVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+    }
+
+    private LongVec(LongVec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
     }
 
     /**
@@ -43,12 +48,12 @@ public class LongVec
 
     public long get(int index)
     {
-        return getValues().getLong((index + getOffset()) * BYTES);
+        return getValues().getLong((index + offset) * BYTES);
     }
 
     public void set(int index, long value)
     {
-        getValues().putLong((index + getOffset()) * BYTES, value);
+        getValues().putLong(index * BYTES, value);
     }
 
     public void put(long[] values, int offset, int start, int length)
@@ -61,12 +66,24 @@ public class LongVec
     @Override
     public LongVec slice(int start, int end)
     {
-        return new LongVec(this, start + getOffset(), end - start);
+        return new LongVec(this, start, end - start, true);
     }
 
     @Override
     public LongVec copy()
     {
         return null;
+    }
+
+    @Override
+    public LongVec copyPositions(int[] positions, int offset, int length)
+    {
+        return new LongVec(this, positions, offset, length);
+    }
+
+    @Override
+    public LongVec copyRegion(int positionOffset, int length)
+    {
+        return new LongVec(this, positionOffset, length, false);
     }
 }

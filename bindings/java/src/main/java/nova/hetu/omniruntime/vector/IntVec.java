@@ -24,19 +24,24 @@ public class IntVec
         super(nativeVector);
     }
 
-    private IntVec(IntVec vector, int offset, int length)
+    private IntVec(IntVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+    }
+
+    private IntVec(IntVec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
     }
 
     public int get(int index)
     {
-        return getValues().getInt((index + getOffset()) * BYTES);
+        return getValues().getInt((index + offset) * BYTES);
     }
 
     public void set(int index, int value)
     {
-        getValues().putInt((index + getOffset()) * BYTES, value);
+        getValues().putInt(index * BYTES, value);
     }
 
     public void put(int[] values, int offset, int start, int length)
@@ -49,12 +54,24 @@ public class IntVec
     @Override
     public IntVec slice(int start, int end)
     {
-        return new IntVec(this, start + getOffset(), end - start);
+        return new IntVec(this, start, end - start, true);
     }
 
     @Override
     public IntVec copy()
     {
         return null;
+    }
+
+    @Override
+    public IntVec copyPositions(int[] positions, int offset, int length)
+    {
+        return new IntVec(this, positions, offset, length);
+    }
+
+    @Override
+    public IntVec copyRegion(int positionOffset, int length)
+    {
+        return new IntVec(this, positionOffset, length, false);
     }
 }

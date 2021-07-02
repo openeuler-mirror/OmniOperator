@@ -27,9 +27,14 @@ public class Decimal256Vec
         super(nativeVector);
     }
 
-    private Decimal256Vec(Decimal256Vec vector, int offset, int length)
+    private Decimal256Vec(Decimal256Vec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+    }
+
+    private Decimal256Vec(Decimal256Vec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
     }
 
     @Override
@@ -47,12 +52,24 @@ public class Decimal256Vec
     @Override
     public Decimal256Vec slice(int start, int end)
     {
-        return new Decimal256Vec(this, start, end - start);
+        return new Decimal256Vec(this, start, end - start, true);
     }
 
     @Override
     public Decimal256Vec copy()
     {
         throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Decimal256Vec is not supported");
+    }
+
+    @Override
+    public Decimal256Vec copyPositions(int[] positions, int offset, int length)
+    {
+        return new Decimal256Vec(this, positions, offset, length);
+    }
+
+    @Override
+    public Decimal256Vec copyRegion(int positionOffset, int length)
+    {
+        return new Decimal256Vec(this, positionOffset, length, false);
     }
 }
