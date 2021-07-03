@@ -15,9 +15,14 @@ public abstract class FixedWidthVec
         super(allocator, capacityInBytes, size, type);
     }
 
-    public FixedWidthVec(FixedWidthVec vector, int offset, int length)
+    public FixedWidthVec(FixedWidthVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+    }
+
+    public FixedWidthVec(FixedWidthVec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
     }
 
     protected FixedWidthVec(long nativeVector)

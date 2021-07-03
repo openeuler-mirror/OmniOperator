@@ -7,10 +7,28 @@ class VarcharVector : public VariableWidthVector<char *>
 {
 public:
     VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size);
-
-    int getValue(int index, char **dst);
-
-    void setValue(int index, char *value, int length);
+    
+    int getValue(int index, char **dst) {
+        ASSERT(index >= 0);
+        ASSERT(index < getSize());
+        int actualIndex = index + positionOffset;
+        
+        int startOffset = getValueOffset(actualIndex);
+        int dataLen =  getValueOffset(actualIndex + 1) - startOffset;
+        *dst = new char[dataLen];
+        getData(startOffset, *dst, 0, dataLen);
+        return dataLen;
+    }
+    
+    void setValue(int index, const char *value, int length) {
+        ASSERT(getReference()->isWritable());
+        ASSERT(index >= 0);
+        ASSERT(index < getSize());
+        
+        fillSlots(index);
+        setData(index, value, 0, length);
+        lastOffsetPosition = index;
+    }
 
     VarcharVector *slice(int index, int length);
 
@@ -23,7 +41,7 @@ private:
 
     void getData(int index, char* dst, int start, int length);
 
-    void setData(int index, char* data, int start, int length);
+    void setData(int index, const char* data, int start, int length);
     
     void fillSlots(int index);
 

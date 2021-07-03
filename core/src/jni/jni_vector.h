@@ -26,6 +26,21 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    copyPositionsNative
+ * Signature: (J[III)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNative
+  (JNIEnv *, jclass, jlong, jintArray, jint, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    copyRegionNative
+ * Signature: (JII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyRegionNative
+  (JNIEnv *, jclass, jlong, jint, jint);  
+/*
+ * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    freeVectorNative
  * Signature: (JJ)V
  */

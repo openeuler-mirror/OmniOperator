@@ -27,9 +27,14 @@ public class Decimal128Vec
         super(nativeVector);
     }
 
-    private Decimal128Vec(Decimal128Vec vector, int offset, int length)
+    private Decimal128Vec(Decimal128Vec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
+    }
+
+    private Decimal128Vec(Decimal128Vec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
     }
 
     @Override
@@ -47,12 +52,24 @@ public class Decimal128Vec
     @Override
     public Decimal128Vec slice(int start, int end)
     {
-        return new Decimal128Vec(this, start, end - start);
+        return new Decimal128Vec(this, start, end - start, true);
     }
 
     @Override
     public Decimal128Vec copy()
     {
         throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Decimal128Vec is not supported");
+    }
+
+    @Override
+    public Decimal128Vec copyPositions(int[] positions, int offset, int length)
+    {
+        return new Decimal128Vec(this, positions, offset, length);
+    }
+
+    @Override
+    public Vec copyRegion(int positionOffset, int length)
+    {
+        return new Decimal128Vec(this, positionOffset, length, false);
     }
 }

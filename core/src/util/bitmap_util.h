@@ -5,6 +5,7 @@
 #include <iostream>
 namespace BitMapUtil
 {
+    static int ROUND_8_MASK_INT = 0xFFFFFFF8;
 // get the index of byte corresponding to bit index in bitmap.
 static inline int byteIndex(int absoluteBitIndex)
 {
@@ -37,6 +38,12 @@ static inline bool getBit(const uint8_t* bits, int index)
     int bitIdx = bitIndex(index);
     uint8_t currentByte = bits[byteIdx];
     return (currentByte >> bitIdx) & 0x01;
+}
+
+// calculate the nearest number of bytes based on the number of elements
+static inline int computeSizeInBytes(int size)
+{
+    return ((size + 7) & ROUND_8_MASK_INT) >> 3;
 }
 }
 

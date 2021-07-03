@@ -12,8 +12,8 @@ public:
                                                                                                            capacityInBytes,
                                                                                                            size,
                                                                                                            type) {}
-    virtual int getValue(int index, T *dst) { return -1; }
+    int getValue(int index, T *dst);
 
-    virtual void setValue(int index, T data, int length) {}                                                                                                       
+    void setValue(int index, const T data, int length);                                                                                                      
 };
 #endif // __VARIABLE_WIDTH_VECTOR_OPERATOR_H__

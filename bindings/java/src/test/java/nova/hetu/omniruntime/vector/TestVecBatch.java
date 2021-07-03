@@ -2,7 +2,7 @@ package nova.hetu.omniruntime.vector;
 
 import org.testng.annotations.Test;
 
-public class VecBatchTest
+public class TestVecBatch
 {
     @Test
     public void testNewVecBatch()
