@@ -8,18 +8,22 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include "../config.h"
 
+#include <set>
+
 namespace omniruntime {
     namespace jit {
         class HardenOptimizer {
         public:
-            HardenOptimizer(unsigned OptLevel) {
+            HardenOptimizer(unsigned OptLevel, std::set<std::string> &specializedModules) {
                 pmb.OptLevel = OptLevel;
                 conf = *Config::getConf();
+                this->specializedModules = specializedModules;
             }
 
-            HardenOptimizer(unsigned OptLevel, Config &opt_config) {
+            HardenOptimizer(unsigned OptLevel, Config &opt_config, std::set<std::string> &specializedModules) {
                 pmb.OptLevel = OptLevel;
                 conf = opt_config;
+                this->specializedModules = specializedModules;
             }
 
             llvm::Expected<llvm::orc::ThreadSafeModule>
@@ -29,6 +33,7 @@ namespace omniruntime {
         private:
             llvm::PassManagerBuilder pmb;
             Config conf;
+            std::set<std::string> specializedModules;
 
             void populatePass(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM);
         };

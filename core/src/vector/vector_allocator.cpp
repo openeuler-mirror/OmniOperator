@@ -15,7 +15,7 @@ VectorReference *VectorAllocator::newVector(int capacityInBytes, int size, VecTy
     Chunk *valueOffsets = nullptr;
     if (isVariableWidthType(type)) {
         // 4-byte length storage variable length type offset
-        valueOffsets = new Chunk((size + 1) * 4);
+        valueOffsets = new Chunk((size + 1) * sizeof(int32_t));
     }
     return new VectorReference(values, valueNulls, valueOffsets, capacityInBytes, type);
 }

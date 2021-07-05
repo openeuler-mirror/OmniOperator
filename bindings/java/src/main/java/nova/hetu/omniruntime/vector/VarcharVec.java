@@ -1,8 +1,5 @@
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.utils.OmniErrorType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
-
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
 
 public class VarcharVec
@@ -10,43 +7,38 @@ public class VarcharVec
 {
     private static final byte[] emptyByteArray = new byte[] {};
 
-    private int lastOffsetPosition;
-    private int capacityInBytes;
+    private int lastOffsetPosition = -1;
 
     public VarcharVec(int capacityInBytes, int size)
     {
         super(capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR);
-        this.capacityInBytes = capacityInBytes;
-        lastOffsetPosition = -1;
     }
 
     public VarcharVec(VecAllocator allocator, int capacityInBytes, int size)
     {
         super(allocator, capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR);
-        lastOffsetPosition = -1;
     }
 
-    private VarcharVec(VarcharVec vector, int offset, int length)
+    private VarcharVec(VarcharVec vector, int offset, int length, boolean isSlice)
     {
-        super(vector, offset, length);
+        super(vector, offset, length, isSlice);
     }
 
-    protected VarcharVec(long nativeVector)
+    private VarcharVec(VarcharVec vector, int[] positions, int offset, int length)
+    {
+        super(vector, positions, offset, length);
+    }
+
+    public VarcharVec(long nativeVector)
     {
         super(nativeVector);
     }
 
     public byte[] getValue(int index)
     {
-        checkIndex(index);
-        final int actualIndex = index + getOffset();
-        // check is null
-        if (getValueNulls() != null && !getValueNulls().get(actualIndex)) {
-            return null;
-        }
-
-        final int startOffset = getValueOffset(index);
-        final int dataLen = getValueOffset(index + 1) - startOffset;
+        final int actualIndex = index + offset;
+        final int startOffset = getValueOffset(actualIndex);
+        final int dataLen = getValueOffset(actualIndex + 1) - startOffset;
         final byte[] data = new byte[dataLen];
         getData(startOffset, data, 0, data.length);
         return data;
@@ -54,35 +46,15 @@ public class VarcharVec
 
     private void getData(int startOffset, byte[] dst, int start, int length)
     {
-        if (startOffset > capacityInBytes - length) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, String.format("startOffset: %d, length: %d (expected: range(0, %d))",
-                    startOffset, length, capacityInBytes));
-        }
         getValues().position(startOffset);
         getValues().get(dst, start, length);
     }
 
     public void setValue(int index, byte[] value)
     {
-        checkIndex(index);
-        if (!isWritable()) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "this vector is not support written.");
-        }
-        final int actualIndex = index + getOffset();
-        fillSlots(actualIndex);
-        if (getValueNulls() != null) {
-            getValueNulls().set(actualIndex);
-        }
-        setData(actualIndex, value, 0, value.length);
-        lastOffsetPosition = actualIndex;
-    }
-
-    private void checkIndex(int index)
-    {
-        if (index < 0 || index >= getSize() - getOffset()) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "the actual index is not valid:index="
-                    + index + ",offset=" + getOffset() + ",elementCount=" + getSize());
-        }
+        fillSlots(index);
+        setData(index, value, 0, value.length);
+        lastOffsetPosition = index;
     }
 
     private void fillSlots(int index)
@@ -96,24 +68,32 @@ public class VarcharVec
     private void setData(int index, byte[] data, int start, int length)
     {
         final int startOffset = getValueOffset(index);
-        if (startOffset > capacityInBytes - length) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, String.format("startOffset: %d, length: %d (expected: range(0, %d))",
-                    startOffset, length, capacityInBytes));
-        }
         setValueOffset(index + 1, startOffset + data.length);
         getValues().position(startOffset);
         getValues().put(data, start, length);
     }
 
     @Override
-    public Vec slice(int start, int end)
+    public VarcharVec slice(int start, int end)
     {
-        return new VarcharVec(this, start + getOffset(), end - start);
+        return new VarcharVec(this, start, end - start, true);
     }
 
     @Override
     public Vec copy()
     {
         return null;
+    }
+
+    @Override
+    public VarcharVec copyPositions(int[] positions, int offset, int length)
+    {
+        return new VarcharVec(this, positions, offset, length);
+    }
+
+    @Override
+    public VarcharVec copyRegion(int positionOffset, int length)
+    {
+        return new VarcharVec(this, positionOffset, length, false);
     }
 }

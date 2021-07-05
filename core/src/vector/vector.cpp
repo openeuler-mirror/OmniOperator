@@ -25,7 +25,7 @@ Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecTyp
 }
 
 Vector::Vector(Vector *vector, int size, int positionOffset)
-        : allocator(vector->allocator), reference(vector->reference), size(size), positionOffset(positionOffset){
+        : allocator(vector->allocator), reference(vector->reference), size(size), positionOffset(vector->positionOffset + positionOffset) {
     reference->incRef();
     valuesAddress = reference->getValuesAddress();
     valueNullsAddress = reference->getValueNullsAddress();
@@ -33,34 +33,17 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
 }
 
 Vector::~Vector() {
+    if (reference == nullptr) {
+        std::cerr << "reference is null" << std::endl;
+    }
     if (0 == reference->decRef()) {
         delete reference;
     }
 }
 
-bool Vector::isValueNull(int index) {
-    ASSERT(index < size);
-    return ((bool *) (valueNullsAddress))[index];
-}
-
-void Vector::setValueNull(int index) {
-    ASSERT(index < size);
-    ((bool *) (valueNullsAddress))[index] = true;
-}
-
 void Vector::setValueNulls(int startIndex, bool *nulls, int length) {
     ASSERT(startIndex + length < size);
     std::memcpy(((bool *) valueNullsAddress) + startIndex, nulls, length);
-}
-
-int Vector::getValueOffset(int index) {
-    ASSERT(index < size + 1);
-    return ((int *) (valueOffsetsAddress))[index];
-}
-
-void Vector::setValueOffset(int index, int valueOffset) {
-    ASSERT(index < size + 1);
-    ((int *) (valueOffsetsAddress))[index] = valueOffset;
 }
 
 int Vector::getSize() {
@@ -84,11 +67,15 @@ VecType Vector::getType() {
 }
 
 void *Vector::getValues() {
-    return reference->getValuesAddress();
+    return valuesAddress;
 }
 
 void *Vector::getValueNulls() {
     return valueNullsAddress;
+}
+
+void *Vector::getValueOffsets() {
+    return valueOffsetsAddress;
 }
 
 void Vector::setSize(int size) {
@@ -97,6 +84,7 @@ void Vector::setSize(int size) {
 
 void Vector::setValueNullBitMap(int index) {
     if (valueNullsAddress != nullptr) {
+        // std::cout << "set value null BitMap" << std::endl;
         BitMapUtil::set(reinterpret_cast<uint8_t *>(valueNullsAddress), index);
     }
 }

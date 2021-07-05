@@ -90,10 +90,16 @@ namespace omniruntime {
         }
 
         uint64_t LLVMCompiler::specializeAndCompile() {
+            std::set<string> specializedModules;
             for (auto const &module : this->modules) {
-                specializeModule(module);
+                bool specialized = specializeModule(module);
+                if (specialized) {
+                    specializedModules.insert(module->getName().str());
+                }
             }
-            auto jit = compileModules();
+            auto jit = compileModules(specializedModules);
+            specializedModules.clear();
+
             if (jit) {
                 if (this->createOperatorSymbol.empty()) {
                     llvm::errs() << "Error: CreateOperator function not found yet\n";
@@ -120,6 +126,9 @@ namespace omniruntime {
             using namespace llvm;
 
             map<string, Function *> annotatedFuncs = getAnnotatedFuncs(module);
+            if (annotatedFuncs.empty()) {
+                return false;
+            }
 
             for (auto &funcPair : annotatedFuncs) {
                 string id = funcPair.first;
@@ -174,7 +183,7 @@ namespace omniruntime {
         // values for the parameters that is not harden
         // conflicting params, e.g. param value provided during hardening cannot be provided here again
         // this should be used for testing purpose only, we should expose a new function with new function type
-        std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules() {
+        std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(set<string> &specializedModules) {
             using namespace llvm;
             using namespace llvm::orc;
             //ELF format on linux to be supported later with llvm-12.0.1 fix
@@ -195,7 +204,7 @@ namespace omniruntime {
                                     //                            })
                             .create());
 
-            JITTER->getIRTransformLayer().setTransform(HardenOptimizer(CodeGenOpt::Default));
+            JITTER->getIRTransformLayer().setTransform(HardenOptimizer(CodeGenOpt::Default, specializedModules));
             // JITTER->getIRTransformLayer().setTransform(OptimizationTransform());
 
             // enable loading common libraries available in the current process

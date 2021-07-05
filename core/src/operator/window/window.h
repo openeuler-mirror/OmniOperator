@@ -29,6 +29,106 @@ public:
 
     Operator *createOperator();
 
+    int32_t *getSourceTypes() const
+    {
+        return sourceTypes;
+    }
+
+    int32_t getTypesCount() const
+    {
+        return typesCount;
+    }
+
+    int32_t *getOutputCols() const
+    {
+        return outputCols;
+    }
+
+    int32_t getOutputColsCount() const
+    {
+        return outputColsCount;
+    }
+
+    int32_t *getWindowFunctionTypes() const
+    {
+        return windowFunctionTypes;
+    }
+
+    int32_t getWindowFunctionCount() const
+    {
+        return windowFunctionCount;
+    }
+
+    int32_t *getPartitionCols() const
+    {
+        return partitionCols;
+    }
+
+    int32_t getPartitionCount() const
+    {
+        return partitionCount;
+    }
+
+    int32_t *getPreGroupedCols() const
+    {
+        return preGroupedCols;
+    }
+
+    int32_t getPreGroupedCount() const
+    {
+        return preGroupedCount;
+    }
+
+    int32_t *getSortCols() const
+    {
+        return sortCols;
+    }
+
+    int32_t *getSortAscendings() const
+    {
+        return sortAscendings;
+    }
+
+    int32_t *getSortNullFirsts() const
+    {
+        return sortNullFirsts;
+    }
+
+    int32_t getSortColCount() const
+    {
+        return sortColCount;
+    }
+
+    int32_t getPreSortedChannelPrefix() const
+    {
+        return preSortedChannelPrefix;
+    }
+
+    int32_t getExpectedPositions() const
+    {
+        return expectedPositions;
+    }
+
+    int32_t *getAllTypes() const
+    {
+        return allTypes;
+    }
+
+    int32_t getAllCount() const
+    {
+        return allCount;
+    }
+
+    int32_t *getArgumentChannels() const
+    {
+        return argumentChannels;
+    }
+
+    int32_t getArgumentChannelsCount() const
+    {
+        return argumentChannelsCount;
+    }
+
 private:
     int32_t *sourceTypes;
     int32_t typesCount;

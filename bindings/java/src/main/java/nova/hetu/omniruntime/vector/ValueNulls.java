@@ -1,7 +1,5 @@
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.utils.BitMapHelper;
-
 import java.nio.ByteBuffer;
 
 public class ValueNulls
@@ -15,12 +13,12 @@ public class ValueNulls
 
     public void set(int index)
     {
-        BitMapHelper.set(bitmap, index);
+        bitmap.put(index, (byte) 1);
     }
 
     public void unset(int index)
     {
-        BitMapHelper.unset(bitmap, index);
+        bitmap.put(index, (byte) 0);
     }
 
     public void set(ValueNulls valueNulls)
@@ -30,6 +28,6 @@ public class ValueNulls
 
     public boolean get(int index)
     {
-        return BitMapHelper.get(bitmap, index) == 1;
+        return bitmap.get(index) == 1;
     }
 }

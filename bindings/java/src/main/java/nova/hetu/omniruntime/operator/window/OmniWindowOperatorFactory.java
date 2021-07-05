@@ -97,7 +97,7 @@ public class OmniWindowOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(sourceTypes, outputChannels, windFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputChannels), Arrays.hashCode(windFunction), Arrays.hashCode(partitionChannels), Arrays.hashCode(preGroupedChannels), Arrays.hashCode(sortChannels), Arrays.hashCode(sortOrder), Arrays.hashCode(sortNullFirsts), preSortedChannelPrefix, expectedPositions, Arrays.hashCode(argumentChannels), Arrays.hashCode(windowFunctionReturnType));
         }
 
         @Override
@@ -113,7 +113,18 @@ public class OmniWindowOperatorFactory
                 return false;
             }
             Context context = (Context) o;
-            return preSortedChannelPrefix == context.preSortedChannelPrefix && expectedPositions == context.expectedPositions && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(outputChannels, context.outputChannels) && Arrays.equals(windFunction, context.windFunction) && Arrays.equals(partitionChannels, context.partitionChannels) && Arrays.equals(preGroupedChannels, context.preGroupedChannels) && Arrays.equals(sortChannels, context.sortChannels) && Arrays.equals(sortOrder, context.sortOrder) && Arrays.equals(sortNullFirsts, context.sortNullFirsts) && Arrays.equals(argumentChannels, context.argumentChannels) && Arrays.equals(windowFunctionReturnType, context.windowFunctionReturnType);
+            return preSortedChannelPrefix == context.preSortedChannelPrefix
+                    && expectedPositions == context.expectedPositions
+                    && Arrays.equals(sourceTypes, context.sourceTypes)
+                    && Arrays.equals(outputChannels, context.outputChannels)
+                    && Arrays.equals(windFunction, context.windFunction)
+                    && Arrays.equals(partitionChannels, context.partitionChannels)
+                    && Arrays.equals(preGroupedChannels, context.preGroupedChannels)
+                    && Arrays.equals(sortChannels, context.sortChannels)
+                    && Arrays.equals(sortOrder, context.sortOrder)
+                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
+                    && Arrays.equals(argumentChannels, context.argumentChannels)
+                    && Arrays.equals(windowFunctionReturnType, context.windowFunctionReturnType);
         }
     }
 }
