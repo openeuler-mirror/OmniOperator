@@ -45,16 +45,31 @@ public final class OmniOperator
 
         public VecBatchIterator()
         {
+            resetIterator();
             advanced();
         }
 
         @Override
         public boolean hasNext()
         {
+            // if it first, the results is null,
+            // or index reach the count of vector batches but it don't finished,
+            // then advanced().
             if (results == null || (index == results.getVecBatches().length && !isFinished())) {
+                resetIterator();
                 advanced();
             }
-            if (results == null || index == results.getVecBatches().length) {
+
+            // after advanced(), if results is still null,
+            // means there is no more data.
+            if (results == null) {
+                return false;
+            }
+
+            // if index reach the count of vector batches
+            // means it finished, return and clean the context.
+            if (index == results.getVecBatches().length) {
+                resetIterator();
                 return false;
             }
             return true;
@@ -66,9 +81,14 @@ public final class OmniOperator
             return results.getVecBatches()[index++];
         }
 
+        private void resetIterator()
+        {
+            results = null;
+            index = 0;
+        }
+
         private void advanced()
         {
-            index = 0;
             results = getOutputNative(nativeOperator);
         }
 

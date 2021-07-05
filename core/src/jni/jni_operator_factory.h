@@ -54,6 +54,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAnd
 */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory
         (JNIEnv *, jobject, jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jint,jint,jintArray,jintArray);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniTopNOperatorFactory
+ * Method:    createTopNOperatorFactory
+ * Signature: ([I[I[II)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory
+        (JNIEnv *env, jobject jObj, jintArray jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts);
+
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory
  * Method:    createHashBuilderOperatorFactory
