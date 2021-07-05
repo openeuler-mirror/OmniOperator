@@ -107,13 +107,13 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
 {
     using namespace omniruntime::op;
     // construct input data
-    const int32_t DATA_SIZE = 100000;
-     int32_t *data1 = new int32_t[DATA_SIZE];
+    const int32_t DATA_SIZE = 10000000;
+     int64_t *data1 = new int64_t[DATA_SIZE];
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
         data1[i] = i;
     }
 
-    int32_t *data2 = new int32_t[DATA_SIZE];
+    int64_t *data2 = new int64_t[DATA_SIZE];
     for (int32_t i = 0; i < DATA_SIZE; ++i) {
         data2[i] = i;
     }
@@ -121,7 +121,9 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
     // add input
     VectorBatch *vecBatch = new VectorBatch(2);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
+    column1->setValues(0, data1, DATA_SIZE);
     LongVector *column2 = new LongVector(nullptr, DATA_SIZE);
+    column2->setValues(0, data2, DATA_SIZE);
     vecBatch->setVector(0, column1);
     vecBatch->setVector(1, column2);
 

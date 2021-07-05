@@ -1,6 +1,11 @@
 #include "pages_index.h"
 #include "optimization.h"
 #include "../jit/annotation.h"
+#include "../vector/int_vector.h"
+#include "../vector/long_vector.h"
+#include "../vector/double_vector.h"
+#include "../vector/vector_helper.h"
+#include "util/operator_util.h"
 
 #include <algorithm>
 
@@ -179,42 +184,6 @@ int32_t compareNull(int32_t *leftNulls, int32_t leftPosition, int32_t *rightNull
     return 2;
 }
 
-int32_t compareIntValue(int32_t *leftData, int32_t leftPosition, int32_t *rightData, int32_t rightPosition)
-{
-    return leftData[leftPosition] - rightData[rightPosition];
-}
-
-int32_t compareInt64Value(int64_t *leftData, int32_t leftPosition, int64_t *rightData, int32_t rightPosition)
-{
-    int64_t leftValue = leftData[leftPosition];
-    int64_t rightValue = rightData[rightPosition];
-    if (leftValue > rightValue) {
-        return 1;
-    }
-    else if (leftValue < rightValue) {
-        return -1;
-    }
-    else {
-        return 0;
-    }
-}
-
-int32_t compareDoubleValue(double *leftData, int32_t leftPosition, double *rightData, int32_t rightPosition)
-{
-    double leftValue = leftData[leftPosition];
-    double rightValue = rightData[rightPosition];
-
-    if (leftValue > rightValue) {
-        return 1;
-    }
-    else if (leftValue < rightValue) {
-        return -1;
-    }
-    else {
-        return 0;
-    }
-}
-
 SPECIALIZE(OMNIJIT_PAGE_INDEX_COMPARE_TO)
 int32_t compareTo(
     int64_t pagesIndexAddr,
@@ -270,20 +239,7 @@ int32_t compareTo(
         //     break;
         // }
 
-        switch (colType)
-        {
-        case 1:
-            compare = compareIntValue((int32_t *)leftData, leftColumnPosition, (int32_t *)rightData, rightColumnPosition);
-            break;
-        case 2:
-            compare = compareInt64Value((int64_t *)leftData, leftColumnPosition, (int64_t *)rightData, rightColumnPosition);
-            break;
-        case 3:
-            compare = compareDoubleValue((double *)leftData, leftColumnPosition, (double *)rightData, rightColumnPosition);
-            break;
-        default:
-            break;
-        }
+        compare= OperatorUtil::compareVectorAtPosition((VecType)colType, leftColumn,leftColumnPosition,rightColumn,rightColumnPosition);
 
         if (sortAscendings[i] == 0) {
             compare = -compare;

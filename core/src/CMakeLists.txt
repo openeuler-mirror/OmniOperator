@@ -63,6 +63,7 @@ set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_function.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_partition.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp
         )
 foreach (SOURCE_FILE ${SOURCE_FILES})
