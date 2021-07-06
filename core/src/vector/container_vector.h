@@ -28,6 +28,7 @@ public:
         for (int32_t i = 0; i < vectorCount; ++i) {
             setValue(i, reinterpret_cast<int64_t>(fieldVectors[i]));
             this->vecTypes.push_back(types[i]);
+            this->vectorOffsets.push_back(vectorOffsets[i]);
         }
     }
 
