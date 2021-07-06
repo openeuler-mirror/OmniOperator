@@ -1,12 +1,5 @@
-#include "stdio.h"
-#include "chrono"
-#include <vector>
-#include "filter.h"
+#include "filter_and_project.h"
 #include "filter_compiler.h"
-#include "../projection/projection.h"
-#include "../../common/expressions.h"
-#include "../../common/parser/parser.h"
-#include "../../codegen/llvm_codegen.h"
 
 namespace omniruntime {
 namespace op {
@@ -21,15 +14,23 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     this->setJitContext(nullptr);
 
     Parser parserObject;
-    std::cout << "parsing: " << expression << std::endl;
+    // std::cout << "parsing: " << expression << std::endl;
     Expr* parsedExpr = parserObject.parseRowExpression(expression, inputTypes, vecCount);
-    parsedExpr->printExprTree();
+    // parsedExpr->printExprTree();
     // std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
     //TODO: replace the placeholder context
     Compiler *compiler = new Compiler(parsedExpr, inputTypes, vecCount);
     this->filter = compiler->compile();
     delete compiler;
+    this->projections = new Projection*[this->projectVecCount];
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        DataExpr* exp = new DataExpr();
+        exp->isColumn = true;
+        exp->colVal = this->projectIndex[i];
+        exp->dataType = Parser::colTypeTrans(inputTypes[projectIndex[i]]);
+        projections[i] = new Projection(inputTypes, vecCount, exp, true);
+    }
 }
 
 FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
@@ -39,21 +40,20 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 
 Operator * FilterAndProjectOperatorFactory::createOperator()
 {
-    return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projectIndex, this->projectVecCount);
+    return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projections, this->projectVecCount);
 }
 
 int32_t FilterAndProjectOperator::addInput(VectorBatch* vecBatch)
 {
-    int32_t *selectedRows = new int32_t[vecBatch->getRowCount()];
-    // std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    int32_t* selectedRows = new int32_t[vecBatch->getRowCount()];
     int32_t numSelectedRows = this->filter->filter(vecBatch, selectedRows);
-    // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    // std::cout << "TIME TAKEN = " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "[ns]" << std::endl;
-    Projection *projection = new Projection(this->inputTypes, this->vecCount, vecBatch->getRowCount(), this->projectIndex, this->projectVecCount);
-    VectorBatch *projectedData = projection->project(selectedRows, numSelectedRows, vecBatch);
+    VectorBatch* projectedData = new VectorBatch(this->projectVecCount);
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        Vector* col = this->projections[i]->project(vecBatch, selectedRows, numSelectedRows);
+        projectedData->setVector(i, col);
+    }
     this->projectedVecs = projectedData;
     delete[] selectedRows;
-    delete projection;
     return numSelectedRows;
 }
 
@@ -69,10 +69,11 @@ int32_t FilterAndProjectOperator::getOutput(std::vector<VectorBatch*>& data)
     return projectedVecs->getRowCount();
 }
 
-Filter::Filter(LLVMCodeGen* codeGen, Expr* expr)
+Filter::Filter(FilterCodeGen* codeGen, Expr* expr)
 {
     this->codeGen = codeGen;
     this->expr = expr;
+    this->func = (int32_t (*)(int64_t*, int32_t, int32_t*)) (intptr_t) codeGen->getFunction();
 }
 
 int32_t Filter::filter(VectorBatch *vecBatch, int32_t *selectedRows)
@@ -83,7 +84,7 @@ int32_t Filter::filter(VectorBatch *vecBatch, int32_t *selectedRows)
         data[i] = (int64_t) vecBatch->getVector(i)->getValues();
     }
 
-    return this->codeGen->execute(data, vecBatch->getRowCount(), selectedRows);
+    return this->func(data, vecBatch->getRowCount(), selectedRows);
 }
 } // end of op
 } // end of omniruntime

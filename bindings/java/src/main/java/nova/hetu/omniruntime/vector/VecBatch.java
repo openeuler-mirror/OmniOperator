@@ -23,10 +23,10 @@ public class VecBatch
 
     private final long nativeVectorBatch;
 
-    public VecBatch(Vec[] vectors)
+    public VecBatch(Vec[] vectors, int size)
     {
         this.vectors = vectors;
-        this.rowCount = vectors[0].getSize();
+        this.rowCount = size;
         this.nativeVectorBatch = newVectorBatchNative(vectors.length);
         int index = 0;
         for (Vec vector : vectors) {
@@ -34,9 +34,62 @@ public class VecBatch
         }
     }
 
+    public VecBatch(Vec[] vectors)
+    {
+        this(vectors, vectors[0].getSize());
+    }
+
+    public VecBatch(List<Vec> vectors, int size)
+    {
+        this(vectors.toArray(new Vec[vectors.size()]), size);
+    }
+
     public VecBatch(List<Vec> vectors)
     {
         this(vectors.toArray(new Vec[vectors.size()]));
+    }
+
+    public VecBatch(long nativeVectorBatch, int size)
+    {
+        this.nativeVectorBatch = nativeVectorBatch;
+        int vectorCount = getVectorCountNative(nativeVectorBatch);
+        /*
+        if (vectorCount == 0) {
+            throw new IllegalArgumentException("There is no vector in the vec batch.");
+        }
+        */
+        vectors = new Vec[vectorCount];
+        for (int idx = 0; idx < vectorCount; idx++) {
+            Vec vector;
+            long nativeVector = getVectorNative(nativeVectorBatch, idx);
+            VecType type = new VecType(getTypeNative(nativeVector));
+            if (OMNI_VEC_TYPE_INT.equals(type)) {
+                vector = new IntVec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_LONG.equals(type)) {
+                vector = new LongVec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_DOUBLE.equals(type)) {
+                vector = new DoubleVec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_SHORT.equals(type)) {
+                vector = new ShortVec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_VARCHAR.equals(type)) {
+                vector = new VarcharVec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_128_DECIMAL.equals(type)) {
+                vector = new Decimal128Vec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_256_DECIMAL.equals(type)) {
+                vector = new Decimal256Vec(nativeVector);
+            }
+            else {
+                throw new IllegalArgumentException(String.format("Not Support Vec Type %s", type));
+            }
+            vectors[idx] = vector;
+        }
+        this.rowCount = size;
     }
 
     public VecBatch(long nativeVectorBatch)

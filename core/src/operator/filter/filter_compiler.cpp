@@ -1,6 +1,6 @@
 #include "filter_compiler.h"
 #include "../../common/expressions.h"
-#include "../../codegen/llvm_codegen.h"
+#include "../../codegen/filter_codegen.h"
 #include <cstring>
 
 namespace omniruntime {
@@ -35,8 +35,7 @@ Filter *Compiler::compile()
 {
     vector<DataType>* datatypes = new vector<DataType>();
     for (int32_t i = 0; i < vecCount; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
-    LLVMCodeGen* codeGenObj = new LLVMCodeGen("comparisionFunc", expression, datatypes);
-    codeGenObj->compile();
+    FilterCodeGen* codeGenObj = new FilterCodeGen("comparisionFunc", expression, datatypes);
     return new Filter(codeGenObj, expression);
 }
 } // end of op

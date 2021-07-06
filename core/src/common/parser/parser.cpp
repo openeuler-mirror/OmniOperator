@@ -215,7 +215,7 @@ DataType getDataType(string data, int32_t* inputTypes, int32_t vecCount)
             if (!isdigit(data[i])) return STRINGD;
         }
         int colIdx = stoi(data.substr(1));
-        return colTypeTrans(inputTypes[colIdx]);
+        return Parser::colTypeTrans(inputTypes[colIdx]);
     }
     // First check if int32 or int64
     bool isIntOrLong = true;
@@ -285,7 +285,7 @@ DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecC
     // Case with column
     if (dataStr[0] == '#') {
         int colIdx = stoi(dataStr.substr(1));
-        DataType dt = colTypeTrans(inputTypes[colIdx]);
+        DataType dt = Parser::colTypeTrans(inputTypes[colIdx]);
         return new DataExpr(colIdx, dt);
     }
 

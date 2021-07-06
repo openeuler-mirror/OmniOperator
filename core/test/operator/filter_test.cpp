@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 // #include "../src/jni/filter_api.h"
-#include "../../src/operator/filter/filter.h"
+#include "../../src/operator/filter/filter_and_project.h"
 #include <iostream>
 #include <cstring>
 #include <vector>
@@ -285,7 +285,7 @@ TEST (FilterTest, MultipleInputs) {
     const int32_t NUM_COLS = 1;
     int32_t* inputTypes = new int32_t[NUM_COLS];
     inputTypes[0] = 1;
-    
+
     const int32_t NUM_ROWS = 1000;
     int32_t* data1 = new int32_t[NUM_ROWS];
     int32_t* data2 = new int32_t[NUM_ROWS];
@@ -330,7 +330,7 @@ TEST (FilterTest, NegativeValues) {
     int32_t* inputTypes = new int32_t[NUM_COLS];
     inputTypes[0] = 1;
     inputTypes[1] = 2;
-    
+
     const int32_t NUM_ROWS = 10000;
     int32_t* data1 = new int32_t[NUM_ROWS];
     int64_t* data2 = new int64_t[NUM_ROWS];
@@ -371,7 +371,7 @@ TEST (FilterTest, AllTypes) {
     inputTypes[0] = 1;
     inputTypes[1] = 2;
     inputTypes[2] = 3;
-    
+
     const int32_t NUM_ROWS = 1000;
     int32_t* data1 = new int32_t[NUM_ROWS];
     int64_t* data2 = new int64_t[NUM_ROWS];
@@ -447,7 +447,7 @@ TEST (FilterTest, Compile) {
     
     // op->close();
     delete[] inputTypes;
-    delete[] data1; 
+    delete[] data1;
     delete[] data2;
     delete[] data3;
     delete[] data4;
