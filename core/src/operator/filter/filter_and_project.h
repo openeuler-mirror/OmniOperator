@@ -1,10 +1,20 @@
 #ifndef __FILTER_H__
 #define __FILTER_H__
 
+#include <stdio.h>
+#include <chrono>
+#include <vector>
+
 #include "../operator_factory.h"
 #include "../operator.h"
+#include "../projection/projection.h"
 #include "../../util/debug.h"
+#include "../../codegen/filter_codegen.h"
+#include "../../common/expressions.h"
+#include "../../common/parser/parser.h"
 #include "../../codegen/llvm_codegen.h"
+
+using namespace omniruntime::expressions;
 
 namespace omniruntime {
 namespace op {
@@ -12,19 +22,20 @@ namespace op {
 class Filter
 {
 public:
-    Filter(LLVMCodeGen* codegen, Expr* expr);
+    Filter(FilterCodeGen* codegen, Expr* expr);
     ~Filter() {delete this->codeGen; delete this->expr;}
     int32_t filter(VectorBatch *vecBatch, int32_t *selectedRows);
 private:
-    LLVMCodeGen *codeGen;
+    FilterCodeGen *codeGen;
     Expr* expr;
+    int32_t (*func)(int64_t*, int32_t, int32_t*);
 };
 
 class FilterAndProjectOperator : public Operator
 {
 public:
-    FilterAndProjectOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
-        : filter(filter), inputTypes(inputTypes), vecCount(vecCount), projectIndex(projectIndex), projectVecCount(projectVecCount)
+    FilterAndProjectOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, Projection** projections, int32_t projectVecCount)
+        : filter(filter), inputTypes(inputTypes), vecCount(vecCount), projections(projections), projectVecCount(projectVecCount)
     {
     }
 
@@ -40,10 +51,10 @@ public:
 
     private:
     Filter *filter;
+    Projection** projections;
+    int32_t projectVecCount;
     int32_t *inputTypes;
     int32_t vecCount;
-    int32_t *projectIndex;
-    int32_t projectVecCount;
     VectorBatch *projectedVecs;
 };
 
@@ -63,6 +74,7 @@ private:
     int32_t *projectIndex;
     int32_t projectVecCount;
     Filter *filter;
+    Projection** projections;
 };
 } // end of op
 } // end of omniruntime

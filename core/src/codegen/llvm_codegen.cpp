@@ -1,17 +1,11 @@
 #include "llvm_codegen.h"
-
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
-
-unique_ptr<LLVMContext> context;
-unique_ptr<IRBuilder<>> builder;
-unique_ptr<Module> _module;
-ExitOnError EOE;
-unique_ptr<LLJIT> JIT;
-ResourceTrackerSP rt;
-std::string _func_name;
 
 Value* LLVMCodeGen::createConstantBool(bool v) {
     return ConstantInt::get(*context, APInt(1, v));
@@ -29,7 +23,6 @@ Value* LLVMCodeGen::createConstantDouble(double v) {
     return ConstantFP::get(*context, APFloat(v));
 }
 
-
 Type* LLVMCodeGen::toLLVMType(DataType t) {
     switch (t) {
         case DataType::INT32D:
@@ -43,18 +36,16 @@ Type* LLVMCodeGen::toLLVMType(DataType t) {
         case DataType::STRINGD:
             return Type::getInt64Ty(*context);
         default:
-            std::cout << "Error: Unknown argument datatype " << t << endl;
+            cout << "Error: Unknown argument datatype " << t << endl;
             return nullptr;
     }
 }
-
 
 // Tells whether or not a function is a valid name
 bool isFunctionName(string fnName) {
     // TODO: either use a global string set to contain function names, or get function names from _module
     return true;
 }
-
 
 // Registers one function given the types, name, and function pointer
 void LLVMCodeGen::registerFunc(void* funcAddr, string funcName, llvm::Type *retType, vector<Type*> paramTypes) {
@@ -78,48 +69,37 @@ void LLVMCodeGen::registerFunctions() {
     Type* t1 = Type::getInt1Ty(*context);
     Type* t32 = Type::getInt32Ty(*context);
     Type* t64 = Type::getInt64Ty(*context);
-    Type* tdouble = Type::getDoubleTy(*context);   
-    
+    Type* tdouble = Type::getDoubleTy(*context);
     // strCompareExt
     vector<Type*> argTypesStrCmp {t64, t64};
     this->registerFunc((void*)strCompareExt, strCompareExt_str, llvm::Type::getInt32Ty(*context), argTypesStrCmp);
-
     // likeExt
     vector<Type*> argTypesLike {t64, t64};
     this->registerFunc((void*)likeExt, likeExt_str, llvm::Type::getInt1Ty(*context), argTypesLike);
-
     // abs_int32
     vector<Type*> argTypesAbs {t32};
     this->registerFunc((void*)abs_int32, abs_int32_str, llvm::Type::getInt32Ty(*context), argTypesAbs);
-
     // abs_int64
     vector<Type*> argTypesAbs64 {t64};
     this->registerFunc((void*)abs_int64, abs_int64_str, llvm::Type::getInt64Ty(*context), argTypesAbs64);
-
     // abs_double
     vector<Type*> argTypesAbsDouble {tdouble};
     this->registerFunc((void*)abs_double, abs_double_str, llvm::Type::getDoubleTy(*context), argTypesAbsDouble);
-
     // substrExt
     vector<Type*> argTypesSubstr {t64, t32, t32};
     this->registerFunc((void*)substrExt, substrExt_str, llvm::Type::getInt64Ty(*context), argTypesSubstr);
-
     // substrWithStartExt
     vector<Type*> argTypesSubstrStart {t64, t32};
     this->registerFunc((void*)substrWithStartExt, substrWithStartExt_str, llvm::Type::getInt64Ty(*context), argTypesSubstrStart);
-
     // concatStrExt
     vector<Type*> argTypesConcat {t64, t64};
     this->registerFunc((void*)concatStrExt, concatStrExt_str, llvm::Type::getInt64Ty(*context), argTypesConcat);
-
     // cast_int32
     vector<Type*> argTypesCast32 {t32};
     this->registerFunc((void*)cast_int32, cast_int32_str, llvm::Type::getDoubleTy(*context), argTypesCast32);
-
     // cast_int64
     vector<Type*> argTypesCast64 {t64};
     this->registerFunc((void*)cast_int64, cast_int64_str, llvm::Type::getDoubleTy(*context), argTypesCast64);
-
     // cast_string
     vector<Type*> argTypesCastStr {t64};
     this->registerFunc((void*)cast_string, cast_string_str, llvm::Type::getInt32Ty(*context), argTypesCastStr);
@@ -131,7 +111,6 @@ LLVMCodeGen::LLVMCodeGen(std::string name, Expr *expr, vector<DataType>* datatyp
     _func_name = name;
     _expr = expr;
     this->datatypes = datatypes;
-
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
@@ -153,12 +132,6 @@ LLVMCodeGen::~LLVMCodeGen() {
     EOE(rt->remove());
 
     delete this->datatypes;
-}
-
-int32_t LLVMCodeGen::execute(int64_t* data, int32_t nRows, int32_t* selected) {
-    auto ret = this->_filter(data, nRows, selected);
-    freeStrings();
-    return ret;
 }
 
 Function* LLVMCodeGen::createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse) {
@@ -236,6 +209,8 @@ Value* LLVMCodeGen::parseDataExpr(DataExpr* dEx, map<string, Value*>& args) {
 
             Constant *addr = ConstantInt::get(*context, APInt(64, (int64_t)(s)));
             return addr;
+        }case DataType::BOOLD: {
+            return this->createConstantBool(dEx->boolVal);
         }
         default: {
             std::cout << "Unsupported data type in Data Expr" << endl;
@@ -608,28 +583,54 @@ Value* LLVMCodeGen::parseExpr(Expr* root, map<string, Value*>& args) {
     }
 }
 
+std::string LLVMCodeGen::dumpCode() {
+  std::string ir;
+  llvm::raw_string_ostream stream(ir);
+  _module->print(stream, nullptr);
+  cout<<" Generated code::" << ir;
+  return ir;
+}
 
+void addOptimizationPasses(legacy::FunctionPassManager* FPM, llvm::legacy::PassManager& MPM) {
+    FPM->add(createSCCPPass());
+    FPM->add(createNewGVNPass());
+    FPM->add(createInductiveRangeCheckEliminationPass());
+    FPM->add(createIndVarSimplifyPass());
 
+    FPM->add(createLICMPass());
+    FPM->add(createLoopUnrollPass());
+    FPM->add(createLoopUnswitchPass());
 
+    FPM->add(createLoopLoadEliminationPass());
+    FPM->add(createInductiveRangeCheckEliminationPass());
+    FPM->add(createIndVarSimplifyPass());
+    FPM->add(createLoopInstSimplifyPass());
+    FPM->add(createLoopSimplifyCFGPass());
+    FPM->add(createMergedLoadStoreMotionPass());
+    FPM->add(createMergeICmpsLegacyPass());
+    FPM->add(createAggressiveDCEPass());
+    FPM->add(createDeadStoreEliminationPass());
 
-// Logic to generate the filter function.
-Function* LLVMCodeGen::generateFunc()
-{   
-    // cout << "Generating function" << endl;
+    MPM.add(createFunctionInliningPass());
+    MPM.add(createPruneEHPass());
+}
+
+Function* LLVMCodeGen::createFunction() {
     vector<Type*> args;
     args.reserve(datatypes->size());
     for (int32_t i = 0; i < datatypes->size(); i++) {
         DataType type = datatypes->at(i);
         args.push_back(this->toLLVMType(type));
     }
-    
-    FunctionType *prototype = FunctionType::get(Type::getInt1Ty(*context), args, false);
+    // _expr->printExprTree();
+    // cout << endl;
+    FunctionType *prototype = FunctionType::get(this->toLLVMType(_expr->getExprDataType()), args, false);
     Function *func = Function::Create(prototype, Function::ExternalLinkage, _func_name, _module.get());
     int32_t idx = 0;
     for (auto& arg : func->args()) {
         arg.setName(to_string(idx++));
     }
-    BasicBlock *body = BasicBlock::Create(*context, "FILTER_FUNC_BODY", func);
+    BasicBlock *body = BasicBlock::Create(*context, "CREATED_FUNC_BODY", func);
     builder->SetInsertPoint(body);
     map<string, Value*> fArgs;
     for (auto& arg : func->args()) {
@@ -640,151 +641,15 @@ Function* LLVMCodeGen::generateFunc()
     builder->CreateRet(ret);
     verifyFunction(*func);
     // _module->print(errs(), nullptr);
-    return func;
-}
+    auto FPM = std::make_unique<legacy::FunctionPassManager>(_module.get());
+    llvm::legacy::PassManager MPM;
+    addOptimizationPasses(FPM.get(), MPM);
+    FPM->doInitialization();
+    for (auto &F : *_module) FPM->run(F);
 
-void LLVMCodeGen::compile()
-{
-    Function* filterFunc = this->generateFunc();
-    int64_t address = this->createWrapper(filterFunc);
-    _filter = (int32_t (*)(int64_t*, int32_t, int32_t*)) (intptr_t) address;
-}
+    MPM.run(*_module);
 
-std::string LLVMCodeGen::dumpCode() {
-  std::string ir;
-  llvm::raw_string_ostream stream(ir);
-  _module->print(stream, nullptr);
-  cout<<" Generated code::" << ir;
-  return ir;
-}
-
-int64_t LLVMCodeGen::createWrapper(Function* filterFunc) {
-    int32_t nArgs = this->datatypes->size();
-    vector<Type*> args;
-    Type* ptrArg = Type::getInt64PtrTy(*context);
-    args.push_back(ptrArg);
-    args.push_back(Type::getInt32Ty(*context));
-    args.push_back(Type::getInt32PtrTy(*context));
-    FunctionType* funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
-    Function* funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", _module.get());
-    BasicBlock* preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
-    BasicBlock* loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
-    BasicBlock* filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);
-    BasicBlock* incrementCounter = BasicBlock::Create(*context, "INCREMENT_COUNTER", funcDecl);
-    BasicBlock* endBlock = BasicBlock::Create(*context, "END_BLOCK", funcDecl);
-    // preprocessing
-    Argument* start = funcDecl->getArg(0);
-    start->setName("ARGS_ARRAY");
-    Argument* numRows = funcDecl->getArg(1);
-    numRows->setName("NUM_ROWS");
-    Argument* resultsArray = funcDecl->getArg(2);
-    resultsArray->setName("RESULTS");
-    Value* minusOne = this->createConstantInt(-1);
-    Value* zero = this->createConstantInt(0);
-    Value* one = this->createConstantInt(1);
-    vector<Value*> filterFuncArgs;
-    filterFuncArgs.reserve(nArgs);
-    Value* gep;
-    Value* elementAddr;
-    Value* elementPtr;
-    Value* elementValue;
-    DataType type;
-    CallInst* ret;
-    // pre loop body
-    builder->SetInsertPoint(preLoop);
-    // Pointer to the current row index to be processed.
-    AllocaInst* indexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "INDEX_COUNTER");
-    // Initialize row index to 0.
-    builder->CreateStore(zero, indexStore);
-    // Value of the current row index to be processed.
-    Value* curIndexVal;
-    // Temp value for next row index.
-    Value* nextIndexVal;
-    // Pointer to the index of the selected positions array to be filled next.
-    AllocaInst* selectedIndexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "SELECTED_INDEX_PTR");
-    // Initialize index to 0.
-    builder->CreateStore(zero, selectedIndexStore);
-    // Value of the selected positions index.
-    Value* selectedIndexVal;
-    // Address of the selected index for writing.
-    Value* selectedAddress;
-    // Temp value for next selected index.
-    Value* nextSelectedIndexVal;
-    builder->CreateBr(loopBody);
-    // loop body
-    builder->SetInsertPoint(loopBody);
-    // Get the value of the current row index to process.
-    curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
-    for (int32_t i = 0; i < nArgs; i++) {
-        // Find address of this column in the addresses array argument.
-        gep = builder->CreateGEP(start, this->createConstantInt(i));
-        // Load the address value.
-        elementAddr = builder->CreateLoad(gep);
-        type = this->datatypes->at(i);
-        // Convert the column address to array of proper datatype.
-        switch (type) {
-            case DataType::BOOLD:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt1PtrTy(*context));
-                break;
-            case DataType::INT32D:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt32PtrTy(*context));
-                break;
-            case DataType::INT64D:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-                break;
-            case DataType::DOUBLED:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getDoublePtrTy(*context));
-                break;
-            case DataType::STRINGD:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-                break;
-            default:
-                cout << "Unsupported column data type" << endl;
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-        }
-        // Find the address of the row to be processed.
-        gep = builder->CreateGEP(elementPtr, curIndexVal);
-        // Value to be processed.
-        elementValue = builder->CreateLoad(gep);
-        // Pass to filter function's arguments.
-        filterFuncArgs.push_back(elementValue);
-    }
-    // Get the boolean response for this row from the filter function.
-    ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
-    // If true, add row index to selected array, otherwise, process next row.
-    builder->CreateCondBr(ret, filterPassed, incrementCounter);
-    // Add row index to results array
-    builder->SetInsertPoint(filterPassed);
-    // Get value of selected index.
-    selectedIndexVal = builder->CreateLoad(selectedIndexStore, "SELECTED_INDEX");
-    // Get address of selected index.
-    selectedAddress = builder->CreateGEP(resultsArray, selectedIndexVal, "SELECTED_ADDRESS");
-    // Set the selected value to the current row index.
-    builder->CreateStore(curIndexVal, selectedAddress);
-    // Increment the selected index.
-    nextSelectedIndexVal = builder->CreateAdd(selectedIndexVal, one, "NEXT_SELECTED_INDEX");
-    builder->CreateStore(nextSelectedIndexVal, selectedIndexStore);
-    // Increment counter and process next row.
-    builder->CreateBr(incrementCounter);
-    // Increment loop counter
-    builder->SetInsertPoint(incrementCounter);
-    // Increment counter.
-    nextIndexVal = builder->CreateAdd(curIndexVal, one, "NEXT_INDEX");
-    builder->CreateStore(nextIndexVal, indexStore);
-    // If there are rows remaining, repeat, otherwise, exit.
-    Value* cond = builder->CreateICmpSLT(nextIndexVal, numRows, "END_LOOP_COND");
-    builder->CreateCondBr(cond, loopBody, endBlock);
-    // Return results
-    builder->SetInsertPoint(endBlock);
-    // Return the filled in results.
-    nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
-    builder->CreateRet(nextSelectedIndexVal);
+    // cout << "After optimization: " << endl;
     // _module->print(errs(), nullptr);
-    auto resTracker = JIT->getMainJITDylib().createResourceTracker();
-    auto threadSafeModule = ThreadSafeModule(move(_module), move(context));
-    EOE(JIT->addIRModule(resTracker, move(threadSafeModule)));
-    rt = resTracker;
-
-    auto sym = cantFail(JIT->lookup("FILTER_WRAPPER"));
-    return sym.getAddress();
+    return func;
 }
