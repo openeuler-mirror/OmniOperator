@@ -5,8 +5,7 @@ import nova.hetu.omniruntime.constants.VecType;
 import java.io.Closeable;
 import java.util.List;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_128_DECIMAL;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_256_DECIMAL;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_CONTAINER;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
@@ -39,6 +38,11 @@ public class VecBatch
         this(vectors.toArray(new Vec[vectors.size()]));
     }
 
+    /**
+     * This constructor is for native to call
+     *
+     * @param nativeVectorBatch
+     */
     public VecBatch(long nativeVectorBatch)
     {
         this.nativeVectorBatch = nativeVectorBatch;
@@ -63,14 +67,11 @@ public class VecBatch
             else if (OMNI_VEC_TYPE_SHORT.equals(type)) {
                 vector = new ShortVec(nativeVector);
             }
+            else if (OMNI_VEC_TYPE_CONTAINER.equals(type)) {
+                vector = new ContainerVec(nativeVector);
+            }
             else if (OMNI_VEC_TYPE_VARCHAR.equals(type)) {
                 vector = new VarcharVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_128_DECIMAL.equals(type)) {
-                vector = new Decimal128Vec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_256_DECIMAL.equals(type)) {
-                vector = new Decimal256Vec(nativeVector);
             }
             else {
                 throw new IllegalArgumentException(String.format("Not Support Vec Type %s", type));

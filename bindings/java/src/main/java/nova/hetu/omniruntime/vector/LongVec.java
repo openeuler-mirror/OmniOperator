@@ -20,7 +20,7 @@ public class LongVec
         super(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG);
     }
 
-    protected LongVec(long nativeVector)
+    public LongVec(long nativeVector)
     {
         super(nativeVector);
     }

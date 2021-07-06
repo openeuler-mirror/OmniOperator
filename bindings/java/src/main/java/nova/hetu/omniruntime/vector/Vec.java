@@ -9,6 +9,7 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_CONTAINER;
 import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
 
 @NotThreadSafe
@@ -138,6 +139,7 @@ public abstract class Vec
 
     /**
      * The routine is just for copyPosition vector operator.
+     *
      * @param vec the vector need to be copy.
      * @param positions the original vector positions
      * @param offset offset of positions in the input parameter
@@ -164,6 +166,9 @@ public abstract class Vec
         this.offset = getOffsetNative(nativeVector);
         this.nativeVector = nativeVector;
         this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
+        if (OMNI_VEC_TYPE_CONTAINER.equals(this.type)) {
+            System.out.println("In Vec constructor addr : " + this.values.getLong(0));
+        }
         this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
     }
 

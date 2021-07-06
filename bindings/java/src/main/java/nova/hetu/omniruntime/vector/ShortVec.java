@@ -19,7 +19,7 @@ public class ShortVec
         super(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG);
     }
 
-    protected ShortVec(long nativeVector)
+    public ShortVec(long nativeVector)
     {
         super(nativeVector);
     }

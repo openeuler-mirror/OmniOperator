@@ -20,6 +20,8 @@ public class VecType
 
     public static VecType OMNI_VEC_TYPE_VARCHAR;
 
+    public static VecType OMNI_VEC_TYPE_CONTAINER;
+
     public VecType(int value)
     {
         super(value);

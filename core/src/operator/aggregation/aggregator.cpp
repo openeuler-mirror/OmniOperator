@@ -20,6 +20,14 @@ int32_t cmp_double(double leftVal, double rightVal)
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
 }
 
+bool Aggregator::isInputRaw() {
+    return this->inputRaw;
+}
+
+bool Aggregator::isOutputPartial() {
+    return this->outputPartial;
+}
+
 void SumAggregator::processGroup(GroupBySlot& groupSlot, void* colPtr, int32_t type, uint32_t offset)
 {
     switch (type)

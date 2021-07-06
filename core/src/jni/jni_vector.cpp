@@ -11,6 +11,7 @@
 #include "../vector/long_vector.h"
 #include "../vector/varchar_vector.h"
 #include "../vector/boolean_vector.h"
+#include "../vector/container_vector.h"
 #include "../vector/vector_allocator_manager.h"
 
 Vector *transformVector(long vectorAddr);
@@ -134,6 +135,21 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNat
     Vector *nativeVector = transformVector(jNativeVector); 
     return transformBaseVectorToByteBuffer(env, nativeVector->getValueNulls(),
                                            nativeVector->getReference()->getValueNullChunk()->getSizeInBytes());
+}
+
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
+    ContainerVector* containerVec = reinterpret_cast<ContainerVector*>(jNativeVector);
+    return containerVec->getPositionCount();
+}
+
+JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
+    ContainerVector* containerVec = reinterpret_cast<ContainerVector*>(jNativeVector);
+    auto vecTypes = containerVec->getVecTypes();
+    jintArray res = env->NewIntArray(vecTypes.size());
+    env->SetIntArrayRegion(res, 0, vecTypes.size(), (int32_t*)vecTypes.data());
+    return res;
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative

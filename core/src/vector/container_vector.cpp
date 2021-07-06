@@ -11,28 +11,29 @@ void ContainerVector::setValues(int32_t startIndex, int64_t *values, int32_t len
 }
 
 ContainerVector *ContainerVector::slice(int32_t positionOffset, int32_t length) {
-    return new ContainerVector(this, length, positionOffset, this->vectorOffsets.data(), this->vecTypes.data());
+    return new ContainerVector(this, length, positionOffset, this->vecTypes.data());
 }
 
 ContainerVector *ContainerVector::copyPositions(int32_t *positions, int32_t offset, int32_t length) {
     ASSERT(offset + length < getSize());
-    Vector** vectors = new Vector*[this->vectorCount];
-    ContainerVector *vector = new ContainerVector(getAllocator(), length, this->valuesAddress, vecTypes.data());
-    for (int32_t i = 0; i < length; ++i) {
-        int32_t position = positions[offset + i];
-        vector->setValue(i, getValue(position));
+    Vector** vectorAddresses = new Vector*[length];
+    VecType* copyTypes = new VecType[length];
+
+    for (int32_t i = offset; i < offset + length; ++i) {
+        vectorAddresses[i] = reinterpret_cast<Vector*>(getValue(positions[i]));
+        copyTypes[i] = this->vecTypes[positions[i]];
     }
-    return vector;
+    return new ContainerVector(getAllocator(), positionCount, vectorAddresses, length, copyTypes);
 }
 
 ContainerVector *ContainerVector::copyRegion(int32_t positionOffset, int32_t length) {
-    ASSERT(positionOffset + length < getSize());
-    ContainerVector *vector = new ContainerVector(getAllocator(), length, vecTypes.data());
-    vector->setValues(0, (int64_t *) valuesAddress + positionOffset, length);
-    vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset, length);
-    return vector;
-}
+    ASSERT(offset + length < getSize());
+    Vector** vectorAddresses = new Vector*[length];
+    VecType* copyTypes = new VecType[length];
 
-void ContainerVector::fromFieldVectors(int64_t positionCount, Vector *fieldVectors, int32_t* vectorOffsets, int32_t vectorCount) {
-
+    for (int32_t i = positionOffset; i < positionOffset + length; ++i) {
+        vectorAddresses[i] = reinterpret_cast<Vector*>(getValue(i));
+        copyTypes[i] = this->vecTypes[i];
+    }
+    return new ContainerVector(getAllocator(), positionCount, vectorAddresses, length, copyTypes);
 }

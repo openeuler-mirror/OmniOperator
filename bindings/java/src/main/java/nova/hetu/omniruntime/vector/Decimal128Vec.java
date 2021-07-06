@@ -22,7 +22,7 @@ public class Decimal128Vec
         super(allocator, size, precision, scale, BYTES, OMNI_VEC_TYPE_128_DECIMAL);
     }
 
-    protected Decimal128Vec(long nativeVector)
+    public Decimal128Vec(long nativeVector)
     {
         super(nativeVector);
     }

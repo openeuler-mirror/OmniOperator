@@ -25,7 +25,7 @@ public abstract class FixedWidthVec
         super(vector, positions, offset, length);
     }
 
-    protected FixedWidthVec(long nativeVector)
+    public FixedWidthVec(long nativeVector)
     {
         super(nativeVector);
     }

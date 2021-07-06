@@ -22,7 +22,7 @@ public class Decimal256Vec
         super(allocator, size, precision, scale, BYTES, OMNI_VEC_TYPE_256_DECIMAL);
     }
 
-    protected Decimal256Vec(long nativeVector)
+    public Decimal256Vec(long nativeVector)
     {
         super(nativeVector);
     }

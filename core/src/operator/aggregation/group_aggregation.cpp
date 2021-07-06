@@ -3,6 +3,7 @@
 #include "../status.h"
 #include "../../jit/annotation.h"
 #include "../optimization.h"
+#include "../../vector/container_vector.h"
 #include <math.h>
 
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
@@ -319,7 +320,12 @@ int32_t HashAggregationOperator::getRowSize(int32_t *types) {
             continue;
         }
         if (aggregators[i]->getType() == OMNI_AGGREGATION_TYPE_AVG) {
-            types[typeIndex++] = OMNI_VEC_TYPE_DOUBLE;
+            if (aggregators[i]->isOutputPartial()) {
+                types[typeIndex++] = OMNI_VEC_TYPE_CONTAINER;
+                rowSize += sizeof(int64_t);
+            } else {
+                types[typeIndex++] = OMNI_VEC_TYPE_DOUBLE;
+            }
             rowSize += sizeof(double);
             continue;
         }
@@ -437,15 +443,25 @@ void HashAggregationOperator::fillAggVectors(VectorBatch *vecBatch, int startInd
             }
             case OMNI_AGGREGATION_TYPE_AVG: { // TODO process intermediate vectors
                 // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise double vector.
-                DoubleVector* vector = (DoubleVector*)vecBatch->getVector(colIndex);
-                for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
-                    if (resultIterator->second.count == 0) {
-                        DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                if (outputPartial) {
+                    ContainerVector* vector = (ContainerVector*)vecBatch->getVector(colIndex);
+                    for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
+                        if (resultIterator->second.avgCnt == 0) {
+                            DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                        }
+                        DoubleVector* doubleVector = reinterpret_cast<DoubleVector*>(vector->getValue(0));
+                        std::cout << "fillAgg vec address: " << doubleVector << std::endl;
+                        doubleVector->setValue(rIdx, *(reinterpret_cast<double*>(resultIterator->second.avgVal)));
+                        LongVector* longVector = reinterpret_cast<LongVector*>(vector->getValue(1));
+                        longVector->setValue(rIdx, resultIterator->second.avgCnt);
                     }
-                    if (outputPartial) {
-                        vector->setValue(rIdx++, *(reinterpret_cast<double*>(resultIterator->second.avgVal)));
-                    } else {
-                      // row type
+                } else {
+                    DoubleVector* vector = (DoubleVector*)vecBatch->getVector(colIndex);
+                    for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
+                        if (resultIterator->second.avgCnt == 0) {
+                            DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                        }
+                        vector->setValue(rIdx, *(reinterpret_cast<double*>(resultIterator->second.avgVal)));
                     }
                 }
                 break;
@@ -459,6 +475,44 @@ void HashAggregationOperator::fillAggVectors(VectorBatch *vecBatch, int startInd
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncExit;
 #endif
+}
+
+void setVectors(VectorBatch* vectorBatch, int32_t* types, int32_t rowCount)
+{
+    for (int colIndex = 0; colIndex < vectorBatch->getVectorCount(); ++colIndex) {
+        switch (types[colIndex]) {
+            case OMNI_VEC_TYPE_INT: {
+                vectorBatch->setVector(colIndex, new IntVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG: {
+                vectorBatch->setVector(colIndex, new LongVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                vectorBatch->setVector(colIndex, new DoubleVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_CONTAINER: {
+                DoubleVector* doubleVector = new DoubleVector(nullptr, rowCount);
+                LongVector* longVector = new LongVector(nullptr, rowCount);
+                Vector** vectorAddresses = new Vector*[2];
+                vectorAddresses[0] = doubleVector;
+                vectorAddresses[1] = longVector;
+                VecType* vecTypes = new VecType[2];
+                vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
+                vecTypes[1] = OMNI_VEC_TYPE_LONG;
+                std::cout << "Double vector addr " << doubleVector << std::endl;
+                ContainerVector* containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
+                vectorBatch->setVector(colIndex, containerVector);
+                break;
+            }
+                // TODO: support other types!!!
+            default: {
+                break;
+            }
+        }
+    }
 }
 
 int32_t HashAggregationOperator::getOutput(std::vector<VectorBatch*>& result)
@@ -476,7 +530,8 @@ int32_t HashAggregationOperator::getOutput(std::vector<VectorBatch*>& result)
     RowIterator rowIterator = groupedRows.begin();
     for (int32_t i = 0; i < vecBatchCount; ++i) {
         int32_t rowCount = std::min(maxRowNum, (int32_t)(this->groupedRows.size() - currentPosition));
-        VectorBatch* vecBatch = new VectorBatch(types, colCount, rowCount);
+        VectorBatch* vecBatch = new VectorBatch(colCount);
+        setVectors(vecBatch, types, rowCount);
         fillGroupByVectors(vecBatch, 0, groupByColSize, rowIterator, rowCount);
         fillAggVectors(vecBatch, groupByColSize, colCount, rowCount);
         result.push_back(vecBatch);

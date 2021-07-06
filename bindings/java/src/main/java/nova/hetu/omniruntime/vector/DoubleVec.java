@@ -19,7 +19,7 @@ public class DoubleVec
         super(allocator, size * BYTES, size, OMNI_VEC_TYPE_DOUBLE);
     }
 
-    protected DoubleVec(long nativeVector)
+    public DoubleVec(long nativeVector)
     {
         super(nativeVector);
     }

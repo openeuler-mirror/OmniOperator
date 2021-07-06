@@ -32,6 +32,7 @@ Java_nova_hetu_omniruntime_constants_Constant_loadConstants(JNIEnv *env, jclass 
     DEFINE_CONSTANT(OMNI_VEC_TYPE_DOUBLE);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_BOOLEAN);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_SHORT);
+    DEFINE_CONSTANT(OMNI_VEC_TYPE_CONTAINER);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_VARCHAR);
 
     cls = env->FindClass("nova/hetu/omniruntime/constants/AggType");

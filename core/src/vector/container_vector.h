@@ -16,47 +16,55 @@
  */
 class ContainerVector : public FixedWidthVector<int64_t> {
 public:
-    ContainerVector(VectorAllocator* allocator, int64_t positionCount, Vector** fieldVectors, int32_t* vectorOffsets, int32_t vectorCount, VecType types[]) :
-    vectorCount(vectorCount), FixedWidthVector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER)
+    ContainerVector(VectorAllocator* allocator, int32_t positionCount, Vector** fieldVectors, int32_t vectorCount, VecType types[]) :
+    vectorCount(vectorCount), positionCount(positionCount), FixedWidthVector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER)
     {
+        // ????? use setValues
         for(int32_t i = 0; i < vectorCount; ++i) {
-            setValue(i, reinterpret_cast<uintptr_t>(fieldVectors[i]));
+            setValue(i, reinterpret_cast<int64_t>(fieldVectors[i]));
             this->vecTypes.push_back(types[i]);
-            this->vectorOffsets.push_back(vectorOffsets[i]);
         }
+//        for (int32_t i = 0; i < vectorCount; ++i) {
+//            std::cout << "get value addr : " << getValue(i) << std::endl;
+//        }
     }
     ContainerVector *slice(int32_t positionOffset, int32_t length) override;
     ContainerVector *copyPositions(int32_t *positions, int32_t offset, int32_t length) override;
     ContainerVector *copyRegion(int32_t positionOffset, int32_t length) override;
     void setValues(int32_t startIndex, int64_t *values, int32_t length) override;
-    void fromFieldVectors(int64_t positionCount, Vector *fieldVectors, int32_t* vectorOffsets, int32_t vectorCount);
 
     // inline for high performance.
     int64_t getValue(int32_t index) {
         ASSERT(index < getSize());
-        return ((int64_t *)valuesAddress)[index];
-
+        return reinterpret_cast<uintptr_t*>(valuesAddress)[index];
     };
 
     // inline for high performance.
-    void setValue(int32_t index, uintptr_t value) {
+    void setValue(int32_t index, int64_t value) {
         ASSERT(getReference()->isWritable());
         ASSERT((uint)index < getSize());
-        ((int64_t *)valuesAddress)[index] = value;
+        reinterpret_cast<int64_t*>(valuesAddress)[index] = value;
     }
 
+    int32_t getPositionCount()
+    {
+        return positionCount;
+    }
+
+    std::vector<VecType>& getVecTypes()
+    {
+        return vecTypes;
+    }
     
 private:
     static const int32_t BYTES = sizeof(int64_t);
     std::vector<VecType> vecTypes;
-    std::vector<int32_t> vectorOffsets;
     int32_t vectorCount;
-    int64_t positionCount;
-    ContainerVector(ContainerVector *vector, int32_t vectorCount, int32_t positionOffset, int32_t* vectorOffsets, VecType types[]) :
+    int32_t positionCount;
+    ContainerVector(ContainerVector *vector, int32_t vectorCount, int32_t positionOffset, VecType types[]) :
     FixedWidthVector(vector, vectorCount, positionOffset) {
         for(int32_t i = 0; i < vectorCount; ++i) {
             this->vecTypes.push_back(types[i]);
-            this->vectorOffsets.push_back(vectorOffsets[i]);
         }
     }
 };

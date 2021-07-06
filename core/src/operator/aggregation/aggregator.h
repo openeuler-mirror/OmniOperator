@@ -75,6 +75,8 @@ public:
     virtual void processNonGroup(void* colPtr, int32_t type, uint32_t offset) = 0;
     virtual void insert(int64_t key, void* colPtr, int32_t type, uint32_t offset) = 0;
     virtual void initiate(void* colPtr, int32_t type, uint32_t offset) = 0;
+    bool isInputRaw();
+    bool isOutputPartial();
     AggregateType getType() {
         return type;
     }

@@ -17,7 +17,7 @@ public class BooleanVec
         super(allocator, size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
-    protected BooleanVec(long nativeVector)
+    public BooleanVec(long nativeVector)
     {
         super(nativeVector);
     }

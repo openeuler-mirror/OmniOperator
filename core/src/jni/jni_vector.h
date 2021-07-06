@@ -112,6 +112,22 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNat
   (JNIEnv *, jclass, jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_ContainerVec
+ * Method:    getPositionNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ContainerVec
+ * Method:    getVecTypesNative
+ * Signature: (J)[I;
+ */
+JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative
+        (JNIEnv *, jclass, jlong);
+
+/*
  * Class:     nova_hetu_omniruntime_vector_VariableWidthVec
  * Method:    getValueOffsetsNative
  * Signature: (J)Ljava/nio/ByteBuffer;

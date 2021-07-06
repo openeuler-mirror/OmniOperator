@@ -19,7 +19,7 @@ public class IntVec
         super(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT);
     }
 
-    protected IntVec(long nativeVector)
+    public IntVec(long nativeVector)
     {
         super(nativeVector);
     }

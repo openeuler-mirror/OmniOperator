@@ -6,6 +6,7 @@
 #include "int_vector.h"
 #include "long_vector.h"
 #include "double_vector.h"
+#include "container_vector.h"
 
 VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount) {
     vectors = new Vector *[vectorCount];
@@ -17,6 +18,7 @@ VectorBatch::~VectorBatch() {
     delete[] vectorTypes;
 }
 
+// This constructor should not exist!
 VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCount(vectorCount) {
     vectors = new Vector *[vectorCount];
     vectorTypes = new VecType[vectorCount];
@@ -33,6 +35,19 @@ VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCoun
             }
             case OMNI_VEC_TYPE_DOUBLE: {
                 setVector(colIndex, new DoubleVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_CONTAINER: {
+                DoubleVector* doubleVector = new DoubleVector(nullptr, rowCount);
+                LongVector* longVector = new LongVector(nullptr, rowCount);
+                Vector** vectorAddresses = new Vector*[2];
+                vectorAddresses[0] = doubleVector;
+                vectorAddresses[1] = longVector;
+                VecType* vecTypes = new VecType[2];
+                vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
+                vecTypes[1] = OMNI_VEC_TYPE_LONG;
+                ContainerVector* containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
+                setVector(colIndex, containerVector);
                 break;
             }
             // TODO: support other types!!!
