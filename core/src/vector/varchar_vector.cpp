@@ -73,3 +73,5 @@ void VarcharVector::fillSlots(int index) {
     }
     lastOffsetPosition = index - 1;
 }
+
+void VarcharVector::append(Vector *other, int positionOffset, int length) { }

@@ -69,6 +69,8 @@ public:
 
     virtual Vector *copyRegion(int positionOffset, int length) = 0;
 
+    virtual void append(Vector *other, int positionOffset, int length) = 0;
+
 protected:
     void *valuesAddress;
     void *valueNullsAddress;

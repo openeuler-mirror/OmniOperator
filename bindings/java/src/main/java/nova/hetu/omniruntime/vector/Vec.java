@@ -231,6 +231,18 @@ public abstract class Vec
 
     public abstract Vec copyRegion(int positionOffset, int length);
 
+    /**
+     * This method takes input a source vector to append to the destination vector only If
+     * the destination vector has enough available positions.
+     * @param other Source Vector to be appended
+     * @param offset Number of Positions already occupied
+     * @param length Number of Positions in the Source Vector
+     */
+    public void append(Vec other, int offset, int length)
+    {
+        appendVectorNative(this.nativeVector, offset, other.nativeVector, length);
+    }
+
     @Override
     public void close()
     {
@@ -272,4 +284,6 @@ public abstract class Vec
     private static native ByteBuffer getValuesNative(long nativeVector);
 
     private static native ByteBuffer getValueNullsNative(long nativeVector);
+
+    protected static native void appendVectorNative(long destNativeVector, int positionOffset, long srcNativeVector, int length);
 }

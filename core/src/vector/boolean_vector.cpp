@@ -35,3 +35,10 @@ BooleanVector *BooleanVector::copyRegion(int positionOffset, int length) {
     vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset + this->positionOffset, length);
     return vector;
 }
+
+void BooleanVector::append(Vector *other, int positionOffset, int length) {
+    ASSERT(positionOffset + length <= getSize());
+    uint8_t *destination = (uint8_t*) this->getValues() + positionOffset * 1/8;
+    uint8_t *src = (other->getPositionOffset() * 1/8) + ((uint8_t*) other->getValues());
+    std::memcpy(destination, src, length * 1/8);
+}

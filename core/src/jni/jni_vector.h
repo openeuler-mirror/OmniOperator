@@ -112,6 +112,14 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNat
   (JNIEnv *, jclass, jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    appendVectorNative
+ * Signature: (JIJI)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
+  (JNIEnv *, jclass, jlong, jint, jlong, jint);
+
+/*
  * Class:     nova_hetu_omniruntime_vector_VariableWidthVec
  * Method:    getValueOffsetsNative
  * Signature: (J)Ljava/nio/ByteBuffer;

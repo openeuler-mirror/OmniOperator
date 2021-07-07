@@ -136,6 +136,13 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNat
                                            nativeVector->getReference()->getValueNullChunk()->getSizeInBytes());
 }
 
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVectorDest, jint jOffSet, jlong jNativeVectorSrc, jint jLength) {
+    Vector *nativeVectorSrc = transformVector(jNativeVectorSrc);
+    Vector *nativeVectorDest = transformVector(jNativeVectorDest);
+    nativeVectorDest->append(nativeVectorSrc, (int32_t) jOffSet, (int32_t) jLength);
+}
+
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector) {
     Vector *nativeVector = transformVector(jNativeVector);

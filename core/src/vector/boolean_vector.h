@@ -29,6 +29,8 @@ public:
 
     BooleanVector *copyRegion(int positionOffset, int length);
 
+    void append(Vector *other, int positionOffset, int length);
+
 private:
     BooleanVector(BooleanVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
 
