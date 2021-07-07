@@ -28,6 +28,8 @@ public:
 
     IntVector *copyRegion(int positionOffset, int length);
 
+    void append(Vector *other, int positionOffset, int length);
+
 private:
     IntVector(IntVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
 

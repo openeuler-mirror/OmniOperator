@@ -28,6 +28,8 @@ public:
 
     DoubleVector *copyRegion(int positionOffset, int length);
 
+    void append(Vector *other, int positionOffset, int length);
+
 private:
     DoubleVector(DoubleVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
 

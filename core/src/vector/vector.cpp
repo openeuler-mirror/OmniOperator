@@ -3,6 +3,7 @@
 //
 
 #include <cstring>
+#include <stdint.h>
 #include "vector.h"
 #include "../util/debug.h"
 #include "vector_allocator_manager.h"
