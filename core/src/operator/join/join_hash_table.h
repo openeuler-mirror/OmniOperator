@@ -4,12 +4,11 @@
 #include "../../vector/vector.h"
 
 #include <stdint.h>
-#include <shared_mutex>
 
 class PagesHashStrategy;
+
 namespace omniruntime {
 namespace op {
-
 class ArrayPositionLinks;
 class PagesHash;
 class JoinHashTable;
@@ -19,17 +18,24 @@ class JoinHashTables
 public:
     JoinHashTables(int32_t hashTableCount);
     ~JoinHashTables();
-    void addHashTable(int32_t partitionIndex, JoinHashTable *hashTable);
+    int32_t getHashTableSize()
+    {
+        return hashTableSize;
+    }
     int32_t getHashTableCount()
     {
         return hashTableCount;
     }
+    void addHashTable(int32_t partitionIndex, JoinHashTable *hashTable);
     JoinHashTable *getHashTable(int32_t partitionIndex);
     bool isJoinPositionEligible();
     int64_t getNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition);
-    int64_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount);
-    int64_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash);
+    int64_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t *joinColumnTypes, int32_t joinColumnsCount,
+                            Vector **allColumns, int32_t allColumnsCount);
+    int64_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns,
+                            int32_t allColumnsCount, int64_t rawHash);
     void getBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol);
+    void clear(int32_t partitionIndex);
 
 private:
     int64_t encodePartitionedJoinPosition(int32_t partition, int32_t joinPosition);
@@ -38,8 +44,7 @@ private:
 
     int64_t *hashTables;  // actually, the type is JoinHashTable **
     int32_t hashTableCount;
-    int32_t hashTableSize;
-    std::shared_timed_mutex mutex;
+    std::atomic_int32_t hashTableSize;
     int32_t partitionMask;
     int32_t shiftSize;
 };
@@ -65,8 +70,11 @@ public:
     int32_t getNextJoinPosition(int32_t currentJoinPosition, int probePosition);
     int32_t getJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash);
     void getBuildValue(void *value, int32_t joinPosition, int32_t outputCol);
+    void printHashTable(int32_t partitionIndex);
 
 private:
+    int32_t startJoinPosition(int32_t currentJoinPosition, int32_t probePosition, Vector **allColumns, int32_t allColumnsCount);
+
     PagesHash *pagesHash;
     ArrayPositionLinks *positionLinks;
 };
@@ -86,6 +94,18 @@ public:
     }
     int32_t getAddressIndex(int probePosition, Vector **joinColumns, int32_t joinColumnsCount, int64_t rawHash);
     void getBuildValue(void *value, int32_t joinPosition, int32_t outputCol);
+    int8_t *getPositionToHashes()
+    {
+        return positionToHashes;
+    }
+    int64_t *getAddresses()
+    {
+        return addresses;
+    }
+    int32_t getAddressesCount()
+    {
+        return addressesCount;
+    }
 
 private:
     int64_t getRawHash(int32_t position);
@@ -113,13 +133,13 @@ private:
 class ArrayPositionLinks
 {
 public:
-    ArrayPositionLinks(int32_t size);
+    ArrayPositionLinks(int32_t capacity);
     ~ArrayPositionLinks();
     int32_t *getPositionLinks()
     {
         return positionLinks;
     }
-    int32_t getPositionLinkSize()
+    int32_t getSize()
     {
         return size;
     }
@@ -128,6 +148,7 @@ public:
     int32_t next(int32_t position);
 private:
     int32_t *positionLinks;
+    int32_t capacity;
     int32_t size;
 };
 } // end of op

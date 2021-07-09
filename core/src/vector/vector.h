@@ -19,7 +19,7 @@ public:
 
     virtual ~Vector();
 
-    int getSize();
+    virtual int getSize();
 
     void setSize(int size);
 
@@ -29,7 +29,7 @@ public:
 
     VectorAllocator *getAllocator();
 
-    VecType getType();
+    virtual VecType getType();
 
     void *getValues();
 

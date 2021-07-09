@@ -25,13 +25,15 @@ public:
                     ((DoubleVector *) rightColumn)->getValue(rightColumnPosition)) {
                     return 1;
                 } else if (((DoubleVector *) leftColumn)->getValue(leftColumnPosition) <
-                           ((DoubleVector *) rightColumn)->getValue(rightColumnPosition)) {
+                    ((DoubleVector *) rightColumn)->getValue(rightColumnPosition)) {
                     return -1;
+                } else {
+                    return 0;
                 }
-                return 0;
             default:
                 break;
         }
+        return 0;
     }
 };
 

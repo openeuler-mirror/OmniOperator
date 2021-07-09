@@ -7,6 +7,7 @@ import java.util.List;
 
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_128_DECIMAL;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_256_DECIMAL;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DICTIONARY;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
@@ -83,6 +84,9 @@ public class VecBatch
             }
             else if (OMNI_VEC_TYPE_256_DECIMAL.equals(type)) {
                 vector = new Decimal256Vec(nativeVector);
+            }
+            else if (OMNI_VEC_TYPE_DICTIONARY.equals(type)) {
+                vector = new DictionaryVec(nativeVector);
             }
             else {
                 throw new IllegalArgumentException(String.format("Not Support Vec Type %s", type));

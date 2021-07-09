@@ -712,14 +712,45 @@ JitContext *createLookupJoinJitContext(
 {
     JNI_DEBUG_LOG("create lookup join jit context starting.");
     auto start = START();
+    using namespace omniruntime::jit;
+
+    ParamValue p_probeTypes = ParamValue(probeTypes, probeTypesCount);
+    ParamValue p_probeOutputCols = ParamValue(probeOutputCols, probeOutputColsCount);
+    ParamValue p_probeOutputColsCount = ParamValue(&probeOutputColsCount);
+
+    auto *buildProbeColumnsSp = new Specialization();
+    buildProbeColumnsSp->addSpecializedParam(2, &p_probeTypes);
+    buildProbeColumnsSp->addSpecializedParam(3, &p_probeOutputCols);
+    buildProbeColumnsSp->addSpecializedParam(4, &p_probeOutputColsCount);
+
+    ParamValue p_buildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
+    ParamValue p_buildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
+    ParamValue p_buildOutputColsCount = ParamValue(&buildOutputColsCount);
+
+    auto *buildBuildColumnsSp = new Specialization();
+    buildBuildColumnsSp->addSpecializedParam(2, &p_buildOutputTypes);
+    buildBuildColumnsSp->addSpecializedParam(3, &p_buildOutputCols);
+    buildBuildColumnsSp->addSpecializedParam(4, &p_buildOutputColsCount);
+    buildBuildColumnsSp->addSpecializedParam(5, &p_probeOutputColsCount);
+
+    std::map<std::string, Specialization> lookupJoinSps = {
+            {OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY, *buildProbeColumnsSp},
+            {OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp}
+    };
+
     int32_t *hashColTypes = new int32_t[probeHashColsCount];
     for (int32_t i = 0; i < probeHashColsCount; i++) {
         hashColTypes[i] = probeTypes[probeHashCols[i]];
     }
-
-    using namespace omniruntime::jit;
     ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
     ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
+
+    auto *hashRowSp = new Specialization();
+    hashRowSp->addSpecializedParam(2, &p_hashColTypes);
+    hashRowSp->addSpecializedParam(3, &p_hashColCount);
+    std::map<std::string, Specialization> joinHashTableSps = {
+            {OMNIJIT_HASH_ROW, *hashRowSp}
+    };
 
     auto *positionEqualsRowIgnoreNullsSp = new Specialization();
     positionEqualsRowIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
@@ -729,8 +760,8 @@ JitContext *createLookupJoinJitContext(
         {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS, *positionEqualsRowIgnoreNullsSp}
     };
 
-    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join", lookupJoinSps, std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps, std::vector<std::string>(), std::vector<std::string>());
     auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
     auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());

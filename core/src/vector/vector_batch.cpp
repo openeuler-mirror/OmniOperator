@@ -10,6 +10,7 @@
 VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount) {
     vectors = new Vector *[vectorCount];
     vectorTypes = new VecType[vectorCount];
+    rowCount = 0;
 }
 
 VectorBatch::~VectorBatch() {
@@ -20,6 +21,7 @@ VectorBatch::~VectorBatch() {
 VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCount(vectorCount) {
     vectors = new Vector *[vectorCount];
     vectorTypes = new VecType[vectorCount];
+    this->rowCount = rowCount;
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType) types[colIndex];
         switch (types[colIndex]) {
@@ -46,7 +48,10 @@ VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCoun
 void VectorBatch::setVector(int index, Vector *vector) {
     vectors[index] = vector;
     vectorTypes[index] = vector->getType();
-    rowCount = vector->getSize();
+    if (rowCount == 0) {
+        rowCount = vector->getSize();
+    }
+    ASSERT(rowCount == vector->getSize())
 }
 
 Vector *VectorBatch::getVector(int index) {

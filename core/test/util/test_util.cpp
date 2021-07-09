@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cfloat>
 #include "test_util.h"
+#include "../../src/vector/dictionary_vector.h"
 
 bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
 bool columnMatch(Vector *actualColumn, Vector *expectColumn);
@@ -40,6 +41,27 @@ bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber
     return true;
 }
 
+bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
+{
+    VecType type = actualVector->getDictionary()->getType();
+    int32_t actualPosition = actualVector->getIds()[position];
+    int32_t expectPosition = expectedVector->getIds()[position];
+    switch (type) {
+        case OMNI_VEC_TYPE_INT: {
+            int32_t actual = actualVector->getInt(actualPosition);
+            int32_t expect = expectedVector->getInt(expectPosition);
+            return actual == expect;
+        }
+        case OMNI_VEC_TYPE_LONG: {
+            int64_t actual = actualVector->getLong(actualPosition);
+            int64_t expect = expectedVector->getLong(expectPosition);
+            return actual == expect;
+        }
+        default:
+            return false;
+    }
+}
+
 bool columnMatch(Vector *actualColumn, Vector *expectColumn)
 {
     if (actualColumn->getType() != expectColumn->getType()) {
@@ -69,6 +91,10 @@ bool columnMatch(Vector *actualColumn, Vector *expectColumn)
                 double actual = ((DoubleVector *)expectColumn)->getValue(i);
                 double expect = ((DoubleVector *)expectColumn)->getValue(i);
                 result = (std::fabs(actual - expect) <= DBL_EPSILON) & result;
+                break;
+            }
+            case OMNI_VEC_TYPE_DICTIONARY: {
+                result = valueMatch((DictionaryVector *)actualColumn, (DictionaryVector *)expectColumn, i);
                 break;
             }
             default:
