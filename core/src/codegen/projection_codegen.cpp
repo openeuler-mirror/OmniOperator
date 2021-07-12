@@ -25,6 +25,8 @@ int64_t ProjectionCodeGen::createWrapper(Function* proj) {
     args.push_back(Type::getInt32PtrTy(*context));
     // Number of selected rows
     args.push_back(Type::getInt32Ty(*context));
+    Type* bitmapArg = Type::getInt1PtrTy(*context);
+    args.push_back(bitmapArg);
     FunctionType* funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function* funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", _module.get());
     BasicBlock* preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -39,6 +41,7 @@ int64_t ProjectionCodeGen::createWrapper(Function* proj) {
     numRows->setName("NUM_ROWS");
     Argument* outputAddress = funcDecl->getArg(2);
     outputAddress->setName("OUTPUT_ADDRESS");
+
     // Only use these values if filter enabled
     Argument* selected;
     Argument* numSelected;
@@ -48,16 +51,28 @@ int64_t ProjectionCodeGen::createWrapper(Function* proj) {
         numSelected = funcDecl->getArg(4);
         numSelected->setName("NUM_SELECTED");
     }
+
+    Argument* bitmap = funcDecl->getArg(5);
+    bitmap->setName("BITMAP");
     
     Value* minusOne = this->createConstantInt(-1);
     Value* zero = this->createConstantInt(0);
     Value* one = this->createConstantInt(1);
     vector<Value*> projFuncArgs;
-    projFuncArgs.reserve(nArgs);
+    // filterFuncArgs contains the values of the arguments to the filter function
+    // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < datatypes.size())
+    // filterFuncArgs[2 * i+1] contains a boolean value stating whether argument i is null
+    // filterFuncArgs[2 * datatypes.size()] contains the current row number
+    projFuncArgs.reserve(2 * nArgs + 1);
     Value* gep;
     Value* elementAddr;
     Value* elementPtr;
     Value* elementValue;
+    // for bitmap
+    Value* bitmapIdx;
+    Value* bitmapGEP;
+    Value* bitmapValue;
+
     DataType type;
     CallInst* ret;
     // pre loop body
@@ -121,8 +136,9 @@ int64_t ProjectionCodeGen::createWrapper(Function* proj) {
         rowIndexVal = curIndexVal;
     }
     for (int32_t i = 0; i < nArgs; i++) {
+        Value* colValue = this->createConstantInt(i);
         // Find address of this column in the addresses array argument.
-        gep = builder->CreateGEP(input, this->createConstantInt(i));
+        gep = builder->CreateGEP(input, colValue);
         // Load the address value.
         elementAddr = builder->CreateLoad(gep);
         type = this->datatypes->at(i);
@@ -153,7 +169,18 @@ int64_t ProjectionCodeGen::createWrapper(Function* proj) {
         elementValue = builder->CreateLoad(gep);
         // Pass to filter function's arguments.
         projFuncArgs.push_back(elementValue);
+        
+        // Get bitmap value bitmap[nArgs * curIndexVal + i]
+        bitmapIdx = builder->CreateMul(createConstantInt(nArgs), curIndexVal);
+        bitmapIdx = builder->CreateAdd(bitmapIdx, colValue, "BITMAP_INDEX");
+        bitmapGEP = builder->CreateGEP(bitmap, bitmapIdx);
+        bitmapValue = builder->CreateLoad(bitmapGEP);
+        // Pass whether the current value is null to projection function arguments
+        projFuncArgs.push_back(bitmapValue);
     }
+    // Add the row number to the end of projFuncArgs
+    projFuncArgs.push_back(curIndexVal);
+
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
     ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");

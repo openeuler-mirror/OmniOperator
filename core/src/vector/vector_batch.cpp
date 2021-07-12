@@ -6,6 +6,7 @@
 #include "int_vector.h"
 #include "long_vector.h"
 #include "double_vector.h"
+#include "varchar_vector.h"
 
 VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount) {
     vectors = new Vector *[vectorCount];
@@ -36,6 +37,17 @@ VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCoun
             case OMNI_VEC_TYPE_DOUBLE: {
                 setVector(colIndex, new DoubleVector(nullptr, rowCount));
                 break;
+            }
+            // TODO: add short support to codegen 
+            case OMNI_VEC_TYPE_SHORT: {
+                setVector(colIndex, new IntVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                VectorAllocator* va = nullptr;
+                // TODO: set capacity appropriately
+                // capacity = rowCount * 50 can't handle a vector of strings with average length above 50
+                setVector(colIndex, new VarcharVector(va, rowCount * 50, rowCount));
             }
             // TODO: support other types!!!
             default: {

@@ -51,17 +51,12 @@ public:
     LLVMCodeGen(string name, Expr *expr, vector<DataType>* datatypes);
     ~LLVMCodeGen();
 
-    void registerFunctionFromSignature(FunctionSignature func_signature);
-    // Should be private
-    void registerFunc(void* funcAddr, string funcName, llvm::Type* retType, vector<Type*> paramTypes);
-    void registerFunctions();
-    
     std::string dumpCode();
     virtual int64_t getFunction() = 0;
 
 // TODO: Figure out which of these can be private
 protected:
-
+    // Parse a generic expression by calling the helper functions below
     Value* parseExpr(Expr* root, map<string, Value*>& args);
 
     Value* createConstantBool(bool n);
@@ -69,6 +64,7 @@ protected:
     Value* createConstantLong(int64_t n);
     Value* createConstantDouble(double n);
     Type* toLLVMType(DataType t);
+    
     Function* createFunction();
     
     // Parsing different kinds of expressions
@@ -84,10 +80,19 @@ protected:
     // Helper functions for generating IR for operators and special forms
     Value* stringCmp(Value *LHS, Value *RHS);
     Function* createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse);
+    Function* createCoalesceFunc(DataType retType, DataExpr* dExpr1, Expr* value2Expr);
     
     std::string _func_name;
     Expr* _expr = nullptr;
     vector<DataType>* datatypes;
+
+
+    // Returns a set of all the required functions for a given row expression
+    // Currently a separate function
+    // Can be integrated with parseRowExpression, but then the method declaration would need refactoring
+    set<string> requiredFunctions(Expr* expr);
+    void requiredFunctionsHelper(Expr* expr, set<string>& s);
+    map<string, FunctionSignature*> funcNameToSignature;
 
     unique_ptr<LLVMContext> context;
     unique_ptr<IRBuilder<>> builder;
@@ -95,20 +100,8 @@ protected:
     ExitOnError EOE; 
     unique_ptr<LLJIT> JIT;
     ResourceTrackerSP rt;
+    FunctionRegistry *FR;
 
-
-    // List of functions
-    const string strCompareExt_str = "strCompareExt"; 
-    const string likeExt_str = "likeExt";
-    const string abs_int32_str = "abs_int32";
-    const string abs_int64_str = "abs_int64";
-    const string abs_double_str = "abs_double";
-    const string substrExt_str = "substrExt";
-    const string substrWithStartExt_str = "substrWithStartExt";
-    const string concatStrExt_str = "concatStrExt";
-    const string cast_int32_str = "cast_int32";
-    const string cast_int64_str = "cast_int64";
-    const string cast_string_str = "cast_string";
 };
 
 #endif

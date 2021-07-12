@@ -49,6 +49,12 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
     }
 
+    void setValueNotNull(int index) {
+        ASSERT(index < size);
+        ASSERT(valueNullsAddress != nullptr);
+        (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
+    }
+
     void setValueNulls(int startIndex, bool *nulls, int length);
 
     void setValueNullBitMap(int startIndex);

@@ -10,89 +10,123 @@ using namespace std;
 using namespace omniruntime::expressions;
 
 
+Parser::Parser() {
+    externalFuncNames = getAllExternalFunctionNames();
+    externalFuncRetTypeMap = getFuncReturnTypeMap();
+}
+
+Parser::~Parser() {
+}
+
 // Update with function return type every time a new function is added
-DataType funcRetTypeMap(string fnName, vector<Expr*> args) {
+DataType Parser::funcRetTypeMap(string fnName, vector<Expr*> args) {
     if (fnName == "CAST") {
         if (args[0]->dataType == STRINGD) return INT32D;
         else return DOUBLED;
     }
     if (fnName == "substr") return STRINGD;
-    if (fnName == "CONCAT") return STRINGD;
+    if (fnName == "concat") return STRINGD;
     if (fnName == "abs") return args[0]->dataType;
     if (fnName == "LIKE") return BOOLD;
+    if (fnName == "combine_hash") return INT64D;
+    if (externalFuncNames.find(fnName) != externalFuncNames.end()) {
+        return externalFuncRetTypeMap[fnName];
+    }
     return INVALIDDATAD;
 }
 
 // Update with conditions every time a new function is added
-bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes) {
+bool Parser::funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes) {
     if (fnName == "CAST" && args.size() == 1) {
         return true;
     }
     if (fnName == "substr" && (args.size() == 2 || args.size() == 3)) {
         if (!checkTypes) return true;
 
-        if (args[0]->dataType == STRINGD && 
-        (args[1]->dataType == INT32D || args[1]->dataType == INT64D) && 
-        (args.size() == 2 || (args[2]->dataType == INT32D || args[2]->dataType == INT64D))) {
+        if (args[0]->dataType == STRINGD &&
+            (args[1]->dataType == INT32D || args[1]->dataType == INT64D) &&
+            (args.size() == 2 || (args[2]->dataType == INT32D || args[2]->dataType == INT64D))) {
             return true;
         }
     }
-    if (fnName == "CONCAT" && args.size() == 2) {
+    if (fnName == "concat" && args.size() == 2) {
         if (!checkTypes) return true;
-        
+
         if (args[0]->dataType == STRINGD && args[1]->dataType == STRINGD) {
             return true;
         }
     }
     if (fnName == "abs" && args.size() == 1) {
         if (!checkTypes) return true;
-        
-        if (args[0]->dataType == INT32D || args[0]->dataType == INT32D || args[0]->dataType == INT32D) {
+
+        if (args[0]->dataType == INT32D || args[0]->dataType == INT64D || args[0]->dataType == DOUBLED) {
             return true;
         }
     }
     if (fnName == "LIKE" && args.size() == 2) {
         if (!checkTypes) return true;
-        
+
         // Assuming that like patterns are represented with strings
         if (args[0]->dataType == STRINGD && args[0]->dataType == STRINGD) {
             return true;
         }
+    }
+    if (fnName == "combine_hash" && args.size() == 2) {
+        if (!checkTypes) return true;
+        if ((args[0]->dataType == INT32D || args[0]->dataType == INT64D) &&
+            (args[1]->dataType == INT32D || args[1]->dataType == INT64D)) {
+            return true;
+        }
+    }
+    if (externalFuncNames.find(fnName) != externalFuncNames.end()) {
+        // Don't do any other checks for now for external fucntions
+        return true;
     }
     return false;
 }
 
 
 string operatorPrefix = "$operator$";
+
+// Helper function to remove operator prefix if it is there
+string demangleOperator(string opStr) {
+    if (opStr.size() > 10 && opStr.substr(0, 10) == operatorPrefix) {
+        return opStr.substr(10);
+    }
+    return opStr;
+}
+
 Operator opTrans(string op)
 {
+    op = demangleOperator(op);
+
     // Comparison operators
-    if (op == operatorPrefix + "EQUAL") return Operator::EQ;
-    else if (op == operatorPrefix + "LESS_THAN" || op == "LESS_THAN") return Operator::LT;
-    else if (op == operatorPrefix + "LESS_THAN_OR_EQUAL" || op == "LESS_THAN_OR_EQUAL") return Operator::LTE;
-    else if (op == operatorPrefix + "GREATER_THAN_OR_EQUAL" || op == "GREATER_THAN_OR_EQUAL") return Operator::GTE;
-    else if (op == operatorPrefix + "GREATER_THAN" || op == "GREATER_THAN") return Operator::GT;
-    else if (op == operatorPrefix + "NOT_EQUAL" || op == "NOT_EQUAL") return Operator::NEQ;
+    if (op == "EQUAL") return Operator::EQ;
+    else if (op == "LESS_THAN") return Operator::LT;
+    else if (op == "LESS_THAN_OR_EQUAL") return Operator::LTE;
+    else if (op == "GREATER_THAN_OR_EQUAL") return Operator::GTE;
+    else if (op == "GREATER_THAN") return Operator::GT;
+    else if (op == "NOT_EQUAL") return Operator::NEQ;
     // Logical operators
     else if (op == "AND") return Operator::AND;
     else if (op == "OR") return Operator::OR;
     else if (op == "NOT" || op == "not") return Operator::NOT;
     // Arithmetic
-    else if (op == operatorPrefix + "ADD" || op == "ADD") return Operator::ADD;
-    else if (op == operatorPrefix + "SUBTRACT" || op == "SUBTRACT") return Operator::SUB;
-    else if (op == operatorPrefix + "MULTIPLY" || op == "MULTIPLY") return Operator::MUL;
-    else if (op == operatorPrefix + "DIVIDE" || op == "DIVIDE") return Operator::DIV;
-    else if (op == operatorPrefix + "MODULUS" || op == "MODULUS") return Operator::MOD;
+    else if (op == "ADD") return Operator::ADD;
+    else if (op == "SUBTRACT") return Operator::SUB;
+    else if (op == "MULTIPLY") return Operator::MUL;
+    else if (op == "DIVIDE") return Operator::DIV;
+    else if (op == "MODULUS") return Operator::MOD;
     else return Operator::INVALIDOP;
 }
 
 OperatorReturnType getBinaryOperatorType(string opStr) 
 {
-    vector<string> allCmpOps {operatorPrefix + "LESS_THAN", operatorPrefix + "LESS_THAN_OR_EQUAL", operatorPrefix + "GREATER_THAN", operatorPrefix + "GREATER_THAN_OR_EQUAL", operatorPrefix + "EQUAL", operatorPrefix + "NOT_EQUAL", 
-    "LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "EQUAL", "NOT_EQUAL"};
+    opStr = demangleOperator(opStr);
+
+    vector<string> allCmpOps {"LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "EQUAL", "NOT_EQUAL"};
     vector<string> allLogOps {"AND", "OR"};
-    vector<string> allArithOps {operatorPrefix + "ADD", operatorPrefix + "SUBTRACT", operatorPrefix + "MULTIPLY", operatorPrefix + "DIVIDE", operatorPrefix + "MODULUS", 
-    "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULULS"};
+    vector<string> allArithOps {"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULULS"};
     for (string cmpOp : allCmpOps) {
         if (opStr == cmpOp) return OperatorReturnType::COMPARISON;
     }
@@ -215,7 +249,7 @@ DataType getDataType(string data, int32_t* inputTypes, int32_t vecCount)
             if (!isdigit(data[i])) return STRINGD;
         }
         int colIdx = stoi(data.substr(1));
-        return Parser::colTypeTrans(inputTypes[colIdx]);
+        return colTypeTrans(inputTypes[colIdx]);
     }
     // First check if int32 or int64
     bool isIntOrLong = true;
@@ -285,7 +319,7 @@ DataExpr* Parser::generateData(string dataStr, int32_t* inputTypes, int32_t vecC
     // Case with column
     if (dataStr[0] == '#') {
         int colIdx = stoi(dataStr.substr(1));
-        DataType dt = Parser::colTypeTrans(inputTypes[colIdx]);
+        DataType dt = colTypeTrans(inputTypes[colIdx]);
         return new DataExpr(colIdx, dt);
     }
 

@@ -12,6 +12,8 @@ int64_t FilterCodeGen::createWrapper(Function* filterFunc) {
     args.push_back(ptrArg);
     args.push_back(Type::getInt32Ty(*context));
     args.push_back(Type::getInt32PtrTy(*context));
+    Type* bitmapArg = Type::getInt1PtrTy(*context);
+    args.push_back(bitmapArg);
     FunctionType* funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function* funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", _module.get());
     BasicBlock* preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -26,15 +28,26 @@ int64_t FilterCodeGen::createWrapper(Function* filterFunc) {
     numRows->setName("NUM_ROWS");
     Argument* resultsArray = funcDecl->getArg(2);
     resultsArray->setName("RESULTS");
+    Argument* bitmap = funcDecl->getArg(3);
+    bitmap->setName("BITMAP");
     Value* minusOne = this->createConstantInt(-1);
     Value* zero = this->createConstantInt(0);
     Value* one = this->createConstantInt(1);
     vector<Value*> filterFuncArgs;
-    filterFuncArgs.reserve(nArgs);
+    // filterFuncArgs contains the values of the arguments to the filter function
+    // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < nArgs)
+    // filterFuncArgs[2 * i+1] contains a boolean value stating whether argument i is null
+    // filterFuncArgs[2 * nArgs] contains the current row number
+    filterFuncArgs.reserve(2 * nArgs + 1);
     Value* gep;
     Value* elementAddr;
     Value* elementPtr;
     Value* elementValue;
+    // for bitmap
+    Value* bitmapIdx;
+    Value* bitmapGEP;
+    Value* bitmapValue;
+
     DataType type;
     CallInst* ret;
     // pre loop body
@@ -63,8 +76,9 @@ int64_t FilterCodeGen::createWrapper(Function* filterFunc) {
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
     for (int32_t i = 0; i < nArgs; i++) {
+        Value* colValue = this->createConstantInt(i);
         // Find address of this column in the addresses array argument.
-        gep = builder->CreateGEP(start, this->createConstantInt(i));
+        gep = builder->CreateGEP(start, colValue);
         // Load the address value.
         elementAddr = builder->CreateLoad(gep);
         type = this->datatypes->at(i);
@@ -95,7 +109,18 @@ int64_t FilterCodeGen::createWrapper(Function* filterFunc) {
         elementValue = builder->CreateLoad(gep);
         // Pass to filter function's arguments.
         filterFuncArgs.push_back(elementValue);
+
+        // Get bitmap value bitmap[nArgs * curIndexVal + i]
+        bitmapIdx = builder->CreateMul(createConstantInt(nArgs), curIndexVal);
+        bitmapIdx = builder->CreateAdd(bitmapIdx, colValue, "BITMAP_INDEX");
+        bitmapGEP = builder->CreateGEP(bitmap, bitmapIdx);
+        bitmapValue = builder->CreateLoad(bitmapGEP);
+        // Pass whether the current value is null to filter function arguments
+        filterFuncArgs.push_back(bitmapValue);
     }
+    // Add the row number to the end of filterFuncArgs
+    filterFuncArgs.push_back(curIndexVal);
+
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
     // If true, add row index to selected array, otherwise, process next row.

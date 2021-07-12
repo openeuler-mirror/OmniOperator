@@ -19,6 +19,7 @@ public:
     Projection(int32_t* inputTypes, int32_t nCols, std::string expr, bool filter);
     Projection(int32_t* inputTypes, int32_t nCols, Expr* expr, bool filter);
     ~Projection() {
+        delete this->expr;
         delete this->codegen;
     }
 
@@ -31,7 +32,16 @@ private:
     int32_t nCols;
     Expr* expr;
     ProjectionCodeGen* codegen;
-    int32_t (*projector)(int64_t*, int32_t, int64_t, int32_t*, int32_t);
+    int64_t* getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap);
+
+    // projector function is retrieved from ProjectionCodeGen
+    // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)
+    // data: 2D array containing vector values
+    // rowCount: number of rows in data
+    // selectedRows: array of row numbers which pass the filter
+    // numSelectedRows: number of rows which pass the filter
+    // bitmap: boolean array where bitmap[numCols * row + col] is true if data[row][col] is null
+    int32_t (*projector)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*);
 };
 
 class ProjectionOperator : public Operator {
@@ -43,7 +53,6 @@ public:
         this->mutated = nullptr;
     }
     ~ProjectionOperator() {
-        if (this->mutated != nullptr) delete this->mutated;
     }
 
     int32_t addInput(VectorBatch* vecBatch) override;
@@ -61,6 +70,7 @@ class ProjectionOperatorFactory : public OperatorFactory {
 public:
     ProjectionOperatorFactory(std::string* expression, int32_t nProj, int32_t* inputTypes, int32_t nCols);
     ProjectionOperatorFactory(Expr** exprs, int32_t nProj, int32_t* inputTypes, int32_t nCols);
+    ~ProjectionOperatorFactory();
     omniruntime::op::Operator* createOperator() override;
 
 private:
