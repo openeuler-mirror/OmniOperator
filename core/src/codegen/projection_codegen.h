@@ -5,10 +5,11 @@
 
 class ProjectionCodeGen : public LLVMCodeGen {
 public:
-ProjectionCodeGen(string name, Expr* expr, vector<DataType>* datatypes, bool filter) :
-LLVMCodeGen(name, expr, datatypes), filter(filter) {}
-int64_t getFunction() override;
-bool isFilterEnabled() {return filter;}
+    ProjectionCodeGen(string name, Expr* expr, vector<DataType>* datatypes, bool filter) :
+    LLVMCodeGen(name, expr, datatypes), filter(filter) {}
+    ~ProjectionCodeGen() {}
+    int64_t getFunction() override;
+    bool isFilterEnabled() {return filter;}
 
 private:
     int64_t createWrapper(Function* proj);

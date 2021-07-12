@@ -4,8 +4,12 @@
 #ifndef __EXPRESSION_H__
 #include "../expressions.h"
 #endif
+#include "../../codegen/func_signature.h"
+#include "../../codegen/functions/externalfunctions.h"
+#include "../../codegen/functions/external_func_registry.h"
 #include <string>
 #include <cstring>
+#include <set>
 
 using namespace std;
 using namespace omniruntime::expressions;
@@ -18,26 +22,22 @@ enum OperatorReturnType {
 };
 
 
-
 class Parser
 {
 public:
+    Parser();
+    ~Parser();
+
+    DataType funcRetTypeMap(string fnName, vector<Expr*> args);
+    bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes);
+
     Expr *parseRowExpression(string input, int32_t *inputTypes, int32_t veccount);
     DataExpr* generateData(string dataStr, int32_t *inputTypes, int32_t vecCount);
-    static DataType colTypeTrans(int32_t colType) {
-        switch(colType) {
-            case 1:
-                return DataType::INT32D;
-            case 2:
-                return DataType::INT64D;
-            case 3:
-                return DataType::DOUBLED;
-                // not yet supported in table
-            case 4 :
-                return DataType::STRINGD;
-        }
-        return DataType::INVALIDDATAD;
-    }
+
+private:
+    set<string> externalFuncNames;
+    map<string, DataType> externalFuncRetTypeMap;
+    map<string, FunctionSignature*> funcNameToSignature;
 };
 
 

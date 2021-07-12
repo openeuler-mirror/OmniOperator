@@ -1,4 +1,3 @@
-/*
 
 #include "gtest/gtest.h"
 
@@ -12,6 +11,8 @@
 #include <regex>
 
 #include "../../src/codegen/llvm_codegen.h"
+#include "../../src/codegen/filter_codegen.h"
+#include "../../src/codegen/projection_codegen.h"
 #include "../../src/codegen/func_registry.h"
 
 
@@ -36,7 +37,7 @@
 
 
 
-TEST (CodeGenTest, Operators1) {  
+TEST (CodeGenTest, Operators1) {
     string unparsed = "AND($operator$GREATER_THAN_OR_EQUAL(ADD(#0, 2), 4), AND($operator$LESS_THAN(#1, 4), $operator$EQUAL(#2, 2)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
@@ -44,7 +45,7 @@ TEST (CodeGenTest, Operators1) {
     Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
     expr->printExprTree();
     cout << endl;
-    
+
     int32_t v1[1] = {2};
     int32_t v2[1] = {3};
     int32_t v3[1] = {2};
@@ -54,15 +55,22 @@ TEST (CodeGenTest, Operators1) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    // unique_ptr<LLVMCodeGen> lc = make_unique<LLVMCodeGen>(testname, expr, typeVec);
-    LLVMCodeGen* lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen* lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
 
     // number of rows that passed filter
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 2;
@@ -72,10 +80,10 @@ TEST (CodeGenTest, Operators1) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix this memory leak issue
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -90,7 +98,7 @@ TEST (CodeGenTest, MathFunctions1) {
     Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
     expr->printExprTree();
     cout << endl;
-    
+
     int32_t v1[1] = {-123};
     int32_t v2[1] = {123};
     int32_t v3[1] = {123};
@@ -100,13 +108,22 @@ TEST (CodeGenTest, MathFunctions1) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 10000;
@@ -116,10 +133,10 @@ TEST (CodeGenTest, MathFunctions1) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -135,7 +152,7 @@ TEST (CodeGenTest, MathFunctions2) {
     Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
     expr->printExprTree();
     cout << endl;
-    
+
     int32_t v1[1] = {1001};
     int32_t v2[1] = {1001};
     int32_t v3[1] = {1001};
@@ -145,13 +162,22 @@ TEST (CodeGenTest, MathFunctions2) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 100;
@@ -161,7 +187,7 @@ TEST (CodeGenTest, MathFunctions2) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
     v1[0] = 100;
@@ -171,10 +197,10 @@ TEST (CodeGenTest, MathFunctions2) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -190,7 +216,7 @@ TEST (CodeGenTest, MathFunctions3) {
     Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
     expr->printExprTree();
     cout << endl;
-    
+
     int32_t v1[1] = {1001};
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
@@ -200,13 +226,22 @@ TEST (CodeGenTest, MathFunctions3) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 100;
@@ -216,7 +251,7 @@ TEST (CodeGenTest, MathFunctions3) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
     v1[0] = -12;
@@ -226,7 +261,7 @@ TEST (CodeGenTest, MathFunctions3) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = -12222;
@@ -236,10 +271,10 @@ TEST (CodeGenTest, MathFunctions3) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -255,7 +290,7 @@ TEST (CodeGenTest, MathFunctions4) {
     Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
     expr->printExprTree();
     cout << endl;
-    
+
     int32_t v1[1] = {1};
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
@@ -265,13 +300,22 @@ TEST (CodeGenTest, MathFunctions4) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 3;
@@ -281,7 +325,7 @@ TEST (CodeGenTest, MathFunctions4) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 5;
@@ -291,7 +335,7 @@ TEST (CodeGenTest, MathFunctions4) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 0;
@@ -301,7 +345,7 @@ TEST (CodeGenTest, MathFunctions4) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
     v1[0] = 123;
@@ -311,10 +355,10 @@ TEST (CodeGenTest, MathFunctions4) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -325,7 +369,7 @@ TEST (CodeGenTest, MathFunctions4) {
 // For testing different types
 TEST (CodeGenTest, CastNumbers1) {
     string unparsed = "$operator$EQUAL(abs(CAST(#0)), abs(CAST(#1)))";
-    
+
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser{};
@@ -333,7 +377,7 @@ TEST (CodeGenTest, CastNumbers1) {
     expr->printExprTree();
     cout << endl;
 
-    
+
     int32_t v1[1] = {10000};
     int64_t v2[1] = {10000};
     double v3[1] = {12.34};
@@ -343,13 +387,22 @@ TEST (CodeGenTest, CastNumbers1) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest3";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = 2000000000;
@@ -359,7 +412,7 @@ TEST (CodeGenTest, CastNumbers1) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
     v1[0] = -1000000;
@@ -369,10 +422,10 @@ TEST (CodeGenTest, CastNumbers1) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -389,7 +442,7 @@ TEST (CodeGenTest, CastNumbers2) {
     expr->printExprTree();
     cout << endl;
 
-    
+
     int32_t v1[1] = {324233};
     int64_t v2[1] = {12};
     double v3[1] = {12.34};
@@ -399,13 +452,22 @@ TEST (CodeGenTest, CastNumbers2) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "simpleTest3";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
     v1[0] = 2000000000;
@@ -415,7 +477,7 @@ TEST (CodeGenTest, CastNumbers2) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = -1000000;
@@ -425,10 +487,10 @@ TEST (CodeGenTest, CastNumbers2) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 1, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete lc;
@@ -438,7 +500,7 @@ TEST (CodeGenTest, CastNumbers2) {
 
 TEST(CodeGenTest, Like) {
     string unparsed = "LIKE(#2, '%hello%world%')";
-    
+
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
@@ -448,7 +510,7 @@ TEST(CodeGenTest, Like) {
 
     string s1;
     string s2;
-    
+
     int32_t v1[1] = {8766};
     s1 = "asdf";
     int64_t v2[1] = {(int64_t)(s1.c_str())};
@@ -460,13 +522,22 @@ TEST(CodeGenTest, Like) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
 
@@ -479,10 +550,10 @@ TEST(CodeGenTest, Like) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -491,14 +562,8 @@ TEST(CodeGenTest, Like) {
 
 
 TEST(CodeGenTest, DateCast) {
-    // string unparsed = "$operator$EQUAL('hello world', 'hello worldjdflskgj')";
-    // string unparsed = "$operator$EQUAL(#1, #2)";
-    // string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
-    // string unparsed = "$operator$EQUAL(substr(#1, 0, 5), #2)";
-    // string unparsed = "$operator$EQUAL(CONCAT(#1, #2), 'helloworld')";
-    // string unparsed = "IN(substr(#2, 0, 2), '12', '21', '13', '31', '34', '43')";
     string unparsed = "$operator$GREATER_THAN(CAST(#2), #0)";
-    
+
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
@@ -509,7 +574,7 @@ TEST(CodeGenTest, DateCast) {
 
     string s1;
     string s2;
-    
+
     int32_t v1[1] = {8766};
     s1 = "asdf";
     int64_t v2[1] = {(int64_t)(s1.c_str())};
@@ -521,13 +586,22 @@ TEST(CodeGenTest, DateCast) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
 
@@ -540,7 +614,7 @@ TEST(CodeGenTest, DateCast) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = {8766};
@@ -552,10 +626,10 @@ TEST(CodeGenTest, DateCast) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -563,13 +637,8 @@ TEST(CodeGenTest, DateCast) {
 }
 
 TEST(CodeGenTest, SubstrIn) {
-    // string unparsed = "$operator$EQUAL('hello world', 'hello worldjdflskgj')";
-    // string unparsed = "$operator$EQUAL(#1, #2)";
-    // string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
-    // string unparsed = "$operator$EQUAL(substr(#1, 0, 5), #2)";
-    // string unparsed = "$operator$EQUAL(CONCAT(#1, #2), 'helloworld')";
     string unparsed = "IN(substr(#2, 0, 2), '12', '21', '13', '31', '34', '43')";
-    
+
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
@@ -580,7 +649,7 @@ TEST(CodeGenTest, SubstrIn) {
 
     string s1;
     string s2;
-    
+
     int32_t v1[1] = {8766};
     s1 = "asdf";
     int64_t v2[1] = {(int64_t)(s1.c_str())};
@@ -592,14 +661,24 @@ TEST(CodeGenTest, SubstrIn) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
+    freeStrings();
 
 
     v1[0] = {8766};
@@ -611,8 +690,9 @@ TEST(CodeGenTest, SubstrIn) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
+    freeStrings();
 
     v1[0] = {8766};
     s1 = "j";
@@ -623,10 +703,11 @@ TEST(CodeGenTest, SubstrIn) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
+    freeStrings();
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -634,12 +715,8 @@ TEST(CodeGenTest, SubstrIn) {
 }
 
 TEST(CodeGenTest, ConcatStr) {
-    // string unparsed = "$operator$EQUAL('hello world', 'hello worldjdflskgj')";
-    // string unparsed = "$operator$EQUAL(#1, #2)";
-    // string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
-    // string unparsed = "$operator$EQUAL(substr(#1, 0, 5), #2)";
-    string unparsed = "$operator$EQUAL(CONCAT(#1, #2), 'helloworld')";
-    
+    string unparsed = "$operator$EQUAL(concat(#1, #2), 'helloworld')";
+
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
@@ -650,7 +727,7 @@ TEST(CodeGenTest, ConcatStr) {
 
     string s1;
     string s2;
-    
+
     int32_t v1[1] = {8766};
     s1 = "hello";
     int64_t v2[1] = {(int64_t)(s1.c_str())};
@@ -662,14 +739,24 @@ TEST(CodeGenTest, ConcatStr) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
+    freeStrings();
 
 
     v1[0] = {8766};
@@ -681,8 +768,10 @@ TEST(CodeGenTest, ConcatStr) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
+    freeStrings();
+
 
     v1[0] = {8766};
     s1 = "hello ";
@@ -693,10 +782,12 @@ TEST(CodeGenTest, ConcatStr) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
+    freeStrings();
 
-    // TODO: fix all memory leaks
+
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -706,7 +797,7 @@ TEST(CodeGenTest, ConcatStr) {
 TEST(CodeGenTest, StringWithOps) {
     string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
 
-    
+
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
@@ -717,7 +808,7 @@ TEST(CodeGenTest, StringWithOps) {
 
     string s1;
     string s2;
-    
+
     int32_t v1[1] = {8766};
     s1 = "asdf";
     int64_t v2[1] = {(int64_t)(s1.c_str())};
@@ -729,13 +820,22 @@ TEST(CodeGenTest, StringWithOps) {
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    LLVMCodeGen *lc = new LLVMCodeGen(testname, expr, typeVec);
+    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
+    
 
-    lc->compile();
 
-    int32_t result = lc->execute(vals, 1, selected);
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
 
@@ -748,7 +848,7 @@ TEST(CodeGenTest, StringWithOps) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
     v1[0] = {8766};
@@ -760,13 +860,61 @@ TEST(CodeGenTest, StringWithOps) {
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
-    result = lc->execute(vals, 0, selected);
+    result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
 
-    // TODO: fix all memory leaks
+    delete[] bitmap;
     delete[] vals;
     delete[] selected;
     delete expr;
     delete lc;
 }
-*/
+
+TEST(CodeGenTest, Coalesce) {
+    string unparsed = "$operator$EQUAL(COALESCE(#0, 0), 123)";
+
+
+    DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
+    Parser parser{};
+    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
+    expr->printExprTree();
+    cout << endl;
+
+    int64_t v1[1] = {123};
+    int64_t v2[1] = {234};
+    int64_t v3[1] = {345};
+    int64_t* vals = new int64_t[3];
+    vals[0] = (int64_t) v1;
+    vals[1] = (int64_t) v2;
+    vals[2] = (int64_t) v3;
+    int32_t *selected = new int32_t[1];
+
+    bool* bitmap = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = false;
+    }
+    
+
+    string testname = "coalesceTest1";
+    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
+    
+
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
+    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t result = func(vals, 1, selected, bitmap);
+    EXPECT_EQ(result, 1);
+
+
+    bitmap[0] = true;
+
+    result = func(vals, 1, selected, bitmap);
+    EXPECT_EQ(result, 0);
+
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
+}

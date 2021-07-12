@@ -8,6 +8,7 @@ namespace omniruntime {
 namespace expressions {
 
 // Helper function to get DataType from jint type
+// Find types in core/src/types/vector_type.h
 DataType colTypeTrans(int32_t colType) {
     switch(colType) {
         case 1:
@@ -16,8 +17,12 @@ DataType colTypeTrans(int32_t colType) {
             return DataType::INT64D;
         case 3:
             return DataType::DOUBLED;
-        // not yet supported in vecBatch
         case 4 :
+            return DataType::BOOLD;
+        // Should be short datatype (INT16D)
+        case 5:
+            return DataType::INT32D;
+        case 100:
             return DataType::STRINGD;
     }
     return DataType::INVALIDDATAD;

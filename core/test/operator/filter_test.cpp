@@ -27,6 +27,19 @@ VectorBatch* createInput(const int32_t NUM_ROWS,
             case OMNI_VEC_TYPE_DOUBLE:
                 ((DoubleVector *)vecBatch->getVector(i))->setValues(0, (double *)allData[i], NUM_ROWS);
                 break;
+            case OMNI_VEC_TYPE_SHORT:
+                ((IntVector *)vecBatch->getVector(i))->setValues(0, (int32_t *)allData[i], NUM_ROWS);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR: {
+                for (int j = 0; j < NUM_ROWS; ++j) {
+                    // std::cout << "row: " << j << std::endl;
+                    int64_t addr = ((int64_t *)(allData[i]))[j];
+                    std::string s ((char *)(addr));
+                    // std::cout << "s: " << s << std::endl;
+                    ((VarcharVector *)vecBatch->getVector(i))->setValue(j, const_cast<char *>(s.c_str()), s.length() + 1);
+                }
+                break;
+            }
         }
 
     }
@@ -116,6 +129,11 @@ TEST (FilterTest, LessThan) {
     }
     VectorHelper::freeVecBatch(in1);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, GreaterThan) {
@@ -151,6 +169,12 @@ TEST (FilterTest, GreaterThan) {
     }
     VectorHelper::freeVecBatch(in1);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, EqualTo) {
@@ -187,6 +211,13 @@ TEST (FilterTest, EqualTo) {
     }
     VectorHelper::freeVecBatch(in1);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, GreaterThanOrEqualTo) {
@@ -220,6 +251,12 @@ TEST (FilterTest, GreaterThanOrEqualTo) {
     }
     VectorHelper::freeVecBatch(in1);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, NotEqualTo) {
@@ -251,6 +288,11 @@ TEST (FilterTest, NotEqualTo) {
     }
     VectorHelper::freeVecBatch(in1);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, AllPass) {
@@ -274,11 +316,19 @@ TEST (FilterTest, AllPass) {
 
     op->addInput(in1);
     int32_t numReturned = op->getOutput(ret);
+    std::cout << "numReturned: " << numReturned << std::endl;
     EXPECT_EQ(numReturned, 20000);
-    for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
-        EXPECT_EQ(val0, 9348);
-    }
+
+    VectorHelper::freeVecBatch(in1);
+    std::cout << "freed in1" << std::endl;
+    // TODO: find out why freeing ret causes segfault
+    // VectorHelper::freeVecBatches(ret);
+//    std::cout << "freed ret" << std::endl;
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, MultipleInputs) {
@@ -316,13 +366,14 @@ TEST (FilterTest, MultipleInputs) {
     EXPECT_TRUE(checkOutput(ret[1], numReturned, filter1));
     EXPECT_EQ(numReturned, 668);
 
-    // op->close();
+    VectorHelper::freeVecBatch(in2);
+    VectorHelper::freeVecBatches(ret);
+
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
+    delete op;
     delete factory;
-    VectorHelper::freeVecBatch(in2);
-    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, NegativeValues) {
@@ -355,13 +406,14 @@ TEST (FilterTest, NegativeValues) {
     // Both values are negative for every multiple of 35.
     EXPECT_EQ(numReturned, 286);
 
-    //op->close();
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
+
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
+    delete op;
     delete factory;
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, AllTypes) {
@@ -399,14 +451,15 @@ TEST (FilterTest, AllTypes) {
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter3));
     EXPECT_EQ(numReturned, 100);
 
-    // op->close();
+    VectorHelper::freeVecBatch(in1);
+    VectorHelper::freeVecBatches(ret);
+
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
     delete[] data3;
+    delete op;
     delete factory;
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, Compile) {
@@ -419,7 +472,7 @@ TEST (FilterTest, Compile) {
     inputTypes[1] = 1;
     inputTypes[2] = 3;
     inputTypes[3] = 3;
-    
+
     const int32_t DATA_SIZE = 10000;
     double *data1 = new double[DATA_SIZE];
     int32_t *data2 = new int32_t[DATA_SIZE];
@@ -444,17 +497,18 @@ TEST (FilterTest, Compile) {
     int32_t numSelectedRows = op->getOutput(ret);
     EXPECT_EQ(numSelectedRows, 100);
     // EXPECT_TRUE(checkOutput(ret[0], DATA_SIZE, filter5));
-    
-    // op->close();
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
     delete[] inputTypes;
     delete[] data1;
     delete[] data2;
     delete[] data3;
     delete[] data4;
     delete[] projectIdx;
+    delete op;
     delete factory;
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
 }
 
 TEST (FilterTest, LogicalOperators1) {
@@ -496,8 +550,19 @@ TEST (FilterTest, LogicalOperators1) {
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 543);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter4));
+
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete[] col4;
+    delete[] col5;
+    delete[] col6;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, LogicalOperators2) {
@@ -535,6 +600,14 @@ TEST (FilterTest, LogicalOperators2) {
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter6));
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete[] col4;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, LogicalOperators3) {
@@ -579,6 +652,12 @@ TEST (FilterTest, LogicalOperators3) {
     }
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, ArithmeticAdd) {
@@ -608,6 +687,11 @@ TEST (FilterTest, ArithmeticAdd) {
     }
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, ArithmeticSubtract) {
@@ -638,8 +722,15 @@ TEST (FilterTest, ArithmeticSubtract) {
         int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
         EXPECT_TRUE(0 < val0 - 5);
     }
+
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, ArithmeticMultiply) {
@@ -675,6 +766,12 @@ TEST (FilterTest, ArithmeticMultiply) {
     }
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, Conditional) {
@@ -705,8 +802,16 @@ TEST (FilterTest, Conditional) {
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 5000);
+
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, Conditional2) {
@@ -737,8 +842,16 @@ TEST (FilterTest, Conditional2) {
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 2000);
+
     VectorHelper::freeVecBatch(t);
     VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
 }
 
 TEST (FilterTest, DISABLED_ArithmeticDivide) {
@@ -752,4 +865,380 @@ TEST (FilterTest, DISABLED_ArithmeticDivide) {
         col1[i] = i;
     }
     int64_t allData[NUM_COLS] = {(int64_t) col1};
+}
+
+TEST (FilterTest, In) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 10000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int32_t* col2 = new int32_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 10;
+        col2[i] = i % 5;
+        col3[i] = i % 6 + 12;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "IN(#0, 1, 3, 5)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+    EXPECT_EQ(numReturned, 3000);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        EXPECT_TRUE(val0 == 1 || val0 == 3 || val0 == 5);
+    }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
+}
+
+TEST (FilterTest, Between) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 10000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int32_t* col2 = new int32_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 5;
+        col2[i] = i % 11;
+        col3[i] = (i % 21) - 3;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "BETWEEN(#1, #0, #2)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+    EXPECT_EQ(numReturned, 4705);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->getVector(1))->getValue(i);
+        int32_t val2 = ((IntVector *)ret[0]->getVector(2))->getValue(i);
+        EXPECT_TRUE((val0 <= val1) && (val1 <= val2));
+    }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
+}
+
+TEST (FilterTest, NotEqualToAbs) {
+    const int32_t NUM_COLS = 1;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+
+    const int32_t NUM_ROWS = 100000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i - 32435;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1};
+    const int32_t PROJECT_COUNT = 1;
+    int32_t projectIndices[PROJECT_COUNT] = {0};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "$operator$NOT_EQUAL(abs(#0), 4)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+    EXPECT_EQ(numReturned, 99998);
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
+
+
+// Function tests
+TEST (FilterTest, MathFunctionFilter1) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 10000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int32_t* col2 = new int32_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 2;
+        col2[i] = i % 5;
+        col3[i] = -1;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "AND($operator$EQUAL(abs(#0), abs(#2)), $operator$EQUAL(abs(#0), abs(#1)))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+
+    EXPECT_EQ(numReturned, 1000);
+    std::cout << "numReturned: " << numReturned << std::endl;
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->getVector(1))->getValue(i);
+        int32_t val2 = ((IntVector *)ret[0]->getVector(2))->getValue(i);
+        EXPECT_TRUE((std::abs(val0) == std::abs(val1)) && (std::abs(val1) == std::abs(val2)));
+    }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
+}
+
+
+
+// For testing different types
+TEST (FilterTest, MathFunctionFilter2) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 2;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 10000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int64_t* col2 = new int64_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 2;
+        col2[i] = i % 5;
+        col3[i] = -1;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "$operator$EQUAL(abs(CAST(#0)), abs(CAST(#1)))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+
+    EXPECT_EQ(numReturned, 2000);
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
+}
+
+// String filter and varcharvec testing
+TEST (FilterTest, FilterString1) {
+    vector<string*> strings;
+
+    const int32_t NUM_COLS = 1;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 100;
+
+    const int32_t NUM_ROWS = 100000;
+    int64_t* col1 = new int64_t[NUM_ROWS];
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        if (i % 40 == 0) {
+            std::string *s = new std::string("hello");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+        else {
+            std::string *s = new std::string("abcdefghijklmnopqrstuvwxyz");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1};
+    const int32_t PROJECT_COUNT = 1;
+    int32_t projectIndices[PROJECT_COUNT] = {0};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+
+    std::string expr = "$operator$EQUAL(#0, 'hello')";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+
+    EXPECT_EQ(numReturned, 2500);
+
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
+
+TEST (FilterTest, Coalesce1) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 100000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int64_t* col2 = new int64_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = 100;
+        col2[i] = 21;
+        col3[i] = -1;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    for (int32_t i = 0; i < NUM_ROWS; i ++) {
+        if (i % 2) {
+            t->getVector(1)->setValueNull(i);
+        }
+        else {
+            t->getVector(1)->setValueNotNull(i);
+        }
+    }
+
+    std::string expr = "$operator$EQUAL(21, COALESCE(#1, #0))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+
+    EXPECT_EQ(numReturned, 50000);
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
+}
+
+
+TEST (FilterTest, Coalesce2) {
+    vector<string*> strings;
+
+    const int32_t NUM_COLS = 1;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 100;
+
+    const int32_t NUM_ROWS = 1000;
+    int64_t* col1 = new int64_t[NUM_ROWS];
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        std::string *s = new std::string("hello");
+        col1[i] = (int64_t)(s->c_str());
+        strings.push_back(s);
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1};
+    const int32_t PROJECT_COUNT = 1;
+    int32_t projectIndices[PROJECT_COUNT] = {0};
+    VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        if (i % 2) {
+            t->getVector(0)->setValueNull(i);
+        }
+        else {
+            // Seemingly necessary so that the bitmap doesn't get default values
+            t->getVector(0)->setValueNotNull(i);
+        };
+    }
+
+    std::string expr = "$operator$EQUAL(COALESCE(#0, 'bye'), 'hello')";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->createOperator();
+    op->addInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->getOutput(ret);
+
+    EXPECT_EQ(numReturned, 500);
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
 }

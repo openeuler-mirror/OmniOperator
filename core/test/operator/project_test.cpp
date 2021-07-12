@@ -73,6 +73,14 @@ TEST (ProjectTest, Simple) {
         int32_t val0 = ((IntVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, i + 5);
     }
+    
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] col;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, Negatives) {
@@ -92,6 +100,14 @@ TEST (ProjectTest, Negatives) {
         int32_t val0 = ((IntVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, i - 505);
     }
+    
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] col;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, Longs) {
@@ -111,6 +127,14 @@ TEST (ProjectTest, Longs) {
         int64_t val0 = ((LongVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, (int64_t) (i - 5000) * 5000000);
     }
+    
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] col;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, Doubles) {
@@ -131,6 +155,14 @@ TEST (ProjectTest, Doubles) {
         double expected = (i - 5000.5) / 2;
         EXPECT_TRUE(val0 > expected - 0.1 && val0 < expected + 0.1);
     }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] col;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, MultipleColumns) {
@@ -155,6 +187,16 @@ TEST (ProjectTest, MultipleColumns) {
         int64_t val1 = ((LongVector*) ret[0]->getVector(1))->getValue(i);
         EXPECT_EQ(val1, i - 9);
     }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, DependOtherColumn) {
@@ -179,6 +221,16 @@ TEST (ProjectTest, DependOtherColumn) {
         int64_t val1 = ((LongVector*) ret[0]->getVector(1))->getValue(i);
         EXPECT_EQ(val1, (int64_t) (i < 500 ? 4000000000 : i));
     }
+
+    VectorHelper::freeVecBatch(t);
+    VectorHelper::freeVecBatches(ret);
+
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+
+    delete op;
+    delete factory;
 }
 
 }

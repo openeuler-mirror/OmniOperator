@@ -14,21 +14,27 @@
 #include "../../common/parser/parser.h"
 #include "../../codegen/llvm_codegen.h"
 
-using namespace omniruntime::expressions;
-
 namespace omniruntime {
 namespace op {
     
 class Filter
 {
 public:
-    Filter(FilterCodeGen* codegen, Expr* expr);
+    Filter(FilterCodeGen* codegen, expressions::Expr* expr);
     ~Filter() {delete this->codeGen; delete this->expr;}
-    int32_t filter(VectorBatch *vecBatch, int32_t *selectedRows);
+    int32_t filter(VectorBatch* &vecBatch, int32_t *selectedRows);
 private:
     FilterCodeGen *codeGen;
-    Expr* expr;
-    int32_t (*func)(int64_t*, int32_t, int32_t*);
+    expressions::Expr* expr;
+    int64_t* getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap);
+    
+    // filter function is retrieved from FilterCodeGen
+    // func(data, numSelectedRows, rowCount, bitmap)
+    // data: 2D array containing vector values
+    // selectedRows: array of row numbers which pass the filter; is modified in func
+    // rowCount: number of rows in data
+    // bitmap: boolean array where bitmap[numCols * row + col] is true if data[row][col] is null
+    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
 };
 
 class FilterAndProjectOperator : public Operator
@@ -37,6 +43,13 @@ public:
     FilterAndProjectOperator(Filter *filter, int32_t *inputTypes, int32_t vecCount, Projection** projections, int32_t projectVecCount)
         : filter(filter), inputTypes(inputTypes), vecCount(vecCount), projections(projections), projectVecCount(projectVecCount)
     {
+    }
+
+    ~FilterAndProjectOperator() {
+        for (int i = 0; i < this->projectVecCount; i++) {
+            delete this->projections[i];
+        }
+        delete[] this->projections;
     }
 
     int32_t addInput(VectorBatch *vecBatch) override;
