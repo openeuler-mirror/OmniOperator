@@ -35,13 +35,13 @@ public:
 
     Operator *CreateOperator();
 
-    int32_t *getSourceTypes() { return sourceTypes; }
+    int32_t *GetSourceTypes() { return sourceTypes; }
 
     int32_t getSourceTypeCount() { return sourceTypeCount; }
 
-    int32_t *getOutputCols() { return outputCols; }
+    int32_t *GetOutputCols() { return outputCols; }
 
-    int32_t getOutputColCount() { return outputColCount; }
+    int32_t GetOutputColCount() { return outputColCount; }
 
     int32_t *getSortCols() { return sortCols; }
 
@@ -82,9 +82,9 @@ public:
 
     int32_t getTypescount() { return typesCount; }
 
-    int32_t *getOutputCols() { return outputCols; }
+    int32_t *GetOutputCols() { return outputCols; }
 
-    int32_t getOutputColsCount() { return outputColsCount; }
+    int32_t GetOutputColsCount() { return outputColsCount; }
 
     int32_t *getSortCols() { return sortCols; }
 

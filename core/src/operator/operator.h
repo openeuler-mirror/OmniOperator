@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __OMNI_OPERATOR_H__
 #define __OMNI_OPERATOR_H__
 
@@ -18,18 +21,27 @@ namespace op {
 
         virtual int32_t GetOutput(std::vector<VectorBatch *> &data) = 0;
 
-        virtual int32_t *GetSourceTypes() { return sourceTypes; }
+        const virtual int32_t *GetSourceTypes()
+        {
+            return sourceTypes;
+        }
 
-        int GetStatus() { return status; }
+        int GetStatus()
+        {
+            return status;
+        }
 
-        void SetStatus(OmniStatus status) { this->status = status; };
+        void SetStatus(OmniStatus status)
+        {
+            this->status = status;
+        };
 
         virtual void Close() {}
 
-    private:
-        int status;
     protected:
         int32_t* sourceTypes;
+    private:
+        int status;
     };
 }
 }

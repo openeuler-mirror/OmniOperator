@@ -89,9 +89,9 @@ JitContext *createTestHashBuilderJitContext(
     auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
     auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*hashBuilderContext, *pagesIndexContext, *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext});
-    auto createOperatorFunc = jit->specialize();
+    auto CreateOperatorFunc = jit->specialize();
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    jitContext->func = reinterpret_cast<uintptr_t>(CreateOperatorFunc);
     return jitContext;
 }
 
@@ -166,9 +166,9 @@ JitContext *createTestLookupJoinJitContext(
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*lookupJoinContext, *joinHashTableContext, *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext});
-    auto createOperatorFunc = jit->specialize();
+    auto CreateOperatorFunc = jit->specialize();
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    jitContext->func = reinterpret_cast<uintptr_t>(CreateOperatorFunc);
 
     return jitContext;
 }

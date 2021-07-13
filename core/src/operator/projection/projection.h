@@ -25,7 +25,7 @@ public:
 
     Vector* project(VectorBatch* vecBatch, int32_t* selected, int32_t nSelected);
     Vector* project(VectorBatch* vecBatch);
-    DataType getOutputType() {return this->expr->getExprDataType();}
+    DataType GetOutputType() {return this->expr->getExprDataType();}
 
 private:
     int32_t* inputTypes;

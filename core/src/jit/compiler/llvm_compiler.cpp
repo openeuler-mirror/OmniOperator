@@ -54,13 +54,13 @@ namespace omniruntime {
             if (!isDependency) {
                 for (auto &func : module->getFunctionList()) {
                     if (func.getName().contains(Compiler::entryFuncName)) {
-                        this->createOperatorSymbol = func.getName().str();
+                        this->CreateOperatorSymbol = func.getName().str();
                         break;
                     }
                 }
 
-                if (this->createOperatorSymbol.empty()) {
-                    outs() << "Error: Couldn't find createOperator function\n";
+                if (this->CreateOperatorSymbol.empty()) {
+                    outs() << "Error: Couldn't find CreateOperator function\n";
                 }
             }
 
@@ -102,19 +102,19 @@ namespace omniruntime {
             specializedModules.clear();
 
             if (jit) {
-                if (this->createOperatorSymbol.empty()) {
+                if (this->CreateOperatorSymbol.empty()) {
                     llvm::errs() << "Error: CreateOperator function not found yet\n";
                     return 0;
                 }
 
-                auto func = jit->lookup(this->createOperatorSymbol);
+                auto func = jit->lookup(this->CreateOperatorSymbol);
                 if (func) {
                     jitter = jit.release();
-                    llvm::outs() << "Found createOperator symbol: " << this->createOperatorSymbol << "\n";
+                    llvm::outs() << "Found CreateOperator symbol: " << this->CreateOperatorSymbol << "\n";
                     return func->getAddress();
                 } else {
-                    llvm::errs() << "Error: Cannot lookup the jitted createOperator method "
-                                 << this->createOperatorSymbol
+                    llvm::errs() << "Error: Cannot lookup the jitted CreateOperator method "
+                                 << this->CreateOperatorSymbol
                                  << ", error: " << toString(func.takeError()) << "\n";
                     return 0;
                 }

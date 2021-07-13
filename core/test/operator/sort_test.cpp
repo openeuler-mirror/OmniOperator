@@ -51,14 +51,14 @@ JitContext *createTestSortJitContext(
     allocColumnsSp->addSpecializedParam(2, &p_outputCols);
     allocColumnsSp->addSpecializedParam(3, &p_outputColCount);
 
-    Specialization *getOutputSp = new Specialization();
-    getOutputSp->addSpecializedParam(1, &p_outputCols);
-    getOutputSp->addSpecializedParam(2, &p_outputColCount);
-    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
+    Specialization *GetOutputSp = new Specialization();
+    GetOutputSp->addSpecializedParam(1, &p_outputCols);
+    GetOutputSp->addSpecializedParam(2, &p_outputColCount);
+    GetOutputSp->addSpecializedParam(4, &p_sourceTypes);
 
     std::map<std::string, Specialization> pagesIndexSps = {
         {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp},
-        {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp}
+        {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *GetOutputSp}
     };
 
     omniruntime::jit::Context *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
@@ -66,10 +66,10 @@ JitContext *createTestSortJitContext(
     omniruntime::jit::Context *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(), std::vector<std::string>());
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
-    auto createOperatorFunc = jit->specialize();
+    auto CreateOperatorFunc = jit->specialize();
 
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    jitContext->func = reinterpret_cast<uintptr_t>(CreateOperatorFunc);
     // jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
 
     return jitContext;

@@ -1,92 +1,92 @@
-//
-// Created by root on 6/21/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
 
 #ifndef OMNI_RUNTIME_TOPN_H
 #define OMNI_RUNTIME_TOPN_H
 
+#include <queue>
+#include <memory>
+#include <vector>
 #include "../operator.h"
 #include "../operator_factory.h"
-#include <queue>
-#include "../../vector/int_vector.h"
 
-using namespace std;
 namespace omniruntime {
-    namespace op {
-        class RowComparator {
-        public:
-            RowComparator(int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t sortColCount,
-                           VectorBatch *vectorBatch);
+namespace op {
+class RowComparator {
+public:
+    RowComparator(int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t sortColCount,
+                  VectorBatch* vectorBatch);
 
-            RowComparator() {};
+    RowComparator() {};
 
-            ~RowComparator();
+    ~RowComparator();
 
+    int32_t *GetSourceTypes() const;
 
-            int32_t *getSourceTypes() const;
+    int32_t *GetSortAscendings() const;
 
-            int32_t *getSortAscendings() const;
+    int32_t GetSortColCount() const;
 
-            int32_t getSortColCount() const;
+    VectorBatch* GetVecBatch() const;
 
-            VectorBatch *getVecBatch() const;
+private:
+    int32_t *sourceTypes = nullptr;
+    int32_t *sortCols = nullptr;
+    int32_t *sortAscendings = nullptr;
+    int32_t sortColCount = 0;
+    VectorBatch* vectorBatch = nullptr;
+};
 
+bool operator < (const RowComparator &left, const RowComparator &right);
 
-        private:
-            int32_t *sourceTypes = nullptr;
-            int32_t *sortCols = nullptr;
-            int32_t *sortAscendings = nullptr;
-            int32_t sortColCount = 0;
-            VectorBatch *vectorBatch = nullptr;
-        };
+class TopNOperatorFactory : public OperatorFactory {
+public:
+    TopNOperatorFactory(int32_t *sourceTypes, int32_t typesCount, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
+        int32_t *sortNullFirsts, int32_t sortColCount);
 
-        bool operator<(const RowComparator &left, const RowComparator &right);
-
-        class TopNOperatorFactory : public OperatorFactory {
-        public:
-            TopNOperatorFactory(int32_t *sourceTypes, int32_t typesCount, int32_t n, int32_t *sortCols,
-                    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
-
-            ~TopNOperatorFactory();
+    ~TopNOperatorFactory() override;
 
 
-            Operator *CreateOperator();
+    Operator *CreateOperator() override;
 
-        private:
-            int32_t *sourceTypes = nullptr;
-            int32_t sourceTypesCount = 0;
-            int32_t *sortCols = nullptr;
-            int32_t n = 0;
-            int32_t *sortAscendings = nullptr;
-            int32_t *sortNullFirsts = nullptr;
-            int32_t sortColCount = 0;
-        };
+private:
+    int32_t *sourceTypes = nullptr;
+    int32_t sourceTypesCount = 0;
+    int32_t *sortCols = nullptr;
+    int32_t n = 0;
+    int32_t *sortAscendings = nullptr;
+    int32_t *sortNullFirsts = nullptr;
+    int32_t sortColCount = 0;
+};
 
-        class TopNOperator : public Operator {
-        public:
-            TopNOperator(int32_t *sourceTypes, int32_t typesCount, int32_t n, int32_t *sortCols,
-                         int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
+class TopNOperator : public Operator {
+public:
+    TopNOperator(int32_t *sourceTypes, int32_t typesCount, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
+        int32_t *sortNullFirsts, int32_t sortColCount);
 
-            ~TopNOperator();
+    ~TopNOperator() override;
 
-            int32_t AddInput(VectorBatch *data) override;
+    int32_t AddInput(VectorBatch *data) override;
 
-            int32_t GetOutput(std::vector<VectorBatch *> &outputVecBatch) override;
+    int32_t GetOutput(std::vector<VectorBatch *> &outputVecBatch) override;
 
-            int32_t
-            compare(int32_t position, VectorBatch *table, VectorBatch *currentMaxVectorBatch, int32_t sortColCount, int32_t *sourceTypes, int32_t *sortAscendings);
+    int32_t Compare(int32_t position, VectorBatch *table, VectorBatch *currentMaxVectorBatch, int32_t sortColCount,
+        const int32_t *sourceTypes, const int32_t *sortAscendings) const;
 
-        private:
-            int32_t *sourceTypes = nullptr;
-            int32_t sourceTypesCount = 0;
-            int32_t *sortCols = nullptr;
-            int32_t n = 0;
-            int32_t *sortAscendings = nullptr;
-            int32_t *sortNullFirsts = nullptr;
-            int32_t sortColCount = 0;
-            priority_queue<RowComparator, vector<RowComparator>, less<vector<RowComparator>::value_type>> pq;
+private:
+    int32_t *sourceTypes = nullptr;
+    int32_t sourceTypesCount = 0;
+    int32_t *sortCols = nullptr;
+    int32_t n = 0;
+    int32_t *sortAscendings = nullptr;
+    int32_t *sortNullFirsts = nullptr;
+    int32_t sortColCount = 0;
+    std::priority_queue<RowComparator, std::vector<RowComparator>,
+                            std::less<std::vector<RowComparator>::value_type>> pq;
 
-        };
-    }
+    void SetValueForSingleRowTable(VectorBatch *vectorBatch, int32_t position, VectorBatch *singleRowTable) const;
+};
 }
-#endif //OMNI_RUNTIME_TOPN_H
+}
+#endif // OMNI_RUNTIME_TOPN_H

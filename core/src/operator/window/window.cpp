@@ -231,7 +231,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         rowCount = min(maxRowCount, positionCount - position);
         vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
         vecBatch->SetVectors(outputTypes);
-        pagesIndex->getOutput(outputCols, outputColsCount, vecBatch, sourceTypes, position, rowCount);
+        pagesIndex->GetOutput(outputCols, outputColsCount, vecBatch, sourceTypes, position, rowCount);
         for (int32_t j = 0; j < rowCount; j++) {
             if (partition == nullptr || !partition->hasNext()) {
                 int partitionStart = partition == nullptr ? 0 : partition->getPartitionEnd();

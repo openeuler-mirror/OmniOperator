@@ -20,7 +20,7 @@ public:
         int32_t sortColCount,
         int32_t from,
         int32_t to);
-    void getOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch, int32_t *sourceTypes, int32_t offset, int32_t length);
+    void GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch, int32_t *sourceTypes, int32_t offset, int32_t length);
 
     int32_t *getTypes()
     {

@@ -60,7 +60,7 @@ public:
 
     int32_t *GetSourceTypes() override { return this->inputTypes; }
 
-    // void close() override { delete this; }
+    // void Close() override { delete this; }
 
     private:
     Filter *filter;

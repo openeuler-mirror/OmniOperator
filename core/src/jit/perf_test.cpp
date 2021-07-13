@@ -63,7 +63,7 @@ using namespace omniruntime::codegen;
 //     int sortNullFirsts[] = {1, 1};
 //     int sortColCount = 2;
 
-//     SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
+//     SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::CreateOperatorFactory(
 //         sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
 //     omniruntime::op::Operator *sortOperator = nullptr;
 //     if (harden) {
@@ -101,13 +101,13 @@ using namespace omniruntime::codegen;
 //         ms d = std::chrono::duration_cast<ms>(fs);
 //         std::cout << " create_jitter: " << d.count() << "ms\n";
 
-//         auto sort = JITTER->lookup("_ZN29NativeSortOperatorFactory18createOperatorEv");
+//         auto sort = JITTER->lookup("_ZN29NativeSortOperatorFactory18CreateOperatorEv");
 //         auto t_lookup_func = Time::now();
 //         fs = t_lookup_func - t_created_jitter;
 //         d = std::chrono::duration_cast<ms>(fs);
 //         std::cout << " lookup func 1: " << d.count() << "ms\n";
 
-//         auto func = (opt_module)(JITTER->lookup("_ZN29NativeSortOperatorFactory18createOperatorEv")->getAddress());
+//         auto func = (opt_module)(JITTER->lookup("_ZN29NativeSortOperatorFactory18CreateOperatorEv")->getAddress());
 //         auto t_lookup_func2 = Time::now();
 //         fs = t_lookup_func2 - t_lookup_func;
 //         d = std::chrono::duration_cast<ms>(fs);
@@ -116,7 +116,7 @@ using namespace omniruntime::codegen;
 //         sortOperator = func(sortOperatorFactory);
 //     }
 //     else {
-//         sortOperator = sortOperatorFactory->createOperator();
+//         sortOperator = sortOperatorFactory->CreateOperator();
 //     }
 
 // }
@@ -162,7 +162,7 @@ void test_sort(bool harden) {
     int sortNullFirsts[] = {1, 1};
     int sortColCount = 2;
 
-    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::createOperatorFactory(
+    SortOperatorFactory *sortOperatorFactory = SortOperatorFactory::CreateOperatorFactory(
             sourceTypes, 2, outputCols, 2, sortCols, sortAscendings, sortNullFirsts, sortColCount);
     omniruntime::op::Operator *sortOperator = nullptr;
     if (harden) {
@@ -205,13 +205,13 @@ void test_sort(bool harden) {
 
         sortOperator = func(sortOperatorFactory);
     } else {
-        sortOperator = sortOperatorFactory->createOperator();
+        sortOperator = sortOperatorFactory->CreateOperator();
     }
 
-    sortOperator->addInput(datas, rowCounts, 1);
+    sortOperator->AddInput(datas, rowCounts, 1);
     vector<VectorBatch *> outputPages;
     auto t1 = Time::now();
-    sortOperator->getOutput(outputPages);
+    sortOperator->GetOutput(outputPages);
     auto t0 = Time::now();
     fsec fs1 = t0 - t1;
     ms d1 = std::chrono::duration_cast<ms>(fs1);

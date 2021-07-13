@@ -101,7 +101,7 @@ void PagesIndex::sort(
 }
 
 SPECIALIZE(OMNIJIT_PAGE_INDEX_GET_OUTPUT)
-void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch* outputVecBatch, int32_t *sourceTypes, int32_t offset, int32_t length)
+void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch* outputVecBatch, int32_t *sourceTypes, int32_t offset, int32_t length)
 {
     Vector ***inputVecBatches = this->columns;
     int64_t *valueAddresses = this->valueAddresses;

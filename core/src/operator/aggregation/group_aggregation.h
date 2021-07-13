@@ -41,7 +41,7 @@ public:
 
     int32_t AddInput(VectorBatch *data) override;
 
-    int32_t GetOutput(std::vector<VectorBatch *> &data) override;
+    int32_t GetOutput(std::vector<VectorBatch*>& data) override;
 
     explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
     {}

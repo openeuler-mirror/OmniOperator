@@ -15,5 +15,6 @@
 #include "varchar_vector.h"
 #include "vector.h"
 #include "vector_batch.h"
+#include "container_vector.h"
 
 #endif // OMNI_RUNTIME_VECTOR_COMMON_H

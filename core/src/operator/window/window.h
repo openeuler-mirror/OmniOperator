@@ -29,7 +29,7 @@ public:
 
     Operator *CreateOperator();
 
-    int32_t *getSourceTypes() const
+    int32_t *GetSourceTypes() const
     {
         return sourceTypes;
     }
@@ -39,12 +39,12 @@ public:
         return typesCount;
     }
 
-    int32_t *getOutputCols() const
+    int32_t *GetOutputCols() const
     {
         return outputCols;
     }
 
-    int32_t getOutputColsCount() const
+    int32_t GetOutputColsCount() const
     {
         return outputColsCount;
     }
