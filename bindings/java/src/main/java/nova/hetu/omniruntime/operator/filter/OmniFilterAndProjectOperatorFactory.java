@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.operator.filter;
+
+import static java.util.Objects.requireNonNull;
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
@@ -7,69 +14,74 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
+/**
+ * The type Omni filter and project operator factory.
+ *
+ * @since 20210630
+ */
 public class OmniFilterAndProjectOperatorFactory
-        extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.Context>
-{
-    public OmniFilterAndProjectOperatorFactory(
-            String expression,
-            VecType[] inputTypes,
-            int[] projectIndices)
-    {
+    extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.Context> {
+    /**
+     * Instantiates a new Omni filter and project operator factory.
+     *
+     * @param expression the expression
+     * @param inputTypes the input types
+     * @param projectIndices the project indices
+     */
+    public OmniFilterAndProjectOperatorFactory(String expression, VecType[] inputTypes, int[] projectIndices) {
         super(new Context(expression, inputTypes, projectIndices));
     }
 
     @Override
-    protected long createNativeOperatorFactory(Context context)
-    {
-        return createFilterAndProjectOperatorFactory(
-                toNativeConstants(context.inputTypes),
-                context.inputTypes.length,
-                context.expression,
-                context.projectIndices,
-                context.projectIndices.length);
+    protected long createNativeOperatorFactory(Context context) {
+        return createFilterAndProjectOperatorFactory(toNativeConstants(context.inputTypes), context.inputTypes.length,
+            context.expression, context.projectIndices, context.projectIndices.length);
     }
 
-    private static native long createFilterAndProjectOperatorFactory(int[] inputTypes, int inputLength, String expression, int[] projectIndices, int projectLength);
+    private static native long createFilterAndProjectOperatorFactory(int[] inputTypes, int inputLength,
+        String expression, int[] projectIndices, int projectLength);
 
-    public static class Context
-            extends OmniOperatorFactoryContext
-    {
+    /**
+     * The type Context.
+     *
+     * @since 20210630
+     */
+    public static class Context extends OmniOperatorFactoryContext {
         private final VecType[] inputTypes;
+
         private final String expression;
+
         private final int[] projectIndices;
 
-        public Context(
-                String expression,
-                VecType[] inputTypes,
-                int[] projectIndices)
-        {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param expression the expression
+         * @param inputTypes the input types
+         * @param projectIndices the project indices
+         */
+        public Context(String expression, VecType[] inputTypes, int[] projectIndices) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expression = requireNonNull(expression, "Expression is null.");
             this.projectIndices = requireNonNull(projectIndices, "Project indices is null.");
         }
 
         @Override
-        public int hashCode()
-        {
+        public int hashCode() {
             return Objects.hash(expression, Arrays.hashCode(inputTypes), Arrays.hashCode(projectIndices));
         }
 
         @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
+        public boolean equals(Object obj) {
+            if (this == obj) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context that = (Context) o;
-            return Objects.equals(expression, that.expression)
-                    && Arrays.equals(inputTypes, that.inputTypes)
-                    && Arrays.equals(projectIndices, that.projectIndices);
+            Context that = (Context) obj;
+            return Objects.equals(expression, that.expression) && Arrays.equals(inputTypes, that.inputTypes)
+                && Arrays.equals(projectIndices, that.projectIndices);
         }
     }
 }

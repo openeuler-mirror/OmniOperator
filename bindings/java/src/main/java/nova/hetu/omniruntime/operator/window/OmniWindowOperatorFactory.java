@@ -1,4 +1,10 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.operator.window;
+
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.constants.WindowFunctionType;
@@ -8,78 +14,98 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
-public class OmniWindowOperatorFactory
-        extends OmniOperatorFactory<OmniWindowOperatorFactory.Context>
-{
-    public OmniWindowOperatorFactory(
-            VecType[] sourceTypes,
-            int[] outputChannels,
-            WindowFunctionType[] windowFunction,
-            int[] partitionChannels,
-            int[] preGroupedChannels,
-            int[] sortChannels,
-            int[] sortOrder,
-            int[] sortNullFirsts,
-            int preSortedChannelPrefix,
-            int expectedPositions,
-            int[] argumentChannels,
-            VecType[] windowFunctionReturnType)
-    {
-        super(new Context(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType));
+/**
+ * The type Omni window operator factory.
+ *
+ * @since 20210630
+ */
+public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOperatorFactory.Context> {
+    /**
+     * Instantiates a new Omni window operator factory.
+     *
+     * @param sourceTypes the source types
+     * @param outputChannels the output channels
+     * @param windowFunction the window function
+     * @param partitionChannels the partition channels
+     * @param preGroupedChannels the pre grouped channels
+     * @param sortChannels the sort channels
+     * @param sortOrder the sort order
+     * @param sortNullFirsts the sort null firsts
+     * @param preSortedChannelPrefix the pre sorted channel prefix
+     * @param expectedPositions the expected positions
+     * @param argumentChannels the argument channels
+     * @param windowFunctionReturnType the window function return type
+     */
+    public OmniWindowOperatorFactory(VecType[] sourceTypes, int[] outputChannels, WindowFunctionType[] windowFunction,
+        int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder, int[] sortNullFirsts,
+        int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels, VecType[] windowFunctionReturnType) {
+        super(new Context(sourceTypes, outputChannels, windowFunction, partitionChannels, preGroupedChannels,
+            sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentChannels,
+            windowFunctionReturnType));
     }
 
-    private static native long createWindowOperatorFactory(int[] sourceTypes, int[] outputChannels, int[] windFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder, int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels, int[] windowFunctionReturnType);
+    private static native long createWindowOperatorFactory(int[] sourceTypes, int[] outputChannels, int[] windFunction,
+        int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder, int[] sortNullFirsts,
+        int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels, int[] windowFunctionReturnType);
 
     @Override
-    protected long createNativeOperatorFactory(Context context)
-    {
-        return createWindowOperatorFactory(
-                toNativeConstants(context.sourceTypes),
-                context.outputChannels,
-                toNativeConstants(context.windFunction),
-                context.partitionChannels,
-                context.preGroupedChannels,
-                context.sortChannels,
-                context.sortOrder,
-                context.sortNullFirsts,
-                context.preSortedChannelPrefix,
-                context.expectedPositions,
-                context.argumentChannels,
-                toNativeConstants(context.windowFunctionReturnType));
+    protected long createNativeOperatorFactory(Context context) {
+        return createWindowOperatorFactory(toNativeConstants(context.sourceTypes), context.outputChannels,
+            toNativeConstants(context.windFunction), context.partitionChannels, context.preGroupedChannels,
+            context.sortChannels, context.sortOrder, context.sortNullFirsts, context.preSortedChannelPrefix,
+            context.expectedPositions, context.argumentChannels, toNativeConstants(context.windowFunctionReturnType));
     }
 
-    public static class Context
-            extends OmniOperatorFactoryContext
-    {
+    /**
+     * The type Context.
+     *
+     * @since 20210630
+     */
+    public static class Context extends OmniOperatorFactoryContext {
         private final VecType[] sourceTypes;
-        private final int[] outputChannels;
-        private final WindowFunctionType[] windFunction;
-        private final int[] partitionChannels;
-        private final int[] sortChannels;
-        private final int[] sortOrder;
-        private int[] preGroupedChannels;
-        private int[] sortNullFirsts;
-        private int preSortedChannelPrefix;
-        private int expectedPositions;
-        private int[] argumentChannels;
-        private VecType[] windowFunctionReturnType;
 
-        public Context(
-                VecType[] sourceTypes,
-                int[] outputChannels,
-                WindowFunctionType[] windowFunction,
-                int[] partitionChannels,
-                int[] preGroupedChannels,
-                int[] sortChannels,
-                int[] sortOrder,
-                int[] sortNullFirsts,
-                int preSortedChannelPrefix,
-                int expectedPositions,
-                int[] argumentChannels,
-                VecType[] windowFunctionReturnType)
-        {
+        private final int[] outputChannels;
+
+        private final WindowFunctionType[] windFunction;
+
+        private final int[] partitionChannels;
+
+        private final int[] sortChannels;
+
+        private final int[] sortOrder;
+
+        private final int[] preGroupedChannels;
+
+        private final int[] sortNullFirsts;
+
+        private final int preSortedChannelPrefix;
+
+        private final int expectedPositions;
+
+        private final int[] argumentChannels;
+
+        private final VecType[] windowFunctionReturnType;
+
+        /**
+         * Instantiates a new Context.
+         *
+         * @param sourceTypes the source types
+         * @param outputChannels the output channels
+         * @param windowFunction the window function
+         * @param partitionChannels the partition channels
+         * @param preGroupedChannels the pre grouped channels
+         * @param sortChannels the sort channels
+         * @param sortOrder the sort order
+         * @param sortNullFirsts the sort null firsts
+         * @param preSortedChannelPrefix the pre sorted channel prefix
+         * @param expectedPositions the expected positions
+         * @param argumentChannels the argument channels
+         * @param windowFunctionReturnType the window function return type
+         */
+        public Context(VecType[] sourceTypes, int[] outputChannels, WindowFunctionType[] windowFunction,
+            int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
+            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
+            VecType[] windowFunctionReturnType) {
             this.sourceTypes = sourceTypes;
             this.outputChannels = outputChannels;
             this.windFunction = windowFunction;
@@ -95,44 +121,31 @@ public class OmniWindowOperatorFactory
         }
 
         @Override
-        public int hashCode()
-        {
-            return Objects.hash(Arrays.hashCode(sourceTypes),
-                    Arrays.hashCode(outputChannels),
-                    Arrays.hashCode(windFunction),
-                    Arrays.hashCode(partitionChannels),
-                    Arrays.hashCode(preGroupedChannels),
-                    Arrays.hashCode(sortChannels),
-                    Arrays.hashCode(sortOrder),
-                    Arrays.hashCode(sortNullFirsts),
-                    preSortedChannelPrefix,
-                    expectedPositions,
-                    Arrays.hashCode(argumentChannels),
-                    Arrays.hashCode(windowFunctionReturnType));
+        public int hashCode() {
+            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputChannels),
+                Arrays.hashCode(windFunction), Arrays.hashCode(partitionChannels), Arrays.hashCode(preGroupedChannels),
+                Arrays.hashCode(sortChannels), Arrays.hashCode(sortOrder), Arrays.hashCode(sortNullFirsts),
+                preSortedChannelPrefix, expectedPositions, Arrays.hashCode(argumentChannels),
+                Arrays.hashCode(windowFunctionReturnType));
         }
 
         @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
+        public boolean equals(Object obj) {
+            if (this == obj) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context context = (Context) o;
+            Context context = (Context) obj;
             return preSortedChannelPrefix == context.preSortedChannelPrefix
-                    && expectedPositions == context.expectedPositions
-                    && Arrays.equals(sourceTypes, context.sourceTypes)
-                    && Arrays.equals(outputChannels, context.outputChannels)
-                    && Arrays.equals(windFunction, context.windFunction)
-                    && Arrays.equals(partitionChannels, context.partitionChannels)
-                    && Arrays.equals(preGroupedChannels, context.preGroupedChannels)
-                    && Arrays.equals(sortChannels, context.sortChannels)
-                    && Arrays.equals(sortOrder, context.sortOrder)
-                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
-                    && Arrays.equals(argumentChannels, context.argumentChannels)
-                    && Arrays.equals(windowFunctionReturnType, context.windowFunctionReturnType);
+                && expectedPositions == context.expectedPositions && Arrays.equals(sourceTypes, context.sourceTypes)
+                && Arrays.equals(outputChannels, context.outputChannels) && Arrays.equals(windFunction,
+                context.windFunction) && Arrays.equals(partitionChannels, context.partitionChannels) && Arrays.equals(
+                preGroupedChannels, context.preGroupedChannels) && Arrays.equals(sortChannels, context.sortChannels)
+                && Arrays.equals(sortOrder, context.sortOrder) && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
+                && Arrays.equals(argumentChannels, context.argumentChannels) && Arrays.equals(windowFunctionReturnType,
+                context.windowFunctionReturnType);
         }
     }
 }

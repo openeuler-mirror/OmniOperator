@@ -1,52 +1,65 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.constants;
 
 import nova.hetu.omniruntime.OmniLibs;
 
 import java.util.Objects;
 
+/**
+ * The type Constant.
+ *
+ * @since 20210630
+ */
 @SuppressWarnings("StaticVariableName")
-public abstract class Constant
-{
-    private final int value;
-
-    public Constant(int value)
-    {
-        this.value = value;
-    }
-
+public abstract class Constant {
     static {
         OmniLibs.load();
         loadConstants();
     }
 
-    public int getValue()
-    {
+    private final int value;
+
+    /**
+     * Instantiates a new Constant.
+     *
+     * @param value the value
+     */
+    public Constant(int value) {
+        this.value = value;
+    }
+
+    private static native void loadConstants();
+
+    /**
+     * Gets value.
+     *
+     * @return the value
+     */
+    public int getValue() {
         return value;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return String.valueOf(value);
     }
 
     @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
+    public boolean equals(Object obj) {
+        if (this == obj) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        return ((Constant) o).getValue() == value;
+        return ((Constant) obj).getValue() == value;
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(value);
     }
-
-    private static native void loadConstants();
 }
