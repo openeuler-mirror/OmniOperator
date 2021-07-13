@@ -19,7 +19,7 @@ public:
 
     virtual ~Vector();
 
-    int getSize();
+    virtual int getSize();
 
     void setSize(int size);
 
@@ -29,7 +29,7 @@ public:
 
     VectorAllocator *getAllocator();
 
-    VecType getType();
+    virtual VecType getType();
 
     void *getValues();
 
@@ -47,6 +47,12 @@ public:
         ASSERT(index < size);
         ASSERT(valueNullsAddress != nullptr);
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
+    }
+
+    void setValueNotNull(int index) {
+        ASSERT(index < size);
+        ASSERT(valueNullsAddress != nullptr);
+        (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
     void setValueNulls(int startIndex, bool *nulls, int length);
@@ -68,6 +74,8 @@ public:
     virtual Vector *copyPositions(int *positions, int offset, int length) = 0;
 
     virtual Vector *copyRegion(int positionOffset, int length) = 0;
+
+    virtual void append(Vector *other, int positionOffset, int length) = 0;
 
 protected:
     void *valuesAddress;

@@ -181,8 +181,7 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
      using namespace omniruntime::op;
      SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
          sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-     //JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-     JitContext *jitContext = nullptr;
+     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
      operatorFactory->setJitContext(jitContext);
 
      SortOperator *sortOperator = (SortOperator *)createTestOperator(operatorFactory);

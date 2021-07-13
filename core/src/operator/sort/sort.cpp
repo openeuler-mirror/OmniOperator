@@ -13,8 +13,6 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
-int32_t DEFAULT_MAX_PAGE_SIZE_IN_BYTES = 1 * 1024 * 1024;
-
 int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount)
 {
     int32_t rowSize = 0;
@@ -37,7 +35,7 @@ int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t output
         }
     }
 
-    int32_t maxRowCount = (DEFAULT_MAX_PAGE_SIZE_IN_BYTES + rowSize - 1) / rowSize;
+    int32_t maxRowCount = (MAX_VEC_BATCH_SIZE_IN_BYTES + rowSize - 1) / rowSize;
     return maxRowCount;
 }
 

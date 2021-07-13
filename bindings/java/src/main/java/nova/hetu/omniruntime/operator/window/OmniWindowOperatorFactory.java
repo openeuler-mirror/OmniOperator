@@ -97,7 +97,18 @@ public class OmniWindowOperatorFactory
         @Override
         public int hashCode()
         {
-            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputChannels), Arrays.hashCode(windFunction), Arrays.hashCode(partitionChannels), Arrays.hashCode(preGroupedChannels), Arrays.hashCode(sortChannels), Arrays.hashCode(sortOrder), Arrays.hashCode(sortNullFirsts), preSortedChannelPrefix, expectedPositions, Arrays.hashCode(argumentChannels), Arrays.hashCode(windowFunctionReturnType));
+            return Objects.hash(Arrays.hashCode(sourceTypes),
+                    Arrays.hashCode(outputChannels),
+                    Arrays.hashCode(windFunction),
+                    Arrays.hashCode(partitionChannels),
+                    Arrays.hashCode(preGroupedChannels),
+                    Arrays.hashCode(sortChannels),
+                    Arrays.hashCode(sortOrder),
+                    Arrays.hashCode(sortNullFirsts),
+                    preSortedChannelPrefix,
+                    expectedPositions,
+                    Arrays.hashCode(argumentChannels),
+                    Arrays.hashCode(windowFunctionReturnType));
         }
 
         @Override
@@ -107,9 +118,6 @@ public class OmniWindowOperatorFactory
                 return true;
             }
             if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            if (!super.equals(o)) {
                 return false;
             }
             Context context = (Context) o;

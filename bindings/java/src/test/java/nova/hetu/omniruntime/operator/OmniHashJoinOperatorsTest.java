@@ -3,15 +3,15 @@ package nova.hetu.omniruntime.operator;
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
+import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import org.testng.annotations.Test;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Iterator;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DICTIONARY;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
@@ -60,21 +60,22 @@ public class OmniHashJoinOperatorsTest
         lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
 
-        results.hasNext();
         VecBatch resultVecBatch = results.next();
-        ByteBuffer output0 = resultVecBatch.getVectors()[0].getValues();
-        ByteBuffer output1 = resultVecBatch.getVectors()[1].getValues();
-        output0.order(ByteOrder.LITTLE_ENDIAN);
-        output1.order(ByteOrder.LITTLE_ENDIAN);
-
         int len = resultVecBatch.getRowCount();
         assertEquals(len, 18);
 
+        Vec actualVec0 = resultVecBatch.getVectors()[0];
+        Vec actualVec1 = resultVecBatch.getVectors()[1];
         long[] actual0 = new long[len];
         long[] actual1 = new long[len];
         for (int i = 0; i < len; i++) {
-            actual0[i] = output0.getLong(i * Long.BYTES);
-            actual1[i] = output1.getLong(i * Long.BYTES);
+            if (actualVec0.getType().equals(OMNI_VEC_TYPE_DICTIONARY)) {
+                actual0[i] = ((DictionaryVec) actualVec0).getLong(i);
+            }
+            else {
+                actual0[i] = ((LongVec) actualVec0).get(i);
+            }
+            actual1[i] = ((LongVec) actualVec1).get(i);
         }
 
         long[] expected0 = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
@@ -140,21 +141,22 @@ public class OmniHashJoinOperatorsTest
         lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
 
-        results.hasNext();
         VecBatch resultVecBatch = results.next();
-        ByteBuffer output0 = resultVecBatch.getVectors()[0].getValues();
-        ByteBuffer output1 = resultVecBatch.getVectors()[1].getValues();
-        output0.order(ByteOrder.LITTLE_ENDIAN);
-        output1.order(ByteOrder.LITTLE_ENDIAN);
-
         int len = resultVecBatch.getRowCount();
         assertEquals(len, 18);
 
+        Vec actualVec0 = resultVecBatch.getVectors()[0];
+        Vec actualVec1 = resultVecBatch.getVectors()[1];
         long[] actual0 = new long[len];
         long[] actual1 = new long[len];
         for (int i = 0; i < len; i++) {
-            actual0[i] = output0.getLong(i * Long.BYTES);
-            actual1[i] = output1.getLong(i * Long.BYTES);
+            if (actualVec0.getType().equals(OMNI_VEC_TYPE_DICTIONARY)) {
+                actual0[i] = ((DictionaryVec) actualVec0).getLong(i);
+            }
+            else {
+                actual0[i] = ((LongVec) actualVec0).get(i);
+            }
+            actual1[i] = ((LongVec) actualVec1).get(i);
         }
 
         long[] expected0 = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};

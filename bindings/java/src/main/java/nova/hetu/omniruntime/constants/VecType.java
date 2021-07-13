@@ -22,6 +22,8 @@ public class VecType
 
     public static VecType OMNI_VEC_TYPE_CONTAINER;
 
+    public static VecType OMNI_VEC_TYPE_DICTIONARY;
+
     public VecType(int value)
     {
         super(value);

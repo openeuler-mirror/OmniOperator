@@ -36,3 +36,10 @@ LongVector *LongVector::copyRegion(int positionOffset, int length) {
     vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset + this->positionOffset, length);
     return vector;
 }
+
+void LongVector::append(Vector *other, int positionOffset, int length) {
+    ASSERT(positionOffset + length <= getSize());
+    uint8_t *destination = (uint8_t*) this->getValues() + positionOffset * BYTES;
+    uint8_t *src = (other->getPositionOffset() * BYTES) + ((uint8_t*) other->getValues());
+    std::memcpy(destination, src, length * BYTES);
+}

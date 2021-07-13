@@ -74,6 +74,7 @@ namespace omniruntime {
             bool loaded = false;
             // TODO: find a better way to load this lib, it differs on different platform
             loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+            // loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-redhat-linux/4.8.5/libstdc++.so");
 //            loaded = !DynamicLibrary::LoadLibraryPermanently("/opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/libstdc++.so");
 //            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-redhat-linux/4.8.5/libstdc++.so");
             if (!loaded) {

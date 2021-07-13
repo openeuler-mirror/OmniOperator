@@ -29,6 +29,8 @@ public:
 
     LongVector *copyRegion(int positionOffset, int length);
 
+    void append(Vector *other, int positionOffset, int length);
+
 private:
     LongVector(LongVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
 

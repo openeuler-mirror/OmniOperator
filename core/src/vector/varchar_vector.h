@@ -36,6 +36,8 @@ public:
 
     VarcharVector *copyRegion(int positionOffset, int length);
 
+    void append(Vector *other, int positionOffset, int bytes);
+
 private:
     VarcharVector(VarcharVector *vector, int size, int positionOffset) : VariableWidthVector(vector, size, positionOffset) {};
 

@@ -21,6 +21,7 @@ VectorAllocator *VectorAllocatorManager::getOrCreateAllocator(std::string scope)
 
 void VectorAllocatorManager::deleteAllocator(VectorAllocator **allocator) {
     if (allocator != nullptr && *allocator != nullptr) {
+        // TODO: *allocator is no longer a valid pointer if it was freed previously.
         if (allocatorList.find((*allocator)->getScope()) != allocatorList.end()) {
             (*allocator)->freeAllVectors();
             allocatorList.erase((*allocator)->getScope());

@@ -48,6 +48,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAnd
         (JNIEnv *, jobject, jintArray, jint, jstring, jintArray, jint);
 
 /*
+ * Class:     nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory
+ * Method:    createProjectOperatorFactory
+ * Signature: ([II[Ljava/lang/Object;I)J
+*/
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory
+        (JNIEnv *, jobject, jintArray, jint, jobjectArray, jint);
+
+/*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory
  * Method:    createWindowOperatorFactory
  * Signature:

@@ -47,9 +47,7 @@ int64_t nextPowerOfTwo(int64_t x)
 #pragma clang optimize off
 int64_t rotateLeft(int64_t i, int32_t distance)
 {
-    uint64_t right = ((uint64_t)i) >> -distance;
-    int64_t result = (i << distance) | right;
-    return result;
+    return (i << distance) | (((uint64_t)i) >> -distance);
 }
 #pragma clang optimize on
 
@@ -59,27 +57,6 @@ int64_t rotateLeft(int64_t i, int32_t distance)
 int64_t HashUtil::hashValue(int64_t value)
 {
     return rotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
-}
-
-int64_t HashUtil::getHash(int64_t previousHashValue, int64_t value)
-{
-    return (31 * previousHashValue + value);
-}
-
-int32_t HashUtil::getRawHashPosition(int64_t rawHash, int64_t mask)
-{
-    uint64_t hashValue = ((uint64_t)rawHash) >> 33;
-    rawHash ^= (int64_t)hashValue;
-    rawHash *= 0xff51afd7ed558ccdL;
-
-    hashValue = ((uint64_t)rawHash) >> 33;
-    rawHash ^= (int64_t)hashValue;
-    rawHash *= 0xc4ceb9fe1a85ec53L;
-
-    hashValue = ((uint64_t)rawHash) >> 33;
-    rawHash ^= (int64_t)hashValue;
-
-    return (int32_t)(rawHash & mask);
 }
 
 int64_t reverse(int64_t rawHash);

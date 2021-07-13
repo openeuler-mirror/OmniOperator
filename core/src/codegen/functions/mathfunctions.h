@@ -21,4 +21,6 @@ extern "C" DLLEXPORT double cast_int32(int32_t x);
 
 extern "C" DLLEXPORT double cast_int64(int64_t x);
 
+extern "C" DLLEXPORT int64_t combine_hash(int64_t prevHashVal, int64_t val);
+
 #endif

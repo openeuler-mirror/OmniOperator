@@ -112,6 +112,14 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNat
   (JNIEnv *, jclass, jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_Vec
+ * Method:    appendVectorNative
+ * Signature: (JIJI)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
+  (JNIEnv *, jclass, jlong, jint, jlong, jint);
+
+/*
  * Class:     nova_hetu_omniruntime_vector_ContainerVec
  * Method:    getPositionNative
  * Signature: (J)I
@@ -198,6 +206,23 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_setVectorNativ
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_getVectorNative
         (JNIEnv *, jclass, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_DictionaryVec
+ * Method:    getDictionaryNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_DictionaryVec
+ * Method:    getIdsNative
+ * Signature: (J)[I
+ */
+JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getIdsNative
+        (JNIEnv *, jclass, jlong);
+
 #ifdef __cplusplus
 }
 #endif

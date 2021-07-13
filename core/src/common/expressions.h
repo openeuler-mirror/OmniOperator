@@ -42,11 +42,11 @@ enum Operator
 
 enum DataType
 {
-    BOOLD, 
-    INT32D, 
-    INT64D, 
-    DOUBLED, 
-    STRINGD, 
+    BOOLD = 4, 
+    INT32D = 1, 
+    INT64D = 2, 
+    DOUBLED = 3, 
+    STRINGD = 100, 
     INVALIDDATAD
 };
 

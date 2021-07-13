@@ -2,7 +2,7 @@
 #define __FILTER_COMPILER_H__
 
 #include "../../common/expressions.h"
-#include "filter.h"
+#include "filter_and_project.h"
 #include <cstring>
 #include <stdint.h>
 
@@ -22,12 +22,12 @@ public:
     // Optional fn_value_opt;
 
     // // todo getter functions
-    Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount);
+    Compiler(expressions::Expr* expression, int32_t *inputTypes, int32_t vecCount);
     ~Compiler() {}
     Filter *compile();
 
 private:
-    Expr* expression;
+    expressions::Expr* expression;
     int32_t *inputTypes;
     int32_t vecCount;
 };
