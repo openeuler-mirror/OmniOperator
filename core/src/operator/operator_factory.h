@@ -17,13 +17,13 @@ public:
 
     virtual ~OperatorFactory() {}
 
-    virtual omniruntime::op::Operator *createOperator() { return nullptr; };
+    virtual omniruntime::op::Operator *CreateOperator() { return nullptr; };
 
-    virtual void setJitContext(JitContext *JitContext) {
+    virtual void SetJitContext(JitContext *JitContext) {
         jitContext = JitContext;
     }
 
-    virtual JitContext *getJitContext() {
+    virtual JitContext *GetJitContext() {
         return jitContext;
     }
 

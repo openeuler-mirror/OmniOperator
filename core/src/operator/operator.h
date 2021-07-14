@@ -14,17 +14,17 @@ namespace op {
 
         virtual ~Operator() {}
 
-        virtual int32_t addInput(VectorBatch *vecBatch) = 0;
+        virtual int32_t AddInput(VectorBatch *vecBatch) = 0;
 
-        virtual int32_t getOutput(std::vector<VectorBatch *> &data) = 0;
+        virtual int32_t GetOutput(std::vector<VectorBatch *> &data) = 0;
 
-        virtual int32_t *getSourceTypes() { return sourceTypes; }
+        virtual int32_t *GetSourceTypes() { return sourceTypes; }
 
-        int getStatus() { return status; }
+        int GetStatus() { return status; }
 
-        void setStatus(OmniStatus status) { this->status = status; };
+        void SetStatus(OmniStatus status) { this->status = status; };
 
-        virtual void close() {}
+        virtual void Close() {}
 
     private:
         int status;

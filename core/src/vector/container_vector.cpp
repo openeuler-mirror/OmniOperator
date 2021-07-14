@@ -14,6 +14,10 @@ ContainerVector *ContainerVector::slice(int32_t positionOffset, int32_t length) 
     return new ContainerVector(this, length, positionOffset, this->vecTypes.data());
 }
 
+void ContainerVector::append(Vector *other, int positionOffset, int length) {
+    return;
+}
+
 ContainerVector *ContainerVector::copyPositions(int32_t *positions, int32_t offset, int32_t length) {
     ASSERT(offset + length < getSize());
     Vector** vectorAddresses = new Vector*[length];

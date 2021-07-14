@@ -89,7 +89,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     aggs1.push_back(countAgg1);
     aggs1.push_back(minAgg1);
     aggs1.push_back(maxAgg1);
-    HashAggregationOperator* groupBy1 = new HashAggregationOperator(groupByColumns1, aggregateColumns1, aggs1);
+    HashAggregationOperator* groupBy1 = new HashAggregationOperator(groupByColumns1, aggregateColumns1, aggs1, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         groupBy1->addInput(input[i]);
@@ -119,7 +119,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     aggs1.push_back(countAgg1);
     aggs1.push_back(minAgg1);
     aggs1.push_back(maxAgg1);
-    HashAggregationOperator* groupBy2 = new HashAggregationOperator(groupByColumns1, aggregateColumns1, aggs1);
+    HashAggregationOperator* groupBy2 = new HashAggregationOperator(groupByColumns1, aggregateColumns1, aggs1, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         groupBy2->addInput(input[i]);
@@ -158,7 +158,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     aggs2.push_back(countAgg2);
     aggs2.push_back(minAgg2);
     aggs2.push_back(maxAgg2);
-    HashAggregationOperator* groupBy3 = new HashAggregationOperator(groupByColumns2, aggregateColumns2, aggs2);
+    HashAggregationOperator* groupBy3 = new HashAggregationOperator(groupByColumns2, aggregateColumns2, aggs2, true, false);
 
     for (int32_t i = 0; i < result1.size(); ++i) {
         groupBy3->addInput(result1[i]);
@@ -212,7 +212,7 @@ TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
     SumAggregator* sum2 = new SumAggregator(2, INPUT_MODE, OUTPUT_MODE);
     aggs.push_back(sum1);
     aggs.push_back(sum2);
-    HashAggregationOperator* groupBy = new HashAggregationOperator(v1, v2, aggs);
+    HashAggregationOperator* groupBy = new HashAggregationOperator(v1, v2, aggs, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         groupBy->addInput(input[i]);
@@ -510,7 +510,7 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     aggs.push_back(countAgg);
     aggs.push_back(minAgg);
     aggs.push_back(maxAgg);
-    AggregationOperator* aggregate1 = new AggregationOperator(aggregateColumns, aggs);
+    AggregationOperator* aggregate1 = new AggregationOperator(aggregateColumns, aggs, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         aggregate1->addInput(input[i]);
@@ -537,7 +537,7 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     aggs.push_back(countAgg);
     aggs.push_back(minAgg);
     aggs.push_back(maxAgg);
-    AggregationOperator* aggregate2 = new AggregationOperator(aggregateColumns, aggs);
+    AggregationOperator* aggregate2 = new AggregationOperator(aggregateColumns, aggs, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         aggregate2->addInput(input[i]);
@@ -563,7 +563,7 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     aggs1.push_back(countAgg);
     aggs1.push_back(minAgg);
     aggs1.push_back(maxAgg);
-    AggregationOperator* aggregate3 = new AggregationOperator(aggregateColumns, aggs1);
+    AggregationOperator* aggregate3 = new AggregationOperator(aggregateColumns, aggs1, true, false);
 
     for (int32_t i = 0; i < result.size(); ++i) {
         aggregate3->addInput(result[i]);
@@ -604,7 +604,7 @@ TEST(AggregatorTest, avg_correctness_test)
     std::vector<Aggregator*> aggs;
     AverageAggregator* avgAgg = new AverageAggregator(2);
     aggs.push_back(avgAgg);
-    AggregationOperator* aggregate = new AggregationOperator(aggregateColumns, aggs);
+    AggregationOperator* aggregate = new AggregationOperator(aggregateColumns, aggs, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         aggregate->addInput(input[i]);

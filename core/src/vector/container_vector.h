@@ -32,6 +32,7 @@ public:
     ContainerVector *copyPositions(int32_t *positions, int32_t offset, int32_t length) override;
     ContainerVector *copyRegion(int32_t positionOffset, int32_t length) override;
     void setValues(int32_t startIndex, int64_t *values, int32_t length) override;
+    void append(Vector *other, int positionOffset, int length) override;
 
     // inline for high performance.
     int64_t getValue(int32_t index) {

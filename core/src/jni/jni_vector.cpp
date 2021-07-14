@@ -74,9 +74,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyRegionNative
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative
         (JNIEnv *env, jclass jcls, jlong jNativeAllocator, jlong jNativeVector) {
-    std::cout << "from jni native vector is:" << jNativeVector << std::endl;
     Vector *nativeVector = transformVector(jNativeVector);
-    std::cout << "affter transform native vector is:" << jNativeVector << std::endl;
     if (nativeVector == nullptr) {
         std::cerr << "free vector native vector is null:" << jNativeVector << std::endl;
     }
@@ -127,7 +125,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeNative
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector) {
     Vector *nativeVector = transformVector(jNativeVector);
-    return transformBaseVectorToByteBuffer(env, nativeVector->getReference()->getValuesAddress(),
+    return transformBaseVectorToByteBuffer(env, nativeVector->getValues(),
                                            nativeVector->getReference()->getCapacityInBytes());
 }
 

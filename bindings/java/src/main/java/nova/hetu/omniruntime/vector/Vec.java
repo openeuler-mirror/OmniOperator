@@ -167,7 +167,7 @@ public abstract class Vec
         this.nativeVector = nativeVector;
         this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
         if (OMNI_VEC_TYPE_CONTAINER.equals(this.type)) {
-            System.out.println("In Vec constructor addr : " + this.values.getLong(0));
+            System.out.println("NativeVector addr: " + nativeVector + ". In Vec constructor double vec addr : " + this.values.getLong(0));
         }
         this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
     }
