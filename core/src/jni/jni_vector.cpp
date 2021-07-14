@@ -282,6 +282,7 @@ JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getI
 Vector *TransformVector(long vectorAddr)
 {
     Vector *nativeVector = reinterpret_cast<Vector *>(vectorAddr);
+    ASSERT(nativeVector != nullptr);
     return nativeVector;
 }
 
