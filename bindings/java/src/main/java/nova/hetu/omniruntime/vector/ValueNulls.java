@@ -30,4 +30,23 @@ public class ValueNulls
     {
         return bitmap.get(index) == 1;
     }
+
+    public void get(int index, boolean[] targetValueNulls, int start, int length)
+    {
+        byte[] nulls = new byte[length];
+        bitmap.position(index);
+        bitmap.get(nulls, 0, length);
+        for (int i = 0; i < length; i++) {
+            targetValueNulls[start + i] = nulls[i] == 1;
+        }
+    }
+
+    public void set(int index, boolean[] isNulls, int start, int length)
+    {
+        for (int i = 0; i < length; i++) {
+            if (isNulls[i + start]) {
+                bitmap.put(i + index, (byte) 1);
+            }
+        }
+    }
 }

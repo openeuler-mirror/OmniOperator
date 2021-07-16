@@ -8,7 +8,7 @@ import java.nio.ByteOrder;
 public abstract class VariableWidthVec
         extends Vec
 {
-    private final ValueOffsets valueOffsets;
+    protected final ValueOffsets valueOffsets;
 
     public VariableWidthVec(int capacityInBytes, int size, VecType type)
     {
@@ -48,6 +48,13 @@ public abstract class VariableWidthVec
     protected void setValueOffset(int index, int offset)
     {
         valueOffsets.set(index, offset);
+    }
+
+    public int[] getRawValueOffset()
+    {
+        int[] rawValueOffset = new int[offset + size + 1];
+        valueOffsets.getOffsets(0, rawValueOffset, 0, rawValueOffset.length);
+        return rawValueOffset;
     }
 
     protected static native ByteBuffer getValueOffsetsNative(long nativeVector);
