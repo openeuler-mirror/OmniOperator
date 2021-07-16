@@ -646,7 +646,7 @@ TEST(FilterTest, LogicalOperators1) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch*> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    int32_t numReturned = op->getOutput(ret);
     EXPECT_EQ(numReturned, 543);
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter4));
 

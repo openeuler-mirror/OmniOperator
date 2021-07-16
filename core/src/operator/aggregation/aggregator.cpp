@@ -312,7 +312,7 @@ void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32
             *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
             break;
         }
-        case 4: {
+        case OMNI_VEC_TYPE_CONTAINER: {
             // row type
             break;
         }
