@@ -3,6 +3,8 @@ package nova.hetu.omniruntime.vector;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
@@ -95,6 +97,36 @@ public class TestVarcharVec {
         varcharVec.close();
     }
 
+    @Test
+    public void testPutValues()
+    {
+        int size = 100;
+        int[] offsets = new int[size + 1];
+        StringBuilder data = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            String str = "test" + i;
+            offsets[i + 1] = str.length() + offsets[i];
+            data.append(str);
+        }
+        VarcharVec values = new VarcharVec(data.toString().length(), size);
+        values.put(0, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, 0, size);
+        ByteBuffer buffer = ByteBuffer.wrap(data.toString().getBytes(StandardCharsets.UTF_8));
+        for (int i = 0; i < size; i++) {
+            assertEquals(values.getValue(i), getDataFromBuffer(buffer, offsets[i], offsets[i + 1] - offsets[i]));
+        }
+
+        assertEquals(offsets, values.getRawValueOffset());
+        values.close();
+    }
+
+    private byte[] getDataFromBuffer(ByteBuffer buffer, int offsetInBytes, int length)
+    {
+        byte[] data = new byte[length];
+        buffer.position(offsetInBytes);
+        buffer.get(data, 0, length);
+        return data;
+    }
+
     /**
      * test value null
      */
@@ -118,6 +150,21 @@ public class TestVarcharVec {
             }
         }
 
+        varcharVec.close();
+    }
+
+    @Test
+    public void testBatchSetValueNull()
+    {
+        int size = 256;
+        boolean[] isNulls = new boolean[size];
+        for (int i = 0; i < size; i++) {
+            isNulls[i] = i % 2 == 0;
+        }
+        VarcharVec varcharVec = new VarcharVec(1024, size);
+        varcharVec.setNulls(0, isNulls, 0, isNulls.length);
+        assertTrue(varcharVec.hasNullValue());
+        assertEquals(isNulls, varcharVec.getRawValueNulls());
         varcharVec.close();
     }
 

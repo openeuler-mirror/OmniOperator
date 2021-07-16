@@ -44,7 +44,7 @@ public class IntVec
      * @return int value
      */
     public int get(int index) {
-        return getValues().getInt((index + offset) * BYTES);
+        return values.getInt((index + offset) * BYTES);
     }
 
     /**
@@ -54,7 +54,7 @@ public class IntVec
      * @param value the value of vec
      */
     public void set(int index, int value) {
-        getValues().putInt(index * BYTES, value);
+        values.putInt(index * BYTES, value);
     }
 
     /**
@@ -66,7 +66,7 @@ public class IntVec
      * @param length the number of elements that need to written
      */
     public void put(int[] values, int offset, int start, int length) {
-        IntBuffer buffer = getValues().asIntBuffer();
+        IntBuffer buffer = this.values.asIntBuffer();
         buffer.position(offset);
         buffer.put(values, start, length);
     }

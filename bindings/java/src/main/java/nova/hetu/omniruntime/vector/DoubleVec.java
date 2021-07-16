@@ -43,7 +43,7 @@ public class DoubleVec
      * @return double value
      */
     public double get(int index) {
-        return getValues().getDouble((index + offset) * BYTES);
+        return values.getDouble((index + offset) * BYTES);
     }
 
     /**
@@ -53,7 +53,7 @@ public class DoubleVec
      * @param value the value of vec
      */
     public void set(int index, double value) {
-        getValues().putDouble(index * BYTES, value);
+        values.putDouble(index * BYTES, value);
     }
 
     /**
@@ -65,7 +65,7 @@ public class DoubleVec
      * @param length the number of elements that need to written
      */
     public void put(double[] values, int offset, int start, int length) {
-        DoubleBuffer buffer = getValues().asDoubleBuffer();
+        DoubleBuffer buffer = this.values.asDoubleBuffer();
         buffer.position(offset);
         buffer.put(values, start, length);
     }
