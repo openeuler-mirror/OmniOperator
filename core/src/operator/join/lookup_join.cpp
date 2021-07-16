@@ -190,7 +190,7 @@ LookupJoinOperator::LookupJoinOperator(
 LookupJoinOperator::~LookupJoinOperator()
 {}
 
-int32_t LookupJoinOperator::addInput(VectorBatch *vecBatch)
+int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
     this->joinProbe = new JoinProbe(vecBatch, probeTypesCount, probeHashCols, probeHashColTypes, probeHashColsCount);
     this->partitionedJoinPosition = -1;
@@ -200,15 +200,15 @@ int32_t LookupJoinOperator::addInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t LookupJoinOperator::getOutput(std::vector<VectorBatch *>& outputPages)
+int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *>& outputPages)
 {
     // build output data
     outputBuilder->buildOutput(joinProbe, hashTables, outputPages);
-    setStatus(OMNI_STATUS_FINISHED);
+    SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
-int32_t *LookupJoinOperator::getSourceTypes()
+int32_t *LookupJoinOperator::GetSourceTypes()
 {
     return probeTypes;
 }

@@ -11,7 +11,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     this->vecCount = vecCount;
     this->projectIndex = projectIndex;
     this->projectVecCount = projectVecCount;
-    this->setJitContext(nullptr);
+    this->SetJitContext(nullptr);
 
     Parser parserObject;
     // std::cout << "parsing: " << expression << std::endl;
@@ -38,12 +38,12 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
     delete this->filter;
 }
 
-Operator * FilterAndProjectOperatorFactory::createOperator()
+Operator * FilterAndProjectOperatorFactory::CreateOperator()
 {
     return new FilterAndProjectOperator(this->filter, this->inputTypes, this->vecCount, this->projections, this->projectVecCount);
 }
 
-int32_t FilterAndProjectOperator::addInput(VectorBatch* vecBatch)
+int32_t FilterAndProjectOperator::AddInput(VectorBatch* vecBatch)
 {
     int32_t* selectedRows = new int32_t[vecBatch->getRowCount()];
     int32_t numSelectedRows = this->filter->filter(vecBatch, selectedRows);
@@ -57,7 +57,7 @@ int32_t FilterAndProjectOperator::addInput(VectorBatch* vecBatch)
     return numSelectedRows;
 }
 
-int32_t FilterAndProjectOperator::getOutput(std::vector<VectorBatch*>& data)
+int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch*>& data)
 {
     if (this->projectedVecs == nullptr) {
         return 0;

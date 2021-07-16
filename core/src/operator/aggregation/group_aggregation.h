@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * Description: Aggregation Base Class
- * Author: Songling Liu
- * Create: 2021-07-01
- * Notes: None
+ * Description: Hash Aggregation Header
  */
 #ifndef GROUP_AGGREGATION_H
 #define GROUP_AGGREGATION_H
@@ -19,9 +16,9 @@ class MultiChannelHash {
 public:
     MultiChannelHash() : result(0) {}
     virtual ~MultiChannelHash() {}
-    uint64_t CombineHash(uint64_t result, uint64_t value) const
+    uint64_t CombineHash(uint64_t res, uint64_t value) const
     {
-        return (31 * result + value);
+        return (31 * res + value);
     }
 
 private:
@@ -38,18 +35,18 @@ class HashAggregationOperatorFactory;
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol,
-        std::vector<Aggregator *> aggs, bool inputRaw, bool outputPartial)
-        : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(aggs, inputRaw, outputPartial)
+        std::vector<unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
+        : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {}
 
     int32_t AddInput(VectorBatch *data) override;
 
     int32_t GetOutput(std::vector<VectorBatch *> &data) override;
 
-    HashAggregationOperator(std::vector<Aggregator *> aggregators) : AggregationCommonOperator(aggregators, true, false)
+    explicit HashAggregationOperator(std::vector<unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
     {}
 
-    ~HashAggregationOperator()
+    ~HashAggregationOperator() override
     {
         // delete map
         for (auto &item : groupedRows) {
@@ -73,32 +70,27 @@ public:
             }
         }
         groupedRows.clear();
-        // delete all aggregators
-        for (auto &agg : aggregators) {
-            delete agg;
-        }
     }
-    void preLoop(VectorBatch *vecBatch);
+    void PreLoop(VectorBatch *vecBatch);
 
-    void inLoop(Vector **vectors, uint32_t offset, int32_t *types, int32_t colNum, int32_t *groupByColIdx,
-        int32_t groupByColNum, int32_t *aggColIdx, int32_t aggColNum, int32_t *aggFuncTypes);
+    void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
+        int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);
 
-    void postLoop(VectorBatch *vecBatch);
+    void PostLoop(VectorBatch *vecBatch);
 
 private:
-    int32_t getRowSize(int32_t *types, int32_t columnCount);
+    int32_t GetRowSize(int32_t *types, int32_t columnCount);
 
-    void fillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, RowIterator &rowIterator,
+    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, RowIterator &rowIterator,
         int32_t rowCount);
 
-    void fillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount);
+    void FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount);
 
 private:
     friend class HashAggregationOperatorFactory;
     std::unordered_map<uint64_t, std::vector<GroupBySlot>> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
-    uint32_t *inputColTypes;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
@@ -112,20 +104,25 @@ public:
           aggColContext(aggCol),
           aggTypeContext(aggType),
           aggFuncTypeContext(aggFuncType),
-          AggregationCommonOperatorFactory(inputRaw, outputPartial)
-    {}
+          AggregationCommonOperatorFactory(inputRaw, outputPartial) {}
 
     ~HashAggregationOperatorFactory() override {}
-
+    OmniStatus Init() override;
+    OmniStatus Close() override;
 private:
     PrepareContext groupByColContext;
+    std::vector<uint32_t> groupByColIdx;
     PrepareContext groupByTypeContext;
+    std::vector<uint32_t> groupByTypes;
     PrepareContext aggColContext;
+    std::vector<uint32_t> aggColIdx;
     PrepareContext aggTypeContext;
+    std::vector<uint32_t> aggTypes;
     PrepareContext aggFuncTypeContext;
+    std::vector<unique_ptr<AggregatorFactory>> aggregatorFactories;
 };
 
-using hashagg_module = omniruntime::op::HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
+using HashAggModule = omniruntime::op::HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
 } // end of namespace op
 } // end of namespace omniruntimef
 #endif

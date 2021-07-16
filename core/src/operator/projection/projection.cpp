@@ -129,7 +129,7 @@ Vector* Projection::project(VectorBatch* vecBatch) {
     return this->project(vecBatch, nullptr, vecBatch->getRowCount());
 }
 
-int32_t ProjectionOperator::addInput(VectorBatch* vecBatch) {
+int32_t ProjectionOperator::AddInput(VectorBatch* vecBatch) {
     VectorBatch* outBatch = new VectorBatch(nProj);
     for (int32_t i = 0; i < nProj; i++) {
         Vector* outCol = proj[i]->project(vecBatch);
@@ -139,7 +139,7 @@ int32_t ProjectionOperator::addInput(VectorBatch* vecBatch) {
     return vecBatch->getRowCount();
 }
 
-int32_t ProjectionOperator::getOutput(std::vector<VectorBatch*>& ret) {
+int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch*>& ret) {
     if (this->mutated == nullptr) {
         std::cerr << "Error: No projected table ready for output" << std::endl;
         return -1;
@@ -150,14 +150,14 @@ int32_t ProjectionOperator::getOutput(std::vector<VectorBatch*>& ret) {
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(std::string* expressions, int32_t nProj, int32_t* inputTypes, int32_t nCols) :
 inputTypes(inputTypes), nCols(nCols), nProj(nProj) {
-    this->setJitContext(nullptr);
+    this->SetJitContext(nullptr);
     this->proj = new Projection*[nProj];
     for (int32_t i = 0; i < nProj; i++) this->proj[i] = new Projection(inputTypes, nCols, expressions[i], false);
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(Expr** exprs, int32_t nProj, int32_t* inputTypes, int32_t nCols) :
 inputTypes(inputTypes), nCols(nCols), nProj(nProj) {
-    this->setJitContext(nullptr);
+    this->SetJitContext(nullptr);
     this->proj = new Projection*[nProj];
     for (int32_t i = 0; i < nProj; i++) this->proj[i] = new Projection(inputTypes, nCols, exprs[i], false);
 }
@@ -169,6 +169,6 @@ ProjectionOperatorFactory::~ProjectionOperatorFactory() {
     delete[] this->proj;
 }
 
-omniruntime::op::Operator* ProjectionOperatorFactory::createOperator() {
+omniruntime::op::Operator* ProjectionOperatorFactory::CreateOperator() {
     return new ProjectionOperator(this->proj, this->inputTypes, this->nCols, this->nProj);
 }

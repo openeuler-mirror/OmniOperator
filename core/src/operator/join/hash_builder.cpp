@@ -100,13 +100,13 @@ HashBuilderOperator::~HashBuilderOperator()
 
 }
 
-int32_t HashBuilderOperator::addInput(VectorBatch *vecBatch)
+int32_t HashBuilderOperator::AddInput(VectorBatch *vecBatch)
 {
     inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
-int32_t HashBuilderOperator::getOutput(std::vector<VectorBatch *>& outputPages)
+int32_t HashBuilderOperator::GetOutput(std::vector<VectorBatch *>& outputPages)
 {
     // add vecBatches into PagesIndex
     pagesIndex->addVecBatches(inputVecBatches);
@@ -117,16 +117,16 @@ int32_t HashBuilderOperator::getOutput(std::vector<VectorBatch *>& outputPages)
     JoinHashTable *joinHashTable = new JoinHashTable(pagesHashStrategy, pagesIndex->getValueAddresses(), pagesIndex->getPositionCount());
     //joinHashTable->printHashTable(partitionIndex);
     hashTables->addHashTable(partitionIndex, joinHashTable);
-    setStatus(OMNI_STATUS_FINISHED);
+    SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
-int32_t *HashBuilderOperator::getSourceTypes()
+int32_t *HashBuilderOperator::GetSourceTypes()
 {
     return buildTypes;
 }
 
-void HashBuilderOperator::close()
+void HashBuilderOperator::Close()
 {
     hashTables->clear(partitionIndex);
 }

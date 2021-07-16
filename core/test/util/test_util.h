@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Type Util Class
+ */
 #ifndef __TEST_UTIL_H__
 #define __TEST_UTIL_H__
 

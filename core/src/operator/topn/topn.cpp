@@ -47,7 +47,7 @@ namespace omniruntime {
 
         TopNOperator::~TopNOperator() {}
 
-        int32_t TopNOperator::addInput(VectorBatch *vectorBatch) {
+        int32_t TopNOperator::AddInput(VectorBatch *vectorBatch) {
             for (int32_t position = 0; position < vectorBatch->getRowCount(); ++position) {
                 if ((pq.size() < n) || compare(position, vectorBatch, pq.top().getVecBatch(), sortColCount, sourceTypes,
                                                sortAscendings) < 0) {
@@ -88,7 +88,7 @@ namespace omniruntime {
             return 0;
         }
 
-        int32_t TopNOperator::getOutput(std::vector<VectorBatch *> &outputVecBatch) {
+        int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch) {
             int64_t positionCount = pq.size();
             if (positionCount <= 0) {
                 return 0;

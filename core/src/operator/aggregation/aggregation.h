@@ -12,6 +12,7 @@
 #include "aggregator.h"
 #include "../../util/debug.h"
 #include "../../memory/memory_pool.h"
+#include "../status.h"
 
 #include <vector>
 #include <cstdint>
@@ -22,7 +23,7 @@ namespace op {
 class AggregationCommonOperator : public Operator {
 public:
     AggregationCommonOperator(std::vector<unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
-        : aggregators(aggs), inputRaw(inputRaw), outputPartial(outputPartial)
+        : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial)
     {}
     ~AggregationCommonOperator() override {}
 
@@ -37,8 +38,9 @@ public:
     AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial)
         : inputRaw(inputRaw), outputPartial(outputPartial)
     {}
-    virtual ~AggregationCommonOperatorFactory() override {}
-
+    ~AggregationCommonOperatorFactory() override {}
+    virtual OmniStatus Init() = 0;
+    virtual OmniStatus Close() = 0;
 protected:
     int inputRaw;
     int outputPartial;

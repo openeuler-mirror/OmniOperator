@@ -136,13 +136,13 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
 
     clock_t start = clock();
     SortOperator *sortOperator = (SortOperator *)createTestOperator(operatorFactory);
-    sortOperator->addInput(vecBatch);
+    sortOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    sortOperator->getOutput(outputVecBatches);
+    sortOperator->GetOutput(outputVecBatches);
     std::cout << "sort and get output elapsed end time: " << (double)(std::clock() - start) / 1000 << " ms" << std::endl;
 
     // free memory
@@ -182,12 +182,12 @@ TEST (NativeOmniSortOperatorTest, TestSortPerformance)
      SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
          sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
      JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
-     operatorFactory->setJitContext(jitContext);
+     operatorFactory->SetJitContext(jitContext);
 
      SortOperator *sortOperator = (SortOperator *)createTestOperator(operatorFactory);
-     sortOperator->addInput(vecBatch);
+     sortOperator->AddInput(vecBatch);
      vector<VectorBatch *> outputVecBatches;
-     sortOperator->getOutput(outputVecBatches);
+     sortOperator->GetOutput(outputVecBatches);
 
      int32_t expectData1[DATA_SIZE] = {0, 1, 2, 3, 4};
      IntVector expectCol1(nullptr, DATA_SIZE);
@@ -241,12 +241,12 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumn)
     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
 
     SortOperator *sortOperator = (SortOperator *)createTestOperator(operatorFactory);
-    sortOperator->addInput(vecBatch);
+    sortOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    sortOperator->getOutput(outputVecBatches);
+    sortOperator->GetOutput(outputVecBatches);
 
     int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
     LongVector *expectCol1 = new LongVector(nullptr, DATA_SIZE);
@@ -302,12 +302,12 @@ TEST(NativeOmniSortOperatorTest, testOrderByDoubleColumnV2)
         sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     //JitContext *jitContext = nullptr;
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
 
     SortOperator *sortOperator = (SortOperator *)createTestOperator(operatorFactory);
-    sortOperator->addInput(vecBatch);
+    sortOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    sortOperator->getOutput(outputVecBatches);
+    sortOperator->GetOutput(outputVecBatches);
 
     int64_t expectData1[DATA_SIZE] = {5, 2, 4, 1, 3, 0};
     LongVector *expectCol1 = new LongVector(nullptr, DATA_SIZE);
@@ -351,16 +351,16 @@ TEST(NativeOmniSortOperatorTest, testOrderByTwoColumnPerf)
     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
         sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
 
     Timer timer;
     timer.setStart();
     SortOperator *sortOperator = (SortOperator *)createTestOperator(operatorFactory);
     for (int i = 0; i < VEC_BATCH_COUNT; ++i) {
-        sortOperator->addInput(vecBatches[i]);
+        sortOperator->AddInput(vecBatches[i]);
     }
     vector<VectorBatch *> outputVecBatches;
-    sortOperator->getOutput(outputVecBatches);
+    sortOperator->GetOutput(outputVecBatches);
     timer.calculateElapse();
     double wall_elapsed = timer.getWallElapse();
     double cpu_elapsed = timer.getCpuElapse();
@@ -405,15 +405,15 @@ void testOrderBy(struct SortThreadArgs *threadArgs)
         sortOperator = dynamic_cast<SortOperator *>(operatorFactory->createOperator());
     }
     else {
-        opt_module sortModule = (opt_module)(operatorFactory->getJitContext()->func);
+        opt_module sortModule = (opt_module)(operatorFactory->GetJitContext()->func);
         sortOperator = (SortOperator *)sortModule(operatorFactory);
     }
 
     for (int i = 0; i < VEC_BATCH_COUNT; ++i) {
-        sortOperator->addInput(threadArgs->vecBatches[i]);
+        sortOperator->AddInput(threadArgs->vecBatches[i]);
     }
     std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->getOutput(outputVecBatches);
+    sortOperator->GetOutput(outputVecBatches);
 
     delete sortOperator;
     VectorHelper::freeVecBatches(outputVecBatches);
@@ -442,7 +442,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByOriginalMultiThreads)
     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
             sourceTypes, 4, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
 
     struct SortThreadArgs threadArgs;
     setSortThreadArgs(&threadArgs, (int64_t)operatorFactory, true, vecBatches, rowCounts, VEC_BATCH_COUNT);
@@ -501,7 +501,7 @@ TEST(NativeOmniSortOperatorTest, testOrderByJITMultiThreads)
     SortOperatorFactory *operatorFactory = SortOperatorFactory::createSortOperatorFactory(
             sourceTypes, 4, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     JitContext *jitContext = createTestSortJitContext(sourceTypes, 2, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
 
     struct SortThreadArgs threadArgs;
     setSortThreadArgs(&threadArgs, (int64_t)operatorFactory, false, vecBatches, rowCounts, VEC_BATCH_COUNT);

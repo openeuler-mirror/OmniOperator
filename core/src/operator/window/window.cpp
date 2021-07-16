@@ -175,13 +175,13 @@ WindowOperator::~WindowOperator()
     }
 }
 
-int32_t WindowOperator::addInput(VectorBatch *vecBatch)
+int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
 {
     inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
-int32_t WindowOperator::getOutput(vector<VectorBatch *> &outputPages)
+int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
     pagesIndex->addVecBatches(inputVecBatches);
 
@@ -249,7 +249,7 @@ int32_t WindowOperator::getOutput(vector<VectorBatch *> &outputPages)
         position += rowCount;
         outputPages.push_back(vecBatch);
     }
-    setStatus(OMNI_STATUS_FINISHED);
+    SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 

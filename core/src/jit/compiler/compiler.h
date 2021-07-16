@@ -18,7 +18,7 @@ namespace omniruntime {
 
         protected:
             const std::string operatorPath = "/opt/lib/ir/";
-            const std::string entryFuncName = "createOperator";
+            const std::string entryFuncName = "CreateOperator";
             std::map<std::string, Specialization> specializations;
         };
     }

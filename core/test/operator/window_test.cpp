@@ -150,12 +150,12 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
         outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
 
-    windowOperator->addInput(vecBatch);
+    windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    windowOperator->getOutput(outputVecBatches);
+    windowOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
@@ -228,12 +228,12 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
         outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 0,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
 
-    windowOperator->addInput(vecBatch);
+    windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    windowOperator->getOutput(outputVecBatches);
+    windowOperator->GetOutput(outputVecBatches);
 
     double expectData1[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
     DoubleVector *expectCol1 = new DoubleVector(nullptr, DATA_SIZE);
@@ -303,12 +303,12 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
         outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
 
-    windowOperator->addInput(vecBatch);
+    windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    windowOperator->getOutput(outputVecBatches);
+    windowOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
@@ -382,12 +382,12 @@ TEST(NativeOmniWindowOperatorTest, testRank)
         outputCols, 3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
 
-    windowOperator->addInput(vecBatch);
+    windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    windowOperator->getOutput(outputVecBatches);
+    windowOperator->GetOutput(outputVecBatches);
 
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
     LongVector *expectCol1 = new LongVector(nullptr, DATA_SIZE);
@@ -460,12 +460,12 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
         outputCols, 3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 5, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
 
-    windowOperator->addInput(vecBatch);
+    windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    windowOperator->getOutput(outputVecBatches);
+    windowOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
@@ -542,12 +542,12 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
         outputCols, 3, windowFunctionTypes, 5, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, 8, argumentChannels, 5);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
-    operatorFactory->setJitContext(jitContext);
+    operatorFactory->SetJitContext(jitContext);
     WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
 
-    windowOperator->addInput(vecBatch);
+    windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
-    windowOperator->getOutput(outputVecBatches);
+    windowOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);

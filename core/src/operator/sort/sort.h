@@ -76,9 +76,9 @@ public:
 
     ~SortOperator();
 
-    int32_t addInput(VectorBatch *vecBatch) override;
+    int32_t AddInput(VectorBatch *vecBatch) override;
 
-    int32_t getOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
 
     int32_t getTypescount() { return typesCount; }
 

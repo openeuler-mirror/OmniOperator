@@ -139,7 +139,7 @@ void AggregateWindowFunction::resetAccumulator()
 
 void AggregateWindowFunction::evaluateFinal(omniruntime::op::Aggregator *pAggregator, Vector *pColumn, int32_t index)
 {
-    auto state = pAggregator->getNonGroupState();
+    auto state = pAggregator->GetNonGroupState();
     switch (aggregationType) {
         case WIN_SUM:
         case WIN_MAX:
@@ -206,7 +206,7 @@ void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
                 default:
                     break;
             }
-            aggregator->processNonGroup(vector, dataType, position - start);
+            aggregator->ProcessNonGroup(vector, dataType, position - start);
         }
     }
 };

@@ -162,9 +162,9 @@ public:
 
     ~WindowOperator();
 
-    int32_t addInput(VectorBatch *vecBatch) override;
-    int32_t getOutput(std::vector<VectorBatch *> &outputPages) override;
-    int32_t *getSourceTypes() override
+    int32_t AddInput(VectorBatch *vecBatch) override;
+    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t *GetSourceTypes() override
     {
         return sourceTypes;
     }

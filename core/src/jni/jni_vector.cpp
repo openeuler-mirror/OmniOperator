@@ -1,6 +1,7 @@
-//
-// Created by root on 5/26/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Vector Operations Source File
+ */
 #include <stdint.h>
 #include <src/vector/vector_common.h>
 #include <src/vector/dictionary_vector.h>
@@ -15,32 +16,33 @@
 #include "../vector/container_vector.h"
 #include "../vector/vector_allocator_manager.h"
 
-Vector *transformVector(long vectorAddr);
+Vector *TransformVector(long vectorAddr);
 
-VectorAllocator *transformAllocator(long allocatorAddr);
+VectorAllocator *TransformAllocator(long allocatorAddr);
 
 jobject transformBaseVectorToByteBuffer(JNIEnv *env, void *addr, int sizeInBytes);
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative
-        (JNIEnv *env, jclass jcls, jint jCapacityInBytes, jint jValueCount, jint jVectorType, jlong jAllocator) {
+        (JNIEnv *env, jclass jcls, jint jCapacityInBytes, jint jValueCount, jint jVectorType, jlong jAllocator)
+{
     int64_t nativeVector = 0;
     switch (jVectorType) {
         case OMNI_VEC_TYPE_INT:
-            nativeVector = reinterpret_cast<int64_t>(new IntVector(transformAllocator(jAllocator), jValueCount));
+            nativeVector = reinterpret_cast<int64_t>(new IntVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_LONG:
-            nativeVector = reinterpret_cast<int64_t>(new LongVector(transformAllocator(jAllocator), jValueCount));
+            nativeVector = reinterpret_cast<int64_t>(new LongVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_DOUBLE:
-            nativeVector = reinterpret_cast<int64_t>(new DoubleVector(transformAllocator(jAllocator), jValueCount));
+            nativeVector = reinterpret_cast<int64_t>(new DoubleVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_BOOLEAN:
-            nativeVector = reinterpret_cast<int64_t>(new BooleanVector(transformAllocator(jAllocator), jValueCount));
+            nativeVector = reinterpret_cast<int64_t>(new BooleanVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_SHORT:
             break;
         case OMNI_VEC_TYPE_VARCHAR:
-            nativeVector = reinterpret_cast<int64_t>(new VarcharVector(transformAllocator(jAllocator), jCapacityInBytes, jValueCount));
+            nativeVector = reinterpret_cast<int64_t>(new VarcharVector(TransformAllocator(jAllocator), jCapacityInBytes, jValueCount));
             break;
         default:
             break;
@@ -50,15 +52,16 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jStartIndex, jint jLength) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jStartIndex, jint jLength)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return reinterpret_cast<int64_t>(nativeVector->slice(jStartIndex, jLength));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNative
   (JNIEnv *env, jclass jcls, jlong jNativeVector, jintArray jPositions, jint jOffset, jint jLength)
 {
-    Vector *nativeVector = transformVector(jNativeVector);
+    Vector *nativeVector = TransformVector(jNativeVector);
     jint positionArray[jLength];
     env->GetIntArrayRegion(jPositions, jOffset, jLength, positionArray);
     jint *positions = positionArray;
@@ -68,13 +71,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyRegionNative
   (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jPositionOffset, jint jLength)
 {
-    Vector *nativeVector = transformVector(jNativeVector);
+    Vector *nativeVector = TransformVector(jNativeVector);
     return reinterpret_cast<int64_t>(nativeVector->copyRegion(jPositionOffset, jLength));
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative
         (JNIEnv *env, jclass jcls, jlong jNativeAllocator, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+    Vector *nativeVector = TransformVector(jNativeVector);
     if (nativeVector == nullptr) {
         std::cerr << "free vector native vector is null:" << jNativeVector << std::endl;
     }
@@ -82,32 +85,37 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getAllocatorNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return reinterpret_cast<int64_t>(nativeVector->getAllocator());
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getCapacityInBytesNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return nativeVector->getReference()->getCapacityInBytes();
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getSizeNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return nativeVector->getSize();
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getOffsetNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return nativeVector->getPositionOffset();
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setValueCountNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jSize) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jSize)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     if (jSize < 0 || jSize > nativeVector->getSize()) {
         std::cerr << "size is error, the range is[0," << nativeVector->getSize() << "]" << std::endl;
         return jSize;
@@ -117,33 +125,38 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setValueCountNative
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return nativeVector->getType();
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return transformBaseVectorToByteBuffer(env, nativeVector->getValues(),
                                            nativeVector->getReference()->getCapacityInBytes());
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector); 
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector); 
     return transformBaseVectorToByteBuffer(env, nativeVector->getValueNulls(),
                                            nativeVector->getReference()->getValueNullChunk()->getSizeInBytes());
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
     ContainerVector* containerVec = reinterpret_cast<ContainerVector*>(jNativeVector);
     return containerVec->getPositionCount();
 }
 
 JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
     ContainerVector* containerVec = reinterpret_cast<ContainerVector*>(jNativeVector);
     auto vecTypes = containerVec->getVecTypes();
     jintArray res = env->NewIntArray(vecTypes.size());
@@ -153,63 +166,72 @@ JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVe
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
         (JNIEnv *env, jclass jcls, jlong jNativeVectorDest, jint jOffSet, jlong jNativeVectorSrc, jint jLength) {
-    Vector *nativeVectorSrc = transformVector(jNativeVectorSrc);
-    Vector *nativeVectorDest = transformVector(jNativeVectorDest);
+    Vector *nativeVectorSrc = TransformVector(jNativeVectorSrc);
+    Vector *nativeVectorDest = TransformVector(jNativeVectorDest);
     nativeVectorDest->append(nativeVectorSrc, (int32_t) jOffSet, (int32_t) jLength);
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector) {
-    Vector *nativeVector = transformVector(jNativeVector);
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    Vector *nativeVector = TransformVector(jNativeVector);
     return transformBaseVectorToByteBuffer(env, nativeVector->getReference()->getValueOffsetsAddress(),
                                            nativeVector->getReference()->getValueOffsetChunk()->getSizeInBytes());
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newAllocatorNative
-        (JNIEnv *env, jclass jcls, jstring jScopeId) {
+        (JNIEnv *env, jclass jcls, jstring jScopeId)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
     return reinterpret_cast<int64_t>(manager.getOrCreateAllocator(GLOBAL_SCOPE_NAME));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_freeAllocatorNative
-        (JNIEnv *env, jclass jcls, jlong jAllocator) {
-    VectorAllocator *allocator = transformAllocator(jAllocator);
+        (JNIEnv *env, jclass jcls, jlong jAllocator)
+{
+    VectorAllocator *allocator = TransformAllocator(jAllocator);
     allocator->freeAllVectors();
     return 0;
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_getGlobalAllocatorNative
-        (JNIEnv *env, jclass jcls) {
+        (JNIEnv *env, jclass jcls)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
     return reinterpret_cast<int64_t>(manager.getOrCreateAllocator(GLOBAL_SCOPE_NAME));
 }
 
 jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative
-        (JNIEnv *env, jclass jcls, jint jVecCount) {
+        (JNIEnv *env, jclass jcls, jint jVecCount)
+{
     VectorBatch *vecBatch = new VectorBatch(jVecCount);
     return (int64_t) vecBatch;
 }
 
 void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative
-        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress) {
+        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
+{
     VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
     delete vecBatch;
 }
 
 jint Java_nova_hetu_omniruntime_vector_VecBatch_getVectorCountNative
-        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress) {
+        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
+{
     VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
     return vecBatch->getVectorCount();
 }
 
 void Java_nova_hetu_omniruntime_vector_VecBatch_setVectorNative
-        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress, jint jVecIndex, jlong jVecAddress) {
+        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress, jint jVecIndex, jlong jVecAddress)
+{
     VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
     vecBatch->setVector(jVecIndex, (Vector *) jVecAddress);
 }
 
 jlong Java_nova_hetu_omniruntime_vector_VecBatch_getVectorNative
-        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress, jint jVecIndex) {
+        (JNIEnv *env, jclass jcls, jlong jVecBatchAddress, jint jVecIndex)
+{
     VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
     return (int64_t) vecBatch->getVector(jVecIndex);
 }
@@ -217,7 +239,7 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_getVectorNative
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector)
 {
-    Vector *nativeVector = transformVector(jNativeVector);
+    Vector *nativeVector = TransformVector(jNativeVector);
     Vector *dictionary = reinterpret_cast<DictionaryVector *>(nativeVector)->getDictionary();
     return reinterpret_cast<jlong>(dictionary);
 }
@@ -225,7 +247,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDicti
 JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getIdsNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector)
 {
-    Vector *nativeVector = transformVector(jNativeVector);
+    Vector *nativeVector = TransformVector(jNativeVector);
     DictionaryVector *dictionaryVector = reinterpret_cast<DictionaryVector *>(nativeVector);
     int32_t *ids = dictionaryVector->getIds();
     int32_t idsCount = dictionaryVector->getIdsCount();
@@ -239,18 +261,21 @@ JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getI
     return jResult;
 }
 
-Vector *transformVector(long vectorAddr) {
+Vector *TransformVector(long vectorAddr)
+{
     Vector *nativeVector = reinterpret_cast<Vector *>(vectorAddr);
     ASSERT(nativeVector != nullptr);
     return nativeVector;
 }
 
-VectorAllocator *transformAllocator(long allocatorAddr) {
+VectorAllocator *TransformAllocator(long allocatorAddr)
+{
     VectorAllocator *nativeAllocator = reinterpret_cast<VectorAllocator *>(allocatorAddr);
     ASSERT(nativeAllocator != nullptr);
     return nativeAllocator;
 }
 
-jobject transformBaseVectorToByteBuffer(JNIEnv *env, void *addr, int sizeInBytes) {
+jobject transformBaseVectorToByteBuffer(JNIEnv *env, void *addr, int sizeInBytes)
+{
     return env->NewDirectByteBuffer(addr, sizeInBytes);
 }
