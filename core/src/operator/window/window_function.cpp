@@ -1,8 +1,13 @@
-#include <cstring>
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: window operator implementations
+ */
+
 #include "window_function.h"
-#include "../../util/debug.h"
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_helper.h"
+
+using namespace std;
 
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
 {
@@ -15,6 +20,7 @@ WindowIndex::~WindowIndex() {}
 
 RankingWindowFunction::RankingWindowFunction()
 {
+    this->windowIndex = nullptr;
     this->currentPeerGroupStart = 0;
     this->currentPosition = 0;
 }
@@ -27,7 +33,9 @@ RankFunction::RankFunction()
     this->count = 1;
 }
 
-void RankingWindowFunction::processRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+RankFunction::~RankFunction() {}
+
+void RankingWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
     int32_t frameStart, int32_t frameEnd)
 {
     bool newPeerGroup = false;
@@ -36,25 +44,25 @@ void RankingWindowFunction::processRow(Vector *column, int32_t index, int32_t pe
         newPeerGroup = true;
     }
     int peerGroupCount = (peerGroupEnd - peerGroupStart) + 1;
-    processRow(column, index, newPeerGroup, peerGroupCount, currentPosition);
+    ProcessRow(column, index, newPeerGroup, peerGroupCount, currentPosition);
     currentPosition++;
 }
 
-void RankingWindowFunction::reset(WindowIndex *windowIndex)
+void RankingWindowFunction::Reset(WindowIndex *windowIndex)
 {
     this->windowIndex = windowIndex;
     this->currentPeerGroupStart = -1;
     this->currentPosition = 0;
-    reset();
+    Reset();
 }
 
-void RankFunction::reset()
+void RankFunction::Reset()
 {
     rank = 0;
     count = 1;
 }
 
-void RankFunction::processRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+void RankFunction::ProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
     int32_t currentPosition)
 {
     if (newPeerGroup) {
@@ -66,7 +74,7 @@ void RankFunction::processRow(Vector *column, int32_t index, bool newPeerGroup, 
     VectorHelper::SetValue(column, index, &rank);
 }
 
-void RowNumberFunction::processRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+void RowNumberFunction::ProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
     int32_t currentPosition)
 {
     int64_t value = currentPosition + 1;
@@ -77,67 +85,66 @@ AggregateWindowFunction::~AggregateWindowFunction() {}
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, int32_t dataType)
 {
-    this->windowIndex = nullptr;
     this->argumentChannels = argumentChannels;
     this->aggregationType = aggregationType;
     this->currentStart = 0;
     this->currentEnd = 0;
     this->dataType = dataType;
-    this->aggregator = nullptr;
 }
 
-void AggregateWindowFunction::reset(WindowIndex *windowIndex)
+void AggregateWindowFunction::Reset(WindowIndex *windowIndex)
 {
     this->windowIndex = windowIndex;
-    resetAccumulator();
+    ResetAccumulator();
 }
 
-void AggregateWindowFunction::processRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+void AggregateWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
     int32_t frameStart, int32_t frameEnd)
 {
     if (frameStart < 0) {
-        resetAccumulator();
+        ResetAccumulator();
     } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
         // same or expanding frame
-        accumulate(currentEnd + 1, frameEnd);
+        Accumulate(currentEnd + 1, frameEnd);
         currentEnd = frameEnd;
     } else {
         // different frame
-        resetAccumulator();
-        accumulate(frameStart, frameEnd);
+        ResetAccumulator();
+        Accumulate(frameStart, frameEnd);
         currentStart = frameStart;
         currentEnd = frameEnd;
     }
-    evaluateFinal(aggregator, column, index);
+    EvaluateFinal(aggregator, column, index);
 }
-omniruntime::op::Aggregator *createAccumulator(int32_t aggregationType, int32_t dataType)
+omniruntime::op::Aggregator *CreateAccumulator(int32_t aggregationType, int32_t dataType)
 {
     switch (aggregationType) {
         case WIN_SUM:
-            return new omniruntime::op::SumAggregator(dataType);
+            return make_unique<omniruntime::op::SumAggregator>(dataType).release();
         case WIN_COUNT:
-            return new omniruntime::op::CountAggregator(dataType);
+            return make_unique<omniruntime::op::CountAggregator>(dataType).release();
         case WIN_AVG:
-            return new omniruntime::op::AverageAggregator(dataType);
+            return make_unique<omniruntime::op::AverageAggregator>(dataType).release();
         case WIN_MAX:
-            return new omniruntime::op::MaxAggregator(dataType);
+            return make_unique<omniruntime::op::MaxAggregator>(dataType).release();
         case WIN_MIN:
-            return new omniruntime::op::MinAggregator(dataType);
+            return make_unique<omniruntime::op::MinAggregator>(dataType).release();
         default:
             return nullptr;
     }
 }
 
-void AggregateWindowFunction::resetAccumulator()
+void AggregateWindowFunction::ResetAccumulator()
 {
     if (currentStart >= 0) {
-        aggregator = createAccumulator(aggregationType, dataType);
+        aggregator = CreateAccumulator(aggregationType, dataType);
         currentStart = -1;
         currentEnd = -1;
     }
 }
 
-void AggregateWindowFunction::evaluateFinal(omniruntime::op::Aggregator *pAggregator, Vector *pColumn, int32_t index)
+void AggregateWindowFunction::EvaluateFinal(omniruntime::op::Aggregator *pAggregator, Vector *pColumn,
+    int32_t index) const
 {
     auto state = pAggregator->GetNonGroupState();
     switch (aggregationType) {
@@ -157,32 +164,17 @@ void AggregateWindowFunction::evaluateFinal(omniruntime::op::Aggregator *pAggreg
     }
 }
 
-void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
+void AggregateWindowFunction::Accumulate(int32_t start, int32_t end)
 {
     if (start > end) {
         return;
     }
-    Vector ***leftColumns = windowIndex->getPagesIndex()->GetColumns();
-    Vector *vector = 0;
+    Vector ***leftColumns = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
-    switch (dataType) {
-        case OMNI_VEC_TYPE_INT: {
-            vector = new IntVector(nullptr, rowCount);
-            break;
-        }
-        case OMNI_VEC_TYPE_LONG: {
-            vector = new LongVector(nullptr, rowCount);
-            break;
-        }
-        case OMNI_VEC_TYPE_DOUBLE: {
-            vector = new DoubleVector(nullptr, rowCount);
-            break;
-        }
-        default:
-            break;
-    }
+    Vector *vector = InitVector(rowCount);
     for (int32_t position = start; position <= end; ++position) {
-        int64_t leftValueAddress = windowIndex->getPagesIndex()->GetValueAddresses()[position + windowIndex->getStart()];
+        int64_t leftValueAddress =
+            windowIndex->GetPagesIndex()->GetValueAddresses()[position + windowIndex->GetStart()];
         int32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
         int32_t leftColumnPosition = DecodePosition(leftValueAddress);
         Vector *tempColumn = leftColumns[argumentChannels][leftColumnIndex];
@@ -209,4 +201,22 @@ void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
             aggregator->ProcessNonGroup(vector, dataType, position - start);
         }
     }
-};
+}
+
+Vector *AggregateWindowFunction::InitVector(int rowCount)
+{
+    switch (dataType) {
+        case OMNI_VEC_TYPE_INT: {
+            return make_unique<IntVector>(nullptr, rowCount).release();
+        }
+        case OMNI_VEC_TYPE_LONG: {
+            return make_unique<LongVector>(nullptr, rowCount).release();
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            return make_unique<LongVector>(nullptr, rowCount).release();
+        }
+        default:
+            break;
+    }
+    return nullptr;
+}
