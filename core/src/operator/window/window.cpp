@@ -183,19 +183,19 @@ int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
-    pagesIndex->addVecBatches(inputVecBatches);
+    pagesIndex->AddVecBatches(inputVecBatches);
 
     // right now we assume the pregroup and presort are null
-    preGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
-                                                           pagesIndex->getTypes(), pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
-    unGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
-                                                           pagesIndex->getTypes(), pagesIndex->getTypesCount(), partitionCols, partitionCount);
-    preSortedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
-                                                           pagesIndex->getTypes(), pagesIndex->getTypesCount(), preGroupedCols, preGroupedCount);
-    peerGroupHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(), pagesIndex->getTypes(), pagesIndex->getTypesCount(),
+    preGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(),
+                                                           pagesIndex->GetTypes(), pagesIndex->GetTypesCount(), preGroupedCols, preGroupedCount);
+    unGroupedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(),
+                                                           pagesIndex->GetTypes(), pagesIndex->GetTypesCount(), partitionCols, partitionCount);
+    preSortedPartitionHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(),
+                                                           pagesIndex->GetTypes(), pagesIndex->GetTypesCount(), preGroupedCols, preGroupedCount);
+    peerGroupHashStrategy = new PagesHashStrategy(pagesIndex->GetColumns(), pagesIndex->GetTypes(), pagesIndex->GetTypesCount(),
                                                   originSortCols, originSortColCount);
 
-    int32_t positionCount = pagesIndex->getPositionCount();
+    int32_t positionCount = pagesIndex->GetPositionCount();
     int32_t finalOutputColsCount = 0;
     if (positionCount <= 0) {
         return 0;
@@ -215,8 +215,8 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     }
 
     // next, get output
-    int32_t maxRowCount = getMaxRowCount(allTypes, finalOutputCols, finalOutputColsCount);
-    int32_t outputPageCount = getPageCount(positionCount, maxRowCount);
+    int32_t maxRowCount = GetMaxRowCount(allTypes, finalOutputCols, finalOutputColsCount);
+    int32_t outputPageCount = GetPageCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
     int32_t outputTypes[finalOutputColsCount];
@@ -235,7 +235,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         for (int32_t j = 0; j < rowCount; j++) {
             if (partition == nullptr || !partition->hasNext()) {
                 int partitionStart = partition == nullptr ? 0 : partition->getPartitionEnd();
-                if (partitionStart >= pagesIndex->getPositionCount()) {
+                if (partitionStart >= pagesIndex->GetPositionCount()) {
                     partition = nullptr;
                     // pagesIndex.clear();
                     break;
@@ -261,17 +261,17 @@ void WindowOperator::finishPagesIndex()
 
 void WindowOperator::sortPagesIndexIfNecessary()
 {
-    if (pagesIndex->getPositionCount() > 1 && sortColCount != 0) {
+    if (pagesIndex->GetPositionCount() > 1 && sortColCount != 0) {
         int32_t sortColTypes[sortColCount];
         for (int32_t i = 0; i < sortColCount; i++) {
             sortColTypes[i] = sourceTypes[sortCols[i]];
         }
 
         int32_t startPosition = 0;
-        auto positionCount = pagesIndex->getPositionCount();
+        auto positionCount = pagesIndex->GetPositionCount();
         while (startPosition < positionCount) {
             int32_t endPosition = findGroupEnd(pagesIndex, preSortedPartitionHashStrategy, startPosition);
-            pagesIndex->sort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, startPosition,
+            pagesIndex->Sort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, startPosition,
                 endPosition);
             startPosition = endPosition;
         }
@@ -281,7 +281,7 @@ void WindowOperator::sortPagesIndexIfNecessary()
 int32_t findGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition)
 {
     int32_t left = startPosition;
-    int32_t right = pagesIndex->getPositionCount();
+    int32_t right = pagesIndex->GetPositionCount();
 
     while (left + 1 < right) {
         int32_t middle = left + (right - left) / 2;

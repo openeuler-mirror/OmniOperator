@@ -222,7 +222,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
     jint sortColsCount = env->GetArrayLength(jSortCols);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
-    omniruntime::op::SortOperatorFactory *sortOperatorFactory = omniruntime::op::SortOperatorFactory::createSortOperatorFactory(
+    omniruntime::op::SortOperatorFactory *sortOperatorFactory = omniruntime::op::SortOperatorFactory::CreateSortOperatorFactory(
         sourceTypesArr,
         sourceTypesCount,
         outputColsArr,
@@ -233,13 +233,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
         sortColsCount);
     JitContext *jitContext = createSortJitContext(
         sortOperatorFactory->GetSourceTypes(),
-        sortOperatorFactory->getSourceTypeCount(),
+        sortOperatorFactory->GetSourceTypeCount(),
         sortOperatorFactory->GetOutputCols(),
         sortOperatorFactory->GetOutputColCount(),
-        sortOperatorFactory->getSortCols(),
-        sortOperatorFactory->getSortAscendings(),
-        sortOperatorFactory->getSortNullFirsts(),
-        sortOperatorFactory->getSortColCount());
+        sortOperatorFactory->GetSortCols(),
+        sortOperatorFactory->GetSortAscendings(),
+        sortOperatorFactory->GetSortNullFirsts(),
+        sortOperatorFactory->GetSortColCount());
     sortOperatorFactory->SetJitContext(jitContext);
     JNI_DEBUG_LOG("create sort operator factory finished, elapsed time: %ld ms.", END(start));
     return (int64_t)sortOperatorFactory;
@@ -275,11 +275,11 @@ JitContext *createSortJitContext(
     ParamValue p_sortColCount = ParamValue(&sortColsCount);
 
     auto *compareToSp = new Specialization();
-    compareToSp->addSpecializedParam(1, &p_sortCols);
-    compareToSp->addSpecializedParam(2, &p_sortColTypes);
-    compareToSp->addSpecializedParam(3, &p_sortAscendings);
-    compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
-    compareToSp->addSpecializedParam(5, &p_sortColCount);
+    compareToSp->addSpecializedParam(0, &p_sortCols);
+    compareToSp->addSpecializedParam(1, &p_sortColTypes);
+    compareToSp->addSpecializedParam(2, &p_sortAscendings);
+    compareToSp->addSpecializedParam(3, &p_sortNullFirsts);
+    compareToSp->addSpecializedParam(4, &p_sortColCount);
 
     auto *allocColumnsSp = new Specialization();
     allocColumnsSp->addSpecializedParam(1, &p_sourceTypes);
@@ -469,11 +469,11 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     ParamValue p_outputCols = ParamValue(outputCols, outputColsCount);
     ParamValue p_outputColCount = ParamValue(&outputColsCount);
     auto *compareToSp = new Specialization();
-    compareToSp->addSpecializedParam(1, &p_sortCols);
-    compareToSp->addSpecializedParam(2, &p_sortColTypes);
-    compareToSp->addSpecializedParam(3, &p_sortAscendings);
-    compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
-    compareToSp->addSpecializedParam(5, &p_sortColCount);
+    compareToSp->addSpecializedParam(0, &p_sortCols);
+    compareToSp->addSpecializedParam(1, &p_sortColTypes);
+    compareToSp->addSpecializedParam(2, &p_sortAscendings);
+    compareToSp->addSpecializedParam(3, &p_sortNullFirsts);
+    compareToSp->addSpecializedParam(4, &p_sortColCount);
     auto *getOutputSp = new Specialization();
     getOutputSp->addSpecializedParam(1, &p_outputCols);
     getOutputSp->addSpecializedParam(2, &p_outputColCount);
@@ -563,7 +563,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilder
     jint buildHashColsCount = env->GetArrayLength(jBuildHashCols);
 
     JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
-    omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory = omniruntime::op::HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
+    omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory = omniruntime::op::HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypesArr,
         buildTypesCount,
         buildOutputColsArr,
@@ -667,7 +667,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinO
     jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
 
     JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
-    omniruntime::op::LookupJoinOperatorFactory *lookupJoinOperatorFactory = omniruntime::op::LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
+    omniruntime::op::LookupJoinOperatorFactory *lookupJoinOperatorFactory = omniruntime::op::LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
         probeTypesArr,
         probeTypesCount,
         probeOutputColsArr,
@@ -691,6 +691,15 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t *buildOutputTypes, int32_t buildOutputColsCount, int64_t hashBuilderFactoryAddr)
 {
+    if (probeHashColsCount <= 0) {
+        std::cerr << "Memory allocation size is illegal!" << std::endl;
+        return nullptr;
+    }
+    int32_t *hashColTypes = new int32_t[probeHashColsCount];
+    for (int32_t i = 0; i < probeHashColsCount; i++) {
+        hashColTypes[i] = probeTypes[probeHashCols[i]];
+    }
+
     JNI_DEBUG_LOG("create lookup join jit context starting.");
     auto start = START();
     using namespace omniruntime::jit;
@@ -719,14 +728,6 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
             {OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp}
     };
 
-    if (probeHashColsCount <= 0) {
-        std::cerr << "Memory allocation size is illegal!" << std::endl;
-        return nullptr;
-    }
-    int32_t *hashColTypes = new int32_t[probeHashColsCount];
-    for (int32_t i = 0; i < probeHashColsCount; i++) {
-        hashColTypes[i] = probeTypes[probeHashCols[i]];
-    }
     ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
     ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
 

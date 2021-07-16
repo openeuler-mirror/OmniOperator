@@ -123,7 +123,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     }
     std::cout << std::endl;
     for (auto vecBatch : result1) {
-        printVecBatch(vecBatch);
+        PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 
@@ -160,7 +160,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
 
     std::cout << std::endl;
     for (auto vecBatch : result2) {
-        printVecBatch(vecBatch);
+        PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(result2);
 }
@@ -552,7 +552,7 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     }
     std::cout << std::endl;
     for (auto vecBatch : result1) {
-        printVecBatch(vecBatch);
+        PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     VectorHelper::FreeVecBatches(result1);
