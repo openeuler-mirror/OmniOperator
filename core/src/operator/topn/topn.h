@@ -69,9 +69,9 @@ namespace omniruntime {
 
             ~TopNOperator();
 
-            int32_t addInput(VectorBatch *data) override;
+            int32_t AddInput(VectorBatch *data) override;
 
-            int32_t getOutput(std::vector<VectorBatch *> &outputVecBatch) override;
+            int32_t GetOutput(std::vector<VectorBatch *> &outputVecBatch) override;
 
             int32_t
             compare(int32_t position, VectorBatch *table, VectorBatch *currentMaxVectorBatch, int32_t sortColCount, int32_t *sourceTypes, int32_t *sortAscendings);

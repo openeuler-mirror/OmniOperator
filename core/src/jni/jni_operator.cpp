@@ -1,6 +1,7 @@
-//
-// Created by root on 5/26/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Operator Operations Source File
+ */
 
 #include <vector>
 #include <algorithm>
@@ -13,7 +14,8 @@
 
 using namespace omniruntime::op;
 
-jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result) {
+jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
+{
     jobjectArray res = env->NewObjectArray(result.size(), vecBatchCls, nullptr);
     int32_t idx = 0;
     for (auto vecBatch : result) {
@@ -24,10 +26,11 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result) {
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInputNative
-        (JNIEnv *env, jobject jObj, jlong jOperatorAddress, jlong jVecBatchAddress) {
+        (JNIEnv *env, jobject jObj, jlong jOperatorAddress, jlong jVecBatchAddress)
+{
     VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
     Operator *nativeOperator = (Operator *) jOperatorAddress;
-    int32_t ret = nativeOperator->addInput(vecBatch);
+    int32_t ret = nativeOperator->AddInput(vecBatch);
     return ret;
 }
 
@@ -37,16 +40,17 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
  * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
  */
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative
-        (JNIEnv *env, jobject jObj, jlong jOperatorAddr) {
+        (JNIEnv *env, jobject jObj, jlong jOperatorAddr)
+{
     JNI_DEBUG_LOG("get output starting.");
     auto start = START();
     Operator *nativeOperator = (Operator *) jOperatorAddr;
     std::vector<VectorBatch *> outputPages;
-    int32_t errNo = nativeOperator->getOutput(outputPages);
+    int32_t errNo = nativeOperator->GetOutput(outputPages);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
     jobjectArray result = transform(env, outputPages);
     JNI_DEBUG_LOG("transform finished, elapsed time: %ld ms.", END(start));
-    return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->getStatus());
+    return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->GetStatus());
 }
 
 /*

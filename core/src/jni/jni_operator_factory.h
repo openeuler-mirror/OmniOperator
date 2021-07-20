@@ -1,9 +1,11 @@
-//
-// Created by root on 5/26/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Type Operator Factory Header
+ */
+#ifndef JNI_OPERATOR_FACTORY_H
+#define JNI_OPERATOR_FACTORY_H
 #include <jni.h>
-#ifndef __JNI_OPERATOR_FACTORY_H__
-#define __JNI_OPERATOR_FACTORY_H__
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,7 +60,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_project_OmniProjectO
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory
  * Method:    createWindowOperatorFactory
- * Signature:
 */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory
         (JNIEnv *, jobject, jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jint,jint,jintArray,jintArray);
@@ -90,4 +91,4 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinO
 #ifdef __cplusplus
 }
 #endif
-#endif //__JNI_OPERATOR_FACTORY_H__
+#endif

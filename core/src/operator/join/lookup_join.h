@@ -70,9 +70,9 @@ public:
         JoinHashTables *hashTables,
         int32_t outputRowSize);
     ~LookupJoinOperator();
-    int32_t addInput(VectorBatch* data) override;
-    int32_t getOutput(std::vector<VectorBatch *>& outputPages) override;
-    int32_t *getSourceTypes() override;
+    int32_t AddInput(VectorBatch* data) override;
+    int32_t GetOutput(std::vector<VectorBatch *>& outputPages) override;
+    int32_t *GetSourceTypes() override;
 private:
     void processProbe();
     bool joinCurrentPosition();

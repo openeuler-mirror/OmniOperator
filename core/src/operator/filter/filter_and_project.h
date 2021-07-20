@@ -52,13 +52,13 @@ public:
         delete[] this->projections;
     }
 
-    int32_t addInput(VectorBatch *vecBatch) override;
+    int32_t AddInput(VectorBatch *vecBatch) override;
 
-    int32_t getOutput(std::vector<VectorBatch*>& data) override;
+    int32_t GetOutput(std::vector<VectorBatch*>& data) override;
 
     int32_t getVecCount() { return this->vecCount; }
 
-    int32_t *getSourceTypes() override { return this->inputTypes; }
+    int32_t *GetSourceTypes() override { return this->inputTypes; }
 
     // void close() override { delete this; }
 
@@ -78,7 +78,7 @@ public:
 
     ~FilterAndProjectOperatorFactory() override;
 
-    Operator* createOperator() override;
+    Operator* CreateOperator() override;
 
 private:
     std::string expression;

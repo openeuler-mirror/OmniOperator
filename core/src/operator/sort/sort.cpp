@@ -1,5 +1,5 @@
 #include "sort.h"
-#include "../../util/type_infer.h"
+#include "../../util/type_util.h"
 #include "../../util/debug.h"
 #include "../../memory/memory_pool.h"
 #include "../../vector/vector_common.h"
@@ -149,14 +149,14 @@ SortOperator::~SortOperator()
     delete pagesIndex;
 }
 
-int32_t SortOperator::addInput(VectorBatch *vecBatch)
+int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 {
     inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
 // return error code
-int32_t SortOperator::getOutput(vector<VectorBatch *>& outputPages)
+int32_t SortOperator::GetOutput(vector<VectorBatch *>& outputPages)
 {
     pagesIndex->addVecBatches(inputVecBatches);
 
@@ -206,7 +206,7 @@ int32_t SortOperator::getOutput(vector<VectorBatch *>& outputPages)
         position += rowCount;
         outputPages.push_back(vecBatch);
     }
-    setStatus(OMNI_STATUS_FINISHED);
+    SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 

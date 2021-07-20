@@ -67,13 +67,13 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscOneColumn) {
     TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 1, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
                                                                      1);
     JitContext *jitContext=createTestTopNJitContext(sourceTypes, 1, 1);
-    topNOperatorFactory->setJitContext(jitContext);
+    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
 
-    topNOperator->addInput(inputVecBatch);
+    topNOperator->AddInput(inputVecBatch);
     vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
+    topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
     expectCol1->setValues(0, expectData1,EXPECTED_DATA_SIZE);
@@ -116,13 +116,13 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn) {
                                                                      1);
 
     JitContext *jitContext=createTestTopNJitContext(sourceTypes, 1, 1);
-    topNOperatorFactory->setJitContext(jitContext);
+    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
 
-    topNOperator->addInput(inputVecBatch);
+    topNOperator->AddInput(inputVecBatch);
     vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
+    topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {2, 2, 1, 1, 0};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
     expectCol1->setValues(0, expectData1,EXPECTED_DATA_SIZE);
@@ -173,13 +173,13 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
     TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
                                                                      2);
     JitContext *jitContext=createTestTopNJitContext(sourceTypes, 3, 2);
-    topNOperatorFactory->setJitContext(jitContext);
+    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
 
-    topNOperator->addInput(inputVecBatch);
+    topNOperator->AddInput(inputVecBatch);
     vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
+    topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
     expectCol1->setValues(0, expectData1, EXPECTED_DATA_SIZE);
@@ -238,13 +238,13 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn) {
     TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
                                                                      2);
     JitContext *jitContext=createTestTopNJitContext(sourceTypes, 3, 2);
-    topNOperatorFactory->setJitContext(jitContext);
+    topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
 
-    topNOperator->addInput(inputVecBatch);
+    topNOperator->AddInput(inputVecBatch);
     vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
+    topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
     expectCol1->setValues(0, expectData1, EXPECTED_DATA_SIZE);

@@ -1,7 +1,7 @@
-//
-// Created by root on 5/31/21.
-//
-
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Constants
+ */
 #include "jni_constants.h"
 #include "../operator/status.h"
 #include "../vector/vector_type.h"

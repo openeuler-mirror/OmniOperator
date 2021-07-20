@@ -1,20 +1,21 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * Description: Aggregation Base Class
- * Author: Songling Liu
- * Create: 2021-07-01
- * Notes: None
+ * Description: Inner supported aggregators header
  */
 #ifndef AGGREGATOR_H
 #define AGGREGATOR_H
 
 #include <cstdint>
 #include <unordered_map>
+#include <memory>
 
 #include "../../vector/vector_type.h"
 
 namespace omniruntime {
 namespace op {
+
+const int32_t AVG_VECTOR_COUNT = 2;
+
 using ColumnIndex = struct ColumnIndex {
     uint32_t idx;
     VecType type;
@@ -43,12 +44,14 @@ using GroupBySlot = union GroupBySlot {
     int64_t count;
 };
 
+class AggregatorFactory;
+
 // TODO check if it can merge subtype aggregators to one aggregator class.
 class Aggregator {
 public:
     // Initiate this aggregator, such as setting default values for states.
     Aggregator(AggregateType ty, int32_t dataTy, bool inputRaw = true, bool outputParitial = false)
-        : type(ty), dataType(dataTy), initiated(false), inputRaw(inputRaw), outputPartial(outputParitial)
+        : type(ty), dataType(dataTy), initiated(false), inputRaw(inputRaw), outputPartial(outputParitial), nonGroupState({ nullptr })
     {}
     virtual ~Aggregator()
     {
@@ -57,15 +60,15 @@ public:
         } else {
             for (auto &i : groupState) {
                 switch (dataType) {
-                    case 1: {
+                    case OMNI_VEC_TYPE_INT: {
                         delete reinterpret_cast<int32_t *>(i.second.val);
                         break;
                     }
-                    case 2: {
+                    case OMNI_VEC_TYPE_LONG: {
                         delete reinterpret_cast<int64_t *>(i.second.val);
                         break;
                     }
-                    case 3: {
+                    case OMNI_VEC_TYPE_DOUBLE: {
                         delete reinterpret_cast<double *>(i.second.val);
                         break;
                     }
@@ -95,7 +98,7 @@ public:
     {
         return groupState;
     }
-    GroupBySlot &GetNonGroupState()
+    const GroupBySlot &GetNonGroupState()
     {
         return nonGroupState;
     }
@@ -118,16 +121,11 @@ protected:
 
 class SumAggregator : public Aggregator {
 public:
-    SumAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty) {}
+    explicit SumAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty) {}
     SumAggregator(int32_t ty, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty, inputRaw, outputPartial)
-    {
-        // initiate non-grouping state
-        // int32_t* val = new int32_t;
-        // *val = 0;
-        // nonGroupState = {val};
-    }
-    ~SumAggregator() {}
+    { }
+    ~SumAggregator() override {}
     void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
@@ -137,14 +135,11 @@ public:
 
 class AverageAggregator : public Aggregator {
 public:
-    AverageAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty) {}
+    explicit AverageAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty) {}
     AverageAggregator(int32_t ty, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty, inputRaw, outputPartial)
-    {
-        // initiate non-grouping state
-        // nonGroupState = {0};
-    }
-    ~AverageAggregator() {}
+    { }
+    ~AverageAggregator() override {}
     void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
@@ -154,13 +149,13 @@ public:
 
 class CountAggregator : public Aggregator {
 public:
-    CountAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty) {}
+    explicit CountAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty) {}
     CountAggregator(int32_t ty, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty, inputRaw, outputPartial)
     {
-        // nonGroup = {0};
+
     }
-    ~CountAggregator() {}
+    ~CountAggregator() override {}
     void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
@@ -170,11 +165,11 @@ public:
 
 class MinAggregator : public Aggregator {
 public:
-    MinAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty) {}
+    explicit MinAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty) {}
     MinAggregator(int32_t ty, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty, inputRaw, outputPartial)
     {}
-    ~MinAggregator() {}
+    ~MinAggregator() override {}
     void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
@@ -184,25 +179,60 @@ public:
 
 class MaxAggregator : public Aggregator {
 public:
-    MaxAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty) {}
+    explicit MaxAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty) {}
     MaxAggregator(int32_t ty, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty, inputRaw, outputPartial)
     {}
-    ~MaxAggregator() {}
+    ~MaxAggregator() override {}
     void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, VecType type) override {}
 };
+
+class AggregatorFactory {
+public:
+    AggregatorFactory() {}
+    virtual ~AggregatorFactory() {}
+    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) = 0;
+};
+
+class SumAggregatorFactory : public AggregatorFactory {
+public:
+    SumAggregatorFactory() {}
+    ~SumAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+};
+
+class CountAggregatorFactory : public AggregatorFactory {
+public:
+    CountAggregatorFactory() {}
+    ~CountAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+};
+
+class MinAggregatorFactory : public AggregatorFactory {
+public:
+    MinAggregatorFactory() {}
+    ~MinAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+};
+
+class MaxAggregatorFactory : public AggregatorFactory {
+public:
+    MaxAggregatorFactory() {}
+    ~MaxAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+};
+
+class AverageAggregatorFactory : public AggregatorFactory {
+public:
+    AverageAggregatorFactory() {}
+    ~AverageAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+};
+
 } // end of namespace op
 } // end of namespace omniruntime
-
-// class DistinctCountAggregator : public Aggregator<GroupBySlot> {
-// public:
-//     DistinctCountAggregator(int32_t ty) : Aggregator(DNV, ty) {}
-//     ~DistinctCountAggregator() {}
-//     void process(void* colPtr, int32_t type, uint32_t offset) override;
-//     void process(void* valuePtr, VecType type) override { }
-// };
 #endif

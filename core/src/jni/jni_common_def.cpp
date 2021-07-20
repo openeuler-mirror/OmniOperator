@@ -1,6 +1,7 @@
-//
-// Created by root on 5/27/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI common functions
+ */
 
 #include "jni_common_def.h"
 
@@ -11,15 +12,17 @@ jmethodID vecBatchInitMethodId;
 jmethodID omniResultsInitMethodId;
 jint JNI_VERSION = JNI_VERSION_1_6;
 
-jclass createGlobalClassRef(JNIEnv* env, const char *className) {
+jclass createGlobalClassRef(JNIEnv* env, const char *className)
+{
     jclass local_class = env->FindClass(className);
     jclass global_class = (jclass)env->NewGlobalRef(local_class);
     env->DeleteLocalRef(local_class);
     return global_class;
 }
 
-jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-    JNIEnv* env;
+jint JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+    JNIEnv* env = nullptr;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION) != JNI_OK) {
         return JNI_ERR;
     }
@@ -31,7 +34,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     return JNI_VERSION;
 }
 
-void JNI_OnUnload(JavaVM *vm, void *reserved) {
+void JNI_OnUnload(JavaVM *vm, const void *reserved)
+{
     JNIEnv* env;
     vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
     env->DeleteGlobalRef(vecBatchCls);

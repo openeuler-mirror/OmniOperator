@@ -63,12 +63,12 @@ TEST (ProjectTest, Simple) {
     string exprs[NUM_COLS] = {"$operator$ADD(#0, 5)"};
     int32_t inputTypes[NUM_COLS] = {1};
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, NUM_COLS, inputTypes, NUM_COLS);
-    omniruntime::op::Operator* op = factory->createOperator();
+    omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[NUM_COLS] = {(int64_t) col};
     VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
-    int32_t numReturned = op->getOutput(ret);
+    int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, i + 5);
@@ -90,12 +90,12 @@ TEST (ProjectTest, Negatives) {
     string exprs[NUM_COLS] = {"$operator$SUBTRACT(#0, 500)"};
     int32_t inputTypes[NUM_COLS] = {1};
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, NUM_COLS, inputTypes, NUM_COLS);
-    omniruntime::op::Operator* op = factory->createOperator();
+    omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[NUM_COLS] = {(int64_t) col};
     VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
-    int32_t numReturned = op->getOutput(ret);
+    int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, i - 505);
@@ -117,12 +117,12 @@ TEST (ProjectTest, Longs) {
     string exprs[NUM_COLS] = {"$operator$MULTIPLY(#0, 5000000)"};
     int32_t inputTypes[NUM_COLS] = {2};
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, NUM_COLS, inputTypes, NUM_COLS);
-    omniruntime::op::Operator* op = factory->createOperator();
+    omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[NUM_COLS] = {(int64_t) col};
     VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
-    int32_t numReturned = op->getOutput(ret);
+    int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < 1; i++) {
         int64_t val0 = ((LongVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, (int64_t) (i - 5000) * 5000000);
@@ -144,12 +144,12 @@ TEST (ProjectTest, Doubles) {
     string exprs[NUM_COLS] = {"$operator$DIVIDE(#0, 2)"};
     int32_t inputTypes[NUM_COLS] = {3};
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, NUM_COLS, inputTypes, NUM_COLS);
-    omniruntime::op::Operator* op = factory->createOperator();
+    omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[NUM_COLS] = {(int64_t) col};
     VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
-    int32_t numReturned = op->getOutput(ret);
+    int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < 1; i++) {
         double val0 = ((DoubleVector*) ret[0]->getVector(0))->getValue(i);
         double expected = (i - 5000.5) / 2;
@@ -175,12 +175,12 @@ TEST (ProjectTest, MultipleColumns) {
     const int32_t NUM_COLS = 3;
     int32_t inputTypes[NUM_COLS] = {1, 1, 2};
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, NUM_PROJECT, inputTypes, NUM_COLS);
-    omniruntime::op::Operator* op = factory->createOperator();
+    omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
     VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
-    int32_t numReturned = op->getOutput(ret);
+    int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, i - 10);
@@ -209,12 +209,12 @@ TEST (ProjectTest, DependOtherColumn) {
     const int32_t NUM_COLS = 3;
     int32_t inputTypes[NUM_COLS] = {1, 1, 2};
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, NUM_PROJECT, inputTypes, NUM_COLS);
-    omniruntime::op::Operator* op = factory->createOperator();
+    omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
     VectorBatch* t = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
-    op->addInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
-    int32_t numReturned = op->getOutput(ret);
+    int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector*) ret[0]->getVector(0))->getValue(i);
         EXPECT_EQ(val0, i * (i - 100));

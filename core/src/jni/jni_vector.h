@@ -1,9 +1,11 @@
-//
-// Created by root on 5/26/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Vector Operations Header
+ */
+#ifndef JNI_VECTOR_H
+#define JNI_VECTOR_H
 #include <jni.h>
-#ifndef __JNI_VECTOR_H__
-#define __JNI_VECTOR_H__
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -226,4 +228,4 @@ JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getI
 #ifdef __cplusplus
 }
 #endif
-#endif //__JNI_VECTOR_H__
+#endif

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Type Util Class
+ */
 #include <cmath>
 #include <cfloat>
 #include "test_util.h"
@@ -113,11 +117,11 @@ omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
     omniruntime::op::Operator *nativeOperator = nullptr;
 
 #ifdef DEBUG_OPERATOR
-    nativeOperator = operatorFactory->createOperator();
+    nativeOperator = operatorFactory->CreateOperator();
 #else
-    JitContext *jitContext = operatorFactory->getJitContext();
+    JitContext *jitContext = operatorFactory->GetJitContext();
     if (jitContext == nullptr) {
-        nativeOperator = operatorFactory->createOperator();
+        nativeOperator = operatorFactory->CreateOperator();
     } else {
         opt_module operatorModule = (opt_module) (jitContext->func);
         nativeOperator = operatorModule(operatorFactory);

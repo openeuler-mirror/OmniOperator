@@ -55,8 +55,8 @@ public:
     ~ProjectionOperator() {
     }
 
-    int32_t addInput(VectorBatch* vecBatch) override;
-    int32_t getOutput(std::vector<VectorBatch*>& ret) override;
+    int32_t AddInput(VectorBatch* vecBatch) override;
+    int32_t GetOutput(std::vector<VectorBatch*>& ret) override;
 
 private:
     Projection** proj;
@@ -71,7 +71,7 @@ public:
     ProjectionOperatorFactory(std::string* expression, int32_t nProj, int32_t* inputTypes, int32_t nCols);
     ProjectionOperatorFactory(Expr** exprs, int32_t nProj, int32_t* inputTypes, int32_t nCols);
     ~ProjectionOperatorFactory();
-    omniruntime::op::Operator* createOperator() override;
+    omniruntime::op::Operator* CreateOperator() override;
 
 private:
     int32_t* inputTypes;
