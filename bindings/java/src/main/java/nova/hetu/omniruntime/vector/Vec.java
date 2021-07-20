@@ -38,7 +38,7 @@ public abstract class Vec
     /**
      * The actual number of value.
      */
-    private int size;
+    protected int size;
 
     /**
      * When a vector has been sliced,
@@ -49,7 +49,7 @@ public abstract class Vec
     /**
      * The value buffer.
      */
-    private final ByteBuffer values;
+    protected final ByteBuffer values;
 
     /**
      * The nulls of vector, it is a bitmap.
@@ -216,6 +216,42 @@ public abstract class Vec
     public void setNull(int index)
     {
         valueNulls.set(index + offset);
+    }
+
+    public void setNulls(int index, boolean[] isNulls, int start, int length)
+    {
+        valueNulls.set(index, isNulls, start, length);
+    }
+
+    public boolean hasNullValue()
+    {
+        boolean[] currentValueNulls = new boolean[size];
+        valueNulls.get(offset, currentValueNulls, 0, size);
+        boolean hasNullValue = false;
+        int start = 0;
+        int end = currentValueNulls.length - 1;
+        while (start <= end) {
+            if (currentValueNulls[start] || currentValueNulls[end]) {
+                hasNullValue = true;
+                break;
+            }
+            start++;
+            end--;
+        }
+        return hasNullValue;
+    }
+
+    /**
+     * return null value array from 0 to size + offset length
+     * @return raw value nulls
+     */
+    public boolean[] getRawValueNulls()
+    {
+        // the length of the array is size + offset, so that the caller
+        // and vec can have the same offset.
+        boolean[] rawValueNulls = new boolean[size + offset];
+        valueNulls.get(0, rawValueNulls, 0, rawValueNulls.length);
+        return rawValueNulls;
     }
 
     public boolean isWritable()

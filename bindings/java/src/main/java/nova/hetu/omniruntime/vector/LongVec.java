@@ -53,7 +53,7 @@ public class LongVec
 
     public void set(int index, long value)
     {
-        getValues().putLong(index * BYTES, value);
+        values.putLong(index * BYTES, value);
     }
 
     public void put(long[] values, int offset, int start, int length)

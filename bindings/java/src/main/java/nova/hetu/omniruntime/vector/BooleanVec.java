@@ -35,16 +35,16 @@ public class BooleanVec
     public void set(int index, boolean value)
     {
         if (value) {
-            getValues().put(index, (byte) 1);
+            values.put(index, (byte) 1);
         }
         else {
-            getValues().put(index, (byte) 0);
+            values.put(index, (byte) 0);
         }
     }
 
     public boolean get(int index)
     {
-        return getValues().get((index + offset) * BYTES) == 1;
+        return values.get((index + offset) * BYTES) == 1;
     }
 
     public void put(boolean[] values, int offset, int start, int length)
