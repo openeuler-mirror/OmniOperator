@@ -195,7 +195,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
         (JNIEnv *env, jclass jcls, jlong jNativeVectorDest, jint jOffSet, jlong jNativeVectorSrc, jint jLength) {
     Vector *nativeVectorSrc = TransformVector(jNativeVectorSrc);
     Vector *nativeVectorDest = TransformVector(jNativeVectorDest);
-    nativeVectorDest->append(nativeVectorSrc, (int32_t) jOffSet, (int32_t) jLength);
+    nativeVectorDest->Append(nativeVectorSrc, (int32_t) jOffSet, (int32_t) jLength);
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative

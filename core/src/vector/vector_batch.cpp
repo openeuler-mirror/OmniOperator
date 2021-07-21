@@ -28,6 +28,7 @@ void VectorBatch::Init()
     }
     vectors = new Vector *[vectorCount];
     vectorTypes = new VecType[vectorCount];
+    rowCount = 0;
 }
 
 VectorBatch::~VectorBatch()
