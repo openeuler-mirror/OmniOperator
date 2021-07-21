@@ -29,19 +29,19 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @Warmup(iterations = 1, time = 500, timeUnit = MILLISECONDS)
 @Measurement(iterations = 15, time = 500, timeUnit = MILLISECONDS)
 @BenchmarkMode(Mode.AverageTime)
-public class BenchmarkVector
-{
-    public static final int ROWS = 8192;
-    private static final int getLoopCount = 1000;
-    private static final int setLoopCount = 1000;
+/**
+ * benchmar vector
+ */
+public class BenchmarkVector {
+    private static final int ROWS = 8192;
+    private static final int GET_LOOP_COUNT = 1000;
+    private static final int SET_LOOP_COUNT = 1000;
 
-    interface AffinityExecutorFunction
-    {
+    interface AffinityExecutorFunction {
         void executor(BenchmarkData data);
     }
 
-    private void affinityExecutor(AffinityExecutorFunction fn, BenchmarkData data)
-    {
+    private void affinityExecutor(AffinityExecutorFunction fn, BenchmarkData data) {
         if (data.cpuAffinity) {
             try (AffinityLock lock = AffinityLock.acquireLock(data.cpuUsed.getAndIncrement() % 16)) {
                 fn.executor(data);
@@ -52,12 +52,11 @@ public class BenchmarkVector
         }
     }
 
-    private void test_omnivec_set(BenchmarkData data)
-    {
+    private void testOmniVecSet(BenchmarkData data) {
         affinityExecutor(benchmarkData -> {
             long[] sampleData = benchmarkData.sampleData;
             LongVec omnivec = benchmarkData.longVec;
-            for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int loopIdx = 0; loopIdx < SET_LOOP_COUNT; loopIdx++) {
                 for (int idx = 0; idx < ROWS; idx++) {
                     omnivec.set(idx, sampleData[idx]);
                 }
@@ -65,12 +64,11 @@ public class BenchmarkVector
         }, data);
     }
 
-    private void test_heapvec_set(BenchmarkData data)
-    {
+    private void testHeapVecSet(BenchmarkData data) {
         affinityExecutor(benchmarkData -> {
             long[] sampleData = benchmarkData.sampleData;
             long[] heapvec = benchmarkData.longValues;
-            for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int loopIdx = 0; loopIdx < SET_LOOP_COUNT; loopIdx++) {
                 for (int idx = 0; idx < ROWS; idx++) {
                     heapvec[idx] = sampleData[idx];
                 }
@@ -78,34 +76,31 @@ public class BenchmarkVector
         }, data);
     }
 
-    private void test_omnivec_set_directcopy(BenchmarkData data)
-    {
+    private void testOmniVecSetDirectcopy(BenchmarkData data) {
         affinityExecutor(benchmarkData -> {
             long[] sampleData = benchmarkData.sampleData;
             LongVec omnivec = benchmarkData.longVec;
-            for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int loopIdx = 0; loopIdx < SET_LOOP_COUNT; loopIdx++) {
                 omnivec.getValues().asLongBuffer().put(sampleData, 0, sampleData.length);
             }
         }, data);
     }
 
-    private void test_heapvec_set_syscopy(BenchmarkData data)
-    {
+    private void testHeapVecSetSyscopy(BenchmarkData data) {
         affinityExecutor(benchmarkData -> {
             long[] sampleData = benchmarkData.sampleData;
             long[] heapvec = benchmarkData.longValues;
-            for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+            for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
                 System.arraycopy(sampleData, 0, heapvec, 0, heapvec.length);
             }
         }, data);
     }
 
-    private void test_direct_buffer_set_Benchmark(BenchmarkData data)
-    {
+    private void testDirectBufferSetBenchmark(BenchmarkData data) {
         affinityExecutor(benchmarkData -> {
             long[] sampleData = benchmarkData.sampleData;
             ByteBuffer byteBuffer = benchmarkData.getLongDirectVec();
-            for (int loopIdx = 0; loopIdx < setLoopCount; loopIdx++) {
+            for (int loopIdx = 0; loopIdx < SET_LOOP_COUNT; loopIdx++) {
                 for (int idx = 0; idx < ROWS; idx++) {
                     byteBuffer.putLong(idx, sampleData[idx]);
                 }
@@ -113,9 +108,11 @@ public class BenchmarkVector
         }, data);
     }
 
+    /**
+     * createLongVec
+     */
     @Benchmark
-    public void createLongVec(BenchmarkData benchmarkData)
-    {
+    public void createLongVec(BenchmarkData benchmarkData) {
         long[] values = benchmarkData.getLongValues();
         LongVec longVec = new LongVec(values.length);
         for (int i = 0; i < values.length; i++) {
@@ -124,425 +121,464 @@ public class BenchmarkVector
         longVec.close();
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_heapvec_set_032(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapVecSet032(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_omnivec_set_032(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet032(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_heapvec_set_064(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet064(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_omnivec_set_064(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet064(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_heapvec_set_128(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet128(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_omnivec_set_128(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet128(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_heapvec_get_032(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecGet032(BenchmarkData benchmarkData) {
         long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
                 long value = heapvec[idx];
             }
         }
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_omnivec_get_032(BenchmarkData benchmarkData)
-    {
+    public void testOmnivecGet032(BenchmarkData benchmarkData) {
         LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
                 long value = omnivec.get(idx);
             }
         }
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_heapvec_get_064(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecGet064(BenchmarkData benchmarkData) {
         long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
                 long value = heapvec[idx];
             }
         }
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_omnivec_get_064(BenchmarkData benchmarkData)
-    {
+    public void testOmnivecGet064(BenchmarkData benchmarkData) {
         LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
                 long value = omnivec.get(idx);
             }
         }
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_heapvec_get_128(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecGet128(BenchmarkData benchmarkData) {
         long[] heapvec = benchmarkData.longValues;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
                 long value = heapvec[idx];
             }
         }
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_omnivec_get_128(BenchmarkData benchmarkData)
-    {
+    public void testOmnivecGet128(BenchmarkData benchmarkData) {
         LongVec omnivec = benchmarkData.longVec;
-        for (int loopIdx = 0; loopIdx < getLoopCount; loopIdx++) {
+        for (int loopIdx = 0; loopIdx < GET_LOOP_COUNT; loopIdx++) {
             for (int idx = 0; idx < ROWS; idx++) {
                 long value = omnivec.get(idx);
             }
         }
     }
 
+    /**
+     * benchmark 2 threads
+     */
     @Benchmark
     @Threads(2)
-    public void test_heapvec_set_002(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet002(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 2 threads
+     */
     @Benchmark
     @Threads(2)
-    public void test_omnivec_set_002(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet002(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 2 threads
+     */
     @Benchmark
     @Threads(2)
-    public void test_omnivec_set_directcopy_002(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy002(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 2 threads
+     */
     @Benchmark
     @Threads(2)
-    public void test_heapvec_set_syscopy_002(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy002(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 4 threads
+     */
     @Benchmark
     @Threads(4)
-    public void test_heapvec_set_004(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet004(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 4 threads
+     */
     @Benchmark
     @Threads(4)
-    public void test_omnivec_set_004(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet004(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 4 threads
+     */
     @Benchmark
     @Threads(4)
-    public void test_omnivec_set_directcopy_004(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy004(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 4 threads
+     */
     @Benchmark
     @Threads(4)
-    public void test_heapvec_set_syscopy_004(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy004(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 8 threads
+     */
     @Benchmark
     @Threads(8)
-    public void test_heapvec_set_008(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet008(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 8 threads
+     */
     @Benchmark
     @Threads(8)
-    public void test_omnivec_set_008(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet008(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 8 threads
+     */
     @Benchmark
     @Threads(8)
-    public void test_omnivec_set_directcopy_008(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy008(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 8 threads
+     */
     @Benchmark
     @Threads(8)
-    public void test_heapvec_set_syscopy_008(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy008(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 16 threads
+     */
     @Benchmark
     @Threads(16)
-    public void test_heapvec_set_016(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet016(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 16 threads
+     */
     @Benchmark
     @Threads(16)
-    public void test_omnivec_set_016(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet016(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 16 threads
+     */
     @Benchmark
     @Threads(16)
-    public void test_omnivec_set_directcopy_016(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy016(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 16 threads
+     */
     @Benchmark
     @Threads(16)
-    public void test_heapvec_set_syscopy_016(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy016(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 1 threads
+     */
     @Benchmark
     @Threads(1)
-    public void test_heapvec_set_001(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set(benchmarkData);
+    public void testHeapvecSet001(BenchmarkData benchmarkData) {
+        testHeapVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 1 threads
+     */
     @Benchmark
     @Threads(1)
-    public void test_omnivec_set_001(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set(benchmarkData);
+    public void testOmnivecSet001(BenchmarkData benchmarkData) {
+        testOmniVecSet(benchmarkData);
     }
 
+    /**
+     * benchmark 1 threads
+     */
     @Benchmark
     @Threads(1)
-    public void test_omnivec_set_directcopy_001(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy001(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 1 threads
+     */
     @Benchmark
     @Threads(1)
-    public void test_heapvec_set_syscopy_001(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy001(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_heapvec_set_syscopy_032(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy032(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_heapvec_set_syscopy_064(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy064(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_heapvec_set_syscopy_128(BenchmarkData benchmarkData)
-    {
-        test_heapvec_set_syscopy(benchmarkData);
+    public void testHeapvecSetSyscopy128(BenchmarkData benchmarkData) {
+        testHeapVecSetSyscopy(benchmarkData);
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_omnivec_set_directcopy_032(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy032(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_omnivec_set_directcopy_064(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy064(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_omnivec_set_directcopy_128(BenchmarkData benchmarkData)
-    {
-        test_omnivec_set_directcopy(benchmarkData);
+    public void testOmnivecSetDirectcopy128(BenchmarkData benchmarkData) {
+        testOmniVecSetDirectcopy(benchmarkData);
     }
 
+    /**
+     * benchmark 1 threads
+     */
     @Benchmark
     @Threads(1)
-    public void test_directbuffer_set_001(BenchmarkData benchmarkData)
-    {
-        test_direct_buffer_set_Benchmark(benchmarkData);
+    public void testDirectbufferSet001(BenchmarkData benchmarkData) {
+        testDirectBufferSetBenchmark(benchmarkData);
     }
 
+    /**
+     * benchmark 1 threads
+     */
     @Benchmark
     @Threads(1)
-    public void test_heapvec_filter_copy_001(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy001(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 2 threads
+     */
     @Benchmark
     @Threads(2)
-    public void test_heapvec_filter_copy_002(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy002(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 4 threads
+     */
     @Benchmark
     @Threads(4)
-    public void test_heapvec_filter_copy_004(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy004(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 8 threads
+     */
     @Benchmark
     @Threads(8)
-    public void test_heapvec_filter_copy_008(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy008(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 16 threads
+     */
     @Benchmark
     @Threads(16)
-    public void test_heapvec_filter_copy_016(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy016(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 32 threads
+     */
     @Benchmark
     @Threads(32)
-    public void test_heapvec_filter_copy_032(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy032(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 64 threads
+     */
     @Benchmark
     @Threads(64)
-    public void test_heapvec_filter_copy_064(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy064(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
+    /**
+     * benchmark 128 threads
+     */
     @Benchmark
     @Threads(128)
-    public void test_heapvec_filter_copy_128(BenchmarkData benchmarkData)
-    {
+    public void testHeapvecFilterCopy128(BenchmarkData benchmarkData) {
         testHeapCopy(benchmarkData);
     }
 
-    // TODO: to support copy region
-//    @Benchmark
-//    @Threads(1)
-//    public void test_omnicopy_filter_copy_001(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(2)
-//    public void test_omnicopy_filter_copy_002(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(4)
-//    public void test_omnicopy_filter_copy_004(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(8)
-//    public void test_omnicopy_filter_copy_008(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(16)
-//    public void test_omnicopy_filter_copy_016(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(32)
-//    public void test_omnicopy_filter_copy_032(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(64)
-//    public void test_omnicopy_filter_copy_064(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-//
-//    @Benchmark
-//    @Threads(128)
-//    public void test_omnicopy_filter_copy_128(BenchmarkData benchmarkData)
-//    {
-//        testOmniCopy(benchmarkData);
-//    }
-
+    /**
+     * createLongVecDirect
+     */
     @Benchmark
-    public void createLongVecDirect(BenchmarkData benchmarkData)
-    {
+    public void createLongVecDirect(BenchmarkData benchmarkData) {
         long[] values = benchmarkData.getLongValues();
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(8 * values.length);
         for (long value : values) {
@@ -550,41 +586,33 @@ public class BenchmarkVector
         }
     }
 
+    /**
+     * getLongValues
+     */
     @Benchmark
-    public void getLongValues(BenchmarkData benchmarkData)
-    {
+    public void getLongValues(BenchmarkData benchmarkData) {
         LongVec longVec = benchmarkData.getLongVec();
         for (int i = 0; i < longVec.getSize(); i++) {
             longVec.get(i);
         }
     }
 
+    /**
+     * getDirectLongValues
+     */
     @Benchmark
-    public void getDirectLongValues(BenchmarkData benchmarkData)
-    {
+    public void getDirectLongValues(BenchmarkData benchmarkData) {
         ByteBuffer byteBuffer = benchmarkData.getLongDirectVec();
         for (int i = 0; i < byteBuffer.capacity() / 8; i++) {
             byteBuffer.getLong(8 * i);
         }
     }
 
-    // TODO: to support copy region
-//    @Benchmark
-//    public void testOmniCopy(BenchmarkData benchmarkData)
-//    {
-//        int[] selectedPositions = benchmarkData.selectedPositions;
-//
-//        LongVec originalVec = benchmarkData.omniVecFilterCopyData;
-//
-//        for (int i = 0; i < 10; i++) {
-//            LongVec newVec = new LongVec(selectedPositions.length);
-//            originalVec.copy(newVec, selectedPositions, 0, selectedPositions.length, 0);
-//        }
-//    }
-
+    /**
+     * testHeapCopy
+     */
     @Benchmark
-    public void testHeapCopy(BenchmarkData benchmarkData)
-    {
+    public void testHeapCopy(BenchmarkData benchmarkData) {
         int[] selectedPositions = benchmarkData.selectedPositions;
         long[] originalVec = benchmarkData.heapVecFilterCopyData;
 
@@ -596,10 +624,12 @@ public class BenchmarkVector
         }
     }
 
+    /**
+     * BenchmarkData
+     */
     @State(Scope.Benchmark)
-    public static class BenchmarkData
-    {
-        protected final Random random = new Random(0);
+    public static class BenchmarkData {
+        private final Random random = new Random(0);
         long[] longValues;
         LongVec longVec;
         ByteBuffer byteBuffer;
@@ -612,8 +642,7 @@ public class BenchmarkVector
         LongVec omniVecFilterCopyData;
         int[] selectedPositions;
 
-        public BenchmarkData()
-        {
+        public BenchmarkData() {
             longValues = new long[ROWS];
             for (int i = 0; i < longValues.length; i++) {
                 longValues[i] = random.nextLong();
@@ -649,25 +678,24 @@ public class BenchmarkVector
             }
         }
 
-        public long[] getLongValues()
-        {
+        public long[] getLongValues() {
             return longValues;
         }
 
-        public LongVec getLongVec()
-        {
+        public LongVec getLongVec() {
             return longVec;
         }
 
-        public ByteBuffer getLongDirectVec()
-        {
+        /**
+         * getLongDirectVec
+         */
+        public ByteBuffer getLongDirectVec() {
             return byteBuffer;
         }
     }
 
     public static void main(String[] args)
-            throws Throwable
-    {
+            throws Throwable {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
                 .include(".*" + BenchmarkVector.class.getSimpleName() + ".test_.*_filter_copy.*")

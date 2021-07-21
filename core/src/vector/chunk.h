@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
@@ -5,17 +8,17 @@
 #ifndef __CHUNK_H__
 #define __CHUNK_H__
 
-#include <stdint.h>
+#include <iostream>
 
 class Chunk {
 public:
-    Chunk(int64_t sizeInBytes);
+    explicit Chunk(int64_t sizeInBytes);
 
     ~Chunk();
 
-    void *getAddress();
+    void *GetAddress() const;
 
-    int64_t getSizeInBytes();
+    int64_t GetSizeInBytes();
 
 private:
     void *address;
@@ -23,4 +26,4 @@ private:
 };
 
 
-#endif //__CHUNK_H__
+#endif // __CHUNK_H__

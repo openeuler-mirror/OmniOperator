@@ -12,7 +12,7 @@ namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
     AggregationOperator(std::vector<ColumnIndex> aggCol,
-                        std::vector<unique_ptr<Aggregator>> aggs,
+                        std::vector<std::unique_ptr<Aggregator>> aggs,
                         bool inputRaw,
                         bool outputPartial)
         : aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)

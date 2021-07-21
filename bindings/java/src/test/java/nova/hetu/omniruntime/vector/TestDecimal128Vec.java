@@ -6,14 +6,16 @@ import java.math.BigInteger;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-public class TestDecimal128Vec
-{
-    //    @Test
-    public void testSetAndGetDecimal()
-    {
+/**
+ * test decimal 128-bit vec
+ */
+public class TestDecimal128Vec {
+    /**
+     * test set and get decimal
+     */
+    public void testSetAndGetDecimal() {
         final int size = 1024;
         Decimal128Vec vec1 = new Decimal128Vec(size, 10, 3);
-        // Assert.assertEquals(vec1.getSize(), size, "Size is expected to be 1024");
         BigDecimal[] values = new BigDecimal[size];
         for (int i = 0; i < size; i++) {
             BigDecimal decimal = new BigDecimal(BigInteger.valueOf(i), 3);
@@ -27,9 +29,10 @@ public class TestDecimal128Vec
         vec1.close();
     }
 
-    //    @Test
-    public void testSlice()
-    {
+    /**
+     * test slice
+     */
+    public void testSlice() {
         final int size = 10;
         Decimal128Vec vec1 = new Decimal128Vec(size, 10, 3);
         for (int i = 0; i < size; i++) {
@@ -49,9 +52,10 @@ public class TestDecimal128Vec
         slice2.close();
     }
 
-    //    @Test
-    public void setNullValue()
-    {
+    /**
+     * set null value
+     */
+    public void setNullValue() {
         final int size = 10;
         Decimal128Vec vec = new Decimal128Vec(size, 10, 3);
         for (int i = 0; i < size; i++) {

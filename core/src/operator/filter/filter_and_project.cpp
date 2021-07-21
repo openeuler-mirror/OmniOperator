@@ -45,12 +45,12 @@ Operator * FilterAndProjectOperatorFactory::CreateOperator()
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch* vecBatch)
 {
-    int32_t* selectedRows = new int32_t[vecBatch->getRowCount()];
+    int32_t* selectedRows = new int32_t[vecBatch->GetRowCount()];
     int32_t numSelectedRows = this->filter->filter(vecBatch, selectedRows);
     VectorBatch* projectedData = new VectorBatch(this->projectVecCount);
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         Vector* col = this->projections[i]->project(vecBatch, selectedRows, numSelectedRows);
-        projectedData->setVector(i, col);
+        projectedData->SetVector(i, col);
     }
     this->projectedVecs = projectedData;
     delete[] selectedRows;
@@ -66,7 +66,7 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch*>& data)
     data.push_back(this->projectedVecs);
     // this->projectedVecs = nullptr;
     // TODO: cleanup memory in old vecBatches
-    return projectedVecs->getRowCount();
+    return projectedVecs->GetRowCount();
 }
 
 Filter::Filter(FilterCodeGen* codeGen, Expr* expr)
@@ -81,22 +81,22 @@ Filter::Filter(FilterCodeGen* codeGen, Expr* expr)
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 int64_t* Filter::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap) 
 {
-    uint32_t nCols = vecBatch->getVectorCount();
-    uint32_t nRows = vecBatch->getRowCount();
+    uint32_t nCols = vecBatch->GetVectorCount();
+    uint32_t nRows = vecBatch->GetRowCount();
     int64_t* data = new int64_t[nCols];
 
 
     for (int32_t i = 0; i < nCols; i++) {
         // varchar vec getValues is different from the rest
-        if (vecBatch->getVector(i)->getType() == OMNI_VEC_TYPE_VARCHAR) {
-            VarcharVector* vcVec = (VarcharVector*)(vecBatch->getVector(i));
+        if (vecBatch->GetVector(i)->GetType() == OMNI_VEC_TYPE_VARCHAR) {
+            VarcharVector* vcVec = (VarcharVector*)(vecBatch->GetVector(i));
             // Create array to hold addresses
             int64_t* vcdata = new int64_t[nRows];
 
             for (int32_t j = 0; j < nRows; j++) {
                 // get data
                 char* actualChar = nullptr;
-                int len = vcVec->getValue(j, &actualChar);
+                int len = vcVec->GetValue(j, &actualChar);
                 // add to vector so it can be freed later
                 stringvalVec.push_back(actualChar);
 
@@ -104,7 +104,7 @@ int64_t* Filter::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, v
 
                 // deal with bitmap
                 // bitmap[j * nCols + i] represents nullity of jth value of vector i
-                bitmap[j * nCols + i] = vcVec->isValueNull(j);
+                bitmap[j * nCols + i] = vcVec->IsValueNull(j);
             }
             vcdataVec.push_back(vcdata);
 
@@ -112,10 +112,10 @@ int64_t* Filter::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, v
         }
 
         else {
-            data[i] = (int64_t) vecBatch->getVector(i)->getValues();
+            data[i] = (int64_t) vecBatch->GetVector(i)->GetValues();
             for (int32_t j = 0; j < nRows; j++) {
                 // whether the jth value of vector i is null is captured in bitmap[j * nCols + i]
-                bitmap[j * nCols + i] = vecBatch->getVector(i)->isValueNull(j);
+                bitmap[j * nCols + i] = vecBatch->GetVector(i)->IsValueNull(j);
             }
         }
     }
@@ -130,12 +130,12 @@ int32_t Filter::filter(VectorBatch* &vecBatch, int32_t *selectedRows)
     // Contains all strings created in VarcharVector::getValue method which need to be freed
     vector<char *> stringvalVec;
 
-    bool* bitmap = new bool[vecBatch->getRowCount() * vecBatch->getVectorCount()];
+    bool* bitmap = new bool[vecBatch->GetRowCount() * vecBatch->GetVectorCount()];
 
     // contents of bitmap are appropriately modified in getData
     int64_t* data = getData(vecBatch, vcdataVec, stringvalVec, bitmap);
 
-    int32_t ret = this->func(data, vecBatch->getRowCount(), selectedRows, bitmap);
+    int32_t ret = this->func(data, vecBatch->GetRowCount(), selectedRows, bitmap);
 
 
     for (auto v : vcdataVec) {

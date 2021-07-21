@@ -30,7 +30,7 @@ public:
         int32_t *buildHashCols,
         int32_t buildHashColsCount,
         int32_t operatorCount);
-    omniruntime::op::Operator *createOperator();
+    omniruntime::op::Operator *CreateOperator();
     JoinHashTables *getHashTables()
     {
         return hashTables;
@@ -71,7 +71,7 @@ private:
     PagesIndex *pagesIndex;
     int32_t partitionIndex;
     JoinHashTables *hashTables;
-    vector<VectorBatch *> inputVecBatches;
+    std::vector<VectorBatch *> inputVecBatches;
 };
 } // end of op
 } // end of omniruntime

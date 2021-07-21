@@ -15,20 +15,21 @@ VectorBatch* createInput(const int32_t NUM_ROWS,
                     int32_t* inputTypes,
                     int64_t* allData)
 {
-    VectorBatch *vecBatch = new VectorBatch(inputTypes, NUM_COLS, NUM_ROWS);
+    VectorBatch *vecBatch = new VectorBatch(NUM_COLS, NUM_ROWS);
+    vecBatch->SetVectors(inputTypes);
     for (int i = 0; i < NUM_COLS; ++i) {
         switch (inputTypes[i]) {
             case OMNI_VEC_TYPE_INT:
-                ((IntVector *)vecBatch->getVector(i))->setValues(0, (int32_t *)allData[i], NUM_ROWS);
+                ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], NUM_ROWS);
                 break;
             case OMNI_VEC_TYPE_LONG:
-                ((LongVector *)vecBatch->getVector(i))->setValues(0, (int64_t *)allData[i], NUM_ROWS);
+                ((LongVector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *)allData[i], NUM_ROWS);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                ((DoubleVector *)vecBatch->getVector(i))->setValues(0, (double *)allData[i], NUM_ROWS);
+                ((DoubleVector *)vecBatch->GetVector(i))->SetValues(0, (double *)allData[i], NUM_ROWS);
                 break;
             case OMNI_VEC_TYPE_SHORT:
-                ((IntVector *)vecBatch->getVector(i))->setValues(0, (int32_t *)allData[i], NUM_ROWS);
+                ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], NUM_ROWS);
                 break;
             case OMNI_VEC_TYPE_VARCHAR: {
                 for (int j = 0; j < NUM_ROWS; ++j) {
@@ -36,7 +37,7 @@ VectorBatch* createInput(const int32_t NUM_ROWS,
                     int64_t addr = ((int64_t *)(allData[i]))[j];
                     std::string s ((char *)(addr));
                     // std::cout << "s: " << s << std::endl;
-                    ((VarcharVector *)vecBatch->getVector(i))->setValue(j, const_cast<char *>(s.c_str()), s.length() + 1);
+                    ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, const_cast<char *>(s.c_str()), s.length() + 1);
                 }
                 break;
             }
@@ -57,47 +58,47 @@ bool checkOutput(VectorBatch* t, const int32_t NUM_ROWS, bool (*filter)(VectorBa
 
 // Expects 1 column of type int32
 bool filter1(VectorBatch* t, int32_t index) {
-    return ((IntVector *)t->getVector(0))->getValue(index) <= 4;
+    return ((IntVector *)t->GetVector(0))->GetValue(index) <= 4;
 }
 
 // Expects 2 columns of type int32, int64
 bool filter2(VectorBatch* t, int32_t index) {
-    int32_t val1 = ((IntVector *)t->getVector(0))->getValue(index);
-    int64_t val2 = ((LongVector *)t->getVector(1))->getValue(index);
+    int32_t val1 = ((IntVector *)t->GetVector(0))->GetValue(index);
+    int64_t val2 = ((LongVector *)t->GetVector(1))->GetValue(index);
     // true if both values are negative
     return val1 < 0 && val2 < 0;
 }
 
 // Expects 3 columns of type int32, int64, double
 bool filter3(VectorBatch* t, int32_t index) {
-    int32_t val1 = ((IntVector *)t->getVector(0))->getValue(index);
-    int64_t val2 = ((LongVector *)t->getVector(1))->getValue(index);
-    double val3 = ((DoubleVector *)t->getVector(2))->getValue(index);
+    int32_t val1 = ((IntVector *)t->GetVector(0))->GetValue(index);
+    int64_t val2 = ((LongVector *)t->GetVector(1))->GetValue(index);
+    double val3 = ((DoubleVector *)t->GetVector(2))->GetValue(index);
     // first val is multiple of 3, second val = 3 billion, third val >= 0.4.
     return val1 % 3 == 0 && val2 == (int64_t) 3e9 && val3 >= 0.4;
 }
 
 bool filter4(VectorBatch* t, int32_t index) {
-    int32_t val0 = ((IntVector *)t->getVector(0))->getValue(index);
-    int32_t val2 = ((IntVector *)t->getVector(1))->getValue(index);
-    double val4 = ((DoubleVector *)t->getVector(2))->getValue(index);
-    int64_t val5 = ((LongVector *)t->getVector(3))->getValue(index);
+    int32_t val0 = ((IntVector *)t->GetVector(0))->GetValue(index);
+    int32_t val2 = ((IntVector *)t->GetVector(1))->GetValue(index);
+    double val4 = ((DoubleVector *)t->GetVector(2))->GetValue(index);
+    int64_t val5 = ((LongVector *)t->GetVector(3))->GetValue(index);
     return (val0 != 1 && val2 > 4800 && val4 < 50.8) || val5 >= 52;
 }
 
 bool filter5(VectorBatch* t, int32_t index) {
-    int32_t val0 = ((IntVector *)t->getVector(0))->getValue(index);
-    double val2 = ((DoubleVector *)t->getVector(2))->getValue(index);
-    double val3 = ((DoubleVector *)t->getVector(3))->getValue(index);
+    int32_t val0 = ((IntVector *)t->GetVector(0))->GetValue(index);
+    double val2 = ((DoubleVector *)t->GetVector(2))->GetValue(index);
+    double val3 = ((DoubleVector *)t->GetVector(3))->GetValue(index);
     return val0 < 24 && val2 >= 0.05 && val2 <= 0.07 && val3 > 9766 && val3 < 9131;
 }
 
 bool filter6(VectorBatch* t, int32_t index) {
     // project order reversed
-    int64_t val0 = ((LongVector *)t->getVector(0))->getValue(index);
-    int64_t val1 = ((LongVector *)t->getVector(1))->getValue(index);
-    int32_t val2 = ((IntVector *)t->getVector(2))->getValue(index);
-    int32_t val3 = ((IntVector *)t->getVector(3))->getValue(index);
+    int64_t val0 = ((LongVector *)t->GetVector(0))->GetValue(index);
+    int64_t val1 = ((LongVector *)t->GetVector(1))->GetValue(index);
+    int32_t val2 = ((IntVector *)t->GetVector(2))->GetValue(index);
+    int32_t val3 = ((IntVector *)t->GetVector(3))->GetValue(index);
     return (val0 >= 0 || val1 <= -3e9) && (val2 == -12 || val3 < 50);
 }
 
@@ -124,11 +125,11 @@ TEST (FilterTest, LessThan) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -162,13 +163,13 @@ TEST (FilterTest, GreaterThan) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 800);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->getVector(1))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
         EXPECT_TRUE(val0 > 20);
         EXPECT_EQ(val1, (int64_t) 3e9);
     }
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -204,13 +205,13 @@ TEST (FilterTest, EqualTo) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 50);
     for (int32_t i = 0; i < numReturned; i++) {
-        double val0 = ((DoubleVector *)ret[0]->getVector(0))->getValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->getVector(1))->getValue(i);
+        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, 50);
         EXPECT_EQ(val0, val1);
     }
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -246,11 +247,11 @@ TEST (FilterTest, GreaterThanOrEqualTo) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 834);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 >= 30);
     }
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -283,11 +284,11 @@ TEST (FilterTest, NotEqualTo) {
     EXPECT_EQ(numReturned, 4999);
     double cnt = 1;
     for (int32_t i = 0; i < numReturned; i++) {
-        double val0 = ((DoubleVector *)ret[0]->getVector(0))->getValue(i);
+        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, cnt++);
     }
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -319,7 +320,7 @@ TEST (FilterTest, AllPass) {
     std::cout << "numReturned: " << numReturned << std::endl;
     EXPECT_EQ(numReturned, 20000);
 
-    VectorHelper::freeVecBatch(in1);
+    VectorHelper::FreeVecBatch(in1);
     std::cout << "freed in1" << std::endl;
     // TODO: find out why freeing ret causes segfault
     // VectorHelper::freeVecBatches(ret);
@@ -357,7 +358,7 @@ TEST (FilterTest, MultipleInputs) {
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter1));
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::freeVecBatch(in1);
+    VectorHelper::FreeVecBatch(in1);
 
     allData[0] = (int64_t) data2;
     VectorBatch* in2 = createInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
@@ -366,8 +367,8 @@ TEST (FilterTest, MultipleInputs) {
     EXPECT_TRUE(checkOutput(ret[1], numReturned, filter1));
     EXPECT_EQ(numReturned, 668);
 
-    VectorHelper::freeVecBatch(in2);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in2);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] data1;
@@ -406,8 +407,8 @@ TEST (FilterTest, NegativeValues) {
     // Both values are negative for every multiple of 35.
     EXPECT_EQ(numReturned, 286);
 
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] data1;
@@ -451,8 +452,8 @@ TEST (FilterTest, AllTypes) {
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter3));
     EXPECT_EQ(numReturned, 100);
 
-    VectorHelper::freeVecBatch(in1);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(in1);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] data1;
@@ -498,8 +499,8 @@ TEST (FilterTest, Compile) {
     EXPECT_EQ(numSelectedRows, 100);
     // EXPECT_TRUE(checkOutput(ret[0], DATA_SIZE, filter5));
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] data1;
@@ -551,8 +552,8 @@ TEST (FilterTest, LogicalOperators1) {
     EXPECT_EQ(numReturned, 543);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter4));
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -598,8 +599,8 @@ TEST (FilterTest, LogicalOperators2) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 3498);
     EXPECT_TRUE(checkOutput(ret[0], numReturned, filter6));
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -645,13 +646,13 @@ TEST (FilterTest, LogicalOperators3) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 6);
     for (int32_t i = 0; i < 6; i++) {
-        double val0 = ((DoubleVector *)ret[0]->getVector(0))->getValue(i);
-        int32_t val1 = ((IntVector *)ret[0]->getVector(1))->getValue(i);
+        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
         EXPECT_TRUE(val0 != 0);
         EXPECT_TRUE(val1 == col1[i + 2]);
     }
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -682,11 +683,11 @@ TEST (FilterTest, ArithmeticAdd) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 + 1 > 4);
     }
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -719,12 +720,12 @@ TEST (FilterTest, ArithmeticSubtract) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 4000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(0 < val0 - 5);
     }
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -759,13 +760,13 @@ TEST (FilterTest, ArithmeticMultiply) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->getVector(1))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, 0);
         EXPECT_TRUE(val1 * 2 < 7);
     }
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -803,8 +804,8 @@ TEST (FilterTest, Conditional) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 5000);
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -843,8 +844,8 @@ TEST (FilterTest, Conditional2) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -896,12 +897,12 @@ TEST (FilterTest, In) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 3000);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 == 1 || val0 == 3 || val0 == 5);
     }
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -940,14 +941,14 @@ TEST (FilterTest, Between) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 4705);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
-        int32_t val1 = ((IntVector *)ret[0]->getVector(1))->getValue(i);
-        int32_t val2 = ((IntVector *)ret[0]->getVector(2))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
         EXPECT_TRUE((val0 <= val1) && (val1 <= val2));
     }
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -980,8 +981,8 @@ TEST (FilterTest, NotEqualToAbs) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 99998);
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -1024,14 +1025,14 @@ TEST (FilterTest, MathFunctionFilter1) {
     EXPECT_EQ(numReturned, 1000);
     std::cout << "numReturned: " << numReturned << std::endl;
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->getVector(0))->getValue(i);
-        int32_t val1 = ((IntVector *)ret[0]->getVector(1))->getValue(i);
-        int32_t val2 = ((IntVector *)ret[0]->getVector(2))->getValue(i);
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
         EXPECT_TRUE((std::abs(val0) == std::abs(val1)) && (std::abs(val1) == std::abs(val2)));
     }
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -1075,8 +1076,8 @@ TEST (FilterTest, MathFunctionFilter2) {
 
     EXPECT_EQ(numReturned, 2000);
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -1129,8 +1130,8 @@ TEST (FilterTest, FilterString1) {
         delete s;
     }
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -1163,10 +1164,10 @@ TEST (FilterTest, Coalesce1) {
 
     for (int32_t i = 0; i < NUM_ROWS; i ++) {
         if (i % 2) {
-            t->getVector(1)->setValueNull(i);
+            t->GetVector(1)->SetValueNull(i);
         }
         else {
-            t->getVector(1)->setValueNotNull(i);
+            t->GetVector(1)->SetValueNotNull(i);
         }
     }
 
@@ -1179,8 +1180,8 @@ TEST (FilterTest, Coalesce1) {
 
     EXPECT_EQ(numReturned, 50000);
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
@@ -1213,11 +1214,11 @@ TEST (FilterTest, Coalesce2) {
 
     for (int32_t i = 0; i < NUM_ROWS; i++) {
         if (i % 2) {
-            t->getVector(0)->setValueNull(i);
+            t->GetVector(0)->SetValueNull(i);
         }
         else {
             // Seemingly necessary so that the bitmap doesn't get default values
-            t->getVector(0)->setValueNotNull(i);
+            t->GetVector(0)->SetValueNotNull(i);
         };
     }
 
@@ -1234,8 +1235,8 @@ TEST (FilterTest, Coalesce2) {
         delete s;
     }
 
-    VectorHelper::freeVecBatch(t);
-    VectorHelper::freeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
@@ -8,84 +11,104 @@
 #include "../util/debug.h"
 #include "vector_allocator_manager.h"
 
-VectorAllocatorManager g_vector_allocator_manager = VectorAllocatorManager::getInstance();
-VectorAllocator *g_vector_allocator = g_vector_allocator_manager.getOrCreateAllocator(GLOBAL_SCOPE_NAME);
+VectorAllocatorManager g_vector_allocator_manager = VectorAllocatorManager::GetInstance();
+VectorAllocator *g_vector_allocator = g_vector_allocator_manager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
 
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
-        : size(size), positionOffset(0) {
+: size(size), positionOffset(0), capacityInBytes(capacityInBytes)
+{
     if (allocator != nullptr) {
-        reference = allocator->newVector(capacityInBytes, size, type);
+        reference = allocator->NewVector(capacityInBytes, size, type);
         this->allocator = allocator;
     } else {
-        reference = g_vector_allocator->newVector(capacityInBytes, size, type);
+        reference = g_vector_allocator->NewVector(capacityInBytes, size, type);
         this->allocator = g_vector_allocator;
     }
-    valuesAddress = reference->getValuesAddress();
-    valueNullsAddress = reference->getValueNullsAddress();
-    valueOffsetsAddress = reference->getValueOffsetsAddress();
+    valuesAddress = reference->GetValuesAddress();
+    valueNullsAddress = reference->GetValueNullsAddress();
+    valueOffsetsAddress = reference->GetValueOffsetsAddress();
 }
 
 Vector::Vector(Vector *vector, int size, int positionOffset)
-        : allocator(vector->allocator), reference(vector->reference), size(size), positionOffset(vector->positionOffset + positionOffset) {
-    reference->incRef();
-    valuesAddress = reference->getValuesAddress();
-    valueNullsAddress = reference->getValueNullsAddress();
-    valueOffsetsAddress = reference->getValueOffsetsAddress();
+    : allocator(vector->allocator),
+      reference(vector->reference),
+      size(size),
+      positionOffset(vector->positionOffset + positionOffset)
+{
+    reference->IncRef();
+    valuesAddress = reference->GetValuesAddress();
+    valueNullsAddress = reference->GetValueNullsAddress();
+    valueOffsetsAddress = reference->GetValueOffsetsAddress();
+    capacityInBytes = reference->GetCapacityInBytes();
 }
 
-Vector::~Vector() {
+Vector::~Vector()
+{
     if (reference == nullptr) {
         std::cerr << "reference is null" << std::endl;
     }
-    if (0 == reference->decRef()) {
+    if (0 == reference->DecRef()) {
         delete reference;
     }
 }
 
-void Vector::setValueNulls(int startIndex, bool *nulls, int length) {
-    ASSERT(startIndex + length < size);
-    std::memcpy(((bool *) valueNullsAddress) + startIndex, nulls, length);
+void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
+{
+    errno_t ret = memcpy_s(((bool *)valueNullsAddress) + startIndex, capacityInBytes, nulls, length);
+    if (ret != EOK) {
+        std::cerr << "set value nulls failed." << std::endl;
+    }
 }
 
-int Vector::getSize() {
+int Vector::GetSize()
+{
     return size;
 }
 
-int Vector::getPositionOffset() {
+int Vector::GetPositionOffset()
+{
     return positionOffset;
 }
 
-VectorReference *Vector::getReference() {
+VectorReference *Vector::GetReference() const
+{
     return reference;
 }
 
-VectorAllocator *Vector::getAllocator() {
+VectorAllocator *Vector::GetAllocator() const
+{
     return allocator;
 }
 
-VecType Vector::getType() {
-    return reference->getType();
+VecType Vector::GetType()
+{
+    return reference->GetType();
 }
 
-void *Vector::getValues() {
+void *Vector::GetValues() const
+{
     return valuesAddress;
 }
 
-void *Vector::getValueNulls() {
+void *Vector::GetValueNulls() const
+{
     return valueNullsAddress;
 }
 
-void *Vector::getValueOffsets() {
+void *Vector::GetValueOffsets() const
+{
     return valueOffsetsAddress;
 }
 
-void Vector::setSize(int size) {
+void Vector::SetSize(int size)
+{
     this->size = size;
 }
 
-void Vector::setValueNullBitMap(int index) {
+void Vector::SetValueNullBitMap(int index)
+{
     if (valueNullsAddress != nullptr) {
         // std::cout << "set value null BitMap" << std::endl;
-        BitMapUtil::set(reinterpret_cast<uint8_t *>(valueNullsAddress), index);
+        BitMapUtil::Set(reinterpret_cast<uint8_t *>(valueNullsAddress), index);
     }
 }

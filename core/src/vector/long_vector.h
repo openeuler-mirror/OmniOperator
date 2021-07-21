@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __LONG_VECTOR__H__
 #define __LONG_VECTOR__H__
 
@@ -9,27 +12,31 @@ public:
     LongVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
-    int64_t getValue(int index){
-        ASSERT(index < getSize());
-        return ((int64_t *)valuesAddress)[index + positionOffset];
+    int64_t GetValue(int index)
+    {
+        if (index >= size) {
+            return -1;
+        }
+        return reinterpret_cast<int64_t *>(valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.
-    void setValue(int index, int64_t value){
-        ASSERT(getReference()->isWritable());
-        ASSERT((uint)index < getSize());
-        ((int64_t *)valuesAddress)[index] = value;
+    void SetValue(int index, int64_t value)
+    {
+        reinterpret_cast<int64_t *>(valuesAddress)[index] = value;
     }
 
-    void setValues(int startIndex, int64_t *values, int length);
+    void SetValues(int startIndex, const int64_t *values, int length) override;
 
-    LongVector *slice(int positionOffset, int length);
+    LongVector *Slice(int positionOffset, int length) override;
 
-    LongVector *copyPositions(int *positions, int offset, int length);
+    LongVector *CopyPositions(const int *positions, int offset, int length) override;
 
-    LongVector *copyRegion(int positionOffset, int length);
+    LongVector *CopyRegion(int positionOffset, int length) override;
 
-    void append(Vector *other, int positionOffset, int length);
+    void Append(Vector *other, int positionOffset, int length) override;
+
+    ~LongVector() {}
 
 private:
     LongVector(LongVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};

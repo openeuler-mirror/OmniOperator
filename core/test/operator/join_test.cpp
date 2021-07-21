@@ -180,13 +180,13 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
     int64_t buildData0[DATA_SIZE] = {1, 2, 1, 2, 3, 4, 5, 6, 7, 1};
     int64_t buildData1[DATA_SIZE] = {79, 79, 70, 70, 70, 70, 70, 70, 70, 70};
     LongVector *buildColumn0 = new LongVector(nullptr, DATA_SIZE);
-    buildColumn0->setValues(0, buildData0, DATA_SIZE);
+    buildColumn0->SetValues(0, buildData0, DATA_SIZE);
     LongVector *buildColumn1 = new LongVector(nullptr, DATA_SIZE);
-    buildColumn1->setValues(0, buildData1, DATA_SIZE);
+    buildColumn1->SetValues(0, buildData1, DATA_SIZE);
 
     VectorBatch *vecBatch = new VectorBatch(2);
-    vecBatch->setVector(0, buildColumn0);
-    vecBatch->setVector(1, buildColumn1);
+    vecBatch->SetVector(0, buildColumn0);
+    vecBatch->SetVector(1, buildColumn1);
 
     int32_t buildTypes[2] = {2, 2};
     int32_t typesCount = 2;
@@ -209,13 +209,13 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
     int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
     int64_t probeData1[DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
     LongVector *probeColumn0 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn0->setValues(0, probeData0, DATA_SIZE);
+    probeColumn0->SetValues(0, probeData0, DATA_SIZE);
     LongVector *probeColumn1 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn1->setValues(0, probeData1, DATA_SIZE);
+    probeColumn1->SetValues(0, probeData1, DATA_SIZE);
 
     VectorBatch *probeVecBatch = new VectorBatch(2);
-    probeVecBatch->setVector(0, probeColumn0);
-    probeVecBatch->setVector(1, probeColumn1);
+    probeVecBatch->SetVector(0, probeColumn0);
+    probeVecBatch->SetVector(1, probeColumn1);
 
     int32_t probeTypes[2] = {2, 2};
     int32_t probeTypesCount = 2;
@@ -240,27 +240,27 @@ TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
     //output[0]->printTable();
 
     const int32_t EXPECTED_DATA_SIZE = 18;
-    EXPECT_EQ(output[0]->getRowCount(), EXPECTED_DATA_SIZE);
+    EXPECT_EQ(output[0]->GetRowCount(), EXPECTED_DATA_SIZE);
 
     int64_t expectedData0[EXPECTED_DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
     int64_t expectedData1[EXPECTED_DATA_SIZE] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
     LongVector *expectedCol0 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol0->setValues(0, expectedData0, EXPECTED_DATA_SIZE);
+    expectedCol0->SetValues(0, expectedData0, EXPECTED_DATA_SIZE);
     int32_t ids[EXPECTED_DATA_SIZE] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
     DictionaryVector *expectedVec0 = new DictionaryVector(expectedCol0, ids, EXPECTED_DATA_SIZE);
 
     LongVector *expectedCol1 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol1->setValues(0, expectedData1, EXPECTED_DATA_SIZE);
+    expectedCol1->SetValues(0, expectedData1, EXPECTED_DATA_SIZE);
 
     VectorBatch *expectVecBatch = new VectorBatch(2);
-    expectVecBatch->setVector(0, expectedVec0);
-    expectVecBatch->setVector(1, expectedCol1);
+    expectVecBatch->SetVector(0, expectedVec0);
+    expectVecBatch->SetVector(1, expectedCol1);
 
     EXPECT_TRUE(vecBatchMatch(output[0], expectVecBatch));
 
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(probeVecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(probeVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
     delete hashBuilderOperator;
     delete lookupJoinOperator;
     deleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -275,22 +275,22 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
     int64_t buildData00[DATA_SIZE1] = {1, 1, 3, 6, 7, 1};
     int64_t buildData01[DATA_SIZE1] = {79, 70, 70, 70, 70, 70};
     LongVector *buildColumn00 = new LongVector(nullptr, DATA_SIZE1);
-    buildColumn00->setValues(0, buildData00, DATA_SIZE1);
+    buildColumn00->SetValues(0, buildData00, DATA_SIZE1);
     LongVector *buildColumn01 = new LongVector(nullptr, DATA_SIZE1);
-    buildColumn01->setValues(0, buildData01, DATA_SIZE1);
+    buildColumn01->SetValues(0, buildData01, DATA_SIZE1);
     VectorBatch *vecBatch0 = new VectorBatch(2);
-    vecBatch0->setVector(0, buildColumn00);
-    vecBatch0->setVector(1, buildColumn01);
+    vecBatch0->SetVector(0, buildColumn00);
+    vecBatch0->SetVector(1, buildColumn01);
 
     int64_t buildData10[DATA_SIZE2] = {2, 2, 4, 5};
     int64_t buildData11[DATA_SIZE2] = {79, 70, 70, 70};
     LongVector *buildColumn10 = new LongVector(nullptr, DATA_SIZE2);
-    buildColumn10->setValues(0, buildData10, DATA_SIZE2);
+    buildColumn10->SetValues(0, buildData10, DATA_SIZE2);
     LongVector *buildColumn11 = new LongVector(nullptr, DATA_SIZE2);
-    buildColumn11->setValues(0, buildData11, DATA_SIZE2);
+    buildColumn11->SetValues(0, buildData11, DATA_SIZE2);
     VectorBatch *vecBatch1 = new VectorBatch(2);
-    vecBatch1->setVector(0, buildColumn10);
-    vecBatch1->setVector(1, buildColumn11);
+    vecBatch1->SetVector(0, buildColumn10);
+    vecBatch1->SetVector(1, buildColumn11);
 
     int32_t buildTypes[2] = {2, 2};
     int32_t typesCount = 2;
@@ -318,12 +318,12 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
     int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
     int64_t probeData1[DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
     LongVector *probeColumn0 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn0->setValues(0, probeData0, DATA_SIZE);
+    probeColumn0->SetValues(0, probeData0, DATA_SIZE);
     LongVector *probeColumn1 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn1->setValues(0, probeData1, DATA_SIZE);
+    probeColumn1->SetValues(0, probeData1, DATA_SIZE);
     VectorBatch *probeVecBatch = new VectorBatch(2);
-    probeVecBatch->setVector(0, probeColumn0);
-    probeVecBatch->setVector(1, probeColumn1);
+    probeVecBatch->SetVector(0, probeColumn0);
+    probeVecBatch->SetVector(1, probeColumn1);
 
     int32_t probeTypes[2] = {2, 2};
     int32_t probeTypesCount = 2;
@@ -349,28 +349,28 @@ TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
     //output[0]->printTable();
 
     const int32_t EXPECTED_DATA_SIZE = 18;
-    EXPECT_EQ(output[0]->getRowCount(), EXPECTED_DATA_SIZE);
+    EXPECT_EQ(output[0]->GetRowCount(), EXPECTED_DATA_SIZE);
 
     int64_t expectedData0[EXPECTED_DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
     int64_t expectedData1[EXPECTED_DATA_SIZE] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
     LongVector *expectedCol0 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol0->setValues(0, expectedData0, EXPECTED_DATA_SIZE);
+    expectedCol0->SetValues(0, expectedData0, EXPECTED_DATA_SIZE);
     int32_t ids[EXPECTED_DATA_SIZE] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
     DictionaryVector *expectedVec0 = new DictionaryVector(expectedCol0, ids, EXPECTED_DATA_SIZE);
 
     LongVector *expectedCol1 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol1->setValues(0, expectedData1, EXPECTED_DATA_SIZE);
+    expectedCol1->SetValues(0, expectedData1, EXPECTED_DATA_SIZE);
 
     VectorBatch *expectVecBatch = new VectorBatch(2);
-    expectVecBatch->setVector(0, expectedVec0);
-    expectVecBatch->setVector(1, expectedCol1);
+    expectVecBatch->SetVector(0, expectedVec0);
+    expectVecBatch->SetVector(1, expectedCol1);
 
     EXPECT_TRUE(vecBatchMatch(output[0], expectVecBatch));
 
-    VectorHelper::freeVecBatch(vecBatch0);
-    VectorHelper::freeVecBatch(vecBatch1);
-    VectorHelper::freeVecBatch(probeVecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch0);
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(probeVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
     delete hashBuilderOperator0;
     delete hashBuilderOperator1;
     delete lookupJoinOperator;
@@ -409,9 +409,9 @@ VectorBatch **constructHashBuilderTestData(int32_t tableCount, int32_t columnCou
             LongVector *vector = new LongVector(nullptr, positionCount);
             for (int32_t position = 0; position < positionCount; position++) {
                 int64_t value = numbers[position % numberCount];
-                vector->setValue(position, value);
+                vector->SetValue(position, value);
             }
-            vecBatch->setVector(vecIdx, vector);
+            vecBatch->SetVector(vecIdx, vector);
         }
         vectorBatches[vecBatchIdx] = vecBatch;
     }
@@ -494,7 +494,7 @@ void testHashBuilder(struct HashJoinThreadArgs *hashJoinThreadArgs)
     HashBuilderOperatorFactory *hashBuilderOperatorFactory = (HashBuilderOperatorFactory *)hashJoinThreadArgs->hashBuilderFactoryAddr;
     HashBuilderOperator *hashBuilderOperator;
     if (hashJoinThreadArgs->isOriginal) {
-        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderOperatorFactory->createOperator());
+        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderOperatorFactory->CreateOperator());
     }
     else {
         opt_module hashBuilderModule = (opt_module)(hashBuilderOperatorFactory->GetJitContext()->func);
@@ -517,7 +517,7 @@ void testLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
     LookupJoinOperatorFactory *lookupJoinOperatorFactory = (LookupJoinOperatorFactory *)hashJoinThreadArgs->lookupJoinFactoryAddr;
     LookupJoinOperator *lookupJoinOperator;
     if (hashJoinThreadArgs->isOriginal) {
-        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->createOperator());
+        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->CreateOperator());
     }
     else {
         opt_module lookupJoinModule = (opt_module)(lookupJoinOperatorFactory->GetJitContext()->func);
@@ -574,7 +574,7 @@ TEST(NativeOmniJoinTest, testHashBuilderOriginalMultiThreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
 
-    VectorHelper::freeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
+    VectorHelper::FreeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
 }
 
 TEST(NativeOmniJoinTest, testHashBuilderJITMultiThreads)
@@ -615,7 +615,7 @@ TEST(NativeOmniJoinTest, testHashBuilderJITMultiThreads)
         deleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
-    VectorHelper::freeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
+    VectorHelper::FreeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
 }
 
 
@@ -629,8 +629,8 @@ VectorBatch **constructBuilderTestData(int32_t *numbers, int32_t numberCount)
         VectorBatch *vectorBatch = new VectorBatch(COLUMN_COUNT_4);
         for (int32_t colIdx = 0; colIdx < COLUMN_COUNT_4; colIdx++) {
             LongVector *column = new LongVector(nullptr, 1);
-            column->setValue(0, numbers[vecBatchIdx]);
-            vectorBatch->setVector(colIdx, column);
+            column->SetValue(0, numbers[vecBatchIdx]);
+            vectorBatch->SetVector(colIdx, column);
         }
         vectorBatches[vecBatchIdx] = vectorBatch;
     }
@@ -649,9 +649,9 @@ VectorBatch **constructProbeTestData(int32_t *numbers, int32_t numberCount)
             LongVector *vector = new LongVector(nullptr, positionCount);
             for (int32_t posIdx = 0; posIdx < positionCount; posIdx++) {
                 int64_t value = numbers[(posIdx % numberCount)];
-                vector->setValue(posIdx, value);
+                vector->SetValue(posIdx, value);
             }
-            vecBatch->setVector(colIdx, vector);
+            vecBatch->SetVector(colIdx, vector);
         }
         vecBatches[vecBatchIdx] = vecBatch;
     }
@@ -726,8 +726,8 @@ TEST(NativeOmniJoinTest, testLookupJoinOriginalMultiThreads)
     }
 
     for (int32_t i = 0; i < groupCount; i++) {
-        VectorHelper::freeVecBatches(buildVecBatches[i], threadNums[i]);
-        VectorHelper::freeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
+        VectorHelper::FreeVecBatches(buildVecBatches[i], threadNums[i]);
+        VectorHelper::FreeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
     }
     delete[] buildVecBatches;
     delete[] probeVecBatches;
@@ -800,8 +800,8 @@ TEST(NativeOmniJoinTest, testLookupJoinJITMultiThreads)
     }
 
     for (int32_t i = 0; i < groupCount; i++) {
-        VectorHelper::freeVecBatches(buildVecBatches[i], threadNums[i]);
-        VectorHelper::freeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
+        VectorHelper::FreeVecBatches(buildVecBatches[i], threadNums[i]);
+        VectorHelper::FreeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
     }
     delete[] buildVecBatches;
     delete[] probeVecBatches;

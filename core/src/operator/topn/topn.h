@@ -50,7 +50,7 @@ namespace omniruntime {
             ~TopNOperatorFactory();
 
 
-            Operator *createOperator();
+            Operator *CreateOperator();
 
         private:
             int32_t *sourceTypes = nullptr;

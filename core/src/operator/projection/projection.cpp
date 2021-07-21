@@ -25,22 +25,22 @@ inputTypes(inputTypes), nCols(nCols), expr(expr) {
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 int64_t* Projection::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap) 
 {
-    uint32_t nCols = vecBatch->getVectorCount();
-    uint32_t nRows = vecBatch->getRowCount();
+    uint32_t nCols = vecBatch->GetVectorCount();
+    uint32_t nRows = vecBatch->GetRowCount();
     int64_t* data = new int64_t[nCols];
 
 
     for (int32_t i = 0; i < nCols; i++) {
         // varchar vec getValues is different from the rest
-        if (vecBatch->getVector(i)->getType() == OMNI_VEC_TYPE_VARCHAR) {
-            VarcharVector* vcVec = (VarcharVector*)(vecBatch->getVector(i));
+        if (vecBatch->GetVector(i)->GetType() == OMNI_VEC_TYPE_VARCHAR) {
+            VarcharVector* vcVec = (VarcharVector*)(vecBatch->GetVector(i));
             // Create array to hold addresses
             int64_t* vcdata = new int64_t[nRows];
 
             for (int32_t j = 0; j < nRows; j++) {
                 // get data
                 char* actualChar = nullptr;
-                int len = vcVec->getValue(j, &actualChar);
+                int len = vcVec->GetValue(j, &actualChar);
                 // add to vector so it can be freed later
                 stringvalVec.push_back(actualChar);
 
@@ -48,7 +48,7 @@ int64_t* Projection::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVe
 
                 // deal with bitmap
                 // bitmap[j * nCols + i] represents nullity of jth value of vector i
-                bitmap[j * nCols + i] = vcVec->isValueNull(j);
+                bitmap[j * nCols + i] = vcVec->IsValueNull(j);
             }
             vcdataVec.push_back(vcdata);
 
@@ -56,10 +56,10 @@ int64_t* Projection::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVe
         }
 
         else {
-            data[i] = (int64_t) vecBatch->getVector(i)->getValues();
+            data[i] = (int64_t) vecBatch->GetVector(i)->GetValues();
             for (int32_t j = 0; j < nRows; j++) {
                 // whether the jth value of vector i is null is captured in bitmap[j * nCols + i]
-                bitmap[j * nCols + i] = vecBatch->getVector(i)->isValueNull(j);
+                bitmap[j * nCols + i] = vecBatch->GetVector(i)->IsValueNull(j);
             }
         }
     }
@@ -68,15 +68,15 @@ int64_t* Projection::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVe
 }
 
 Vector* Projection::project(VectorBatch* vecBatch, int32_t* selectedRows, int32_t numSelectedRows) {
-    if (numSelectedRows != 0 && numSelectedRows == vecBatch->getRowCount() && expr->getType() == ExprType::DATA_E) {
+    if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->getType() == ExprType::DATA_E) {
         DataExpr* dEx = (DataExpr*) expr;
         if (dEx->isColumn) {
-            return vecBatch->getVector(dEx->colVal);
+            return vecBatch->GetVector(dEx->colVal);
         }
     }
     DataType outType = expr->getExprDataType();
-    VectorAllocatorManager vam = VectorAllocatorManager::getInstance();
-    VectorAllocator* va = vam.getOrCreateAllocator("projection_codegen");
+    VectorAllocatorManager vam = VectorAllocatorManager::GetInstance();
+    VectorAllocator* va = vam.GetOrCreateAllocator("projection_codegen");
     Vector* outVec;
     switch (outType) {
         case INT32D:
@@ -102,12 +102,12 @@ Vector* Projection::project(VectorBatch* vecBatch, int32_t* selectedRows, int32_
     // Contains all strings created in VarcharVector::getValue method which need to be freed
     vector<char *> stringvalVec;
 
-    bool* bitmap = new bool[vecBatch->getRowCount() * vecBatch->getVectorCount()];
+    bool* bitmap = new bool[vecBatch->GetRowCount() * vecBatch->GetVectorCount()];
 
     // contents of bitmap are modified in getData method
     int64_t* data = getData(vecBatch, vcdataVec, stringvalVec, bitmap);
 
-    int32_t nReturned = this->projector(data, vecBatch->getRowCount(), (int64_t) outVec->getValues(), selectedRows, numSelectedRows, bitmap);
+    int32_t nReturned = this->projector(data, vecBatch->GetRowCount(), (int64_t) outVec->GetValues(), selectedRows, numSelectedRows, bitmap);
 
 
     for (auto v : vcdataVec) {
@@ -126,17 +126,17 @@ Vector* Projection::project(VectorBatch* vecBatch, int32_t* selectedRows, int32_
 }
 
 Vector* Projection::project(VectorBatch* vecBatch) {
-    return this->project(vecBatch, nullptr, vecBatch->getRowCount());
+    return this->project(vecBatch, nullptr, vecBatch->GetRowCount());
 }
 
 int32_t ProjectionOperator::AddInput(VectorBatch* vecBatch) {
     VectorBatch* outBatch = new VectorBatch(nProj);
     for (int32_t i = 0; i < nProj; i++) {
         Vector* outCol = proj[i]->project(vecBatch);
-        outBatch->setVector(i, outCol);
+        outBatch->SetVector(i, outCol);
     }
     this->mutated = outBatch;
-    return vecBatch->getRowCount();
+    return vecBatch->GetRowCount();
 }
 
 int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch*>& ret) {
@@ -145,7 +145,7 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch*>& ret) {
         return -1;
     }
     ret.push_back(this->mutated);
-    return this->mutated->getRowCount();
+    return this->mutated->GetRowCount();
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(std::string* expressions, int32_t nProj, int32_t* inputTypes, int32_t nCols) :

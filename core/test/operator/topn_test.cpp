@@ -53,8 +53,8 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscOneColumn) {
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
+    column0->SetValues(0,data0, DATA_SIZE);
+    inputVecBatch->SetVector(0, column0);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -76,18 +76,18 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscOneColumn) {
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1,EXPECTED_DATA_SIZE);
+    expectCol1->SetValues(0, expectData1,EXPECTED_DATA_SIZE);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->setVector(0,expectCol1);
+    expectVecorBatch->SetVector(0,expectCol1);
 
     printVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn) {
@@ -101,8 +101,8 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn) {
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
+    column0->SetValues(0,data0, DATA_SIZE);
+    inputVecBatch->SetVector(0, column0);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -125,18 +125,18 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn) {
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {2, 2, 1, 1, 0};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1,EXPECTED_DATA_SIZE);
+    expectCol1->SetValues(0, expectData1,EXPECTED_DATA_SIZE);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->setVector(0,expectCol1);
+    expectVecorBatch->SetVector(0,expectCol1);
 
     printVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
@@ -151,14 +151,14 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
 
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
+    column0->SetValues(0,data0, DATA_SIZE);
     LongVector * column1=new LongVector(nullptr,DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
-    inputVecBatch->setVector(1, column1);
-    inputVecBatch->setVector(2, column2);
+    column2->SetValues(0, data2, DATA_SIZE);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
 
 
     int32_t rowCount = DATA_SIZE;
@@ -182,17 +182,17 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1, EXPECTED_DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, EXPECTED_DATA_SIZE);
     int64_t expectData2[EXPECTED_DATA_SIZE] = {0, 3, 1, 4, 2};
     LongVector *expectCol2 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol2->setValues(0, expectData2, EXPECTED_DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, EXPECTED_DATA_SIZE);
     double expectData3[EXPECTED_DATA_SIZE] = {6.6, 3.3, 5.5, 2.2, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol3->setValues(0, expectData3, EXPECTED_DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, EXPECTED_DATA_SIZE);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->setVector(0,expectCol1);
-    expectVecorBatch->setVector(1,expectCol2);
-    expectVecorBatch->setVector(2,expectCol3);
+    expectVecorBatch->SetVector(0,expectCol1);
+    expectVecorBatch->SetVector(1,expectCol2);
+    expectVecorBatch->SetVector(2,expectCol3);
 
     printVecBatch(outputVecorBatchs[0]);
 
@@ -200,9 +200,9 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn) {
@@ -216,14 +216,14 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn) {
 
     VectorBatch *inputVecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
+    column0->SetValues(0,data0, DATA_SIZE);
     LongVector * column1=new LongVector(nullptr,DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
-    inputVecBatch->setVector(1, column1);
-    inputVecBatch->setVector(2, column2);
+    column2->SetValues(0, data2, DATA_SIZE);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
 
 
     int32_t rowCount = DATA_SIZE;
@@ -247,26 +247,26 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn) {
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1, EXPECTED_DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, EXPECTED_DATA_SIZE);
     int64_t expectData2[EXPECTED_DATA_SIZE] = {3, 0, 4, 1, 5};
     LongVector *expectCol2 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol2->setValues(0, expectData2, EXPECTED_DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, EXPECTED_DATA_SIZE);
     double expectData3[EXPECTED_DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1};
     DoubleVector *expectCol3 = new DoubleVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol3->setValues(0, expectData3, EXPECTED_DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, EXPECTED_DATA_SIZE);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->setVector(0,expectCol1);
-    expectVecorBatch->setVector(1,expectCol2);
-    expectVecorBatch->setVector(2,expectCol3);
+    expectVecorBatch->SetVector(0,expectCol1);
+    expectVecorBatch->SetVector(1,expectCol2);
+    expectVecorBatch->SetVector(2,expectCol3);
 
     printVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 

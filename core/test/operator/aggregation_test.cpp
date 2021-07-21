@@ -39,9 +39,9 @@ VectorBatch** buildInput(int32_t vecBatchNum, int32_t colNum, int32_t rowPerVecB
         for (int32_t c = 0; c < colNum; ++ c) {
             LongVector* col = new LongVector(nullptr, rowPerVecBatch);
             for (int32_t i = 0; i < rowPerVecBatch; ++i) {
-                col->setValue(i, i % cardinality);
+                col->SetValue(i, i % cardinality);
             }
-            vecBatch->setVector(c, col);
+            vecBatch->SetVector(c, col);
         }
         input[i] = vecBatch;
     }
@@ -51,7 +51,7 @@ VectorBatch** buildInput(int32_t vecBatchNum, int32_t colNum, int32_t rowPerVecB
 void destroyInput(VectorBatch** input, int32_t vecBatchNum, int32_t colNum)
 {
     for (int32_t i = 0; i < vecBatchNum; ++i) {
-        input[i]->freeAllVectors();
+        input[i]->FreeAllVectors();
         delete input[i];
     }
 }
@@ -125,7 +125,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     for (auto vecBatch : result1) {
         printVecBatch(vecBatch);
     }
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 
     // Second stage
     ColumnIndex c14 = {0, OMNI_VEC_TYPE_LONG};
@@ -149,20 +149,20 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
         groupBy3->AddInput(result1[i]);
     }
 
-    VectorHelper::freeVecBatches(result1);
+    VectorHelper::FreeVecBatches(result1);
 
     std::vector<VectorBatch*> result2;
     groupBy3->GetOutput(result2);
     delete groupBy3;
 
-    EXPECT_EQ(result2[0]->getVectorCount(), 7);
-    EXPECT_EQ(result2[0]->getRowCount(), 4);
+    EXPECT_EQ(result2[0]->GetVectorCount(), 7);
+    EXPECT_EQ(result2[0]->GetRowCount(), 4);
 
     std::cout << std::endl;
     for (auto vecBatch : result2) {
         printVecBatch(vecBatch);
     }
-    VectorHelper::freeVecBatches(result2);
+    VectorHelper::FreeVecBatches(result2);
 }
 
 TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
@@ -177,15 +177,15 @@ TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
         VectorBatch* vecBatch = new VectorBatch(2);
         LongVector* col1 = new LongVector(nullptr, DATA_SIZE);
         for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            col1->setValue(i, i % 3);
+            col1->SetValue(i, i % 3);
         }
 
         LongVector* col2 = new LongVector(nullptr, DATA_SIZE);
         for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            col2->setValue(i, i % 3);
+            col2->SetValue(i, i % 3);
         }
-        vecBatch->setVector(0, col1);
-        vecBatch->setVector(1, col2);
+        vecBatch->SetVector(0, col1);
+        vecBatch->SetVector(1, col2);
         input[i] = vecBatch;
     }
     ColumnIndex c0 = {0, OMNI_VEC_TYPE_LONG};
@@ -204,17 +204,17 @@ TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
 
-    EXPECT_EQ(result[0]->getVectorCount(), 4);
+    EXPECT_EQ(result[0]->GetVectorCount(), 4);
 
-    for (int32_t i = 0; i < result[0]->getVectorCount(); ++i) {
-        Vector* col = result[0]->getVector(i);
+    for (int32_t i = 0; i < result[0]->GetVectorCount(); ++i) {
+        Vector* col = result[0]->GetVector(i);
         // TODO: print data;
 //        col->printColumn();
     }
     for (int i = 0; i < VEC_BATCH_NUM; ++i) {
-        input[i]->freeAllVectors();
+        input[i]->FreeAllVectors();
     }
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
 #include <time.h>
@@ -225,9 +225,9 @@ double total_wall_time;
 void perfTestOriginal(int64_t moduleAddr, VectorBatch** input)
 {
     using namespace omniruntime::op;
-    uint32_t* columnTypes1 = new uint32_t[input[0]->getVectorCount()];
-    for (int32_t i = 0; i < input[0]->getVectorCount(); ++i) {
-        columnTypes1[i] = (int32_t)input[0]->getVectorTypes()[i];
+    uint32_t* columnTypes1 = new uint32_t[input[0]->GetVectorCount()];
+    for (int32_t i = 0; i < input[0]->GetVectorCount(); ++i) {
+        columnTypes1[i] = (int32_t)input[0]->GetVectorTypes()[i];
     }
     // create operator
     HashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<HashAggregationOperatorFactory*>(moduleAddr);
@@ -239,8 +239,8 @@ void perfTestOriginal(int64_t moduleAddr, VectorBatch** input)
     }
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
-    EXPECT_EQ(result[0]->getVectorCount(), 4);
-    EXPECT_EQ(result[0]->getRowCount(), 4);
+    EXPECT_EQ(result[0]->GetVectorCount(), 4);
+    EXPECT_EQ(result[0]->GetRowCount(), 4);
     delete[] columnTypes1;
 }
 
@@ -308,7 +308,7 @@ TEST(HashAggregationOperatorTest, Original_Multiple_Threads)
         std::this_thread::sleep_for(100ms);
     }
 
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
 void perfTest(int64_t moduleAddr, VectorBatch** input, int32_t vecBatchNum, int32_t* rowCount)
@@ -325,8 +325,8 @@ void perfTest(int64_t moduleAddr, VectorBatch** input, int32_t vecBatchNum, int3
     }
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
-    EXPECT_EQ(result[0]->getVectorCount(), 4);
-    EXPECT_EQ(result[0]->getRowCount(), 4);
+    EXPECT_EQ(result[0]->GetVectorCount(), 4);
+    EXPECT_EQ(result[0]->GetRowCount(), 4);
 }
 
 uint64_t prepare_group()
@@ -464,7 +464,7 @@ TEST(HashAggregationOperatorTest, PerfViaAPI_Multiple_Threads)
         std::this_thread::sleep_for(100ms);
     }
     delete[] rowCount;
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
 TEST(AggregationOperatorTest, VerifyCorrectness)
@@ -539,13 +539,13 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
         aggregate3->AddInput(result[i]);
     }
 
-    VectorHelper::freeVecBatches(result);
+    VectorHelper::FreeVecBatches(result);
 
     std::vector<VectorBatch*> result1;
     int32_t tableCount3 = aggregate3->GetOutput(result1);
     delete aggregate3;
-    EXPECT_EQ(result1[0]->getRowCount(), 1);
-    EXPECT_EQ(result1[0]->getVectorCount(), 5);
+    EXPECT_EQ(result1[0]->GetRowCount(), 1);
+    EXPECT_EQ(result1[0]->GetVectorCount(), 5);
 
     for (auto& aggType : aggNames) {
         std::cout << aggType << "\t";
@@ -554,8 +554,8 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     for (auto vecBatch : result1) {
         printVecBatch(vecBatch);
     }
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
-    VectorHelper::freeVecBatches(result1);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(result1);
 }
 
 
@@ -582,27 +582,27 @@ TEST(AggregatorTest, avg_correctness_test)
     std::vector<VectorBatch *> result;
     int32_t tableCount = aggregate->GetOutput(result);
 
-    EXPECT_EQ(result[0]->getVectorCount(), 1);
-    EXPECT_EQ(result[0]->getRowCount(), 1);
+    EXPECT_EQ(result[0]->GetVectorCount(), 1);
+    EXPECT_EQ(result[0]->GetRowCount(), 1);
 
     string aggNames[] = {"avg"};
 
-    for (int32_t i = 0; i < result[0]->getVectorCount(); ++i) {
-        Vector* col = result[0]->getVector(i);
+    for (int32_t i = 0; i < result[0]->GetVectorCount(); ++i) {
+        Vector* col = result[0]->GetVector(i);
         std::cout << aggNames[i] << " ";
 //        col->printColumn();
     }
 
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
-    VectorHelper::freeVecBatches(result);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(result);
 }
 
 void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch** input, int32_t vecBatchNum, int32_t* rowCount)
 {
     using namespace omniruntime::op;
-    uint32_t* columnTypes1 = new uint32_t[input[0]->getVectorCount()];
-    for (int32_t i = 0; i < input[0]->getVectorCount(); ++i) {
-        columnTypes1[i] = (int32_t)input[0]->getVectorTypes()[i];
+    uint32_t* columnTypes1 = new uint32_t[input[0]->GetVectorCount()];
+    for (int32_t i = 0; i < input[0]->GetVectorCount(); ++i) {
+        columnTypes1[i] = (int32_t)input[0]->GetVectorTypes()[i];
     }
     // create operatory
     AggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<AggregationOperatorFactory*>(moduleAddr);
@@ -619,8 +619,8 @@ void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch** input,
     }
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = aggregation->GetOutput(result);
-    EXPECT_EQ(result[0]->getVectorCount(), 4);
-    EXPECT_EQ(result[0]->getRowCount(), 1);
+    EXPECT_EQ(result[0]->GetVectorCount(), 4);
+    EXPECT_EQ(result[0]->GetRowCount(), 1);
     delete[] columnTypes1;
 }
 
@@ -682,7 +682,7 @@ TEST(AggregationOperatorTest, Perf_Original)
         std::this_thread::sleep_for(100ms);
     }
     delete[] rowCount;
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
 uint64_t prepare_nogroup()
@@ -775,7 +775,7 @@ TEST(AggregationOperatorTest, Perf_Codegen)
         std::this_thread::sleep_for(100ms);
     }
     delete[] rowCount;
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
 TEST(HashAggregationOperatorTest, compare_perf)
@@ -896,5 +896,5 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
     std::cout << "wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
 
-    VectorHelper::freeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }

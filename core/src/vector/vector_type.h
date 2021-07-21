@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/8/21.
 //
@@ -18,4 +21,4 @@ typedef enum {
     OMNI_VEC_TYPE_DICTIONARY = 101,
     OMNI_VEC_TYPE_INVALID = 200
 } VecType;
-#endif //OMNI_RUNTIME_VECTOR_TYPE_H
+#endif // OMNI_RUNTIME_VECTOR_TYPE_H

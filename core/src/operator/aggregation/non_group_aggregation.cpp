@@ -8,6 +8,7 @@
 #include "../../vector/vector_common.h"
 #include "../status.h"
 
+using namespace std;
 namespace omniruntime {
 namespace op {
 
@@ -76,7 +77,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 #endif
     this->PreLoop(vecBatch);
 
-    int32_t vectorCount = vecBatch->getVectorCount();
+    int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t aggColNum = this->aggCols.size();
     if (vectorCount != aggColNum) {
         DebugError("Doing pure aggregation needs column number to equal with aggregate column number, but vectorCount "
@@ -84,7 +85,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
             vectorCount, aggColNum);
     }
 
-    int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->getVectorTypes());
+    int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->GetVectorTypes());
 
     auto aggFuncTypes = make_unique<int32_t[]>(aggColNum);
 
@@ -92,9 +93,9 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
         aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
 
-    int32_t rowCount = vecBatch->getRowCount();
+    int32_t rowCount = vecBatch->GetRowCount();
     for (int32_t rowOffst = 0; rowOffst < rowCount; ++rowOffst) {
-        this->InLoop(vecBatch->getVectors(), rowOffst, vectorCount, vectorTypes, aggFuncTypes.get());
+        this->InLoop(vecBatch->GetVectors(), rowOffst, vectorCount, vectorTypes, aggFuncTypes.get());
     }
 
     this->PostLoop(vecBatch);
@@ -118,26 +119,26 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
 void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
 {
     // set result value
-    int32_t vectorCount = vecBatch->getVectorCount();
+    int32_t vectorCount = vecBatch->GetVectorCount();
     for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
         AggregateType aggType = this->aggregators[colIdx]->GetType();
         auto state = this->aggregators[colIdx]->GetNonGroupState();
-        auto vector = vecBatch->getVector(colIdx);
+        auto vector = vecBatch->GetVector(colIdx);
         switch (aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                switch (vector->getType()) {
+                switch (vector->GetType()) {
                     case OMNI_VEC_TYPE_INT: {
-                        dynamic_cast<IntVector *>(vector)->setValue(0, *static_cast<int32_t *>(state.val));
+                        dynamic_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
                         break;
                     }
                     case OMNI_VEC_TYPE_LONG: {
-                        dynamic_cast<LongVector *>(vector)->setValue(0, *static_cast<int64_t *>(state.val));
+                        dynamic_cast<LongVector *>(vector)->SetValue(0, *static_cast<int64_t *>(state.val));
                         break;
                     }
                     case OMNI_VEC_TYPE_DOUBLE: {
-                        dynamic_cast<DoubleVector *>(vector)->setValue(0, *static_cast<double *>(state.val));
+                        dynamic_cast<DoubleVector *>(vector)->SetValue(0, *static_cast<double *>(state.val));
                         break;
                     }
                     default:
@@ -146,14 +147,14 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {
-                dynamic_cast<LongVector *>(vector)->setValue(0, state.count);
+                dynamic_cast<LongVector *>(vector)->SetValue(0, state.count);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
                 if (state.count == 0) {
                     DebugError("Divisor is zero! column index = %d", colIdx);
                 }
-                dynamic_cast<DoubleVector *>(vector)->setValue(0, *reinterpret_cast<double *>(state.avgVal));
+                dynamic_cast<DoubleVector *>(vector)->SetValue(0, *reinterpret_cast<double *>(state.avgVal));
                 break;
             }
             default: {
@@ -183,7 +184,8 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
         types[i] = aggCols[i].type;
     }
 
-    VectorBatch *vecBatch = new VectorBatch(types.get(), colSize, 1);
+    VectorBatch *vecBatch = new VectorBatch(colSize, 1);
+    vecBatch->SetVectors(types.get());
     FillResultVectors(vecBatch);
     result.push_back(vecBatch);
 #ifdef DEBUG_LEVEL_LOW

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/9/21.
 //
@@ -12,28 +15,32 @@ class VectorBatch {
 public:
     VectorBatch(int vectorCount);
 
-    VectorBatch(int *types, int vectorCount, int rowCount);
+    VectorBatch(int vectorCount, int rowCount);
 
     ~VectorBatch();
 
-    Vector *getVector(int index);
+    Vector *GetVector(int index);
 
-    Vector **getVectors();
+    Vector **GetVectors() const;
 
-    void setVector(int index, Vector *vector);
+    void SetVector(int index, Vector *vector);
 
-    int getVectorCount();
+    int GetVectorCount();
 
-    int getRowCount();
+    int GetRowCount();
 
-    VecType *getVectorTypes();
+    VecType *GetVectorTypes() const;
 
-    void freeAllVectors();
+    void FreeAllVectors();
+
+    void SetVectors(int *types);
+
 private:
+    void Init();
     int vectorCount;
     int rowCount;
     Vector **vectors;
     VecType *vectorTypes;
 };
 
-#endif //OMNI_RUNTIME_VECTOR_BATCH_H
+#endif // OMNI_RUNTIME_VECTOR_BATCH_H

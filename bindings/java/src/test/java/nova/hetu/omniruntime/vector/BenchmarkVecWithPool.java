@@ -39,82 +39,102 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @Warmup(iterations = 1, time = 500, timeUnit = MILLISECONDS)
 @Measurement(iterations = 10, time = 500, timeUnit = MILLISECONDS)
 @BenchmarkMode(Mode.AverageTime)
-public class BenchmarkVecWithPool
-{
-    private static final int pageSize = 2048;
-    private static final int pageCount = 2000;
+/**
+ * vec benchmar with pool
+ */
+public class BenchmarkVecWithPool {
+    private static final int PAGE_SIZE = 2048;
+    private static final int PAGE_COUNT = 2000;
 
+    /**
+     * benchmark 16 thread
+     */
     @Benchmark
     @Threads(16)
-    public void test_omnivec_with_initial_all_page_performance_16()
-    {
+    public void testOmnivecWithInitialAllPagePerformance16() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_omnivec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testOmniVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 32 thread
+     */
     @Benchmark
     @Threads(32)
-    public void test_omnivec_with_initial_all_page_performance_32()
-    {
+    public void testOmnivecWithInitialAllPagePerformance32() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_omnivec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testOmniVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 64 thread
+     */
     @Benchmark
     @Threads(64)
-    public void test_omnivec_with_initial_all_page_performance_64()
-    {
+    public void testOmnivecWithInitialAllPagePerformance64() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_omnivec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testOmniVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 128 thread
+     */
     @Benchmark
     @Threads(128)
-    public void test_omnivec_with_initial_all_page_performance_128()
-    {
+    public void testOmnivecWithInitialAllPagePerformance128() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_omnivec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testOmniVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 16 thread
+     */
     @Benchmark
     @Threads(16)
-    public void test_heapvec_with_initial_all_page_performance_16()
-    {
+    public void testHeapvecWithInitialAllPagePerformance16() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_heapvec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testHeapVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 32 thread
+     */
     @Benchmark
     @Threads(32)
-    public void test_heapvec_with_initial_all_page_performance_32()
-    {
+    public void testHeapvecWithInitialAllPagePerformance32() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_heapvec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testHeapVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 64 thread
+     */
     @Benchmark
     @Threads(64)
-    public void test_heapvec_with_initial_all_page_performance_64()
-    {
+    public void testHeapvecWithInitialAllPagePerformance64() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_heapvec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testHeapVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 128 thread
+     */
     @Benchmark
     @Threads(128)
-    public void test_heapvec_with_initial_all_page_performance_128()
-    {
+    public void testHeapvecWithInitialAllPagePerformance128() {
         DataGenerator dataGenerator = new DataGenerator();
-        dataGenerator.test_heapvec_with_initial_all_page(pageCount, pageSize, 1);
+        dataGenerator.testHeapVecWithInitialAllPage(PAGE_COUNT, PAGE_SIZE, 1);
     }
 
+    /**
+     * benchmark 64 thread
+     */
     @Benchmark
     @Threads(64)
-    public void test_omnivec_performance_64()
-    {
+    public void testOmnivecPerformance64() {
         DataGenerator dataGenerator = new DataGenerator();
-        for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
-            LongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_Vec_Page_like_q1(pageSize);
+        for (int pageIdx = 0; pageIdx < PAGE_COUNT; pageIdx++) {
+            LongVec[] vecs = dataGenerator.builderGroupBy2CSum2CVecPageLikeQ1(PAGE_SIZE);
             for (int i = 0; i < vecs.length; i++) {
                 for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
@@ -124,13 +144,15 @@ public class BenchmarkVecWithPool
         }
     }
 
+    /**
+     * benchmark 64 thread
+     */
     @Benchmark
     @Threads(64)
-    public void test_heapvec_performance_64()
-    {
+    public void testHeapvecPerformance64() {
         DataGenerator dataGenerator = new DataGenerator();
-        for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
-            HeapLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_heap_Page_like_q1(pageSize);
+        for (int pageIdx = 0; pageIdx < PAGE_COUNT; pageIdx++) {
+            HeapLongVec[] vecs = dataGenerator.builderGroupBy2CSum2CHeapPageLikeQ1(PAGE_SIZE);
             for (int i = 0; i < vecs.length; i++) {
                 for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
@@ -140,13 +162,15 @@ public class BenchmarkVecWithPool
         }
     }
 
+    /**
+     * benchmark 64 thread
+     */
     @Benchmark
     @Threads(64)
-    public void test_unsafevec_performance_64()
-    {
+    public void testUnsafevecPerformance64() {
         DataGenerator dataGenerator = new DataGenerator();
-        for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
-            UnsafeLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_unsafevec_Page_like_q1(pageSize);
+        for (int pageIdx = 0; pageIdx < PAGE_COUNT; pageIdx++) {
+            UnsafeLongVec[] vecs = dataGenerator.builderGroupBy2CSum2CUnsafevecPageLikeQ1(PAGE_SIZE);
             for (int i = 0; i < vecs.length; i++) {
                 for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
@@ -156,13 +180,15 @@ public class BenchmarkVecWithPool
         }
     }
 
+    /**
+     * benchmark 32 thread
+     */
     @Benchmark
     @Threads(32)
-    public void test_omnivec_performance_32()
-    {
+    public void testOmnivecPerformance32() {
         DataGenerator dataGenerator = new DataGenerator();
-        for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
-            LongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_Vec_Page_like_q1(pageSize);
+        for (int pageIdx = 0; pageIdx < PAGE_COUNT; pageIdx++) {
+            LongVec[] vecs = dataGenerator.builderGroupBy2CSum2CVecPageLikeQ1(PAGE_SIZE);
             for (int i = 0; i < vecs.length; i++) {
                 for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
@@ -172,13 +198,15 @@ public class BenchmarkVecWithPool
         }
     }
 
+    /**
+     * benchmark 32 thread
+     */
     @Benchmark
     @Threads(32)
-    public void test_heapvec_performance_32()
-    {
+    public void testHeapvecPerformance32() {
         DataGenerator dataGenerator = new DataGenerator();
-        for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
-            HeapLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_heap_Page_like_q1(pageSize);
+        for (int pageIdx = 0; pageIdx < PAGE_COUNT; pageIdx++) {
+            HeapLongVec[] vecs = dataGenerator.builderGroupBy2CSum2CHeapPageLikeQ1(PAGE_SIZE);
             for (int i = 0; i < vecs.length; i++) {
                 for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
@@ -188,13 +216,15 @@ public class BenchmarkVecWithPool
         }
     }
 
+    /**
+     * benchmark 32 thread
+     */
     @Benchmark
     @Threads(32)
-    public void test_unsafevec_performance_32()
-    {
+    public void testUnsafevecPerformance32() {
         DataGenerator dataGenerator = new DataGenerator();
-        for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
-            UnsafeLongVec[] vecs = dataGenerator.builderGroupBy_2C_Sum_2C_unsafevec_Page_like_q1(pageSize);
+        for (int pageIdx = 0; pageIdx < PAGE_COUNT; pageIdx++) {
+            UnsafeLongVec[] vecs = dataGenerator.builderGroupBy2CSum2CUnsafevecPageLikeQ1(PAGE_SIZE);
             for (int i = 0; i < vecs.length; i++) {
                 for (int j = 0; j < vecs[i].getSize(); j++) {
                     vecs[i].get(j);
@@ -205,8 +235,7 @@ public class BenchmarkVecWithPool
     }
 
     public static void main(String[] args)
-            throws RunnerException
-    {
+            throws RunnerException {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
                 .include(".*" + BenchmarkVecWithPool.class.getSimpleName() + ".test_.*_with_initial_all_page*")
@@ -216,72 +245,75 @@ public class BenchmarkVecWithPool
         new Runner(options).run();
     }
 
-    public class DataGenerator
-    {
-        private class PageUseOmniVec
-        {
+    /**
+     * data generator
+     */
+    public class DataGenerator {
+        private class PageUseOmniVec {
             private LongVec[] data;
 
-            public PageUseOmniVec(LongVec[] data)
-            {
+            public PageUseOmniVec(LongVec[] data) {
                 this.data = data;
             }
 
-            public LongVec[] getData()
-            {
+            public LongVec[] getData() {
                 return this.data;
             }
 
-            public void release()
-            {
+            /**
+             * release memory
+             */
+            public void release() {
                 for (LongVec vec : data) {
                     vec.close();
                 }
             }
         }
 
-        private class PageUseHeapVec
-        {
+        private class PageUseHeapVec {
             private HeapLongVec[] data;
 
-            public PageUseHeapVec(HeapLongVec[] data)
-            {
+            public PageUseHeapVec(HeapLongVec[] data) {
                 this.data = data;
             }
 
-            public HeapLongVec[] getData()
-            {
+            public HeapLongVec[] getData() {
                 return this.data;
             }
 
-            public void release()
-            {
+            /**
+             * release memory
+             */
+            public void release() {
                 for (HeapLongVec vec : data) {
                     vec.close();
                 }
             }
         }
 
-        public class ExecutorWithHeapPageInitial
-        {
+        /**
+         * ExecutorWithHeapPageInitial
+         */
+        public class ExecutorWithHeapPageInitial {
             private PageUseHeapVec[] pages;
             private int pageCount;
             private int pageSize;
 
-            public ExecutorWithHeapPageInitial(int pageCount, int pageSize)
-            {
+            public ExecutorWithHeapPageInitial(int pageCount, int pageSize) {
                 this.pages = new PageUseHeapVec[pageCount];
                 for (int pIdx = 0; pIdx < pageCount; pIdx++) {
-                    HeapLongVec[] data = builderGroupBy_2C_Sum_2C_heap_Page_like_q1(pageSize);
+                    HeapLongVec[] data = builderGroupBy2CSum2CHeapPageLikeQ1(pageSize);
                     this.pages[pIdx] = new PageUseHeapVec(data);
                 }
                 this.pageCount = pageCount;
                 this.pageSize = pageSize;
             }
 
-            public ExecutorWithHeapPageInitial executor(int loopReadCount)
-            {
-                //test read, get vec all data
+            /**
+             * executor 
+             */
+            public ExecutorWithHeapPageInitial executor(int loopReadCount) {
+                // test read, get vec all data
                 for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
                     PageUseHeapVec pageUseOmniVec = this.pages[pageIdx];
                     for (int vecIdx = 0; vecIdx < 4; vecIdx++) {
@@ -295,8 +327,10 @@ public class BenchmarkVecWithPool
                 return this;
             }
 
-            public void release()
-            {
+            /**
+             * release vector memory
+             */
+            public void release() {
                 for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
                     PageUseHeapVec pageUseOmniVec = this.pages[pageIdx];
                     pageUseOmniVec.release();
@@ -304,26 +338,29 @@ public class BenchmarkVecWithPool
             }
         }
 
-        public class ExecutorWithOmniPagesInitial
-        {
+        /**
+         * ExecutorWithOmniPagesInitial
+         */
+        public class ExecutorWithOmniPagesInitial {
             private PageUseOmniVec[] pages;
             private int pageCount;
             private int pageSize;
 
-            public ExecutorWithOmniPagesInitial(int pageCount, int pageSize)
-            {
+            public ExecutorWithOmniPagesInitial(int pageCount, int pageSize) {
                 this.pages = new PageUseOmniVec[pageCount];
                 for (int pIdx = 0; pIdx < pageCount; pIdx++) {
-                    LongVec[] data = builderGroupBy_2C_Sum_2C_Vec_Page_like_q1(pageSize);
+                    LongVec[] data = builderGroupBy2CSum2CVecPageLikeQ1(pageSize);
                     this.pages[pIdx] = new PageUseOmniVec(data);
                 }
                 this.pageCount = pageCount;
                 this.pageSize = pageSize;
             }
 
-            public ExecutorWithOmniPagesInitial executor(int loopReadCount)
-            {
-                //test read, get vec all data
+            /**
+             * executor
+             */
+            public ExecutorWithOmniPagesInitial executor(int loopReadCount) {
+                // test read, get vec all data
                 for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
                     PageUseOmniVec pageUseOmniVec = this.pages[pageIdx];
                     for (int vecIdx = 0; vecIdx < 4; vecIdx++) {
@@ -337,8 +374,10 @@ public class BenchmarkVecWithPool
                 return this;
             }
 
-            public void release()
-            {
+            /**
+             * release memory
+             */
+            public void release() {
                 for (int pageIdx = 0; pageIdx < pageCount; pageIdx++) {
                     PageUseOmniVec pageUseOmniVec = this.pages[pageIdx];
                     pageUseOmniVec.release();
@@ -346,20 +385,26 @@ public class BenchmarkVecWithPool
             }
         }
 
-        public void test_omnivec_with_initial_all_page(int pageCount, int pageSize, int readLoopCount)
-        {
+        /**
+         * testOmniVecWithInitialAllPage
+         */
+        public void testOmniVecWithInitialAllPage(int pageCount, int pageSize, int readLoopCount) {
             ExecutorWithOmniPagesInitial executorWithOmniPagesInitial = new ExecutorWithOmniPagesInitial(pageCount, pageSize);
             executorWithOmniPagesInitial.executor(readLoopCount).release();
         }
 
-        public void test_heapvec_with_initial_all_page(int pageCount, int pageSize, int readLoopCount)
-        {
+        /**
+         * testHeapVecWithInitialAllPage
+         */
+        public void testHeapVecWithInitialAllPage(int pageCount, int pageSize, int readLoopCount) {
             ExecutorWithHeapPageInitial executorWithHeapPagesInitial = new ExecutorWithHeapPageInitial(pageCount, pageSize);
             executorWithHeapPagesInitial.executor(readLoopCount).release();
         }
 
-        public LongVec[] builderGroupBy_2C_Sum_2C_Vec_Page_like_q1(int pageSize)
-        {
+        /**
+         * builderGroupBy2CSum2CVecPageLikeQ1
+         */
+        public LongVec[] builderGroupBy2CSum2CVecPageLikeQ1(int pageSize) {
             LongVec key1 = new LongVec(pageSize);
             LongVec key2 = new LongVec(pageSize);
             LongVec value1 = new LongVec(pageSize);
@@ -374,8 +419,10 @@ public class BenchmarkVecWithPool
             return new LongVec[] {key1, key2, value1, value2};
         }
 
-        public HeapLongVec[] builderGroupBy_2C_Sum_2C_heap_Page_like_q1(int pageSize)
-        {
+        /**
+         * builderGroupBy2CSum2CHeapPageLikeQ1
+         */
+        public HeapLongVec[] builderGroupBy2CSum2CHeapPageLikeQ1(int pageSize) {
             HeapLongVec key1 = new HeapLongVec(pageSize);
             HeapLongVec key2 = new HeapLongVec(pageSize);
             HeapLongVec value1 = new HeapLongVec(pageSize);
@@ -389,8 +436,10 @@ public class BenchmarkVecWithPool
             return new HeapLongVec[] {key1, key2, value1, value2};
         }
 
-        public UnsafeLongVec[] builderGroupBy_2C_Sum_2C_unsafevec_Page_like_q1(int pageSize)
-        {
+        /**
+         * builderGroupBy2CSum2CUnsafevecPageLikeQ1
+         */
+        public UnsafeLongVec[] builderGroupBy2CSum2CUnsafevecPageLikeQ1(int pageSize) {
             UnsafeLongVec key1 = new UnsafeLongVec(pageSize);
             UnsafeLongVec key2 = new UnsafeLongVec(pageSize);
             UnsafeLongVec value1 = new UnsafeLongVec(pageSize);
@@ -404,95 +453,117 @@ public class BenchmarkVecWithPool
             return new UnsafeLongVec[] {key1, key2, value1, value2};
         }
 
-        public void release(LongVec[] inputs)
-        {
+        /**
+         * release vec memory
+         */
+        public void release(LongVec[] inputs) {
             for (LongVec vec : inputs) {
                 vec.close();
             }
         }
 
-        public void release(HeapLongVec[] inputs)
-        {
+        /**
+         * release heap vec memory
+         */
+        public void release(HeapLongVec[] inputs) {
             for (HeapLongVec vec : inputs) {
                 vec.close();
             }
         }
 
-        public void release(UnsafeLongVec[] inputs)
-        {
+        /**
+         * release unsafe long vec memory
+         */
+        public void release(UnsafeLongVec[] inputs) {
             for (UnsafeLongVec vec : inputs) {
                 vec.close();
             }
         }
     }
 
-    public class HeapLongVec
-    {
+    /**
+     * heap long vec
+     */
+    public class HeapLongVec {
         private long[] values;
 
-        public HeapLongVec(int pageSize)
-        {
+        public HeapLongVec(int pageSize) {
             this.values = new long[pageSize];
         }
 
-        public void set(int idx, long value)
-        {
+        /**
+         * set value
+         */
+        public void set(int idx, long value) {
             this.values[idx] = value;
         }
 
-        public long get(int idx)
-        {
+        /**
+         * get value
+         */
+        public long get(int idx) {
             return this.values[idx];
         }
 
-        public int getSize()
-        {
+        /**
+         * get size
+         */
+        public int getSize() {
             return values.length;
         }
 
-        public void close()
-        {
+        /**
+         * close
+         */
+        public void close() {
         }
     }
 
-    public class UnsafeLongVec
-    {
+    /**
+     * unsafe long vec
+     */
+    public class UnsafeLongVec {
         private final long address;
         private final int capacity;
 
-        public UnsafeLongVec(int capacity)
-        {
-            this(JvmUtils.unsafe.allocateMemory(Long.BYTES * capacity), capacity);
+        public UnsafeLongVec(int capacity) {
+            this(JvmUtils.UNSAFE.allocateMemory(Long.BYTES * capacity), capacity);
         }
 
-        public UnsafeLongVec(long address, int capacity)
-        {
+        public UnsafeLongVec(long address, int capacity) {
             this.address = address;
             this.capacity = capacity;
         }
 
-        public void set(int idx, long value)
-        {
-            JvmUtils.unsafe.putLong(address + idx * Long.BYTES, value);
+        /**
+         * set value
+         */
+        public void set(int idx, long value) {
+            JvmUtils.UNSAFE.putLong(address + idx * Long.BYTES, value);
         }
 
-        public long get(int idx)
-        {
-            return JvmUtils.unsafe.getLong(address + idx * Long.BYTES);
+        /**
+         * get value
+         */
+        public long get(int idx) {
+            return JvmUtils.UNSAFE.getLong(address + idx * Long.BYTES);
         }
 
-        public int getSize()
-        {
+        /**
+         * get size
+         */
+        public int getSize() {
             return capacity;
         }
 
-        public void close()
-        {
-            JvmUtils.unsafe.freeMemory(address);
+        /**
+         * free memory
+         */
+        public void close() {
+            JvmUtils.UNSAFE.freeMemory(address);
         }
 
-        public long getAddress()
-        {
+        public long getAddress() {
             return address;
         }
     }

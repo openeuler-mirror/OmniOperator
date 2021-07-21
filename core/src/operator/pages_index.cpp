@@ -47,13 +47,13 @@ PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
 }
 
 // return error number
-int32_t PagesIndex::addVecBatches(vector<VectorBatch *> &vecBatches)
+int32_t PagesIndex::addVecBatches(std::vector<VectorBatch *> &vecBatches)
 {
     int32_t vecBatchCount = vecBatches.size();
     int32_t columnCount = this->typesCount;
 
     for (int vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-        this->positionCount += vecBatches[vecBatchIdx]->getRowCount();
+        this->positionCount += vecBatches[vecBatchIdx]->GetRowCount();
     }
     this->valueAddresses = new int64_t[this->positionCount];
 
@@ -65,7 +65,7 @@ int32_t PagesIndex::addVecBatches(vector<VectorBatch *> &vecBatches)
     int32_t valueIndex = 0;
     for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
         VectorBatch *vecBatch = vecBatches[vecBatchIdx];
-        int32_t rowCount = vecBatch->getRowCount();
+        int32_t rowCount = vecBatch->GetRowCount();
         // generate value address.
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
             int64_t valueAddress = encodeSyntheticAddress(vecBatchIdx, rowIdx);
@@ -74,7 +74,7 @@ int32_t PagesIndex::addVecBatches(vector<VectorBatch *> &vecBatches)
 
         // put vectors to a collector.
         for (int32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
-            this->columns[colIdx][vecBatchIdx] = vecBatch->getVector(colIdx);
+            this->columns[colIdx][vecBatchIdx] = vecBatch->GetVector(colIdx);
         }
     }
     return 0;
@@ -112,9 +112,9 @@ void PagesIndex::getOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
     int colType = 0;
 
     for (int32_t j = 0; j < outputColsCount; j++) {
-        outputColumn = outputVecBatch->getVector(j);
+        outputColumn = outputVecBatch->GetVector(j);
         outputCol = outputCols[j];
-        outputData = outputColumn->getValues();
+        outputData = outputColumn->GetValues();
         colType = sourceTypes[outputCol];
         Vector **inputVecBatch = inputVecBatches[outputCol];
 
@@ -216,8 +216,8 @@ int32_t compareTo(
     for (int32_t i = 0; i < sortColCount; i++) {
         int32_t sortCol = sortCols[i];
         Vector *leftColumn = columns[sortCol][leftColumnIndex];
-        void *leftData = leftColumn->getValues();
-        void *leftNulls = leftColumn->getValueNulls();
+        void *leftData = leftColumn->GetValues();
+        void *leftNulls = leftColumn->GetValueNulls();
         int32_t colType = sortColTypes[i];
         Vector *rightColumn;
         void *rightData;
@@ -230,8 +230,8 @@ int32_t compareTo(
         }
         else {
             rightColumn = columns[sortCol][rightColumnIndex];
-            rightData = rightColumn->getValues();
-            rightNulls = rightColumn->getValueNulls();
+            rightData = rightColumn->GetValues();
+            rightNulls = rightColumn->GetValueNulls();
         }
 
         // compare = compareNull(leftNulls, leftColumnPosition, rightNulls, rightColumnPosition, sortNullFirsts[i]);
@@ -403,7 +403,7 @@ void setInt32ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
         position = decodePosition(valueAddress);
         if (preTableIndex != pageIndex) {
             inputColumn = inputVecBatch[pageIndex];
-            inputData = (int32_t *)(inputColumn->getValues());
+            inputData = (int32_t *)(inputColumn->GetValues());
             preTableIndex = pageIndex;
         }
 
@@ -431,7 +431,7 @@ void setInt64ColumnValues(int64_t *valueAddresses, int32_t offset, int32_t lengt
 
         if (preTableIndex != pageIndex) {
             inputColumn = inputVecBatch[pageIndex];
-            inputData = (int64_t *)(inputColumn->getValues());
+            inputData = (int64_t *)(inputColumn->GetValues());
             preTableIndex = pageIndex;
         }
 
@@ -458,7 +458,7 @@ void setDoubleColumnValues(int64_t *valueAddresses, int32_t offset, int32_t leng
         position = decodePosition(valueAddress);
         if (preTableIndex != pageIndex) {
             inputColumn = inputVecBatch[pageIndex];
-            inputData = (double *)(inputColumn->getValues());
+            inputData = (double *)(inputColumn->GetValues());
             preTableIndex = pageIndex;
         }
 

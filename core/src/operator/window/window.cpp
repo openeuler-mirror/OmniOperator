@@ -82,7 +82,7 @@ WindowOperatorFactory *WindowOperatorFactory::createWindowOperatorFactory(int32_
     return operatorFactory;
 }
 
-Operator *WindowOperatorFactory::createOperator()
+Operator *WindowOperatorFactory::CreateOperator()
 {
     WindowOperator *windowOperator = new WindowOperator(sourceTypes, typesCount, outputCols, outputColsCount,
         windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
@@ -229,7 +229,8 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     int32_t rowCount = 0;
     for (int32_t i = 0; i < outputPageCount; i++) {
         rowCount = min(maxRowCount, positionCount - position);
-        vecBatch = new VectorBatch(outputTypes, finalOutputColsCount, rowCount);
+        vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
+        vecBatch->SetVectors(outputTypes);
         pagesIndex->getOutput(outputCols, outputColsCount, vecBatch, sourceTypes, position, rowCount);
         for (int32_t j = 0; j < rowCount; j++) {
             if (partition == nullptr || !partition->hasNext()) {

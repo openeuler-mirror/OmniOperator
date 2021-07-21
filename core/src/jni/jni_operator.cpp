@@ -19,7 +19,7 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
     jobjectArray res = env->NewObjectArray(result.size(), vecBatchCls, nullptr);
     int32_t idx = 0;
     for (auto vecBatch : result) {
-        jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), vecBatch->getRowCount());
+        jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }
     return res;

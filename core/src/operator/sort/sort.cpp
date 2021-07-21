@@ -108,7 +108,7 @@ SortOperatorFactory * SortOperatorFactory::createSortOperatorFactory(
     return operatorFactory;
 }
 
-Operator * SortOperatorFactory::createOperator()
+Operator * SortOperatorFactory::CreateOperator()
 {
     SortOperator *sortOperator = new SortOperator(
         sourceTypes,
@@ -200,7 +200,8 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *>& outputPages)
         rowCount = min(maxRowCount, positionCount - position);
         auto start = START();
         OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
-        vecBatch = new VectorBatch(outputTypes, outputColsCount, rowCount);
+        vecBatch = new VectorBatch(outputColsCount, rowCount);
+        vecBatch->SetVectors(outputTypes);
         pagesIndex->getOutput(outputCols, outputColsCount, vecBatch, sourceTypes, position, rowCount);
         OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));
         position += rowCount;

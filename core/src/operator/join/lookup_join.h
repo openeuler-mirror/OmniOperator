@@ -34,7 +34,7 @@ public:
         int32_t *buildOutputTypes,
         int32_t buildOutputColsCount,
         int64_t hashBuilderFactoryAddr);
-    Operator *createOperator();
+    Operator *CreateOperator();
 private:
     int32_t *probeTypes;      // all types for probe
     int32_t probeTypesCount;

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
@@ -15,29 +18,29 @@ public:
 
     ~VectorReference();
 
-    int64_t decRef();
+    int64_t DecRef();
 
-    void incRef();
+    void IncRef();
 
-    int64_t getRef();
+    int64_t GetRef();
 
-    void *getValuesAddress();
+    void *GetValuesAddress();
 
-    void *getValueNullsAddress();
+    void *GetValueNullsAddress();
 
-    void *getValueOffsetsAddress();
+    void *GetValueOffsetsAddress();
 
-    VecType getType();
+    VecType GetType();
 
-    int getCapacityInBytes();
+    int GetCapacityInBytes();
 
-    bool isWritable();
+    bool IsWritable();
 
-    Chunk* getValueChunk();
+    Chunk *GetValueChunk() const;
 
-    Chunk* getValueNullChunk();
+    Chunk *GetValueNullChunk() const;
 
-    Chunk* getValueOffsetChunk();
+    Chunk *GetValueOffsetChunk() const;
 
 private:
     int capacityInBytes;
@@ -50,4 +53,4 @@ private:
 };
 
 
-#endif //__VECTOR_REFERENCE_H__
+#endif // __VECTOR_REFERENCE_H__

@@ -8,17 +8,23 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestIntVec
-{
+/**
+ * test int vec
+ */
+public class TestIntVec {
+    /**
+     * tear down
+     */
     @AfterClass
-    public void tearDown()
-    {
+    public void tearDown() {
         VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
+    /**
+     * test new vector
+     */
     @Test
-    public void testNewVector()
-    {
+    public void testNewVector() {
         IntVec vec = new IntVec(256);
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
@@ -27,9 +33,11 @@ public class TestIntVec
         vec.close();
     }
 
+    /**
+     * test slice
+     */
     @Test
-    public void testSlice()
-    {
+    public void testSlice() {
         IntVec oritinalVec = new IntVec(10);
         for (int i = 0; i < oritinalVec.getSize(); i++) {
             oritinalVec.set(i, i);
@@ -52,9 +60,11 @@ public class TestIntVec
         slice2.close();
     }
 
+    /**
+     * test set and get value
+     */
     @Test
-    public void testSetAndGetValue()
-    {
+    public void testSetAndGetValue() {
         IntVec vec = new IntVec(256);
         for (int i = 0; i < vec.getSize(); i++) {
             vec.set(i, i * 2);
@@ -66,9 +76,11 @@ public class TestIntVec
         vec.close();
     }
 
+    /**
+     * test put value
+     */
     @Test
-    public void testPutValues()
-    {
+    public void testPutValues() {
         int[] values = {1, 3, 4, 6, 7};
         IntVec vec1 = new IntVec(values.length);
         vec1.put(values, 0, 0, values.length);
@@ -86,9 +98,11 @@ public class TestIntVec
         vec2.close();
     }
 
+    /**
+     * test value null
+     */
     @Test
-    public void testValueNull()
-    {
+    public void testValueNull() {
         IntVec vec = new IntVec(256);
         for (int i = 0; i < vec.getSize(); i++) {
             if (i % 5 == 0) {
@@ -110,9 +124,11 @@ public class TestIntVec
         vec.close();
     }
 
+    /**
+     * test copy postion
+     */
     @Test
-    public void testCopyPositions()
-    {
+    public void testCopyPositions() {
         IntVec originalVector = new IntVec(4);
         for (int i = 0; i < originalVector.getSize(); i++) {
             originalVector.set(i, i);
@@ -129,9 +145,11 @@ public class TestIntVec
         copyPositionVector.close();
     }
 
+    /**
+     * test copy region
+     */
     @Test
-    public void testCopyRegion()
-    {
+    public void testCopyRegion() {
         IntVec originalVector = new IntVec(4);
         for (int i = 0; i < 4; i++) {
             originalVector.set(i, i * 2);
@@ -147,9 +165,11 @@ public class TestIntVec
         copyRegionVector.close();
     }
 
+    /**
+     * test zero size allocate
+     */
     @Test
-    public void testZeroSizeAllocate()
-    {
+    public void testZeroSizeAllocate() {
         IntVec v1 = new IntVec(0);
         int[] values = new int[0];
         v1.put(values, 0, 0, values.length);

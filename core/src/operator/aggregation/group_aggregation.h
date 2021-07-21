@@ -35,7 +35,7 @@ class HashAggregationOperatorFactory;
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
     HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol,
-        std::vector<unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
+        std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
         : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {}
 
@@ -43,7 +43,7 @@ public:
 
     int32_t GetOutput(std::vector<VectorBatch *> &data) override;
 
-    explicit HashAggregationOperator(std::vector<unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
+    explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
     {}
 
     ~HashAggregationOperator() override
@@ -119,7 +119,7 @@ private:
     PrepareContext aggTypeContext;
     std::vector<uint32_t> aggTypes;
     PrepareContext aggFuncTypeContext;
-    std::vector<unique_ptr<AggregatorFactory>> aggregatorFactories;
+    std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };
 
 using HashAggModule = omniruntime::op::HashAggregationOperator *(*)(HashAggregationOperatorFactory *);

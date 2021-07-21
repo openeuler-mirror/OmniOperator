@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __DOUBLE_VECTOR__H__
 #define __DOUBLE_VECTOR__H__
 
@@ -8,30 +11,32 @@ public:
     DoubleVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
-    double getValue(int index){
-        ASSERT(index < getSize());
-        return ((double *) valuesAddress)[index + positionOffset];
+    double GetValue(int index)
+    {
+        return reinterpret_cast<double *>(valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.
-    void setValue(int index, double value){
-        ASSERT(getReference()->isWritable());
-        ASSERT((uint)index < getSize());
-        ((double *) valuesAddress)[index] = value;
+    void SetValue(int index, double value)
+    {
+        reinterpret_cast<double *>(valuesAddress)[index] = value;
     }
 
-    void setValues(int startIndex, double *values, int length);
+    void SetValues(int startIndex, const double *values, int length) override;
 
-    DoubleVector *slice(int positionOffset, int length);
+    DoubleVector *Slice(int positionOffset, int length) override;
 
-    DoubleVector *copyPositions(int *positions, int offset, int length);
+    DoubleVector *CopyPositions(const int *positions, int offset, int length) override;
 
-    DoubleVector *copyRegion(int positionOffset, int length);
+    DoubleVector *CopyRegion(int positionOffset, int length) override;
 
-    void append(Vector *other, int positionOffset, int length);
+    void Append(Vector *other, int positionOffset, int length) override;
+
+    ~DoubleVector() {}
 
 private:
-    DoubleVector(DoubleVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
+    DoubleVector(DoubleVector *vector, int size, int positionOffset)
+        : FixedWidthVector(vector, size, positionOffset) {};
 
     static const int BYTES = sizeof(double);
 };

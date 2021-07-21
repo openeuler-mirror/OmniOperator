@@ -29,7 +29,7 @@ namespace omniruntime {
 
         TopNOperatorFactory::~TopNOperatorFactory() {}
 
-        Operator *TopNOperatorFactory::createOperator() {
+        Operator *TopNOperatorFactory::CreateOperator() {
             return new TopNOperator(sourceTypes, sourceTypesCount, n, sortCols, sortAscendings, sortNullFirsts,
                                     sortColCount);
         }
@@ -48,28 +48,29 @@ namespace omniruntime {
         TopNOperator::~TopNOperator() {}
 
         int32_t TopNOperator::AddInput(VectorBatch *vectorBatch) {
-            for (int32_t position = 0; position < vectorBatch->getRowCount(); ++position) {
+            for (int32_t position = 0; position < vectorBatch->GetRowCount(); ++position) {
                 if ((pq.size() < n) || compare(position, vectorBatch, pq.top().getVecBatch(), sortColCount, sourceTypes,
                                                sortAscendings) < 0) {
-                    VectorBatch *singleRowTable = new VectorBatch(sourceTypes, sourceTypesCount, 1);
+                    VectorBatch *singleRowTable = new VectorBatch(sourceTypesCount, 1);
+                    singleRowTable->SetVectors(sourceTypes);
 
                     for (int i = 0; i < sourceTypesCount; ++i) {
                         switch ((VecType) sourceTypes[i]) {
                             case OMNI_VEC_TYPE_INT:
-                                ((IntVector *) singleRowTable->getVector(i))->setValue(0,
-                                                                                       ((IntVector *) vectorBatch->getVector(
-                                                                                               i))->getValue(position));
+                                ((IntVector *) singleRowTable->GetVector(i))->SetValue(0,
+                                                                                       ((IntVector *) vectorBatch->GetVector(
+                                                                                               i))->GetValue(position));
                                 break;
                             case OMNI_VEC_TYPE_LONG:
-                                ((LongVector *) singleRowTable->getVector(i))->setValue(0,
-                                                                                        ((LongVector *) vectorBatch->getVector(
-                                                                                                i))->getValue(
+                                ((LongVector *) singleRowTable->GetVector(i))->SetValue(0,
+                                                                                        ((LongVector *) vectorBatch->GetVector(
+                                                                                                i))->GetValue(
                                                                                                 position));
                                 break;
                             case OMNI_VEC_TYPE_DOUBLE:
-                                ((DoubleVector *) singleRowTable->getVector(i))->setValue(0,
-                                                                                          ((DoubleVector *) vectorBatch->getVector(
-                                                                                                  i))->getValue(
+                                ((DoubleVector *) singleRowTable->GetVector(i))->SetValue(0,
+                                                                                          ((DoubleVector *) vectorBatch->GetVector(
+                                                                                                  i))->GetValue(
                                                                                                   position));
                                 break;
                             default:
@@ -93,7 +94,8 @@ namespace omniruntime {
             if (positionCount <= 0) {
                 return 0;
             }
-            VectorBatch *tmpVecBatch = new VectorBatch(sourceTypes, sourceTypesCount, pq.size());
+            VectorBatch *tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
+            tmpVecBatch->SetVectors(sourceTypes);
             int32_t outputCols[sourceTypesCount];
             for (int32_t i = 0; i < sourceTypesCount; ++i) {
                 outputCols[i] = i;
@@ -104,8 +106,8 @@ namespace omniruntime {
                 VectorBatch *pqVecBatch = pq.top().getVecBatch();
 
                 for (int i = 0; i < sourceTypesCount; ++i) {
-                    VectorHelper::setValue(tmpVecBatch->getVector(i), positionCount - rowNum - 1,
-                                           pqVecBatch->getVector(i)->getValues());
+                    VectorHelper::SetValue(tmpVecBatch->GetVector(i), positionCount - rowNum - 1,
+                                           pqVecBatch->GetVector(i)->GetValues());
                 }
                 rowNum++;
                 pq.pop();
@@ -122,8 +124,8 @@ namespace omniruntime {
 
             for (int i = 0; i < sortColCount; ++i) {
                 int32_t colType = sourceTypes[i];
-                compare = OperatorUtil::compareVectorAtPosition((VecType) colType, vectorBatch->getVector(i), position,
-                                                                currentMaxVectorBatch->getVector(i), 0);
+                compare = OperatorUtil::compareVectorAtPosition((VecType) colType, vectorBatch->GetVector(i), position,
+                                                                currentMaxVectorBatch->GetVector(i), 0);
 
                 if (sortAscendings[i] == 0) {
                     compare = -compare;
@@ -171,8 +173,8 @@ namespace omniruntime {
             for (int i = 0; i < left.getSortColCount(); ++i) {
 
                 int32_t colType = left.getSourceTypes()[i];
-                compare = OperatorUtil::compareVectorAtPosition((VecType) colType, left.getVecBatch()->getVector(i), 0,
-                                                                right.getVecBatch()->getVector(i), 0);
+                compare = OperatorUtil::compareVectorAtPosition((VecType) colType, left.getVecBatch()->GetVector(i), 0,
+                                                                right.getVecBatch()->GetVector(i), 0);
 
                 if (left.getSortAscendings()[i] == 0 && right.getSortAscendings()[i] == 0) {
                     compare = -compare;

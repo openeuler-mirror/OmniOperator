@@ -139,7 +139,7 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::createLookupJoinOperatorFa
     return operatorFactory;
 }
 
-Operator *LookupJoinOperatorFactory::createOperator()
+Operator *LookupJoinOperatorFactory::CreateOperator()
 {
     LookupJoinOperator *lookupJoinoperator = new LookupJoinOperator(
         probeTypes,
@@ -265,12 +265,12 @@ JoinProbe::JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols
 {
     Vector **allColumns = (Vector **)malloc(allColsCount * sizeof(Vector *));
     for (int32_t columnIdx = 0; columnIdx < allColsCount; columnIdx++) {
-        allColumns[columnIdx] = input->getVector(columnIdx);
+        allColumns[columnIdx] = input->GetVector(columnIdx);
     }
 
     this->probeAllColumns = allColumns;
     this->probeAllColsCount = allColsCount;
-    this->positionCount = input->getRowCount();
+    this->positionCount = input->GetRowCount();
     this->probeHashColTypes = hashColTypes;
     this->probeHashColsCount = hashColsCount;
     this->probeHashColumns = (Vector **)malloc(hashColsCount * sizeof(Vector *));
@@ -307,7 +307,7 @@ bool JoinProbe::currentRowContainsNull()
     Vector *column;
     for (int32_t columnIdx = 0; columnIdx < probeHashColsCount; columnIdx++) {
         column = probeHashColumns[columnIdx];
-        if (column->isValueNull(position)) {
+        if (column->IsValueNull(position)) {
             return true;
         }
     }
@@ -348,7 +348,7 @@ Vector *buildProbeINT32Column(IntVector *allData, int32_t *probeIndex, int32_t o
     int32_t end = offset + length;
     int32_t index = 0;
     for (int32_t i = start; i < end; i++) {
-        column->setValue(index++, allData->getValue(probeIndex[i]));
+        column->SetValue(index++, allData->GetValue(probeIndex[i]));
     }
 
     return column;
@@ -361,7 +361,7 @@ Vector *buildProbeINT64Column(LongVector *allData, int32_t *probeIndex, int32_t 
     int32_t end = offset + length;
     int32_t index = 0;
     for (int32_t i = start; i < end; i++) {
-        column->setValue(index++, allData->getValue(probeIndex[i]));
+        column->SetValue(index++, allData->GetValue(probeIndex[i]));
     }
 
     return column;
@@ -374,7 +374,7 @@ Vector *buildProbeDOUBLEColumn(DoubleVector *allData, int32_t *probeIndex, int32
     int32_t end = offset + length;
     int32_t index = 0;
     for (int32_t i = start; i < end; i++) {
-        column->setValue(index++, allData->getValue(probeIndex[i]));
+        column->SetValue(index++, allData->GetValue(probeIndex[i]));
     }
 
     return column;
@@ -392,7 +392,7 @@ Vector *buildBuildINT32Column(JoinHashTables *hashTables, int32_t outputCol, int
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         partitionedJoinPosition = buildIndex[rowIdx];
         hashTables->getBuildValue(&value, partitionedJoinPosition, outputCol);
-        column->setValue(index++, value);
+        column->SetValue(index++, value);
     }
 
     return column;
@@ -410,7 +410,7 @@ Vector *buildBuildINT64Column(JoinHashTables *hashTables, int32_t outputCol, int
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         partitionedJoinPosition = buildIndex[rowIdx];
         hashTables->getBuildValue(&value, partitionedJoinPosition, outputCol);
-        column->setValue(index++, value);
+        column->SetValue(index++, value);
     }
 
     return column;
@@ -428,7 +428,7 @@ Vector *buildBuildDOUBLEColumn(JoinHashTables *hashTables, int32_t outputCol, in
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         partitionedJoinPosition = buildIndex[rowIdx];
         hashTables->getBuildValue(&value, partitionedJoinPosition, outputCol);
-        column->setValue(index++, value);
+        column->SetValue(index++, value);
     }
 
     return column;
@@ -438,7 +438,7 @@ void constructProbeColumnsFromSlice(VectorBatch *vectorBatch,
                                     Vector **probeAllColumns,
                                     int32_t *probeOutputCols,
                                     int32_t probeOutputColsCount,
-                                    vector<int32_t> &probeIndex,
+                                    std::vector<int32_t> &probeIndex,
                                     int32_t position,
                                     int32_t rowCount)
 {
@@ -447,8 +447,8 @@ void constructProbeColumnsFromSlice(VectorBatch *vectorBatch,
     Vector *probeColumn;
     for (int32_t columnIdx = 0; columnIdx < probeOutputColsCount; columnIdx++) {
         column = probeAllColumns[probeOutputCols[columnIdx]];
-        probeColumn = column->slice(probeIndex[position], rowCount);
-        vectorBatch->setVector(outputColumnIdx++, probeColumn);
+        probeColumn = column->Slice(probeIndex[position], rowCount);
+        vectorBatch->SetVector(outputColumnIdx++, probeColumn);
     }
 }
 
@@ -461,8 +461,8 @@ void constructProbeColumnsFromReuse(VectorBatch *vectorBatch,
     Vector *column;
     for (int32_t columnIdx = 0; columnIdx < probeOutputColsCount; columnIdx++) {
         column = probeAllColumns[probeOutputCols[columnIdx]];
-        column->getReference()->incRef();
-        vectorBatch->setVector(outputColumnIdx++, column);
+        column->GetReference()->IncRef();
+        vectorBatch->SetVector(outputColumnIdx++, column);
     }
 }
 
@@ -472,7 +472,7 @@ void constructProbeColumnsFromCopy(VectorBatch *vectorBatch,
                                    int32_t *probeTypes,
                                    int32_t *probeOutputCols,
                                    int32_t probeOutputColsCount,
-                                   vector<int32_t> &probeIndex,
+                                   std::vector<int32_t> &probeIndex,
                                    int32_t position,
                                    int32_t rowCount)
 {
@@ -495,7 +495,7 @@ void constructProbeColumnsFromCopy(VectorBatch *vectorBatch,
             default:
                 break;
         }
-        vectorBatch->setVector(outputColumnIdx++, probeColumn);
+        vectorBatch->SetVector(outputColumnIdx++, probeColumn);
     }
 }
 
@@ -504,7 +504,7 @@ void constructProbeColumnsFromPositions(VectorBatch *vectorBatch,
                                         int32_t *probeTypes,
                                         int32_t *probeOutputCols,
                                         int32_t probeOutputColsCount,
-                                        vector<int32_t> &probeIndex,
+                                        std::vector<int32_t> &probeIndex,
                                         int32_t position,
                                         int32_t rowCount)
 {
@@ -515,7 +515,7 @@ void constructProbeColumnsFromPositions(VectorBatch *vectorBatch,
     for (int32_t columnIdx = 0; columnIdx < probeOutputColsCount; columnIdx++) {
         column = probeAllColumns[probeOutputCols[columnIdx]];
         probeColumn = new DictionaryVector(column, &probeIndex[position], rowCount);
-        vectorBatch->setVector(outputColumnIdx++, probeColumn);
+        vectorBatch->SetVector(outputColumnIdx++, probeColumn);
     }
 }
 
@@ -536,7 +536,7 @@ void constructProbeColumns(VectorBatch *vectorBatch,
                                       probeIndex, position, rowCount);*/
         constructProbeColumnsFromPositions(vectorBatch, probeAllColumns, probeTypes, probeOutputCols, probeOutputColsCount,
                                       probeIndex, position, rowCount);
-    } else if (probeLength == probeAllColumns[probeOutputCols[0]]->getSize()) {
+    } else if (probeLength == probeAllColumns[probeOutputCols[0]]->GetSize()) {
         // probeIndices are a simple covering of the vector
         constructProbeColumnsFromReuse(vectorBatch, probeAllColumns, probeOutputCols, probeOutputColsCount);
     } else {
@@ -576,7 +576,7 @@ void constructBuildColumns(VectorBatch *vectorBatch,
             default:
                 break;
         }
-        vectorBatch->setVector(outputColumnIndex++, buildColumn);
+        vectorBatch->SetVector(outputColumnIndex++, buildColumn);
     }
 }
 
