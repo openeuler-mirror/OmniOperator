@@ -13,8 +13,8 @@ const int32_t VECTOR_COUNT = 2;
 const VecType VECTOR_TYPES[] = {OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG};
 
 TEST(ContainerVector, sliceVector) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector* doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -24,31 +24,31 @@ TEST(ContainerVector, sliceVector) {
     vectorAddresses[1] = longVector;
     ContainerVector *originalVector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
                                                           const_cast<VecType *>(VECTOR_TYPES));
-    for (int i = 0; i < originalVector->getSize(); i++) {
+    for (int i = 0; i < originalVector->GetSize(); i++) {
         originalVector->setValue(i, i * 2);
     }
 
     int offset = 0;
-    ContainerVector *slice1 = originalVector->slice(offset, 2);
-    EXPECT_EQ(slice1->getPositionOffset(), offset);
-    EXPECT_EQ(slice1->getSize(), 2);
-    EXPECT_EQ(slice1->getReference()->getRef(), 2);
-    for (int i = 0; i < slice1->getSize(); i++) {
+    ContainerVector *slice1 = originalVector->Slice(offset, 2);
+    EXPECT_EQ(slice1->GetPositionOffset(), offset);
+    EXPECT_EQ(slice1->GetSize(), 2);
+    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
+    for (int i = 0; i < slice1->GetSize(); i++) {
         EXPECT_EQ(slice1->getValue(i), originalVector->getValue(i + offset));
     }
 
     delete originalVector;
-    EXPECT_EQ(slice1->getReference()->getRef(), 1);
+    EXPECT_EQ(slice1->GetReference()->GetRef(), 1);
 
     delete slice1;
 
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(ContainerVector, setAndGetValue) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector* doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -65,7 +65,7 @@ TEST(ContainerVector, setAndGetValue) {
         EXPECT_EQ(vector->getValue(i), i * 2);
     }
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
@@ -142,8 +142,8 @@ TEST(ContainerVector, setValuesWithoutOffsetOutOfBounds) {
 
 // Test is copyPosition
 TEST(ContainerVector, copyPositions) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("longVector");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("longVector");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector* doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -155,21 +155,21 @@ TEST(ContainerVector, copyPositions) {
 
     int *positions = new int[1];
     positions[0] = 1;
-    ContainerVector* copyPostionVector = vector->copyPositions(positions, 0, 1);
+    ContainerVector* copyPostionVector = vector->CopyPositions(positions, 0, 1);
 
-    for (int i = 0; i < copyPostionVector->getSize(); i++) {
+    for (int i = 0; i < copyPostionVector->GetSize(); i++) {
         EXPECT_EQ(copyPostionVector->getValue(i), vector->getValue(positions[i]));
     }
 
     delete vector;
     delete copyPostionVector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test is copyRegion
 TEST(ContainerVector, copyRegion) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("longVector");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("longVector");
     EXPECT_TRUE(allocator != NULL);
 
     DoubleVector* doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -179,20 +179,20 @@ TEST(ContainerVector, copyRegion) {
     vectorAddresses[1] = longVector;
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT, const_cast<VecType*>(VECTOR_TYPES));
 
-    ContainerVector *copyRegionVector = vector->copyRegion(0, 2);
+    ContainerVector *copyRegionVector = vector->CopyRegion(0, 2);
 
-    for (int i = 0; i < copyRegionVector->getSize(); i++) {
+    for (int i = 0; i < copyRegionVector->GetSize(); i++) {
         EXPECT_EQ(copyRegionVector->getValue(i), vector->getValue(i));
     }
 
     delete vector;
     delete copyRegionVector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 TEST(ContainerVector, jniFreeVector) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector* doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -215,7 +215,7 @@ TEST(ContainerVector, getVectorAllocator) {
 
     int64_t doubleVecAddr = vector->getValue(0);
     auto doubleVec = reinterpret_cast<Vector*>(doubleVecAddr);
-    auto allocator = doubleVec->getAllocator();
+    auto allocator = doubleVec->GetAllocator();
 
     delete vector;
 }

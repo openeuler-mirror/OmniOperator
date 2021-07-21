@@ -118,15 +118,15 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 
     VectorBatch *vecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0, data0, DATA_SIZE);
+    column0->SetValues(0, data0, DATA_SIZE);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
+    column2->SetValues(0, data2, DATA_SIZE);
 
-    vecBatch->setVector(0, column0);
-    vecBatch->setVector(1, column1);
-    vecBatch->setVector(2, column2);
+    vecBatch->SetVector(0, column0);
+    vecBatch->SetVector(1, column1);
+    vecBatch->SetVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -159,29 +159,29 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
-    expectCol1->setValues(0, expectData1, DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {3, 0, 4, 1, 5, 2};
     LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
-    expectCol2->setValues(0, expectData2, DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
-    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    expectCol4->SetValues(0, expectData4, DATA_SIZE);
     VectorBatch *expectVecBatch = new VectorBatch(4);
-    expectVecBatch->setVector(0, expectCol1);
-    expectVecBatch->setVector(1, expectCol2);
-    expectVecBatch->setVector(2, expectCol3);
-    expectVecBatch->setVector(3, expectCol4);
+    expectVecBatch->SetVector(0, expectCol1);
+    expectVecBatch->SetVector(1, expectCol2);
+    expectVecBatch->SetVector(2, expectCol3);
+    expectVecBatch->SetVector(3, expectCol4);
     EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    VectorHelper::freeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRowNumber)
@@ -196,15 +196,15 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
 
     VectorBatch *vecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0, data0, DATA_SIZE);
+    column0->SetValues(0, data0, DATA_SIZE);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
+    column2->SetValues(0, data2, DATA_SIZE);
 
-    vecBatch->setVector(0, column0);
-    vecBatch->setVector(1, column1);
-    vecBatch->setVector(2, column2);
+    vecBatch->SetVector(0, column0);
+    vecBatch->SetVector(1, column1);
+    vecBatch->SetVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -237,25 +237,25 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
 
     double expectData1[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
     DoubleVector *expectCol1 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol1->setValues(0, expectData1, DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
-    expectCol2->setValues(0, expectData2, DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, DATA_SIZE);
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     LongVector *expectCol3 = new LongVector(nullptr, DATA_SIZE);
-    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, DATA_SIZE);
     VectorBatch *expectVecBatch = new VectorBatch(3);
-    expectVecBatch->setVector(0, expectCol1);
-    expectVecBatch->setVector(1, expectCol2);
-    expectVecBatch->setVector(2, expectCol3);
+    expectVecBatch->SetVector(0, expectCol1);
+    expectVecBatch->SetVector(1, expectCol2);
+    expectVecBatch->SetVector(2, expectCol3);
     EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    VectorHelper::freeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRankPartition)
@@ -271,15 +271,15 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     VectorBatch **vecBatches = (VectorBatch **)malloc(1 * sizeof(VectorBatch *));
     VectorBatch *vecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0, data0, DATA_SIZE);
+    column0->SetValues(0, data0, DATA_SIZE);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
+    column2->SetValues(0, data2, DATA_SIZE);
 
-    vecBatch->setVector(0, column0);
-    vecBatch->setVector(1, column1);
-    vecBatch->setVector(2, column2);
+    vecBatch->SetVector(0, column0);
+    vecBatch->SetVector(1, column1);
+    vecBatch->SetVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -312,30 +312,30 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
-    expectCol1->setValues(0, expectData1, DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
-    expectCol2->setValues(0, expectData2, DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 2, 1, 2};
     LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
-    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    expectCol4->SetValues(0, expectData4, DATA_SIZE);
 
     VectorBatch *expectVecBatch = new VectorBatch(4);
-    expectVecBatch->setVector(0, expectCol1);
-    expectVecBatch->setVector(1, expectCol2);
-    expectVecBatch->setVector(2, expectCol3);
-    expectVecBatch->setVector(3, expectCol4);
+    expectVecBatch->SetVector(0, expectCol1);
+    expectVecBatch->SetVector(1, expectCol2);
+    expectVecBatch->SetVector(2, expectCol3);
+    expectVecBatch->SetVector(3, expectCol4);
     EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    VectorHelper::freeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRank)
@@ -350,15 +350,15 @@ TEST(NativeOmniWindowOperatorTest, testRank)
 
     VectorBatch *vecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0, data0, DATA_SIZE);
+    column0->SetValues(0, data0, DATA_SIZE);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
+    column2->SetValues(0, data2, DATA_SIZE);
 
-    vecBatch->setVector(0, column0);
-    vecBatch->setVector(1, column1);
-    vecBatch->setVector(2, column2);
+    vecBatch->SetVector(0, column0);
+    vecBatch->SetVector(1, column1);
+    vecBatch->SetVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -391,29 +391,29 @@ TEST(NativeOmniWindowOperatorTest, testRank)
 
     int64_t expectData1[DATA_SIZE] = {8, 8, 5, 4, 2, 1};
     LongVector *expectCol1 = new LongVector(nullptr, DATA_SIZE);
-    expectCol1->setValues(0, expectData1, DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, DATA_SIZE);
     double expectData2[DATA_SIZE] = {6.6, 3.3, 1.1, 2.2, 4.4, 5.5};
     DoubleVector *expectCol2 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol2->setValues(0, expectData2, DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, DATA_SIZE);
     int32_t expectData3[DATA_SIZE] = {0, 0, 2, 1, 2, 1};
     IntVector *expectCol3 = new IntVector(nullptr, DATA_SIZE);
-    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 1, 3, 4, 5, 6};
     LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
-    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    expectCol4->SetValues(0, expectData4, DATA_SIZE);
     VectorBatch *expectVecBatch = new VectorBatch(4);
-    expectVecBatch->setVector(0, expectCol1);
-    expectVecBatch->setVector(1, expectCol2);
-    expectVecBatch->setVector(2, expectCol3);
-    expectVecBatch->setVector(3, expectCol4);
+    expectVecBatch->SetVector(0, expectCol1);
+    expectVecBatch->SetVector(1, expectCol2);
+    expectVecBatch->SetVector(2, expectCol3);
+    expectVecBatch->SetVector(3, expectCol4);
     EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    VectorHelper::freeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
@@ -428,15 +428,15 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 
     VectorBatch *vecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0, data0, DATA_SIZE);
+    column0->SetValues(0, data0, DATA_SIZE);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
+    column2->SetValues(0, data2, DATA_SIZE);
 
-    vecBatch->setVector(0, column0);
-    vecBatch->setVector(1, column1);
-    vecBatch->setVector(2, column2);
+    vecBatch->SetVector(0, column0);
+    vecBatch->SetVector(1, column1);
+    vecBatch->SetVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -469,33 +469,33 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
 
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
-    expectCol1->setValues(0, expectData1, DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
-    expectCol2->setValues(0, expectData2, DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {1, 1, 1, 2, 1, 2};
     LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
-    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    expectCol4->SetValues(0, expectData4, DATA_SIZE);
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     LongVector *expectCol5 = new LongVector(nullptr, DATA_SIZE);
-    expectCol5->setValues(0, expectData5, DATA_SIZE);
+    expectCol5->SetValues(0, expectData5, DATA_SIZE);
     VectorBatch *expectVecBatch = new VectorBatch(5);
-    expectVecBatch->setVector(0, expectCol1);
-    expectVecBatch->setVector(1, expectCol2);
-    expectVecBatch->setVector(2, expectCol3);
-    expectVecBatch->setVector(3, expectCol4);
-    expectVecBatch->setVector(4, expectCol5);
+    expectVecBatch->SetVector(0, expectCol1);
+    expectVecBatch->SetVector(1, expectCol2);
+    expectVecBatch->SetVector(2, expectCol3);
+    expectVecBatch->SetVector(3, expectCol4);
+    expectVecBatch->SetVector(4, expectCol5);
     EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    VectorHelper::freeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
 TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
@@ -510,15 +510,15 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
 
     VectorBatch *vecBatch = new VectorBatch(3);
     IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0, data0, DATA_SIZE);
+    column0->SetValues(0, data0, DATA_SIZE);
     LongVector *column1 = new LongVector(nullptr, DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
+    column1->SetValues(0, data1, DATA_SIZE);
     DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
+    column2->SetValues(0, data2, DATA_SIZE);
 
-    vecBatch->setVector(0, column0);
-    vecBatch->setVector(1, column1);
-    vecBatch->setVector(2, column2);
+    vecBatch->SetVector(0, column0);
+    vecBatch->SetVector(1, column1);
+    vecBatch->SetVector(2, column2);
 
     int32_t rowCount = DATA_SIZE;
     int32_t rowCounts[1] = {rowCount};
@@ -551,43 +551,43 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
 
     int32_t expectData1[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     IntVector *expectCol1 = new IntVector(nullptr, DATA_SIZE);
-    expectCol1->setValues(0, expectData1, DATA_SIZE);
+    expectCol1->SetValues(0, expectData1, DATA_SIZE);
     int64_t expectData2[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     LongVector *expectCol2 = new LongVector(nullptr, DATA_SIZE);
-    expectCol2->setValues(0, expectData2, DATA_SIZE);
+    expectCol2->SetValues(0, expectData2, DATA_SIZE);
     double expectData3[DATA_SIZE] = {1.1, 2.2, 3.3, 4.4, 5.5, 6.6};
     DoubleVector *expectCol3 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol3->setValues(0, expectData3, DATA_SIZE);
+    expectCol3->SetValues(0, expectData3, DATA_SIZE);
     int64_t expectData4[DATA_SIZE] = {5, 9, 12, 14, 15, 15};
     LongVector *expectCol4 = new LongVector(nullptr, DATA_SIZE);
-    expectCol4->setValues(0, expectData4, DATA_SIZE);
+    expectCol4->SetValues(0, expectData4, DATA_SIZE);
     int64_t expectData5[DATA_SIZE] = {1, 2, 3, 4, 5, 6};
     LongVector *expectCol5 = new LongVector(nullptr, DATA_SIZE);
-    expectCol5->setValues(0, expectData5, DATA_SIZE);
+    expectCol5->SetValues(0, expectData5, DATA_SIZE);
     double expectData6[DATA_SIZE] = {5.0, 4.5, 4.0, 3.5, 3.0, 2.5};
     DoubleVector *expectCol6 = new DoubleVector(nullptr, DATA_SIZE);
-    expectCol6->setValues(0, expectData6, DATA_SIZE);
+    expectCol6->SetValues(0, expectData6, DATA_SIZE);
     int32_t expectData7[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     IntVector *expectCol7 = new IntVector(nullptr, DATA_SIZE);
-    expectCol7->setValues(0, expectData7, DATA_SIZE);
+    expectCol7->SetValues(0, expectData7, DATA_SIZE);
     int64_t expectData8[DATA_SIZE] = {5, 4, 3, 2, 1, 0};
     LongVector *expectCol8 = new LongVector(nullptr, DATA_SIZE);
-    expectCol8->setValues(0, expectData8, DATA_SIZE);
+    expectCol8->SetValues(0, expectData8, DATA_SIZE);
     VectorBatch *expectVecBatch = new VectorBatch(8);
-    expectVecBatch->setVector(0, expectCol1);
-    expectVecBatch->setVector(1, expectCol2);
-    expectVecBatch->setVector(2, expectCol3);
-    expectVecBatch->setVector(3, expectCol4);
-    expectVecBatch->setVector(4, expectCol5);
-    expectVecBatch->setVector(5, expectCol6);
-    expectVecBatch->setVector(6, expectCol7);
-    expectVecBatch->setVector(7, expectCol8);
+    expectVecBatch->SetVector(0, expectCol1);
+    expectVecBatch->SetVector(1, expectCol2);
+    expectVecBatch->SetVector(2, expectCol3);
+    expectVecBatch->SetVector(3, expectCol4);
+    expectVecBatch->SetVector(4, expectCol5);
+    expectVecBatch->SetVector(5, expectCol6);
+    expectVecBatch->SetVector(6, expectCol7);
+    expectVecBatch->SetVector(7, expectCol8);
     EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    VectorHelper::freeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatches(outputVecBatches);
 }

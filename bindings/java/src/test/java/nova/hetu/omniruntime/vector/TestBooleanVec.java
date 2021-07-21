@@ -8,17 +8,23 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestBooleanVec
-{
+/**
+ * test boolean vec
+ */
+public class TestBooleanVec {
+    /**
+     * tear down
+     */
     @AfterClass
-    public void tearDown()
-    {
+    public void tearDown() {
         VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
+    /**
+     * test new vector
+     */
     @Test
-    public void testNewVector()
-    {
+    public void testNewVector() {
         BooleanVec vector1 = new BooleanVec(256);
         assertEquals(vector1.getSize(), 256);
         assertEquals(vector1.getOffset(), 0);
@@ -34,9 +40,11 @@ public class TestBooleanVec
         vector2.close();
     }
 
+    /**
+     * test slice
+     */
     @Test
-    public void testSlice()
-    {
+    public void testSlice() {
         BooleanVec originalVec = new BooleanVec(10);
         for (int i = 0; i < originalVec.getSize(); i++) {
             originalVec.set(i, i % 2 == 0);
@@ -59,9 +67,11 @@ public class TestBooleanVec
         slice2.close();
     }
 
+    /**
+     * test set and get value
+     */
     @Test
-    public void testSetAndGetValue()
-    {
+    public void testSetAndGetValue() {
         final int size = 1024;
         BooleanVec vec1 = new BooleanVec(size);
         for (int i = 0; i < size; i++) {
@@ -79,9 +89,11 @@ public class TestBooleanVec
         vec1.close();
     }
 
+    /**
+     * test set values
+     */
     @Test
-    public void testSetValues()
-    {
+    public void testSetValues() {
         boolean[] values = {true, false, false, true, true};
         BooleanVec vector1 = new BooleanVec(values.length);
         vector1.put(values, 0, 0, values.length);
@@ -98,9 +110,11 @@ public class TestBooleanVec
         vector2.close();
     }
 
+    /**
+     * test value null
+     */
     @Test
-    public void testValueNull()
-    {
+    public void testValueNull() {
         BooleanVec vector1 = new BooleanVec(256);
         for (int i = 0; i < vector1.getSize(); i++) {
             if (i % 5 == 0) {
@@ -122,9 +136,11 @@ public class TestBooleanVec
         vector1.close();
     }
 
+    /**
+     * test copy positions
+     */
     @Test
-    public void testCopyPositions()
-    {
+    public void testCopyPositions() {
         BooleanVec originalVector = new BooleanVec(4);
         for (int i = 0; i < originalVector.getSize(); i++) {
             originalVector.set(i, i % 2 == 0);
@@ -141,9 +157,11 @@ public class TestBooleanVec
         copyPositionVector.close();
     }
 
+    /**
+     * test copy region
+     */
     @Test
-    public void testCopyRegion()
-    {
+    public void testCopyRegion() {
         BooleanVec originalVector = new BooleanVec(4);
         for (int i = 0; i < 4; i++) {
             originalVector.set(i, i % 2 == 0);

@@ -12,21 +12,21 @@ bool columnMatch(Vector *actualColumn, Vector *expectColumn);
 
 bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
-    if (outputPages->getRowCount() != expectPage->getRowCount()) {
+    if (outputPages->GetRowCount() != expectPage->GetRowCount()) {
         return false;
     }
 
-    int32_t columnNumber = outputPages->getVectorCount();
-    if (columnNumber != expectPage->getVectorCount()) {
+    int32_t columnNumber = outputPages->GetVectorCount();
+    if (columnNumber != expectPage->GetVectorCount()) {
         return false;
     }
 
-    if (!typesMatch(outputPages->getVectorTypes(), expectPage->getVectorTypes(), columnNumber)) {
+    if (!typesMatch(outputPages->GetVectorTypes(), expectPage->GetVectorTypes(), columnNumber)) {
         return false;
     }
 
     for (int32_t i = 0; i < columnNumber; i++) {
-        if (!columnMatch(outputPages->getVector(i), expectPage->getVector(i))) {
+        if (!columnMatch(outputPages->GetVector(i), expectPage->GetVector(i))) {
             return false;
         }
     }
@@ -47,18 +47,18 @@ bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber
 
 bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
 {
-    VecType type = actualVector->getDictionary()->getType();
-    int32_t actualPosition = actualVector->getIds()[position];
-    int32_t expectPosition = expectedVector->getIds()[position];
+    VecType type = actualVector->GetDictionary()->GetType();
+    int32_t actualPosition = actualVector->GetIds()[position];
+    int32_t expectPosition = expectedVector->GetIds()[position];
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
-            int32_t actual = actualVector->getInt(actualPosition);
-            int32_t expect = expectedVector->getInt(expectPosition);
+            int32_t actual = actualVector->GetInt(actualPosition);
+            int32_t expect = expectedVector->GetInt(expectPosition);
             return actual == expect;
         }
         case OMNI_VEC_TYPE_LONG: {
-            int64_t actual = actualVector->getLong(actualPosition);
-            int64_t expect = expectedVector->getLong(expectPosition);
+            int64_t actual = actualVector->GetLong(actualPosition);
+            int64_t expect = expectedVector->GetLong(expectPosition);
             return actual == expect;
         }
         default:
@@ -68,32 +68,32 @@ bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector
 
 bool columnMatch(Vector *actualColumn, Vector *expectColumn)
 {
-    if (actualColumn->getType() != expectColumn->getType()) {
+    if (actualColumn->GetType() != expectColumn->GetType()) {
         return false;
     }
 
-    if (actualColumn->getSize() != expectColumn->getSize()) {
+    if (actualColumn->GetSize() != expectColumn->GetSize()) {
         return false;
     }
 
     bool result = true;
-    for (int32_t i = 0; i < actualColumn->getSize(); i++) {
-        switch (actualColumn->getType()) {
+    for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
+        switch (actualColumn->GetType()) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t actual = ((IntVector *)actualColumn)->getValue(i);
-                int32_t expect = ((IntVector *)expectColumn)->getValue(i);
+                int32_t actual = ((IntVector *)actualColumn)->GetValue(i);
+                int32_t expect = ((IntVector *)expectColumn)->GetValue(i);
                 result = (actual == expect) & result;
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t actual = ((LongVector *)actualColumn)->getValue(i);
-                int64_t expect = ((LongVector *)expectColumn)->getValue(i);
+                int64_t actual = ((LongVector *)actualColumn)->GetValue(i);
+                int64_t expect = ((LongVector *)expectColumn)->GetValue(i);
                 result = (actual == expect) & result;
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double actual = ((DoubleVector *)expectColumn)->getValue(i);
-                double expect = ((DoubleVector *)expectColumn)->getValue(i);
+                double actual = ((DoubleVector *)expectColumn)->GetValue(i);
+                double expect = ((DoubleVector *)expectColumn)->GetValue(i);
                 result = (std::fabs(actual - expect) <= DBL_EPSILON) & result;
                 break;
             }
@@ -132,25 +132,25 @@ omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
 
 void printVecBatch(VectorBatch* vecBatch)
 {
-    int32_t vectorCount = vecBatch->getVectorCount();
-    for (int32_t rowIdx = 0; rowIdx < vecBatch->getVector(0)->getSize(); ++rowIdx) {
+    int32_t vectorCount = vecBatch->GetVectorCount();
+    for (int32_t rowIdx = 0; rowIdx < vecBatch->GetVector(0)->GetSize(); ++rowIdx) {
         for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
-            auto vecType = vecBatch->getVector(colIdx)->getType();
-            auto vector = vecBatch->getVector(colIdx);
+            auto vecType = vecBatch->GetVector(colIdx)->GetType();
+            auto vector = vecBatch->GetVector(colIdx);
             switch (vecType) {
                 case OMNI_VEC_TYPE_INT: {
                     IntVector* vec = (IntVector*)vector;
-                    std::cout << vec->getValue(rowIdx) << "   ";
+                    std::cout << vec->GetValue(rowIdx) << "   ";
                     break;
                 }
                 case OMNI_VEC_TYPE_LONG: {
                     LongVector* vec = (LongVector*)vector;
-                    std::cout << vec->getValue(rowIdx) << "   ";
+                    std::cout << vec->GetValue(rowIdx) << "   ";
                     break;
                 }
                 case OMNI_VEC_TYPE_DOUBLE: {
                     DoubleVector* vec = (DoubleVector*)vector;
-                    std::cout << vec->getValue(rowIdx) << "   ";
+                    std::cout << vec->GetValue(rowIdx) << "   ";
                     break;
                 }
                 default:

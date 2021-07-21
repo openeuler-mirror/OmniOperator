@@ -40,7 +40,7 @@ void WindowPartition::processNextRow(VectorBatch *vecBatch, int32_t index, int32
 
     for (int32_t i = 0; i < windowFunctions.size(); i++) {
         Range *range = getFrameRange();
-        windowFunctions[i]->processRow(vecBatch->getVector(channel), index, peerGroupStart - partitionStart,
+        windowFunctions[i]->processRow(vecBatch->GetVector(channel), index, peerGroupStart - partitionStart,
             peerGroupEnd - partitionStart - 1, range->getStart(), range->getEnd());
         channel++;
         delete range;

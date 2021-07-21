@@ -11,7 +11,7 @@ class PagesIndex
 public:
     PagesIndex(int32_t *types, int32_t typesCount);
     ~PagesIndex();
-    int32_t addVecBatches(vector<VectorBatch *> &vecBatches);
+    int32_t addVecBatches(std::vector<VectorBatch *> &vecBatches);
     void sort(
         int32_t *sortCols,
         int32_t *sortColTypes,

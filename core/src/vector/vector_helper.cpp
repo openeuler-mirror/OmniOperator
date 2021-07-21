@@ -1,28 +1,31 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/16/21.
 //
 
 #include "vector_helper.h"
 
-void VectorHelper::freeVecBatch(VectorBatch *vecBatch)
+void VectorHelper::FreeVecBatch(VectorBatch *vecBatch)
 {
-    vecBatch->freeAllVectors();
+    vecBatch->FreeAllVectors();
     delete vecBatch;
 }
 
-void VectorHelper::freeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount)
+void VectorHelper::FreeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount)
 {
     for (int i = 0; i < vecBatchCount; ++i) {
-        vecBatches[i]->freeAllVectors();
+        vecBatches[i]->FreeAllVectors();
         delete vecBatches[i];
     }
     delete[] vecBatches;
 }
 
-void VectorHelper::freeVecBatches(vector<VectorBatch *> &vecBatches)
+void VectorHelper::FreeVecBatches(std::vector<VectorBatch *> &vecBatches)
 {
     for (int i = 0; i < vecBatches.size(); ++i) {
-        vecBatches[i]->freeAllVectors();
+        vecBatches[i]->FreeAllVectors();
         delete vecBatches[i];
     }
 }

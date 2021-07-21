@@ -33,7 +33,7 @@ public:
             int32_t *sortNullFirsts,
             int32_t sortColCount);
 
-    Operator *createOperator();
+    Operator *CreateOperator();
 
     int32_t *getSourceTypes() { return sourceTypes; }
 
@@ -105,7 +105,7 @@ private:
     int32_t *sortNullFirsts;
     int32_t sortColCount;
     PagesIndex *pagesIndex;
-    vector<VectorBatch *> inputVecBatches;
+    std::vector<VectorBatch *> inputVecBatches;
 };
 
 int32_t getMaxRowCount(int32_t *sourceTypes, int32_t *outputCols, int32_t outputColsCount);

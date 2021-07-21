@@ -17,33 +17,27 @@
 class ContainerVector : public FixedWidthVector<int64_t> {
 public:
     ContainerVector(VectorAllocator* allocator, int32_t positionCount, Vector** fieldVectors, int32_t vectorCount, VecType types[]) :
-    vectorCount(vectorCount), positionCount(positionCount), FixedWidthVector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER)
+    FixedWidthVector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER), vectorCount(vectorCount), positionCount(positionCount)
     {
         // ????? use setValues
         for(int32_t i = 0; i < vectorCount; ++i) {
             setValue(i, reinterpret_cast<int64_t>(fieldVectors[i]));
             this->vecTypes.push_back(types[i]);
         }
-//        for (int32_t i = 0; i < vectorCount; ++i) {
-//            std::cout << "get value addr : " << getValue(i) << std::endl;
-//        }
     }
-    ContainerVector *slice(int32_t positionOffset, int32_t length) override;
-    ContainerVector *copyPositions(int32_t *positions, int32_t offset, int32_t length) override;
-    ContainerVector *copyRegion(int32_t positionOffset, int32_t length) override;
-    void setValues(int32_t startIndex, int64_t *values, int32_t length) override;
-    void append(Vector *other, int positionOffset, int length) override;
+    ContainerVector *Slice(int32_t positionOffset, int32_t length) override;
+    ContainerVector *CopyPositions(const int32_t *positions, int32_t offset, int32_t length) override;
+    ContainerVector *CopyRegion(int32_t positionOffset, int32_t length) override;
+    void SetValues(int32_t startIndex, const int64_t *values, int32_t length) override;
+    void Append(Vector *other, int positionOffset, int length) override;
 
     // inline for high performance.
     int64_t getValue(int32_t index) {
-        ASSERT(index < getSize());
         return reinterpret_cast<uintptr_t*>(valuesAddress)[index];
     };
 
     // inline for high performance.
     void setValue(int32_t index, int64_t value) {
-        ASSERT(getReference()->isWritable());
-        ASSERT((uint)index < getSize());
         reinterpret_cast<int64_t*>(valuesAddress)[index] = value;
     }
 
@@ -56,7 +50,9 @@ public:
     {
         return vecTypes;
     }
-    
+
+    ~ContainerVector() {}
+
 private:
     static const int32_t BYTES = sizeof(int64_t);
     std::vector<VecType> vecTypes;

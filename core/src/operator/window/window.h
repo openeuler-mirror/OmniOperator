@@ -27,7 +27,7 @@ public:
         int32_t preSortedChannelPrefix, int32_t expectedPositions, int32_t *allTypes, int32_t allCount,
         int32_t *argumentChannels, int32_t argumentChannelsCount);
 
-    Operator *createOperator();
+    Operator *CreateOperator();
 
     int32_t *getSourceTypes() const
     {

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/9/21.
 //
@@ -9,35 +12,50 @@
 #include "varchar_vector.h"
 #include "container_vector.h"
 
-VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount) {
-    vectors = new Vector *[vectorCount];
-    vectorTypes = new VecType[vectorCount];
-    rowCount = 0;
+VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount), rowCount(0)
+{
+    vectors = nullptr;
+    vectorTypes = nullptr;
+    Init();
 }
 
-VectorBatch::~VectorBatch() {
+void VectorBatch::Init()
+{
+    if (vectorCount < 0) {
+        return;
+    }
+    vectors = new Vector *[vectorCount];
+    vectorTypes = new VecType[vectorCount];
+}
+
+VectorBatch::~VectorBatch()
+{
     delete[] vectors;
     delete[] vectorTypes;
 }
 
-// This constructor should not exist!
-VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCount(vectorCount) {
-    vectors = new Vector *[vectorCount];
-    vectorTypes = new VecType[vectorCount];
-    this->rowCount = rowCount;
+VectorBatch::VectorBatch(int vectorCount, int rowCount) : vectorCount(vectorCount), rowCount(rowCount)
+{
+    vectors = nullptr;
+    vectorTypes = nullptr;
+}
+
+void VectorBatch::SetVectors(int *types)
+{
+    Init();
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
-        vectorTypes[colIndex] = (VecType) types[colIndex];
+        vectorTypes[colIndex] = (VecType)types[colIndex];
         switch (types[colIndex]) {
             case OMNI_VEC_TYPE_INT: {
-                setVector(colIndex, new IntVector(nullptr, rowCount));
+                SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                setVector(colIndex, new LongVector(nullptr, rowCount));
+                SetVector(colIndex, new LongVector(nullptr, rowCount));
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                setVector(colIndex, new DoubleVector(nullptr, rowCount));
+                SetVector(colIndex, new DoubleVector(nullptr, rowCount));
                 break;
             }
             case OMNI_VEC_TYPE_CONTAINER: {
@@ -50,19 +68,19 @@ VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCoun
                 vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
                 vecTypes[1] = OMNI_VEC_TYPE_LONG;
                 ContainerVector* containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
-                setVector(colIndex, containerVector);
+                SetVector(colIndex, containerVector);
                 break;
             }
             // TODO: add short support to codegen
             case OMNI_VEC_TYPE_SHORT: {
-                setVector(colIndex, new IntVector(nullptr, rowCount));
+                SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }
             case OMNI_VEC_TYPE_VARCHAR: {
-                VectorAllocator* va = nullptr;
+                VectorAllocator *va = nullptr;
                 // TODO: set capacity appropriately
                 // capacity = rowCount * 50 can't handle a vector of strings with average length above 50
-                setVector(colIndex, new VarcharVector(va, rowCount * 50, rowCount));
+                SetVector(colIndex, new VarcharVector(va, rowCount * 50, rowCount));
             }
             // TODO: support other types!!!
             default: {
@@ -72,36 +90,42 @@ VectorBatch::VectorBatch(int *types, int vectorCount, int rowCount) : vectorCoun
     }
 }
 
-void VectorBatch::setVector(int index, Vector *vector) {
+void VectorBatch::SetVector(int index, Vector *vector)
+{
     vectors[index] = vector;
-    vectorTypes[index] = vector->getType();
+    vectorTypes[index] = vector->GetType();
     if (rowCount == 0) {
-        rowCount = vector->getSize();
+        rowCount = vector->GetSize();
     }
-    ASSERT(rowCount == vector->getSize())
 }
 
-Vector *VectorBatch::getVector(int index) {
+Vector *VectorBatch::GetVector(int index)
+{
     return vectors[index];
 }
 
-Vector **VectorBatch::getVectors() {
+Vector **VectorBatch::GetVectors() const
+{
     return vectors;
 }
 
-int VectorBatch::getVectorCount() {
+int VectorBatch::GetVectorCount()
+{
     return vectorCount;
 }
 
-int VectorBatch::getRowCount() {
+int VectorBatch::GetRowCount()
+{
     return rowCount;
 }
 
-VecType * VectorBatch::getVectorTypes() {
+VecType *VectorBatch::GetVectorTypes() const
+{
     return vectorTypes;
 }
 
-void VectorBatch::freeAllVectors() {
+void VectorBatch::FreeAllVectors()
+{
     for (int vecIndex = 0; vecIndex < vectorCount; ++vecIndex) {
         delete vectors[vecIndex];
         vectors[vecIndex] = nullptr;

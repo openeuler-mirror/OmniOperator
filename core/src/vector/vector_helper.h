@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/16/21.
 //
@@ -14,46 +17,45 @@
 
 class VectorHelper {
 public:
-
-    static void setValue(Vector *vector, int32_t index, void *value)
+    static void SetValue(Vector *vector, int32_t index, void *value)
     {
-        switch (vector->getType()) {
+        switch (vector->GetType()) {
             case OMNI_VEC_TYPE_INT:
-                ((IntVector *) vector)->setValue(index, *(int32_t *) value);
+                ((IntVector *)vector)->SetValue(index, *(int32_t *)value);
                 break;
             case OMNI_VEC_TYPE_LONG:
-                ((LongVector *) vector)->setValue(index, *(int64_t *) value);
+                ((LongVector *)vector)->SetValue(index, *(int64_t *)value);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                ((DoubleVector *) vector)->setValue(index, *(double *) value);
+                ((DoubleVector *)vector)->SetValue(index, *(double *)value);
                 break;
             default:
                 break;
         }
     }
 
-    static void getValue(Vector *vector, int32_t index, void *value)
+    static void GetValue(Vector *vector, int32_t index, void *value)
     {
-        switch (vector->getType()) {
+        switch (vector->GetType()) {
             case OMNI_VEC_TYPE_INT:
-                *(int32_t *) value = ((IntVector *) vector)->getValue(index);
+                *(int32_t *)value = ((IntVector *)vector)->GetValue(index);
                 break;
             case OMNI_VEC_TYPE_LONG:
-                *(int64_t *) value = ((LongVector *) vector)->getValue(index);
+                *(int64_t *)value = ((LongVector *)vector)->GetValue(index);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                *(double *) value = ((DoubleVector *) vector)->getValue(index);
+                *(double *)value = ((DoubleVector *)vector)->GetValue(index);
                 break;
             default:
                 break;
         }
     }
 
-    static void freeVecBatch(VectorBatch *vecBatch);
+    static void FreeVecBatch(VectorBatch *vecBatch);
 
-    static void freeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount);
+    static void FreeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount);
 
-    static void freeVecBatches(vector<VectorBatch *> &vecBatches);
+    static void FreeVecBatches(std::vector<VectorBatch *> &vecBatches);
 };
 
-#endif //OMNI_RUNTIME_VECTOR_HELPER_H
+#endif // OMNI_RUNTIME_VECTOR_HELPER_H

@@ -63,14 +63,14 @@ void RankFunction::processRow(Vector *column, int32_t index, bool newPeerGroup, 
     } else {
         count++;
     }
-    VectorHelper::setValue(column, index, &rank);
+    VectorHelper::SetValue(column, index, &rank);
 }
 
 void RowNumberFunction::processRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
     int32_t currentPosition)
 {
     int64_t value = currentPosition + 1;
-    VectorHelper::setValue(column, index, &value);
+    VectorHelper::SetValue(column, index, &value);
 }
 
 AggregateWindowFunction::~AggregateWindowFunction() {}
@@ -144,13 +144,13 @@ void AggregateWindowFunction::evaluateFinal(omniruntime::op::Aggregator *pAggreg
         case WIN_SUM:
         case WIN_MAX:
         case WIN_MIN:
-            VectorHelper::setValue(pColumn, index, state.val);
+            VectorHelper::SetValue(pColumn, index, state.val);
             break;
         case WIN_COUNT:
-            VectorHelper::setValue(pColumn, index, (void *)(&state.count));
+            VectorHelper::SetValue(pColumn, index, (void *)(&state.count));
             break;
         case WIN_AVG:
-            VectorHelper::setValue(pColumn, index, state.avgVal);
+            VectorHelper::SetValue(pColumn, index, state.avgVal);
             break;
         default:
             break;
@@ -186,21 +186,21 @@ void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
         int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
         int32_t leftColumnPosition = decodePosition(leftValueAddress);
         Vector *tempColumn = leftColumns[argumentChannels][leftColumnIndex];
-        if (!tempColumn->isValueNull(leftColumnPosition)) {
-            switch (tempColumn->getType()) {
+        if (!tempColumn->IsValueNull(leftColumnPosition)) {
+            switch (tempColumn->GetType()) {
                 case OMNI_VEC_TYPE_INT: {
-                    int32_t actual = ((IntVector *)tempColumn)->getValue(leftColumnPosition);
-                    ((IntVector *)vector)->setValue(position - start, actual);
+                    int32_t actual = ((IntVector *)tempColumn)->GetValue(leftColumnPosition);
+                    ((IntVector *)vector)->SetValue(position - start, actual);
                     break;
                 }
                 case OMNI_VEC_TYPE_LONG: {
-                    int64_t actual = ((LongVector *)tempColumn)->getValue(leftColumnPosition);
-                    ((LongVector *)vector)->setValue(position - start, actual);
+                    int64_t actual = ((LongVector *)tempColumn)->GetValue(leftColumnPosition);
+                    ((LongVector *)vector)->SetValue(position - start, actual);
                     break;
                 }
                 case OMNI_VEC_TYPE_DOUBLE: {
-                    double actual = ((DoubleVector *)tempColumn)->getValue(leftColumnPosition);
-                    ((DoubleVector *)vector)->setValue(position - start, actual);
+                    double actual = ((DoubleVector *)tempColumn)->GetValue(leftColumnPosition);
+                    ((DoubleVector *)vector)->SetValue(position - start, actual);
                     break;
                 }
                 default:

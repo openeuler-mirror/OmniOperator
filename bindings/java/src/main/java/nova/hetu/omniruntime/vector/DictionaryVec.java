@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.constants.VecType;
@@ -7,14 +10,17 @@ import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_SHORT;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
 
+/**
+ * dictionary vec
+ *
+ * @since 2021-07-17
+ */
 public class DictionaryVec
-        extends Vec
-{
+        extends Vec {
     private Vec dictionary;
     private int[] ids;
 
-    public DictionaryVec(long nativeVector)
-    {
+    public DictionaryVec(long nativeVector) {
         super(nativeVector);
         long dictionaryNative = getDictionaryNative(nativeVector);
         VecType type = new VecType(getTypeNative(dictionaryNative));
@@ -33,59 +39,66 @@ public class DictionaryVec
         this.ids = getIdsNative(nativeVector);
     }
 
-    public DictionaryVec(Vec dictionary, int[] ids)
-    {
+    public DictionaryVec(Vec dictionary, int[] ids) {
         super(dictionary.getNativeVector());
         this.dictionary = dictionary;
         this.ids = ids;
     }
 
-    public Vec getDictionary()
-    {
+    public Vec getDictionary() {
         return dictionary;
     }
 
-    public int[] getIds()
-    {
+    public int[] getIds() {
         return ids;
     }
 
-    public int getSize()
-    {
+    /**
+     * position array length
+     *
+     * @return position array length
+     */
+    public int getSize() {
         return ids.length;
     }
 
-    public int getInt(int index)
-    {
+    /**
+     * get the specified integer at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return integer value
+     */
+    public int getInt(int index) {
         return ((IntVec) dictionary).get(ids[index]);
     }
 
-    public long getLong(int index)
-    {
+    /**
+     * get the specified long at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return long value
+     */
+    public long getLong(int index) {
         return ((LongVec) dictionary).get(ids[index]);
     }
 
     @Override
-    public Vec slice(int start, int length)
-    {
+    public Vec slice(int start, int length) {
         return null;
     }
 
     @Override
-    public Vec copy()
-    {
+    public Vec copy() {
         return null;
     }
 
     @Override
-    public Vec copyPositions(int[] positions, int offset, int length)
-    {
+    public Vec copyPositions(int[] positions, int offset, int length) {
         return null;
     }
 
     @Override
-    public Vec copyRegion(int positionOffset, int length)
-    {
+    public Vec copyRegion(int positionOffset, int length) {
         return null;
     }
 

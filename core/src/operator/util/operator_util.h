@@ -15,17 +15,17 @@ public:
                                            int32_t rightColumnPosition) {
         switch (colType) {
             case OMNI_VEC_TYPE_INT:
-                return ((IntVector *) leftColumn)->getValue(leftColumnPosition) -
-                       ((IntVector *) rightColumn)->getValue(rightColumnPosition);
+                return ((IntVector *) leftColumn)->GetValue(leftColumnPosition) -
+                       ((IntVector *) rightColumn)->GetValue(rightColumnPosition);
             case OMNI_VEC_TYPE_LONG:
-                return ((LongVector *) leftColumn)->getValue(leftColumnPosition) -
-                       ((LongVector *) rightColumn)->getValue(rightColumnPosition);
+                return ((LongVector *) leftColumn)->GetValue(leftColumnPosition) -
+                       ((LongVector *) rightColumn)->GetValue(rightColumnPosition);
             case OMNI_VEC_TYPE_DOUBLE:
-                if (((DoubleVector *) leftColumn)->getValue(leftColumnPosition) >
-                    ((DoubleVector *) rightColumn)->getValue(rightColumnPosition)) {
+                if (((DoubleVector *) leftColumn)->GetValue(leftColumnPosition) >
+                    ((DoubleVector *) rightColumn)->GetValue(rightColumnPosition)) {
                     return 1;
-                } else if (((DoubleVector *) leftColumn)->getValue(leftColumnPosition) <
-                    ((DoubleVector *) rightColumn)->getValue(rightColumnPosition)) {
+                } else if (((DoubleVector *) leftColumn)->GetValue(leftColumnPosition) <
+                    ((DoubleVector *) rightColumn)->GetValue(rightColumnPosition)) {
                     return -1;
                 } else {
                     return 0;

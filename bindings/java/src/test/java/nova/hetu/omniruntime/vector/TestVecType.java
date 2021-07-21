@@ -11,18 +11,21 @@ import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
-public class TestVecType
-{
+/**
+ * test vec type
+ */
+public class TestVecType {
+    /**
+     * test vec type
+     */
     @Test
-    public void testVecType()
-    {
+    public void testVecType() {
         assertEquals(OMNI_VEC_TYPE_LONG.getValue(), 2);
         VecType type = getVecTypeFromBase("BIGINT");
         assertEquals(type, OMNI_VEC_TYPE_LONG);
     }
 
-    private VecType getVecTypeFromBase(String base)
-    {
+    private VecType getVecTypeFromBase(String base) {
         switch (base) {
             case "INT":
             case "DATE":

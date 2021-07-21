@@ -61,7 +61,7 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::createHashBuilderOperato
     return operatorFactory;
 }
 
-Operator *HashBuilderOperatorFactory::createOperator()
+Operator *HashBuilderOperatorFactory::CreateOperator()
 {
     int32_t partitionIndex = operatorIndex++ % hashTables->getHashTableCount();
     HashBuilderOperator *hashBuilderOperator = new HashBuilderOperator(

@@ -41,23 +41,23 @@ int64_t hashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         column = buildHashColumns[columnIdx][vecBatchIdx];
-        if (column->isValueNull(rowIndex)) {
+        if (column->IsValueNull(rowIndex)) {
             continue;
         }
 
         switch (hashColTypes[columnIdx]) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t intValue = ((IntVector *)column)->getValue(rowIndex);
+                int32_t intValue = ((IntVector *)column)->GetValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)intValue);
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t int64Value = ((LongVector *)column)->getValue(rowIndex);
+                int64_t int64Value = ((LongVector *)column)->GetValue(rowIndex);
                 hash = HashUtil::hashValue(int64Value);
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double doubleValue = ((DoubleVector *)column)->getValue(rowIndex);
+                double doubleValue = ((DoubleVector *)column)->GetValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)doubleValue);
                 break;
             }
@@ -77,7 +77,7 @@ bool PagesHashStrategy::isPositionNull(int32_t pageIndex, int rowIndex)
     Vector *column;
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         column = buildHashColumns[columnIdx][pageIndex];
-        if (column->isValueNull(rowIndex)) {
+        if (column->IsValueNull(rowIndex)) {
             return true;
         }
     }
@@ -126,13 +126,13 @@ bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex,
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        leftValues = leftColumn->getValues();
+        leftValues = leftColumn->GetValues();
         if (isSame) {
             rightValues = leftValues;
         }
         else {
             rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-            rightValues = rightColumn->getValues();
+            rightValues = rightColumn->GetValues();
         }
 
         switch (hashColTypes[columnIdx])
@@ -174,13 +174,13 @@ bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex,
 
         switch (hashColTypes[columnIdx]) {
             case 1:
-                result = intValueEqualsIgnoreNulls((int32_t *)(buildColumn->getValues()), buildRowIndex, (int32_t *)(probeColumn->getValues()), probePosition);
+                result = intValueEqualsIgnoreNulls((int32_t *)(buildColumn->GetValues()), buildRowIndex, (int32_t *)(probeColumn->GetValues()), probePosition);
                 break;
             case 2:
-                result = int64ValueEqualsIgnoreNulls((int64_t *)(buildColumn->getValues()), buildRowIndex, (int64_t *)(probeColumn->getValues()), probePosition);
+                result = int64ValueEqualsIgnoreNulls((int64_t *)(buildColumn->GetValues()), buildRowIndex, (int64_t *)(probeColumn->GetValues()), probePosition);
                 break;
             case 3:
-                result = doubleValueEqualsIgnoreNulls((double *)(buildColumn->getValues()), buildRowIndex, (double *)(probeColumn->getValues()), probePosition);
+                result = doubleValueEqualsIgnoreNulls((double *)(buildColumn->GetValues()), buildRowIndex, (double *)(probeColumn->GetValues()), probePosition);
                 break;
             default:
                 result = false;
@@ -207,8 +207,8 @@ bool PagesHashStrategy::positionEqualsPosition(int32_t leftTableIndex, int32_t l
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-        leftIsNull = leftColumn->isValueNull(leftRowIndex);
-        rightIsNull = rightColumn->isValueNull(rightRowIndex);
+        leftIsNull = leftColumn->IsValueNull(leftRowIndex);
+        rightIsNull = rightColumn->IsValueNull(rightRowIndex);
         if (leftIsNull || rightIsNull) {
             return false;
         }
@@ -216,13 +216,13 @@ bool PagesHashStrategy::positionEqualsPosition(int32_t leftTableIndex, int32_t l
         columnType = buildHashColTypes[columnIdx];
         switch (columnType) {
             case 1:
-                result = intValueEqualsIgnoreNulls((int32_t *)(leftColumn->getValues()), leftRowIndex, (int32_t *)(rightColumn->getValues()), rightRowIndex);
+                result = intValueEqualsIgnoreNulls((int32_t *)(leftColumn->GetValues()), leftRowIndex, (int32_t *)(rightColumn->GetValues()), rightRowIndex);
                 break;
             case 2:
-                result = int64ValueEqualsIgnoreNulls((int64_t *)(leftColumn->getValues()), leftRowIndex, (int64_t *)(rightColumn->getValues()), rightRowIndex);
+                result = int64ValueEqualsIgnoreNulls((int64_t *)(leftColumn->GetValues()), leftRowIndex, (int64_t *)(rightColumn->GetValues()), rightRowIndex);
                 break;
             case 3:
-                result = doubleValueEqualsIgnoreNulls((double *)(leftColumn->getValues()), leftRowIndex, (double *)(rightColumn->getValues()), rightRowIndex);
+                result = doubleValueEqualsIgnoreNulls((double *)(leftColumn->GetValues()), leftRowIndex, (double *)(rightColumn->GetValues()), rightRowIndex);
                 break;
             default:
                 result = false;
@@ -239,12 +239,12 @@ bool PagesHashStrategy::positionEqualsPosition(int32_t leftTableIndex, int32_t l
 
 bool PagesHashStrategy::valuePositionEqualsPosition(VecType type, Vector *leftColumn, int32_t leftRowIndex, Vector *rightColumn, int32_t rightRowIndex)
 {
-    bool leftIsNull = leftColumn->isValueNull(leftRowIndex);
-    bool rightIsNull = rightColumn->isValueNull(rightRowIndex);
+    bool leftIsNull = leftColumn->IsValueNull(leftRowIndex);
+    bool rightIsNull = rightColumn->IsValueNull(rightRowIndex);
     if (leftIsNull || rightIsNull) {
         return leftIsNull && rightIsNull;
     }
-    return valueEqualsValueIgnoreNulls(type, leftColumn->getValues(), leftRowIndex, rightColumn->getValues(), rightRowIndex);
+    return valueEqualsValueIgnoreNulls(type, leftColumn->GetValues(), leftRowIndex, rightColumn->GetValues(), rightRowIndex);
 }
 
 bool PagesHashStrategy::valueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex)

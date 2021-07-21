@@ -22,13 +22,13 @@ namespace omniruntime {
 namespace op {
 class AggregationCommonOperator : public Operator {
 public:
-    AggregationCommonOperator(std::vector<unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
+    AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
         : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial)
     {}
     ~AggregationCommonOperator() override {}
 
 protected:
-    std::vector<unique_ptr<Aggregator>> aggregators;
+    std::vector<std::unique_ptr<Aggregator>> aggregators;
     int inputRaw;
     int outputPartial;
 };

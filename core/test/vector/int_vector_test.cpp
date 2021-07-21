@@ -9,132 +9,132 @@
 #include "int_vector.h"
 
 TEST(IntVector, newVector) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     IntVector *vector = new IntVector(allocator, 256);
-    EXPECT_EQ(vector->getSize(), 256);
-    EXPECT_EQ(vector->getPositionOffset(), 0);
-    EXPECT_EQ(vector->getReference()->getCapacityInBytes(), 1024);
-    EXPECT_EQ(vector->getReference()->getType(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(vector->GetSize(), 256);
+    EXPECT_EQ(vector->GetPositionOffset(), 0);
+    EXPECT_EQ(vector->GetReference()->GetCapacityInBytes(), 1024);
+    EXPECT_EQ(vector->GetReference()->GetType(), OMNI_VEC_TYPE_INT);
     delete vector;
 
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(IntVector, sliceVector) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *originalVector = new IntVector(allocator, 10);
-    for (int i = 0; i < originalVector->getSize(); i++) {
-        originalVector->setValue(i, i * 2);
+    for (int i = 0; i < originalVector->GetSize(); i++) {
+        originalVector->SetValue(i, i * 2);
     }
 
     int offset = 3;
-    IntVector *slice1 = originalVector->slice(offset, 4);
-    EXPECT_EQ(slice1->getPositionOffset(), offset);
-    EXPECT_EQ(slice1->getSize(), 4);
-    EXPECT_EQ(slice1->getReference()->getRef(), 2);
-    for (int i = 0; i < slice1->getSize(); i++) {
-        EXPECT_EQ(slice1->getValue(i), originalVector->getValue(i + offset));
+    IntVector *slice1 = originalVector->Slice(offset, 4);
+    EXPECT_EQ(slice1->GetPositionOffset(), offset);
+    EXPECT_EQ(slice1->GetSize(), 4);
+    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
+    for (int i = 0; i < slice1->GetSize(); i++) {
+        EXPECT_EQ(slice1->GetValue(i), originalVector->GetValue(i + offset));
     }
 
-    IntVector *slice2 = slice1->slice(1, 2);
-    for (int i = 0; i < slice2->getSize(); i++) {
-        EXPECT_EQ(slice2->getValue(i), originalVector->getValue(i + offset + 1));
+    IntVector *slice2 = slice1->Slice(1, 2);
+    for (int i = 0; i < slice2->GetSize(); i++) {
+        EXPECT_EQ(slice2->GetValue(i), originalVector->GetValue(i + offset + 1));
     }
 
     delete originalVector;
-    EXPECT_EQ(slice1->getReference()->getRef(), 2);
+    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
 
     delete slice1;
-    EXPECT_EQ(slice2->getReference()->getRef(), 1);
+    EXPECT_EQ(slice2->GetReference()->GetRef(), 1);
     delete slice2;
 
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(IntVector, setAndGetValue) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
     for (int i = 0; i < 256; i++) {
-        vector->setValue(i, i * 2);
+        vector->SetValue(i, i * 2);
     }
 
     for (int i = 0; i < 256; i++) {
-        EXPECT_EQ(vector->getValue(i), i * 2);
+        EXPECT_EQ(vector->GetValue(i), i * 2);
     }
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
-// Test setValues
-TEST(IntVector, setValues) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+// Test SetValues
+TEST(IntVector, SetValues) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != NULL);
 
     const int size = 5;
     int32_t values[size] = {1, 3, 4, 6, 7};
     int32_t *p = values;
     IntVector *intVector1 = new IntVector(allocator, size);
-    intVector1->setValues(0, p, size);
+    intVector1->SetValues(0, p, size);
     for (int i = 0; i < size; i++) {
-        EXPECT_EQ(intVector1->getValue(i), values[i]);
+        EXPECT_EQ(intVector1->GetValue(i), values[i]);
     }
     
     IntVector *intVector2 = new IntVector(allocator, size);
-    intVector2->setValues(1, p + 2, 3);
+    intVector2->SetValues(1, p + 2, 3);
     for (int i = 0; i < 3; i++) {
-        EXPECT_EQ(intVector2->getValue(i + 1), values[i + 2]);
+        EXPECT_EQ(intVector2->GetValue(i + 1), values[i + 2]);
     }
 
     delete intVector1;
     delete intVector2;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
-TEST(IntVector, setValueOutOfBounds1) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+TEST(IntVector, SetValueOutOfBounds1) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
-    EXPECT_THROW(vector->setValue(256, 256), runtime_error);
+    EXPECT_THROW(vector->SetValue(256, 256), runtime_error);
 
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 #endif
 
 // Test out of bounds
 #ifdef DEBUG
-TEST(IntVector, setValueOutOfBounds2) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+TEST(IntVector, SetValueOutOfBounds2) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
-    EXPECT_THROW(vector->setValue(-1, 256), runtime_error);
+    EXPECT_THROW(vector->SetValue(-1, 256), runtime_error);
 
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 #endif
 
-// Test setValues/get
-TEST(IntVector, setValuesWithoutOffset) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+// Test SetValues/get
+TEST(IntVector, SetValuesWithoutOffset) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
@@ -142,20 +142,20 @@ TEST(IntVector, setValuesWithoutOffset) {
     for (int i = 0; i < 256; i++) {
         value[i] = i * 2;
     }
-    vector->setValues(0, value, 256);
+    vector->SetValues(0, value, 256);
     for (int i = 0; i < 256; i++) {
-        EXPECT_EQ(vector->getValue(i), i * 2);
+        EXPECT_EQ(vector->GetValue(i), i * 2);
     }
 
     delete[] value;
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
-// Test setValues/get with offset
-TEST(IntVector, setValuesWithOffset) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+// Test SetValues/get with offset
+TEST(IntVector, SetValuesWithOffset) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
@@ -163,21 +163,21 @@ TEST(IntVector, setValuesWithOffset) {
     for (int i = 0; i < 256; i++) {
         value[i] = i * 2;
     }
-    vector->setValues(128, &value[128], 128);
+    vector->SetValues(128, &value[128], 128);
     for (int i = 128; i < 256; i++) {
-        EXPECT_EQ(vector->getValue(i), i * 2);
+        EXPECT_EQ(vector->GetValue(i), i * 2);
     }
 
     delete[] value;
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
-TEST(IntVector, setValuesWithoutOffsetOutOfBounds) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+TEST(IntVector, SetValuesWithoutOffsetOutOfBounds) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
@@ -186,89 +186,89 @@ TEST(IntVector, setValuesWithoutOffsetOutOfBounds) {
         value[i] = i * 2;
     }
 
-    EXPECT_THROW(vector->setValues(0, value, 257), runtime_error);
+    EXPECT_THROW(vector->SetValues(0, value, 257), runtime_error);
 
     delete[] value;
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 #endif
 
 // Test is null
-TEST(IntVector, setValueNull) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+TEST(IntVector, SetValueNull) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *vector = new IntVector(allocator, 256);
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
-            vector->setValueNull(i);
+            vector->SetValueNull(i);
         } else {
-            vector->setValue(i, i);
+            vector->SetValue(i, i);
         }
     }
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
-            EXPECT_TRUE(vector->isValueNull(i));
+            EXPECT_TRUE(vector->IsValueNull(i));
         } else {
-            EXPECT_FALSE(vector->isValueNull(i));
+            EXPECT_FALSE(vector->IsValueNull(i));
         }
     }
     delete vector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 // Test is copyPosition
-TEST(IntVector, copyPositions) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("intVector");
+TEST(IntVector, CopyPositions) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("intVector");
     EXPECT_TRUE(allocator != nullptr);
 
     IntVector *originalVector = new IntVector(allocator, 4);
-    for (int i = 0; i < originalVector->getSize(); i++) {
-        originalVector->setValue(i, i);
+    for (int i = 0; i < originalVector->GetSize(); i++) {
+        originalVector->SetValue(i, i);
     }
 
     int *possions = new int[2];
     possions[0] = 1;
     possions[1] = 3;
-    IntVector* copyPostionVector = originalVector->copyPositions(possions, 0, 2);
+    IntVector* copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
 
-    for (int i = 0; i < copyPostionVector->getSize(); i++) {
-        EXPECT_EQ(copyPostionVector->getValue(i), originalVector->getValue(possions[i]));
+    for (int i = 0; i < copyPostionVector->GetSize(); i++) {
+        EXPECT_EQ(copyPostionVector->GetValue(i), originalVector->GetValue(possions[i]));
     }
 
     delete originalVector;
     delete copyPostionVector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
-// Test is copyRegion
-TEST(IntVector, copyRegion) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("intVector");
+// Test is CopyRegion
+TEST(IntVector, CopyRegion) {
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("intVector");
     EXPECT_TRUE(allocator != NULL);
 
     IntVector *originalVector = new IntVector(allocator, 4);
     for (int i = 0; i < 4; i++) {
-        originalVector->setValue(i, i * 2);
+        originalVector->SetValue(i, i * 2);
     }
 
-    IntVector *copyRegionVector = originalVector->copyRegion(2, 2);
+    IntVector *copyRegionVector = originalVector->CopyRegion(2, 2);
 
-    for (int i = 0; i < copyRegionVector->getSize(); i++) {
-        EXPECT_EQ(copyRegionVector->getValue(i), originalVector->getValue(i + 2));
+    for (int i = 0; i < copyRegionVector->GetSize(); i++) {
+        EXPECT_EQ(copyRegionVector->GetValue(i), originalVector->GetValue(i + 2));
     }
 
     delete originalVector;
     delete copyRegionVector;
-    manager.deleteAllocator(&allocator);
+    manager.DeleteAllocator(&allocator);
 }
 
 TEST(IntVector, jniFreeVector) {
-    VectorAllocatorManager manager = VectorAllocatorManager::getInstance();
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
    IntVector *oritianlVector = new IntVector(allocator, 256);

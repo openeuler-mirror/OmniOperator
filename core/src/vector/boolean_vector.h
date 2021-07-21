@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __BOOLEAN_VECTOR__H__
 #define __BOOLEAN_VECTOR__H__
 
@@ -6,14 +9,13 @@
 class BooleanVector : public FixedWidthVector<bool> {
 public:
     BooleanVector(VectorAllocator *allocator, int size);
-    bool getValue(int index) {
-        ASSERT(index < getSize());
-        return  reinterpret_cast<bool *>(valuesAddress)[index + positionOffset];
+    bool GetValue(int index) const
+    {
+        return reinterpret_cast<bool *>(valuesAddress)[index + positionOffset];
     }
-    
-    void setValue(int index, bool value) {
-        ASSERT(getReference()->isWritable());
-        ASSERT((uint)index < getSize());
+
+    void SetValue(int index, bool value)
+    {
         if (value) {
             (reinterpret_cast<bool *>(valuesAddress))[index] = true;
         } else {
@@ -21,18 +23,21 @@ public:
         }
     }
 
-    void setValues(int startIndex, bool *values, int length);
+    void SetValues(int startIndex, const bool *values, int length) override;
 
-    BooleanVector *slice(int positionOffset, int length);
+    BooleanVector *Slice(int positionOffset, int length) override;
 
-    BooleanVector *copyPositions(int *positions, int offset, int length);
+    BooleanVector *CopyPositions(const int *positions, int offset, int length) override;
 
-    BooleanVector *copyRegion(int positionOffset, int length);
+    BooleanVector *CopyRegion(int positionOffset, int length) override;
 
-    void append(Vector *other, int positionOffset, int length);
+    void Append(Vector *other, int positionOffset, int length) override;
+
+    ~BooleanVector() {}
 
 private:
-    BooleanVector(BooleanVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
+    BooleanVector(BooleanVector *vector, int size, int positionOffset)
+        : FixedWidthVector(vector, size, positionOffset) {};
 
     static const int BYTES = 0;
 };

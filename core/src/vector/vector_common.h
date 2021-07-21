@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/16/21.
 //
@@ -13,4 +16,4 @@
 #include "vector.h"
 #include "vector_batch.h"
 
-#endif //OMNI_RUNTIME_VECTOR_COMMON_H
+#endif // OMNI_RUNTIME_VECTOR_COMMON_H

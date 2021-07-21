@@ -114,23 +114,23 @@ int64_t hashRow(int32_t rowIndex, Vector **columns, int32_t *columnTypes, int32_
 
     for (int32_t columnIdx = 0; columnIdx < columnCount; columnIdx++) {
         column = columns[columnIdx];
-        if (column->isValueNull(rowIndex)) {
+        if (column->IsValueNull(rowIndex)) {
             continue;
         }
 
         switch (columnTypes[columnIdx]) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t intValue = ((IntVector *)column)->getValue(rowIndex);
+                int32_t intValue = ((IntVector *)column)->GetValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)intValue);
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t int64Value = ((LongVector *)column)->getValue(rowIndex);
+                int64_t int64Value = ((LongVector *)column)->GetValue(rowIndex);
                 hash = HashUtil::hashValue(int64Value);
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double doubleValue = ((DoubleVector *)column)->getValue(rowIndex);
+                double doubleValue = ((DoubleVector *)column)->GetValue(rowIndex);
                 hash = HashUtil::hashValue((int64_t)doubleValue);
                 break;
             }
@@ -368,7 +368,7 @@ void PagesHash::getBuildValue(void *value, int32_t joinPosition, int32_t outputC
    int32_t vecBatchIndex = decodeSliceIndex(address);
    int32_t rowIndex = decodePosition(address);
 
-   VectorHelper::getValue(pagesHashStrategy->getBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
+   VectorHelper::GetValue(pagesHashStrategy->getBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
 }
 
 int64_t PagesHash::getRawHash(int32_t position)
