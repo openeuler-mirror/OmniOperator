@@ -232,10 +232,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperato
         nullFirstsArr,
         sortColsCount);
     JitContext *jitContext = createSortJitContext(
-        sortOperatorFactory->getSourceTypes(),
+        sortOperatorFactory->GetSourceTypes(),
         sortOperatorFactory->getSourceTypeCount(),
-        sortOperatorFactory->getOutputCols(),
-        sortOperatorFactory->getOutputColCount(),
+        sortOperatorFactory->GetOutputCols(),
+        sortOperatorFactory->GetOutputColCount(),
         sortOperatorFactory->getSortCols(),
         sortOperatorFactory->getSortAscendings(),
         sortOperatorFactory->getSortNullFirsts(),
@@ -367,10 +367,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
         argumentChannelsCount
         );
     JitContext *jitContext = createWindowJitContext(
-        windowOperatorFactory->getSourceTypes(),
+        windowOperatorFactory->GetSourceTypes(),
         windowOperatorFactory->getTypesCount(),
-        windowOperatorFactory->getOutputCols(),
-        windowOperatorFactory->getOutputColsCount(),
+        windowOperatorFactory->GetOutputCols(),
+        windowOperatorFactory->GetOutputColsCount(),
         windowOperatorFactory->getPartitionCols(),
         windowOperatorFactory->getPartitionCount(),
         windowOperatorFactory->getSortCols(),

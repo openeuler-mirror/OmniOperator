@@ -32,7 +32,7 @@ namespace omniruntime {
             std::unique_ptr<llvm::IRBuilder<>> builder;
             std::unique_ptr<llvm::LLVMContext> context;
             std::vector<std::unique_ptr<llvm::Module>> modules;
-            std::string createOperatorSymbol;
+            std::string CreateOperatorSymbol;
 
             llvm::orc::LLJIT *jitter;
 

@@ -63,12 +63,12 @@ JitContext *createTestWindowJitContext(int32_t *sourceTypes, int32_t typesCount,
     compareToSp->addSpecializedParam(3, &p_sortAscendings);
     compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
     compareToSp->addSpecializedParam(5, &p_sortColCount);
-    auto *getOutputSp = new Specialization();
-    getOutputSp->addSpecializedParam(1, &p_outputCols);
-    getOutputSp->addSpecializedParam(2, &p_outputColCount);
-    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
+    auto *GetOutputSp = new Specialization();
+    GetOutputSp->addSpecializedParam(1, &p_outputCols);
+    GetOutputSp->addSpecializedParam(2, &p_outputColCount);
+    GetOutputSp->addSpecializedParam(4, &p_sourceTypes);
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
-        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
+        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *GetOutputSp } };
     auto *windowContext = new omniruntime::jit::Context("window", std::map<std::string, Specialization>(),
         std::vector<std::string>(), std::vector<std::string>(), true);
     auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
@@ -90,16 +90,16 @@ JitContext *createTestWindowJitContext(int32_t *sourceTypes, int32_t typesCount,
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowContext, *sortContext, *aggContext,
         *windowFunctionContext, *windowPartitionContext, *hashUtilContext, *pagesHashStrategyContext,
         *memoryPoolContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->specialize();
+    auto CreateOperatorFunc = jit->specialize();
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+    jitContext->func = reinterpret_cast<uintptr_t>(CreateOperatorFunc);
     return jitContext;
 }
 
 JitContext *createTestWindowJitContextWithFactory(omniruntime::op::WindowOperatorFactory *windowOperatorFactory)
 {
-    return createTestWindowJitContext(windowOperatorFactory->getSourceTypes(), windowOperatorFactory->getTypesCount(),
-        windowOperatorFactory->getOutputCols(), windowOperatorFactory->getOutputColsCount(),
+    return createTestWindowJitContext(windowOperatorFactory->GetSourceTypes(), windowOperatorFactory->getTypesCount(),
+        windowOperatorFactory->GetOutputCols(), windowOperatorFactory->GetOutputColsCount(),
         windowOperatorFactory->getPartitionCols(), windowOperatorFactory->getPartitionCount(),
         windowOperatorFactory->getSortCols(), windowOperatorFactory->getSortAscendings(),
         windowOperatorFactory->getSortNullFirsts(), windowOperatorFactory->getSortColCount(),

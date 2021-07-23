@@ -731,7 +731,7 @@ uint64_t prepare_nogroup()
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
-    nativeOperatorFactory->SetJitContext(jitContext); 
+    nativeOperatorFactory->SetJitContext(jitContext);
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
