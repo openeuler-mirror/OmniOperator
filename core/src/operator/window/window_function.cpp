@@ -162,7 +162,7 @@ void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
     if (start > end) {
         return;
     }
-    Vector ***leftColumns = windowIndex->getPagesIndex()->getColumns();
+    Vector ***leftColumns = windowIndex->getPagesIndex()->GetColumns();
     Vector *vector = 0;
     int rowCount = end - start + 1;
     switch (dataType) {
@@ -182,9 +182,9 @@ void AggregateWindowFunction::accumulate(int32_t start, int32_t end)
             break;
     }
     for (int32_t position = start; position <= end; ++position) {
-        int64_t leftValueAddress = windowIndex->getPagesIndex()->getValueAddresses()[position + windowIndex->getStart()];
-        int32_t leftColumnIndex = decodeSliceIndex(leftValueAddress);
-        int32_t leftColumnPosition = decodePosition(leftValueAddress);
+        int64_t leftValueAddress = windowIndex->getPagesIndex()->GetValueAddresses()[position + windowIndex->getStart()];
+        int32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
+        int32_t leftColumnPosition = DecodePosition(leftValueAddress);
         Vector *tempColumn = leftColumns[argumentChannels][leftColumnIndex];
         if (!tempColumn->IsValueNull(leftColumnPosition)) {
             switch (tempColumn->GetType()) {

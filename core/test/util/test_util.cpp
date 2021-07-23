@@ -7,10 +7,10 @@
 #include "test_util.h"
 #include "../../src/vector/dictionary_vector.h"
 
-bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
-bool columnMatch(Vector *actualColumn, Vector *expectColumn);
+bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
+bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
-bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
+bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
     if (outputPages->GetRowCount() != expectPage->GetRowCount()) {
         return false;
@@ -21,12 +21,12 @@ bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
         return false;
     }
 
-    if (!typesMatch(outputPages->GetVectorTypes(), expectPage->GetVectorTypes(), columnNumber)) {
+    if (!TypesMatch(outputPages->GetVectorTypes(), expectPage->GetVectorTypes(), columnNumber)) {
         return false;
     }
 
     for (int32_t i = 0; i < columnNumber; i++) {
-        if (!columnMatch(outputPages->GetVector(i), expectPage->GetVector(i))) {
+        if (!ColumnMatch(outputPages->GetVector(i), expectPage->GetVector(i))) {
             return false;
         }
     }
@@ -34,7 +34,7 @@ bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
-bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber)
+bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber)
 {
     for (int32_t i = 0; i < columnNumber; i++) {
         if (actualTypes[i] != expectTypes[i]) {
@@ -45,7 +45,7 @@ bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber
     return true;
 }
 
-bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
+bool ValueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
 {
     VecType type = actualVector->GetDictionary()->GetType();
     int32_t actualPosition = actualVector->GetIds()[position];
@@ -66,7 +66,7 @@ bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector
     }
 }
 
-bool columnMatch(Vector *actualColumn, Vector *expectColumn)
+bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 {
     if (actualColumn->GetType() != expectColumn->GetType()) {
         return false;
@@ -98,7 +98,7 @@ bool columnMatch(Vector *actualColumn, Vector *expectColumn)
                 break;
             }
             case OMNI_VEC_TYPE_DICTIONARY: {
-                result = valueMatch((DictionaryVector *)actualColumn, (DictionaryVector *)expectColumn, i);
+                result = ValueMatch((DictionaryVector *) actualColumn, (DictionaryVector *) expectColumn, i);
                 break;
             }
             default:
@@ -112,7 +112,7 @@ bool columnMatch(Vector *actualColumn, Vector *expectColumn)
     return result;
 }
 
-omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
+omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory)
 {
     omniruntime::op::Operator *nativeOperator = nullptr;
 
@@ -130,7 +130,15 @@ omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
     return nativeOperator;
 }
 
-void printVecBatch(VectorBatch* vecBatch)
+void DeleteOperatorFactory(OperatorFactory *operatorFactory)
+{
+    if (operatorFactory->GetJitContext() != nullptr) {
+        delete operatorFactory->GetJitContext();
+    }
+    delete operatorFactory;
+}
+
+void PrintVecBatch(VectorBatch* vecBatch)
 {
     int32_t vectorCount = vecBatch->GetVectorCount();
     for (int32_t rowIdx = 0; rowIdx < vecBatch->GetVector(0)->GetSize(); ++rowIdx) {

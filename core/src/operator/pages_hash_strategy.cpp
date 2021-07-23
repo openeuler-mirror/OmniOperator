@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ */
 #include "pages_hash_strategy.h"
 #include "hash_util.h"
 #include "pages_index.h"
@@ -5,39 +8,46 @@
 #include "optimization.h"
 #include "../jit/annotation.h"
 
-PagesHashStrategy::PagesHashStrategy(Vector ***columns, int32_t *columnTypes, int32_t columnCount, int32_t *hashCols, int32_t hashColsCount)
+#include <memory>
+
+PagesHashStrategy::PagesHashStrategy(Vector ***columns, int32_t *columnTypes, int32_t columnCount, int32_t *hashCols,
+    int32_t hashColsCount)
 {
     this->buildColumns = columns;
     this->buildColumnCount = columnCount;
     this->buildHashColsCount = hashColsCount;
-    this->buildHashColTypes = new int32_t[hashColsCount];
-
-    if(hashColsCount == 0) {
-        this->buildHashColumns= nullptr;
-    }
-    else{
-        this->buildHashColumns = new Vector**[hashColsCount];
-        int32_t hashColumn;
+    if (hashColsCount > 0) {
+        this->buildHashColTypes = std::make_unique<int32_t[]>(hashColsCount).release();
+        this->buildHashColumns = std::make_unique<Vector **[]>(hashColsCount).release();
+        int32_t hashColumn = 0;
         for (int32_t i = 0; i < hashColsCount; i++) {
             hashColumn = hashCols[i];
             buildHashColumns[i] = columns[hashColumn];
             buildHashColTypes[i] = columnTypes[hashColumn];
         }
+    } else {
+        this->buildHashColTypes = nullptr;
+        this->buildHashColumns = nullptr;
     }
 }
 
 PagesHashStrategy::~PagesHashStrategy()
 {
-    delete[] buildHashColTypes;
-    delete[] buildHashColumns;
+    if (buildHashColTypes != nullptr) {
+        delete[] buildHashColTypes;
+    }
+    if (buildHashColumns != nullptr) {
+        delete[] buildHashColumns;
+    }
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_HASH_POSITION)
-int64_t hashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashColumns, int32_t *hashColTypes, int32_t hashColCount)
+int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes,
+    int32_t hashColCount)
 {
     int64_t result = 0;
-    Vector *column;
-    int64_t hash;
+    Vector *column = nullptr;
+    int64_t hash = 0;
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         column = buildHashColumns[columnIdx][vecBatchIdx];
@@ -47,18 +57,18 @@ int64_t hashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
 
         switch (hashColTypes[columnIdx]) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t intValue = ((IntVector *)column)->GetValue(rowIndex);
-                hash = HashUtil::hashValue((int64_t)intValue);
+                int32_t intValue = (dynamic_cast<IntVector *>(column))->GetValue(rowIndex);
+                hash = HashUtil::HashValue(static_cast<int64_t>(intValue));
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t int64Value = ((LongVector *)column)->GetValue(rowIndex);
-                hash = HashUtil::hashValue(int64Value);
+                int64_t int64Value = (dynamic_cast<LongVector *>(column))->GetValue(rowIndex);
+                hash = HashUtil::HashValue(int64Value);
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double doubleValue = ((DoubleVector *)column)->GetValue(rowIndex);
-                hash = HashUtil::hashValue((int64_t)doubleValue);
+                double doubleValue = (dynamic_cast<DoubleVector *>(column))->GetValue(rowIndex);
+                hash = HashUtil::HashValue(static_cast<int64_t>(doubleValue));
                 break;
             }
             default: {
@@ -67,14 +77,14 @@ int64_t hashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
             }
         }
 
-        result = HashUtil::getHash(result, hash);
+        result = HashUtil::GetHash(result, hash);
     }
     return result;
 }
 
-bool PagesHashStrategy::isPositionNull(int32_t pageIndex, int rowIndex)
+bool PagesHashStrategy::IsPositionNull(int32_t pageIndex, int rowIndex) const
 {
-    Vector *column;
+    Vector *column = nullptr;
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         column = buildHashColumns[columnIdx][pageIndex];
         if (column->IsValueNull(rowIndex)) {
@@ -84,67 +94,64 @@ bool PagesHashStrategy::isPositionNull(int32_t pageIndex, int rowIndex)
     return false;
 }
 
-bool valueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex);
+bool ValueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex);
 
-bool intValueEqualsIgnoreNulls(int32_t *leftData, int32_t leftIndex, int32_t *rightData, int32_t rightIndex)
+bool IntValueEqualsIgnoreNulls(const int32_t *leftData, int32_t leftIndex, const int32_t *rightData, int32_t rightIndex)
 {
     bool result = (leftData[leftIndex] == rightData[rightIndex]);
     return result;
 }
 
-bool int64ValueEqualsIgnoreNulls(int64_t *leftData, int32_t leftIndex, int64_t *rightData, int32_t rightIndex)
+bool Int64ValueEqualsIgnoreNulls(const int64_t *leftData, int32_t leftIndex, const int64_t *rightData,
+    int32_t rightIndex)
 {
     bool result = (leftData[leftIndex] == rightData[rightIndex]);
     return result;
 }
 
-bool doubleValueEqualsIgnoreNulls(double *leftData, int32_t leftIndex, double *rightData, int32_t rightIndex)
+bool DoubleValueEqualsIgnoreNulls(const double *leftData, int32_t leftIndex, const double *rightData,
+    int32_t rightIndex)
 {
     if (std::abs(leftData[leftIndex] - rightData[rightIndex]) < __DBL_EPSILON__) {
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS)
-bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex,
-                                       int32_t leftRowIndex,
-                                       int32_t rightTableIndex,
-                                       int32_t rightRowIndex,
-                                       Vector ***buildHashColumns,
-                                       int32_t *hashColTypes,
-                                       int32_t hashColCount)
+bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
+    int32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes, int32_t hashColCount)
 {
-    Vector *leftColumn;
-    Vector *rightColumn;
-    bool result;
+    Vector *leftColumn = nullptr;
+    Vector *rightColumn = nullptr;
+    bool result = true;
     bool isSame = leftTableIndex == rightTableIndex;
-    void *leftValues;
-    void *rightValues;
+    void *leftValues = nullptr;
+    void *rightValues = nullptr;
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         leftValues = leftColumn->GetValues();
         if (isSame) {
             rightValues = leftValues;
-        }
-        else {
+        } else {
             rightColumn = buildHashColumns[columnIdx][rightTableIndex];
             rightValues = rightColumn->GetValues();
         }
 
-        switch (hashColTypes[columnIdx])
-        {
-            case 1:
-                result = intValueEqualsIgnoreNulls((int32_t *)leftValues, leftRowIndex, (int32_t *)rightValues, rightRowIndex);
+        switch (hashColTypes[columnIdx]) {
+            case OMNI_VEC_TYPE_INT:
+                result = IntValueEqualsIgnoreNulls((int32_t *)leftValues, leftRowIndex, (int32_t *)rightValues,
+                    rightRowIndex);
                 break;
-            case 2:
-                result = int64ValueEqualsIgnoreNulls((int64_t *)leftValues, leftRowIndex, (int64_t *)rightValues, rightRowIndex);
+            case OMNI_VEC_TYPE_LONG:
+                result = Int64ValueEqualsIgnoreNulls((int64_t *)leftValues, leftRowIndex, (int64_t *)rightValues,
+                    rightRowIndex);
                 break;
-            case 3:
-                result = doubleValueEqualsIgnoreNulls((double *)leftValues, leftRowIndex, (double *)rightValues, rightRowIndex);
+            case OMNI_VEC_TYPE_DOUBLE:
+                result = DoubleValueEqualsIgnoreNulls((double *)leftValues, leftRowIndex, (double *)rightValues,
+                    rightRowIndex);
                 break;
             default:
                 result = false;
@@ -158,29 +165,27 @@ bool positionEqualsPositionIgnoreNulls(int32_t leftTableIndex,
 }
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS)
-bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex,
-                                  int32_t buildRowIndex,
-                                  int32_t probePosition,
-                                  Vector **probeJoinColumns,
-                                  Vector ***buildHashColumns,
-                                  int32_t *hashColTypes,
-                                  int32_t hashColCount)
+bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition,
+    Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, int32_t hashColCount)
 {
-    bool result;
+    bool result = true;
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
 
         switch (hashColTypes[columnIdx]) {
-            case 1:
-                result = intValueEqualsIgnoreNulls((int32_t *)(buildColumn->GetValues()), buildRowIndex, (int32_t *)(probeColumn->GetValues()), probePosition);
+            case OMNI_VEC_TYPE_INT:
+                result = IntValueEqualsIgnoreNulls((int32_t *)(buildColumn->GetValues()), buildRowIndex,
+                    (int32_t *)(probeColumn->GetValues()), probePosition);
                 break;
-            case 2:
-                result = int64ValueEqualsIgnoreNulls((int64_t *)(buildColumn->GetValues()), buildRowIndex, (int64_t *)(probeColumn->GetValues()), probePosition);
+            case OMNI_VEC_TYPE_LONG:
+                result = Int64ValueEqualsIgnoreNulls((int64_t *)(buildColumn->GetValues()), buildRowIndex,
+                    (int64_t *)(probeColumn->GetValues()), probePosition);
                 break;
-            case 3:
-                result = doubleValueEqualsIgnoreNulls((double *)(buildColumn->GetValues()), buildRowIndex, (double *)(probeColumn->GetValues()), probePosition);
+            case OMNI_VEC_TYPE_DOUBLE:
+                result = DoubleValueEqualsIgnoreNulls((double *)(buildColumn->GetValues()), buildRowIndex,
+                    (double *)(probeColumn->GetValues()), probePosition);
                 break;
             default:
                 result = false;
@@ -195,14 +200,15 @@ bool positionEqualsRowIgnoreNulls(int32_t buildTableIndex,
     return true;
 }
 
-bool PagesHashStrategy::positionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex, int32_t rightRowIndex)
+bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
+    int32_t rightRowIndex) const
 {
-    Vector *leftColumn;
-    Vector *rightColumn;
-    bool leftIsNull;
-    bool rightIsNull;
-    int32_t columnType;
-    bool result;
+    Vector *leftColumn = nullptr;
+    Vector *rightColumn = nullptr;
+    bool leftIsNull = false;
+    bool rightIsNull = false;
+    int32_t columnType = 0;
+    bool result = true;
 
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
@@ -215,60 +221,64 @@ bool PagesHashStrategy::positionEqualsPosition(int32_t leftTableIndex, int32_t l
 
         columnType = buildHashColTypes[columnIdx];
         switch (columnType) {
-            case 1:
-                result = intValueEqualsIgnoreNulls((int32_t *)(leftColumn->GetValues()), leftRowIndex, (int32_t *)(rightColumn->GetValues()), rightRowIndex);
+            case OMNI_VEC_TYPE_INT:
+                result = IntValueEqualsIgnoreNulls((int32_t *)(leftColumn->GetValues()), leftRowIndex,
+                    (int32_t *)(rightColumn->GetValues()), rightRowIndex);
                 break;
-            case 2:
-                result = int64ValueEqualsIgnoreNulls((int64_t *)(leftColumn->GetValues()), leftRowIndex, (int64_t *)(rightColumn->GetValues()), rightRowIndex);
+            case OMNI_VEC_TYPE_LONG:
+                result = Int64ValueEqualsIgnoreNulls((int64_t *)(leftColumn->GetValues()), leftRowIndex,
+                    (int64_t *)(rightColumn->GetValues()), rightRowIndex);
                 break;
-            case 3:
-                result = doubleValueEqualsIgnoreNulls((double *)(leftColumn->GetValues()), leftRowIndex, (double *)(rightColumn->GetValues()), rightRowIndex);
+            case OMNI_VEC_TYPE_DOUBLE:
+                result = DoubleValueEqualsIgnoreNulls((double *)(leftColumn->GetValues()), leftRowIndex,
+                    (double *)(rightColumn->GetValues()), rightRowIndex);
                 break;
             default:
                 result = false;
                 break;
         }
 
-        if (!result)
-        {
+        if (!result) {
             return false;
         }
     }
     return true;
 }
 
-bool PagesHashStrategy::valuePositionEqualsPosition(VecType type, Vector *leftColumn, int32_t leftRowIndex, Vector *rightColumn, int32_t rightRowIndex)
+bool PagesHashStrategy::ValuePositionEqualsPosition(VecType type, Vector *leftColumn, int32_t leftRowIndex,
+    Vector *rightColumn, int32_t rightRowIndex) const
 {
     bool leftIsNull = leftColumn->IsValueNull(leftRowIndex);
     bool rightIsNull = rightColumn->IsValueNull(rightRowIndex);
     if (leftIsNull || rightIsNull) {
         return leftIsNull && rightIsNull;
     }
-    return valueEqualsValueIgnoreNulls(type, leftColumn->GetValues(), leftRowIndex, rightColumn->GetValues(), rightRowIndex);
+    return ValueEqualsValueIgnoreNulls(type, leftColumn->GetValues(), leftRowIndex, rightColumn->GetValues(),
+        rightRowIndex);
 }
 
-bool PagesHashStrategy::valueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex)
+bool PagesHashStrategy::ValueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData,
+    int32_t rightIndex) const
 {
-    bool result;
-    switch (type)
-    {
-    case OMNI_VEC_TYPE_INT:
-        result = (((int32_t *)leftData)[leftIndex] == ((int32_t *)rightData)[rightIndex]);
-        break;
-    case OMNI_VEC_TYPE_LONG:
-        result = (((int64_t *)leftData)[leftIndex] == ((int64_t *)rightData)[rightIndex]);
-        break;
-    case OMNI_VEC_TYPE_DOUBLE:
-        if (std::abs(((double *)leftData)[leftIndex] - ((double *)rightData)[rightIndex]) < __DBL_EPSILON__) {
-            result = true;
-        }
-        else {
+    bool result = false;
+    switch (type) {
+        case OMNI_VEC_TYPE_INT:
+            result = (static_cast<int32_t *>(leftData)[leftIndex] == (static_cast<int32_t *>(rightData))[rightIndex]);
+            break;
+        case OMNI_VEC_TYPE_LONG:
+            result = (static_cast<int64_t *>(leftData)[leftIndex] == (static_cast<int64_t *>(rightData))[rightIndex]);
+            break;
+        case OMNI_VEC_TYPE_DOUBLE:
+            if (std::abs(static_cast<double *>(leftData)[leftIndex] - static_cast<double *>(rightData)[rightIndex]) <
+                __DBL_EPSILON__) {
+                result = true;
+            } else {
+                result = false;
+            }
+            break;
+        default:
             result = false;
-        }
-        break;
-     default:
-         result = false;
-         break;
+            break;
     }
 
     return result;

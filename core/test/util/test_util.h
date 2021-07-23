@@ -10,11 +10,20 @@
 #include "../../src/operator/operator_factory.h"
 #include <time.h>
 
-bool vecBatchMatch(VectorBatch *outputTables, VectorBatch *expectTable);
+const int32_t PARAM_OFFSET_0 = 0;
+const int32_t PARAM_OFFSET_1 = 1;
+const int32_t PARAM_OFFSET_2 = 2;
+const int32_t PARAM_OFFSET_3 = 3;
+const int32_t PARAM_OFFSET_4 = 4;
+const int32_t PARAM_OFFSET_5 = 5;
+const int32_t PARAM_OFFSET_6 = 6;
 
-void printVecBatch(VectorBatch* vecBatch);
+bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage);
 
-omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory);
+void PrintVecBatch(VectorBatch* vecBatch);
+
+omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory);
+void DeleteOperatorFactory(OperatorFactory *operatorFactory);
 
 class Timer {
 public:

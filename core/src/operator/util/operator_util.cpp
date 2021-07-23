@@ -1,5 +1,5 @@
-//
-// Created by root on 7/2/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ */
 
 #include "operator_util.h"

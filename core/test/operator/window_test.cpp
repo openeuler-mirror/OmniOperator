@@ -58,17 +58,17 @@ JitContext *createTestWindowJitContext(int32_t *sourceTypes, int32_t typesCount,
     ParamValue p_outputColCount = ParamValue(&outputColsCount);
 
     auto *compareToSp = new Specialization();
-    compareToSp->addSpecializedParam(1, &p_sortCols);
-    compareToSp->addSpecializedParam(2, &p_sortColTypes);
-    compareToSp->addSpecializedParam(3, &p_sortAscendings);
-    compareToSp->addSpecializedParam(4, &p_sortNullFirsts);
-    compareToSp->addSpecializedParam(5, &p_sortColCount);
-    auto *GetOutputSp = new Specialization();
-    GetOutputSp->addSpecializedParam(1, &p_outputCols);
-    GetOutputSp->addSpecializedParam(2, &p_outputColCount);
-    GetOutputSp->addSpecializedParam(4, &p_sourceTypes);
+    compareToSp->addSpecializedParam(PARAM_OFFSET_0, &p_sortCols);
+    compareToSp->addSpecializedParam(PARAM_OFFSET_1, &p_sortColTypes);
+    compareToSp->addSpecializedParam(PARAM_OFFSET_2, &p_sortAscendings);
+    compareToSp->addSpecializedParam(PARAM_OFFSET_3, &p_sortNullFirsts);
+    compareToSp->addSpecializedParam(PARAM_OFFSET_4, &p_sortColCount);
+    auto *getOutputSp = new Specialization();
+    getOutputSp->addSpecializedParam(PARAM_OFFSET_1, &p_outputCols);
+    getOutputSp->addSpecializedParam(PARAM_OFFSET_2, &p_outputColCount);
+    getOutputSp->addSpecializedParam(PARAM_OFFSET_4, &p_sourceTypes);
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
-        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *GetOutputSp } };
+        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
     auto *windowContext = new omniruntime::jit::Context("window", std::map<std::string, Specialization>(),
         std::vector<std::string>(), std::vector<std::string>(), true);
     auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
@@ -90,9 +90,9 @@ JitContext *createTestWindowJitContext(int32_t *sourceTypes, int32_t typesCount,
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowContext, *sortContext, *aggContext,
         *windowFunctionContext, *windowPartitionContext, *hashUtilContext, *pagesHashStrategyContext,
         *memoryPoolContext, *pagesIndexContext });
-    auto CreateOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->specialize();
     JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(CreateOperatorFunc);
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     return jitContext;
 }
 
@@ -151,7 +151,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
-    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -174,7 +174,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     expectVecBatch->SetVector(1, expectCol2);
     expectVecBatch->SetVector(2, expectCol3);
     expectVecBatch->SetVector(3, expectCol4);
-    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
@@ -229,7 +229,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
-    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -248,7 +248,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     expectVecBatch->SetVector(0, expectCol1);
     expectVecBatch->SetVector(1, expectCol2);
     expectVecBatch->SetVector(2, expectCol3);
-    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
@@ -304,7 +304,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
-    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -328,7 +328,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     expectVecBatch->SetVector(1, expectCol2);
     expectVecBatch->SetVector(2, expectCol3);
     expectVecBatch->SetVector(3, expectCol4);
-    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
@@ -383,7 +383,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
         preSortedChannelPrefix, expectedPositions, allTypes, 4, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
-    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -406,7 +406,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     expectVecBatch->SetVector(1, expectCol2);
     expectVecBatch->SetVector(2, expectCol3);
     expectVecBatch->SetVector(3, expectCol4);
-    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
@@ -461,7 +461,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
         preSortedChannelPrefix, expectedPositions, allTypes, 5, argumentChannels, 0);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
-    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -488,7 +488,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     expectVecBatch->SetVector(2, expectCol3);
     expectVecBatch->SetVector(3, expectCol4);
     expectVecBatch->SetVector(4, expectCol5);
-    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
@@ -543,7 +543,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
         preSortedChannelPrefix, expectedPositions, allTypes, 8, argumentChannels, 5);
     JitContext *jitContext = createTestWindowJitContextWithFactory(operatorFactory);
     operatorFactory->SetJitContext(jitContext);
-    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(createTestOperator(operatorFactory));
+    WindowOperator *windowOperator = dynamic_cast<WindowOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     vector<VectorBatch *> outputVecBatches;
@@ -582,7 +582,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartition)
     expectVecBatch->SetVector(5, expectCol6);
     expectVecBatch->SetVector(6, expectCol7);
     expectVecBatch->SetVector(7, expectCol8);
-    EXPECT_TRUE(vecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     delete jitContext;
     delete windowOperator;
