@@ -11,10 +11,10 @@ extern "C" {
 #endif
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
- * Method:    CreateOperatorNative
+ * Method:    createOperatorNative
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_CreateOperatorNative
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative
         (JNIEnv *, jobject, jlong);
 
 /*
