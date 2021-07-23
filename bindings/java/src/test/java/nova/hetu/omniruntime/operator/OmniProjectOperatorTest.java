@@ -1,33 +1,38 @@
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 import com.google.common.collect.ImmutableList;
+
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+
 import org.testng.annotations.Test;
 
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
-public class OmniProjectOperatorTest
-{
-    private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols)
-    {
+/**
+ * The type Omni project operator test.
+ */
+public class OmniProjectOperatorTest {
+    private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols) {
         return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols)});
     }
 
+    /**
+     * Simple test.
+     */
     @Test
-    public void simpleTest()
-    {
+    public void simpleTest() {
         String[] exprs = {"$operator$ADD(#0, 5)"};
         VecType[] inputTypes = {OMNI_VEC_TYPE_INT};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
@@ -50,9 +55,11 @@ public class OmniProjectOperatorTest
         }
     }
 
+    /**
+     * Complex test.
+     */
     @Test
-    public void complexTest()
-    {
+    public void complexTest() {
         String[] exprs = {"$operator$MULTIPLY(#0, #1)", "IF($operator$LESS_THAN(#0, 500), 4000000000, #2)"};
         VecType[] inputTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);

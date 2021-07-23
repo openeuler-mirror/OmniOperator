@@ -1,33 +1,49 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.utils;
 
 import java.nio.ByteBuffer;
 
-public class BitMapHelper
-{
+/**
+ * The type Bit map helper.
+ *
+ * @since 20210630
+ */
+public class BitMapHelper {
     private static final int ROUND_8_MASK_INT = 0xFFFFFFF8;
 
-    private BitMapHelper()
-    {
+    private BitMapHelper() {
     }
 
     /**
-     * Get the index of byte corresponding to bit index in bitmap.
+     * Byte index int.
+     *
+     * @param absoluteBitIndex the absolute bit index
+     * @return the int
      */
-    public static int byteIndex(int absoluteBitIndex)
-    {
+    public static int byteIndex(int absoluteBitIndex) {
         return absoluteBitIndex >> 3;
     }
 
     /**
-     * Get the relative index of bit within the byte in bitmap.
+     * Bit index int.
+     *
+     * @param absoluteBitIndex the absolute bit index
+     * @return the int
      */
-    public static int bitIndex(int absoluteBitIndex)
-    {
+    public static int bitIndex(int absoluteBitIndex) {
         return absoluteBitIndex & 7;
     }
 
-    public static void set(ByteBuffer bitMap, int index)
-    {
+    /**
+     * Set.
+     *
+     * @param bitMap the bit map
+     * @param index the index
+     */
+    public static void set(ByteBuffer bitMap, int index) {
         final int byteIndex = byteIndex(index);
         final int bitIndex = bitIndex(index);
 
@@ -38,8 +54,13 @@ public class BitMapHelper
         bitMap.put(position, currentByte);
     }
 
-    public static void unset(ByteBuffer bitMap, int index)
-    {
+    /**
+     * Unset.
+     *
+     * @param bitMap the bit map
+     * @param index the index
+     */
+    public static void unset(ByteBuffer bitMap, int index) {
         final int byteIndex = byteIndex(index);
         final int bitIndex = bitIndex(index);
 
@@ -50,8 +71,14 @@ public class BitMapHelper
         bitMap.put(position, currentByte);
     }
 
-    public static int get(ByteBuffer bitMap, int index)
-    {
+    /**
+     * Get int.
+     *
+     * @param bitMap the bit map
+     * @param index the index
+     * @return the int
+     */
+    public static int get(ByteBuffer bitMap, int index) {
         final int byteIndex = byteIndex(index);
         final int bitIndex = bitIndex(index);
         final byte currentByte = bitMap.get(byteIndex);
@@ -59,13 +86,12 @@ public class BitMapHelper
     }
 
     /**
-     * Calculate the nearest number of bytes based on the number of elements
+     * Compute size in bytes int.
      *
-     * @param size the number of element
-     * @return Number of bytes required
+     * @param size the size
+     * @return the int
      */
-    public static int computeSizeInBytes(int size)
-    {
+    public static int computeSizeInBytes(int size) {
         return ((size + 7) & ROUND_8_MASK_INT) >> 3;
     }
 }

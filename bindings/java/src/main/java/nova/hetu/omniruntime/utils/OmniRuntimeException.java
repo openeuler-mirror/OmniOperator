@@ -1,37 +1,47 @@
 /*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
+
 package nova.hetu.omniruntime.utils;
 
-public class OmniRuntimeException
-        extends RuntimeException
-{
+/**
+ * The type Omni runtime exception.
+ *
+ * @since 20210630
+ */
+public class OmniRuntimeException extends RuntimeException {
     private final OmniErrorType errorType;
 
-    public OmniRuntimeException(OmniErrorType errorType, String msg)
-    {
+    /**
+     * Instantiates a new Omni runtime exception.
+     *
+     * @param errorType the error type
+     * @param msg the msg
+     */
+    public OmniRuntimeException(OmniErrorType errorType, String msg) {
         super(msg);
         this.errorType = errorType;
     }
 
-    public OmniRuntimeException(OmniErrorType errorType, String s, Throwable throwable)
-    {
-        super(s, throwable);
+    /**
+     * Instantiates a new Omni runtime exception.
+     *
+     * @param errorType the error type
+     * @param string the string
+     * @param throwable the throwable
+     */
+    public OmniRuntimeException(OmniErrorType errorType, String string, Throwable throwable) {
+        super(string, throwable);
         this.errorType = errorType;
     }
 
-    public OmniRuntimeException(OmniErrorType errorType, Throwable throwable)
-    {
+    /**
+     * Instantiates a new Omni runtime exception.
+     *
+     * @param errorType the error type
+     * @param throwable the throwable
+     */
+    public OmniRuntimeException(OmniErrorType errorType, Throwable throwable) {
         super(throwable);
         this.errorType = errorType;
     }

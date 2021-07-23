@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.operator.project;
+
+import static java.util.Objects.requireNonNull;
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
@@ -6,63 +13,67 @@ import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 
 import java.util.Objects;
 
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
-public class OmniProjectOperatorFactory
-        extends OmniOperatorFactory<OmniProjectOperatorFactory.Context>
-{
-    public OmniProjectOperatorFactory(
-            String[] expressions,
-            VecType[] inputTypes)
-    {
+/**
+ * The type Omni project operator factory.
+ *
+ * @since 20210630
+ */
+public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectOperatorFactory.Context> {
+    /**
+     * Instantiates a new Omni project operator factory.
+     *
+     * @param expressions the expressions
+     * @param inputTypes the input types
+     */
+    public OmniProjectOperatorFactory(String[] expressions, VecType[] inputTypes) {
         super(new Context(expressions, inputTypes));
     }
 
     @Override
-    protected long createNativeOperatorFactory(Context context)
-    {
-        return createProjectOperatorFactory(
-                toNativeConstants(context.inputTypes),
-                context.inputTypes.length,
-                context.expressions,
-                context.expressions.length);
+    protected long createNativeOperatorFactory(Context context) {
+        return createProjectOperatorFactory(toNativeConstants(context.inputTypes), context.inputTypes.length,
+            context.expressions, context.expressions.length);
     }
 
-    private static native long createProjectOperatorFactory(int[] inputTypes, int inputLength, Object[] expressions, int expressionsLength);
+    private static native long createProjectOperatorFactory(int[] inputTypes, int inputLength, Object[] expressions,
+        int expressionsLength);
 
-    public static class Context
-            extends OmniOperatorFactoryContext
-    {
+    /**
+     * The type Context.
+     *
+     * @since 20210630
+     */
+    public static class Context extends OmniOperatorFactoryContext {
         private final VecType[] inputTypes;
+
         private final String[] expressions;
 
-        public Context(
-                String[] expressions,
-                VecType[] inputTypes)
-        {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param expressions the expressions
+         * @param inputTypes the input types
+         */
+        public Context(String[] expressions, VecType[] inputTypes) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expressions = requireNonNull(expressions, "Expressions is null.");
         }
 
         @Override
-        public int hashCode()
-        {
+        public int hashCode() {
             return Objects.hash(expressions, inputTypes);
         }
 
         @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
+        public boolean equals(Object obj) {
+            if (this == obj) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context that = (Context) o;
-            return Objects.equals(expressions, that.expressions)
-                    && Objects.equals(inputTypes, that.inputTypes);
+            Context that = (Context) obj;
+            return Objects.equals(expressions, that.expressions) && Objects.equals(inputTypes, that.inputTypes);
         }
     }
 }

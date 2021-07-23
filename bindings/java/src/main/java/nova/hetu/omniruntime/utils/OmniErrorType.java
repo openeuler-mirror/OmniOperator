@@ -1,19 +1,40 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.utils;
 
-public enum OmniErrorType
-{
+/**
+ * The enum Omni error type.
+ *
+ * @since 20210630
+ */
+public enum OmniErrorType {
+    /**
+     * Omni undefined omni error type.
+     */
     OMNI_UNDEFINED(1),
+    /**
+     * Omni nosupport omni error type.
+     */
     OMNI_NOSUPPORT(2),
+    /**
+     * Omni native error omni error type.
+     */
     OMNI_NATIVE_ERROR(3);
 
-    private int value;
-    OmniErrorType(int v)
-    {
-        this.value = v;
+    private final int value;
+
+    OmniErrorType(int value) {
+        this.value = value;
     }
 
-    public int getValue()
-    {
+    /**
+     * Gets value.
+     *
+     * @return the value
+     */
+    public int getValue() {
         return value;
     }
 }
