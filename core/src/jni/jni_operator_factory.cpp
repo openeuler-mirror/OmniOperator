@@ -344,7 +344,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
         allTypes[i] = windowFunctionReturnType[i - sourceTypeCount];
     }
 
-    omniruntime::op::WindowOperatorFactory *windowOperatorFactory =new omniruntime::op::WindowOperatorFactory(
+    omniruntime::op::WindowOperatorFactory *windowOperatorFactory = new omniruntime::op::WindowOperatorFactory(
         sourceTypes,
         sourceTypeCount,
         outputChannels,
@@ -368,17 +368,18 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
         );
     JitContext *jitContext = createWindowJitContext(
         windowOperatorFactory->GetSourceTypes(),
-        windowOperatorFactory->getTypesCount(),
+        windowOperatorFactory->GetTypesCount(),
         windowOperatorFactory->GetOutputCols(),
         windowOperatorFactory->GetOutputColsCount(),
-        windowOperatorFactory->getPartitionCols(),
-        windowOperatorFactory->getPartitionCount(),
-        windowOperatorFactory->getSortCols(),
-        windowOperatorFactory->getSortAscendings(),
-        windowOperatorFactory->getSortNullFirsts(),
-        windowOperatorFactory->getSortColCount(),
-        windowOperatorFactory->getAllTypes(),
-        windowOperatorFactory->getAllCount());
+        windowOperatorFactory->GetPartitionCols(),
+        windowOperatorFactory->GetPartitionCount(),
+        windowOperatorFactory->GetSortCols(),
+        windowOperatorFactory->GetSortAscendings(),
+        windowOperatorFactory->GetSortNullFirsts(),
+        windowOperatorFactory->GetSortColCount(),
+        windowOperatorFactory->GetAllTypes(),
+        windowOperatorFactory->GetAllCount());
+    windowOperatorFactory->Init();
     windowOperatorFactory->SetJitContext(jitContext);
     return (int64_t) windowOperatorFactory;
 }

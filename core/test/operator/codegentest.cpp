@@ -59,12 +59,12 @@ TEST (CodeGenTest, Operators1) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen* lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
     func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
@@ -112,12 +112,12 @@ TEST (CodeGenTest, MathFunctions1) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -166,12 +166,12 @@ TEST (CodeGenTest, MathFunctions2) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -230,12 +230,12 @@ TEST (CodeGenTest, MathFunctions3) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -304,12 +304,12 @@ TEST (CodeGenTest, MathFunctions4) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -391,12 +391,12 @@ TEST (CodeGenTest, CastNumbers1) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest3";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -456,12 +456,12 @@ TEST (CodeGenTest, CastNumbers2) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest3";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -526,12 +526,12 @@ TEST(CodeGenTest, Like) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -590,12 +590,12 @@ TEST(CodeGenTest, DateCast) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -665,12 +665,12 @@ TEST(CodeGenTest, SubstrIn) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -743,12 +743,12 @@ TEST(CodeGenTest, ConcatStr) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -824,12 +824,12 @@ TEST(CodeGenTest, StringWithOps) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
@@ -893,12 +893,12 @@ TEST(CodeGenTest, Coalesce) {
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "coalesceTest1";
     vector<DataType> *typeVec = new vector<DataType>(types, types+3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
-    
+
 
     int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
     func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();

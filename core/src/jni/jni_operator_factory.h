@@ -59,7 +59,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_project_OmniProjectO
 
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory
- * Method:    createWindowOperatorFactory
+ * Method:    CreateWindowOperatorFactory
+ * Signature: ([I[I[I[I[I[I[I[III[I[I)J
 */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory
         (JNIEnv *, jobject, jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jintArray,jint,jint,jintArray,jintArray);
