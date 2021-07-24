@@ -1,7 +1,11 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #include "stdio.h"
-int callee();
+int Callee();
 
-int caller() {
+int Caller()
+{
     printf("I am caller");
-    return callee();
+    return Callee();
 }

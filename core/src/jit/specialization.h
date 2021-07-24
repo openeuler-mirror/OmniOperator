@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __OMNI_JIT_SPECIALIZATION_H__
 #define __OMNI_JIT_SPECIALIZATION_H__
 
@@ -17,13 +20,15 @@ namespace omniruntime {
         public:
             Specialization();
 
-            void addSpecializedParam(int paramIndex, ParamValue *paramValue);
+            ~Specialization();
 
-            bool hasSpecializedParam(int paramIndex);
+            void AddSpecializedParam(int paramIndex, ParamValue *paramValue);
 
-            ParamValue *getSpecializedParam(int paramIndex);
+            bool HasSpecializedParam(int paramIndex) const;
 
-            void addSpecializedStats(Stats stats);
+            ParamValue *GetSpecializedParam(int paramIndex) const;
+
+            void AddSpecializedStats(Stats stats) const;
 
         private:
             std::string id;

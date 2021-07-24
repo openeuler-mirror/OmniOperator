@@ -99,14 +99,14 @@ void InitParams(omniruntime::jit::ParamValue &pSortCols, omniruntime::jit::Param
     compareToSp = new omniruntime::jit::Specialization();
     getOutputSp = new omniruntime::jit::Specialization();
 
-    compareToSp->addSpecializedParam(PARAM_INDEX0, &pSortCols);
-    compareToSp->addSpecializedParam(PARAM_INDEX1, &pSortColTypes);
-    compareToSp->addSpecializedParam(PARAM_INDEX2, &pSortAscendings);
-    compareToSp->addSpecializedParam(PARAM_INDEX3, &pSortNullFirsts);
-    compareToSp->addSpecializedParam(PARAM_INDEX4, &pSortColCount);
-    getOutputSp->addSpecializedParam(PARAM_INDEX1, &pOutputCols);
-    getOutputSp->addSpecializedParam(PARAM_INDEX2, &pOutputColCount);
-    getOutputSp->addSpecializedParam(PARAM_INDEX4, &pSourceTypes);
+    compareToSp->AddSpecializedParam(PARAM_INDEX0, &pSortCols);
+    compareToSp->AddSpecializedParam(PARAM_INDEX1, &pSortColTypes);
+    compareToSp->AddSpecializedParam(PARAM_INDEX2, &pSortAscendings);
+    compareToSp->AddSpecializedParam(PARAM_INDEX3, &pSortNullFirsts);
+    compareToSp->AddSpecializedParam(PARAM_INDEX4, &pSortColCount);
+    getOutputSp->AddSpecializedParam(PARAM_INDEX1, &pOutputCols);
+    getOutputSp->AddSpecializedParam(PARAM_INDEX2, &pOutputColCount);
+    getOutputSp->AddSpecializedParam(PARAM_INDEX4, &pSourceTypes);
 }
 
 JitContext *GetContext(const omniruntime::jit::Specialization *compareToSp,
@@ -135,7 +135,7 @@ JitContext *GetContext(const omniruntime::jit::Specialization *compareToSp,
     omniruntime::jit::Jit *jit = new omniruntime::jit::Jit(vector<omniruntime::jit::Context> { *windowContext,
         *sortContext, *aggContext, *windowFunctionContext, *windowPartitionContext, *hashUtilContext,
         *pagesHashStrategyContext, *memoryPoolContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     return jitContext;
