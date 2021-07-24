@@ -7,6 +7,8 @@
 
 #include "vector_helper.h"
 
+namespace omniruntime {
+namespace vec {
 void VectorHelper::FreeVecBatch(VectorBatch *vecBatch)
 {
     vecBatch->FreeAllVectors();
@@ -29,3 +31,5 @@ void VectorHelper::FreeVecBatches(std::vector<VectorBatch *> &vecBatches)
         delete vecBatches[i];
     }
 }
+} // namespace vec
+} // namespace omniruntime

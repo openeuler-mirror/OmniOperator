@@ -18,6 +18,7 @@
 
 using namespace omniruntime::op;
 using namespace omniruntime::jit;
+using namespace omniruntime::vec;
 
 const int32_t COLUMN_COUNT_2 = 2;
 

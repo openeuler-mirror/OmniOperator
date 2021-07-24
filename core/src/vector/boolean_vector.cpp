@@ -6,6 +6,8 @@
 #include "debug.h"
 #include "boolean_vector.h"
 
+namespace omniruntime {
+namespace vec {
 BooleanVector::BooleanVector(VectorAllocator *allocator, int size)
     : FixedWidthVector(allocator, size, size, OMNI_VEC_TYPE_BOOLEAN)
 {}
@@ -61,3 +63,5 @@ void BooleanVector::Append(Vector *other, int positionOffset, int length)
         std::cerr << "append failed in boolean vector." << std::endl;
     }
 }
+} // namespace vec
+} // namespace omniruntime

@@ -5,6 +5,8 @@
 #include "varchar_vector.h"
 #include <cstring>
 
+namespace omniruntime {
+namespace vec {
 VarcharVector::VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size)
     : VariableWidthVector(allocator, capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR)
 {}
@@ -48,9 +50,8 @@ VarcharVector *VarcharVector::CopyRegion(int positionOffset, int length)
     int totalDataLen = GetValueOffset(newPosition + length) - GetValueOffset(newPosition);
 
     VarcharVector *vector = new VarcharVector(GetAllocator(), totalDataLen, length);
-    errno_t ret = memcpy_s(reinterpret_cast<char *>(vector->GetValues()), totalDataLen, 
-        (reinterpret_cast<char *>(valuesAddress)) + startOffset,
-        totalDataLen);
+    errno_t ret = memcpy_s(reinterpret_cast<char *>(vector->GetValues()), totalDataLen,
+        (reinterpret_cast<char *>(valuesAddress)) + startOffset, totalDataLen);
     if (ret != EOK) {
         delete vector;
         return nullptr;
@@ -104,4 +105,7 @@ void VarcharVector::FillSlots(int index)
     }
     lastOffsetPosition = index - 1;
 }
+
 void VarcharVector::Append(Vector *other, int positionOffset, int length) {}
+}
+}

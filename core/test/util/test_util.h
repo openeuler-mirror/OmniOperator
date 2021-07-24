@@ -18,9 +18,9 @@ const int32_t PARAM_OFFSET_4 = 4;
 const int32_t PARAM_OFFSET_5 = 5;
 const int32_t PARAM_OFFSET_6 = 6;
 
-bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage);
+bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 
-void PrintVecBatch(VectorBatch* vecBatch);
+void PrintVecBatch(omniruntime::vec::VectorBatch* vecBatch);
 
 omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory);
 void DeleteOperatorFactory(OperatorFactory *operatorFactory);

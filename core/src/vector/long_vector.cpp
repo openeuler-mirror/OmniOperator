@@ -5,6 +5,8 @@
 #include "debug.h"
 #include "long_vector.h"
 
+namespace omniruntime {
+namespace vec {
 LongVector::LongVector(VectorAllocator *allocator, int size)
     : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG)
 {}
@@ -63,3 +65,5 @@ void LongVector::Append(Vector *other, int positionOffset, int length)
         std::cerr << "append failed in long vector." << std::endl;
     }
 }
+} // namespace vec
+} // namespace omniruntime

@@ -15,6 +15,7 @@
 #include "../../src/jit/jit.h"
 
 using namespace std;
+using namespace omniruntime::vec;
 
 const int32_t DATA_SIZE = 6;
 

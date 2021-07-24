@@ -8,6 +8,8 @@
 
 #include <iostream>
 
+namespace omniruntime {
+namespace vec {
 class Chunk {
 public:
     explicit Chunk(int64_t sizeInBytes);
@@ -22,6 +24,6 @@ private:
     void *address;
     int64_t sizeInBytes;
 };
-
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __CHUNK_H__

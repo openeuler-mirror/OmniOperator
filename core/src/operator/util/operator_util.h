@@ -11,22 +11,22 @@
 
 class OperatorUtil {
 public:
-    static int32_t compareVectorAtPosition(VecType colType, Vector *leftColumn, int32_t leftColumnPosition,
-        Vector *rightColumn, int32_t rightColumnPosition)
+    static int32_t compareVectorAtPosition(omniruntime::vec::VecType colType, omniruntime::vec::Vector *leftColumn,
+        int32_t leftColumnPosition, omniruntime::vec::Vector *rightColumn, int32_t rightColumnPosition)
     {
         switch (colType) {
-            case OMNI_VEC_TYPE_INT:
-                return ((IntVector *)leftColumn)->GetValue(leftColumnPosition) -
-                    ((IntVector *)rightColumn)->GetValue(rightColumnPosition);
-            case OMNI_VEC_TYPE_LONG:
-                return ((LongVector *)leftColumn)->GetValue(leftColumnPosition) -
-                    ((LongVector *)rightColumn)->GetValue(rightColumnPosition);
-            case OMNI_VEC_TYPE_DOUBLE:
-                if (((DoubleVector *)leftColumn)->GetValue(leftColumnPosition) >
-                    ((DoubleVector *)rightColumn)->GetValue(rightColumnPosition)) {
+            case  omniruntime::vec::OMNI_VEC_TYPE_INT:
+                return ((omniruntime::vec::IntVector *)leftColumn)->GetValue(leftColumnPosition) -
+                    ((omniruntime::vec::IntVector *)rightColumn)->GetValue(rightColumnPosition);
+            case  omniruntime::vec::OMNI_VEC_TYPE_LONG:
+                return ((omniruntime::vec::LongVector *)leftColumn)->GetValue(leftColumnPosition) -
+                    ((omniruntime::vec::LongVector *)rightColumn)->GetValue(rightColumnPosition);
+            case  omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+                if (((omniruntime::vec::DoubleVector *)leftColumn)->GetValue(leftColumnPosition) >
+                    ((omniruntime::vec::DoubleVector *)rightColumn)->GetValue(rightColumnPosition)) {
                     return 1;
-                } else if (((DoubleVector *)leftColumn)->GetValue(leftColumnPosition) <
-                    ((DoubleVector *)rightColumn)->GetValue(rightColumnPosition)) {
+                } else if (((omniruntime::vec::DoubleVector *)leftColumn)->GetValue(leftColumnPosition) <
+                    ((omniruntime::vec::DoubleVector *)rightColumn)->GetValue(rightColumnPosition)) {
                     return -1;
                 } else {
                     return 0;

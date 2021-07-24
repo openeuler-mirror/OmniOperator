@@ -44,8 +44,8 @@ public:
         std::vector<int32_t> &buildOutputCols, std::vector<int32_t> &buildOutputTypes, JoinHashTables *hashTables,
         int32_t outputRowSize);
     ~LookupJoinOperator() override;
-    int32_t AddInput(VectorBatch *data) override;
-    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
     int32_t *GetSourceTypes() override;
 
 private:
@@ -69,14 +69,14 @@ private:
 
 class JoinProbe {
 public:
-    JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
+    JoinProbe(omniruntime::vec::VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
         int32_t hashColsCount);
     ~JoinProbe();
     int32_t GetPosition() const
     {
         return position;
     }
-    Vector **GetProbeAllColumns() const
+    omniruntime::vec::Vector **GetProbeAllColumns() const
     {
         return probeAllColumns;
     }
@@ -86,10 +86,10 @@ public:
 private:
     bool CurrentRowContainsNull() const;
 
-    Vector **probeAllColumns;
+    omniruntime::vec::Vector **probeAllColumns;
     int32_t probeAllColsCount;
     int32_t positionCount;
-    Vector **probeHashColumns; // Vector *[join column count]
+    omniruntime::vec::Vector **probeHashColumns; // Vector *[join column count]
     int32_t *probeHashColTypes;
     int32_t probeHashColsCount;
     int32_t position;
@@ -102,7 +102,7 @@ public:
     ~LookupJoinOutputBuilder() {}
     void AppendRow(int32_t probePosition, int64_t partitionedJoinPosition);
     void BuildOutput(const JoinProbe *joinProbe, const JoinHashTables *hashTables,
-        std::vector<VectorBatch *> &outputTables);
+        std::vector<omniruntime::vec::VectorBatch *> &outputTables);
 
 private:
     int32_t *probeTypes;

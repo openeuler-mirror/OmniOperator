@@ -12,6 +12,8 @@
 #include "varchar_vector.h"
 #include "container_vector.h"
 
+namespace omniruntime {
+namespace vec {
 VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount), rowCount(0)
 {
     vectors = nullptr;
@@ -59,19 +61,19 @@ void VectorBatch::SetVectors(int *types)
                 break;
             }
             case OMNI_VEC_TYPE_CONTAINER: {
-                DoubleVector* doubleVector = new DoubleVector(nullptr, rowCount);
-                LongVector* longVector = new LongVector(nullptr, rowCount);
-                Vector** vectorAddresses = new Vector*[2];
+                DoubleVector *doubleVector = new DoubleVector(nullptr, rowCount);
+                LongVector *longVector = new LongVector(nullptr, rowCount);
+                Vector **vectorAddresses = new Vector *[2];
                 vectorAddresses[0] = doubleVector;
                 vectorAddresses[1] = longVector;
-                VecType* vecTypes = new VecType[2];
+                VecType *vecTypes = new VecType[2];
                 vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
                 vecTypes[1] = OMNI_VEC_TYPE_LONG;
-                ContainerVector* containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
+                ContainerVector *containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
                 SetVector(colIndex, containerVector);
                 break;
             }
-            // TODO: add short support to codegen
+                // TODO: add short support to codegen
             case OMNI_VEC_TYPE_SHORT: {
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
@@ -82,7 +84,7 @@ void VectorBatch::SetVectors(int *types)
                 // capacity = rowCount * 50 can't handle a vector of strings with average length above 50
                 SetVector(colIndex, new VarcharVector(va, rowCount * 50, rowCount));
             }
-            // TODO: support other types!!!
+                // TODO: support other types!!!
             default: {
                 break;
             }
@@ -131,3 +133,5 @@ void VectorBatch::FreeAllVectors()
         vectors[vecIndex] = nullptr;
     }
 }
+} // namespace vec
+} // namespace omniruntime

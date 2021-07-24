@@ -9,6 +9,7 @@
 #include "../../src/vector/vector_helper.h"
 
 using namespace omniruntime::op;
+using namespace omniruntime::vec;
 
 VectorBatch* createInput(const int32_t NUM_ROWS,
                     const int32_t NUM_COLS,

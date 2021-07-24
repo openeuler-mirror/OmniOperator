@@ -9,6 +9,7 @@
 #include <chrono>
 
 using namespace omniruntime::op;
+using namespace omniruntime::vec;
 
 namespace project_test {
 

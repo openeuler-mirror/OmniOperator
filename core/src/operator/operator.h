@@ -17,9 +17,9 @@ namespace op {
 
         virtual ~Operator() {}
 
-        virtual int32_t AddInput(VectorBatch *vecBatch) = 0;
+        virtual int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) = 0;
 
-        virtual int32_t GetOutput(std::vector<VectorBatch *> &data) = 0;
+        virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) = 0;
 
         const virtual int32_t *GetSourceTypes()
         {

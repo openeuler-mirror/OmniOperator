@@ -7,6 +7,8 @@
 #include "../vector/vector_type.h"
 #include "src/operator/aggregation/aggregator.h"
 
+using namespace omniruntime::vec;
+
 #define DEFINE_CONSTANT(_value_name) do { \
     jfieldID field = env->GetStaticFieldID(cls, #_value_name, fieldName); \
     if (field != nullptr) { \

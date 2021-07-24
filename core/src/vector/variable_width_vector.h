@@ -6,6 +6,8 @@
 
 #include "vector.h"
 
+namespace omniruntime {
+namespace vec {
 template <class T> class VariableWidthVector : public Vector {
 public:
     VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {};
@@ -13,10 +15,13 @@ public:
     VariableWidthVector(VectorAllocator *pAllocator, int capacityInBytes, int size, VecType type)
         : Vector(pAllocator, capacityInBytes, size, type)
     {}
+
     int GetValue(int index, T *dst);
 
     void SetValue(int index, const T data, int length);
 
     ~VariableWidthVector() {}
 };
+}
+}
 #endif // __VARIABLE_WIDTH_VECTOR_OPERATOR_H__

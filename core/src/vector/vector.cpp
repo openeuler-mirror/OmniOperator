@@ -11,11 +11,14 @@
 #include "../util/debug.h"
 #include "vector_allocator_manager.h"
 
-VectorAllocatorManager g_vector_allocator_manager = VectorAllocatorManager::GetInstance();
-VectorAllocator *g_vector_allocator = g_vector_allocator_manager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
-
+omniruntime::vec::VectorAllocatorManager g_vector_allocator_manager =
+    omniruntime::vec::VectorAllocatorManager::GetInstance();
+omniruntime::vec::VectorAllocator *g_vector_allocator =
+    g_vector_allocator_manager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
+namespace omniruntime {
+namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
-: size(size), positionOffset(0), capacityInBytes(capacityInBytes)
+    : size(size), positionOffset(0), capacityInBytes(capacityInBytes)
 {
     if (allocator != nullptr) {
         reference = allocator->NewVector(capacityInBytes, size, type);
@@ -111,4 +114,6 @@ void Vector::SetValueNullBitMap(int index)
         // std::cout << "set value null BitMap" << std::endl;
         BitMapUtil::Set(reinterpret_cast<uint8_t *>(valueNullsAddress), index);
     }
+}
+}
 }

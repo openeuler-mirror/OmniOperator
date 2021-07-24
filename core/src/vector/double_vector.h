@@ -6,6 +6,8 @@
 
 #include "fixed_width_vector.h"
 
+namespace omniruntime {
+namespace vec {
 class DoubleVector : public FixedWidthVector<double> {
 public:
     DoubleVector(VectorAllocator *allocator, int size);
@@ -40,5 +42,6 @@ private:
 
     static const int BYTES = sizeof(double);
 };
-
-#endif
+} // namespace vec
+} // namespace omniruntime
+#endif // __DOUBLE_VECTOR__H__

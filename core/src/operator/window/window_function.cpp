@@ -7,6 +7,7 @@
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_helper.h"
 
+using namespace omniruntime::vec;
 using namespace std;
 
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)

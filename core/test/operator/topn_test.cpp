@@ -12,7 +12,7 @@
 #include <src/operator/optimization.h>
 #include "../../src/jit/jit.h"
 
-
+using namespace omniruntime::vec;
 
 JitContext *CreateTestTopNJitContext(int32_t *sourceTypes, int32_t sourceTypesCount, int32_t sortColsCount)
 {

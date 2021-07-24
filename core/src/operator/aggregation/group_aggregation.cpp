@@ -19,7 +19,7 @@ using namespace std;
 #endif
 namespace omniruntime {
 namespace op {
-
+using namespace omniruntime::vec;
 OmniStatus HashAggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;

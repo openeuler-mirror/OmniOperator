@@ -22,11 +22,12 @@ class Filter
 public:
     Filter(FilterCodeGen* codegen, expressions::Expr* expr);
     ~Filter() {delete this->codeGen; delete this->expr;}
-    int32_t filter(VectorBatch* &vecBatch, int32_t *selectedRows);
+    int32_t filter(omniruntime::vec::VectorBatch* &vecBatch, int32_t *selectedRows);
 private:
     FilterCodeGen *codeGen;
     expressions::Expr* expr;
-    int64_t* getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap);
+    int64_t* getData(omniruntime::vec::VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec,
+        vector<char *> &stringvalVec, bool* bitmap);
     
     // filter function is retrieved from FilterCodeGen
     // func(data, numSelectedRows, rowCount, bitmap)
@@ -52,9 +53,9 @@ public:
         delete[] this->projections;
     }
 
-    int32_t AddInput(VectorBatch *vecBatch) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<VectorBatch*>& data) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch*>& data) override;
 
     int32_t getVecCount() { return this->vecCount; }
 
@@ -68,7 +69,7 @@ public:
     int32_t projectVecCount;
     int32_t *inputTypes;
     int32_t vecCount;
-    VectorBatch *projectedVecs;
+    omniruntime::vec::VectorBatch *projectedVecs;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory

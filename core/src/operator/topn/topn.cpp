@@ -14,6 +14,7 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
+    using namespace omniruntime::vec;
 TopNOperatorFactory::TopNOperatorFactory(int32_t *sourceTypes, int32_t sourceTypesCount, int32_t n, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {

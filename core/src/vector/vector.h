@@ -15,6 +15,8 @@
 #include "vector_allocator.h"
 #include "vector_type.h"
 
+namespace omniruntime {
+namespace vec {
 class Vector {
 public:
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type);
@@ -90,5 +92,6 @@ private:
     VectorReference *reference;
     VectorAllocator *allocator;
 };
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __VECTOR_H__

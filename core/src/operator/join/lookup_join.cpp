@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <memory>
 
+using namespace omniruntime::vec;
 inline int32_t GetTypeSize(int32_t type)
 {
     switch (type) {

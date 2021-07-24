@@ -3,6 +3,7 @@
 
 namespace omniruntime {
 namespace op {
+using namespace omniruntime::vec;
 using namespace std;
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)

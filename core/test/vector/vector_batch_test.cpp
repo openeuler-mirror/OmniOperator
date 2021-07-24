@@ -5,6 +5,8 @@
 #include "gtest/gtest.h"
 #include "vector_batch.h"
 
+using namespace omniruntime::vec;
+
 TEST(VectorBatch, constructVectorBatchWithVectorCount) {
     VectorBatch *vectorBatch = new VectorBatch(4);
     LongVector *vector0 = new LongVector(nullptr, 1024);

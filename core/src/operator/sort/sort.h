@@ -80,9 +80,9 @@ public:
 
     ~SortOperator() override;
 
-    int32_t AddInput(VectorBatch *vecBatch) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
 
     int32_t GetTypescount()
     {
@@ -131,7 +131,7 @@ private:
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
     std::unique_ptr<PagesIndex> pagesIndex;
-    std::vector<VectorBatch *> inputVecBatches;
+    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
 };
 
 int32_t GetMaxRowCount(const int32_t *sourceTypes, const int32_t *outputCols, int32_t outputColsCount);

@@ -6,6 +6,7 @@
 #include <memory>
 #include "window_function.h"
 
+using namespace omniruntime::vec;
 using namespace std;
 
 WindowPartition::WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart, int32_t partitionEnd,

@@ -23,8 +23,8 @@ public:
         delete this->codegen;
     }
 
-    Vector* project(VectorBatch* vecBatch, int32_t* selected, int32_t nSelected);
-    Vector* project(VectorBatch* vecBatch);
+    omniruntime::vec::Vector* project(omniruntime::vec::VectorBatch* vecBatch, int32_t* selected, int32_t nSelected);
+    omniruntime::vec::Vector* project(omniruntime::vec::VectorBatch* vecBatch);
     DataType GetOutputType() {return this->expr->getExprDataType();}
 
 private:
@@ -32,7 +32,8 @@ private:
     int32_t nCols;
     Expr* expr;
     ProjectionCodeGen* codegen;
-    int64_t* getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap);
+    int64_t* getData(omniruntime::vec::VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec,
+        vector<char *> &stringvalVec, bool* bitmap);
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)
@@ -55,14 +56,14 @@ public:
     ~ProjectionOperator() {
     }
 
-    int32_t AddInput(VectorBatch* vecBatch) override;
-    int32_t GetOutput(std::vector<VectorBatch*>& ret) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch* vecBatch) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch*>& ret) override;
 
 private:
     Projection** proj;
     int32_t nCols;
     int32_t nProj;
-    VectorBatch* mutated;
+    omniruntime::vec::VectorBatch* mutated;
 };
 
 class ProjectionOperatorFactory : public OperatorFactory {

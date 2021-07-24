@@ -6,9 +6,12 @@
 
 #include "fixed_width_vector.h"
 
+namespace omniruntime {
+namespace vec {
 class BooleanVector : public FixedWidthVector<bool> {
 public:
     BooleanVector(VectorAllocator *allocator, int size);
+
     bool GetValue(int index) const
     {
         return reinterpret_cast<bool *>(valuesAddress)[index + positionOffset];
@@ -41,5 +44,6 @@ private:
 
     static const int BYTES = 0;
 };
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __BOOLEAN_VECTOR__H__

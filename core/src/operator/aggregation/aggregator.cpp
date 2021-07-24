@@ -12,6 +12,7 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
+    using namespace omniruntime::vec;
 int32_t CompareInt(int32_t leftVal, int32_t rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));

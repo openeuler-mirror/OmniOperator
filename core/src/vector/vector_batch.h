@@ -11,6 +11,8 @@
 
 #include "vector.h"
 
+namespace omniruntime {
+namespace vec {
 class VectorBatch {
 public:
     VectorBatch(int vectorCount);
@@ -19,17 +21,17 @@ public:
 
     ~VectorBatch();
 
-    Vector *GetVector(int index);
+    omniruntime::vec::Vector *GetVector(int index);
 
-    Vector **GetVectors() const;
+    omniruntime::vec::Vector **GetVectors() const;
 
-    void SetVector(int index, Vector *vector);
+    void SetVector(int index, omniruntime::vec::Vector *vector);
 
     int GetVectorCount();
 
     int GetRowCount();
 
-    VecType *GetVectorTypes() const;
+    omniruntime::vec::VecType *GetVectorTypes() const;
 
     void FreeAllVectors();
 
@@ -37,10 +39,12 @@ public:
 
 private:
     void Init();
+
     int vectorCount;
     int rowCount;
-    Vector **vectors;
-    VecType *vectorTypes;
+    omniruntime::vec::Vector **vectors;
+    omniruntime::vec::VecType *vectorTypes;
 };
-
+} // namespace vec
+} // namespace omniruntime
 #endif // OMNI_RUNTIME_VECTOR_BATCH_H

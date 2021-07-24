@@ -11,7 +11,7 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
-
+using namespace omniruntime::vec;
 OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;

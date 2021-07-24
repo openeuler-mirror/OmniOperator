@@ -7,9 +7,11 @@
 #include "fixed_width_vector.h"
 #include <limits>
 
+namespace omniruntime {
+namespace vec {
 class LongVector : public FixedWidthVector<int64_t> {
 public:
-    LongVector(VectorAllocator *allocator, int size);
+    LongVector(omniruntime::vec::VectorAllocator *allocator, int size);
 
     // inline for high performance.
     int64_t GetValue(int index)
@@ -43,5 +45,6 @@ private:
 
     static const int BYTES = sizeof(int64_t);
 };
-
-#endif
+} // namespace vec
+} // namespace omniruntime
+#endif // __LONG_VECTOR__H__

@@ -18,7 +18,7 @@ const int32_t AVG_VECTOR_COUNT = 2;
 
 using ColumnIndex = struct ColumnIndex {
     uint32_t idx;
-    VecType type;
+    omniruntime::vec::VecType type;
 };
 
 using PrepareContext = struct PrepareContext {
@@ -60,15 +60,15 @@ public:
         } else {
             for (auto &i : groupState) {
                 switch (dataType) {
-                    case OMNI_VEC_TYPE_INT: {
+                    case omniruntime::vec::OMNI_VEC_TYPE_INT: {
                         delete reinterpret_cast<int32_t *>(i.second.val);
                         break;
                     }
-                    case OMNI_VEC_TYPE_LONG: {
+                    case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
                         delete reinterpret_cast<int64_t *>(i.second.val);
                         break;
                     }
-                    case OMNI_VEC_TYPE_DOUBLE: {
+                    case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
                         delete reinterpret_cast<double *>(i.second.val);
                         break;
                     }
@@ -79,7 +79,7 @@ public:
         }
         groupState.clear();
     }
-    virtual void Process(void *valuePtr, VecType type) = 0;
+    virtual void Process(void *valuePtr, omniruntime::vec::VecType type) = 0;
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
@@ -130,7 +130,7 @@ public:
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
+    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
 
 class AverageAggregator : public Aggregator {
@@ -144,7 +144,7 @@ public:
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
+    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
 
 class CountAggregator : public Aggregator {
@@ -160,7 +160,7 @@ public:
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
+    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
 
 class MinAggregator : public Aggregator {
@@ -174,7 +174,7 @@ public:
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
+    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
 
 class MaxAggregator : public Aggregator {
@@ -188,7 +188,7 @@ public:
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
     void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
+    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
 
 class AggregatorFactory {

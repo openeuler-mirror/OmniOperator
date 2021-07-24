@@ -10,6 +10,8 @@
 
 #include <memory>
 
+using namespace omniruntime::vec;
+
 PagesHashStrategy::PagesHashStrategy(Vector ***columns, int32_t *columnTypes, int32_t columnCount, int32_t *hashCols,
     int32_t hashColsCount)
 {

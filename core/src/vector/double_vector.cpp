@@ -6,6 +6,8 @@
 #include <cstring>
 #include "double_vector.h"
 
+namespace omniruntime {
+namespace vec {
 DoubleVector::DoubleVector(VectorAllocator *allocator, int size)
     : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_DOUBLE)
 {}
@@ -63,4 +65,6 @@ void DoubleVector::Append(Vector *other, int positionOffset, int length)
     if (ret != EOK) {
         std::cerr << "append failed in double vector." << std::endl;
     }
+}
+}
 }

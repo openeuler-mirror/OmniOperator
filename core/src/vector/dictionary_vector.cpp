@@ -5,6 +5,8 @@
 #include "int_vector.h"
 #include "long_vector.h"
 
+namespace omniruntime {
+namespace vec {
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount)
     : Vector(dictionary, dictionary->GetSize(), 0), dictionary(dictionary), ids(ids), idsCount(idsCount), idsOffset(0)
 {
@@ -43,3 +45,5 @@ DictionaryVector *DictionaryVector::CopyRegion(int positionOffset, int length)
 }
 
 void DictionaryVector::Append(Vector *other, int positionOffset, int length) {}
+} // namespace vec
+} // namespace omniruntime

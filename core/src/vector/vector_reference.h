@@ -12,6 +12,8 @@
 #include "chunk.h"
 #include "vector_type.h"
 
+namespace omniruntime {
+namespace vec {
 class VectorReference {
 public:
     VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, int capacityInBytes, VecType type);
@@ -51,6 +53,6 @@ private:
     bool writable;
     std::atomic<int64_t> reference;
 };
-
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __VECTOR_REFERENCE_H__

@@ -6,6 +6,8 @@
 
 #include "variable_width_vector.h"
 
+namespace omniruntime {
+namespace vec {
 class VarcharVector : public VariableWidthVector<char *> {
 public:
     VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size);
@@ -52,4 +54,6 @@ private:
 
     int lastOffsetPosition = -1;
 };
+}
+}
 #endif // __VARCHAR_VECTOR__H__
