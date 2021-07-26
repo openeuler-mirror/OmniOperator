@@ -9,6 +9,7 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
+    using namespace omniruntime::vec;
     WindowOperatorFactory::WindowOperatorFactory(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
     int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
     int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,

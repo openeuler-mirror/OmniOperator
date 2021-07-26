@@ -16,7 +16,7 @@ namespace op {
 class RowComparator {
 public:
     RowComparator(int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t sortColCount,
-                  VectorBatch* vectorBatch);
+                  omniruntime::vec::VectorBatch* vectorBatch);
 
     RowComparator() {};
 
@@ -28,14 +28,14 @@ public:
 
     int32_t GetSortColCount() const;
 
-    VectorBatch* GetVecBatch() const;
+    omniruntime::vec::VectorBatch* GetVecBatch() const;
 
 private:
     int32_t *sourceTypes = nullptr;
     int32_t *sortCols = nullptr;
     int32_t *sortAscendings = nullptr;
     int32_t sortColCount = 0;
-    VectorBatch* vectorBatch = nullptr;
+    omniruntime::vec::VectorBatch* vectorBatch = nullptr;
 };
 
 bool operator < (const RowComparator &left, const RowComparator &right);
@@ -67,11 +67,12 @@ public:
 
     ~TopNOperator() override;
 
-    int32_t AddInput(VectorBatch *data) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
 
-    int32_t GetOutput(std::vector<VectorBatch *> &outputVecBatch) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
-    int32_t Compare(int32_t position, VectorBatch *table, VectorBatch *currentMaxVectorBatch, int32_t sortColCount,
+    int32_t Compare(int32_t position, omniruntime::vec::VectorBatch *table,
+        omniruntime::vec::VectorBatch *currentMaxVectorBatch, int32_t sortColCount,
         const int32_t *sourceTypes, const int32_t *sortAscendings) const;
 
 private:
@@ -85,7 +86,8 @@ private:
     std::priority_queue<RowComparator, std::vector<RowComparator>,
                             std::less<std::vector<RowComparator>::value_type>> pq;
 
-    void SetValueForSingleRowTable(VectorBatch *vectorBatch, int32_t position, VectorBatch *singleRowTable) const;
+    void SetValueForSingleRowTable(omniruntime::vec::VectorBatch *vectorBatch, int32_t position,
+        omniruntime::vec::VectorBatch *singleRowTable) const;
 };
 }
 }

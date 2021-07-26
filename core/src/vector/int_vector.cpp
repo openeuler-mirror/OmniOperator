@@ -6,6 +6,8 @@
 #include <cstring>
 #include "int_vector.h"
 
+namespace omniruntime {
+namespace vec {
 IntVector::IntVector(VectorAllocator *allocator, int size)
     : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT)
 {}
@@ -26,6 +28,7 @@ IntVector *IntVector::Slice(int positionOffset, int length)
 {
     return new IntVector(this, length, positionOffset);
 }
+
 IntVector *IntVector::CopyPositions(const int *positions, int offset, int length)
 {
     if (length > size) {
@@ -63,3 +66,5 @@ void IntVector::Append(Vector *other, int positionOffset, int length)
         std::cerr << "append failed in int vector." << std::endl;
     }
 }
+} // namespace vec
+} // namespace omniruntime

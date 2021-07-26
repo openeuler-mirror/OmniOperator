@@ -6,14 +6,18 @@
 
 #include "vector.h"
 
+namespace omniruntime {
+namespace vec {
 // template<class T>
 class DictionaryVector : public Vector {
 public:
     DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount);
+
     ~DictionaryVector()
     {
         delete dictionary;
     }
+
     Vector *GetDictionary() const
     {
         return dictionary;
@@ -57,6 +61,6 @@ private:
     int32_t idsCount;
     int32_t idsOffset;
 };
-
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __DICTIONARY_VECTOR_H__

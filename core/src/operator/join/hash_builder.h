@@ -42,8 +42,8 @@ public:
         std::vector<int32_t> &buildHashCols, JoinHashTables *hashTables, int32_t partitionIndex,
         std::unique_ptr<PagesIndex> &pagesIndex);
     ~HashBuilderOperator() override;
-    int32_t AddInput(VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
     int32_t *GetSourceTypes() override;
     void Close() override;
 
@@ -53,7 +53,7 @@ private:
     std::unique_ptr<PagesIndex> pagesIndex;
     int32_t partitionIndex;
     JoinHashTables *hashTables;
-    std::vector<VectorBatch *> inputVecBatches;
+    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
 };
 } // end of op
 } // end of omniruntime

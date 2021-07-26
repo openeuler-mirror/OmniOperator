@@ -15,6 +15,8 @@
 #include "double_vector.h"
 #include <vector>
 
+namespace omniruntime {
+namespace vec {
 class VectorHelper {
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
@@ -57,5 +59,6 @@ public:
 
     static void FreeVecBatches(std::vector<VectorBatch *> &vecBatches);
 };
-
+} // namespace vec
+} // namespace omniruntime
 #endif // OMNI_RUNTIME_VECTOR_HELPER_H

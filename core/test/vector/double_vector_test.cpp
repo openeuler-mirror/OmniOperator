@@ -8,6 +8,8 @@
 #include "vector_allocator_manager.h"
 #include "double_vector.h"
 
+using namespace omniruntime::vec;
+
 TEST(DoubleVector, newVector) {
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");

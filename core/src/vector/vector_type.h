@@ -8,6 +8,8 @@
 #ifndef OMNI_RUNTIME_VECTOR_TYPE_H
 #define OMNI_RUNTIME_VECTOR_TYPE_H
 
+namespace omniruntime {
+namespace vec {
 typedef enum {
     OMNI_VEC_TYPE_INT = 1,
     OMNI_VEC_TYPE_LONG = 2,
@@ -21,4 +23,6 @@ typedef enum {
     OMNI_VEC_TYPE_DICTIONARY = 101,
     OMNI_VEC_TYPE_INVALID = 200
 } VecType;
+} // namespace vec
+} // namespace omniruntime
 #endif // OMNI_RUNTIME_VECTOR_TYPE_H

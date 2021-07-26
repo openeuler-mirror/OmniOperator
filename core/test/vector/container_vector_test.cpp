@@ -8,6 +8,8 @@
 #include "container_vector.h"
 #include "../util/test_util.h"
 
+using namespace omniruntime::vec;
+
 const int32_t POSITION_COUNT = 100;
 const int32_t VECTOR_COUNT = 2;
 const VecType VECTOR_TYPES[] = {OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG};

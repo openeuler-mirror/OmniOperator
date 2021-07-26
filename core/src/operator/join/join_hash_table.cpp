@@ -14,6 +14,7 @@
 
 namespace omniruntime {
 namespace op {
+using namespace omniruntime::vec;
 const int32_t CACHE_SIZE = 131072; // 128KB
 
 int32_t NumberOfTrailingZeros(int32_t value)

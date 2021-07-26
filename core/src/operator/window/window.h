@@ -169,8 +169,8 @@ public:
 
     ~WindowOperator() override;
 
-    int32_t AddInput(VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
     int32_t *GetSourceTypes() override
     {
         return sourceTypes.data();
@@ -203,21 +203,21 @@ private:
     std::vector<int32_t> allTypes;
     int32_t allCount;
     std::unique_ptr<PagesIndex> pagesIndex;
-    VectorBatch *pendingInput;
+    omniruntime::vec::VectorBatch *pendingInput;
     std::unique_ptr<PagesHashStrategy> preGroupedPartitionHashStrategy = nullptr;
     std::unique_ptr<PagesHashStrategy> unGroupedPartitionHashStrategy = nullptr;
     std::unique_ptr<PagesHashStrategy> preSortedPartitionHashStrategy = nullptr;
     std::unique_ptr<PagesHashStrategy> peerGroupHashStrategy = nullptr;
     std::unique_ptr<WindowPartition> partition;
     std::vector<std::unique_ptr<WindowFunction>> windowFunctions;
-    std::vector<VectorBatch *> inputVecBatches;
+    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
     std::vector<int32_t> argumentChannels;
     int32_t argumentChannelsCount;
 
     void Initialization();
 
     void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount, int *outputTypes,
-        int32_t position, VectorBatch *&vecBatch, int32_t &rowCount);
+        int32_t position, omniruntime::vec::VectorBatch *&vecBatch, int32_t &rowCount);
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);

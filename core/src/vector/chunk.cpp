@@ -9,6 +9,8 @@
 #include "../../../huawei_secure_c/include/securec.h"
 #include "../memory/memory_pool.h"
 
+namespace omniruntime {
+namespace vec {
 Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes))
 {
     if (memset_s(address, sizeInBytes, 0, sizeInBytes) != EOK) {
@@ -18,7 +20,7 @@ Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAlloca
 
 Chunk::~Chunk()
 {
-    OmniRelease((int64_t) address);
+    OmniRelease((int64_t)address);
 }
 
 void *Chunk::GetAddress() const
@@ -30,3 +32,5 @@ int64_t Chunk::GetSizeInBytes()
 {
     return sizeInBytes;
 }
+} // namespace vec
+} // namespace omniruntime

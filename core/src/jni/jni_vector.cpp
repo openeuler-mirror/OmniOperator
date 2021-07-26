@@ -16,6 +16,8 @@
 #include "../vector/container_vector.h"
 #include "../vector/vector_allocator_manager.h"
 
+using namespace omniruntime::vec;
+
 Vector *TransformVector(long vectorAddr);
 
 VectorAllocator *TransformAllocator(long allocatorAddr);

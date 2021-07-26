@@ -14,6 +14,7 @@
 #include <thread>
 #include <cstdlib>
 
+using namespace omniruntime::vec;
 using namespace std;
 
 const int32_t VEC_BATCH_NUM = 10;

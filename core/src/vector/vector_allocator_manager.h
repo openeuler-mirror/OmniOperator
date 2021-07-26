@@ -13,6 +13,8 @@
 
 const static std::string GLOBAL_SCOPE_NAME = "___GLOBAL_SCOPE___";
 
+namespace omniruntime {
+namespace vec {
 class VectorAllocatorManager {
 public:
     VectorAllocatorManager();
@@ -29,6 +31,6 @@ public:
 private:
     std::map<std::string, VectorAllocator *> allocatorList;
 };
-
-
+}
+}
 #endif // __VECTOR_ALLOCATOR_MANAGER_H__

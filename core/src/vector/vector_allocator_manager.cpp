@@ -7,11 +7,13 @@
 
 #include "vector_allocator_manager.h"
 
-VectorAllocatorManager::VectorAllocatorManager() {}
+namespace omniruntime {
+namespace vec {
+VectorAllocatorManager::VectorAllocatorManager() = default;
 
 VectorAllocator *VectorAllocatorManager::GetOrCreateAllocator(std::string scope)
 {
-    std::map<std::string, VectorAllocator *>::iterator iterator = allocatorList.find(scope);
+    auto iterator = allocatorList.find(scope);
     VectorAllocator *allocator = nullptr;
     if (iterator == allocatorList.end()) {
         allocator = new VectorAllocator(scope);
@@ -39,4 +41,6 @@ const VectorAllocatorManager &VectorAllocatorManager::GetInstance()
 {
     static VectorAllocatorManager instance;
     return instance;
+}
+}
 }

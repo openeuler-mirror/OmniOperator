@@ -13,11 +13,11 @@ class PagesIndex {
 public:
     PagesIndex(int32_t *types, int32_t typesCount);
     ~PagesIndex();
-    int32_t AddVecBatches(std::vector<VectorBatch *> &vecBatches);
+    int32_t AddVecBatches(std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
     void Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
         const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to) const;
-    void GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch, int32_t *sourceTypes,
-        int32_t offset, int32_t length) const;
+    void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
+        int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
     int32_t *GetTypes() const
     {
@@ -36,7 +36,7 @@ public:
         return this->positionCount;
     }
 
-    Vector ***GetColumns() const
+    omniruntime::vec::Vector ***GetColumns() const
     {
         return this->columns;
     }
@@ -44,7 +44,7 @@ public:
 private:
     int32_t *types;
     int32_t typesCount;
-    Vector ***columns; // Vector* [columnIndex][tableIndex]
+    omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
     int64_t *valueAddresses;
     int32_t positionCount;
 };

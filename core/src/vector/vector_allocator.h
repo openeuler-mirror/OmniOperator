@@ -15,6 +15,8 @@
 #include "vector_reference.h"
 #include "vector_type.h"
 
+namespace omniruntime {
+namespace vec {
 class VectorAllocator {
 public:
     VectorAllocator(const std::string scope);
@@ -38,6 +40,6 @@ private:
     std::list<VectorReference *> vectorList;
     std::atomic<int64_t> allocatedBytes;
 };
-
-
+}
+}
 #endif // __VECTOR_ALLOCATOR_H__

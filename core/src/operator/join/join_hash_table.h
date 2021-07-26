@@ -32,10 +32,10 @@ public:
     JoinHashTable *GetHashTable(int32_t partitionIndex) const;
     bool IsJoinPositionEligible() const;
     int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
-    int64_t GetJoinPosition(int32_t position, Vector **joinColumns, int32_t *joinColumnTypes, int32_t joinColumnsCount,
-        Vector **allColumns, int32_t allColumnsCount) const;
-    int64_t GetJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns,
-        int32_t allColumnsCount, int64_t rawHash) const;
+    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t *joinColumnTypes,
+        int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns, int32_t allColumnsCount) const;
+    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
+        omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
     void GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const;
     void Clear(int32_t partitionIndex);
 
@@ -65,16 +65,19 @@ public:
         return positionLinks;
     }
 
-    int64_t GetJoinPosition(int32_t position, Vector **joinColumns, Vector **allColumns) const;
-    int64_t GetJoinPosition(int32_t position, Vector **joinColumns, Vector **allColumns, int64_t rawHash) const;
+    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
+        omniruntime::vec::Vector **allColumns) const;
+    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
+        omniruntime::vec::Vector **allColumns, int64_t rawHash) const;
     int32_t GetNextJoinPosition(int32_t currentJoinPosition, int probePosition) const;
-    int32_t GetJoinPosition(int32_t position, Vector **joinColumns, int32_t joinColumnsCount, Vector **allColumns,
+    int32_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
+        int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns,
         int32_t allColumnsCount, int64_t rawHash) const;
     void GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
     void PrintHashTable(int32_t partitionIndex) const;
 
 private:
-    int32_t StartJoinPosition(int32_t currentJoinPosition, int32_t probePosition, Vector **allColumns,
+    int32_t StartJoinPosition(int32_t currentJoinPosition, int32_t probePosition, omniruntime::vec::Vector **allColumns,
         int32_t allColumnsCount) const;
 
     PagesHash *pagesHash;
@@ -96,7 +99,8 @@ public:
     }
     void SetAddressIndex(ArrayPositionLinks *positionLinks, int32_t realPosition, int64_t hash,
         int64_t *totalHashCollisions) const;
-    int32_t GetAddressIndex(int probePosition, Vector **joinColumns, int32_t joinColumnsCount, int64_t rawHash) const;
+    int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns,
+        int32_t joinColumnsCount, int64_t rawHash) const;
     void GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
     int8_t *GetPositionToHashes() const
     {
@@ -116,7 +120,7 @@ private:
     bool IsPositionNull(int32_t position) const;
     bool PositionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition) const;
     bool PositionEqualsCurrentRowIgnoreNulls(int32_t buildPosition, int8_t rawHash, int32_t probePosition,
-        Vector **joinColumns) const;
+        omniruntime::vec::Vector **joinColumns) const;
 
     PagesHashStrategy *pagesHashStrategy;
     int64_t *addresses;

@@ -8,9 +8,17 @@
 #include <stddef.h>
 #include "vector_reference.h"
 
+namespace omniruntime {
+namespace vec {
 VectorReference::VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, int capacityInBytes,
     VecType type)
-    : values(values), valueNulls(valueNulls), valueOffsets(valueOffsets), reference(1), capacityInBytes(capacityInBytes), type(type), writable(true)
+    : values(values),
+      valueNulls(valueNulls),
+      valueOffsets(valueOffsets),
+      reference(1),
+      capacityInBytes(capacityInBytes),
+      type(type),
+      writable(true)
 {}
 
 VectorReference::~VectorReference() {}
@@ -98,3 +106,5 @@ Chunk *VectorReference::GetValueOffsetChunk() const
 {
     return valueOffsets;
 }
+} // namespace vec
+} // namespace omniruntime

@@ -16,6 +16,7 @@
 #include <memory>
 
 using namespace omniruntime::op;
+using namespace omniruntime::vec;
 using namespace std;
 
 JitContext *CreateTestSortJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,

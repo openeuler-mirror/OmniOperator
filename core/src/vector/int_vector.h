@@ -6,6 +6,8 @@
 
 #include "fixed_width_vector.h"
 
+namespace omniruntime {
+namespace vec {
 class IntVector : public FixedWidthVector<int32_t> {
 public:
     IntVector(VectorAllocator *allocator, int size);
@@ -39,5 +41,6 @@ private:
 
     static const int BYTES = sizeof(int32_t);
 };
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __INT_VECTOR__H__

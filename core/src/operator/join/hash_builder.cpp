@@ -64,13 +64,13 @@ HashBuilderOperator::HashBuilderOperator(std::vector<int32_t> &buildTypes, const
 
 HashBuilderOperator::~HashBuilderOperator() {}
 
-int32_t HashBuilderOperator::AddInput(VectorBatch *vecBatch)
+int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
     inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
-int32_t HashBuilderOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
     // add vecBatches into PagesIndex
     pagesIndex->AddVecBatches(inputVecBatches);

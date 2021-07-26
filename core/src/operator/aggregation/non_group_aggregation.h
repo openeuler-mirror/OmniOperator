@@ -19,10 +19,10 @@ public:
     {}
 
     ~AggregationOperator() override {}
-    int32_t AddInput(VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<VectorBatch *> &data) override;
-    inline void InLoop(Vector **vectors, uint32_t offset, int32_t colNum, const int32_t *aggDataType, const int32_t *aggFuncType);
-    inline void PreLoop(VectorBatch *vecBatch)
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
+    inline void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, int32_t colNum, const int32_t *aggDataType, const int32_t *aggFuncType);
+    inline void PreLoop(omniruntime::vec::VectorBatch *vecBatch)
     {
         sourceTypes = new int32_t[aggCols.size()];
         int32_t idx = 0;
@@ -30,9 +30,9 @@ public:
             sourceTypes[idx++] = static_cast<int32_t>(c.type);
         }
     }
-    inline void PostLoop(VectorBatch *vecBatch) const {}
+    inline void PostLoop(omniruntime::vec::VectorBatch *vecBatch) const {}
 
-    void FillResultVectors(VectorBatch *vecBatch);
+    void FillResultVectors(omniruntime::vec::VectorBatch *vecBatch);
 
 private:
     std::vector<ColumnIndex> aggCols;

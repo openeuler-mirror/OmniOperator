@@ -8,6 +8,8 @@
 #include "long_vector.h"
 #include "../util/test_util.h"
 
+using namespace omniruntime::vec;
+
 VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
 
 TEST(LongVector, sliceVector) {

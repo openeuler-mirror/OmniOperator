@@ -39,9 +39,9 @@ public:
         : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {}
 
-    int32_t AddInput(VectorBatch *data) override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
 
-    int32_t GetOutput(std::vector<VectorBatch*>& data) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch*>& data) override;
 
     explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
     {}
@@ -52,15 +52,15 @@ public:
         for (auto &item : groupedRows) {
             for (int32_t idx = 0; idx < item.second.size(); ++idx) {
                 switch (groupByCols[idx].type) {
-                    case OMNI_VEC_TYPE_INT: {
+                    case omniruntime::vec::OMNI_VEC_TYPE_INT: {
                         delete reinterpret_cast<int32_t *>(item.second[idx].val);
                         break;
                     }
-                    case OMNI_VEC_TYPE_LONG: {
+                    case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
                         delete reinterpret_cast<int64_t *>(item.second[idx].val);
                         break;
                     }
-                    case OMNI_VEC_TYPE_DOUBLE: {
+                    case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
                         delete reinterpret_cast<double *>(item.second[idx].val);
                         break;
                     }
@@ -71,20 +71,21 @@ public:
         }
         groupedRows.clear();
     }
-    void PreLoop(VectorBatch *vecBatch);
+    void PreLoop(omniruntime::vec::VectorBatch *vecBatch);
 
-    void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
-        int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);
+    void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum,
+        const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum,
+        const int32_t *aggFuncTypes);
 
-    void PostLoop(VectorBatch *vecBatch);
+    void PostLoop(omniruntime::vec::VectorBatch *vecBatch);
 
 private:
     int32_t GetRowSize(int32_t *types, int32_t columnCount);
 
-    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, RowIterator &rowIterator,
-        int32_t rowCount);
+    void FillGroupByVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
+        RowIterator &rowIterator, int32_t rowCount);
 
-    void FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount);
+    void FillAggVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount);
 
 private:
     friend class HashAggregationOperatorFactory;

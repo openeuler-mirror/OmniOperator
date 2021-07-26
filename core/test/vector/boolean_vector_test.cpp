@@ -8,6 +8,8 @@
 #include "vector_allocator_manager.h"
 #include "boolean_vector.h"
 
+using namespace omniruntime::vec;
+
 TEST(BooleanVector, newVector) {
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");

@@ -16,15 +16,15 @@
  */
 class PagesHashStrategy {
 public:
-    PagesHashStrategy(Vector ***columns, int32_t *columnTypes, int32_t columnCount, int32_t *joinCols,
+    PagesHashStrategy(omniruntime::vec::Vector ***columns, int32_t *columnTypes, int32_t columnCount, int32_t *joinCols,
         int32_t joinColsCount);
     ~PagesHashStrategy();
     bool IsPositionNull(int32_t pageIndex, int32_t rowIndex) const;
     bool PositionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
         int32_t rightRowIndex) const;
-    bool ValuePositionEqualsPosition(VecType type, Vector *leftColumn, int32_t leftRowIndex, Vector *rightColumn,
-        int32_t rightRowIndex) const;
-    bool ValueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData,
+    bool ValuePositionEqualsPosition(omniruntime::vec::VecType type, omniruntime::vec::Vector *leftColumn,
+        int32_t leftRowIndex, omniruntime::vec::Vector *rightColumn, int32_t rightRowIndex) const;
+    bool ValueEqualsValueIgnoreNulls(omniruntime::vec::VecType type, void *leftData, int32_t leftIndex, void *rightData,
         int32_t rightIndex) const;
     int32_t *GetBuildHashColTypes() const
     {
@@ -34,27 +34,29 @@ public:
     {
         return buildHashColsCount;
     }
-    Vector ***GetBuildHashColumns() const
+    omniruntime::vec::Vector ***GetBuildHashColumns() const
     {
         return buildHashColumns;
     }
-    Vector ***GetBuildColumns() const
+    omniruntime::vec::Vector ***GetBuildColumns() const
     {
         return buildColumns;
     }
 
 private:
-    Vector ***buildColumns;     // Vector *[colCount][vecBatchCount]
+    omniruntime::vec::Vector ***buildColumns;     // Vector *[colCount][vecBatchCount]
     int32_t buildColumnCount;   // column count
     int32_t *buildHashColTypes; // build hash column types
-    Vector ***buildHashColumns; // Vector *[join colCount][vecBatchCount]
+    omniruntime::vec::Vector ***buildHashColumns; // Vector *[join colCount][vecBatchCount]
     int32_t buildHashColsCount; // join column count
 };
 
-int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes,
-    int32_t hashColCount);
+int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, omniruntime::vec::Vector ***buildHashColumns,
+    const int32_t *hashColTypes, int32_t hashColCount);
 bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
-    int32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes, int32_t hashColCount);
+    int32_t rightRowIndex, omniruntime::vec::Vector ***buildHashColumns,
+    const int32_t *hashColTypes, int32_t hashColCount);
 bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex, int32_t probePosition,
-    Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, int32_t hashColCount);
+    omniruntime::vec::Vector **probeJoinColumns, omniruntime::vec::Vector ***buildHashColumns,
+    const int32_t *hashColTypes, int32_t hashColCount);
 #endif

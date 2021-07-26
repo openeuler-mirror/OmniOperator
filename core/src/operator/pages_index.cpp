@@ -9,6 +9,8 @@
 
 #include <algorithm>
 
+using namespace omniruntime::vec;
+
 const int32_t SHIFT_SIZE_32 = 32;
 const int32_t QUICK_SORT_SMALL_LEN = 7;
 const int32_t QUICK_SORT_BIG_LEN = 40;

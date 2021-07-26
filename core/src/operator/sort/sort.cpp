@@ -13,6 +13,7 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
+    using namespace omniruntime::vec;
 int32_t GetMaxRowCount(const int32_t *sourceTypes, const int32_t *outputCols, int32_t outputColsCount)
 {
     int32_t rowSize = 0;

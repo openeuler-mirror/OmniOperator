@@ -7,6 +7,8 @@
 #include "test_util.h"
 #include "../../src/vector/dictionary_vector.h"
 
+using namespace omniruntime::vec;
+
 bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 

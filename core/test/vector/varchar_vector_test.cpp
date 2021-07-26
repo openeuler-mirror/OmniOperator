@@ -9,6 +9,8 @@
 #include "vector_allocator_manager.h"
 #include "varchar_vector.h"
 
+using namespace omniruntime::vec;
+
 TEST(VarcharVector, newVector) {
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");

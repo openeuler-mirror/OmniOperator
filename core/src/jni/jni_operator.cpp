@@ -13,6 +13,7 @@
 #include "../util/debug.h"
 
 using namespace omniruntime::op;
+using namespace omniruntime::vec;
 
 jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
 {

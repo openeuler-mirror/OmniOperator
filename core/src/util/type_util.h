@@ -12,13 +12,13 @@ class TypeUtil {
 public:
     static int32_t GetVarByteSize(uint32_t type) {
         switch (type) {
-            case OMNI_VEC_TYPE_INT: {
+            case  omniruntime::vec::OMNI_VEC_TYPE_INT: {
                 return sizeof(int32_t);
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
                 return sizeof(int64_t);
             }
-            case OMNI_VEC_TYPE_DOUBLE: {
+            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
                 return sizeof(double);
             }
             default:

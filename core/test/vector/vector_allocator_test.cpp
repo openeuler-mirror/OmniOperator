@@ -6,6 +6,8 @@
 #include "vector_allocator.h"
 #include "vector_allocator_manager.h"
 
+using namespace omniruntime::vec;
+
 TEST(VectorAllocatorManager, getOrCreateAllocator) {
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
 

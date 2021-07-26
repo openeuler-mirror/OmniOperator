@@ -7,6 +7,8 @@
 
 #include "vector_allocator.h"
 
+namespace omniruntime {
+namespace vec {
 VectorAllocator::VectorAllocator(std::string scope) : scope(scope)
 {
     vectorList.clear();
@@ -52,4 +54,6 @@ bool VectorAllocator::IsVariableWidthType(int type)
             // TODO: throw error.
             return false;
     }
+}
+}
 }
