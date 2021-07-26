@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description: registry function
+ */
 #include <vector>
 #include <map>
 #include "../common/expressions.h"
@@ -11,7 +15,8 @@ using namespace llvm;
 
 
 // Helper function to find the corresponding llvm type of a DataType
-Type* toLLVMType(DataType t, LLVMContext* context) {
+Type* ToLLVMType(DataType t, LLVMContext* context)
+{
     switch (t) {
         case DataType::INT32D:
             return Type::getInt32Ty(*context);
@@ -30,13 +35,15 @@ Type* toLLVMType(DataType t, LLVMContext* context) {
 }
 
 
-FunctionRegistry::FunctionRegistry(unique_ptr<LLJIT> &J, unique_ptr<LLVMContext> &C, unique_ptr<Module> &M) {
+FunctionRegistry::FunctionRegistry(unique_ptr<llvm::orc::LLJIT> &J, unique_ptr<LLVMContext> &C, unique_ptr<Module> &M)
+{
     JIT = J.get();
-    FRContext = C.get();
-    _module = M.get();
+    frContext = C.get();
+    module = M.get();
 }
 
-FunctionRegistry::~FunctionRegistry() {
+FunctionRegistry::~FunctionRegistry()
+{
     for (pair<const string, FunctionSignature*>& p : funcNameToSignatureMap) {
         delete p.second;
     }
@@ -45,130 +52,126 @@ FunctionRegistry::~FunctionRegistry() {
 
 // From codegen-refactor-func-reg branch
 // Registers one function given the function signature
-void FunctionRegistry::registerFunctionFromSignature(FunctionSignature func_signature) {
+void FunctionRegistry::RegisterFunctionFromSignature(FunctionSignature funcSignature)
+{
     // Register function in JIT
     auto &jd = JIT->getMainJITDylib();
     auto &dl = JIT->getDataLayout();
-    MangleAndInterner Mangle(JIT->getExecutionSession(), dl);
+    llvm::orc::MangleAndInterner Mangle(JIT->getExecutionSession(), dl);
     vector<Type*> args;
-    std::vector<DataType> params = func_signature.getParams();
+    std::vector<DataType> params = funcSignature.GetParams();
     args.reserve(params.size());
     for (int32_t i = 0; i < params.size(); i++) {
         DataType type = params.at(i);
-        args.push_back(toLLVMType(type, FRContext));
+        args.push_back(ToLLVMType(type, frContext));
     }
 
     // register a function
-    auto s = absoluteSymbols({{Mangle(func_signature.getName()), JITEvaluatedSymbol(pointerToJITTargetAddress(func_signature.getFunctionAddress()), JITSymbolFlags::Exported)}});
+    auto s =  llvm::orc::absoluteSymbols({{Mangle(funcSignature.GetName()), JITEvaluatedSymbol(pointerToJITTargetAddress(funcSignature.GetFunctionAddress()), JITSymbolFlags::Exported)}});
     auto ign = jd.define(s);
     if (ign) cerr << "Error while defining absolute symbol in jd" << endl;
-    llvm::FunctionType* ft = llvm::FunctionType::get(toLLVMType(func_signature.getReturnType(), FRContext), args, false);
-    Function* fn = llvm::Function::Create(ft, Function::ExternalLinkage, func_signature.getName(), _module);
-    FunctionCallee callee = _module->getOrInsertFunction(func_signature.getName(), ft);
-
-    // cout << "Registered function " << func_signature.getName() << endl;
+    llvm::FunctionType* ft = llvm::FunctionType::get(ToLLVMType(funcSignature.GetReturnType(), frContext), args, false);
+    Function* fn = llvm::Function::Create(ft, Function::ExternalLinkage, funcSignature.GetName(), module);
+    FunctionCallee callee = module->getOrInsertFunction(funcSignature.GetName(), ft);
 }
 
 
 // Only registers necessary functions
-void FunctionRegistry::initNecessary(std::set<string> requiredFuncs)
+void FunctionRegistry::InitNecessary(std::set<string> requiredFuncs)
 {
     // TODO: remove hard-coded strings
 
     // Always register string comparison
     vector<DataType> strCompareExt_types {DataType::INT64D, DataType::INT64D};
-    FunctionSignature* strCompareExt_sig = new FunctionSignature(strCompareExt_str, strCompareExt_types, DataType::INT32D, (void*)(strCompareExt));
-    this->registerFunctionFromSignature(*strCompareExt_sig);
-    funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(strCompareExt_str, strCompareExt_sig));
-    
+    auto strCompareExtSig = make_unique<FunctionSignature>(strCompareExt_str, strCompareExt_types, DataType::INT32D, (void*)(StrCompareExt)).release();
+    this->RegisterFunctionFromSignature(*strCompareExtSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(strCompareExt_str, strCompareExtSig));
 
-    set<string> externalFuncNames = getAllExternalFunctionNames();
+    set<string> externalFuncNames = GetAllExternalFunctionNames();
     for (auto fn : requiredFuncs) {
 
         // Math functions
         if (fn == "abs_int32") {
             vector<DataType> abs_int32_types {DataType::INT32D};
-            FunctionSignature* abs_int32_sig = new FunctionSignature(abs_int32_str, abs_int32_types, DataType::INT32D, (void*)(abs_int32));
-            this->registerFunctionFromSignature(*abs_int32_sig);
+            auto abs_int32_sig = make_unique<FunctionSignature>(abs_int32_str, abs_int32_types, DataType::INT32D, (void*)(AbsInt32)).release();
+            this->RegisterFunctionFromSignature(*abs_int32_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(abs_int32_str, abs_int32_sig));
         }
         if (fn == "abs_int64") {
             vector<DataType> abs_int64_types {DataType::INT64D};
-            FunctionSignature* abs_int64_sig = new FunctionSignature(abs_int64_str, abs_int64_types, DataType::INT64D, (void*)(abs_int64));
-            this->registerFunctionFromSignature(*abs_int64_sig);
+            auto abs_int64_sig =  make_unique<FunctionSignature>(abs_int64_str, abs_int64_types, DataType::INT64D, (void*)(AbsInt64)).release();
+            this->RegisterFunctionFromSignature(*abs_int64_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(abs_int64_str, abs_int64_sig));
         }
         if (fn == "abs_double") {
             vector<DataType> abs_double_types {DataType::DOUBLED};
-            FunctionSignature* abs_double_sig = new FunctionSignature(abs_double_str, abs_double_types, DataType::DOUBLED, (void*)(abs_double));
-            this->registerFunctionFromSignature(*abs_double_sig);
+            auto abs_double_sig =  make_unique<FunctionSignature>(abs_double_str, abs_double_types, DataType::DOUBLED, (void*)(AbsDouble)).release();
+            this->RegisterFunctionFromSignature(*abs_double_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(abs_double_str, abs_double_sig));
         }
 
         // String functions
         if (fn == "substrExt") {
             vector<DataType> substrExt_types {DataType::INT64D, DataType::INT32D, DataType::INT32D};
-            FunctionSignature* substrExt_sig = new FunctionSignature(substrExt_str, substrExt_types, DataType::INT64D, (void*)(substrExt));
-            this->registerFunctionFromSignature(*substrExt_sig);
+            auto substrExt_sig =  make_unique<FunctionSignature>(substrExt_str, substrExt_types, DataType::INT64D, (void*)(SubstrExt)).release();
+            this->RegisterFunctionFromSignature(*substrExt_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(substrExt_str, substrExt_sig));
         }
         if (fn == "substrWithStartExt") {
             vector <DataType> substrWithStartExt_types{DataType::INT64D, DataType::INT32D};
-            FunctionSignature* substrWithStartExt_sig = new FunctionSignature(substrWithStartExt_str, substrWithStartExt_types, DataType::INT64D, (void *) (substrWithStartExt));
-            this->registerFunctionFromSignature(*substrWithStartExt_sig);
+            auto substrWithStartExt_sig =  make_unique<FunctionSignature>(substrWithStartExt_str, substrWithStartExt_types, DataType::INT64D, (void *) (SubstrWithStartExt)).release();
+            this->RegisterFunctionFromSignature(*substrWithStartExt_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(substrWithStartExt_str, substrWithStartExt_sig));
         }
         if (fn == "concat") {
             vector<DataType> concatStrExt_types {DataType::INT64D, DataType::INT64D};
-            FunctionSignature* concatStrExt_sig = new FunctionSignature(concatStrExt_str, concatStrExt_types, DataType::INT64D, (void*)(concatStrExt));
-            this->registerFunctionFromSignature(*concatStrExt_sig);
+            auto concatStrExt_sig =  make_unique<FunctionSignature>(concatStrExt_str, concatStrExt_types, DataType::INT64D, (void*)(ConcatStrExt)).release();
+            this->RegisterFunctionFromSignature(*concatStrExt_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(concatStrExt_str, concatStrExt_sig));
         }
 
 
         if (fn == "LIKE") {
             vector<DataType> likeExt_types {DataType::INT64D, DataType::INT64D};
-            FunctionSignature* likeExt_sig = new FunctionSignature(likeExt_str, likeExt_types, DataType::BOOLD, (void*)(likeExt));
-            this->registerFunctionFromSignature(*likeExt_sig);
+            auto likeExt_sig =  make_unique<FunctionSignature>(likeExt_str, likeExt_types, DataType::BOOLD, (void*)(LikeExt)).release();
+            this->RegisterFunctionFromSignature(*likeExt_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(likeExt_str, likeExt_sig));
         }
 
         // Cast functions
         if (fn == "CAST_int32") {
             vector<DataType> cast_int32_types {DataType::INT32D};
-            FunctionSignature* cast_int32_sig = new FunctionSignature(cast_int32_str, cast_int32_types, DataType::DOUBLED, (void*)(cast_int32));
-            this->registerFunctionFromSignature(*cast_int32_sig);
+            auto cast_int32_sig =  make_unique<FunctionSignature>(cast_int32_str, cast_int32_types, DataType::DOUBLED, (void*)(CastInt32)).release();
+            this->RegisterFunctionFromSignature(*cast_int32_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(cast_int32_str, cast_int32_sig));
         }
         if (fn == "CAST_int64") {
             vector<DataType> cast_int64_types {DataType::INT64D};
-            FunctionSignature* cast_int64_sig = new FunctionSignature(cast_int64_str, cast_int64_types, DataType::DOUBLED, (void*)(cast_int64));
-            this->registerFunctionFromSignature(*cast_int64_sig);
+            auto cast_int64_sig =  make_unique<FunctionSignature>(cast_int64_str, cast_int64_types, DataType::DOUBLED, (void*)(CastInt64)).release();
+            this->RegisterFunctionFromSignature(*cast_int64_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(cast_int64_str, cast_int64_sig));
         }
         if (fn == "CAST_string") {
             vector<DataType> cast_string_types {DataType::INT64D};
-            FunctionSignature* cast_string_sig = new FunctionSignature(cast_string_str, cast_string_types, DataType::INT32D, (void*)(cast_string));
-            this->registerFunctionFromSignature(*cast_string_sig);
+            auto cast_string_sig =  make_unique<FunctionSignature>(cast_string_str, cast_string_types, DataType::INT32D, (void*)(CastString)).release();
+            this->RegisterFunctionFromSignature(*cast_string_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(cast_string_str, cast_string_sig));
         }
 
         // Hash-related functions
         if (fn == "combine_hash") {
             vector<DataType> combine_hash_types {DataType::INT64D, DataType::INT64D};
-            FunctionSignature* combine_hash_sig = new FunctionSignature(combine_hash_str, combine_hash_types, DataType::INT64D, (void*)(combine_hash));
-            this->registerFunctionFromSignature(*combine_hash_sig);
+            auto combine_hash_sig =  make_unique<FunctionSignature>(combine_hash_str, combine_hash_types, DataType::INT64D, (void*)(CombineHash)).release();
+            this->RegisterFunctionFromSignature(*combine_hash_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(combine_hash_str, combine_hash_sig));
         }
 
         // External developer functions
         if (externalFuncNames.find(fn) != externalFuncNames.end()) {
-            FunctionSignature* external_sig = getExternalSignature(fn);
-            this->registerFunctionFromSignature(*external_sig);
+            FunctionSignature* external_sig = GetExternalSignature(fn);
+            this->RegisterFunctionFromSignature(*external_sig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature*>(fn, external_sig));
         }
-
-
     }
 }
 

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description: registry external function
+ */
 #ifndef __EXTERNAL_FUNC_REGISTERY_H__
 #define __EXTERNAL_FUNC_REGISTERY_H__
 #include <vector>
@@ -16,17 +20,17 @@
 
 // Returns a set containing strings of all the external function names
 // Modify in external_func_registry.cpp
-set<string> getAllExternalFunctionNames();
+std::set<std::string> GetAllExternalFunctionNames();
 
 
 // Returns a map from function name to return type
 // Modify in external_func_registry.cpp
-map<string, DataType> getFuncReturnTypeMap();
+std::map<std::string, DataType> GetFuncReturnTypeMap();
 
 
 // Add the signatures for your own functions here
 // Modify in external_func_registry.cpp
-FunctionSignature* getExternalSignature(std::string funcName);
+FunctionSignature* GetExternalSignature(std::string funcName);
 
 
 

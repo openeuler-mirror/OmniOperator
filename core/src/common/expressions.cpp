@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description:
+ */
 #include "expressions.h"
 #include <stdio.h>
 #include <iostream>
@@ -7,29 +11,39 @@
 namespace omniruntime {
 namespace expressions {
 
+
+const int TYPE_INT32D = 1;
+const int TYPE_INT64D = 2;
+const int TYPE_DOUBLED = 3;
+const int TYPE_BOOLD = 4;
+const int TYPE_INT32D_2ND = 5;
+const int TYPE_STRINGD = 100;
 // Helper function to get DataType from jint type
 // Find types in core/src/types/vector_type.h
-DataType colTypeTrans(int32_t colType) {
-    switch(colType) {
-        case 1:
+DataType ColTypeTrans(int32_t colType)
+{
+    switch (colType) {
+        case TYPE_INT32D:
             return DataType::INT32D;
-        case 2: 
+        case TYPE_INT64D:
             return DataType::INT64D;
-        case 3:
+        case TYPE_DOUBLED:
             return DataType::DOUBLED;
-        case 4 :
+        case TYPE_BOOLD :
             return DataType::BOOLD;
         // Should be short datatype (INT16D)
-        case 5:
+        case TYPE_INT32D_2ND:
             return DataType::INT32D;
-        case 100:
+        case TYPE_STRINGD:
             return DataType::STRINGD;
+        default:
+            return DataType::INVALIDDATAD;
     }
-    return DataType::INVALIDDATAD;
 }
 
-std::string dataTypeString(DataType dt) {
-    switch(dt) {
+std::string dataTypeString(DataType dt)
+{
+    switch (dt) {
         case DataType::BOOLD: return "bool";
         case DataType::DOUBLED: return "double";
         case DataType::INT32D: return "int32";
@@ -40,53 +54,62 @@ std::string dataTypeString(DataType dt) {
 }
 
 
-ExprType Expr::getType() {
+ExprType Expr::GetType()
+{
     return INVALID_E;
 }
 
-DataType Expr::getExprDataType() {
+DataType Expr::GetExprDataType()
+{
     return dataType;
 }
 
 
-DataExpr::DataExpr() {
-}
+DataExpr::DataExpr(){}
 
-DataExpr::~DataExpr() {
+DataExpr::~DataExpr()
+{
     if (dataType == STRINGD && !isColumn) delete stringVal;
 }
 
-ExprType DataExpr::getType() {
+ExprType DataExpr::GetType()
+{
     return ExprType::DATA_E;
 }
 
 // Helper constructors for different data types
-DataExpr::DataExpr(bool val) {
+DataExpr::DataExpr(bool val)
+{
     isColumn = false;
     dataType = BOOLD;
     boolVal = val;
 }
-DataExpr::DataExpr(int32_t val) {
+DataExpr::DataExpr(int32_t val)
+{
     isColumn = false;
     dataType = INT32D;
     intVal = val;
 }
-DataExpr::DataExpr(int64_t val) {
+DataExpr::DataExpr(int64_t val)
+{
     isColumn = false;
     dataType = INT64D;
     longVal = val;
 }
-DataExpr::DataExpr(double val) {
+DataExpr::DataExpr(double val)
+{
     isColumn = false;
     dataType = DOUBLED;
     doubleVal = val;
 }
-DataExpr::DataExpr(std::string* val) {
+DataExpr::DataExpr(std::string* val)
+{
     isColumn = false;
     dataType = STRINGD;
     stringVal = val;
 }
-DataExpr::DataExpr(int32_t colIdx, DataType dt) {
+DataExpr::DataExpr(int32_t colIdx, DataType dt)
+{
     isColumn = true;
     // use magic numbers from jni wrapper
     dataType = dt; // has already been translated
@@ -94,97 +117,115 @@ DataExpr::DataExpr(int32_t colIdx, DataType dt) {
 }
 
 
-BinaryExpr::BinaryExpr() {
+BinaryExpr::BinaryExpr()
+{
     dataType = BOOLD;
 }
 
-BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr) {
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
+{
     op = bop;
     left = leftExpr;
     right = rightExpr;
     // use the more encompassing DataType
-    dataType = std::max(leftExpr->getExprDataType(), rightExpr->getExprDataType());
-} 
+    dataType = std::max(leftExpr->GetExprDataType(), rightExpr->GetExprDataType());
+}
 
-BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt) {
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt)
+{
     op = bop;
     left = leftExpr;
     right = rightExpr;
     dataType = dt;
-} 
+}
 
-BinaryExpr::~BinaryExpr() {
+BinaryExpr::~BinaryExpr()
+{
     delete left;
     delete right;
 }
 
-ExprType BinaryExpr::getType() {
+ExprType BinaryExpr::GetType()
+{
     return ExprType::BINARY_E;
 }
 
 
-UnaryExpr::UnaryExpr() {
+UnaryExpr::UnaryExpr()
+{
     dataType = BOOLD;
 }
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr){
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr)
+{
     op = uop;
     exp = expr;
-} 
+}
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataType dt) {
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataType dt)
+{
     op = uop;
     exp = expr;
     dataType = dt;
-} 
+}
 
-UnaryExpr::~UnaryExpr() {
+UnaryExpr::~UnaryExpr()
+{
     delete exp;
 }
 
-ExprType UnaryExpr::getType() {
+ExprType UnaryExpr::GetType()
+{
     return ExprType::UNARY_E;
 }
 
 
-InExpr::InExpr() {
+InExpr::InExpr()
+{
     dataType = BOOLD;
 }
 
-InExpr::~InExpr() {
+InExpr::~InExpr()
+{
     for (Expr* exp : arguments) {
         delete exp;
     }
 }
 
-InExpr::InExpr(std::vector<Expr*> args) {
+InExpr::InExpr(std::vector<Expr*> args)
+{
     dataType = BOOLD;
     arguments = args;
 }
 
-ExprType InExpr::getType() {
+ExprType InExpr::GetType()
+{
     return ExprType::IN_E;
 }
 
 
-BetweenExpr::BetweenExpr() {
+BetweenExpr::BetweenExpr()
+{
     dataType = BOOLD;
 }
 
-BetweenExpr::~BetweenExpr() {
+BetweenExpr::~BetweenExpr()
+{
     delete value;
     delete lowerBound;
     delete upperBound;
 }
 
-BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound) {
+BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound)
+{
     dataType = BOOLD;
     value = val;
     lowerBound = lowBound;
     upperBound = upBound;
 }
 
-ExprType BetweenExpr::getType() {
+ExprType BetweenExpr::GetType()
+{
     return ExprType::BETWEEN_E;
 }
 
@@ -192,20 +233,23 @@ ExprType BetweenExpr::getType() {
 IfExpr::IfExpr() {
 }
 
-IfExpr::~IfExpr() {
+IfExpr::~IfExpr()
+{
     delete condition;
     delete trueExpr;
     delete falseExpr;
 }
 
-IfExpr::IfExpr(Expr* cond, Expr* texp, Expr* fexp) {
+IfExpr::IfExpr(Expr* cond, Expr* texp, Expr* fexp)
+{
     dataType = texp->dataType;
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
 }
 
-ExprType IfExpr::getType() {
+ExprType IfExpr::GetType()
+{
     return ExprType::IF_E;
 }
 
@@ -213,55 +257,61 @@ ExprType IfExpr::getType() {
 CoalesceExpr::CoalesceExpr() {
 }
 
-CoalesceExpr::~CoalesceExpr() {
+CoalesceExpr::~CoalesceExpr()
+{
     delete value1;
     delete value2;
 }
 
-CoalesceExpr::CoalesceExpr(Expr* val1, Expr* val2) {
+CoalesceExpr::CoalesceExpr(Expr* val1, Expr* val2)
+{
     dataType = val1->dataType;
     value1 = val1;
     value2 = val2;
 }
 
-ExprType CoalesceExpr::getType() {
+ExprType CoalesceExpr::GetType()
+{
     return ExprType::COALESCE_E;
 }
 
 
-FuncExpr::FuncExpr() {
-}
+FuncExpr::FuncExpr() {}
 
-FuncExpr::~FuncExpr() {
+FuncExpr::~FuncExpr()
+{
     for (Expr* exp : arguments) {
         delete exp;
     }
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args){
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args)
+{
     funcName = fnName;
     arguments = args;
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt){
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt)
+{
     funcName = fnName;
     arguments = args;
     dataType = dt;
 }
 
-ExprType FuncExpr::getType() {
+ExprType FuncExpr::GetType()
+{
     return ExprType::FUNC_E;
 }
 
 
 
 // debugging Expr tree
-void Expr::printExprTree() {
+void Expr::PrintExprTree() {
 }
 
-void BinaryExpr::printExprTree() {
-    switch(op) 
-    {
+void BinaryExpr::PrintExprTree()
+{
+    switch (op) {
         // Comparison
         case EQ:
             printf("Cmp(EQ, ");
@@ -281,7 +331,7 @@ void BinaryExpr::printExprTree() {
         case GTE:
             printf("Cmp(GTE, ");
             break;
-        
+
         // Logical
         case AND:
             printf("Bin(AND, ");
@@ -310,15 +360,15 @@ void BinaryExpr::printExprTree() {
             printf("invalid BinaryOperator %d(", op);
             break;
     }
-    left->printExprTree();
+    left->PrintExprTree();
     printf(", ");
-    right->printExprTree();
+    right->PrintExprTree();
     printf(")");
 }
 
-void UnaryExpr::printExprTree() {
-    switch(op) 
-    {
+void UnaryExpr::PrintExprTree()
+{
+    switch (op) {
         case NOT:
             printf("Unary(NOT, ");
             break;
@@ -326,21 +376,20 @@ void UnaryExpr::printExprTree() {
             printf("invalid UnaryOperator %d(", op);
             break;
     }
-    exp->printExprTree();
+    exp->PrintExprTree();
     printf(")");
 }
 
-void DataExpr::printExprTree() {
+void DataExpr::PrintExprTree()
+{
     const bool printWithTypes = false; // for debugging types
-    #ifdef DEBUG
+#ifdef DEBUG
     std::cout << "Data" + dataTypeString(dataType) + "(";
-    #endif
+#endif
     if (isColumn) {
         printf("#%d", colVal);
-    }
-    else {
-        switch(dataType)
-        {
+    } else {
+        switch (dataType) {
             case BOOLD: {
                 if (printWithTypes) printf("bool_");
                 if (boolVal) printf("true");
@@ -367,57 +416,61 @@ void DataExpr::printExprTree() {
                 printf("invalid DataType %d", dataType);
         }
     }
-    #ifdef DEBUG
+#ifdef DEBUG
     printf(")");
-    #endif
+#endif
 }
 
-void InExpr::printExprTree() {
+void InExpr::PrintExprTree()
+{
     printf("In(");
     for (int i = 0; i < arguments.size(); i++) {
-        arguments[i]->printExprTree();
+        arguments[i]->PrintExprTree();
         if (i == arguments.size() - 1) printf(")");
         else printf(", ");
     }
 }
 
-void BetweenExpr::printExprTree() {
+void BetweenExpr::PrintExprTree()
+{
     printf("Between(");
-    value->printExprTree();
+    value->PrintExprTree();
     printf(", ");
-    lowerBound->printExprTree();
+    lowerBound->PrintExprTree();
     printf(", ");
-    upperBound->printExprTree();
+    upperBound->PrintExprTree();
     printf(")");
 }
 
-void IfExpr::printExprTree() {
+void IfExpr::PrintExprTree()
+{
     printf("If(");
-    condition->printExprTree();
+    condition->PrintExprTree();
     printf(", ");
-    trueExpr->printExprTree();
+    trueExpr->PrintExprTree();
     printf(", ");
-    falseExpr->printExprTree();
+    falseExpr->PrintExprTree();
     printf(")");
 }
 
-void CoalesceExpr::printExprTree() {
+void CoalesceExpr::PrintExprTree()
+{
     printf("Coalesce(");
-    value1->printExprTree();
+    value1->PrintExprTree();
     printf(", ");
-    value2->printExprTree();
+    value2->PrintExprTree();
     printf(")");
 }
 
-void FuncExpr::printExprTree() {
+void FuncExpr::PrintExprTree()
+{
     printf("%s(", funcName.c_str());
 
     for (int i = 0; i < arguments.size(); i++) {
-        arguments[i]->printExprTree();
+        arguments[i]->PrintExprTree();
         if (i == arguments.size() - 1) printf(")");
         else printf(", ");
     }
 }
-
 }
 }

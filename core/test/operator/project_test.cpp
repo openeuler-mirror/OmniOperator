@@ -10,7 +10,7 @@
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
-
+using namespace std;
 namespace project_test {
 
 VectorBatch* createInput(const int32_t NUM_ROWS,

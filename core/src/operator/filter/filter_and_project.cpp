@@ -16,7 +16,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
 
     Parser parserObject;
     // std::cout << "parsing: " << expression << std::endl;
-    Expr* parsedExpr = parserObject.parseRowExpression(expression, inputTypes, vecCount);
+    Expr* parsedExpr = parserObject.ParseRowExpression(expression, inputTypes, vecCount);
     // parsedExpr->printExprTree();
     // std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
     // might want to check if parsed suceed?
@@ -29,7 +29,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
         DataExpr* exp = new DataExpr();
         exp->isColumn = true;
         exp->colVal = this->projectIndex[i];
-        exp->dataType = colTypeTrans(inputTypes[projectIndex[i]]);
+        exp->dataType = ColTypeTrans(inputTypes[projectIndex[i]]);
         projections[i] = new Projection(inputTypes, vecCount, exp, true);
     }
 }
@@ -74,7 +74,7 @@ Filter::Filter(FilterCodeGen* codeGen, Expr* expr)
 {
     this->codeGen = codeGen;
     this->expr = expr;
-    this->func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) codeGen->getFunction();
+    this->func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) codeGen->GetFunction();
 }
 
 

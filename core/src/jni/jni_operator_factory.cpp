@@ -255,7 +255,7 @@ JitContext *createSortJitContext(
     int32_t *sortNullFirsts,
     int32_t sortColsCount)
 {
-    JNI_DEBUG_LOG("create sort jit context starting.");
+    JNI_DEBUG_LOG("create sort JIT context starting.");
     auto start = START();
     using namespace omniruntime::jit;
     int sortColTypes[sortColsCount];
@@ -305,7 +305,7 @@ JitContext *createSortJitContext(
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    JNI_DEBUG_LOG("create sort jit context finished, elapsed time: %ld ms.", END(start));
+    JNI_DEBUG_LOG("create sort JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
 
@@ -594,7 +594,7 @@ JitContext *createHashBuilderJitContext(
     int32_t buildHashColsCount,
     int32_t operatorCount)
 {
-    JNI_DEBUG_LOG("create hash builder jit context starting.");
+    JNI_DEBUG_LOG("create hash builder JIT context starting.");
     auto start = START();
 
     if (buildHashColsCount <= 0) {
@@ -634,7 +634,7 @@ JitContext *createHashBuilderJitContext(
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    JNI_DEBUG_LOG("create hash builder jit context finished, elapsed time: %ld ms.", END(start));
+    JNI_DEBUG_LOG("create hash builder JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
 
@@ -701,7 +701,7 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
         hashColTypes[i] = probeTypes[probeHashCols[i]];
     }
 
-    JNI_DEBUG_LOG("create lookup join jit context starting.");
+    JNI_DEBUG_LOG("create lookup join JIT context starting.");
     auto start = START();
     using namespace omniruntime::jit;
 
@@ -759,6 +759,6 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    JNI_DEBUG_LOG("create lookup join jit context finished, elapsed time: %ld ms.", END(start));
+    JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }

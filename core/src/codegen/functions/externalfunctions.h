@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description: registry function name
+ */
 #ifndef __EXTERNALFUNCTIONS_H__
 #define __EXTERNALFUNCTIONS_H__
 
@@ -17,15 +21,15 @@
 // Make sure that they are included in external_func_registry.h
 
 // Example functions
-extern "C" DLLEXPORT int32_t id_int32(int32_t x);
-extern "C" DLLEXPORT int32_t add1_int32(int32_t x);
+extern "C" DLLEXPORT int32_t IdInt32(int32_t x);
+extern "C" DLLEXPORT int32_t Add1Int32(int32_t x);
 
 
 
 
 // List of functions
 // Add the string representation of external functions here
-const string add1_int32_str = "add1_int32";
-const string id_int32_str = "id_int32";
+const std::string add1_int32_str = "Add1Int32";
+const std::string id_int32_str = "IdInt32";
 
 #endif

@@ -26,8 +26,8 @@ public:
 private:
     FilterCodeGen *codeGen;
     expressions::Expr* expr;
-    int64_t* getData(omniruntime::vec::VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec,
-        vector<char *> &stringvalVec, bool* bitmap);
+    int64_t* getData(omniruntime::vec::VectorBatch* &vecBatch, std::vector<int64_t *> &vcdataVec,
+                     std::vector<char *> &stringvalVec, bool* bitmap);
     
     // filter function is retrieved from FilterCodeGen
     // func(data, numSelectedRows, rowCount, bitmap)

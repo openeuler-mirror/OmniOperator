@@ -6,25 +6,25 @@ using namespace omniruntime::vec;
 Projection::Projection(int32_t* inputTypes, int32_t nCols, std::string expr, bool filter) :
 inputTypes(inputTypes), nCols(nCols) {
     Parser parser;
-    this->expr = parser.parseRowExpression(expr, inputTypes, nCols);
-    vector<DataType>* datatypes = new vector<DataType>();
-    for (int32_t i = 0; i < nCols; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
+    this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
+    std::vector<DataType>* datatypes = new std::vector<DataType>();
+    for (int32_t i = 0; i < nCols; i++) datatypes->push_back(expressions::ColTypeTrans(inputTypes[i]));
     this->codegen = new ProjectionCodeGen("proj_func", this->expr, datatypes, filter);
-    this->projector = (int32_t (*)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*)) (intptr_t) this->codegen->getFunction();
+    this->projector = (int32_t (*)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*)) (intptr_t) this->codegen->GetFunction();
 }
 
 Projection::Projection(int32_t* inputTypes, int32_t nCols, Expr* expr, bool filter) :
 inputTypes(inputTypes), nCols(nCols), expr(expr) {
-    vector<DataType>* datatypes = new vector<DataType>();
-    for (int32_t i = 0; i < nCols; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
+    std::vector<DataType>* datatypes = new std::vector<DataType>();
+    for (int32_t i = 0; i < nCols; i++) datatypes->push_back(expressions::ColTypeTrans(inputTypes[i]));
     this->codegen = new ProjectionCodeGen("proj_func", this->expr, datatypes, filter);
-    this->projector = (int32_t (*)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*)) (intptr_t) this->codegen->getFunction();
+    this->projector = (int32_t (*)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*)) (intptr_t) this->codegen->GetFunction();
 }
 
 
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
-int64_t* Projection::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec, vector<char *> &stringvalVec, bool* bitmap) 
+int64_t* Projection::getData(VectorBatch* &vecBatch, std::vector<int64_t *> &vcdataVec, std::vector<char *> &stringvalVec, bool* bitmap)
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     uint32_t nRows = vecBatch->GetRowCount();
@@ -69,13 +69,13 @@ int64_t* Projection::getData(VectorBatch* &vecBatch, vector<int64_t *> &vcdataVe
 }
 
 Vector* Projection::project(VectorBatch* vecBatch, int32_t* selectedRows, int32_t numSelectedRows) {
-    if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->getType() == ExprType::DATA_E) {
+    if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->GetType() == ExprType::DATA_E) {
         DataExpr* dEx = (DataExpr*) expr;
         if (dEx->isColumn) {
             return vecBatch->GetVector(dEx->colVal);
         }
     }
-    DataType outType = expr->getExprDataType();
+    DataType outType = expr->GetExprDataType();
     VectorAllocatorManager vam = VectorAllocatorManager::GetInstance();
     VectorAllocator* va = vam.GetOrCreateAllocator("projection_codegen");
     Vector* outVec;
@@ -99,9 +99,9 @@ Vector* Projection::project(VectorBatch* vecBatch, int32_t* selectedRows, int32_
     // std::cout << std::endl;
     
     // Contains arrays with addresses for varchar vecs
-    vector<int64_t *> vcdataVec;
+    std::vector<int64_t *> vcdataVec;
     // Contains all strings created in VarcharVector::getValue method which need to be freed
-    vector<char *> stringvalVec;
+    std::vector<char *> stringvalVec;
 
     bool* bitmap = new bool[vecBatch->GetRowCount() * vecBatch->GetVectorCount()];
 

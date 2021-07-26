@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description:
+ */
 #ifndef __LLVM_COMPILER_H__
 #define __LLVM_COMPILER_H__
 
@@ -16,23 +20,23 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JITSymbol.h>
 
-using namespace llvm;
 
-class LLVMCompiler
-{
+class LLVMCompiler {
 public:
     LLVMCompiler(std::string func_name);
-    void compile();
 
-    void execute();
+    ~LLVMCompiler();
+
+    void Compile();
+
+    void Execute();
+
 private:
-    
-    std::unique_ptr<llvm::LLVMContext> _context;
-    std::unique_ptr<llvm::IRBuilder<>> _builder;
-    std::unique_ptr<llvm::Module> _module;    
-    TargetMachine* _targetMachine;
-    std::string _func_name;
-
+    std::unique_ptr<llvm::LLVMContext> context;
+    std::unique_ptr<llvm::IRBuilder<>> builder;
+    std::unique_ptr<llvm::Module> module;
+    TargetMachine *targetMachine;
+    std::string funcName;
 };
 
 #endif

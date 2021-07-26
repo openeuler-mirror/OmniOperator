@@ -25,15 +25,15 @@ public:
 
     omniruntime::vec::Vector* project(omniruntime::vec::VectorBatch* vecBatch, int32_t* selected, int32_t nSelected);
     omniruntime::vec::Vector* project(omniruntime::vec::VectorBatch* vecBatch);
-    DataType GetOutputType() {return this->expr->getExprDataType();}
+    DataType GetOutputType() {return this->expr->GetExprDataType();}
 
 private:
     int32_t* inputTypes;
     int32_t nCols;
     Expr* expr;
     ProjectionCodeGen* codegen;
-    int64_t* getData(omniruntime::vec::VectorBatch* &vecBatch, vector<int64_t *> &vcdataVec,
-        vector<char *> &stringvalVec, bool* bitmap);
+    int64_t* getData(omniruntime::vec::VectorBatch* &vecBatch, std::vector<int64_t *> &vcdataVec,
+                     std::vector<char *> &stringvalVec, bool* bitmap);
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)

@@ -1,31 +1,35 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description:
+ */
 #include "./func_signature.h"
 
 FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType, void* address)
 {
-    this->func_name = name;
-    this->param_types = params;
-    this->ret_type = returnType;
-    this->func_address = address;
+    this->funcName = name;
+    this->paramTypes = params;
+    this->retType = returnType;
+    this->funcAddress = address;
 }
 
-FunctionSignature::~FunctionSignature() {
-}
+FunctionSignature::~FunctionSignature(){}
 
-std::string FunctionSignature::getName() {
-    return this->func_name;
-}
-
-std::vector<DataType> FunctionSignature::getParams()
+std::string FunctionSignature::GetName()
 {
-    return this->param_types;
+    return this->funcName;
 }
 
-DataType FunctionSignature::getReturnType()
+std::vector<DataType> FunctionSignature::GetParams()
 {
-    return this-> ret_type;
+    return this->paramTypes;
 }
 
-void* FunctionSignature::getFunctionAddress()
+DataType FunctionSignature::GetReturnType()
 {
-    return this->func_address;
+    return this-> retType;
+}
+
+void* FunctionSignature::GetFunctionAddress()
+{
+    return this->funcAddress;
 }
