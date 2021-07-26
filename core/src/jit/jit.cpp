@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #include "jit.h"
 #include "compiler/llvm_compiler.h"
 
@@ -6,12 +9,19 @@
 
 namespace omniruntime {
     namespace jit {
-        Jit::Jit(std::vector<Context> contexts, CompilerType compilerType) {
+        void Jit::InitCompile()
+        {
+            this->compiler = new LLVMCompiler();
+        }
+
+        Jit::Jit(std::vector<Context> contexts, CompilerType compilerType)
+        {
             this->contexts = std::move(contexts);
 
             switch (compilerType) {
-                case llvm:
-                    this->compiler = new LLVMCompiler();
+                case LLVM:
+                    this->compiler = nullptr;
+                    InitCompile();
                     break;
                 default:
                     std::cout << "Error: Compiler type not supported: " << compilerType << std::endl;
@@ -19,9 +29,10 @@ namespace omniruntime {
             }
         }
 
-        uint64_t Jit::specialize() {
+        uint64_t Jit::Specialize()
+        {
             for (auto &context : this->contexts) {
-                bool loaded = this->compiler->loadOperatorTemplate(context.getJitTemplate(), context.isDependency());
+                bool loaded = this->compiler->LoadOperatorTemplate(context.getJitTemplate(), context.IsDependency());
                 if (!loaded) {
                     std::cout << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
                     return 0;
@@ -29,14 +40,15 @@ namespace omniruntime {
                 std::cout << "Loaded template: " << context.getJitTemplate() << std::endl;
 
                 for (auto &specializationPair : context.getSpecializations()) {
-                    this->compiler->addSpecialization(specializationPair.first, specializationPair.second);
+                    this->compiler->AddSpecialization(specializationPair.first, specializationPair.second);
                 }
                 std::cout << "Added specializations" << std::endl;
             }
-            return this->compiler->specializeAndCompile();
+            return this->compiler->SpecializeAndCompile();
         }
 
-        std::vector<std::string> Jit::getAppliedOptimizations() {
+        std::vector<std::string> Jit::getAppliedOptimizations()
+        {
             std::vector<std::string> temp;
             return temp;
         }

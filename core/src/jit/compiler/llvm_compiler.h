@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __OMNI_JIT_LLVM_COMPILER_H__
 #define __OMNI_JIT_LLVM_COMPILER_H__
 
@@ -18,11 +21,15 @@ namespace omniruntime {
         public:
             LLVMCompiler();
 
-            bool loadOperatorTemplate(std::string operatorName, bool isDependency) override;
+            ~LLVMCompiler();
 
-            uint64_t specializeAndCompile() override;
+            void InitCompile();
 
-            void addSpecialization(std::string id, Specialization specialization) override;
+            bool LoadOperatorTemplate(std::string operatorName, bool isDependency) override;
+
+            uint64_t SpecializeAndCompile() override;
+
+            void AddSpecialization(std::string id, Specialization specialization) override;
 
         private:
             const std::string templateFileSuffix = ".ll";
@@ -32,11 +39,11 @@ namespace omniruntime {
             std::unique_ptr<llvm::IRBuilder<>> builder;
             std::unique_ptr<llvm::LLVMContext> context;
             std::vector<std::unique_ptr<llvm::Module>> modules;
-            std::string CreateOperatorSymbol;
+            std::string createOperatorSymbol;
 
             llvm::orc::LLJIT *jitter;
 
-            static void loadExtraLibraries();
+            static void LoadExtraLibraries();
 
             std::unique_ptr<llvm::orc::LLJIT> compileModules(std::set<std::string> &specializedModules);
 
@@ -53,6 +60,12 @@ namespace omniruntime {
             llvm::Constant *
             to_array_llvm_value(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
 
+            llvm::Constant *to_int32_vector_llvm_value(ParamValue value, std::vector<llvm::Constant *> vecValues);
+
+            llvm::Constant *ToInt32ArrayLlvmValue(
+                const std::string &name, ParamValue value,
+                const std::unique_ptr<llvm::Module> &module, std::vector<llvm::Constant *> vecValues);
+
             llvm::Constant *to_vector_llvm_value(const std::string &name, ParamValue value,
                                                  const std::unique_ptr<llvm::Module> &module);
 
@@ -64,7 +77,7 @@ namespace omniruntime {
 
         map<string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
 
-        string build_param_key(llvm::Function &func, int arg_pos);
+        string build_param_key(llvm::Function &func, int argPos);
     }
 }
 

@@ -40,21 +40,21 @@ JitContext *CreateTestSortJitContext(int32_t *sourceTypes, int32_t typesCount, i
     ParamValue pSortColCount = ParamValue(&sortColsCount);
 
     Specialization *compareToSp = std::make_unique<Specialization>().release();
-    compareToSp->addSpecializedParam(PARAM_OFFSET_0, &pSortCols);
-    compareToSp->addSpecializedParam(PARAM_OFFSET_1, &pSortColTypes);
-    compareToSp->addSpecializedParam(PARAM_OFFSET_2, &pSortAscendings);
-    compareToSp->addSpecializedParam(PARAM_OFFSET_3, &pSortNullFirsts);
-    compareToSp->addSpecializedParam(PARAM_OFFSET_4, &pSortColCount);
+    compareToSp->AddSpecializedParam(PARAM_OFFSET_0, &pSortCols);
+    compareToSp->AddSpecializedParam(PARAM_OFFSET_1, &pSortColTypes);
+    compareToSp->AddSpecializedParam(PARAM_OFFSET_2, &pSortAscendings);
+    compareToSp->AddSpecializedParam(PARAM_OFFSET_3, &pSortNullFirsts);
+    compareToSp->AddSpecializedParam(PARAM_OFFSET_4, &pSortColCount);
 
     Specialization *allocColumnsSp = std::make_unique<Specialization>().release();
-    allocColumnsSp->addSpecializedParam(PARAM_OFFSET_1, &pSourceTypes);
-    allocColumnsSp->addSpecializedParam(PARAM_OFFSET_2, &pOutputCols);
-    allocColumnsSp->addSpecializedParam(PARAM_OFFSET_3, &pOutputColCount);
+    allocColumnsSp->AddSpecializedParam(PARAM_OFFSET_1, &pSourceTypes);
+    allocColumnsSp->AddSpecializedParam(PARAM_OFFSET_2, &pOutputCols);
+    allocColumnsSp->AddSpecializedParam(PARAM_OFFSET_3, &pOutputColCount);
 
     Specialization *getOutputSp = std::make_unique<Specialization>().release();
-    getOutputSp->addSpecializedParam(PARAM_OFFSET_1, &pOutputCols);
-    getOutputSp->addSpecializedParam(PARAM_OFFSET_2, &pOutputColCount);
-    getOutputSp->addSpecializedParam(PARAM_OFFSET_4, &pSourceTypes);
+    getOutputSp->AddSpecializedParam(PARAM_OFFSET_1, &pOutputCols);
+    getOutputSp->AddSpecializedParam(PARAM_OFFSET_2, &pOutputColCount);
+    getOutputSp->AddSpecializedParam(PARAM_OFFSET_4, &pSourceTypes);
 
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
@@ -67,7 +67,7 @@ JitContext *CreateTestSortJitContext(int32_t *sourceTypes, int32_t typesCount, i
         std::vector<std::string>(), std::vector<std::string>());
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *memoryPoolContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext *jitContext = new JitContext;
     jitContext->func = static_cast<uintptr_t>(createOperatorFunc);

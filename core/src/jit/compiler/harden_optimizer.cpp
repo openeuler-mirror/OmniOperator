@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #include "harden_optimizer.h"
 
 #include "llvm/Transforms/Scalar.h"
@@ -22,19 +25,20 @@ namespace omniruntime {
         using namespace llvm;
         using namespace llvm::orc;
 
-        void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM) {
+        void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
+        {
             conf.populate(FPM, MPM);
         }
 
-        Expected<ThreadSafeModule>
-        HardenOptimizer::operator()(ThreadSafeModule TSM,
-                                    const MaterializationResponsibility &) {
+        Expected<ThreadSafeModule> HardenOptimizer::operator()(ThreadSafeModule TSM,
+            const MaterializationResponsibility &)
+        {
 
             Module &M = *TSM.getModuleUnlocked();
             if (this->specializedModules.count(M.getName().str()) == 0) {
                 return std::move(TSM);
             }
-            int original_count = M.getInstructionCount();
+            int originalCount = M.getInstructionCount();
 
             legacy::FunctionPassManager FPM(&M);
             legacy::PassManager MPM;
@@ -51,10 +55,7 @@ namespace omniruntime {
             FPM.doFinalization();
             MPM.run(M);
 
-            // dbgs() << "--- AFTER OPTIMIZATION ---\n" << M << "\n";
-
-            int new_count = M.getInstructionCount();
-            // outs() << "\n " << M.getName() << " instruct count: original: " << original_count << " new:" << new_count;
+            int newCount = M.getInstructionCount();
 
             return std::move(TSM);
         }

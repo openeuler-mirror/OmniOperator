@@ -21,15 +21,15 @@ JitContext *CreateTestTopNJitContext(int32_t *sourceTypes, int32_t sourceTypesCo
     ParamValue pSortColCount = ParamValue(&sortColsCount);
 
     auto * topNCompareSp = new Specialization();
-    topNCompareSp->addSpecializedParam(4, &pSortColCount);
-    topNCompareSp->addSpecializedParam(5, &pSourceTypes);
+    topNCompareSp->AddSpecializedParam(4, &pSortColCount);
+    topNCompareSp->AddSpecializedParam(5, &pSourceTypes);
 
     std::map<string, Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
 
     auto *topNContext = new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string >(),std::vector<std::string >(),true);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*topNContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext *jitContext = new JitContext;
     jitContext->func =createOperatorFunc;
@@ -113,7 +113,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn) {
     TopNOperator *topNOperator =dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
+    std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {2, 2, 1, 1, 0};
     IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
@@ -166,7 +166,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
     TopNOperator *topNOperator = dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
+    std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
@@ -227,7 +227,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn) {
     TopNOperator *topNOperator = dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
+    std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);

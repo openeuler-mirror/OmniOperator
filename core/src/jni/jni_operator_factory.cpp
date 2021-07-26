@@ -102,23 +102,23 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
     auto *inloopSp = new Specialization();
-    inloopSp->addSpecializedParam(3, &p_col_type);
-    inloopSp->addSpecializedParam(4, &p_col_count);
-    inloopSp->addSpecializedParam(6, &p_group_num);
-    inloopSp->addSpecializedParam(8, &p_agg_num);
-    inloopSp->addSpecializedParam(9, &p_agg_types);
+    inloopSp->AddSpecializedParam(3, &p_col_type);
+    inloopSp->AddSpecializedParam(4, &p_col_count);
+    inloopSp->AddSpecializedParam(6, &p_group_num);
+    inloopSp->AddSpecializedParam(8, &p_agg_num);
+    inloopSp->AddSpecializedParam(9, &p_agg_types);
 
     auto *processAggSp = new Specialization();
-    processAggSp->addSpecializedParam(2, &p_agg_num);
-    processAggSp->addSpecializedParam(3, &p_col_type);
+    processAggSp->AddSpecializedParam(2, &p_agg_num);
+    processAggSp->AddSpecializedParam(3, &p_col_type);
 
     auto *hashColumnSp = new Specialization();
-    hashColumnSp->addSpecializedParam(2, &p_col_type);
-    hashColumnSp->addSpecializedParam(3, &p_group_num);
+    hashColumnSp->AddSpecializedParam(2, &p_col_type);
+    hashColumnSp->AddSpecializedParam(3, &p_group_num);
 
     auto *aggColumnSp = new Specialization();
-    aggColumnSp->addSpecializedParam(2, &p_col_type);
-    aggColumnSp->addSpecializedParam(3, &p_agg_num);
+    aggColumnSp->AddSpecializedParam(2, &p_col_type);
+    aggColumnSp->AddSpecializedParam(3, &p_agg_num);
 
     std::map<std::string, Specialization> hashGroupbySps = {
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
@@ -132,7 +132,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -168,9 +168,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggre
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
     auto *inloopSp = new Specialization();
-    inloopSp->addSpecializedParam(3, &p_agg_num);
-    inloopSp->addSpecializedParam(4, &p_col_type);
-    inloopSp->addSpecializedParam(5, &p_agg_types);
+    inloopSp->AddSpecializedParam(3, &p_agg_num);
+    inloopSp->AddSpecializedParam(4, &p_col_type);
+    inloopSp->AddSpecializedParam(5, &p_agg_types);
 
     std::map<std::string, Specialization> nonGroupSps = {
             {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
@@ -180,7 +180,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggre
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -275,21 +275,21 @@ JitContext *createSortJitContext(
     ParamValue p_sortColCount = ParamValue(&sortColsCount);
 
     auto *compareToSp = new Specialization();
-    compareToSp->addSpecializedParam(0, &p_sortCols);
-    compareToSp->addSpecializedParam(1, &p_sortColTypes);
-    compareToSp->addSpecializedParam(2, &p_sortAscendings);
-    compareToSp->addSpecializedParam(3, &p_sortNullFirsts);
-    compareToSp->addSpecializedParam(4, &p_sortColCount);
+    compareToSp->AddSpecializedParam(0, &p_sortCols);
+    compareToSp->AddSpecializedParam(1, &p_sortColTypes);
+    compareToSp->AddSpecializedParam(2, &p_sortAscendings);
+    compareToSp->AddSpecializedParam(3, &p_sortNullFirsts);
+    compareToSp->AddSpecializedParam(4, &p_sortColCount);
 
     auto *allocColumnsSp = new Specialization();
-    allocColumnsSp->addSpecializedParam(1, &p_sourceTypes);
-    allocColumnsSp->addSpecializedParam(2, &p_outputCols);
-    allocColumnsSp->addSpecializedParam(3, &p_outputColCount);
+    allocColumnsSp->AddSpecializedParam(1, &p_sourceTypes);
+    allocColumnsSp->AddSpecializedParam(2, &p_outputCols);
+    allocColumnsSp->AddSpecializedParam(3, &p_outputColCount);
 
     auto *getOutputSp = new Specialization();
-    getOutputSp->addSpecializedParam(1, &p_outputCols);
-    getOutputSp->addSpecializedParam(2, &p_outputColCount);
-    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
+    getOutputSp->AddSpecializedParam(1, &p_outputCols);
+    getOutputSp->AddSpecializedParam(2, &p_outputColCount);
+    getOutputSp->AddSpecializedParam(4, &p_sourceTypes);
 
     std::map<std::string, Specialization> pagesIndexSps = {
         {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp},
@@ -300,7 +300,7 @@ JitContext *createSortJitContext(
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -411,8 +411,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
     ParamValue p_sortColCount= ParamValue(&sortColCount);
 
     auto * topNCompareSp=new Specialization();
-    topNCompareSp->addSpecializedParam(4, &p_sortColCount);
-    topNCompareSp->addSpecializedParam(5, &p_sourceTypes);
+    topNCompareSp->AddSpecializedParam(4, &p_sortColCount);
+    topNCompareSp->AddSpecializedParam(5, &p_sourceTypes);
 
     std::map<string,Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
 
@@ -420,7 +420,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*topNContext});
 
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = createOperatorFunc;
 
@@ -470,15 +470,15 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     ParamValue p_outputCols = ParamValue(outputCols, outputColsCount);
     ParamValue p_outputColCount = ParamValue(&outputColsCount);
     auto *compareToSp = new Specialization();
-    compareToSp->addSpecializedParam(0, &p_sortCols);
-    compareToSp->addSpecializedParam(1, &p_sortColTypes);
-    compareToSp->addSpecializedParam(2, &p_sortAscendings);
-    compareToSp->addSpecializedParam(3, &p_sortNullFirsts);
-    compareToSp->addSpecializedParam(4, &p_sortColCount);
+    compareToSp->AddSpecializedParam(0, &p_sortCols);
+    compareToSp->AddSpecializedParam(1, &p_sortColTypes);
+    compareToSp->AddSpecializedParam(2, &p_sortAscendings);
+    compareToSp->AddSpecializedParam(3, &p_sortNullFirsts);
+    compareToSp->AddSpecializedParam(4, &p_sortColCount);
     auto *getOutputSp = new Specialization();
-    getOutputSp->addSpecializedParam(1, &p_outputCols);
-    getOutputSp->addSpecializedParam(2, &p_outputColCount);
-    getOutputSp->addSpecializedParam(4, &p_sourceTypes);
+    getOutputSp->AddSpecializedParam(1, &p_outputCols);
+    getOutputSp->AddSpecializedParam(2, &p_outputColCount);
+    getOutputSp->AddSpecializedParam(4, &p_sourceTypes);
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
                                                             { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
     auto *windowContext = new omniruntime::jit::Context("window", std::map<std::string, Specialization>(),
@@ -502,7 +502,7 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowContext, *sortContext, *aggContext,
         *windowFunctionContext, *windowPartitionContext, *hashUtilContext, *pagesHashStrategyContext,
         *memoryPoolContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     return jitContext;
@@ -611,12 +611,12 @@ JitContext *createHashBuilderJitContext(
     ParamValue p_hashColCount = ParamValue(&buildHashColsCount);
 
     auto *hashPositionSp = new Specialization();
-    hashPositionSp->addSpecializedParam(3, &p_hashColTypes);
-    hashPositionSp->addSpecializedParam(4, &p_hashColCount);
+    hashPositionSp->AddSpecializedParam(3, &p_hashColTypes);
+    hashPositionSp->AddSpecializedParam(4, &p_hashColCount);
 
     auto *positionEqualsPositionIgnoreNullsSp = new Specialization();
-    positionEqualsPositionIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
-    positionEqualsPositionIgnoreNullsSp->addSpecializedParam(6, &p_hashColCount);
+    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
+    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
 
     std::map<std::string, Specialization> hashStrategySps = {
         {OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp},
@@ -630,7 +630,7 @@ JitContext *createHashBuilderJitContext(
     auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*hashBuilderContext, *pagesIndexContext, *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
@@ -710,19 +710,19 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     ParamValue p_probeOutputColsCount = ParamValue(&probeOutputColsCount);
 
     auto *buildProbeColumnsSp = new Specialization();
-    buildProbeColumnsSp->addSpecializedParam(2, &p_probeTypes);
-    buildProbeColumnsSp->addSpecializedParam(3, &p_probeOutputCols);
-    buildProbeColumnsSp->addSpecializedParam(4, &p_probeOutputColsCount);
+    buildProbeColumnsSp->AddSpecializedParam(2, &p_probeTypes);
+    buildProbeColumnsSp->AddSpecializedParam(3, &p_probeOutputCols);
+    buildProbeColumnsSp->AddSpecializedParam(4, &p_probeOutputColsCount);
 
     ParamValue p_buildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
     ParamValue p_buildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
     ParamValue p_buildOutputColsCount = ParamValue(&buildOutputColsCount);
 
     auto *buildBuildColumnsSp = new Specialization();
-    buildBuildColumnsSp->addSpecializedParam(2, &p_buildOutputTypes);
-    buildBuildColumnsSp->addSpecializedParam(3, &p_buildOutputCols);
-    buildBuildColumnsSp->addSpecializedParam(4, &p_buildOutputColsCount);
-    buildBuildColumnsSp->addSpecializedParam(5, &p_probeOutputColsCount);
+    buildBuildColumnsSp->AddSpecializedParam(2, &p_buildOutputTypes);
+    buildBuildColumnsSp->AddSpecializedParam(3, &p_buildOutputCols);
+    buildBuildColumnsSp->AddSpecializedParam(4, &p_buildOutputColsCount);
+    buildBuildColumnsSp->AddSpecializedParam(5, &p_probeOutputColsCount);
 
     std::map<std::string, Specialization> lookupJoinSps = {
             {OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY, *buildProbeColumnsSp},
@@ -733,15 +733,15 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
 
     auto *hashRowSp = new Specialization();
-    hashRowSp->addSpecializedParam(2, &p_hashColTypes);
-    hashRowSp->addSpecializedParam(3, &p_hashColCount);
+    hashRowSp->AddSpecializedParam(2, &p_hashColTypes);
+    hashRowSp->AddSpecializedParam(3, &p_hashColCount);
     std::map<std::string, Specialization> joinHashTableSps = {
             {OMNIJIT_HASH_ROW, *hashRowSp}
     };
 
     auto *positionEqualsRowIgnoreNullsSp = new Specialization();
-    positionEqualsRowIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
-    positionEqualsRowIgnoreNullsSp->addSpecializedParam(6, &p_hashColCount);
+    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
+    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
 
     std::map<std::string, Specialization> hashStrategySps = {
         {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS, *positionEqualsRowIgnoreNullsSp}
@@ -755,7 +755,7 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*lookupJoinContext, *joinHashTableContext, *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 

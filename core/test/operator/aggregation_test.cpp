@@ -380,26 +380,26 @@ uint64_t prepare_group()
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
     Specialization *inloopSp = new Specialization();
-    inloopSp->addSpecializedParam(3, &p_col_type);
-    inloopSp->addSpecializedParam(4, &p_col_count);
-    inloopSp->addSpecializedParam(5, &p_groupByColIdx);
-    inloopSp->addSpecializedParam(6, &p_group_num);
-    inloopSp->addSpecializedParam(7, &p_aggColIdx);
-    inloopSp->addSpecializedParam(8, &p_agg_num);
-    inloopSp->addSpecializedParam(9, &p_agg_types);
+    inloopSp->AddSpecializedParam(3, &p_col_type);
+    inloopSp->AddSpecializedParam(4, &p_col_count);
+    inloopSp->AddSpecializedParam(5, &p_groupByColIdx);
+    inloopSp->AddSpecializedParam(6, &p_group_num);
+    inloopSp->AddSpecializedParam(7, &p_aggColIdx);
+    inloopSp->AddSpecializedParam(8, &p_agg_num);
+    inloopSp->AddSpecializedParam(9, &p_agg_types);
 
     Specialization *processAggSp = new Specialization();
-    processAggSp->addSpecializedParam(2, &p_agg_num);
-    processAggSp->addSpecializedParam(3, &p_col_type);
-    processAggSp->addSpecializedParam(4, &p_aggColIdx);
+    processAggSp->AddSpecializedParam(2, &p_agg_num);
+    processAggSp->AddSpecializedParam(3, &p_col_type);
+    processAggSp->AddSpecializedParam(4, &p_aggColIdx);
 
     Specialization *hashColumnSp = new Specialization();
-    hashColumnSp->addSpecializedParam(2, &p_col_type);
-    hashColumnSp->addSpecializedParam(3, &p_group_num);
+    hashColumnSp->AddSpecializedParam(2, &p_col_type);
+    hashColumnSp->AddSpecializedParam(3, &p_group_num);
 
     Specialization *aggColumnSp = new Specialization();
-    aggColumnSp->addSpecializedParam(2, &p_col_type);
-    aggColumnSp->addSpecializedParam(3, &p_agg_num);
+    aggColumnSp->AddSpecializedParam(2, &p_col_type);
+    aggColumnSp->AddSpecializedParam(3, &p_agg_num);
 
     std::map<std::string, Specialization> hashGroupbySps = {
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
@@ -412,7 +412,7 @@ uint64_t prepare_group()
     omniruntime::jit::Context *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     omniruntime::jit::Context *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -711,9 +711,9 @@ uint64_t prepare_nogroup()
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
     auto *inloopSp = new Specialization();
-    inloopSp->addSpecializedParam(3, &p_agg_num);
-    inloopSp->addSpecializedParam(4, &p_agg_data_type);
-    inloopSp->addSpecializedParam(5, &p_agg_types);
+    inloopSp->AddSpecializedParam(3, &p_agg_num);
+    inloopSp->AddSpecializedParam(4, &p_agg_data_type);
+    inloopSp->AddSpecializedParam(5, &p_agg_types);
 
     std::map<std::string, Specialization> nonGroupSps = {
         {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
@@ -723,7 +723,7 @@ uint64_t prepare_nogroup()
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -829,18 +829,18 @@ TEST(HashAggregationOperatorTest, compare_perf)
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
     auto *inloopSp = new Specialization();
-    inloopSp->addSpecializedParam(3, &p_col_type);
-    inloopSp->addSpecializedParam(4, &p_col_count);
-    inloopSp->addSpecializedParam(5, &p_groupByColIdx);
-    inloopSp->addSpecializedParam(6, &p_group_num);
-    inloopSp->addSpecializedParam(7, &p_aggColIdx);
-    inloopSp->addSpecializedParam(8, &p_agg_num);
-    inloopSp->addSpecializedParam(9, &p_agg_types);
+    inloopSp->AddSpecializedParam(3, &p_col_type);
+    inloopSp->AddSpecializedParam(4, &p_col_count);
+    inloopSp->AddSpecializedParam(5, &p_groupByColIdx);
+    inloopSp->AddSpecializedParam(6, &p_group_num);
+    inloopSp->AddSpecializedParam(7, &p_aggColIdx);
+    inloopSp->AddSpecializedParam(8, &p_agg_num);
+    inloopSp->AddSpecializedParam(9, &p_agg_types);
 
     auto *processAggSp = new Specialization();
-    processAggSp->addSpecializedParam(2, &p_agg_num);
-    processAggSp->addSpecializedParam(3, &p_col_type);
-    processAggSp->addSpecializedParam(4, &p_aggColIdx);
+    processAggSp->AddSpecializedParam(2, &p_agg_num);
+    processAggSp->AddSpecializedParam(3, &p_col_type);
+    processAggSp->AddSpecializedParam(4, &p_aggColIdx);
 
     std::map<std::string, Specialization> hashGroupbySps = {
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
@@ -851,7 +851,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
      // ------------------------------------------Create operator--------------------------------------------
     JitContext* jitContext = new JitContext;
