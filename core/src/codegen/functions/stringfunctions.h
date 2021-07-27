@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description: registry  function
+ */
 #ifndef __STRINGFUNCTIONS_H__
 #define __STRINGFUNCTIONS_H__
 
@@ -9,8 +13,7 @@
 #include <cassert>
 #include <algorithm>
 #include <regex>
-// #include <re2/re2.h>
-// #include <re2/stringpiece.h>
+
 
 // All extern functions go here temporarily
 #ifdef _WIN32
@@ -19,15 +22,15 @@
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT bool strCompareExt(int64_t Ap, int64_t Bp);
-extern "C" DLLEXPORT bool likeExt(int64_t str, int64_t regexToMatch);
-extern "C" DLLEXPORT int64_t substrExt(int64_t str, int32_t startIdx, int32_t length);
-extern "C" DLLEXPORT int64_t substrWithStartExt(int64_t str, int32_t startIdx);
-extern "C" DLLEXPORT int64_t concatStrExt(int64_t Ap, int64_t Bp);
-extern "C" DLLEXPORT int32_t cast_string(int64_t str);
+extern "C" DLLEXPORT bool StrCompareExt(int64_t ap, int64_t bp);
+extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t regexToMatch);
+extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t startIdx, int32_t length);
+extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t startIdx);
+extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int64_t bp);
+extern "C" DLLEXPORT int32_t CastString(int64_t str);
 
 
-void freeStrings();
+void FreeStrings();
 
 
 #endif

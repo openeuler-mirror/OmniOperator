@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description:
+ */
 #ifndef __FUNC_SIGNATURE_H__
 #define __FUNC_SIGNATURE_H__
 #include <vector>
@@ -8,26 +12,24 @@
 
 #include "../common/expressions.h"
 
-using namespace std;
 using namespace omniruntime::expressions;
-
 
 class FunctionSignature {
 public:
-    FunctionSignature(std::string name, vector<DataType> params, DataType returnType, void* address);
+    FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType, void* address);
     ~FunctionSignature();
-    std::string getId();
-    std::string getName();
-    std::vector<DataType> getParams();
-    DataType getReturnType();
-    void* getFunctionAddress();
+    std::string GetId();
+    std::string GetName();
+    std::vector<DataType> GetParams();
+    DataType GetReturnType();
+    void* GetFunctionAddress();
 private:
-    std::string func_name;
-    std::vector<DataType> param_types;
-    DataType ret_type;
-    void* func_address;
+    std::string funcName;
+    std::vector<DataType> paramTypes;
+    DataType retType;
+    void* funcAddress;
 };
 
-vector<FunctionSignature> getFunctionSignatures();
+std::vector<FunctionSignature> GetFunctionSignatures();
 
 #endif

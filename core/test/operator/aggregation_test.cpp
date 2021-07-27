@@ -417,7 +417,7 @@ uint64_t prepare_group()
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     // jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
-    std::cout << "after jit" << std::endl;
+    std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext, true, false);
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->SetJitContext(jitContext);
@@ -728,7 +728,7 @@ uint64_t prepare_nogroup()
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     // jitContext->jitter = reinterpret_cast<uintptr_t>(jitter.release());
-    std::cout << "after jit" << std::endl;
+    std::cout << "after JIT" << std::endl;
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
@@ -856,7 +856,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
      // ------------------------------------------Create operator--------------------------------------------
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-    std::cout << "after jit" << std::endl;
+    std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext,true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;

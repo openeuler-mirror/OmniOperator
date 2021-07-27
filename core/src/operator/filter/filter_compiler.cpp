@@ -34,7 +34,7 @@ Compiler::Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount)
 Filter *Compiler::compile()
 {
     vector<DataType>* datatypes = new vector<DataType>();
-    for (int32_t i = 0; i < vecCount; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
+    for (int32_t i = 0; i < vecCount; i++) datatypes->push_back(expressions::ColTypeTrans(inputTypes[i]));
     FilterCodeGen* codeGenObj = new FilterCodeGen("comparisionFunc", expression, datatypes);
     return new Filter(codeGenObj, expression);
 }
