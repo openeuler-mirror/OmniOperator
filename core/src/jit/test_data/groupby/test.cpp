@@ -53,14 +53,14 @@ int TestGroupBy()
     }
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        delete[] reinterpret_cast<int32_t*>(input[i]->getColumn(0)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(1)->getData());
+        delete[] reinterpret_cast<int32_t*>(input[i]->getColumn(0)->GetData());
+        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(1)->GetData());
         delete input[i];
     }
 
     for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
         Vector* col = result->getColumn(i);
-        delete col->getData();
+        delete col->GetData();
         delete col;
     }
     delete result;

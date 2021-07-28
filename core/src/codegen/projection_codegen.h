@@ -9,7 +9,7 @@
 
 class ProjectionCodeGen : public LLVMCodeGen {
 public:
-    ProjectionCodeGen(std::string name, Expr *expr, std::vector <DataType> *datatypes, bool filter)
+    ProjectionCodeGen(std::string name, Expr *expr, std::vector <DataType> &datatypes, bool filter)
         :LLVMCodeGen(name, expr, datatypes), filter(filter) {}
     ~ProjectionCodeGen() {}
     int64_t GetFunction() override;

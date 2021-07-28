@@ -1,51 +1,63 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Projection operator source file
+ */
 #include "projection.h"
 
 using namespace omniruntime::op;
-using namespace omniruntime::vec;
 
-Projection::Projection(int32_t* inputTypes, int32_t nCols, std::string expr, bool filter) :
-inputTypes(inputTypes), nCols(nCols) {
+
+Projection::Projection(int32_t *inputTypes, int32_t nCols, std::string expr, bool filter)
+    : inputTypes(inputTypes), nCols(nCols)
+{
     Parser parser;
     this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
-    std::vector<DataType>* datatypes = new std::vector<DataType>();
-    for (int32_t i = 0; i < nCols; i++) datatypes->push_back(expressions::ColTypeTrans(inputTypes[i]));
-    this->codegen = new ProjectionCodeGen("proj_func", this->expr, datatypes, filter);
-    this->projector = (int32_t (*)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*)) (intptr_t) this->codegen->GetFunction();
+    std::vector<DataType> datatypes;
+    for (int32_t i = 0; i < nCols; i++) {
+        datatypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+    }
+    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", this->expr, datatypes, filter);
+    this->projector = reinterpret_cast<int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, bool *)>(
+        this->codegen->GetFunction());
 }
 
-Projection::Projection(int32_t* inputTypes, int32_t nCols, Expr* expr, bool filter) :
-inputTypes(inputTypes), nCols(nCols), expr(expr) {
-    std::vector<DataType>* datatypes = new std::vector<DataType>();
-    for (int32_t i = 0; i < nCols; i++) datatypes->push_back(expressions::ColTypeTrans(inputTypes[i]));
-    this->codegen = new ProjectionCodeGen("proj_func", this->expr, datatypes, filter);
-    this->projector = (int32_t (*)(int64_t*, int32_t, int64_t, int32_t*, int32_t, bool*)) (intptr_t) this->codegen->GetFunction();
+Projection::Projection(int32_t *inputTypes, int32_t nCols, Expr *expr, bool filter)
+    : inputTypes(inputTypes), nCols(nCols), expr(expr)
+{
+    std::vector<DataType> datatypes;
+    for (int32_t i = 0; i < nCols; i++) {
+        datatypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+    }
+    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", this->expr, datatypes, filter);
+    this->projector = reinterpret_cast<int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, bool *)>(
+        this->codegen->GetFunction());
 }
-
 
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
-int64_t* Projection::getData(VectorBatch* &vecBatch, std::vector<int64_t *> &vcdataVec, std::vector<char *> &stringvalVec, bool* bitmap)
+std::vector<int64_t> Projection::GetData(omniruntime::vec::VectorBatch *&vecBatch, std::vector<std::vector<int64_t>> &vcdataVec,
+    std::vector<char *> &stringvalVec, bool *bitmap) const
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     uint32_t nRows = vecBatch->GetRowCount();
-    int64_t* data = new int64_t[nCols];
+    std::vector<int64_t> data;
 
 
     for (int32_t i = 0; i < nCols; i++) {
-        // varchar vec getValues is different from the rest
-        if (vecBatch->GetVector(i)->GetType() == OMNI_VEC_TYPE_VARCHAR) {
-            VarcharVector* vcVec = (VarcharVector*)(vecBatch->GetVector(i));
+        // varchar vec GetValues is different from the rest
+        if (vecBatch->GetVector(i)->GetType() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
+            auto *vcVec = reinterpret_cast<omniruntime::vec::VarcharVector *>(vecBatch->GetVector(i));
             // Create array to hold addresses
-            int64_t* vcdata = new int64_t[nRows];
+            std::vector<int64_t> vcdata;
 
             for (int32_t j = 0; j < nRows; j++) {
                 // get data
-                char* actualChar = nullptr;
+                char *actualChar = nullptr;
                 int len = vcVec->GetValue(j, &actualChar);
                 // add to vector so it can be freed later
                 stringvalVec.push_back(actualChar);
 
-                vcdata[j] = (int64_t)(actualChar);
+                vcdata.push_back(reinterpret_cast<int64_t>(actualChar));
 
                 // deal with bitmap
                 // bitmap[j * nCols + i] represents nullity of jth value of vector i
@@ -53,11 +65,9 @@ int64_t* Projection::getData(VectorBatch* &vecBatch, std::vector<int64_t *> &vcd
             }
             vcdataVec.push_back(vcdata);
 
-            data[i] = (int64_t)(vcdata);
-        }
-
-        else {
-            data[i] = (int64_t) vecBatch->GetVector(i)->GetValues();
+            data.push_back(reinterpret_cast<int64_t>(vcdata.data()));
+        } else {
+            data.push_back(reinterpret_cast<int64_t>(vecBatch->GetVector(i)->GetValues()));
             for (int32_t j = 0; j < nRows; j++) {
                 // whether the jth value of vector i is null is captured in bitmap[j * nCols + i]
                 bitmap[j * nCols + i] = vecBatch->GetVector(i)->IsValueNull(j);
@@ -68,108 +78,124 @@ int64_t* Projection::getData(VectorBatch* &vecBatch, std::vector<int64_t *> &vcd
     return data;
 }
 
-Vector* Projection::project(VectorBatch* vecBatch, int32_t* selectedRows, int32_t numSelectedRows) {
+omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vecBatch, int32_t *selectedRows,
+    const int32_t numSelectedRows) const
+{
     if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->GetType() == ExprType::DATA_E) {
-        DataExpr* dEx = (DataExpr*) expr;
+        auto *dEx = reinterpret_cast<DataExpr *>(expr);
         if (dEx->isColumn) {
             return vecBatch->GetVector(dEx->colVal);
         }
     }
     DataType outType = expr->GetExprDataType();
-    VectorAllocatorManager vam = VectorAllocatorManager::GetInstance();
-    VectorAllocator* va = vam.GetOrCreateAllocator("projection_codegen");
-    Vector* outVec;
+    omniruntime::vec::VectorAllocatorManager vam = omniruntime::vec::VectorAllocatorManager::GetInstance();
+    omniruntime::vec::VectorAllocator *va = vam.GetOrCreateAllocator("projection_codegen");
+    std::unique_ptr<omniruntime::vec::Vector> outVec;
     switch (outType) {
         case INT32D:
-            outVec = new IntVector(va, numSelectedRows);
+            outVec = std::make_unique<omniruntime::vec::IntVector>(va, numSelectedRows);
             break;
         case INT64D:
-            outVec = new LongVector(va, numSelectedRows);
+            outVec = std::make_unique<omniruntime::vec::LongVector>(va, numSelectedRows);
             break;
         case DOUBLED:
-            outVec = new DoubleVector(va, numSelectedRows);
+            outVec = std::make_unique<omniruntime::vec::DoubleVector>(va, numSelectedRows);
             break;
         case STRINGD:
             // TODO: set capacity appropriately
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
-            outVec = new VarcharVector(va, numSelectedRows * 50, numSelectedRows);
+            outVec = std::make_unique<omniruntime::vec::VarcharVector>(va, numSelectedRows * 50, numSelectedRows);
             break;
+        default: {
+            DebugError("No such data type %d", outType);
+            break;
+        }
     }
-    // expr->printExprTree();
-    // std::cout << std::endl;
-    
+
     // Contains arrays with addresses for varchar vecs
-    std::vector<int64_t *> vcdataVec;
-    // Contains all strings created in VarcharVector::getValue method which need to be freed
+    std::vector<std::vector<int64_t>> vcdataVec;
+    // Contains all strings created in VarcharVector::GetValue method which need to be freed
     std::vector<char *> stringvalVec;
 
-    bool* bitmap = new bool[vecBatch->GetRowCount() * vecBatch->GetVectorCount()];
+    const int totalRowCount = vecBatch->GetRowCount() * vecBatch->GetVectorCount();
+    bool bitmap[totalRowCount];
 
-    // contents of bitmap are modified in getData method
-    int64_t* data = getData(vecBatch, vcdataVec, stringvalVec, bitmap);
+    // contents of bitmap are modified in GetData method
+    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap);
 
-    int32_t nReturned = this->projector(data, vecBatch->GetRowCount(), (int64_t) outVec->GetValues(), selectedRows, numSelectedRows, bitmap);
+    int32_t nReturned = this->projector(data.data(), vecBatch->GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
+        selectedRows, numSelectedRows, bitmap);
 
 
     for (auto v : vcdataVec) {
-        delete[] v;
+        v.clear();
     }
     for (auto v : stringvalVec) {
         delete[] v;
     }
 
-    delete[] bitmap;
-    delete[] data;
+    data.clear();
     delete va;
 
-
-    return outVec;
+    return outVec.release();
 }
 
-Vector* Projection::project(VectorBatch* vecBatch) {
-    return this->project(vecBatch, nullptr, vecBatch->GetRowCount());
+omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vecBatch) const
+{
+    return this->Project(vecBatch, nullptr, vecBatch->GetRowCount());
 }
 
-int32_t ProjectionOperator::AddInput(VectorBatch* vecBatch) {
-    VectorBatch* outBatch = new VectorBatch(nProj);
+int32_t ProjectionOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
+{
+    auto outBatch = std::make_unique<omniruntime::vec::VectorBatch>(nProj);
     for (int32_t i = 0; i < nProj; i++) {
-        Vector* outCol = proj[i]->project(vecBatch);
+        omniruntime::vec::Vector *outCol = proj[i]->Project(vecBatch);
         outBatch->SetVector(i, outCol);
     }
-    this->mutated = outBatch;
+    this->mutated = outBatch.release();
     return vecBatch->GetRowCount();
 }
 
-int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch*>& ret) {
+int32_t ProjectionOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data)
+{
     if (this->mutated == nullptr) {
         std::cerr << "Error: No projected table ready for output" << std::endl;
         return -1;
     }
-    ret.push_back(this->mutated);
+    data.push_back(this->mutated);
     return this->mutated->GetRowCount();
 }
 
-ProjectionOperatorFactory::ProjectionOperatorFactory(std::string* expressions, int32_t nProj, int32_t* inputTypes, int32_t nCols) :
-inputTypes(inputTypes), nCols(nCols), nProj(nProj) {
+ProjectionOperatorFactory::ProjectionOperatorFactory(std::string const * expressions, int32_t nProj,
+    int32_t *inputTypes, int32_t nCols)
+    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
+{
     this->SetJitContext(nullptr);
-    this->proj = new Projection*[nProj];
-    for (int32_t i = 0; i < nProj; i++) this->proj[i] = new Projection(inputTypes, nCols, expressions[i], false);
-}
-
-ProjectionOperatorFactory::ProjectionOperatorFactory(Expr** exprs, int32_t nProj, int32_t* inputTypes, int32_t nCols) :
-inputTypes(inputTypes), nCols(nCols), nProj(nProj) {
-    this->SetJitContext(nullptr);
-    this->proj = new Projection*[nProj];
-    for (int32_t i = 0; i < nProj; i++) this->proj[i] = new Projection(inputTypes, nCols, exprs[i], false);
-}
-
-ProjectionOperatorFactory::~ProjectionOperatorFactory() {
     for (int32_t i = 0; i < nProj; i++) {
-        delete this->proj[i];
+        this->proj.push_back(std::make_unique<Projection>(inputTypes, nCols, expressions[i], false));
     }
-    delete[] this->proj;
 }
 
-omniruntime::op::Operator* ProjectionOperatorFactory::CreateOperator() {
-    return new ProjectionOperator(this->proj, this->inputTypes, this->nCols, this->nProj);
+ProjectionOperatorFactory::ProjectionOperatorFactory(Expr **exprs, int32_t nProj, int32_t *inputTypes, int32_t nCols)
+    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
+{
+    this->SetJitContext(nullptr);
+    for (int32_t i = 0; i < nProj; i++) {
+        this->proj.push_back(std::make_unique<Projection>(inputTypes, nCols, exprs[i], false));
+    }
+}
+
+ProjectionOperatorFactory::~ProjectionOperatorFactory()
+{
+    for (auto &projection : this->proj) {
+        projection.reset();
+    }
+    this->proj.clear();
+}
+
+omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
+{
+    auto projectionOperator =
+        std::make_unique<ProjectionOperator>(this->proj, this->inputTypes, this->nCols, this->nProj);
+    return projectionOperator.release();
 }

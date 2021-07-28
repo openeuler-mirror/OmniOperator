@@ -16,7 +16,7 @@ int64_t ProjectionCodeGen::GetFunction()
 
 int64_t ProjectionCodeGen::createWrapper(Function *proj)
 {
-    int32_t nArgs = this->datatypes->size();
+    int32_t nArgs = this->datatypes.size();
     std::vector<Type*> args;
     /*
     For filter enabled:
@@ -150,7 +150,7 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
         gep = builder->CreateGEP(input, colValue);
         // Load the address value.
         elementAddr = builder->CreateLoad(gep);
-        type = this->datatypes->at(i);
+        type = this->datatypes.at(i);
         // Convert the column address to array of proper datatype.
         switch (type) {
             case DataType::BOOLD:

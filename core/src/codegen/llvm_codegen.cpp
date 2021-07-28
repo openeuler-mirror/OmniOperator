@@ -71,7 +71,7 @@ bool isFunctionName(std::string fnName)
 }
 
 
-LLVMCodeGen::LLVMCodeGen(std::string name,  Expr *cpExpr, std::vector <DataType> *datatypes)
+LLVMCodeGen::LLVMCodeGen(std::string name,  Expr *cpExpr, std::vector<DataType> &datatypes) : datatypes(datatypes)
 {
     funcName = name;
     expr = cpExpr;
@@ -105,7 +105,6 @@ LLVMCodeGen::LLVMCodeGen(std::string name,  Expr *cpExpr, std::vector <DataType>
 LLVMCodeGen::~LLVMCodeGen()
 {
     EOE(rt->remove());
-    delete this->datatypes;
     delete fr;
 }
 
@@ -361,9 +360,9 @@ Function *LLVMCodeGen::createConditional(DataType retType, Expr *cond, Expr *ifT
     // args[2 * i] contains the type of the ith argument (where 0 <= i < datatypes.size())
     // args[2 * i+1] contains the boolean type, as argument with index 2i+1 contains whether argument i is null
     // args[2 * datatypes.size()] contains the type of the current row number (int32_t)
-    args.reserve(2 * datatypes->size() + 1);
-    for (int32_t i = 0; i < datatypes->size(); i++) {
-        DataType type = datatypes->at(i);
+    args.reserve(2 * datatypes.size() + 1);
+    for (int32_t i = 0; i < datatypes.size(); i++) {
+        DataType type = datatypes.at(i);
         args.push_back(this->toLLVMType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
@@ -376,7 +375,7 @@ Function *LLVMCodeGen::createConditional(DataType retType, Expr *cond, Expr *ifT
 
     int32_t idx = 0;
     for (auto &arg : func->args()) {
-        if (idx == datatypes->size() * MULTIPLES) arg.setName("rowIdx");
+        if (idx == datatypes.size() * MULTIPLES) arg.setName("rowIdx");
         else {
             if (idx % IS_EVEN == 0) {
                 arg.setName(std::to_string(idx / MULTIPLES));
@@ -530,9 +529,9 @@ Function *LLVMCodeGen::createCoalesceFunc(DataType retType, DataExpr *dExpr1, Ex
     // args[2 * i] contains the type of the ith argument (where 0 <= i < datatypes.size())
     // args[2 * i+1] contains the boolean type, as argument with index 2i+1 contains whether argument i is null
     // args[2 * datatypes.size()] contains the type of the current row number (int32_t)
-    args.reserve(2 * datatypes->size() + 1);
-    for (int32_t i = 0; i < datatypes->size(); i++) {
-        DataType type = datatypes->at(i);
+    args.reserve(2 * datatypes.size() + 1);
+    for (int32_t i = 0; i < datatypes.size(); i++) {
+        DataType type = datatypes.at(i);
         args.push_back(this->toLLVMType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
@@ -545,7 +544,7 @@ Function *LLVMCodeGen::createCoalesceFunc(DataType retType, DataExpr *dExpr1, Ex
 
     int32_t idx = 0;
     for (auto &arg : func->args()) {
-        if (idx == datatypes->size() * MULTIPLES) arg.setName("rowIdx");
+        if (idx == datatypes.size() * MULTIPLES) arg.setName("rowIdx");
         else {
             if (idx % IS_EVEN == 0) {
                 arg.setName(std::to_string(idx / MULTIPLES));
@@ -853,11 +852,11 @@ void addOptimizationPasses(legacy::FunctionPassManager *FPM, llvm::legacy::PassM
 Function *LLVMCodeGen::createFunction()
 {
     std::vector<Type*> args;
-    args.reserve(MULTIPLES * datatypes->size() + 1);
+    args.reserve(MULTIPLES * datatypes.size() + 1);
     // Values in args vector follow the format:
     // #0, #0_isNull, #1, #1_isNull, ..., #4, #4_isNull, rowIdx
-    for (int32_t i = 0; i < datatypes->size(); i++) {
-        DataType type = datatypes->at(i);
+    for (int32_t i = 0; i < datatypes.size(); i++) {
+        DataType type = datatypes.at(i);
         args.push_back(this->toLLVMType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
@@ -872,7 +871,7 @@ Function *LLVMCodeGen::createFunction()
 
     int32_t idx = 0;
     for (auto &arg : func->args()) {
-        if (idx == datatypes->size() * MULTIPLES) arg.setName("rowIdx");
+        if (idx == datatypes.size() * MULTIPLES) arg.setName("rowIdx");
         else {
             if (idx % IS_EVEN == 0) {
                 arg.setName(std::to_string(idx / MULTIPLES));

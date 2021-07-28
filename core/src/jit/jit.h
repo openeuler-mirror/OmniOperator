@@ -25,7 +25,7 @@ namespace omniruntime {
             ~Jit(){}
 
             /// Specialize operator templates with values/stats in Context
-            /// return pointer to createOperator method in the optimized code
+            /// return pointer to CreateOperator method in the optimized code
             /// or 0 if specialization failed
             uint64_t Specialize();
 
