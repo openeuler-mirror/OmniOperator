@@ -24,7 +24,11 @@
 
 using llvm::Module;
 using llvm::outs;
+using std::map;
+using std::set;
 using std::string;
+using std::to_string;
+using std::unique_ptr;
 
 namespace omniruntime {
     namespace jit {

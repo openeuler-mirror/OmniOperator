@@ -420,7 +420,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
         sortOperator->AddInput(threadArgs->vecBatches[i]);
     }
     std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->getOutput(outputVecBatches);
+    sortOperator->GetOutput(outputVecBatches);
 
     delete sortOperator;
     VectorHelper::FreeVecBatches(outputVecBatches);

@@ -24,7 +24,7 @@ JitContext *CreateTestTopNJitContext(int32_t *sourceTypes, int32_t sourceTypesCo
     topNCompareSp->AddSpecializedParam(4, &pSortColCount);
     topNCompareSp->AddSpecializedParam(5, &pSourceTypes);
 
-    std::map<string, Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
+    std::map<std::string, Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
 
     auto *topNContext = new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string >(),std::vector<std::string >(),true);
 

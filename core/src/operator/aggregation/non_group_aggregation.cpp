@@ -70,12 +70,12 @@ Operator *AggregationOperatorFactory::CreateOperator()
     return aggOp;
 }
 
-int32_t AggregationOperator::addInput(VectorBatch* vecBatch)
+int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncEntry;
 #endif
-    this->preLoop(vecBatch);
+    this->PreLoop(vecBatch);
 
     int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t aggColNum = this->aggCols.size();

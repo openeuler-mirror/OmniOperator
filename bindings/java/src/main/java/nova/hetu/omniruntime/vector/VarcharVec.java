@@ -64,11 +64,6 @@ public class VarcharVec
         return data;
     }
 
-    private void getData(int startOffset, byte[] dst, int start, int length) {
-        getValues().position(startOffset);
-        getValues().get(dst, start, length);
-    }
-
     /**
      * Sets the specified bytes at the specified absolute
      *
@@ -114,11 +109,10 @@ public class VarcharVec
         lastOffsetPosition = index - 1;
     }
 
-    private void setData(int index, byte[] data, int start, int length) {
-        final int startOffset = getValueOffset(index);
-        setValueOffset(index + 1, startOffset + data.length);
-        getValues().position(startOffset);
-        getValues().put(data, start, length);
+    private void setData(int offsetInBytes, byte[] data, int start, int length)
+    {
+        values.position(offsetInBytes);
+        values.put(data, start, length);
     }
 
     @Override

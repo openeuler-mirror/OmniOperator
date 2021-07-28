@@ -174,30 +174,6 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
     nativeVectorDest->Append(nativeVectorSrc, (int32_t) jOffSet, (int32_t) jLength);
 }
 
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector)
-{
-    ContainerVector* containerVec = reinterpret_cast<ContainerVector*>(jNativeVector);
-    return containerVec->getPositionCount();
-}
-
-JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVector)
-{
-    ContainerVector* containerVec = reinterpret_cast<ContainerVector*>(jNativeVector);
-    auto vecTypes = containerVec->getVecTypes();
-    jintArray res = env->NewIntArray(vecTypes.size());
-    env->SetIntArrayRegion(res, 0, vecTypes.size(), (int32_t*)vecTypes.data());
-    return res;
-}
-
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
-        (JNIEnv *env, jclass jcls, jlong jNativeVectorDest, jint jOffSet, jlong jNativeVectorSrc, jint jLength) {
-    Vector *nativeVectorSrc = TransformVector(jNativeVectorSrc);
-    Vector *nativeVectorDest = TransformVector(jNativeVectorDest);
-    nativeVectorDest->Append(nativeVectorSrc, (int32_t) jOffSet, (int32_t) jLength);
-}
-
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector)
 {

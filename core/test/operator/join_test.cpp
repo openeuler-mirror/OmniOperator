@@ -19,6 +19,9 @@
 using namespace omniruntime::op;
 using namespace omniruntime::jit;
 using namespace omniruntime::vec;
+using std::map;
+using std::string;
+using std::vector;
 
 const int32_t COLUMN_COUNT_2 = 2;
 

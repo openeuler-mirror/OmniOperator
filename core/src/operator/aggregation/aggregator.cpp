@@ -312,10 +312,6 @@ void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32
             *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
             break;
         }
-        case OMNI_VEC_TYPE_CONTAINER: {
-            // row type
-            break;
-        }
         default: {
             DebugError("No such data type %d", type);
             break;

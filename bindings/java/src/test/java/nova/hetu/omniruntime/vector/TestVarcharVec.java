@@ -4,7 +4,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
