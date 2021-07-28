@@ -37,8 +37,8 @@ VectorBatch* CreateInput(const int32_t numRows,
                 break;
             }
         }
-        return vecBatch;
     }
+    return vecBatch;
 }
 
 int32_t* MakeInts(const int32_t size, const int32_t start = 0)
@@ -177,72 +177,72 @@ TEST (ProjectTest, Doubles) {
     delete factory;
 }
 
-//TEST (ProjectTest, MultipleColumns) {
-//    const int32_t numRows = 1000;
-//    int32_t* col1 = MakeInts(numRows);
-//    int32_t* col2 = MakeInts(numRows, -100);
-//    int64_t* col3 = MakeLongs(numRows, -10);
-//    const int32_t numProject = 2;
-//    string exprs[numProject] = {"$operator$SUBTRACT(#0, 10)", "$operator$ADD(#2, 1)"};
-//    const int32_t numCols = 3;
-//    int32_t inputTypes[numCols] = {1, 1, 2};
-//    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
-//    omniruntime::op::Operator* op = factory->CreateOperator();
-//    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
-//    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
-//        op->AddInput(t);
-//    vector<VectorBatch*> ret;
-//    int32_t numReturned = op->GetOutput(ret);
-//    for (int32_t i = 0; i < numReturned; i++) {
-//        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
-//        EXPECT_EQ(val0, i - 10);
-//        int64_t val1 = ((LongVector*) ret[0]->GetVector(1))->GetValue(i);
-//        EXPECT_EQ(val1, i - 9);
-//    }
-//
-//    VectorHelper::FreeVecBatch(t);
-//    VectorHelper::FreeVecBatches(ret);
-//
-//    delete[] col1;
-//    delete[] col2;
-//    delete[] col3;
-//
-//    delete op;
-//    delete factory;
-//}
-//
-//TEST (ProjectTest, DependOtherColumn) {
-//    const int32_t numRows = 1000;
-//    int32_t* col1 = MakeInts(numRows);
-//    int32_t* col2 = MakeInts(numRows, -100);
-//    int64_t* col3 = MakeLongs(numRows);
-//    const int32_t numProject = 2;
-//    string exprs[numProject] = {"$operator$MULTIPLY(#0, #1)", "IF($operator$LESS_THAN(#0, 500), 4000000000, #2)"};
-//    const int32_t numCols = 3;
-//    int32_t inputTypes[numCols] = {1, 1, 2};
-//    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
-//    omniruntime::op::Operator* op = factory->CreateOperator();
-//    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
-//    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
-//        op->AddInput(t);
-//    vector<VectorBatch*> ret;
-//    int32_t numReturned = op->GetOutput(ret);
-//    for (int32_t i = 0; i < numReturned; i++) {
-//        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
-//        EXPECT_EQ(val0, i * (i - 100));
-//        int64_t val1 = ((LongVector*) ret[0]->GetVector(1))->GetValue(i);
-//        EXPECT_EQ(val1, (int64_t) (i < 500 ? 4000000000 : i));
-//    }
-//
-//    VectorHelper::FreeVecBatch(t);
-//    VectorHelper::FreeVecBatches(ret);
-//
-//    delete[] col1;
-//    delete[] col2;
-//    delete[] col3;
-//
-//    delete op;
-//    delete factory;
-//}
+TEST (ProjectTest, MultipleColumns) {
+   const int32_t numRows = 1000;
+   int32_t* col1 = MakeInts(numRows);
+   int32_t* col2 = MakeInts(numRows, -100);
+   int64_t* col3 = MakeLongs(numRows, -10);
+   const int32_t numProject = 2;
+   string exprs[numProject] = {"$operator$SUBTRACT(#0, 10)", "$operator$ADD(#2, 1)"};
+   const int32_t numCols = 3;
+   int32_t inputTypes[numCols] = {1, 1, 2};
+   ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+   omniruntime::op::Operator* op = factory->CreateOperator();
+   int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+   VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+       op->AddInput(t);
+   vector<VectorBatch*> ret;
+   int32_t numReturned = op->GetOutput(ret);
+   for (int32_t i = 0; i < numReturned; i++) {
+       int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+       EXPECT_EQ(val0, i - 10);
+       int64_t val1 = ((LongVector*) ret[0]->GetVector(1))->GetValue(i);
+       EXPECT_EQ(val1, i - 9);
+   }
+
+   VectorHelper::FreeVecBatch(t);
+   VectorHelper::FreeVecBatches(ret);
+
+   delete[] col1;
+   delete[] col2;
+   delete[] col3;
+
+   delete op;
+   delete factory;
+}
+
+TEST (ProjectTest, DependOtherColumn) {
+   const int32_t numRows = 1000;
+   int32_t* col1 = MakeInts(numRows);
+   int32_t* col2 = MakeInts(numRows, -100);
+   int64_t* col3 = MakeLongs(numRows);
+   const int32_t numProject = 2;
+   string exprs[numProject] = {"$operator$MULTIPLY(#0, #1)", "IF($operator$LESS_THAN(#0, 500), 4000000000, #2)"};
+   const int32_t numCols = 3;
+   int32_t inputTypes[numCols] = {1, 1, 2};
+   ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+   omniruntime::op::Operator* op = factory->CreateOperator();
+   int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+   VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+       op->AddInput(t);
+   vector<VectorBatch*> ret;
+   int32_t numReturned = op->GetOutput(ret);
+   for (int32_t i = 0; i < numReturned; i++) {
+       int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+       EXPECT_EQ(val0, i * (i - 100));
+       int64_t val1 = ((LongVector*) ret[0]->GetVector(1))->GetValue(i);
+       EXPECT_EQ(val1, (int64_t) (i < 500 ? 4000000000 : i));
+   }
+
+   VectorHelper::FreeVecBatch(t);
+   VectorHelper::FreeVecBatches(ret);
+
+   delete[] col1;
+   delete[] col2;
+   delete[] col3;
+
+   delete op;
+   delete factory;
+}
 
 }
