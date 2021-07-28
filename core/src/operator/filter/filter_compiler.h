@@ -1,33 +1,25 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Filter compiler header
+ */
 #ifndef __FILTER_COMPILER_H__
 #define __FILTER_COMPILER_H__
 
-#include "../../common/expressions.h"
+#include <memory>
+
 #include "filter_and_project.h"
-#include <cstring>
-#include <stdint.h>
 
 namespace omniruntime {
 namespace op {
-
-class Compiler
-{
+class Compiler {
 public:
-    // Context context;
-    // Builder builder;
-    // PassManager fpm;
-    // Module module;
-    // Layout layout;
-    // Expr expression;
-    // HashMap<string, long> variables;
-    // Optional fn_value_opt;
-
     // // todo getter functions
-    Compiler(expressions::Expr* expression, int32_t *inputTypes, int32_t vecCount);
-    ~Compiler() {}
-    Filter *compile();
+    Compiler(expressions::Expr *expression, int32_t *inputTypes, int32_t vecCount);
+    ~Compiler() = default;
+    std::unique_ptr<Filter> Compile() const;
 
 private:
-    expressions::Expr* expression;
+    expressions::Expr *expression;
     int32_t *inputTypes;
     int32_t vecCount;
 };

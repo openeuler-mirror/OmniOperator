@@ -46,7 +46,7 @@
 class LLVMCodeGen {
 
 public:
-    LLVMCodeGen(std::string name, Expr *expr, std::vector<DataType>* datatypes);
+    LLVMCodeGen(std::string name, Expr *expr, std::vector<DataType> &datatypes);
     ~LLVMCodeGen();
 
     std::string dumpCode();
@@ -82,7 +82,7 @@ protected:
 
     std::string funcName;
     Expr* expr = nullptr;
-    std::vector<DataType>* datatypes;
+    std::vector<DataType> &datatypes;
 
 
     // Returns a set of all the required functions for a given row expression

@@ -65,14 +65,14 @@ TEST(CodeGenTest, Operators1) {
 
 
     string testname = "simpleTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
     func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
-    // number of rows that passed filter
+    // number of rows that passed Filter
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
@@ -118,7 +118,7 @@ TEST(CodeGenTest, MathFunctions1) {
 
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -174,7 +174,7 @@ TEST(CodeGenTest, MathFunctions2) {
 
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -237,7 +237,7 @@ TEST(CodeGenTest, MathFunctions3) {
 
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -310,7 +310,7 @@ TEST(CodeGenTest, MathFunctions4) {
 
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -395,7 +395,7 @@ TEST(CodeGenTest, CastNumbers1) {
 
 
     string testname = "simpleTest3";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -458,7 +458,7 @@ TEST(CodeGenTest, CastNumbers2) {
 
 
     string testname = "simpleTest3";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -527,7 +527,7 @@ TEST(CodeGenTest, Like) {
 
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -590,7 +590,7 @@ TEST(CodeGenTest, DateCast) {
 
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -664,7 +664,7 @@ TEST(CodeGenTest, SubstrIn) {
 
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -740,7 +740,7 @@ TEST(CodeGenTest, ConcatStr) {
     }
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
@@ -817,7 +817,7 @@ TEST(CodeGenTest, StringWithOps) {
 
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
@@ -885,7 +885,7 @@ TEST(CodeGenTest, Coalesce) {
 
 
     string testname = "coalesceTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types + 3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 

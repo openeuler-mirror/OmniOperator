@@ -12,7 +12,7 @@ int64_t FilterCodeGen::GetFunction()
 
 int64_t FilterCodeGen::CreateWrapper(Function *filter)
 {
-    int32_t nArgs = this->datatypes->size();
+    int32_t nArgs = this->datatypes.size();
     std::vector<Type*> args;
     Type *ptrArg = Type::getInt64PtrTy(*context);
     args.push_back(ptrArg);
@@ -87,7 +87,7 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
         gep = builder->CreateGEP(start, colValue);
         // Load the address value.
         elementAddr = builder->CreateLoad(gep);
-        type = this->datatypes->at(i);
+        type = this->datatypes.at(i);
         // Convert the column address to array of proper datatype.
         switch (type) {
             case DataType::BOOLD:
