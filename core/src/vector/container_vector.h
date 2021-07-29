@@ -30,7 +30,9 @@ public:
             this->vecTypes.push_back(types[i]);
         }
     }
-
+    ContainerVector(VectorAllocator* allocator, int32_t vectorCount)
+        : vectorCount(vectorCount), positionCount(0), FixedWidthVector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER)
+    {}
     ContainerVector *Slice(int32_t positionOffset, int32_t length) override;
 
     ContainerVector *CopyPositions(const int32_t *positions, int32_t offset, int32_t length) override;
@@ -44,12 +46,15 @@ public:
     // inline for high performance.
     int64_t getValue(int32_t index)
     {
+        ASSERT(index < getSize());
         return reinterpret_cast<uintptr_t *>(valuesAddress)[index];
     };
 
     // inline for high performance.
     void setValue(int32_t index, int64_t value)
     {
+        ASSERT(getReference()->isWritable());
+        ASSERT((uint)index < getSize());
         reinterpret_cast<int64_t *>(valuesAddress)[index] = value;
     }
 
@@ -58,7 +63,7 @@ public:
         return positionCount;
     }
 
-    std::vector<VecType> &getVecTypes()
+    std::vector<VecType>& getVecTypes()
     {
         return vecTypes;
     }

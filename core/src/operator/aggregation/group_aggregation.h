@@ -80,7 +80,7 @@ public:
     void PostLoop(omniruntime::vec::VectorBatch *vecBatch);
 
 private:
-    int32_t GetRowSize(int32_t *types, int32_t columnCount);
+    int32_t GetRowSize(std::vector<int32_t>& types, int32_t columnCount);
 
     void FillGroupByVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
         RowIterator &rowIterator, int32_t rowCount);

@@ -163,6 +163,15 @@ void PrintVecBatch(VectorBatch* vecBatch)
                     std::cout << vec->GetValue(rowIdx) << "   ";
                     break;
                 }
+                case OMNI_VEC_TYPE_CONTAINER: {
+                    ContainerVector* vec = reinterpret_cast<ContainerVector*>(vector);
+                    DoubleVector* doubleVec = reinterpret_cast<DoubleVector*>(vec->getValue(0));
+                    double avgVal = doubleVec->GetValue(rowIdx);
+                    LongVector* longVec = reinterpret_cast<LongVector*>(vec->getValue(1));
+                    int64_t avgCnt = longVec->GetValue(rowIdx);
+                    std::cout << avgVal << "/" << avgCnt << std::endl;
+                    break;
+                }
                 default:
                     DebugError("Error vector type %d", vecType);
             }

@@ -195,42 +195,42 @@ class AggregatorFactory {
 public:
     AggregatorFactory() {}
     virtual ~AggregatorFactory() {}
-    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) = 0;
+    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw = true, bool outputPartial = false) = 0;
 };
 
 class SumAggregatorFactory : public AggregatorFactory {
 public:
     SumAggregatorFactory() {}
     ~SumAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
 };
 
 class CountAggregatorFactory : public AggregatorFactory {
 public:
     CountAggregatorFactory() {}
     ~CountAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
 };
 
 class MinAggregatorFactory : public AggregatorFactory {
 public:
     MinAggregatorFactory() {}
     ~MinAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
 };
 
 class MaxAggregatorFactory : public AggregatorFactory {
 public:
     MaxAggregatorFactory() {}
     ~MaxAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
 };
 
 class AverageAggregatorFactory : public AggregatorFactory {
 public:
     AverageAggregatorFactory() {}
     ~AverageAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
 };
 
 } // end of namespace op
