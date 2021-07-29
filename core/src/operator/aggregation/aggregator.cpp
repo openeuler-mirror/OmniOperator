@@ -9,7 +9,6 @@
 #include "../../util/debug.h"
 #include "../../vector/vector_common.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
     using namespace omniruntime::vec;
@@ -201,7 +200,7 @@ void CountAggregator::Insert(int64_t key, void *colPtr, int32_t type, uint32_t o
 
 void AverageAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
 {
-    auto val = make_unique<double>(0.0);
+    auto val = std::make_unique<double>(0.0);
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
             int32_t rowVal = ((IntVector *)colPtr)->GetValue(offset);
@@ -262,7 +261,7 @@ void AverageAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t off
 
 void AverageAggregator::Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset)
 {
-    auto val = make_unique<double>(0.0);
+    auto val = std::make_unique<double>(0.0);
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
             int32_t rowVal = ((IntVector *)colPtr)->GetValue(offset);
@@ -282,6 +281,18 @@ void AverageAggregator::Insert(int64_t key, void *colPtr, int32_t type, uint32_t
             double rowVal = ((DoubleVector *)colPtr)->GetValue(offset);
             *val = rowVal / 1.0;
             GroupBySlot slot = { { val.release(), 1 } };
+            groupState.insert({ key, slot });
+            break;
+        }
+        case OMNI_VEC_TYPE_CONTAINER: {
+            // get intermediate state from container vector
+            ContainerVector* containerVector = reinterpret_cast<ContainerVector*>(colPtr);
+            DoubleVector* avgValVector = reinterpret_cast<DoubleVector*>(containerVector->getValue(0));
+            double avgVal = avgValVector->GetValue(offset);
+            LongVector* avgCountVector = reinterpret_cast<LongVector*>(containerVector->getValue(1));
+            int64_t avgCnt = avgCountVector->GetValue(offset);
+            *val = avgVal * avgCnt / avgCnt;
+            GroupBySlot slot = { { val.release(), avgCnt } };
             groupState.insert({ key, slot });
             break;
         }
@@ -310,6 +321,16 @@ void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32
         case OMNI_VEC_TYPE_DOUBLE: {
             double rowVal = ((DoubleVector *)colPtr)->GetValue(offset);
             *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            break;
+        }
+        case OMNI_VEC_TYPE_CONTAINER: {
+            ContainerVector* containerVector = reinterpret_cast<ContainerVector*>(colPtr);
+            DoubleVector* avgValVector = reinterpret_cast<DoubleVector*>(containerVector->getValue(0));
+            double avgVal = avgValVector->GetValue(offset);
+            LongVector* avgCountVector = reinterpret_cast<LongVector*>(containerVector->getValue(1));
+            int64_t avgCnt = avgCountVector->GetValue(offset);
+            groupSlot.avgCnt += avgCnt;
+            *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;
             break;
         }
         default: {
@@ -352,19 +373,19 @@ void MinAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
             auto curVal = ((IntVector *)colPtr)->GetValue(offset);
-            auto val = make_unique<int32_t>(curVal);
+            auto val = std::make_unique<int32_t>(curVal);
             nonGroupState = { val.release() };
             break;
         }
         case OMNI_VEC_TYPE_LONG: {
             auto curVal = ((LongVector *)colPtr)->GetValue(offset);
-            auto val = make_unique<int64_t>(curVal);
+            auto val = std::make_unique<int64_t>(curVal);
             nonGroupState = { val.release() };
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             auto curVal = ((DoubleVector *)colPtr)->GetValue(offset);
-            auto val = make_unique<double>(curVal);
+            auto val = std::make_unique<double>(curVal);
             nonGroupState = { val.release() };
             break;
         }
@@ -414,19 +435,19 @@ void MinAggregator::Insert(int64_t key, void *colPtr, int32_t type, uint32_t off
 {
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
-            auto val = make_unique<int32_t>(INT32_MAX);
+            auto val = std::make_unique<int32_t>(INT32_MAX);
             GroupBySlot slot = { val.release() };
             groupState.insert({ key, slot });
             break;
         }
         case OMNI_VEC_TYPE_LONG: {
-            auto val = make_unique<int64_t>(INT64_MAX);
+            auto val = std::make_unique<int64_t>(INT64_MAX);
             GroupBySlot slot = { val.release() };
             groupState.insert({ key, slot });
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            auto val = make_unique<int64_t>(__DBL_MAX__);
+            auto val = std::make_unique<int64_t>(__DBL_MAX__);
             GroupBySlot slot = { val.release() };
             groupState.insert({ key, slot });
             break;
@@ -533,19 +554,19 @@ void MaxAggregator::Insert(int64_t key, void *colPtr, int32_t type, uint32_t off
 {
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
-            auto val = make_unique<int32_t>(INT32_MIN);
+            auto val = std::make_unique<int32_t>(INT32_MIN);
             GroupBySlot slot = { val.release() };
             groupState.insert({ key, slot });
             break;
         }
         case OMNI_VEC_TYPE_LONG: {
-            auto val = make_unique<int64_t>(INT64_MIN);
+            auto val = std::make_unique<int64_t>(INT64_MIN);
             GroupBySlot slot = { val.release() };
             groupState.insert({ key, slot });
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            auto val = make_unique<double>(__DBL_MIN__);
+            auto val = std::make_unique<double>(__DBL_MIN__);
             GroupBySlot slot = { val.release() };
             groupState.insert({ key, slot });
             break;
@@ -557,44 +578,44 @@ void MaxAggregator::Insert(int64_t key, void *colPtr, int32_t type, uint32_t off
     }
 }
 
-std::unique_ptr<Aggregator> SumAggregatorFactory::CreateAggregator(int32_t dataType)
+std::unique_ptr<Aggregator> SumAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
-        throw exception();
+        throw std::exception();
     }
-    return make_unique<SumAggregator>(dataType);
+    return std::make_unique<SumAggregator>(dataType, inputRaw, outputPartial);
 }
 
-std::unique_ptr<Aggregator> CountAggregatorFactory::CreateAggregator(int32_t dataType)
+std::unique_ptr<Aggregator> CountAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
-        throw exception();
+        throw std::exception();
     }
-    return make_unique<CountAggregator>(dataType);
+    return std::make_unique<CountAggregator>(dataType, inputRaw, outputPartial);
 }
 
-std::unique_ptr<Aggregator> MinAggregatorFactory::CreateAggregator(int32_t dataType)
+std::unique_ptr<Aggregator> MinAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
-        throw exception();
+        throw std::exception();
     }
-    return make_unique<MinAggregator>(dataType);
+    return std::make_unique<MinAggregator>(dataType, inputRaw, outputPartial);
 }
 
-std::unique_ptr<Aggregator> MaxAggregatorFactory::CreateAggregator(int32_t dataType)
+std::unique_ptr<Aggregator> MaxAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
-        throw exception();
+        throw std::exception();
     }
-    return make_unique<MaxAggregator>(dataType);
+    return std::make_unique<MaxAggregator>(dataType, inputRaw, outputPartial);
 }
 
-std::unique_ptr<Aggregator> AverageAggregatorFactory::CreateAggregator(int32_t dataType)
+std::unique_ptr<Aggregator> AverageAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
-        throw exception();
+        throw std::exception();
     }
-    return make_unique<AverageAggregator>(dataType);
+    return std::make_unique<AverageAggregator>(dataType, inputRaw, outputPartial);
 }
 } // end of namespace op
 } // end of namespace omniruntime

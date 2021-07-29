@@ -8,7 +8,6 @@
 #include "../../vector/vector_common.h"
 #include "../status.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
@@ -57,12 +56,12 @@ OmniStatus AggregationOperatorFactory::Close()
 Operator *AggregationOperatorFactory::CreateOperator()
 {
     std::vector<ColumnIndex> aggIndex;
-    std::vector<unique_ptr<Aggregator>> aggs;
+    std::vector<std::unique_ptr<Aggregator>> aggs;
 
     for (int32_t i = 0; i < this->aggTypes.size(); ++i) {
         ColumnIndex c = { static_cast<uint32_t>(i), static_cast<VecType>(this->aggTypes[i]) };
         aggIndex.push_back(c);
-        auto aggregator = aggregatorFactories[i]->CreateAggregator(this->aggTypes[i]);
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(this->aggTypes[i], inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
@@ -87,7 +86,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->GetVectorTypes());
 
-    auto aggFuncTypes = make_unique<int32_t[]>(aggColNum);
+    auto aggFuncTypes = std::make_unique<int32_t[]>(aggColNum);
 
     for (int32_t i = 0; i < aggColNum; ++i) {
         aggFuncTypes[i] = this->aggregators[i]->GetType();
@@ -170,7 +169,7 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
     uint32_t colSize = aggCols.size();
 
-    auto types = make_unique<int32_t[]>(colSize);
+    auto types = std::make_unique<int32_t[]>(colSize);
     int32_t idx = 0;
     for (int32_t i = 0; i < colSize; ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {

@@ -46,6 +46,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative
         case OMNI_VEC_TYPE_VARCHAR:
             nativeVector = reinterpret_cast<int64_t>(new VarcharVector(TransformAllocator(jAllocator), jCapacityInBytes, jValueCount));
             break;
+        case OMNI_VEC_TYPE_CONTAINER:
+            nativeVector = reinterpret_cast<uintptr_t>(new ContainerVector(TransformAllocator(jAllocator), jValueCount));
         default:
             break;
     }

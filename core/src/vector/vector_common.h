@@ -13,6 +13,7 @@
 #include "int_vector.h"
 #include "double_vector.h"
 #include "varchar_vector.h"
+#include "container_vector.h"
 #include "vector.h"
 #include "vector_batch.h"
 #include "container_vector.h"

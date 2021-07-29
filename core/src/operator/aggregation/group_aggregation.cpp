@@ -13,7 +13,6 @@
 #include "../../vector/container_vector.h"
 #include "../../util/type_util.h"
 
-using namespace std;
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
 #include <sstream>
 #endif
@@ -70,18 +69,18 @@ OmniStatus HashAggregationOperatorFactory::Close()
 
 Operator *HashAggregationOperatorFactory::CreateOperator()
 {
-    std::vector<ColumnIndex> groupByIndex;
-    std::vector<ColumnIndex> aggIndex;
-    std::vector<unique_ptr<Aggregator>> aggs;
+    std::vector<ColumnIndex> groupByIndex(groupByColIdx.size(), ColumnIndex());
+    std::vector<ColumnIndex> aggIndex(aggColIdx.size(), ColumnIndex());
+    std::vector<std::unique_ptr<Aggregator>> aggs;
 
     for (int32_t i = 0; i < this->groupByColIdx.size(); ++i) {
         ColumnIndex c = { this->groupByColIdx[i], static_cast<VecType>(this->groupByTypes[i]) };
-        groupByIndex.push_back(c);
+        groupByIndex[i] = c;
     }
     for (int32_t i = 0; i < this->aggColIdx.size(); ++i) {
         ColumnIndex c = { this->aggColIdx[i], static_cast<VecType>(this->aggTypes[i]) };
-        aggIndex.push_back(c);
-        auto aggregator = aggregatorFactories[i]->CreateAggregator(this->aggTypes[i]);
+        aggIndex[i] = c;
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(this->aggTypes[i], inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
@@ -93,7 +92,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
 void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
 {
     int32_t colSize = groupByCols.size() + aggCols.size();
-    sourceTypes = make_unique<int32_t[]>(colSize).release();
+    sourceTypes = std::make_unique<int32_t[]>(colSize).release();
     int32_t idx = 0;
     for (auto &c : groupByCols) {
         sourceTypes[idx++] = static_cast<int32_t>(c.type);
@@ -106,7 +105,7 @@ void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) {}
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_PROCESS_AGG)
-extern "C" void ProcessAgg(uint64_t key, std::vector<unique_ptr<Aggregator>> &aggs, int32_t aggNum, const int32_t *types,
+extern "C" void ProcessAgg(uint64_t key, std::vector<std::unique_ptr<Aggregator>> &aggs, int32_t aggNum, const int32_t *types,
     const int32_t *aggIdx, void **head, uint32_t offset)
 {
     for (int32_t i = 0; i < aggNum; ++i) {
@@ -155,24 +154,24 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const in
         combineHashVal = hashFunc.CombineHash(combineHashVal, hash);
     }
     if (groupedRows.find(combineHashVal) == groupedRows.end()) {
-        std::vector<GroupBySlot> groupByTuple;
+        std::vector<GroupBySlot> groupByTuple(groupByColNum, GroupBySlot());
         for (int32_t i = 0; i < groupByColNum; ++i) {
             // copy col value to map
             void *rowPtr = nullptr;
             uint32_t idx = groupByColIdx[i];
             switch (types[idx]) {
                 case OMNI_VEC_TYPE_INT: {
-                    auto copyVal = make_unique<int32_t>(dynamic_cast<IntVector *>(vectors[idx])->GetValue(offset));
+                    auto copyVal = std::make_unique<int32_t>(dynamic_cast<IntVector *>(vectors[idx])->GetValue(offset));
                     rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
                 case OMNI_VEC_TYPE_LONG: {
-                    auto copyVal = make_unique<int64_t>(dynamic_cast<LongVector *>(vectors[idx])->GetValue(offset));
+                    auto copyVal = std::make_unique<int64_t>(dynamic_cast<LongVector *>(vectors[idx])->GetValue(offset));
                     rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
                 case OMNI_VEC_TYPE_DOUBLE: {
-                    auto copyVal = make_unique<double>(dynamic_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
+                    auto copyVal = std::make_unique<double>(dynamic_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
                     rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
@@ -182,7 +181,7 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const in
                 }
             }
             GroupBySlot groupCol = { rowPtr };
-            groupByTuple.push_back(groupCol);
+            groupByTuple[i] = groupCol;
         }
         groupedRows.insert({ combineHashVal, groupByTuple });
     }
@@ -198,10 +197,10 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->GetVectorTypes());
     int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t groupColNum = this->groupByCols.size();
-    auto groupByColIdx = make_unique<int32_t[]>(groupColNum);
+    auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
     int32_t aggColNum = this->aggCols.size();
-    auto aggColIdx = make_unique<int32_t[]>(aggColNum);
-    auto aggFuncTypes = make_unique<int32_t[]>(aggColNum);
+    auto aggColIdx = std::make_unique<int32_t[]>(aggColNum);
+    auto aggFuncTypes = std::make_unique<int32_t[]>(aggColNum);
 
     for (int32_t i = 0; i < groupColNum; ++i) {
         groupByColIdx[i] = this->groupByCols[i].idx;
@@ -220,31 +219,31 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t HashAggregationOperator::GetRowSize(int32_t *types, int32_t columnCount)
+int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t>& types, int32_t columnCount)
 {
     int32_t rowSize = 0;
     int32_t typeIndex = 0;
     for (auto &i : groupByCols) {
-        types[typeIndex++] = i.type;
+        types.push_back(i.type);
         rowSize += TypeUtil::GetVarByteSize(i.type);
     }
     for (int32_t i = 0; i < aggCols.size(); ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
-            types[typeIndex++] = OMNI_VEC_TYPE_LONG;
+            types.push_back(OMNI_VEC_TYPE_LONG);
             rowSize += sizeof(int64_t);
             continue;
         }
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
             if (aggregators[i]->IsOutputPartial()) {
-                types[typeIndex++] = OMNI_VEC_TYPE_CONTAINER;
+                types.push_back(OMNI_VEC_TYPE_CONTAINER);
                 rowSize += sizeof(int64_t);
             } else {
-                types[typeIndex++] = OMNI_VEC_TYPE_DOUBLE;
+                types.push_back(OMNI_VEC_TYPE_DOUBLE);
             }
             rowSize += sizeof(double);
             continue;
         }
-        types[typeIndex++] = aggCols[i].type;
+        types.push_back(aggCols[i].type);
         rowSize += TypeUtil::GetVarByteSize(aggCols[i].type);
     }
     return rowSize;
@@ -357,7 +356,6 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
                             DebugError("Divisor is zero! key = %ld", resultIterator->first);
                         }
                         DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
-                        std::cout << "fillAgg vec address: " << doubleVector << std::endl;
                         doubleVector->SetValue(rIdx, *(reinterpret_cast<double *>(resultIterator->second.avgVal)));
                         LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
                         longVector->SetValue(rIdx, resultIterator->second.avgCnt);
@@ -386,7 +384,7 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
 #endif
 }
 
-void SetVectors(VectorBatch *vectorBatch, const int32_t *types, int32_t rowCount)
+void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t>& types, int32_t rowCount)
 {
     for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
         switch (types[colIndex]) {
@@ -411,7 +409,6 @@ void SetVectors(VectorBatch *vectorBatch, const int32_t *types, int32_t rowCount
                 VecType *vecTypes = new VecType[2];
                 vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
                 vecTypes[1] = OMNI_VEC_TYPE_LONG;
-                std::cout << "Double vector addr " << doubleVector << " row count: " << rowCount << std::endl;
                 ContainerVector *containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, AVG_VECTOR_COUNT, vecTypes);
                 vectorBatch->SetVector(colIndex, containerVector);
                 break;
@@ -429,13 +426,13 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t groupByColSize = groupByCols.size();
     uint32_t aggColSize = aggCols.size();
     uint32_t colCount = groupByColSize + aggColSize;
-    auto types = make_unique<int32_t[]>(colCount);
+    std::vector<int32_t> types;
     int32_t vecBatchCount;
-    int32_t rowSize = GetRowSize(types.get(), colCount);
+    int32_t rowSize = GetRowSize(types, colCount);
     try {
         if (rowSize <= 0) {
             // TODO define our exception class
-            throw exception();
+            throw std::exception();
         }
         int32_t maxRowNum = MAX_TABLE_SIZE_IN_BYTES / rowSize;
         vecBatchCount = std::ceil(static_cast<double>(this->groupedRows.size()) / static_cast<double>(maxRowNum));
@@ -444,14 +441,14 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
         RowIterator rowIterator = groupedRows.begin();
         for (int32_t i = 0; i < vecBatchCount; ++i) {
             int32_t rowCount = std::min(maxRowNum, static_cast<int32_t>((this->groupedRows.size() - currentPosition)));
-            auto vecBatch = make_unique<VectorBatch>(colCount);
-            SetVectors(vecBatch.get(), types.get(), rowCount);
+            auto vecBatch = std::make_unique<VectorBatch>(colCount);
+            SetVectors(vecBatch.get(), types, rowCount);
             FillGroupByVectors(vecBatch.get(), 0, groupByColSize, rowIterator, rowCount);
             FillAggVectors(vecBatch.get(), groupByColSize, colCount, rowCount);
             result.push_back(vecBatch.release());
             currentPosition += maxRowNum;
         }
-    } catch (exception &e) {
+    } catch (std::exception &e) {
         std::cerr << "Hash Aggregation getOutput failed." << std::endl;
     }
     // set finished.
