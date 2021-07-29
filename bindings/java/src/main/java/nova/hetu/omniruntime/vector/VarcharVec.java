@@ -47,14 +47,21 @@ public class VarcharVec
         final int actualIndex = index + offset;
         final int startOffset = getValueOffset(actualIndex);
         final int dataLen = getValueOffset(actualIndex + 1) - startOffset;
-        final byte[] data = new byte[dataLen];
-        getData(startOffset, data, 0, data.length);
-        return data;
+        return getData(startOffset, dataLen);
     }
 
-    private void getData(int startOffset, byte[] dst, int start, int length) {
-        getValues().position(startOffset);
-        getValues().get(dst, start, length);
+    /**
+     * according to the specified offset and length, read data from the buffer
+     * @param offsetInBytes offset bytes in buffer
+     * @param length the length of the data to be read
+     * @return byte array
+     */
+    public byte[] getData(int offsetInBytes, int length)
+    {
+        byte[] data = new byte[length];
+        values.position(offsetInBytes);
+        values.get(data, 0, length);
+        return data;
     }
 
     /**
@@ -65,8 +72,34 @@ public class VarcharVec
      */
     public void setValue(int index, byte[] value) {
         fillSlots(index);
-        setData(index, value, 0, value.length);
+        final int startOffset = getValueOffset(index);
+        setValueOffset(index + 1, startOffset + value.length);
+        setData(startOffset, value, 0, value.length);
         lastOffsetPosition = index;
+    }
+
+    public void put(int index, byte[] values, int offsetInArray, int[] offsets, int offsetsIndex, int length)
+    {
+        if (values == null || length == 0) {
+            return;
+        }
+        int[] newOffsets = compactOffsets(index, offsets, offsetsIndex, length);
+        int dataLength = offsets[offsetsIndex + length] - offsets[offsetsIndex];
+        // set offsets
+        valueOffsets.put(index, newOffsets);
+        // set data
+        setData(getValueOffset(index), values, offsetInArray + offsets[offsetsIndex], dataLength);
+        lastOffsetPosition = index + length - 1;
+    }
+
+    private int[] compactOffsets(int index, int[] srcOffsets, int offsetIndex, int length)
+    {
+        int originalOffset = getValueOffset(index);
+        int[] newOffsets = new int[length + 1];
+        for (int i = 1; i <= length; i++) {
+            newOffsets[i] = srcOffsets[offsetIndex + i] - srcOffsets[offsetIndex] + originalOffset;
+        }
+        return newOffsets;
     }
 
     private void fillSlots(int index) {
@@ -76,11 +109,10 @@ public class VarcharVec
         lastOffsetPosition = index - 1;
     }
 
-    private void setData(int index, byte[] data, int start, int length) {
-        final int startOffset = getValueOffset(index);
-        setValueOffset(index + 1, startOffset + data.length);
-        getValues().position(startOffset);
-        getValues().put(data, start, length);
+    private void setData(int offsetInBytes, byte[] data, int start, int length)
+    {
+        values.position(offsetInBytes);
+        values.put(data, start, length);
     }
 
     @Override

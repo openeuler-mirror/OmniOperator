@@ -5,14 +5,11 @@
 #define __PARAM_H__
 
 #include <list>
-#include <assert.h>
 #include <vector>
+#include "../util/debug.h"
 
 namespace omniruntime {
     namespace jit {
-
-        using namespace std;
-
         typedef enum ParamType {
             INT32,
             INT64,
@@ -53,71 +50,43 @@ namespace omniruntime {
 
             std::vector<int> *ToInt32Vec()
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size >= 0 && type == INT32 && vector);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size >= 0 && type == INT32 && vector);
                 return (std::vector<int> *) value;
             }
 
             int *ToInt32Array()
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size >= 0 && type == INT32);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size >= 0 && type == INT32);
                 return (int *) value;
             };
 
             int ToInt32() const
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size == -1 && type == INT32);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size == -1 && type == INT32);
                 return *(int *) value;
             };
 
             long *ToInt64Array() const
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size >= 0 && type == INT64);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size >= 0 && type == INT64);
                 return (long *) value;
             };
 
             long ToInt64() const
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size == -1 && type == INT64);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size == -1 && type == INT64);
                 return *(long *) value;
             };
 
             double *ToFp64Array() const
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size >= 0 && type == FP64);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size >= 0 && type == FP64);
                 return (double *) value;
             };
 
             double ToFp64() const
             {
-#ifdef DEBUG
-#define ASSERT(f) assert(size == -1 && type == FP64);
-#else
-#define ASSERT(f) ((void)0)
-#endif
+                ASSERT(size == -1 && type == FP64);
                 return *(double *) value;
             };
 

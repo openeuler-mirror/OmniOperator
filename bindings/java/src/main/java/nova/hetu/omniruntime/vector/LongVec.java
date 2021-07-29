@@ -55,7 +55,7 @@ public class LongVec
      * @return long value
      */
     public long get(int index) {
-        return getValues().getLong((index + offset) * BYTES);
+        return values.getLong((index + offset) * BYTES);
     }
 
     /**
@@ -65,7 +65,7 @@ public class LongVec
      * @param value the value of vec
      */
     public void set(int index, long value) {
-        getValues().putLong(index * BYTES, value);
+        values.putLong(index * BYTES, value);
     }
 
     /**
@@ -77,7 +77,7 @@ public class LongVec
      * @param length the number of elements that need to written
      */
     public void put(long[] values, int offset, int start, int length) {
-        LongBuffer buffer = getValues().asLongBuffer();
+        LongBuffer buffer = this.values.asLongBuffer();
         buffer.position(offset);
         buffer.put(values, start, length);
     }

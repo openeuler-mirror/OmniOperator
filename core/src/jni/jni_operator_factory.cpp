@@ -414,7 +414,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
     topNCompareSp->AddSpecializedParam(4, &p_sortColCount);
     topNCompareSp->AddSpecializedParam(5, &p_sourceTypes);
 
-    std::map<string,Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
+    std::map<std::string,Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
 
     auto *topNContext=new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string>(),std::vector<std::string>(),true);
 

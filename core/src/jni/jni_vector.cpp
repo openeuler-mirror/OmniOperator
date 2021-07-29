@@ -145,7 +145,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector)
 {
-    Vector *nativeVector = TransformVector(jNativeVector); 
+    Vector *nativeVector = TransformVector(jNativeVector);
     return transformBaseVectorToByteBuffer(env, nativeVector->GetValueNulls(),
                                            nativeVector->GetReference()->GetValueNullChunk()->GetSizeInBytes());
 }
@@ -267,12 +267,14 @@ JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getI
 Vector *TransformVector(long vectorAddr)
 {
     Vector *nativeVector = reinterpret_cast<Vector *>(vectorAddr);
+    ASSERT(nativeVector != nullptr);
     return nativeVector;
 }
 
 VectorAllocator *TransformAllocator(long allocatorAddr)
 {
     VectorAllocator *nativeAllocator = reinterpret_cast<VectorAllocator *>(allocatorAddr);
+    ASSERT(nativeAllocator != nullptr);
     return nativeAllocator;
 }
 

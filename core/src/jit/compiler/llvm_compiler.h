@@ -75,9 +75,9 @@ namespace omniruntime {
 
         bool optimizeAttributes(llvm::Function *function);
 
-        map<string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
+        std::map<std::string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
 
-        string build_param_key(llvm::Function &func, int argPos);
+        std::string build_param_key(llvm::Function &func, int argPos);
     }
 }
 

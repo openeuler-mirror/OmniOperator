@@ -5,6 +5,7 @@
 #include "projection.h"
 
 using namespace omniruntime::op;
+using namespace omniruntime::vec;
 
 
 Projection::Projection(int32_t *inputTypes, int32_t nCols, std::string expr, bool filter)
