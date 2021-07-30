@@ -17,6 +17,7 @@
 #include "../operator/join/hash_builder.h"
 #include "../operator/join/lookup_join.h"
 #include "../operator/topn/topn.h"
+#include "../operator/partitionedoutput/partitionedoutput.h"
 #include "../operator/optimization.h"
 #include "config.h"
 
@@ -686,6 +687,37 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinO
     lookupJoinOperatorFactory->SetJitContext(jitContext);
     JNI_DEBUG_LOG("create lookup join operator factory finished, elapsed time: %ld ms.", END(start));
     return (int64_t)lookupJoinOperatorFactory;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory
+    (JNIEnv *env, jobject jObj, jintArray jSourceTypes, jboolean jReplicatesAnyRow, jint jNullChannel,
+    jintArray jPartitionChannels, jint jPartitionCount, jintArray jBucketToPartition)
+{
+    JNI_DEBUG_LOG("create partitionedoutput operator factory starting.");
+    auto start = START();
+    jint *sourceTypesArr = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    jint *partitionChannelsArr = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
+    jint *bucketToPartitionArr = env->GetIntArrayElements(jBucketToPartition, JNI_FALSE);
+
+    jint sourceTypesCount = env->GetArrayLength(jSourceTypes);
+    jint partitionChannelsCount = env->GetArrayLength(jPartitionChannels);
+    jint bucketToPartitionCount = env->GetArrayLength(jBucketToPartition);
+
+    JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
+    omniruntime::op::PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+        omniruntime::op::PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+            sourceTypesArr,
+            sourceTypesCount,
+            jReplicatesAnyRow,
+            jNullChannel,
+            partitionChannelsArr,
+            partitionChannelsCount,
+            jPartitionCount,
+            bucketToPartitionArr,
+            bucketToPartitionCount);
+    JNI_DEBUG_LOG("create partitionedoutput operator factory finished, elapsed time: %ld ms.", END(start));
+    partitionedOutputOperatorFactory->SetJitContext(nullptr);
+    return (int64_t) partitionedOutputOperatorFactory;
 }
 
 JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
