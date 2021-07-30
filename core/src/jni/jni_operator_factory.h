@@ -89,6 +89,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilder
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory
   (JNIEnv *, jobject, jintArray, jintArray, jintArray, jintArray, jintArray, jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_partitionedoutput_PartitionedOutputOperatorFactory
+ * Method:    CreatePartitionedOutputOperatorFactory
+ * Signature: ([IZI[II[I)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory
+(JNIEnv *env, jobject, jintArray, jboolean, jint, jintArray, jint, jintArray);
+
 #ifdef __cplusplus
 }
 #endif
