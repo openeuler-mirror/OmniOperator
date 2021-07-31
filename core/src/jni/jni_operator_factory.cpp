@@ -314,29 +314,29 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount);
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jSourceTypes,jintArray jOutputChannels,jintArray jWindowFunction, jintArray jPartitionChannels,jintArray JPreGroupedChannels,jintArray jSortChannels,jintArray jSortOrder,jintArray jSortNullFirsts,jint preSortedChannelPrefix,jint expectedPositions,jintArray jArgumentChannels,jintArray jWindowFunctionReturnType)
+    JNIEnv *env, jobject jObj, jintArray jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction, jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder, jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels, jintArray jWindowFunctionReturnType)
 {
-    jint *sourceTypes=env->GetIntArrayElements(jSourceTypes,JNI_FALSE);
-    jint *outputChannels=env->GetIntArrayElements(jOutputChannels,JNI_FALSE);
-    jint *windowFunction=env->GetIntArrayElements(jWindowFunction,JNI_FALSE);
-    jint *partitionChannels=env->GetIntArrayElements(jPartitionChannels,JNI_FALSE);
-    jint *preGroupedChannels=env->GetIntArrayElements(JPreGroupedChannels,JNI_FALSE);
-    jint *sortChannels=env->GetIntArrayElements(jSortChannels,JNI_FALSE);
-    jint *sortOrder=env->GetIntArrayElements(jSortOrder,JNI_FALSE);
-    jint *sortNullFirsts=env->GetIntArrayElements(jSortNullFirsts,JNI_FALSE);
+    jint *sourceTypes = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+    jint *windowFunction = env->GetIntArrayElements(jWindowFunction, JNI_FALSE);
+    jint *partitionChannels = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
+    jint *preGroupedChannels = env->GetIntArrayElements(JPreGroupedChannels, JNI_FALSE);
+    jint *sortChannels = env->GetIntArrayElements(jSortChannels, JNI_FALSE);
+    jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
+    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     jint *argumentChannels = env->GetIntArrayElements(jArgumentChannels, JNI_FALSE);
     jint *windowFunctionReturnType = env->GetIntArrayElements(jWindowFunctionReturnType, JNI_FALSE);
 
     jint sourceTypeCount = env->GetArrayLength(jSourceTypes);
-    jint outputColsCount=env->GetArrayLength(jOutputChannels);
-    jint windowFunctionCount=env->GetArrayLength(jWindowFunction);
-    jint partitionCount=env->GetArrayLength(jPartitionChannels);
-    jint preGroupedCount=env->GetArrayLength(JPreGroupedChannels);
-    jint sortColCount=env->GetArrayLength(jSortChannels);
+    jint outputColsCount = env->GetArrayLength(jOutputChannels);
+    jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
+    jint partitionCount = env->GetArrayLength(jPartitionChannels);
+    jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
+    jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
     jint windowFunctionReturnTypeCount = env->GetArrayLength(jWindowFunctionReturnType);
 
-    int32_t allCount=sourceTypeCount+windowFunctionReturnTypeCount;
+    int32_t allCount = sourceTypeCount+windowFunctionReturnTypeCount;
     int32_t *allTypes = new int32_t[allCount];
     for (int i = 0; i <sourceTypeCount ; ++i) {
         allTypes[i] = sourceTypes[i];
@@ -389,16 +389,16 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
     JNIEnv *env, jobject jObj, jintArray jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
 {
     using namespace omniruntime::jit;
-    jint *sourceTypes=env->GetIntArrayElements(jSourceTypes,JNI_FALSE);
-    jint *sortCols=env->GetIntArrayElements(jSortCols,JNI_FALSE);
-    jint *sortAsc=env->GetIntArrayElements(jSortAsc, JNI_FALSE);
-    jint *sortNullFirsts=env->GetIntArrayElements(jSortNullFirsts,JNI_FALSE);
+    jint *sourceTypes = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    jint *sortCols = env->GetIntArrayElements(jSortCols, JNI_FALSE);
+    jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
+    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     int32_t n = (int32_t) jN;
 
     jint sourceTypesCount = env->GetArrayLength(jSourceTypes);
     jint sortColCount = env->GetArrayLength(jSortCols);
 
-    omniruntime::op::TopNOperatorFactory *topNOperatorFactory =new omniruntime::op::TopNOperatorFactory(
+    omniruntime::op::TopNOperatorFactory *topNOperatorFactory = new omniruntime::op::TopNOperatorFactory(
             sourceTypes,
             sourceTypesCount,
             n,
@@ -409,15 +409,17 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
     );
 
     ParamValue p_sourceTypes = ParamValue(sourceTypes, sourceTypesCount);
-    ParamValue p_sortColCount= ParamValue(&sortColCount);
+    ParamValue p_sortColCount = ParamValue(&sortColCount);
+    ParamValue p_sortCols = ParamValue(sortCols, sortColCount);
 
-    auto * topNCompareSp=new Specialization();
-    topNCompareSp->AddSpecializedParam(4, &p_sortColCount);
-    topNCompareSp->AddSpecializedParam(5, &p_sourceTypes);
+    auto * topNCompareSp = new Specialization();
+    topNCompareSp->AddSpecializedParam(4, &p_sortColCount); // 4teh parameter
+    topNCompareSp->AddSpecializedParam(5, &p_sortCols); // 5teh parameter
+    topNCompareSp->AddSpecializedParam(6, &p_sourceTypes); // 6teh parameter
 
-    std::map<std::string,Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
+    std::map<std::string, Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
 
-    auto *topNContext=new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string>(),std::vector<std::string>(),true);
+    auto *topNContext = new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string >(),std::vector<std::string >(),true);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*topNContext});
 

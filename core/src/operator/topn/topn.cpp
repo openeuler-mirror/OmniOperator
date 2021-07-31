@@ -55,7 +55,8 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
     for (int32_t position = 0; position < vectorBatch->GetRowCount(); ++position) {
         if ((pq.size() < n) ||
-            Compare(position, vectorBatch, pq.top().GetVecBatch(), sortColCount, sourceTypes, sortAscendings) < 0) {
+            Compare(position, vectorBatch, pq.top().GetVecBatch(), sortColCount,
+                    sortCols, sourceTypes, sortAscendings) < 0) {
             VectorBatch* singleRowTable = new VectorBatch(sourceTypesCount, 1);
             singleRowTable->SetVectors(sourceTypes);
             SetValueForSingleRowTable(vectorBatch, position, singleRowTable);
@@ -137,14 +138,15 @@ void TopNOperator::SetValueForSingleRowTable(VectorBatch *vectorBatch, int32_t p
 
 SPECIALIZE(OMNIJIT_TOPN_COMPARE)
 int32_t TopNOperator::Compare(int32_t position, VectorBatch *vectorBatch, VectorBatch *currentMaxVectorBatch,
-    int32_t sortColCount, const int32_t *sourceTypes, const int32_t *sortAscendings) const
+    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypes, const int32_t *sortAscendings) const
 {
     int compare = 0;
 
     for (int i = 0; i < sortColCount; ++i) {
-        int32_t colType = sourceTypes[i];
-        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType), vectorBatch->GetVector(i),
-                                                        position, currentMaxVectorBatch->GetVector(i), 0);
+        int32_t sortCol = sortCols[i];
+        int32_t colType = sourceTypes[sortCol];
+        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType), vectorBatch->GetVector(sortCol),
+                                                        position, currentMaxVectorBatch->GetVector(sortCol), 0);
         if (sortAscendings[i] == 0) {
             compare = -compare;
         }
@@ -189,14 +191,22 @@ VectorBatch* RowComparator::GetVecBatch() const
     return vectorBatch;
 }
 
+int32_t *RowComparator::GetSortCols() const
+{
+    return sortCols;
+}
+
 bool operator < (const RowComparator &left, const RowComparator &right)
 {
     int compare = 0;
 
     for (int i = 0; i < left.GetSortColCount(); ++i) {
-        int32_t colType = left.GetSourceTypes()[i];
-        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType), left.GetVecBatch()->GetVector(i),
-                                                        0, right.GetVecBatch()->GetVector(i), 0);
+        int32_t sortCol = left.GetSortCols()[i];
+        int32_t colType = left.GetSourceTypes()[sortCol];
+
+        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType),
+                                                        left.GetVecBatch()->GetVector(sortCol), 0,
+                                                        right.GetVecBatch()->GetVector(sortCol), 0);
 
         if (left.GetSortAscendings()[i] == 0 && right.GetSortAscendings()[i] == 0) {
             compare = -compare;

@@ -28,6 +28,8 @@ public:
 
     int32_t GetSortColCount() const;
 
+    int32_t *GetSortCols() const;
+
     omniruntime::vec::VectorBatch* GetVecBatch() const;
 
 private:
@@ -72,7 +74,7 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
     int32_t Compare(int32_t position, omniruntime::vec::VectorBatch *table,
-        omniruntime::vec::VectorBatch *currentMaxVectorBatch, int32_t sortColCount,
+        omniruntime::vec::VectorBatch *currentMaxVectorBatch, int32_t sortColCount, const int32_t *sortCols,
         const int32_t *sourceTypes, const int32_t *sortAscendings) const;
 
 private:
