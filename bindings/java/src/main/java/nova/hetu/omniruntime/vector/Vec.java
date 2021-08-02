@@ -264,13 +264,11 @@ public abstract class Vec
         valueNulls.set(index + offset);
     }
 
-    public void setNulls(int index, boolean[] isNulls, int start, int length)
-    {
+    public void setNulls(int index, boolean[] isNulls, int start, int length) {
         valueNulls.set(index, isNulls, start, length);
     }
 
-    public boolean hasNullValue()
-    {
+    public boolean hasNullValue() {
         boolean[] currentValueNulls = new boolean[size];
         valueNulls.get(offset, currentValueNulls, 0, size);
         boolean hasNullValue = false;
@@ -291,8 +289,7 @@ public abstract class Vec
      * return null value array from 0 to size + offset length
      * @return raw value nulls
      */
-    public boolean[] getRawValueNulls()
-    {
+    public boolean[] getRawValueNulls() {
         // the length of the array is size + offset, so that the caller
         // and vec can have the same offset.
         boolean[] rawValueNulls = new boolean[size + offset];

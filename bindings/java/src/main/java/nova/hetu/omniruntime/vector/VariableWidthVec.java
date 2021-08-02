@@ -62,8 +62,7 @@ public abstract class VariableWidthVec
         valueOffsets.set(index, offset);
     }
 
-    public int[] getRawValueOffset()
-    {
+    public int[] getRawValueOffset() {
         int[] rawValueOffset = new int[offset + size + 1];
         valueOffsets.getOffsets(0, rawValueOffset, 0, rawValueOffset.length);
         return rawValueOffset;
