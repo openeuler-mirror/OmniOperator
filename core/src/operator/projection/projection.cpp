@@ -85,7 +85,7 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
     if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->GetType() == ExprType::DATA_E) {
         auto *dEx = reinterpret_cast<DataExpr *>(expr);
         if (dEx->isColumn) {
-            return vecBatch->GetVector(dEx->colVal);
+            return vecBatch->GetVector(dEx->colVal)->Slice(0, numSelectedRows);
         }
     }
     DataType outType = expr->GetExprDataType();
@@ -126,7 +126,6 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
 
     int32_t nReturned = this->projector(data.data(), vecBatch->GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
         selectedRows, numSelectedRows, bitmap);
-
 
     for (auto v : vcdataVec) {
         v.clear();
