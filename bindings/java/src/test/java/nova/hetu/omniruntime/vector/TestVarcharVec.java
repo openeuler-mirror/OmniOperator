@@ -97,8 +97,7 @@ public class TestVarcharVec {
     }
 
     @Test
-    public void testPutValues()
-    {
+    public void testPutValues() {
         int size = 100;
         int[] offsets = new int[size + 1];
         StringBuilder data = new StringBuilder();
@@ -118,8 +117,7 @@ public class TestVarcharVec {
         values.close();
     }
 
-    private byte[] getDataFromBuffer(ByteBuffer buffer, int offsetInBytes, int length)
-    {
+    private byte[] getDataFromBuffer(ByteBuffer buffer, int offsetInBytes, int length) {
         byte[] data = new byte[length];
         buffer.position(offsetInBytes);
         buffer.get(data, 0, length);
@@ -153,8 +151,7 @@ public class TestVarcharVec {
     }
 
     @Test
-    public void testBatchSetValueNull()
-    {
+    public void testBatchSetValueNull() {
         int size = 256;
         boolean[] isNulls = new boolean[size];
         for (int i = 0; i < size; i++) {

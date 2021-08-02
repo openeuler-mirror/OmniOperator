@@ -56,8 +56,7 @@ public class VarcharVec
      * @param length the length of the data to be read
      * @return byte array
      */
-    public byte[] getData(int offsetInBytes, int length)
-    {
+    public byte[] getData(int offsetInBytes, int length) {
         byte[] data = new byte[length];
         values.position(offsetInBytes);
         values.get(data, 0, length);
@@ -78,8 +77,7 @@ public class VarcharVec
         lastOffsetPosition = index;
     }
 
-    public void put(int index, byte[] values, int offsetInArray, int[] offsets, int offsetsIndex, int length)
-    {
+    public void put(int index, byte[] values, int offsetInArray, int[] offsets, int offsetsIndex, int length) {
         if (values == null || length == 0) {
             return;
         }
@@ -92,8 +90,7 @@ public class VarcharVec
         lastOffsetPosition = index + length - 1;
     }
 
-    private int[] compactOffsets(int index, int[] srcOffsets, int offsetIndex, int length)
-    {
+    private int[] compactOffsets(int index, int[] srcOffsets, int offsetIndex, int length) {
         int originalOffset = getValueOffset(index);
         int[] newOffsets = new int[length + 1];
         for (int i = 1; i <= length; i++) {
@@ -109,8 +106,7 @@ public class VarcharVec
         lastOffsetPosition = index - 1;
     }
 
-    private void setData(int offsetInBytes, byte[] data, int start, int length)
-    {
+    private void setData(int offsetInBytes, byte[] data, int start, int length) {
         values.position(offsetInBytes);
         values.put(data, start, length);
     }
