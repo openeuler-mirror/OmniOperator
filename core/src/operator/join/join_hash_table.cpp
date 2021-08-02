@@ -126,17 +126,17 @@ int64_t HashRow(int32_t rowIndex, Vector **columns, const int32_t *columnTypes, 
 
         switch (columnTypes[columnIdx]) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t intValue = dynamic_cast<IntVector *>(column)->GetValue(rowIndex);
+                int32_t intValue = static_cast<IntVector *>(column)->GetValue(rowIndex);
                 hash = HashUtil::HashValue(static_cast<int64_t>(intValue));
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t int64Value = dynamic_cast<LongVector *>(column)->GetValue(rowIndex);
+                int64_t int64Value = static_cast<LongVector *>(column)->GetValue(rowIndex);
                 hash = HashUtil::HashValue(int64Value);
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double doubleValue = dynamic_cast<DoubleVector *>(column)->GetValue(rowIndex);
+                double doubleValue = static_cast<DoubleVector *>(column)->GetValue(rowIndex);
                 hash = HashUtil::HashValue(static_cast<int64_t>(doubleValue));
                 break;
             }

@@ -63,51 +63,6 @@ void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
     }
 }
 
-int Vector::GetSize()
-{
-    return size;
-}
-
-int Vector::GetPositionOffset()
-{
-    return positionOffset;
-}
-
-VectorReference *Vector::GetReference() const
-{
-    return reference;
-}
-
-VectorAllocator *Vector::GetAllocator() const
-{
-    return allocator;
-}
-
-VecType Vector::GetType()
-{
-    return reference->GetType();
-}
-
-void *Vector::GetValues() const
-{
-    return valuesAddress;
-}
-
-void *Vector::GetValueNulls() const
-{
-    return valueNullsAddress;
-}
-
-void *Vector::GetValueOffsets() const
-{
-    return valueOffsetsAddress;
-}
-
-void Vector::SetSize(int size)
-{
-    this->size = size;
-}
-
 void Vector::SetValueNullBitMap(int index)
 {
     if (valueNullsAddress != nullptr) {

@@ -426,7 +426,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniSortTest, testOrderByOriginalMultiThreads)
+TEST(NativeOmniSortTest, TestOrderByOriginalMultiThreads)
 {
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
     BuildSortTestData(vecBatches, COLUMN_COUNT_4);
@@ -474,7 +474,7 @@ TEST(NativeOmniSortTest, testOrderByOriginalMultiThreads)
     VectorHelper::FreeVecBatches(vecBatches, VEC_BATCH_COUNT);
 }
 
-TEST(NativeOmniSortTest, testOrderByJITMultiThreads)
+TEST(NativeOmniSortTest, TestOrderByJITMultiThreads)
 {
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
     BuildSortTestData(vecBatches, COLUMN_COUNT_4);

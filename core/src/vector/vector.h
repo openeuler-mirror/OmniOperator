@@ -25,23 +25,50 @@ public:
 
     virtual ~Vector();
 
-    virtual int GetSize();
+    virtual int GetSize()
+    {
+        return size;
+    }
 
-    void SetSize(int size);
+    void SetSize(int size)
+    {
+        this->size = size;
+    }
 
-    int GetPositionOffset();
+    int GetPositionOffset()
+    {
+        return positionOffset;
+    }
 
-    VectorReference *GetReference() const;
+    VectorReference *GetReference() const
+    {
+        return reference;
+    }
 
-    VectorAllocator *GetAllocator() const;
+    VectorAllocator *GetAllocator() const
+    {
+        return allocator;
+    }
 
-    virtual VecType GetType();
+    virtual VecType GetType()
+    {
+        return reference->GetType();
+    }
 
-    void *GetValues() const;
+    void *GetValues() const
+    {
+        return valuesAddress;
+    }
 
-    void *GetValueNulls() const;
+    void *GetValueOffsets() const
+    {
+        return valueOffsetsAddress;
+    }
 
-    void *GetValueOffsets() const;
+    void *GetValueNulls() const
+    {
+        return valueNullsAddress;
+    }
 
     bool IsValueNull(int index)
     {
