@@ -380,7 +380,7 @@ void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, Vector **probeAllC
     Vector *column = nullptr;
     for (int32_t columnIdx = 0; columnIdx < probeOutputColsCount; columnIdx++) {
         column = probeAllColumns[probeOutputCols[columnIdx]];
-        column->GetReference()->IncRef();
+        column = column->Slice(0, column->GetSize());
         vectorBatch->SetVector(outputColumnIdx++, column);
     }
 }
