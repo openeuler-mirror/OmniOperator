@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.constants.VecType;
@@ -7,10 +10,15 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
+import java.util.Locale;
 
+/**
+ * base class of decimal vec
+ *
+ * @since 2021-07-17
+ */
 public abstract class DecimalVec
-        extends FixedWidthVec
-{
+        extends FixedWidthVec {
     private static final byte[] ZEROS = new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     private static final byte[] MINUS_ONE = new byte[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -18,71 +26,87 @@ public abstract class DecimalVec
     private final int precision;
     private final int scale;
 
-    public DecimalVec(int size, int precision, int scale, int typeLength, VecType type)
-    {
+    public DecimalVec(int size, int precision, int scale, int typeLength, VecType type) {
         super(size * typeLength, size, type);
         this.precision = precision;
         this.scale = scale;
         setPrecisionAndScale(precision, scale);
     }
 
-    public DecimalVec(VecAllocator allocator, int size, int precision, int scale, int typeLength, VecType type)
-    {
+    public DecimalVec(VecAllocator allocator, int size, int precision, int scale, int typeLength, VecType type) {
         super(allocator, size * typeLength, size, type);
         this.precision = precision;
         this.scale = scale;
         setPrecisionAndScale(precision, scale);
     }
 
-    public DecimalVec(long nativeVector)
-    {
+    public DecimalVec(long nativeVector) {
         super(nativeVector);
         this.precision = getPrecision(nativeVector);
         this.scale = getScale(nativeVector);
     }
 
-    protected DecimalVec(DecimalVec vector, int offset, int length, boolean isSlice)
-    {
+    protected DecimalVec(DecimalVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
         this.precision = vector.precision;
         this.scale = vector.scale;
     }
 
-    protected DecimalVec(DecimalVec vector, int[] positions, int offset, int length)
-    {
+    protected DecimalVec(DecimalVec vector, int[] positions, int offset, int length) {
         super(vector, positions, offset, length);
         this.precision = vector.precision;
         this.scale = vector.scale;
     }
 
-    public int getPrecision()
-    {
+    public int getPrecision() {
         return precision;
     }
 
-    public int getScale()
-    {
+    public int getScale() {
         return scale;
     }
 
+    /**
+     * Sets the specified decimal value at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @param value the value of the element to be written
+     */
     public abstract void set(int index, BigDecimal value);
 
-    protected void set(int index, BigDecimal value, int typeLength)
-    {
+    /**
+     * set the value according to the index position and type length
+     *
+     * @param index the element offset in vec
+     * @param value decimal value
+     * @param typeLength decimal type length 128 or 256 bytes
+     */
+    protected void set(int index, BigDecimal value, int typeLength) {
         checkPrecisionAndScale(value);
         getValueNulls().set(index);
         writeBigDecimalToBuf(value, index, typeLength);
     }
 
+    /**
+     * get the specified decimal at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return decimal value
+     */
     public abstract BigDecimal get(int index);
 
-    protected BigDecimal get(int index, int typeLength)
-    {
+    /**
+     * according to index and type length, read data
+     *
+     * @param index the element offset in vec
+     * @param typeLength type length 128 or 256 bytes
+     * @return decimal value
+     */
+    protected BigDecimal get(int index, int typeLength) {
         return getBigDecimalFromBuf(index + offset, typeLength);
     }
 
-    private BigDecimal getBigDecimalFromBuf(int index, int typeLength)
-    {
+    private BigDecimal getBigDecimalFromBuf(int index, int typeLength) {
         byte[] value = new byte[typeLength];
         final int startIndex = index * typeLength;
 
@@ -95,8 +119,7 @@ public abstract class DecimalVec
         return new BigDecimal(unscaledValue, scale, new MathContext(precision));
     }
 
-    private void reverse(byte[] values)
-    {
+    private void reverse(byte[] values) {
         int length = values.length;
         byte temp;
         for (int i = 0; i < length / 2; i++) {
@@ -106,13 +129,12 @@ public abstract class DecimalVec
         }
     }
 
-    private void writeBigDecimalToBuf(BigDecimal value, int index, int typeLength)
-    {
+    private void writeBigDecimalToBuf(BigDecimal value, int index, int typeLength) {
         final byte[] bytes = value.unscaledValue().toByteArray();
         final int startIndex = index * typeLength;
         if (bytes.length > typeLength) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                    String.format("Decimal size greater then %d bytes:%d", typeLength, bytes.length));
+                    String.format(Locale.ROOT, "Decimal size greater then %d bytes:%d", typeLength, bytes.length));
         }
         byte[] padBytes = bytes[0] < 0 ? MINUS_ONE : ZEROS;
         // TODO:default is little endian and need check bytes order
@@ -124,16 +146,15 @@ public abstract class DecimalVec
         getValues().put(padBytes, 0, typeLength - bytes.length);
     }
 
-    private void checkPrecisionAndScale(BigDecimal value)
-    {
+    private void checkPrecisionAndScale(BigDecimal value) {
         if (value.precision() > precision) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                    String.format("BigDecimal precision can not be greater than decimal vector:%d != %d", value.precision(), precision));
+                    String.format(Locale.ROOT, "BigDecimal precision can not be greater than decimal vector:%d != %d", value.precision(), precision));
         }
 
         if (value.scale() != scale) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                    String.format("BigDecimal scale must equal than in the decimal vector:%d != %d", value.scale(), scale));
+                    String.format(Locale.ROOT, "BigDecimal scale must equal than in the decimal vector:%d != %d", value.scale(), scale));
         }
     }
 

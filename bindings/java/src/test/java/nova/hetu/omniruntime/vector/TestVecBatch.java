@@ -2,11 +2,15 @@ package nova.hetu.omniruntime.vector;
 
 import org.testng.annotations.Test;
 
-public class TestVecBatch
-{
+/**
+ * test vec batch
+ */
+public class TestVecBatch {
+    /**
+     * test new vec batch
+     */
     @Test
-    public void testNewVecBatch()
-    {
+    public void testNewVecBatch() {
         int vecCount = 10;
         int rowCount = 1024;
         Vec[] vecArray = new Vec[vecCount];

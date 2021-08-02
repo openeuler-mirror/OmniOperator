@@ -1,77 +1,59 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ */
 #ifndef __HASH_BUILDER_H__
 #define __HASH_BUILDER_H__
 
+#include <memory>
 #include "../operator_factory.h"
 #include "../operator.h"
 #include "../pages_index.h"
 #include "join_hash_table.h"
-#include <atomic>
 
 namespace omniruntime {
 namespace op {
-
-class HashBuilderOperatorFactory : public OperatorFactory
-{
+class HashBuilderOperatorFactory : public OperatorFactory {
 public:
-    HashBuilderOperatorFactory(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        int32_t operatorCount);
-    ~HashBuilderOperatorFactory();
-    static HashBuilderOperatorFactory *createHashBuilderOperatorFactory(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        int32_t operatorCount);
-    omniruntime::op::Operator *createOperator();
-    JoinHashTables *getHashTables()
+    HashBuilderOperatorFactory(const int32_t *buildTypes, int32_t buildTypesCount, const int32_t *buildOutputCols,
+        int32_t buildOutputColsCount, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+    int32_t Init();
+    ~HashBuilderOperatorFactory() override;
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const int32_t *buildTypes,
+        int32_t buildTypesCount, const int32_t *buildOutputCols, int32_t buildOutputColsCount,
+        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+    omniruntime::op::Operator *CreateOperator() override;
+    JoinHashTables *GetHashTables() const
     {
         return hashTables;
     }
+
 private:
-    int32_t *buildTypes;                // all types for build
-    int32_t buildTypesCount;
-    int32_t *buildOutputCols;           // output columns for build
-    int32_t buildOutputColsCount;
-    int32_t *buildHashCols;             // join columns for build
-    int32_t buildHashColsCount;
+    std::vector<int32_t> buildTypes;
+    std::vector<int32_t> buildOutputCols;
+    std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
+    int32_t hashTableCount;
     std::atomic<int32_t> operatorIndex;
 };
 
-class HashBuilderOperator : public Operator
-{
+class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        JoinHashTables *hashTables,
-        int32_t partitionIndex);
-    ~HashBuilderOperator();
-    int32_t addInput(VectorBatch *vecBatch) override;
-    int32_t getOutput(std::vector<VectorBatch *>& outputPages) override;
-    int32_t *getSourceTypes() override;
-    void close() override;
+    HashBuilderOperator(std::vector<int32_t> &buildTypes, const std::vector<int32_t> &buildOutputCols,
+        std::vector<int32_t> &buildHashCols, JoinHashTables *hashTables, int32_t partitionIndex,
+        std::unique_ptr<PagesIndex> &pagesIndex);
+    ~HashBuilderOperator() override;
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
+    int32_t *GetSourceTypes() override;
+    void Close() override;
+
 private:
-    int32_t *buildTypes;
-    int32_t buildTypesCount;
-    int32_t *buildHashCols;
-    int32_t buildHashColsCount;
-    PagesIndex *pagesIndex;
+    std::vector<int32_t> buildTypes;
+    std::vector<int32_t> buildHashCols;
+    std::unique_ptr<PagesIndex> pagesIndex;
     int32_t partitionIndex;
     JoinHashTables *hashTables;
-    vector<VectorBatch *> inputVecBatches;
+    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
 };
 } // end of op
 } // end of omniruntime

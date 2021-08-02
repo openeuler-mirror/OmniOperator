@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.OmniLibs;
@@ -9,12 +12,17 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_CONTAINER;
 import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
 
+/**
+ * base class of vec
+ *
+ * @since 2021-07-17
+ */
 @NotThreadSafe
 public abstract class Vec
-        implements Closeable
-{
+        implements Closeable {
     /**
      * The specialized vector allocator.
      */
@@ -68,8 +76,7 @@ public abstract class Vec
         OmniLibs.load();
     }
 
-    private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, VecType type, boolean isWritable)
-    {
+    private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, VecType type, boolean isWritable) {
         this.allocator = allocator;
         this.capacityInBytes = capacityInBytes;
         this.size = size;
@@ -90,8 +97,7 @@ public abstract class Vec
      * @param type the type of this vector.
      * @param allocator the specialized vector allocator.
      */
-    public Vec(VecAllocator allocator, int capacityInBytes, int size, VecType type)
-    {
+    public Vec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
         this(allocator,
                 newVectorNative(capacityInBytes, size, type.getValue(), allocator.getNativeAllocator()),
                 capacityInBytes,
@@ -109,8 +115,7 @@ public abstract class Vec
      * @param size the actual number of value of vector.
      * @param type the type of this vector.
      */
-    public Vec(int capacityInBytes, int size, VecType type)
-    {
+    public Vec(int capacityInBytes, int size, VecType type) {
         this(GLOBAL_VECTOR_ALLOCATOR, capacityInBytes, size, type);
     }
 
@@ -122,8 +127,7 @@ public abstract class Vec
      * @param length the number of value.
      * @param isSlice Whether the current vector is sliced
      */
-    protected Vec(Vec vec, int offset, int length, boolean isSlice)
-    {
+    protected Vec(Vec vec, int offset, int length, boolean isSlice) {
         this(vec.allocator,
                 isSlice ? sliceVectorNative(vec.nativeVector, offset, length) : copyRegionNative(vec.nativeVector, offset, length),
                 vec.getCapacityInBytes(),
@@ -138,13 +142,13 @@ public abstract class Vec
 
     /**
      * The routine is just for copyPosition vector operator.
+     *
      * @param vec the vector need to be copy.
      * @param positions the original vector positions
      * @param offset offset of positions in the input parameter
      * @param length number of elements copied
      */
-    protected Vec(Vec vec, int[] positions, int offset, int length)
-    {
+    protected Vec(Vec vec, int[] positions, int offset, int length) {
         this(vec.allocator,
                 copyPositionsNative(vec.nativeVector, positions, offset, length),
                 0,
@@ -155,8 +159,7 @@ public abstract class Vec
         capacityInBytes = getValues().capacity();
     }
 
-    protected Vec(long nativeVector)
-    {
+    protected Vec(long nativeVector) {
         this.allocator = new VecAllocator(getAllocatorNative(nativeVector));
         this.capacityInBytes = getCapacityInBytesNative(nativeVector);
         this.size = getSizeNative(nativeVector);
@@ -164,67 +167,108 @@ public abstract class Vec
         this.offset = getOffsetNative(nativeVector);
         this.nativeVector = nativeVector;
         this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
+        if (OMNI_VEC_TYPE_CONTAINER.equals(this.type)) {
+            System.out.println("NativeVector addr: " + nativeVector + ". In Vec constructor double vec addr : " + this.values.getLong(0));
+        }
         this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
     }
 
-    public long getNativeVector()
-    {
+    /**
+     * get native vector
+     *
+     * @return native vector address
+     */
+    public long getNativeVector() {
         return nativeVector;
     }
 
-    public int getSize()
-    {
+    /**
+     * the size of vector
+     *
+     * @return size
+     */
+    public int getSize() {
         return size;
     }
 
-    public void setSize(int size)
-    {
+    /**
+     * set size of vector
+     *
+     * @param size size value
+     */
+    public void setSize(int size) {
         this.size = size;
         setValueCountNative(nativeVector, size);
     }
 
-    public int getCapacityInBytes()
-    {
+    /**
+     * capacity in bytes of vector
+     *
+     * @return capacity
+     */
+    public int getCapacityInBytes() {
         return capacityInBytes;
     }
 
-    public int getOffset()
-    {
+    /**
+     * the offset of element in vec
+     *
+     * @return offset value
+     */
+    public int getOffset() {
         return offset;
     }
 
-    public VecType getType()
-    {
+    /**
+     * vector type
+     * @return vec type
+     */
+    public VecType getType() {
         return type;
     }
 
-    public ByteBuffer getValues()
-    {
+    /**
+     * get values buffer
+     *
+     * @return values buffer
+     */
+    public ByteBuffer getValues() {
         return values;
     }
 
-    public ValueNulls getValueNulls()
-    {
+    /**
+     * get value nulls buffer
+     *
+     * @return nulls value buffer
+     */
+    public ValueNulls getValueNulls() {
         return valueNulls;
     }
 
-    public boolean isNull(int index)
-    {
+    /**
+     * specify whether the position element is null
+     *
+     * @param index the element offset in vec
+     * @return if it is null, return true, otherwise return false
+     */
+    public boolean isNull(int index) {
         return valueNulls.get(index + offset);
     }
 
-    public void setNull(int index)
-    {
+    /**
+     * set the element at the specified position to a null value
+     *
+     * @param index the element offset in vec
+     */
+    public void setNull(int index) {
         valueNulls.set(index + offset);
     }
 
-    public void setNulls(int index, boolean[] isNulls, int start, int length)
-    {
+    public void setNulls(int index, boolean[] isNulls, int start, int length) {
         valueNulls.set(index, isNulls, start, length);
     }
 
-    public boolean hasNullValue()
-    {
+    public boolean hasNullValue() {
         boolean[] currentValueNulls = new boolean[size];
         valueNulls.get(offset, currentValueNulls, 0, size);
         boolean hasNullValue = false;
@@ -245,8 +289,7 @@ public abstract class Vec
      * return null value array from 0 to size + offset length
      * @return raw value nulls
      */
-    public boolean[] getRawValueNulls()
-    {
+    public boolean[] getRawValueNulls() {
         // the length of the array is size + offset, so that the caller
         // and vec can have the same offset.
         boolean[] rawValueNulls = new boolean[size + offset];
@@ -254,41 +297,75 @@ public abstract class Vec
         return rawValueNulls;
     }
 
-    public boolean isWritable()
-    {
+    /**
+     * is vec writable
+     *
+     * @return if it is writable, return true, otherwise return false
+     */
+    public boolean isWritable() {
         return isWritable;
     }
 
+    /**
+     * split a vec into two vec according to the specified index and length
+     *
+     * @param start starting index
+     * @param length number of elements
+     * @return new vec
+     */
     public abstract Vec slice(int start, int length);
 
+    /**
+     * copy a new vec according to the vec
+     *
+     * @return new vec
+     */
     public abstract Vec copy();
 
+    /**
+     * copy a new vec based on the positions
+     *
+     * @param positions all positions in vec
+     * @param offset position offset
+     * @param length the number of elements to be copied
+     * @return new vec
+     */
     public abstract Vec copyPositions(int[] positions, int offset, int length);
 
+    /**
+     * copy a vec based on the starting position and the number of elements
+     *
+     * @param positionOffset staring position
+     * @param length the number of elements
+     * @return new vec
+     */
     public abstract Vec copyRegion(int positionOffset, int length);
 
     /**
      * This method takes input a source vector to append to the destination vector only If
      * the destination vector has enough available positions.
+     *
      * @param other Source Vector to be appended
      * @param offset Number of Positions already occupied
      * @param length Number of Positions in the Source Vector
      */
-    public void append(Vec other, int offset, int length)
-    {
+    public void append(Vec other, int offset, int length) {
         appendVectorNative(this.nativeVector, offset, other.nativeVector, length);
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
         if (isCloseable) {
             freeVectorNative(this.allocator.getNativeAllocator(), this.nativeVector);
         }
     }
 
-    public void setClosable(boolean isCloseable)
-    {
+    /**
+     * set whether vec can be closed
+     *
+     * @param isCloseable can vec be closed
+     */
+    public void setClosable(boolean isCloseable) {
         this.isCloseable = isCloseable;
     }
 
@@ -315,11 +392,25 @@ public abstract class Vec
 
     private static native int setValueCountNative(long nativeVector, int valueCount);
 
+    /**
+     * get type from native vector
+     *
+     * @param nativeVector native vector address
+     * @return vec type
+     */
     protected static native int getTypeNative(long nativeVector);
 
     private static native ByteBuffer getValuesNative(long nativeVector);
 
     private static native ByteBuffer getValueNullsNative(long nativeVector);
 
+    /**
+     * merge two vectors
+     *
+     * @param destNativeVector target native vector
+     * @param positionOffset position offset
+     * @param srcNativeVector source native vector
+     * @param length the number of element
+     */
     protected static native void appendVectorNative(long destNativeVector, int positionOffset, long srcNativeVector, int length);
 }

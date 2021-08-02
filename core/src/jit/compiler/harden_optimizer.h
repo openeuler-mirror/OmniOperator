@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __OPTIMIZER_H__
 #define __OPTIMIZER_H__
 
@@ -14,17 +17,21 @@ namespace omniruntime {
     namespace jit {
         class HardenOptimizer {
         public:
-            HardenOptimizer(unsigned OptLevel, std::set<std::string> &specializedModules) {
-                pmb.OptLevel = OptLevel;
-                conf = *Config::getConf();
+            HardenOptimizer(unsigned optLevel, std::set<std::string> &specializedModules)
+            {
+                pmb.OptLevel = optLevel;
+                conf = *Config::GetConf();
                 this->specializedModules = specializedModules;
             }
 
-            HardenOptimizer(unsigned OptLevel, Config &opt_config, std::set<std::string> &specializedModules) {
-                pmb.OptLevel = OptLevel;
-                conf = opt_config;
+            HardenOptimizer(unsigned optLevel, const Config &optConfig, std::set<std::string> &specializedModules)
+            {
+                pmb.OptLevel = optLevel;
+                conf = optConfig;
                 this->specializedModules = specializedModules;
             }
+
+            ~HardenOptimizer(){}
 
             llvm::Expected<llvm::orc::ThreadSafeModule>
             operator()(llvm::orc::ThreadSafeModule TSM,

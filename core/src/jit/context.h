@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __OMNI_JIT_CONTEXT_H__
 #define __OMNI_JIT_CONTEXT_H__
 
@@ -15,27 +18,34 @@ namespace omniruntime {
                     std::vector<std::string> libraryPaths,
                     std::vector<std::string> optimizations,
                     bool hasOperatorFactory = false)
-                    : jitTemplate(jitTemplate), specializations(specializations), libraryPaths(libraryPaths),
-                      optimizations(optimizations), hasOperatorFactory(hasOperatorFactory) {
+                : jitTemplate(jitTemplate), specializations(specializations), libraryPaths(libraryPaths),
+                  optimizations(optimizations), hasOperatorFactory(hasOperatorFactory) {
             }
 
-            std::string getJitTemplate() {
+            ~Context(){}
+
+            std::string getJitTemplate()
+            {
                 return this->jitTemplate;
             }
 
-            std::map<std::string, Specialization> getSpecializations() {
+            std::map<std::string, Specialization> getSpecializations()
+            {
                 return this->specializations;
             }
 
-            std::vector<std::string> getLibraries() {
+            std::vector<std::string> getLibraries()
+            {
                 return this->libraryPaths;
             }
 
-            std::vector<std::string> getOptimizations() {
+            std::vector<std::string> getOptimizations()
+            {
                 return this->optimizations;
             }
 
-            bool isDependency() {
+            bool IsDependency()
+            {
                 return !this->hasOperatorFactory;
             }
 

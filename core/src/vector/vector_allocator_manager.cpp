@@ -1,14 +1,19 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
 
 #include "vector_allocator_manager.h"
 
-VectorAllocatorManager::VectorAllocatorManager() {
-}
+namespace omniruntime {
+namespace vec {
+VectorAllocatorManager::VectorAllocatorManager() = default;
 
-VectorAllocator *VectorAllocatorManager::getOrCreateAllocator(std::string scope) {
-    std::map<std::string, VectorAllocator *>::iterator iterator = allocatorList.find(scope);
+VectorAllocator *VectorAllocatorManager::GetOrCreateAllocator(std::string scope)
+{
+    auto iterator = allocatorList.find(scope);
     VectorAllocator *allocator = nullptr;
     if (iterator == allocatorList.end()) {
         allocator = new VectorAllocator(scope);
@@ -19,19 +24,23 @@ VectorAllocator *VectorAllocatorManager::getOrCreateAllocator(std::string scope)
     return allocator;
 }
 
-void VectorAllocatorManager::deleteAllocator(VectorAllocator **allocator) {
+void VectorAllocatorManager::DeleteAllocator(VectorAllocator **allocator)
+{
     if (allocator != nullptr && *allocator != nullptr) {
         // TODO: *allocator is no longer a valid pointer if it was freed previously.
-        if (allocatorList.find((*allocator)->getScope()) != allocatorList.end()) {
-            (*allocator)->freeAllVectors();
-            allocatorList.erase((*allocator)->getScope());
+        if (allocatorList.find((*allocator)->GetScope()) != allocatorList.end()) {
+            (*allocator)->FreeAllVectors();
+            allocatorList.erase((*allocator)->GetScope());
             delete *allocator;
         }
         *allocator = nullptr;
     }
 }
 
-const VectorAllocatorManager &VectorAllocatorManager::getInstance() {
+const VectorAllocatorManager &VectorAllocatorManager::GetInstance()
+{
     static VectorAllocatorManager instance;
     return instance;
+}
+}
 }

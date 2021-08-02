@@ -1,206 +1,149 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Hash Aggregation Source File
+ */
 #include "group_aggregation.h"
+
+#include <cmath>
+
 #include "../../vector/vector_common.h"
 #include "../status.h"
 #include "../../jit/annotation.h"
 #include "../optimization.h"
-#include <math.h>
+#include "../../vector/container_vector.h"
+#include "../../util/type_util.h"
 
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
 #include <sstream>
 #endif
 namespace omniruntime {
 namespace op {
-
-Operator * HashAggregationOperatorFactory::createOperator()
+using namespace omniruntime::vec;
+OmniStatus HashAggregationOperatorFactory::Init()
 {
-    std::vector<ColumnIndex> groupByIndex;
-    std::vector<ColumnIndex> aggIndex;
-    std::vector<Aggregator*> aggs;
-    
-    for (int32_t i = 0; i < this->groupByColContext.len; ++i) {
-        ColumnIndex c = {this->groupByColContext.context[i], (VecType)this->groupByTypeContext.context[i]};
-        groupByIndex.push_back(c);
+    OmniStatus ret = OMNI_STATUS_NORMAL;
+    if (aggTypeContext.len != aggColContext.len || aggTypeContext.len != aggFuncTypeContext.len ||
+        aggFuncTypeContext.len != aggColContext.len || groupByTypeContext.len != groupByColContext.len) {
+        ret = OMNI_STATUS_ERROR;
     }
-    for (int32_t i = 0; i < this->aggColContext.len; ++i) {
-        ColumnIndex c = {this->aggColContext.context[i], (VecType)this->aggTypeContext.context[i]};
-        aggIndex.push_back(c);
-
-        if ((AggregateType)this->aggFuncTypeContext.context[i] == OMNI_AGGREGATION_TYPE_SUM) {
-            switch (this->aggTypeContext.context[i])
-            {
-                case OMNI_VEC_TYPE_INT: {
-                    aggs.push_back(new SumAggregator(1, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    aggs.push_back(new SumAggregator(2, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    aggs.push_back(new SumAggregator(3, inputRaw, outputPartial));
-                    break;
-                }
-                default: {
-                    DebugError("No such type %d", this->aggTypeContext.context[i]);
-                    break;
-                }
+    for (int32_t i = 0; i < aggFuncTypeContext.len; ++i) {
+        aggColIdx.push_back(aggColContext.context[i]);
+        aggTypes.push_back(aggTypeContext.context[i]);
+        switch (aggFuncTypeContext.context[i]) {
+            case OMNI_AGGREGATION_TYPE_SUM: {
+                aggregatorFactories.push_back(std::make_unique<SumAggregatorFactory>());
+                break;
             }
-        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == OMNI_AGGREGATION_TYPE_AVG)
-        {
-            switch (this->aggTypeContext.context[i])
-            {
-                case OMNI_VEC_TYPE_INT: {
-                    aggs.push_back(new AverageAggregator(1, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    aggs.push_back(new AverageAggregator(2, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    aggs.push_back(new AverageAggregator(3, inputRaw, outputPartial));
-                    break;
-                }
-                default: {
-                    DebugError("No such type %d", this->aggTypeContext.context[i]);
-                    break;
-                }
+            case OMNI_AGGREGATION_TYPE_COUNT: {
+                aggregatorFactories.push_back(std::make_unique<CountAggregatorFactory>());
+                break;
             }
-        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == OMNI_AGGREGATION_TYPE_MAX)
-        {
-            switch (this->aggTypeContext.context[i])
-            {
-                case OMNI_VEC_TYPE_INT: {
-                    aggs.push_back(new MaxAggregator(1, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    aggs.push_back(new MaxAggregator(2, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    aggs.push_back(new MaxAggregator(3, inputRaw, outputPartial));
-                    break;
-                }
-                default: {
-                    DebugError("No such type %d", this->aggTypeContext.context[i]);
-                    break;
-                }
+            case OMNI_AGGREGATION_TYPE_MAX: {
+                aggregatorFactories.push_back(std::make_unique<MaxAggregatorFactory>());
+                break;
             }
-        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == OMNI_AGGREGATION_TYPE_MIN)
-        {
-            switch (this->aggTypeContext.context[i])
-            {
-                case OMNI_VEC_TYPE_INT: {
-                    aggs.push_back(new MinAggregator(1, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    aggs.push_back(new MinAggregator(2, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    aggs.push_back(new MinAggregator(3, inputRaw, outputPartial));
-                    break;
-                }
-                default: {
-                    DebugError("No such type %d", this->aggTypeContext.context[i]);
-                    break;
-                }
+            case OMNI_AGGREGATION_TYPE_MIN: {
+                aggregatorFactories.push_back(std::make_unique<MinAggregatorFactory>());
+                break;
             }
-        } else if ((AggregateType)this->aggFuncTypeContext.context[i] == OMNI_AGGREGATION_TYPE_COUNT)
-        {
-            switch (this->aggTypeContext.context[i])
-            {
-                case OMNI_VEC_TYPE_INT: {
-                    aggs.push_back(new CountAggregator(1, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    aggs.push_back(new CountAggregator(2, inputRaw, outputPartial));
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    aggs.push_back(new CountAggregator(3, inputRaw, outputPartial));
-                    break;
-                }
-                default: {
-                    DebugError("No such type %d", this->aggTypeContext.context[i]);
-                    break;
-                }
+            case OMNI_AGGREGATION_TYPE_AVG: {
+                aggregatorFactories.push_back(std::make_unique<AverageAggregatorFactory>());
+                break;
             }
-        }  else {
-            // UDAF
+            default: {
+                ret = OMNI_STATUS_ERROR;
+            }
         }
     }
+    for (int32_t i = 0; i < groupByTypeContext.len; ++i) {
+        groupByColIdx.push_back(groupByColContext.context[i]);
+        groupByTypes.push_back(groupByTypeContext.context[i]);
+    }
+    return ret;
+}
 
-    HashAggregationOperator* groupBy = new HashAggregationOperator(groupByIndex, aggIndex, aggs);
+OmniStatus HashAggregationOperatorFactory::Close()
+{
+    return OMNI_STATUS_NORMAL;
+}
+
+Operator *HashAggregationOperatorFactory::CreateOperator()
+{
+    std::vector<ColumnIndex> groupByIndex(groupByColIdx.size(), ColumnIndex());
+    std::vector<ColumnIndex> aggIndex(aggColIdx.size(), ColumnIndex());
+    std::vector<std::unique_ptr<Aggregator>> aggs;
+
+    for (int32_t i = 0; i < this->groupByColIdx.size(); ++i) {
+        ColumnIndex c = { this->groupByColIdx[i], static_cast<VecType>(this->groupByTypes[i]) };
+        groupByIndex[i] = c;
+    }
+    for (int32_t i = 0; i < this->aggColIdx.size(); ++i) {
+        ColumnIndex c = { this->aggColIdx[i], static_cast<VecType>(this->aggTypes[i]) };
+        aggIndex[i] = c;
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(this->aggTypes[i], inputRaw, outputPartial);
+        aggs.push_back(std::move(aggregator));
+    }
+
+    HashAggregationOperator *groupBy =
+        new HashAggregationOperator(groupByIndex, aggIndex, std::move(aggs), inputRaw, outputPartial);
     return groupBy;
 }
 
-void HashAggregationOperator::preLoop(VectorBatch *vecBatch)
+void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
 {
-    this->inputColTypes = new uint32_t[groupByCols.size() + aggCols.size()];
+    int32_t colSize = groupByCols.size() + aggCols.size();
+    sourceTypes = std::make_unique<int32_t[]>(colSize).release();
+    int32_t idx = 0;
+    for (auto &c : groupByCols) {
+        sourceTypes[idx++] = static_cast<int32_t>(c.type);
+    }
+    for (auto &c : aggCols) {
+        sourceTypes[idx++] = static_cast<int32_t>(c.type);
+    }
 }
 
-void HashAggregationOperator::postLoop(VectorBatch *vecBatch)
-{
-
-}
+void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) {}
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_PROCESS_AGG)
-extern "C" void processAgg(uint64_t key, 
-                            std::vector<Aggregator*>& aggs, 
-                            int32_t aggNum, 
-                            int32_t* types, 
-                            int32_t* aggIdx, 
-                            void** head, 
-                            uint32_t offset)
+extern "C" void ProcessAgg(uint64_t key, std::vector<std::unique_ptr<Aggregator>> &aggs, int32_t aggNum, const int32_t *types,
+    const int32_t *aggIdx, void **head, uint32_t offset)
 {
     for (int32_t i = 0; i < aggNum; ++i) {
         int32_t idx = aggIdx[i];
         int32_t type = types[idx];
-        void* colPtr = head[idx];
-        auto groupIter = aggs[i]->getGroupState().find(key);
-        if (groupIter != aggs[i]->getGroupState().end()) {
-            aggs[i]->processGroup(groupIter->second, colPtr, type, offset);      
-        }else { // insert a new GroupBySlot as a state
-            aggs[i]->insert(key, colPtr, type, offset);
+        void *colPtr = head[idx];
+        auto groupIter = aggs[i]->GetGroupState().find(key);
+        if (groupIter != aggs[i]->GetGroupState().end()) {
+            aggs[i]->ProcessGroup(groupIter->second, colPtr, type, offset);
+        } else { // insert a new GroupBySlot as a state
+            aggs[i]->Insert(key, colPtr, type, offset);
         }
     }
 }
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
-void HashAggregationOperator::inLoop(Vector **vectors,
-                                    uint32_t offset, 
-                                    int32_t* types, 
-                                    int32_t colNum,  
-                                    int32_t* groupByColIdx,
-                                    int32_t groupByColNum,
-                                    int32_t* aggColIdx,
-                                    int32_t aggColNum,
-                                    int32_t* aggFuncTypes) 
-{    
+void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum,
+    const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes)
+{
     int64_t combineHashVal = 0;
     MultiChannelHash hashFunc;
-    for (int32_t i = 0; i < groupByColNum; ++i) {    
+    for (int32_t i = 0; i < groupByColNum; ++i) {
         uint64_t hash = 0;
         uint32_t idx = groupByColIdx[i];
-        switch (types[idx])
-        {
-            case 1: {
+        switch (types[idx]) {
+            case OMNI_VEC_TYPE_INT: {
                 std::hash<int32_t> hashInt32;
-                hash = hashInt32(((IntVector *) vectors[idx])->getValue(offset));
+                hash = hashInt32(dynamic_cast<IntVector *>(vectors[idx])->GetValue(offset));
                 break;
             }
-            case 2: {
+            case OMNI_VEC_TYPE_LONG: {
                 std::hash<int64_t> hashInt64;
-                hash = hashInt64(((LongVector *) vectors[idx])->getValue(offset));
+                hash = hashInt64(dynamic_cast<LongVector *>(vectors[idx])->GetValue(offset));
                 break;
             }
-            case 3: {
+            case OMNI_VEC_TYPE_DOUBLE: {
                 std::hash<double> hashDouble;
-                hash = hashDouble(((DoubleVector *) vectors[idx])->getValue(offset));
+                hash = hashDouble(dynamic_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
                 break;
             }
             default: {
@@ -208,32 +151,28 @@ void HashAggregationOperator::inLoop(Vector **vectors,
                 break;
             }
         }
-        combineHashVal = hashFunc.combineHash(combineHashVal, hash);
+        combineHashVal = hashFunc.CombineHash(combineHashVal, hash);
     }
-
     if (groupedRows.find(combineHashVal) == groupedRows.end()) {
-        std::vector<GroupBySlot> groupByTuple;
+        std::vector<GroupBySlot> groupByTuple(groupByColNum, GroupBySlot());
         for (int32_t i = 0; i < groupByColNum; ++i) {
             // copy col value to map
-            void* rowPtr = nullptr;
+            void *rowPtr = nullptr;
             uint32_t idx = groupByColIdx[i];
             switch (types[idx]) {
-                case 1: {
-                    int32_t *copyVal = new int32_t;
-                    *copyVal = ((IntVector *) vectors[idx])->getValue(offset);
-                    rowPtr = reinterpret_cast<void *>(copyVal);
+                case OMNI_VEC_TYPE_INT: {
+                    auto copyVal = std::make_unique<int32_t>(dynamic_cast<IntVector *>(vectors[idx])->GetValue(offset));
+                    rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
-                case 2: {
-                    int64_t *copyVal = new int64_t;
-                    *copyVal = ((LongVector *) vectors[idx])->getValue(offset);
-                    rowPtr = reinterpret_cast<void *>(copyVal);
+                case OMNI_VEC_TYPE_LONG: {
+                    auto copyVal = std::make_unique<int64_t>(dynamic_cast<LongVector *>(vectors[idx])->GetValue(offset));
+                    rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
-                case 3: {
-                    double *copyVal = new double;
-                    *copyVal = ((DoubleVector *) vectors[idx])->getValue(offset);
-                    rowPtr = reinterpret_cast<void *>(copyVal);
+                case OMNI_VEC_TYPE_DOUBLE: {
+                    auto copyVal = std::make_unique<double>(dynamic_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
+                    rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
                 default: {
@@ -241,140 +180,104 @@ void HashAggregationOperator::inLoop(Vector **vectors,
                     break;
                 }
             }
-            GroupBySlot groupCol = {rowPtr};
-            groupByTuple.push_back(groupCol);
+            GroupBySlot groupCol = { rowPtr };
+            groupByTuple[i] = groupCol;
         }
-        groupedRows.insert({combineHashVal, groupByTuple});
+        groupedRows.insert({ combineHashVal, groupByTuple });
     }
-    
-    // processAgg(combinedHash.hashVal, aggregators, aggDataTypes, aggColIdx, (void**)head, offset);
-    processAgg(combineHashVal, aggregators, aggColNum, types, aggColIdx, (void**)vectors, offset);
+    ProcessAgg(combineHashVal, aggregators, aggColNum, types, aggColIdx, reinterpret_cast<void **>(vectors), offset);
 }
 
-int32_t HashAggregationOperator::addInput(VectorBatch *vecBatch)
+int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
 #ifdef DEBUG_LEVEL_HIGH
     DebugFuncEntry;
 #endif
-    this->preLoop(vecBatch);
-    int32_t *vectorTypes = (int32_t *)vecBatch->getVectorTypes();
-    int32_t vectorCount = vecBatch->getVectorCount();
+    this->PreLoop(vecBatch);
+    int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->GetVectorTypes());
+    int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t groupColNum = this->groupByCols.size();
-    int32_t *groupByColIdx = new int32_t[groupColNum];
+    auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
     int32_t aggColNum = this->aggCols.size();
-    int32_t *aggColIdx = new int32_t[aggColNum];
-    int32_t *aggFuncTypes = new int32_t[aggColNum];
+    auto aggColIdx = std::make_unique<int32_t[]>(aggColNum);
+    auto aggFuncTypes = std::make_unique<int32_t[]>(aggColNum);
 
     for (int32_t i = 0; i < groupColNum; ++i) {
         groupByColIdx[i] = this->groupByCols[i].idx;
-        this->inputColTypes[this->groupByCols[i].idx] = 0; // 0 represents groupby
     }
     for (int32_t i = 0; i < aggColNum; ++i) {
         aggColIdx[i] = this->aggCols[i].idx;
-        this->inputColTypes[this->aggCols[i].idx] = 1; // 1 represents agg
-        aggFuncTypes[i] = this->aggregators[i]->getType();
+        aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
-    int32_t rowCount = vecBatch->getRowCount();
-    Vector **vectors = vecBatch->getVectors();
+    int32_t rowCount = vecBatch->GetRowCount();
+    Vector **vectors = vecBatch->GetVectors();
     for (int32_t i = 0; i < rowCount; ++i) {
-        this->inLoop(vectors, i, vectorTypes, vectorCount, groupByColIdx, groupColNum, aggColIdx, aggColNum,
-                     aggFuncTypes);
+        this->InLoop(vectors, i, vectorTypes, vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggColNum,
+            aggFuncTypes.get());
     }
-    this->postLoop(vecBatch);
-    delete[] groupByColIdx;
-    delete[] aggColIdx;
-    delete[] aggFuncTypes;
+    this->PostLoop(vecBatch);
     return 0;
 }
 
-int32_t HashAggregationOperator::getRowSize(int32_t *types) {
+int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t>& types, int32_t columnCount)
+{
     int32_t rowSize = 0;
     int32_t typeIndex = 0;
     for (auto &i : groupByCols) {
-        types[typeIndex++] = i.type;
-        switch (i.type) {
-            case OMNI_VEC_TYPE_INT: {
-                rowSize += sizeof(int32_t);
-                /* code */
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG: {
-                rowSize += sizeof(int64_t);
-                /* code */
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                rowSize += sizeof(double);
-                /* code */
-                break;
-            }
-            default:
-                break;
-        }
+        types.push_back(i.type);
+        rowSize += TypeUtil::GetVarByteSize(i.type);
     }
     for (int32_t i = 0; i < aggCols.size(); ++i) {
-        if (aggregators[i]->getType() == OMNI_AGGREGATION_TYPE_COUNT) {
-            types[typeIndex++] = OMNI_VEC_TYPE_LONG;
+        if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
+            types.push_back(OMNI_VEC_TYPE_LONG);
             rowSize += sizeof(int64_t);
             continue;
         }
-        if (aggregators[i]->getType() == OMNI_AGGREGATION_TYPE_AVG) {
-            types[typeIndex++] = OMNI_VEC_TYPE_DOUBLE;
+        if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
+            if (aggregators[i]->IsOutputPartial()) {
+                types.push_back(OMNI_VEC_TYPE_CONTAINER);
+                rowSize += sizeof(int64_t);
+            } else {
+                types.push_back(OMNI_VEC_TYPE_DOUBLE);
+            }
             rowSize += sizeof(double);
             continue;
         }
-        types[typeIndex++] = aggCols[i].type;
-        switch (aggCols[i].type) {
-            case OMNI_VEC_TYPE_INT: {
-                rowSize += sizeof(int32_t);
-                /* code */
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG: {
-                rowSize += sizeof(int64_t);
-                /* code */
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                rowSize += sizeof(double);
-                /* code */
-                break;
-            }
-            default:
-                break;
-        }
+        types.push_back(aggCols[i].type);
+        rowSize += TypeUtil::GetVarByteSize(aggCols[i].type);
     }
     return rowSize;
 }
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_HASH_COLUMN)
-void HashAggregationOperator::fillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
-                                                 RowIterator &rowIterator, int32_t rowCount) {
+void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
+    RowIterator &rowIterator, int32_t rowCount)
+{
     RowIterator tempRowIterator = rowIterator;
     for (int colIndex = startIndex, groupByIndex = 0; colIndex < endIndex; ++colIndex, ++groupByIndex) {
         tempRowIterator = rowIterator;
         switch (groupByCols[groupByIndex].type) {
-            case 1: {
-                IntVector *vector = ((IntVector *) vecBatch->getVector(colIndex));
-                for (int rowIndex = 0;
-                     rowIndex < rowCount && tempRowIterator != groupedRows.end(); ++rowIndex, ++tempRowIterator) {
-                    vector->setValue(rowIndex, *(int32_t *) tempRowIterator->second[colIndex].val);
+            case OMNI_VEC_TYPE_INT: {
+                IntVector *vector = dynamic_cast<IntVector *>(vecBatch->GetVector(colIndex));
+                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+                    ++rowIndex, ++tempRowIterator) {
+                    vector->SetValue(rowIndex, *(int32_t *)tempRowIterator->second[colIndex].val);
                 }
                 break;
             }
-            case 2: {
-                LongVector *vector = ((LongVector *) vecBatch->getVector(colIndex));
-                for (int rowIndex = 0;
-                     rowIndex < rowCount && tempRowIterator != groupedRows.end(); ++rowIndex, ++tempRowIterator) {
-                    vector->setValue(rowIndex, *(int64_t *) tempRowIterator->second[colIndex].val);
+            case OMNI_VEC_TYPE_LONG: {
+                LongVector *vector = dynamic_cast<LongVector *>(vecBatch->GetVector(colIndex));
+                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+                    ++rowIndex, ++tempRowIterator) {
+                    vector->SetValue(rowIndex, *(int64_t *)tempRowIterator->second[colIndex].val);
                 }
                 break;
             }
-            case 3: {
-                DoubleVector *vector = ((DoubleVector *) vecBatch->getVector(colIndex));
-                for (int rowIndex = 0;
-                     rowIndex < rowCount && tempRowIterator != groupedRows.end(); ++rowIndex, ++tempRowIterator) {
-                    vector->setValue(rowIndex, *(double *) tempRowIterator->second[colIndex].val);
+            case OMNI_VEC_TYPE_DOUBLE: {
+                DoubleVector *vector = dynamic_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
+                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+                    ++rowIndex, ++tempRowIterator) {
+                    vector->SetValue(rowIndex, *(double *)tempRowIterator->second[colIndex].val);
                 }
                 break;
             }
@@ -390,36 +293,40 @@ void HashAggregationOperator::fillGroupByVectors(VectorBatch *vecBatch, int star
 // TODO currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
-void HashAggregationOperator::fillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount)
+void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount)
 {
-    for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex){
-        auto resultIterator = this->aggregators[aggIndex]->getGroupState().begin();
-        AggregateType aggType = this->aggregators[aggIndex]->getType();
-        switch (aggType)
-        {
+    for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex) {
+        auto resultIterator = this->aggregators[aggIndex]->GetGroupState().begin();
+        AggregateType aggType = this->aggregators[aggIndex]->GetType();
+        switch (aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                switch (aggCols[aggIndex].type)
-                {
-                    case 1:{
-                        IntVector* vector = (IntVector*) vecBatch->getVector(colIndex);
-                        for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
-                            vector->setValue(rIdx, *reinterpret_cast<int32_t*>(resultIterator->second.val));
+                switch (aggCols[aggIndex].type) {
+                    case OMNI_VEC_TYPE_INT: {
+                        IntVector *vector = dynamic_cast<IntVector *>(vecBatch->GetVector(colIndex));
+                        for (int32_t rIdx = 0;
+                            rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
+                            ++rIdx, resultIterator++) {
+                            vector->SetValue(rIdx, *reinterpret_cast<int32_t *>(resultIterator->second.val));
                         }
                         break;
                     }
-                    case 2:{
-                        LongVector* vector = (LongVector*) vecBatch->getVector(colIndex);
-                        for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
-                            vector->setValue(rIdx, *reinterpret_cast<int64_t*>(resultIterator->second.val));
+                    case OMNI_VEC_TYPE_LONG: {
+                        LongVector *vector = dynamic_cast<LongVector *>(vecBatch->GetVector(colIndex));
+                        for (int32_t rIdx = 0;
+                            rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
+                            ++rIdx, resultIterator++) {
+                            vector->SetValue(rIdx, *reinterpret_cast<int64_t *>(resultIterator->second.val));
                         }
                         break;
                     }
-                    case 3:{
-                        DoubleVector* vector = (DoubleVector*) vecBatch->getVector(colIndex);
-                        for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
-                            vector->setValue(rIdx, *reinterpret_cast<double*>(resultIterator->second.val));
+                    case OMNI_VEC_TYPE_DOUBLE: {
+                        DoubleVector *vector = dynamic_cast<DoubleVector*>(vecBatch->GetVector(colIndex));
+                        for (int32_t rIdx = 0;
+                            rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
+                            ++rIdx, resultIterator++) {
+                            vector->SetValue(rIdx, *reinterpret_cast<double *>(resultIterator->second.val));
                         }
                         break;
                     }
@@ -429,23 +336,39 @@ void HashAggregationOperator::fillAggVectors(VectorBatch *vecBatch, int startInd
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {
-                LongVector* vector = (LongVector*) vecBatch->getVector(colIndex);
-                for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
-                    vector->setValue(rIdx, reinterpret_cast<int64_t>(resultIterator->second.count));
+                LongVector *vector = dynamic_cast<LongVector *>(vecBatch->GetVector(colIndex));
+                for (int32_t rIdx = 0;
+                    rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
+                    ++rIdx, resultIterator++) {
+                    vector->SetValue(rIdx, reinterpret_cast<int64_t>(resultIterator->second.count));
                 }
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: { // TODO process intermediate vectors
-                // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise double vector.
-                DoubleVector* vector = (DoubleVector*)vecBatch->getVector(colIndex);
-                for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != aggregators[aggIndex]->getGroupState().end(); ++rIdx, resultIterator++) {
-                    if (resultIterator->second.count == 0) {
-                        DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise
+                // double vector.
+                if (outputPartial) {
+                    ContainerVector *vector = dynamic_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
+                    for (int32_t rIdx = 0;
+                        rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
+                        ++rIdx, resultIterator++) {
+                        if (resultIterator->second.avgCnt == 0) {
+                            DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                        }
+                        DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
+                        doubleVector->SetValue(rIdx, *(reinterpret_cast<double *>(resultIterator->second.avgVal)));
+                        LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
+                        longVector->SetValue(rIdx, resultIterator->second.avgCnt);
                     }
-                    if (outputPartial) {
-                        vector->setValue(rIdx++, *(reinterpret_cast<double*>(resultIterator->second.avgVal)));
-                    } else {
-                      // row type
+                } else {
+                    DoubleVector *vector = dynamic_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
+                    for (int32_t rIdx = 0;
+                        rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
+                        ++rIdx, resultIterator++) {
+                        if (resultIterator->second.avgCnt == 0) {
+                            DebugError("Divisor is zero! key = %ld", resultIterator->first);
+                        }
+                        vector->SetValue(rIdx, *(reinterpret_cast<double *>(resultIterator->second.avgVal)));
                     }
                 }
                 break;
@@ -461,32 +384,76 @@ void HashAggregationOperator::fillAggVectors(VectorBatch *vecBatch, int startInd
 #endif
 }
 
-int32_t HashAggregationOperator::getOutput(std::vector<VectorBatch*>& result)
+void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t>& types, int32_t rowCount)
+{
+    for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
+        switch (types[colIndex]) {
+            case OMNI_VEC_TYPE_INT: {
+                vectorBatch->SetVector(colIndex, new IntVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG: {
+                vectorBatch->SetVector(colIndex, new LongVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                vectorBatch->SetVector(colIndex, new DoubleVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_CONTAINER: {
+                DoubleVector *doubleVector = new DoubleVector(nullptr, rowCount);
+                LongVector *longVector = new LongVector(nullptr, rowCount);
+                Vector **vectorAddresses = new Vector *[2];
+                vectorAddresses[0] = doubleVector;
+                vectorAddresses[1] = longVector;
+                VecType *vecTypes = new VecType[2];
+                vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
+                vecTypes[1] = OMNI_VEC_TYPE_LONG;
+                ContainerVector *containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, AVG_VECTOR_COUNT, vecTypes);
+                vectorBatch->SetVector(colIndex, containerVector);
+                break;
+            }
+                // TODO: support other types!!!
+            default: {
+                break;
+            }
+        }
+    }
+}
+
+int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 {
     uint32_t groupByColSize = groupByCols.size();
     uint32_t aggColSize = aggCols.size();
     uint32_t colCount = groupByColSize + aggColSize;
-    int32_t* types = new int32_t[colCount];
-    int32_t rowSize = getRowSize(types);
+    std::vector<int32_t> types;
+    int32_t vecBatchCount;
+    int32_t rowSize = GetRowSize(types, colCount);
+    try {
+        if (rowSize <= 0) {
+            // TODO define our exception class
+            throw std::exception();
+        }
+        int32_t maxRowNum = MAX_TABLE_SIZE_IN_BYTES / rowSize;
+        vecBatchCount = std::ceil(static_cast<double>(this->groupedRows.size()) / static_cast<double>(maxRowNum));
+        int32_t currentPosition = 0;
 
-    int32_t maxRowNum = MAX_TABLE_SIZE_IN_BYTES / rowSize;
-    int32_t vecBatchCount = std::ceil((double)this->groupedRows.size() / (double)maxRowNum);
-    int32_t currentPosition = 0;
-
-    RowIterator rowIterator = groupedRows.begin();
-    for (int32_t i = 0; i < vecBatchCount; ++i) {
-        int32_t rowCount = std::min(maxRowNum, (int32_t)(this->groupedRows.size() - currentPosition));
-        VectorBatch* vecBatch = new VectorBatch(types, colCount, rowCount);
-        fillGroupByVectors(vecBatch, 0, groupByColSize, rowIterator, rowCount);
-        fillAggVectors(vecBatch, groupByColSize, colCount, rowCount);
-        result.push_back(vecBatch);
-        currentPosition += maxRowNum;
+        RowIterator rowIterator = groupedRows.begin();
+        for (int32_t i = 0; i < vecBatchCount; ++i) {
+            int32_t rowCount = std::min(maxRowNum, static_cast<int32_t>((this->groupedRows.size() - currentPosition)));
+            auto vecBatch = std::make_unique<VectorBatch>(colCount);
+            SetVectors(vecBatch.get(), types, rowCount);
+            FillGroupByVectors(vecBatch.get(), 0, groupByColSize, rowIterator, rowCount);
+            FillAggVectors(vecBatch.get(), groupByColSize, colCount, rowCount);
+            result.push_back(vecBatch.release());
+            currentPosition += maxRowNum;
+        }
+    } catch (std::exception &e) {
+        std::cerr << "Hash Aggregation getOutput failed." << std::endl;
     }
-    delete[] types;
     // set finished.
-    setStatus(OMNI_STATUS_FINISHED);
+    SetStatus(OMNI_STATUS_FINISHED);
     return vecBatchCount;
 }
-
 } // end of namespace op
 } // end of namespace omniruntime

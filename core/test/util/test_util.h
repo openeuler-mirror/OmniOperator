@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Type Util Class
+ */
 #ifndef __TEST_UTIL_H__
 #define __TEST_UTIL_H__
 
@@ -6,11 +10,20 @@
 #include "../../src/operator/operator_factory.h"
 #include <time.h>
 
-bool vecBatchMatch(VectorBatch *outputTables, VectorBatch *expectTable);
+const int32_t PARAM_OFFSET_0 = 0;
+const int32_t PARAM_OFFSET_1 = 1;
+const int32_t PARAM_OFFSET_2 = 2;
+const int32_t PARAM_OFFSET_3 = 3;
+const int32_t PARAM_OFFSET_4 = 4;
+const int32_t PARAM_OFFSET_5 = 5;
+const int32_t PARAM_OFFSET_6 = 6;
 
-void printVecBatch(VectorBatch* vecBatch);
+bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 
-omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory);
+void PrintVecBatch(omniruntime::vec::VectorBatch* vecBatch);
+
+omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory);
+void DeleteOperatorFactory(OperatorFactory *operatorFactory);
 
 class Timer {
 public:

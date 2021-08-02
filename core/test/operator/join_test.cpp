@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ */
 #include "gtest/gtest.h"
 #include "../../src/operator/join/hash_builder.h"
 #include "../../src/operator/join/lookup_join.h"
@@ -13,368 +16,352 @@
 #include <src/vector/vector_helper.h>
 #include <src/vector/dictionary_vector.h>
 
-// TEST(NativeOmniJoinTest, testHash)
-// {
-//     const int32_t DATA_SIZE = 10;
-//     int64_t hash = 0;
-//     int32_t partition = 0;
-//
-//     int64_t buildData[DATA_SIZE] = {1, 2, 1, 2, 3, 4 ,5 ,6 ,7 ,1};
-//     for (int32_t i = 0; i < DATA_SIZE; i++) {
-//         hash = HashUtil::hashValue(buildData[i]);
-//         partition = HashUtil::getRawHashPartition(hash, 1);
-//         std::cout << "BUILD hash(" << buildData[i] << ") = " << hash << ", partition=" << partition << std::endl;
-//     }
-//
-//     int64_t probeData[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
-//     for (int32_t i = 0; i < DATA_SIZE; i++) {
-//         hash = HashUtil::hashValue(probeData[i]);
-//         partition = HashUtil::getRawHashPartition(hash, 1);
-//         std::cout << "PROBE hash(" << probeData[i] << ") = " << hash << ", partition=" << partition << std::endl;
-//     }
-// }
 using namespace omniruntime::op;
+using namespace omniruntime::jit;
+using namespace omniruntime::vec;
+using std::map;
+using std::string;
+using std::vector;
 
-void deleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory, LookupJoinOperatorFactory *lookupJoinOperatorFactory)
+const int32_t COLUMN_COUNT_2 = 2;
+
+void DeleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory,
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory)
 {
     if (hashBuilderOperatorFactory != nullptr) {
-        if (hashBuilderOperatorFactory->getJitContext() != nullptr) {
-            delete hashBuilderOperatorFactory->getJitContext();
+        if (hashBuilderOperatorFactory->GetJitContext() != nullptr) {
+            delete hashBuilderOperatorFactory->GetJitContext();
         }
         delete hashBuilderOperatorFactory;
     }
 
     if (lookupJoinOperatorFactory != nullptr) {
-        if (lookupJoinOperatorFactory->getJitContext() != nullptr) {
-            delete lookupJoinOperatorFactory->getJitContext();
+        if (lookupJoinOperatorFactory->GetJitContext() != nullptr) {
+            delete lookupJoinOperatorFactory->GetJitContext();
         }
         delete lookupJoinOperatorFactory;
     }
 }
 
-JitContext *createTestHashBuilderJitContext(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        int32_t operatorCount)
+JitContext *CreateTestHashBuilderJitContext(int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildOutputCols,
+    int32_t buildOutputColsCount, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
 {
-    int32_t *hashColTypes = new int32_t[buildHashColsCount];
+    if (buildHashColsCount <= 0) {
+        return nullptr;
+    }
+    int32_t hashColTypes[buildHashColsCount];
     for (int32_t i = 0; i < buildHashColsCount; i++) {
         hashColTypes[i] = buildTypes[buildHashCols[i]];
     }
 
     using namespace omniruntime::jit;
-    ParamValue p_hashColTypes = ParamValue(hashColTypes, buildHashColsCount);
-    ParamValue p_hashColCount = ParamValue(&buildHashColsCount);
+    ParamValue pHashColTypes = ParamValue(hashColTypes, buildHashColsCount);
+    ParamValue pHashColCount = ParamValue(&buildHashColsCount);
 
     auto *hashPositionSp = new Specialization();
-    hashPositionSp->addSpecializedParam(3, &p_hashColTypes);
-    hashPositionSp->addSpecializedParam(4, &p_hashColCount);
+    hashPositionSp->AddSpecializedParam(PARAM_OFFSET_3, &pHashColTypes);
+    hashPositionSp->AddSpecializedParam(PARAM_OFFSET_4, &pHashColCount);
 
     auto *positionEqualsPositionIgnoreNullsSp = new Specialization();
-    positionEqualsPositionIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
-    positionEqualsPositionIgnoreNullsSp->addSpecializedParam(6, &p_hashColCount);
+    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_5, &pHashColTypes);
+    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_6, &pHashColCount);
 
-    std::map<std::string, Specialization> hashStrategySps = {
-        {OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp},
-        {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp}
-    };
+    std::map<std::string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp },
+        { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp } };
 
-    auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
-    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*hashBuilderContext, *pagesIndexContext, *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext});
-    auto createOperatorFunc = jit->specialize();
+    auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table",
+        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps,
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *pagesIndexContext,
+        *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext });
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     return jitContext;
 }
 
-JitContext *createTestLookupJoinJitContext(
-        int32_t *probeTypes,
-        int32_t probeTypesCount,
-        int32_t *probeOutputCols,
-        int32_t probeOutputColsCount,
-        int32_t *probeHashCols,
-        int32_t probeHashColsCount,
-        int32_t *buildOutputCols,
-        int32_t *buildOutputTypes,
-        int32_t buildOutputColsCount,
-        int64_t hashBuilderFactoryAddr)
+Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &hashColCount);
+Context *CreateTestHashTableContext(ParamValue &hashColTypes, ParamValue &hashColCount);
+Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOutputCols,
+    ParamValue &probeOutputColsCount, ParamValue &buildOutputTypes, ParamValue &buildOutputCols,
+    ParamValue &buildOutputColsCount);
+
+JitContext *CreateTestLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
+    int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
+    int32_t *buildOutputTypes, int32_t buildOutputColsCount, int64_t hashBuilderFactoryAddr)
 {
-    using namespace omniruntime::jit;
-    ParamValue p_probeTypes = ParamValue(probeTypes, probeTypesCount);
-    ParamValue p_probeOutputCols = ParamValue(probeOutputCols, probeOutputColsCount);
-    ParamValue p_probeOutputColsCount = ParamValue(&probeOutputColsCount);
+    ParamValue pProbeTypes = ParamValue(probeTypes, probeTypesCount);
+    ParamValue pProbeOutputCols = ParamValue(probeOutputCols, probeOutputColsCount);
+    ParamValue pProbeOutputColsCount = ParamValue(&probeOutputColsCount);
+    ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
+    ParamValue pBuildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
+    ParamValue pBuildOutputColsCount = ParamValue(&buildOutputColsCount);
+    auto *lookupJoinContext = CreateTestLookupJoinContext(pProbeTypes, pProbeOutputCols, pProbeOutputColsCount,
+        pBuildOutputTypes, pBuildOutputCols, pBuildOutputColsCount);
 
-    auto *buildProbeColumnsSp = new Specialization();
-    buildProbeColumnsSp->addSpecializedParam(2, &p_probeTypes);
-    buildProbeColumnsSp->addSpecializedParam(3, &p_probeOutputCols);
-    buildProbeColumnsSp->addSpecializedParam(4, &p_probeOutputColsCount);
-
-    ParamValue p_buildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
-    ParamValue p_buildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
-    ParamValue p_buildOutputColsCount = ParamValue(&buildOutputColsCount);
-
-    auto *buildBuildColumnsSp = new Specialization();
-    buildBuildColumnsSp->addSpecializedParam(2, &p_buildOutputTypes);
-    buildBuildColumnsSp->addSpecializedParam(3, &p_buildOutputCols);
-    buildBuildColumnsSp->addSpecializedParam(4, &p_buildOutputColsCount);
-    buildBuildColumnsSp->addSpecializedParam(5, &p_probeOutputColsCount);
-
-    std::map<std::string, Specialization> lookupJoinSps = {
-            {OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY, *buildProbeColumnsSp},
-            {OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp}
-    };
-
-    int32_t *hashColTypes = new int32_t[probeHashColsCount];
+    int32_t hashColTypes[probeHashColsCount];
     for (int32_t i = 0; i < probeHashColsCount; i++) {
         hashColTypes[i] = probeTypes[probeHashCols[i]];
     }
-    ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
-    ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
+    ParamValue pHashColTypes = ParamValue(hashColTypes, probeHashColsCount);
+    ParamValue pHashColCount = ParamValue(&probeHashColsCount);
+    auto *joinHashTableContext = CreateTestHashTableContext(pHashColTypes, pHashColCount);
+    auto *pagesHashStrategyContext = CreateTestHashStrategyContext(pHashColTypes, pHashColCount);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
 
-    auto *hashRowSp = new Specialization();
-    hashRowSp->addSpecializedParam(2, &p_hashColTypes);
-    hashRowSp->addSpecializedParam(3, &p_hashColCount);
-    std::map<std::string, Specialization> joinHashTableSps = {
-            {OMNIJIT_HASH_ROW, *hashRowSp}
-    };
-
-    auto *positionEqualsRowIgnoreNullsSp = new Specialization();
-    positionEqualsRowIgnoreNullsSp->addSpecializedParam(5, &p_hashColTypes);
-    positionEqualsRowIgnoreNullsSp->addSpecializedParam(6, &p_hashColCount);
-
-    auto *hashPositionSp = new Specialization();
-    hashPositionSp->addSpecializedParam(3, &p_hashColTypes);
-    hashPositionSp->addSpecializedParam(4, &p_hashColCount);
-
-    std::map<std::string, Specialization> hashStrategySps = {
-            {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS, *positionEqualsRowIgnoreNullsSp}
-    };
-
-    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join", lookupJoinSps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps, std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
-    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*lookupJoinContext, *joinHashTableContext, *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext});
-    auto createOperatorFunc = jit->specialize();
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
+        *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext });
+    auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
 }
 
-TEST(NativeOmniJoinTest, testOneHashBuilderOneColumn)
+Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOutputCols,
+    ParamValue &probeOutputColsCount, ParamValue &buildOutputTypes, ParamValue &buildOutputCols,
+    ParamValue &buildOutputColsCount)
 {
-    // construct input data
-    const int32_t DATA_SIZE = 10;
-    int64_t buildData0[DATA_SIZE] = {1, 2, 1, 2, 3, 4, 5, 6, 7, 1};
-    int64_t buildData1[DATA_SIZE] = {79, 79, 70, 70, 70, 70, 70, 70, 70, 70};
-    LongVector *buildColumn0 = new LongVector(nullptr, DATA_SIZE);
-    buildColumn0->setValues(0, buildData0, DATA_SIZE);
-    LongVector *buildColumn1 = new LongVector(nullptr, DATA_SIZE);
-    buildColumn1->setValues(0, buildData1, DATA_SIZE);
+    auto *buildProbeColumnsSp = new Specialization();
+    buildProbeColumnsSp->AddSpecializedParam(PARAM_OFFSET_2, &probeTypes);
+    buildProbeColumnsSp->AddSpecializedParam(PARAM_OFFSET_3, &probeOutputCols);
+    buildProbeColumnsSp->AddSpecializedParam(PARAM_OFFSET_4, &probeOutputColsCount);
 
-    VectorBatch *vecBatch = new VectorBatch(2);
-    vecBatch->setVector(0, buildColumn0);
-    vecBatch->setVector(1, buildColumn1);
+    auto *buildBuildColumnsSp = new Specialization();
+    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_2, &buildOutputTypes);
+    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_3, &buildOutputCols);
+    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_4, &buildOutputColsCount);
+    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_5, &probeOutputColsCount);
 
-    int32_t buildTypes[2] = {2, 2};
-    int32_t typesCount = 2;
-    int32_t buildOutputCols[1] = {1};
-    int32_t buildOutputColsCount = 1;
-    int32_t buildJoinCols[1] = {0};
-    int32_t joinColsCount = 1;
-    int32_t operatorCount = 1;
-
-    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
-        buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
-    JitContext *hashBuilderJitContext = createTestHashBuilderJitContext(
-                buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
-    hashBuilderFactory->setJitContext(hashBuilderJitContext);
-    HashBuilderOperator *hashBuilderOperator = (HashBuilderOperator *)createTestOperator(hashBuilderFactory);
-    hashBuilderOperator->addInput(vecBatch);
-    std::vector<VectorBatch *> hashBuildOutput;
-    hashBuilderOperator->getOutput(hashBuildOutput);
-
-    int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
-    int64_t probeData1[DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
-    LongVector *probeColumn0 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn0->setValues(0, probeData0, DATA_SIZE);
-    LongVector *probeColumn1 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn1->setValues(0, probeData1, DATA_SIZE);
-
-    VectorBatch *probeVecBatch = new VectorBatch(2);
-    probeVecBatch->setVector(0, probeColumn0);
-    probeVecBatch->setVector(1, probeColumn1);
-
-    int32_t probeTypes[2] = {2, 2};
-    int32_t probeTypesCount = 2;
-    int32_t probeOutputCols[1]= {1};
-    int32_t probeOutputColsCount = 1;
-    int32_t probeHashCols[1] = {0};
-    int32_t probeHashColsCount = 1;
-    int32_t buildOutputTypes[1] = {2};
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
-        probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = createTestLookupJoinJitContext(
-                probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
-                buildOutputCols, buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
-    lookupJoinFactory->setJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)createTestOperator(lookupJoinFactory);
-    lookupJoinOperator->addInput(probeVecBatch);
-    std::vector<VectorBatch *> output;
-    lookupJoinOperator->getOutput(output);
-    EXPECT_EQ(output.size(), 1);
-    //output[0]->printTable();
-
-    const int32_t EXPECTED_DATA_SIZE = 18;
-    EXPECT_EQ(output[0]->getRowCount(), EXPECTED_DATA_SIZE);
-
-    int64_t expectedData0[EXPECTED_DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
-    int64_t expectedData1[EXPECTED_DATA_SIZE] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
-    LongVector *expectedCol0 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol0->setValues(0, expectedData0, EXPECTED_DATA_SIZE);
-    int32_t ids[EXPECTED_DATA_SIZE] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
-    DictionaryVector *expectedVec0 = new DictionaryVector(expectedCol0, ids, EXPECTED_DATA_SIZE);
-
-    LongVector *expectedCol1 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol1->setValues(0, expectedData1, EXPECTED_DATA_SIZE);
-
-    VectorBatch *expectVecBatch = new VectorBatch(2);
-    expectVecBatch->setVector(0, expectedVec0);
-    expectVecBatch->setVector(1, expectedCol1);
-
-    EXPECT_TRUE(vecBatchMatch(output[0], expectVecBatch));
-
-    VectorHelper::freeVecBatch(vecBatch);
-    VectorHelper::freeVecBatch(probeVecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
-    delete hashBuilderOperator;
-    delete lookupJoinOperator;
-    deleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+    map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY, *buildProbeColumnsSp },
+        { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp } };
+    auto *lookupJoinContext = new Context("lookup_join", lookupJoinSps, vector<string>(), vector<string>(), true);
+    return lookupJoinContext;
 }
 
-TEST(NativeOmniJoinTest, testTwoHashBuilderOneColumn)
+Context *CreateTestHashTableContext(ParamValue &hashColTypes, ParamValue &hashColCount)
 {
-    const int32_t DATA_SIZE = 10;
-    const int32_t DATA_SIZE1 = 6;
-    const int32_t DATA_SIZE2 = 4;
+    auto *hashRowSp = new Specialization();
+    hashRowSp->AddSpecializedParam(PARAM_OFFSET_2, &hashColTypes);
+    hashRowSp->AddSpecializedParam(PARAM_OFFSET_3, &hashColCount);
+    map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
+    auto *joinHashTableContext = new Context("join_hash_table", joinHashTableSps, vector<string>(), vector<string>());
+    return joinHashTableContext;
+}
 
-    int64_t buildData00[DATA_SIZE1] = {1, 1, 3, 6, 7, 1};
-    int64_t buildData01[DATA_SIZE1] = {79, 70, 70, 70, 70, 70};
-    LongVector *buildColumn00 = new LongVector(nullptr, DATA_SIZE1);
-    buildColumn00->setValues(0, buildData00, DATA_SIZE1);
-    LongVector *buildColumn01 = new LongVector(nullptr, DATA_SIZE1);
-    buildColumn01->setValues(0, buildData01, DATA_SIZE1);
-    VectorBatch *vecBatch0 = new VectorBatch(2);
-    vecBatch0->setVector(0, buildColumn00);
-    vecBatch0->setVector(1, buildColumn01);
+Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &hashColCount)
+{
+    auto *positionEqualsRowIgnoreNullsSp = new Specialization();
+    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_5, &hashColTypes);
+    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_6, &hashColCount);
 
-    int64_t buildData10[DATA_SIZE2] = {2, 2, 4, 5};
-    int64_t buildData11[DATA_SIZE2] = {79, 70, 70, 70};
-    LongVector *buildColumn10 = new LongVector(nullptr, DATA_SIZE2);
-    buildColumn10->setValues(0, buildData10, DATA_SIZE2);
-    LongVector *buildColumn11 = new LongVector(nullptr, DATA_SIZE2);
-    buildColumn11->setValues(0, buildData11, DATA_SIZE2);
-    VectorBatch *vecBatch1 = new VectorBatch(2);
-    vecBatch1->setVector(0, buildColumn10);
-    vecBatch1->setVector(1, buildColumn11);
+    map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
+        *positionEqualsRowIgnoreNullsSp } };
+    auto *pagesHashStrategyContext =
+        new Context("pages_hash_strategy", hashStrategySps, vector<string>(), vector<string>());
+    return pagesHashStrategyContext;
+}
 
+VectorBatch *ConstructSimpleBuildData()
+{
+    const int32_t dataSize = 10;
+    int64_t buildData0[dataSize] = {1, 2, 1, 2, 3, 4, 5, 6, 7, 1};
+    int64_t buildData1[dataSize] = {79, 79, 70, 70, 70, 70, 70, 70, 70, 70};
+    LongVector *buildColumn0 = new LongVector(nullptr, dataSize);
+    buildColumn0->SetValues(0, buildData0, dataSize);
+    LongVector *buildColumn1 = new LongVector(nullptr, dataSize);
+    buildColumn1->SetValues(0, buildData1, dataSize);
+
+    VectorBatch *vecBatch = new VectorBatch(COLUMN_COUNT_2);
+    vecBatch->SetVector(0, buildColumn0);
+    vecBatch->SetVector(1, buildColumn1);
+
+    return vecBatch;
+}
+
+VectorBatch **ConstructSimpleBuildData2()
+{
+    const int32_t dataSize1 = 6;
+    const int32_t dataSize2 = 4;
+
+    int64_t buildData00[dataSize1] = {1, 1, 3, 6, 7, 1};
+    int64_t buildData01[dataSize1] = {79, 70, 70, 70, 70, 70};
+    LongVector *buildColumn00 = new LongVector(nullptr, dataSize1);
+    buildColumn00->SetValues(0, buildData00, dataSize1);
+    LongVector *buildColumn01 = new LongVector(nullptr, dataSize1);
+    buildColumn01->SetValues(0, buildData01, dataSize1);
+    VectorBatch *vecBatch0 = new VectorBatch(COLUMN_COUNT_2);
+    vecBatch0->SetVector(0, buildColumn00);
+    vecBatch0->SetVector(1, buildColumn01);
+
+    int64_t buildData10[dataSize2] = {2, 2, 4, 5};
+    int64_t buildData11[dataSize2] = {79, 70, 70, 70};
+    LongVector *buildColumn10 = new LongVector(nullptr, dataSize2);
+    buildColumn10->SetValues(0, buildData10, dataSize2);
+    LongVector *buildColumn11 = new LongVector(nullptr, dataSize2);
+    buildColumn11->SetValues(0, buildData11, dataSize2);
+    VectorBatch *vecBatch1 = new VectorBatch(COLUMN_COUNT_2);
+    vecBatch1->SetVector(0, buildColumn10);
+    vecBatch1->SetVector(1, buildColumn11);
+
+    VectorBatch **vectorBatches = new VectorBatch *[2];
+    vectorBatches[0] = vecBatch0;
+    vectorBatches[1] = vecBatch1;
+    return vectorBatches;
+}
+
+VectorBatch *ConstructSimpleProbeData()
+{
+    const int32_t dataSize = 10;
+    int64_t probeData0[] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
+    int64_t probeData1[] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
+    LongVector *probeColumn0 = new LongVector(nullptr, dataSize);
+    probeColumn0->SetValues(0, probeData0, dataSize);
+    LongVector *probeColumn1 = new LongVector(nullptr, dataSize);
+    probeColumn1->SetValues(0, probeData1, dataSize);
+
+    VectorBatch *probeVecBatch = new VectorBatch(COLUMN_COUNT_2);
+    probeVecBatch->SetVector(0, probeColumn0);
+    probeVecBatch->SetVector(1, probeColumn1);
+    return probeVecBatch;
+}
+
+VectorBatch *ConstructSimpleExpectedData()
+{
+    const int32_t expectedDataSize = 18;
+    int64_t expectedData0[expectedDataSize] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
+    int64_t expectedData1[expectedDataSize] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
+    LongVector *expectedCol0 = new LongVector(nullptr, expectedDataSize);
+    expectedCol0->SetValues(0, expectedData0, expectedDataSize);
+    int32_t ids[expectedDataSize] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
+    DictionaryVector *expectedVec0 = new DictionaryVector(expectedCol0, ids, expectedDataSize);
+
+    LongVector *expectedCol1 = new LongVector(nullptr, expectedDataSize);
+    expectedCol1->SetValues(0, expectedData1, expectedDataSize);
+
+    VectorBatch *expectVecBatch = new VectorBatch(COLUMN_COUNT_2);
+    expectVecBatch->SetVector(0, expectedVec0);
+    expectVecBatch->SetVector(1, expectedCol1);
+
+    return expectVecBatch;
+}
+
+HashBuilderOperatorFactory *CreateSimpleBuildFactory(int32_t operatorCount)
+{
     int32_t buildTypes[2] = {2, 2};
     int32_t typesCount = 2;
     int32_t buildOutputCols[1] = {1};
     int32_t buildOutputColsCount = 1;
     int32_t buildJoinCols[1] = {0};
     int32_t joinColsCount = 1;
-    int32_t operatorCount = 2;
 
-    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
-            buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
-    JitContext *hashBuilderJitContext = createTestHashBuilderJitContext(
-            buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
-    hashBuilderFactory->setJitContext(hashBuilderJitContext);
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+        buildTypes, typesCount, buildOutputCols, buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
+    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes, typesCount, buildOutputCols,
+        buildOutputColsCount, buildJoinCols, joinColsCount, operatorCount);
+    hashBuilderFactory->SetJitContext(hashBuilderJitContext);
+    return hashBuilderFactory;
+}
 
-    HashBuilderOperator *hashBuilderOperator0 = (HashBuilderOperator *)createTestOperator(hashBuilderFactory);
-    hashBuilderOperator0->addInput(vecBatch0);
-    std::vector<VectorBatch *> hashBuildOutput;
-    hashBuilderOperator0->getOutput(hashBuildOutput);
-
-    HashBuilderOperator *hashBuilderOperator1 = (HashBuilderOperator *)createTestOperator(hashBuilderFactory);
-    hashBuilderOperator1->addInput(vecBatch1);
-    hashBuilderOperator1->getOutput(hashBuildOutput);
-
-    int64_t probeData0[DATA_SIZE] = {1, 2, 3, 4, 5, 6, 1, 1, 2, 3};
-    int64_t probeData1[DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
-    LongVector *probeColumn0 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn0->setValues(0, probeData0, DATA_SIZE);
-    LongVector *probeColumn1 = new LongVector(nullptr, DATA_SIZE);
-    probeColumn1->setValues(0, probeData1, DATA_SIZE);
-    VectorBatch *probeVecBatch = new VectorBatch(2);
-    probeVecBatch->setVector(0, probeColumn0);
-    probeVecBatch->setVector(1, probeColumn1);
-
+LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFactory *hashBuilderFactory)
+{
     int32_t probeTypes[2] = {2, 2};
     int32_t probeTypesCount = 2;
-    int32_t probeOutputCols[1]= {1};
+    int32_t probeOutputCols[1] = {1};
     int32_t probeOutputColsCount = 1;
     int32_t probeHashCols[1] = {0};
     int32_t probeHashColsCount = 1;
     int32_t buildOutputTypes[1] = {2};
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
-        probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = createTestLookupJoinJitContext(
-                probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
-                buildOutputCols, buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
-    lookupJoinFactory->setJitContext(lookupJoinJitContext);
+    int32_t buildOutputCols[1] = {1};
+    int32_t buildOutputColsCount = 1;
 
-    LookupJoinOperator *lookupJoinOperator = (LookupJoinOperator *)createTestOperator(lookupJoinFactory);
-    lookupJoinOperator->addInput(probeVecBatch);
+    int64_t hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
+    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
+        probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
+        buildOutputCols, buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
+    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes, probeTypesCount, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        buildOutputColsCount, hashBuilderFactoryAddr);
+    lookupJoinFactory->SetJitContext(lookupJoinJitContext);
+    return lookupJoinFactory;
+}
+
+TEST(NativeOmniJoinTest, TestOneHashBuilderOneColumn)
+{
+    VectorBatch *vecBatch = ConstructSimpleBuildData();
+    HashBuilderOperatorFactory *hashBuilderFactory = CreateSimpleBuildFactory(1);
+    HashBuilderOperator *hashBuilderOperator =
+        dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator->AddInput(vecBatch);
+    std::vector<VectorBatch *> hashBuildOutput;
+    hashBuilderOperator->GetOutput(hashBuildOutput);
+
+    VectorBatch *probeVecBatch = ConstructSimpleProbeData();
+    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory);
+    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
-    lookupJoinOperator->getOutput(output);
+    lookupJoinOperator->GetOutput(output);
     EXPECT_EQ(output.size(), 1);
-    //output[0]->printTable();
 
-    const int32_t EXPECTED_DATA_SIZE = 18;
-    EXPECT_EQ(output[0]->getRowCount(), EXPECTED_DATA_SIZE);
+    VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
+    EXPECT_EQ(output[0]->GetRowCount(), expectVecBatch->GetRowCount());
+    EXPECT_TRUE(VecBatchMatch(output[0], expectVecBatch));
 
-    int64_t expectedData0[EXPECTED_DATA_SIZE] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
-    int64_t expectedData1[EXPECTED_DATA_SIZE] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
-    LongVector *expectedCol0 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol0->setValues(0, expectedData0, EXPECTED_DATA_SIZE);
-    int32_t ids[EXPECTED_DATA_SIZE] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
-    DictionaryVector *expectedVec0 = new DictionaryVector(expectedCol0, ids, EXPECTED_DATA_SIZE);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(probeVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    delete hashBuilderOperator;
+    delete lookupJoinOperator;
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
 
-    LongVector *expectedCol1 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectedCol1->setValues(0, expectedData1, EXPECTED_DATA_SIZE);
+TEST(NativeOmniJoinTest, TestTwoHashBuilderOneColumn)
+{
+    VectorBatch **vectorBatches = ConstructSimpleBuildData2();
+    HashBuilderOperatorFactory *hashBuilderFactory = CreateSimpleBuildFactory(2);
+    HashBuilderOperator *hashBuilderOperator0 =
+        dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator0->AddInput(vectorBatches[0]);
+    std::vector<VectorBatch *> hashBuildOutput;
+    hashBuilderOperator0->GetOutput(hashBuildOutput);
 
-    VectorBatch *expectVecBatch = new VectorBatch(2);
-    expectVecBatch->setVector(0, expectedVec0);
-    expectVecBatch->setVector(1, expectedCol1);
+    HashBuilderOperator *hashBuilderOperator1 =
+        dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator1->AddInput(vectorBatches[1]);
+    hashBuilderOperator1->GetOutput(hashBuildOutput);
 
-    EXPECT_TRUE(vecBatchMatch(output[0], expectVecBatch));
+    VectorBatch *probeVecBatch = ConstructSimpleProbeData();
+    LookupJoinOperatorFactory *lookupJoinFactory = CreateSimpleProbeFactory(hashBuilderFactory);
+    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    lookupJoinOperator->AddInput(probeVecBatch);
+    std::vector<VectorBatch *> output;
+    lookupJoinOperator->GetOutput(output);
+    EXPECT_EQ(output.size(), 1);
 
-    VectorHelper::freeVecBatch(vecBatch0);
-    VectorHelper::freeVecBatch(vecBatch1);
-    VectorHelper::freeVecBatch(probeVecBatch);
-    VectorHelper::freeVecBatch(expectVecBatch);
+    VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
+    EXPECT_EQ(output[0]->GetRowCount(), expectVecBatch->GetRowCount());
+    EXPECT_TRUE(VecBatchMatch(output[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(vectorBatches, 2);
+    VectorHelper::FreeVecBatch(probeVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
     delete hashBuilderOperator0;
     delete hashBuilderOperator1;
     delete lookupJoinOperator;
-    deleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
 }
 
 const int32_t VEC_BATCH_COUNT_10 = 10;
@@ -384,8 +371,7 @@ const int32_t PROBE_POSITION_COUNT = 10000;
 const int32_t COLUMN_COUNT_4 = 4;
 const int32_t TIME_TO_SLEEP = 100;
 
-struct HashJoinThreadArgs
-{
+struct HashJoinThreadArgs {
     bool isOriginal;
     int64_t hashBuilderFactoryAddr;
     VectorBatch **buildVecBatches;
@@ -396,7 +382,7 @@ struct HashJoinThreadArgs
     int32_t probeVecBatchCount;
 };
 
-VectorBatch **constructHashBuilderTestData(int32_t tableCount, int32_t columnCount)
+VectorBatch **ConstructHashBuilderTestData(int32_t tableCount, int32_t columnCount)
 {
     int32_t numbers[] = {1, 2, 3, 4, 6, 7, 8, 9, 12, 13, 75, 27, 28, 38, 36, 32, 20, 50, 37};
     int32_t numberCount = 19;
@@ -409,9 +395,9 @@ VectorBatch **constructHashBuilderTestData(int32_t tableCount, int32_t columnCou
             LongVector *vector = new LongVector(nullptr, positionCount);
             for (int32_t position = 0; position < positionCount; position++) {
                 int64_t value = numbers[position % numberCount];
-                vector->setValue(position, value);
+                vector->SetValue(position, value);
             }
-            vecBatch->setVector(vecIdx, vector);
+            vecBatch->SetVector(vecIdx, vector);
         }
         vectorBatches[vecBatchIdx] = vecBatch;
     }
@@ -419,7 +405,7 @@ VectorBatch **constructHashBuilderTestData(int32_t tableCount, int32_t columnCou
     return vectorBatches;
 }
 
-HashBuilderOperatorFactory *prepareHashBuilder(int32_t operatorCount, bool isOriginal)
+HashBuilderOperatorFactory *PrepareHashBuilder(int32_t operatorCount, bool isOriginal)
 {
     int32_t buildTypes[] = {2, 2, 2, 2};
     int32_t buildTypesCount = 4;
@@ -427,22 +413,21 @@ HashBuilderOperatorFactory *prepareHashBuilder(int32_t operatorCount, bool isOri
     int32_t buildOutputColsCount = 2;
     int32_t buildHashCols[] = {2, 3};
     int32_t buildHashColsCount = 2;
-    HashBuilderOperatorFactory *hashBuilderOperatorFactory = HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
-            buildTypes, buildTypesCount, buildOutputCols, buildOutputColsCount, buildHashCols, buildHashColsCount, operatorCount);
+    HashBuilderOperatorFactory *hashBuilderOperatorFactory =
+        HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildTypesCount, buildOutputCols,
+        buildOutputColsCount, buildHashCols, buildHashColsCount, operatorCount);
     if (isOriginal) {
-        hashBuilderOperatorFactory->setJitContext(nullptr);
-    }
-    else {
-        JitContext *hashBuilderJitContext = createTestHashBuilderJitContext(buildTypes, buildTypesCount,
-                                                                            buildOutputCols, buildOutputColsCount,
-                                                                            buildHashCols, buildHashColsCount,
-                                                                            operatorCount);
-        hashBuilderOperatorFactory->setJitContext(hashBuilderJitContext);
+        hashBuilderOperatorFactory->SetJitContext(nullptr);
+    } else {
+        JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes, buildTypesCount,
+            buildOutputCols, buildOutputColsCount, buildHashCols, buildHashColsCount, operatorCount);
+        hashBuilderOperatorFactory->SetJitContext(hashBuilderJitContext);
     }
     return hashBuilderOperatorFactory;
 }
 
-LookupJoinOperatorFactory *prepareLookupJoin(HashBuilderOperatorFactory *hashBuilderOperatorFactory, bool isOriginal)
+LookupJoinOperatorFactory *PrepareLookupJoin(const HashBuilderOperatorFactory *hashBuilderOperatorFactory,
+    bool isOriginal)
 {
     int32_t probeTypes[] = {2, 2, 2, 2};
     int32_t probeTypesCount = 4;
@@ -453,31 +438,24 @@ LookupJoinOperatorFactory *prepareLookupJoin(HashBuilderOperatorFactory *hashBui
     int32_t buildOutputCols[] = {0, 1};
     int32_t buildOutputColsCount = 2;
     int32_t buildOutputTypes[] = {2, 2};
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderOperatorFactory;
-    LookupJoinOperatorFactory *lookupJoinOperatorFactory = LookupJoinOperatorFactory::createLookupJoinOperatorFactory(
-            probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
-            buildOutputCols, buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
+    int64_t hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderOperatorFactory);
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
+        probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
+        buildOutputCols, buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
     if (isOriginal) {
-        lookupJoinOperatorFactory->setJitContext(nullptr);
-    }
-    else {
-        JitContext *lookupJoinJitContext = createTestLookupJoinJitContext(
-                probeTypes, probeTypesCount, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
-                buildOutputCols, buildOutputTypes, buildOutputColsCount, hashBuilderFactoryAddr);
-        lookupJoinOperatorFactory->setJitContext(lookupJoinJitContext);
+        lookupJoinOperatorFactory->SetJitContext(nullptr);
+    } else {
+        JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes, probeTypesCount,
+           probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+            buildOutputColsCount, hashBuilderFactoryAddr);
+        lookupJoinOperatorFactory->SetJitContext(lookupJoinJitContext);
     }
     return lookupJoinOperatorFactory;
 }
 
-void setHashJoinThreadArgs(
-        struct HashJoinThreadArgs *hashJoinThreadArgs,
-        bool isOriginal,
-        int64_t hashBuilderFactoryAddr,
-        VectorBatch **buildVecBatches,
-        int32_t buildVecBatchCount,
-        int64_t lookupJoinFactoryAddr,
-        VectorBatch **probeVecBatches,
-        int32_t probeVecBatchCount)
+void SetHashJoinThreadArgs(struct HashJoinThreadArgs *hashJoinThreadArgs, bool isOriginal,
+    int64_t hashBuilderFactoryAddr, VectorBatch **buildVecBatches, int32_t buildVecBatchCount,
+    int64_t lookupJoinFactoryAddr, VectorBatch **probeVecBatches, int32_t probeVecBatchCount)
 {
     hashJoinThreadArgs->isOriginal = isOriginal;
     hashJoinThreadArgs->hashBuilderFactoryAddr = hashBuilderFactoryAddr;
@@ -489,73 +467,73 @@ void setHashJoinThreadArgs(
     hashJoinThreadArgs->partitionIndex = -1;
 }
 
-void testHashBuilder(struct HashJoinThreadArgs *hashJoinThreadArgs)
+void TestHashBuilder(struct HashJoinThreadArgs *hashJoinThreadArgs)
 {
-    HashBuilderOperatorFactory *hashBuilderOperatorFactory = (HashBuilderOperatorFactory *)hashJoinThreadArgs->hashBuilderFactoryAddr;
+    HashBuilderOperatorFactory *hashBuilderOperatorFactory =
+        reinterpret_cast<HashBuilderOperatorFactory *>(hashJoinThreadArgs->hashBuilderFactoryAddr);
     HashBuilderOperator *hashBuilderOperator;
     if (hashJoinThreadArgs->isOriginal) {
-        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderOperatorFactory->createOperator());
-    }
-    else {
-        opt_module hashBuilderModule = (opt_module)(hashBuilderOperatorFactory->getJitContext()->func);
-        hashBuilderOperator = (HashBuilderOperator *)hashBuilderModule(hashBuilderOperatorFactory);
+        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderOperatorFactory->CreateOperator());
+    } else {
+        opt_module hashBuilderModule = reinterpret_cast<opt_module>(hashBuilderOperatorFactory->GetJitContext()->func);
+        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderModule(hashBuilderOperatorFactory));
     }
     if (hashJoinThreadArgs->partitionIndex != -1) {
-        hashBuilderOperator->addInput(hashJoinThreadArgs->buildVecBatches[hashJoinThreadArgs->partitionIndex]);
-    }
-    else {
-        for (int i = 0; i <hashJoinThreadArgs->buildVecBatchCount; ++i) {
-            hashBuilderOperator->addInput(hashJoinThreadArgs->buildVecBatches[i]);
+        hashBuilderOperator->AddInput(hashJoinThreadArgs->buildVecBatches[hashJoinThreadArgs->partitionIndex]);
+    } else {
+        for (int i = 0; i < hashJoinThreadArgs->buildVecBatchCount; ++i) {
+            hashBuilderOperator->AddInput(hashJoinThreadArgs->buildVecBatches[i]);
         }
     }
     std::vector<VectorBatch *> buildOutputTables;
-    hashBuilderOperator->getOutput(buildOutputTables);
+    hashBuilderOperator->GetOutput(buildOutputTables);
 }
 
-void testLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
+void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
 {
-    LookupJoinOperatorFactory *lookupJoinOperatorFactory = (LookupJoinOperatorFactory *)hashJoinThreadArgs->lookupJoinFactoryAddr;
-    LookupJoinOperator *lookupJoinOperator;
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory =
+        reinterpret_cast<LookupJoinOperatorFactory *>(hashJoinThreadArgs->lookupJoinFactoryAddr);
+    LookupJoinOperator *lookupJoinOperator = nullptr;
     if (hashJoinThreadArgs->isOriginal) {
-        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->createOperator());
-    }
-    else {
-        opt_module lookupJoinModule = (opt_module)(lookupJoinOperatorFactory->getJitContext()->func);
+        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->CreateOperator());
+    } else {
+        opt_module lookupJoinModule = reinterpret_cast<opt_module>(lookupJoinOperatorFactory->GetJitContext()->func);
         lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinModule(lookupJoinOperatorFactory));
     }
-    for (int loop = 0; loop < 1000; loop++) {
+    const int32_t maxLoopCount = 1000;
+    for (int loop = 0; loop < maxLoopCount; loop++) {
         for (int i = 0; i < hashJoinThreadArgs->probeVecBatchCount; ++i) {
-            lookupJoinOperator->addInput(hashJoinThreadArgs->probeVecBatches[i]);
+            lookupJoinOperator->AddInput(hashJoinThreadArgs->probeVecBatches[i]);
             std::vector<VectorBatch *> probeOutputTables;
-            lookupJoinOperator->getOutput(probeOutputTables);
+            lookupJoinOperator->GetOutput(probeOutputTables);
         }
     }
     delete lookupJoinOperator;
 }
 
-TEST(NativeOmniJoinTest, testHashBuilderOriginalMultiThreads)
+TEST(NativeOmniJoinTest, TestHashBuilderOriginalMultiThreads)
 {
-    VectorBatch **buildVecBatches = constructHashBuilderTestData(VEC_BATCH_COUNT_10, COLUMN_COUNT_4);
+    VectorBatch **buildVecBatches = ConstructHashBuilderTestData(VEC_BATCH_COUNT_10, COLUMN_COUNT_4);
     std::cout << "finish build hash builder data" << std::endl;
 
-    const auto processor_count = std::thread::hardware_concurrency();
-    std::cout << "core number: " << processor_count << std::endl;
+    const auto processorCount = std::thread::hardware_concurrency();
+    std::cout << "core number: " << processorCount << std::endl;
     int threadNums[] = {1, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
-        auto t_ = threadNums[i] < processor_count ? processor_count / threadNums[i] : 1;
+        auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
 
         int32_t threadNum = threadNums[i];
-        HashBuilderOperatorFactory *hashBuilderOperatorFactory = prepareHashBuilder(threadNum, true);
+        HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(threadNum, true);
         struct HashJoinThreadArgs hashJoinThreadArgs;
-        setHashJoinThreadArgs(&hashJoinThreadArgs, true, (int64_t)hashBuilderOperatorFactory, buildVecBatches,
-                              VEC_BATCH_COUNT_10, 0, nullptr, 0);
+        SetHashJoinThreadArgs(&hashJoinThreadArgs, true, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
+            buildVecBatches, VEC_BATCH_COUNT_10, 0, nullptr, 0);
 
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
         for (int32_t i = 0; i < threadNum; ++i) {
-            std::thread t(testHashBuilder, &hashJoinThreadArgs);
-            vecOfThreads.push_back(std::move(t));
+            std::thread th(TestHashBuilder, &hashJoinThreadArgs);
+            vecOfThreads.push_back(std::move(th));
         }
         for (auto &th : vecOfThreads) {
             if (th.joinable()) {
@@ -563,74 +541,76 @@ TEST(NativeOmniJoinTest, testHashBuilderOriginalMultiThreads)
             }
         }
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse();
-        double cpu_elapsed = timer.getCpuElapse();
-        std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " wall_elapsed time: " << wall_elapsed
-                  << "s" << std::endl;
-        std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " cpu_elapsed time: "
-                  << cpu_elapsed / processor_count * t_ << "s" << std::endl;
+        double wallElapsed = timer.getWallElapse();
+        double cpuElapsed = timer.getCpuElapse();
+        std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed <<
+            "s" << std::endl;
+        std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
+            cpuElapsed / processorCount * t << "s" << std::endl;
 
-        deleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
+        DeleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
 
-    VectorHelper::freeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
+    VectorHelper::FreeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
 }
 
-TEST(NativeOmniJoinTest, testHashBuilderJITMultiThreads)
+TEST(NativeOmniJoinTest, TestHashBuilderJITMultiThreads)
 {
-    VectorBatch **buildVecBatches = constructHashBuilderTestData(VEC_BATCH_COUNT_10, COLUMN_COUNT_4);
+    VectorBatch **buildVecBatches = ConstructHashBuilderTestData(VEC_BATCH_COUNT_10, COLUMN_COUNT_4);
     std::cout << "finish build hash builder data" << std::endl;
 
-    const auto processor_count = std::thread::hardware_concurrency();
-    std::cout << "core number: " << processor_count << std::endl;
+    const auto processorCount = std::thread::hardware_concurrency();
+    std::cout << "core number: " << processorCount << std::endl;
     int threadNums[] = {1, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
-        auto t_ = threadNums[i] < processor_count ? processor_count / threadNums[i] : 1;
+        auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
 
         int32_t threadNum = threadNums[i];
-        HashBuilderOperatorFactory *hashBuilderOperatorFactory = prepareHashBuilder(threadNum, false);
+        HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(threadNum, false);
         struct HashJoinThreadArgs hashJoinThreadArgs;
-        setHashJoinThreadArgs(&hashJoinThreadArgs, false, (int64_t)hashBuilderOperatorFactory, buildVecBatches,
-                              VEC_BATCH_COUNT_10, 0, nullptr, 0);
+        SetHashJoinThreadArgs(&hashJoinThreadArgs, false, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
+            buildVecBatches, VEC_BATCH_COUNT_10, 0, nullptr, 0);
 
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
         for (int32_t i = 0; i < threadNum; ++i) {
-            std::thread t(testHashBuilder, &hashJoinThreadArgs);
-            vecOfThreads.push_back(std::move(t));
+            std::thread th(TestHashBuilder, &hashJoinThreadArgs);
+            vecOfThreads.push_back(std::move(th));
         }
-        for (auto& th : vecOfThreads) {
+        for (auto &th : vecOfThreads) {
             if (th.joinable()) {
                 th.join();
             }
         }
         timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse();
-        double cpu_elapsed = timer.getCpuElapse();
-        std::cout << "testHashBuilderJITMultiThreads " << threadNum << " wall_elapsed time: " << wall_elapsed << "s" << std::endl;
-        std::cout << "testHashBuilderJITMultiThreads " << threadNum << " cpu_elapsed time: " << cpu_elapsed / processor_count * t_ << "s" << std::endl;
+        double wallElapsed = timer.getWallElapse();
+        double cpuElapsed = timer.getCpuElapse();
+        std::cout << "testHashBuilderJITMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed << "s" <<
+            std::endl;
+        std::cout << "testHashBuilderJITMultiThreads " << threadNum << " cpuElapsed time: " <<
+            cpuElapsed / processorCount * t << "s" << std::endl;
 
-        deleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
+        DeleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
-    VectorHelper::freeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
+    VectorHelper::FreeVecBatches(buildVecBatches, VEC_BATCH_COUNT_10);
 }
 
 
 // this test data is used for testLookupJoin*MultiThreads.
 // there is one row for a thread, and the thread i will handle the vector batch i
 // the numbers[i] belongs to partition i
-VectorBatch **constructBuilderTestData(int32_t *numbers, int32_t numberCount)
+VectorBatch **ConstructBuilderTestData(int32_t *numbers, int32_t numberCount)
 {
-    VectorBatch **vectorBatches = new VectorBatch*[numberCount];
+    VectorBatch **vectorBatches = new VectorBatch *[numberCount];
     for (int32_t vecBatchIdx = 0; vecBatchIdx < numberCount; vecBatchIdx++) {
         VectorBatch *vectorBatch = new VectorBatch(COLUMN_COUNT_4);
         for (int32_t colIdx = 0; colIdx < COLUMN_COUNT_4; colIdx++) {
             LongVector *column = new LongVector(nullptr, 1);
-            column->setValue(0, numbers[vecBatchIdx]);
-            vectorBatch->setVector(colIdx, column);
+            column->SetValue(0, numbers[vecBatchIdx]);
+            vectorBatch->SetVector(colIdx, column);
         }
         vectorBatches[vecBatchIdx] = vectorBatch;
     }
@@ -639,8 +619,11 @@ VectorBatch **constructBuilderTestData(int32_t *numbers, int32_t numberCount)
 
 // this test data is used for testLookupJoin*MultiThreads.
 // it will output one vector batches, each vector batches has all data
-VectorBatch **constructProbeTestData(int32_t *numbers, int32_t numberCount)
+VectorBatch **ConstructProbeTestData(const int32_t *numbers, int32_t numberCount)
 {
+    if (numberCount <= 0) {
+        return nullptr;
+    }
     int32_t positionCount = PROBE_POSITION_COUNT;
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT_1];
     for (int32_t vecBatchIdx = 0; vecBatchIdx < VEC_BATCH_COUNT_1; vecBatchIdx++) {
@@ -649,9 +632,9 @@ VectorBatch **constructProbeTestData(int32_t *numbers, int32_t numberCount)
             LongVector *vector = new LongVector(nullptr, positionCount);
             for (int32_t posIdx = 0; posIdx < positionCount; posIdx++) {
                 int64_t value = numbers[(posIdx % numberCount)];
-                vector->setValue(posIdx, value);
+                vector->SetValue(posIdx, value);
             }
-            vecBatch->setVector(colIdx, vector);
+            vecBatch->SetVector(colIdx, vector);
         }
         vecBatches[vecBatchIdx] = vecBatch;
     }
@@ -659,7 +642,55 @@ VectorBatch **constructProbeTestData(int32_t *numbers, int32_t numberCount)
     return vecBatches;
 }
 
-TEST(NativeOmniJoinTest, testLookupJoinOriginalMultiThreads)
+HashBuilderOperatorFactory *TestHashBuilderMultiThreads(VectorBatch ***buildVecBatches, int32_t threadNum,
+    int32_t index, bool isOriginal)
+{
+    HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(threadNum, isOriginal);
+    struct HashJoinThreadArgs hashBuilderThreadArgs;
+    SetHashJoinThreadArgs(&hashBuilderThreadArgs, isOriginal, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
+        buildVecBatches[index], threadNum, 0, nullptr, 0);
+    std::vector<std::thread> vecOfThreads;
+    for (int32_t i = 0; i < threadNum; ++i) {
+        hashBuilderThreadArgs.partitionIndex = i;
+        std::thread th(TestHashBuilder, &hashBuilderThreadArgs);
+        vecOfThreads.push_back(std::move(th));
+    }
+    for (auto &th : vecOfThreads) {
+        if (th.joinable()) {
+            th.join();
+        }
+    }
+    return hashBuilderOperatorFactory;
+}
+
+LookupJoinOperatorFactory *TestLookupJoinMultiThreads(VectorBatch ***probeVecBatches, int32_t threadNum, int32_t index,
+    bool isOriginal, const HashBuilderOperatorFactory *hashBuilderOperatorFactory, double &wallElapsed,
+    double &cpuElapsed)
+{
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory = PrepareLookupJoin(hashBuilderOperatorFactory, isOriginal);
+    struct HashJoinThreadArgs lookupJoinThreadArgs;
+    SetHashJoinThreadArgs(&lookupJoinThreadArgs, isOriginal, 0, nullptr, 0,
+        reinterpret_cast<int64_t>(lookupJoinOperatorFactory), probeVecBatches[index], VEC_BATCH_COUNT_1);
+
+    std::vector<std::thread> vecOfThreads;
+    Timer timer;
+    timer.setStart();
+    for (int32_t i = 0; i < threadNum; ++i) {
+        std::thread t(TestLookupJoin, &lookupJoinThreadArgs);
+        vecOfThreads.push_back(std::move(t));
+    }
+    for (auto &th : vecOfThreads) {
+        if (th.joinable()) {
+            th.join();
+        }
+    }
+    timer.calculateElapse();
+    wallElapsed = timer.getWallElapse();
+    cpuElapsed = timer.getCpuElapse();
+    return lookupJoinOperatorFactory;
+}
+
+TEST(NativeOmniJoinTest, TestLookupJoinOriginalMultiThreads)
 {
     int32_t numbers[3][16] = {
         {6},
@@ -670,70 +701,43 @@ TEST(NativeOmniJoinTest, testLookupJoinOriginalMultiThreads)
     int32_t groupCount = sizeof(threadNums) / sizeof(int32_t);
     VectorBatch ***buildVecBatches = new VectorBatch **[groupCount];
     for (int32_t i = 0; i < groupCount; i++) {
-        buildVecBatches[i] = constructBuilderTestData(numbers[i], threadNums[i]);
+        buildVecBatches[i] = ConstructBuilderTestData(numbers[i], threadNums[i]);
     }
     VectorBatch ***probeVecBatches = new VectorBatch **[groupCount];
     for (int32_t i = 0; i < groupCount; i++) {
-        probeVecBatches[i] = constructProbeTestData(numbers[i], threadNums[i]);
+        probeVecBatches[i] = ConstructProbeTestData(numbers[i], threadNums[i]);
     }
 
-    const auto processor_count = std::thread::hardware_concurrency();
-    std::cout << "core number: " << processor_count << std::endl;
+    const auto processorCount = std::thread::hardware_concurrency();
+    std::cout << "core number: " << processorCount << std::endl;
     for (int32_t i = 0; i < groupCount; ++i) {
-        auto t_ = threadNums[i] < processor_count ? processor_count / threadNums[i] : 1;
+        auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
         int32_t threadNum = threadNums[i];
 
-        HashBuilderOperatorFactory *hashBuilderOperatorFactory = prepareHashBuilder(threadNum, true);
-        struct HashJoinThreadArgs hashBuilderThreadArgs;
-        setHashJoinThreadArgs(&hashBuilderThreadArgs, true, (int64_t)hashBuilderOperatorFactory, buildVecBatches[i],
-                threadNum, 0, nullptr, 0);
-        std::vector<std::thread> vecOfThreads;
-        for (int32_t i = 0; i < threadNum; ++i) {
-            hashBuilderThreadArgs.partitionIndex = i;
-            std::thread t(testHashBuilder, &hashBuilderThreadArgs);
-            vecOfThreads.push_back(std::move(t));
-        }
-        for (auto& th : vecOfThreads) {
-            if (th.joinable()) {
-                th.join();
-            }
-        }
-        vecOfThreads.clear();
+        HashBuilderOperatorFactory *hashBuilderOperatorFactory =
+            TestHashBuilderMultiThreads(buildVecBatches, threadNum, i, true);
+        double wallElapsed = 0;
+        double cpuElapsed = 0;
+        LookupJoinOperatorFactory *lookupJoinOperatorFactory = TestLookupJoinMultiThreads(probeVecBatches, threadNum, i,
+            true, hashBuilderOperatorFactory, wallElapsed, cpuElapsed);
 
-        LookupJoinOperatorFactory *lookupJoinOperatorFactory = prepareLookupJoin(hashBuilderOperatorFactory, true);
-        struct HashJoinThreadArgs lookupJoinThreadArgs;
-        setHashJoinThreadArgs(&lookupJoinThreadArgs, true, 0, nullptr,
-                0, (int64_t)lookupJoinOperatorFactory, probeVecBatches[i], VEC_BATCH_COUNT_1);
-
-        Timer timer;
-        timer.setStart();
-        for (int32_t i = 0; i < threadNum; ++i) {
-            std::thread t(testLookupJoin, &lookupJoinThreadArgs);
-            vecOfThreads.push_back(std::move(t));
-        }
-        for (auto& th : vecOfThreads) {
-            if (th.joinable()) {
-                th.join();
-            }
-        }
-        timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse();
-        double cpu_elapsed = timer.getCpuElapse();
-        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " wall_elapsed time: " << wall_elapsed << "s" << std::endl;
-        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " cpu_elapsed time: " << cpu_elapsed / processor_count * t_ << "s" << std::endl;
-        deleteJoinOperatorFactory(hashBuilderOperatorFactory, lookupJoinOperatorFactory);
+        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed <<
+            "s" << std::endl;
+        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
+            cpuElapsed / processorCount * t << "s" << std::endl;
+        DeleteJoinOperatorFactory(hashBuilderOperatorFactory, lookupJoinOperatorFactory);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
 
     for (int32_t i = 0; i < groupCount; i++) {
-        VectorHelper::freeVecBatches(buildVecBatches[i], threadNums[i]);
-        VectorHelper::freeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
+        VectorHelper::FreeVecBatches(buildVecBatches[i], threadNums[i]);
+        VectorHelper::FreeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
     }
     delete[] buildVecBatches;
     delete[] probeVecBatches;
 }
 
-TEST(NativeOmniJoinTest, testLookupJoinJITMultiThreads)
+TEST(NativeOmniJoinTest, TestLookupJoinJITMultiThreads)
 {
     int32_t numbers[3][16] = {
             {6},
@@ -744,64 +748,36 @@ TEST(NativeOmniJoinTest, testLookupJoinJITMultiThreads)
     int32_t groupCount = sizeof(threadNums) / sizeof(int32_t);
     VectorBatch ***buildVecBatches = new VectorBatch **[groupCount];
     for (int32_t i = 0; i < groupCount; i++) {
-        buildVecBatches[i] = constructBuilderTestData(numbers[i], threadNums[i]);
+        buildVecBatches[i] = ConstructBuilderTestData(numbers[i], threadNums[i]);
     }
     VectorBatch ***probeVecBatches = new VectorBatch **[groupCount];
     for (int32_t i = 0; i < groupCount; i++) {
-        probeVecBatches[i] = constructProbeTestData(numbers[i], threadNums[i]);
+        probeVecBatches[i] = ConstructProbeTestData(numbers[i], threadNums[i]);
     }
 
-    const auto processor_count = std::thread::hardware_concurrency();
-    std::cout << "core number: " << processor_count << std::endl;
+    const auto processorCount = std::thread::hardware_concurrency();
+    std::cout << "core number: " << processorCount << std::endl;
     for (int32_t i = 0; i < groupCount; ++i) {
-        auto t_ = threadNums[i] < processor_count ? processor_count / threadNums[i] : 1;
+        auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
         int32_t threadNum = threadNums[i];
 
-        HashBuilderOperatorFactory *hashBuilderOperatorFactory = prepareHashBuilder(threadNum, false);
-        struct HashJoinThreadArgs hashBuilderThreadArgs;
-        setHashJoinThreadArgs(&hashBuilderThreadArgs, false, (int64_t)hashBuilderOperatorFactory, buildVecBatches[i],
-                              threadNum, 0, nullptr, 0);
-        std::vector<std::thread> vecOfThreads;
-        for (int32_t i = 0; i < threadNum; ++i) {
-            hashBuilderThreadArgs.partitionIndex = i;
-            std::thread t(testHashBuilder, &hashBuilderThreadArgs);
-            vecOfThreads.push_back(std::move(t));
-        }
-        for (auto& th : vecOfThreads) {
-            if (th.joinable()) {
-                th.join();
-            }
-        }
-        vecOfThreads.clear();
-
-        LookupJoinOperatorFactory *lookupJoinOperatorFactory = prepareLookupJoin(hashBuilderOperatorFactory, false);
-        struct HashJoinThreadArgs lookupJoinThreadArgs;
-        setHashJoinThreadArgs(&lookupJoinThreadArgs, false, 0, nullptr,
-                              0, (int64_t)lookupJoinOperatorFactory, probeVecBatches[i], VEC_BATCH_COUNT_1);
-
-        Timer timer;
-        timer.setStart();
-        for (int32_t i = 0; i < threadNum; ++i) {
-            std::thread t(testLookupJoin, &lookupJoinThreadArgs);
-            vecOfThreads.push_back(std::move(t));
-        }
-        for (auto& th : vecOfThreads) {
-            if (th.joinable()) {
-                th.join();
-            }
-        }
-        timer.calculateElapse();
-        double wall_elapsed = timer.getWallElapse();
-        double cpu_elapsed = timer.getCpuElapse();
-        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " wall_elapsed time: " << wall_elapsed << "s" << std::endl;
-        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " cpu_elapsed time: " << cpu_elapsed / processor_count * t_ << "s" << std::endl;
-        deleteJoinOperatorFactory(hashBuilderOperatorFactory, lookupJoinOperatorFactory);
+        HashBuilderOperatorFactory *hashBuilderOperatorFactory =
+            TestHashBuilderMultiThreads(buildVecBatches, threadNum, i, false);
+        double wallElapsed = 0;
+        double cpuElapsed = 0;
+        LookupJoinOperatorFactory *lookupJoinOperatorFactory = TestLookupJoinMultiThreads(probeVecBatches, threadNum, i,
+            false, hashBuilderOperatorFactory, wallElapsed, cpuElapsed);
+        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " wallElapsed time: " << wallElapsed <<
+            "s" << std::endl;
+        std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
+            cpuElapsed / processorCount * t << "s" << std::endl;
+        DeleteJoinOperatorFactory(hashBuilderOperatorFactory, lookupJoinOperatorFactory);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
 
     for (int32_t i = 0; i < groupCount; i++) {
-        VectorHelper::freeVecBatches(buildVecBatches[i], threadNums[i]);
-        VectorHelper::freeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
+        VectorHelper::FreeVecBatches(buildVecBatches[i], threadNums[i]);
+        VectorHelper::FreeVecBatches(probeVecBatches[i], VEC_BATCH_COUNT_1);
     }
     delete[] buildVecBatches;
     delete[] probeVecBatches;

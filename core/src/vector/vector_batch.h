@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/9/21.
 //
@@ -8,32 +11,40 @@
 
 #include "vector.h"
 
+namespace omniruntime {
+namespace vec {
 class VectorBatch {
 public:
     VectorBatch(int vectorCount);
 
-    VectorBatch(int *types, int vectorCount, int rowCount);
+    VectorBatch(int vectorCount, int rowCount);
 
     ~VectorBatch();
 
-    Vector *getVector(int index);
+    omniruntime::vec::Vector *GetVector(int index);
 
-    Vector **getVectors();
+    omniruntime::vec::Vector **GetVectors() const;
 
-    void setVector(int index, Vector *vector);
+    void SetVector(int index, omniruntime::vec::Vector *vector);
 
-    int getVectorCount();
+    int GetVectorCount();
 
-    int getRowCount();
+    int GetRowCount();
 
-    VecType *getVectorTypes();
+    omniruntime::vec::VecType *GetVectorTypes() const;
 
-    void freeAllVectors();
+    void FreeAllVectors();
+
+    void SetVectors(int *types);
+
 private:
+    void Init();
+
     int vectorCount;
     int rowCount;
-    Vector **vectors;
-    VecType *vectorTypes;
+    omniruntime::vec::Vector **vectors;
+    omniruntime::vec::VecType *vectorTypes;
 };
-
-#endif //OMNI_RUNTIME_VECTOR_BATCH_H
+} // namespace vec
+} // namespace omniruntime
+#endif // OMNI_RUNTIME_VECTOR_BATCH_H

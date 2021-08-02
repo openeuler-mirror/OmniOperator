@@ -1,10 +1,5 @@
 package nova.hetu.omniruntime.constant;
 
-import nova.hetu.omniruntime.constants.AggType;
-import nova.hetu.omniruntime.constants.Status;
-import nova.hetu.omniruntime.constants.VecType;
-import org.testng.annotations.Test;
-
 import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_ERROR;
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_FINISHED;
@@ -15,11 +10,21 @@ import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
 import static org.testng.Assert.assertEquals;
 
-public class ConstantLoadTest
-{
+import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.Status;
+import nova.hetu.omniruntime.constants.VecType;
+
+import org.testng.annotations.Test;
+
+/**
+ * The type Constant load test.
+ */
+public class ConstantLoadTest {
+    /**
+     * Test load constant.
+     */
     @Test
-    public void testLoadConstant()
-    {
+    public void testLoadConstant() {
         Status status = OMNI_STATUS_NORMAL;
         assertEquals(status.getValue(), 0);
         status = OMNI_STATUS_ERROR;
@@ -40,9 +45,11 @@ public class ConstantLoadTest
         assertEquals(aggType.getValue(), 0);
     }
 
+    /**
+     * Test equals.
+     */
     @Test
-    public void testEquals()
-    {
+    public void testEquals() {
         Status status = OMNI_STATUS_NORMAL;
         assertEquals(status.getValue(), 0);
     }

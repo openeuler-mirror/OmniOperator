@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
@@ -9,35 +12,37 @@
 #include "chunk.h"
 #include "vector_type.h"
 
+namespace omniruntime {
+namespace vec {
 class VectorReference {
 public:
     VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, int capacityInBytes, VecType type);
 
     ~VectorReference();
 
-    int64_t decRef();
+    int64_t DecRef();
 
-    void incRef();
+    void IncRef();
 
-    int64_t getRef();
+    int64_t GetRef();
 
-    void *getValuesAddress();
+    void *GetValuesAddress();
 
-    void *getValueNullsAddress();
+    void *GetValueNullsAddress();
 
-    void *getValueOffsetsAddress();
+    void *GetValueOffsetsAddress();
 
-    VecType getType();
+    VecType GetType();
 
-    int getCapacityInBytes();
+    int GetCapacityInBytes();
 
-    bool isWritable();
+    bool IsWritable();
 
-    Chunk* getValueChunk();
+    Chunk *GetValueChunk() const;
 
-    Chunk* getValueNullChunk();
+    Chunk *GetValueNullChunk() const;
 
-    Chunk* getValueOffsetChunk();
+    Chunk *GetValueOffsetChunk() const;
 
 private:
     int capacityInBytes;
@@ -48,6 +53,6 @@ private:
     bool writable;
     std::atomic<int64_t> reference;
 };
-
-
-#endif //__VECTOR_REFERENCE_H__
+} // namespace vec
+} // namespace omniruntime
+#endif // __VECTOR_REFERENCE_H__

@@ -17,27 +17,30 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 
-final class JvmUtils
-{
-    public static final Unsafe unsafe;
+/**
+ * jmv utils
+ */
+final class JvmUtils {
+    /**
+     * jvm unsafe
+     */
+    public static final Unsafe UNSAFE;
 
-    private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale)
-    {
+    private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
         if (actualIndexScale != expectedIndexScale) {
             throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
         }
     }
 
-    private JvmUtils()
-    {
+    private JvmUtils() {
     }
 
     static {
         try {
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
-            unsafe = (Unsafe) field.get((Object) null);
-            if (unsafe == null) {
+            UNSAFE = (Unsafe) field.get((Object) null);
+            if (UNSAFE == null) {
                 throw new RuntimeException("Unsafe access not available");
             }
             else {

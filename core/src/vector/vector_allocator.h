@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
@@ -12,29 +15,31 @@
 #include "vector_reference.h"
 #include "vector_type.h"
 
-using namespace std;
-
+namespace omniruntime {
+namespace vec {
 class VectorAllocator {
 public:
-    VectorAllocator(string scope);
+    VectorAllocator(const std::string scope);
 
-    VectorReference *newVector(int capacityInBytes, int size, VecType type);
+    VectorReference *NewVector(int capacityInBytes, int size, VecType type);
 
-    void freeAllVectors();
+    void FreeAllVectors();
 
-    string getScope();
+    std::string GetScope() const;
 
-    int64_t getAllocatedBytes();
+    int64_t GetAllocatedBytes();
+
+    ~VectorAllocator() {}
 
 private:
-    bool isVariableWidthType(int type);
+    bool IsVariableWidthType(int type);
 
 private:
-    string scope;
+    const std::string scope;
     // TODO: per list per CPU core.
-    list<VectorReference *> vectorList;
-    atomic<int64_t> allocatedBytes;
+    std::list<VectorReference *> vectorList;
+    std::atomic<int64_t> allocatedBytes;
 };
-
-
-#endif //__VECTOR_ALLOCATOR_H__
+}
+}
+#endif // __VECTOR_ALLOCATOR_H__

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __OMNI_OPERATOR_H__
 #define __OMNI_OPERATOR_H__
 
@@ -14,22 +17,31 @@ namespace op {
 
         virtual ~Operator() {}
 
-        virtual int32_t addInput(VectorBatch *vecBatch) = 0;
+        virtual int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) = 0;
 
-        virtual int32_t getOutput(std::vector<VectorBatch *> &data) = 0;
+        virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) = 0;
 
-        virtual int32_t *getSourceTypes() { return sourceTypes; }
+        const virtual int32_t *GetSourceTypes()
+        {
+            return sourceTypes;
+        }
 
-        int getStatus() { return status; }
+        int GetStatus()
+        {
+            return status;
+        }
 
-        void setStatus(OmniStatus status) { this->status = status; };
+        void SetStatus(OmniStatus status)
+        {
+            this->status = status;
+        };
 
-        virtual void close() {}
+        virtual void Close() {}
 
-    private:
-        int status;
     protected:
         int32_t* sourceTypes;
+    private:
+        int status;
     };
 }
 }

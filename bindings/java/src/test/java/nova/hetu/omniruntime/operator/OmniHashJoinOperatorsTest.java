@@ -1,5 +1,9 @@
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DICTIONARY;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
+import static org.testng.Assert.assertEquals;
+
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
@@ -7,19 +11,20 @@ import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+
 import org.testng.annotations.Test;
 
 import java.util.Iterator;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DICTIONARY;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
-import static org.testng.Assert.assertEquals;
-
-public class OmniHashJoinOperatorsTest
-{
+/**
+ * The type Omni hash join operators test.
+ */
+public class OmniHashJoinOperatorsTest {
+    /**
+     * Test inner hash join one column 1.
+     */
     @Test
-    public void testInnerHashJoinOneColumn1()
-    {
+    public void testInnerHashJoinOneColumn1() {
         long[] buildData1 = {1, 2, 1, 2, 3, 4, 5, 6, 7, 1};
         long[] buildData2 = {79, 79, 70, 70, 70, 70, 70, 70, 70, 70};
         LongVec buildVec1 = new LongVec(10);
@@ -35,7 +40,7 @@ public class OmniHashJoinOperatorsTest
         int[] buildJoinCols = {0};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildOutputCols, buildJoinCols, operatorCount);
+            buildOutputCols, buildJoinCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -50,12 +55,17 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2});
 
+        assertResult(buildOutputCols, hashBuilderOperatorFactory, probeVecBatch);
+    }
+
+    private void assertResult(int[] buildOutputCols, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory,
+        VecBatch probeVecBatch) {
         VecType[] probeTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
         VecType[] buildOutputTypes = {OMNI_VEC_TYPE_LONG};
-        OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
+        OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
+            probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
         lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
@@ -71,8 +81,7 @@ public class OmniHashJoinOperatorsTest
         for (int i = 0; i < len; i++) {
             if (actualVec0.getType().equals(OMNI_VEC_TYPE_DICTIONARY)) {
                 actual0[i] = ((DictionaryVec) actualVec0).getLong(i);
-            }
-            else {
+            } else {
                 actual0[i] = ((LongVec) actualVec0).get(i);
             }
             actual1[i] = ((LongVec) actualVec1).get(i);
@@ -84,9 +93,11 @@ public class OmniHashJoinOperatorsTest
         assertEquals(actual1, expected1);
     }
 
+    /**
+     * Test inner hash join one column 2.
+     */
     @Test
-    public void testInnerHashJoinOneColumn2()
-    {
+    public void testInnerHashJoinOneColumn2() {
         long[] buildData11 = {1, 1, 3, 6, 7, 1};
         long[] buildData12 = {79, 70, 70, 70, 70, 70};
         LongVec buildVec11 = new LongVec(6);
@@ -112,7 +123,7 @@ public class OmniHashJoinOperatorsTest
         int[] buildJoinCols = {0};
         int operatorCount = 2;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildOutputCols, buildJoinCols, operatorCount);
+            buildOutputCols, buildJoinCols, operatorCount);
         OmniOperator hashBuilderOperator1 = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator1.addInput(buildVecBatch1);
         hashBuilderOperator1.getOutput();
@@ -131,37 +142,6 @@ public class OmniHashJoinOperatorsTest
         }
         VecBatch probeVecBatch = new VecBatch(new Vec[] {probeVec1, probeVec2});
 
-        VecType[] probeTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
-        int[] probeOutputCols = {1};
-        int[] probeHashCols = {0};
-        VecType[] buildOutputTypes = {OMNI_VEC_TYPE_LONG};
-        OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
-        OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
-        lookupJoinOperator.addInput(probeVecBatch);
-        Iterator<VecBatch> results = lookupJoinOperator.getOutput();
-
-        VecBatch resultVecBatch = results.next();
-        int len = resultVecBatch.getRowCount();
-        assertEquals(len, 18);
-
-        Vec actualVec0 = resultVecBatch.getVectors()[0];
-        Vec actualVec1 = resultVecBatch.getVectors()[1];
-        long[] actual0 = new long[len];
-        long[] actual1 = new long[len];
-        for (int i = 0; i < len; i++) {
-            if (actualVec0.getType().equals(OMNI_VEC_TYPE_DICTIONARY)) {
-                actual0[i] = ((DictionaryVec) actualVec0).getLong(i);
-            }
-            else {
-                actual0[i] = ((LongVec) actualVec0).get(i);
-            }
-            actual1[i] = ((LongVec) actualVec1).get(i);
-        }
-
-        long[] expected0 = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
-        long[] expected1 = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
-        assertEquals(actual0, expected0);
-        assertEquals(actual1, expected1);
+        assertResult(buildOutputCols, hashBuilderOperatorFactory, probeVecBatch);
     }
 }

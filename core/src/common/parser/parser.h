@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description: parser function
+ */
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
@@ -11,33 +15,29 @@
 #include <cstring>
 #include <set>
 
-using namespace std;
-using namespace omniruntime::expressions;
-
 enum OperatorReturnType {
-    COMPARISON, 
-    LOGICAL, 
-    ARITHMETIC, 
+    COMPARISON,
+    LOGICAL,
+    ARITHMETIC,
     INVALIDRETURNTYPE
 };
 
 
-class Parser
-{
+class Parser {
 public:
     Parser();
     ~Parser();
 
-    DataType funcRetTypeMap(string fnName, vector<Expr*> args);
-    bool funcDeclMatch(string fnName, vector<Expr*> args, bool checkTypes);
+    DataType FuncRetTypeMap(std::string fnName, std::vector<Expr*> args);
+    bool FuncDeclMatch(std::string fnName, std::vector<Expr*> args, bool checkTypes);
 
-    Expr *parseRowExpression(string input, int32_t *inputTypes, int32_t veccount);
-    DataExpr* generateData(string dataStr, int32_t *inputTypes, int32_t vecCount);
+    Expr *ParseRowExpression(std::string input, int32_t *inputTypes, int32_t veccount);
+    DataExpr* GenerateData(std::string dataStr, int32_t *inputTypes, int32_t vecCount);
 
 private:
-    set<string> externalFuncNames;
-    map<string, DataType> externalFuncRetTypeMap;
-    map<string, FunctionSignature*> funcNameToSignature;
+    std::set<std::string> externalFuncNames;
+    std::map<std::string, DataType> externalFuncRetTypeMap;
+    std::map<std::string, FunctionSignature*> funcNameToSignature;
 };
 
 

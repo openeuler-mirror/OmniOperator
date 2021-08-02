@@ -11,17 +11,23 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestVarcharVec
-{
+/**
+ * test varchar vec
+ */
+public class TestVarcharVec {
+    /**
+     * teardown
+     */
     @AfterClass
-    public void tearDown()
-    {
+    public void tearDown() {
         VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
+    /**
+     * test new vector
+     */
     @Test
-    public void testNewVector()
-    {
+    public void testNewVector() {
         VarcharVec vec = new VarcharVec(1024, 256);
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
@@ -30,14 +36,16 @@ public class TestVarcharVec
         vec.close();
     }
 
+    /**
+     * test slice
+     */
     @Test
-    public void testSlice()
-    {
+    public void testSlice() {
         int size = 10;
         VarcharVec originalVec = new VarcharVec(1024, size);
-        String s = "testvarchar";
+        String tmpStr = "testvarchar";
         for (int i = 0; i < size; i++) {
-            String str = s.substring(0, i) + i;
+            String str = tmpStr.substring(0, i) + i;
             originalVec.setValue(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
@@ -66,19 +74,21 @@ public class TestVarcharVec
         originalVec.close();
     }
 
+    /**
+     * test set and get value
+     */
     @Test
-    public void testSetAndGetValue()
-    {
+    public void testSetAndGetValue() {
         int size = 4;
         VarcharVec varcharVec = new VarcharVec(1024, size);
-        String s = "test";
+        String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
-            String str = s.substring(0, i) + i;
+            String str = tmpStr.substring(0, i) + i;
             varcharVec.setValue(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
         for (int i = 0; i < 4; i++) {
-            String str = s.substring(0, i) + i;
+            String str = tmpStr.substring(0, i) + i;
             byte[] actualValue = varcharVec.getValue(i);
             assertEquals(actualValue, str.getBytes(StandardCharsets.UTF_8));
         }
@@ -87,8 +97,7 @@ public class TestVarcharVec
     }
 
     @Test
-    public void testPutValues()
-    {
+    public void testPutValues() {
         int size = 100;
         int[] offsets = new int[size + 1];
         StringBuilder data = new StringBuilder();
@@ -108,17 +117,18 @@ public class TestVarcharVec
         values.close();
     }
 
-    private byte[] getDataFromBuffer(ByteBuffer buffer, int offsetInBytes, int length)
-    {
+    private byte[] getDataFromBuffer(ByteBuffer buffer, int offsetInBytes, int length) {
         byte[] data = new byte[length];
         buffer.position(offsetInBytes);
         buffer.get(data, 0, length);
         return data;
     }
 
+    /**
+     * test value null
+     */
     @Test
-    public void testValueNull()
-    {
+    public void testValueNull() {
         VarcharVec varcharVec = new VarcharVec(1024, 256);
         for (int i = 0; i < varcharVec.getSize(); i++) {
             if (i % 5 == 0) {
@@ -141,8 +151,7 @@ public class TestVarcharVec
     }
 
     @Test
-    public void testBatchSetValueNull()
-    {
+    public void testBatchSetValueNull() {
         int size = 256;
         boolean[] isNulls = new boolean[size];
         for (int i = 0; i < size; i++) {
@@ -155,13 +164,15 @@ public class TestVarcharVec
         varcharVec.close();
     }
 
+    /**
+     * test copy postion
+     */
     @Test
-    public void testCopyPositions()
-    {
+    public void testCopyPositions() {
         VarcharVec originalVector = new VarcharVec(1024, 4);
-        String s = "test";
+        String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
-            String str = s.substring(0, i) + i;
+            String str = tmpStr.substring(0, i) + i;
             originalVector.setValue(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
@@ -178,13 +189,15 @@ public class TestVarcharVec
         copyPostionVector.close();
     }
 
+    /**
+     * test copy region
+     */
     @Test
-    public void testCopyRegion()
-    {
+    public void testCopyRegion() {
         VarcharVec originalVector = new VarcharVec(1024, 4);
-        String s = "test";
+        String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
-            String str = s.substring(0, i) + i;
+            String str = tmpStr.substring(0, i) + i;
             originalVector.setValue(i, str.getBytes(StandardCharsets.UTF_8));
         }
 

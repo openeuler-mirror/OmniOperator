@@ -1,4 +1,7 @@
-
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description:
+ */
 #include "gtest/gtest.h"
 
 #include <iostream>
@@ -36,40 +39,40 @@
 #include "llvm/Target/TargetMachine.h"
 
 
-
-TEST (CodeGenTest, Operators1) {
+using namespace std;
+TEST(CodeGenTest, Operators1) {
     string unparsed = "AND($operator$GREATER_THAN_OR_EQUAL(ADD(#0, 2), 4), AND($operator$LESS_THAN(#1, 4), $operator$EQUAL(#2, 2)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     int32_t v1[1] = {2};
     int32_t v2[1] = {3};
     int32_t v3[1] = {2};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen* lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
 
-    // number of rows that passed filter
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
+
+    // number of rows that passed Filter
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
 
@@ -90,38 +93,37 @@ TEST (CodeGenTest, Operators1) {
     delete expr;
 }
 
-TEST (CodeGenTest, MathFunctions1) {
+TEST(CodeGenTest, MathFunctions1) {
     string unparsed = "AND($operator$EQUAL(abs(#0), abs(#2)), $operator$EQUAL(abs(#0), abs(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     int32_t v1[1] = {-123};
     int32_t v2[1] = {123};
     int32_t v3[1] = {123};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -144,38 +146,40 @@ TEST (CodeGenTest, MathFunctions1) {
 }
 
 
-TEST (CodeGenTest, MathFunctions2) {
+TEST(CodeGenTest, MathFunctions2) {
     string unparsed = "BETWEEN(#1, #0, #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     int32_t v1[1] = {1001};
     int32_t v2[1] = {1001};
     int32_t v3[1] = {1001};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
+    //    vals[0] = reinterpret_cast<int64_t>(v1);
+    //    vals[1] = reinterpret_cast<int64_t>(v2);
+    //    vals[2] = reinterpret_cast<int64_t>(v3);
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -208,38 +212,37 @@ TEST (CodeGenTest, MathFunctions2) {
 }
 
 
-TEST (CodeGenTest, MathFunctions3) {
+TEST(CodeGenTest, MathFunctions3) {
     string unparsed = "IF($operator$GREATER_THAN(#0, 100), $operator$GREATER_THAN(#0, 200), $operator$LESS_THAN(#0, 0))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     int32_t v1[1] = {1001};
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -282,38 +285,37 @@ TEST (CodeGenTest, MathFunctions3) {
 }
 
 
-TEST (CodeGenTest, MathFunctions4) {
+TEST(CodeGenTest, MathFunctions4) {
     string unparsed = "IN(#0, 1, 2, 3, 4, 5)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     int32_t v1[1] = {1};
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest2";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -365,42 +367,40 @@ TEST (CodeGenTest, MathFunctions4) {
     delete expr;
 }
 
-
 // For testing different types
-TEST (CodeGenTest, CastNumbers1) {
+TEST(CodeGenTest, CastNumbers1) {
     string unparsed = "$operator$EQUAL(abs(CAST(#0)), abs(CAST(#1)))";
 
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
 
     int32_t v1[1] = {10000};
     int64_t v2[1] = {10000};
     double v3[1] = {12.34};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest3";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -432,40 +432,38 @@ TEST (CodeGenTest, CastNumbers1) {
     delete expr;
 }
 
-
-TEST (CodeGenTest, CastNumbers2) {
+TEST(CodeGenTest, CastNumbers2) {
     string unparsed = "$operator$GREATER_THAN(CAST(#1), #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
 
     int32_t v1[1] = {324233};
     int64_t v2[1] = {12};
     double v3[1] = {12.34};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "simpleTest3";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
@@ -504,8 +502,8 @@ TEST(CodeGenTest, Like) {
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     string s1;
@@ -513,29 +511,28 @@ TEST(CodeGenTest, Like) {
 
     int32_t v1[1] = {8766};
     s1 = "asdf";
-    int64_t v2[1] = {(int64_t)(s1.c_str())};
+    int64_t v2[1] = {(int64_t) (s1.c_str())};
     s2 = "asjd fehellojdsl kfjworlddslk  jf ";
-    int64_t v3[1] = {(int64_t)(s2.c_str())};
-    int64_t* vals = new int64_t[3];
+    int64_t v3[1] = {(int64_t) (s2.c_str())};
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -543,9 +540,9 @@ TEST(CodeGenTest, Like) {
 
     v1[0] = {8766};
     s1 = "asdf";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "asjd fehell ojdsl kfjwo rld dslk  jf ";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
@@ -567,8 +564,8 @@ TEST(CodeGenTest, DateCast) {
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
 
@@ -577,29 +574,28 @@ TEST(CodeGenTest, DateCast) {
 
     int32_t v1[1] = {8766};
     s1 = "asdf";
-    int64_t v2[1] = {(int64_t)(s1.c_str())};
+    int64_t v2[1] = {(int64_t) (s1.c_str())};
     s2 = "1994-01-01";
-    int64_t v3[1] = {(int64_t)(s2.c_str())};
-    int64_t* vals = new int64_t[3];
+    int64_t v3[1] = {(int64_t) (s2.c_str())};
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
@@ -607,9 +603,9 @@ TEST(CodeGenTest, DateCast) {
 
     v1[0] = {8766};
     s1 = "j";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "1996-01-02";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
@@ -619,9 +615,9 @@ TEST(CodeGenTest, DateCast) {
 
     v1[0] = {8766};
     s1 = "j";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "1993-11-12";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
@@ -642,8 +638,8 @@ TEST(CodeGenTest, SubstrIn) {
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
 
@@ -652,60 +648,59 @@ TEST(CodeGenTest, SubstrIn) {
 
     int32_t v1[1] = {8766};
     s1 = "asdf";
-    int64_t v2[1] = {(int64_t)(s1.c_str())};
+    int64_t v2[1] = {(int64_t) (s1.c_str())};
     s2 = "2134124";
-    int64_t v3[1] = {(int64_t)(s2.c_str())};
-    int64_t* vals = new int64_t[3];
+    int64_t v3[1] = {(int64_t) (s2.c_str())};
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
-    freeStrings();
+    FreeStrings();
 
 
     v1[0] = {8766};
     s1 = "j";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "233425";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
     result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
-    freeStrings();
+    FreeStrings();
 
     v1[0] = {8766};
     s1 = "j";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "424321";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
     result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
-    freeStrings();
+    FreeStrings();
 
     delete[] bitmap;
     delete[] vals;
@@ -720,8 +715,8 @@ TEST(CodeGenTest, ConcatStr) {
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
 
@@ -730,61 +725,58 @@ TEST(CodeGenTest, ConcatStr) {
 
     int32_t v1[1] = {8766};
     s1 = "hello";
-    int64_t v2[1] = {(int64_t)(s1.c_str())};
+    int64_t v2[1] = {(int64_t) (s1.c_str())};
     s2 = "world";
-    int64_t v3[1] = {(int64_t)(s2.c_str())};
-    int64_t* vals = new int64_t[3];
+    int64_t v3[1] = {(int64_t) (s2.c_str())};
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
-
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
-    freeStrings();
+    FreeStrings();
 
 
     v1[0] = {8766};
     s1 = "hello";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "world ";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
     result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
-    freeStrings();
+    FreeStrings();
 
 
     v1[0] = {8766};
     s1 = "hello ";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "world";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
 
     result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 0);
-    freeStrings();
+    FreeStrings();
 
 
     delete[] bitmap;
@@ -798,42 +790,39 @@ TEST(CodeGenTest, StringWithOps) {
     string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
 
 
-
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
-
 
     string s1;
     string s2;
 
     int32_t v1[1] = {8766};
     s1 = "asdf";
-    int64_t v2[1] = {(int64_t)(s1.c_str())};
+    int64_t v2[1] = {(int64_t) (s1.c_str())};
     s2 = "Saturday";
-    int64_t v3[1] = {(int64_t)(s2.c_str())};
-    int64_t* vals = new int64_t[3];
+    int64_t v3[1] = {(int64_t) (s2.c_str())};
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "stringTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
-    FilterCodeGen * lc = new FilterCodeGen(testname, expr, typeVec);
-    
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);
@@ -841,9 +830,9 @@ TEST(CodeGenTest, StringWithOps) {
 
     v1[0] = {8766};
     s1 = "j";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "Sunday";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
@@ -853,9 +842,9 @@ TEST(CodeGenTest, StringWithOps) {
 
     v1[0] = {8766};
     s1 = "j";
-    v2[0] = {(int64_t)(s1.c_str())};
+    v2[0] = {(int64_t) (s1.c_str())};
     s2 = "Monday";
-    v3[0] = {(int64_t)(s2.c_str())};
+    v3[0] = {(int64_t) (s2.c_str())};
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
@@ -876,32 +865,32 @@ TEST(CodeGenTest, Coalesce) {
 
     DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
     Parser parser{};
-    Expr* expr = parser.parseRowExpression(unparsed, reinterpret_cast<int*>(types), 3);
-    expr->printExprTree();
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
     cout << endl;
 
     int64_t v1[1] = {123};
     int64_t v2[1] = {234};
     int64_t v3[1] = {345};
-    int64_t* vals = new int64_t[3];
+    int64_t *vals = new int64_t[3];
     vals[0] = (int64_t) v1;
     vals[1] = (int64_t) v2;
     vals[2] = (int64_t) v3;
     int32_t *selected = new int32_t[1];
 
-    bool* bitmap = new bool[3];
+    bool *bitmap = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = false;
     }
-    
+
 
     string testname = "coalesceTest1";
-    vector<DataType> *typeVec = new vector<DataType>(types, types+3);
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     FilterCodeGen *lc = new FilterCodeGen(testname, expr, typeVec);
-    
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, bool*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, bool*)) (intptr_t) lc->getFunction();
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, bool *)) (intptr_t) lc->GetFunction();
 
     int32_t result = func(vals, 1, selected, bitmap);
     EXPECT_EQ(result, 1);

@@ -13,8 +13,22 @@ set(CMAKE_INSTALL_PREFIX /opt/lib)
 set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 
+# clean all target
+set(target_generated ${CMAKE_INSTALL_PREFIX}/libomruntime.so
+	             ${CMAKE_INSTALL_PREFIX}/libvector.so
+	             ${CMAKE_INSTALL_PREFIX}/libsecurec.so
+	             ${CMAKE_INSTALL_PREFIX}/ir
+)
+foreach(file ${target_generated})
+       	if (EXISTS ${file})
+	       	file(REMOVE_RECURSE ${file})
+		message(STATUS "Delete file or directory:${file}")
+        endif()
+endforeach(file)
+	    
 # compile library
 add_subdirectory(src)
+add_subdirectory(thirdparty/huawei_secure_c)
 
 # unit test
 enable_testing()

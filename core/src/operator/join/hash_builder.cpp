@@ -1,134 +1,98 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ */
 #include "hash_builder.h"
+#include <vector>
+#include <memory>
 #include "join_hash_table.h"
 #include "../pages_hash_strategy.h"
-#include <vector>
-#include <cstring>
+#include "../util/operator_util.h"
 
 namespace omniruntime {
 namespace op {
-
-HashBuilderOperatorFactory::HashBuilderOperatorFactory(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        int32_t operatorCount)
+HashBuilderOperatorFactory::HashBuilderOperatorFactory(const int32_t *buildTypes, int32_t buildTypesCount,
+    const int32_t *buildOutputCols, int32_t buildOutputColsCount, const int32_t *buildHashCols,
+    int32_t buildHashColsCount, int32_t operatorCount)
 {
-    int32_t intByteLen = sizeof(int32_t);
-
-    this->buildTypes = new int32_t[buildTypesCount];
-    memcpy(this->buildTypes, buildTypes, buildTypesCount * intByteLen);
-    this->buildTypesCount = buildTypesCount;
-
-    this->buildOutputCols = new int32_t[buildOutputColsCount];
-    memcpy(this->buildOutputCols, buildOutputCols, buildOutputColsCount * intByteLen);
-    this->buildOutputColsCount = buildOutputColsCount;
-
-    this->buildHashCols = new int32_t[buildHashColsCount];
-    memcpy(this->buildHashCols, buildHashCols, buildHashColsCount * intByteLen);
-    this->buildHashColsCount = buildHashColsCount;
-
-    this->hashTables = new JoinHashTables(operatorCount);
+    this->buildTypes.insert(this->buildTypes.end(), buildTypes, buildTypes + buildTypesCount);
+    this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols, buildOutputCols + buildOutputColsCount);
+    this->buildHashCols.insert(this->buildHashCols.end(), buildHashCols, buildHashCols + buildHashColsCount);
+    this->hashTables = nullptr;
+    this->hashTableCount = operatorCount;
     this->operatorIndex = 0;
 }
 
-HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
+int32_t HashBuilderOperatorFactory::Init()
 {
-    delete[] buildTypes;
-    delete[] buildOutputCols;
-    delete[] buildHashCols;
+    this->hashTables = std::make_unique<JoinHashTables>(this->hashTableCount).release();
+    return 0;
 }
 
-HashBuilderOperatorFactory *HashBuilderOperatorFactory::createHashBuilderOperatorFactory(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        int32_t operatorCount)
+HashBuilderOperatorFactory::~HashBuilderOperatorFactory() {}
+
+HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(const int32_t *buildTypes,
+    int32_t buildTypesCount, const int32_t *buildOutputCols, int32_t buildOutputColsCount, const int32_t *buildHashCols,
+    int32_t buildHashColsCount, int32_t operatorCount)
 {
-    HashBuilderOperatorFactory *operatorFactory = new HashBuilderOperatorFactory(
-        buildTypes,
-        buildTypesCount,
-        buildOutputCols,
-        buildOutputColsCount,
-        buildHashCols,
-        buildHashColsCount,
-        operatorCount);
-    return operatorFactory;
+    auto pOperatorFactory = std::make_unique<HashBuilderOperatorFactory>(buildTypes, buildTypesCount, buildOutputCols,
+        buildOutputColsCount, buildHashCols, buildHashColsCount, operatorCount);
+    pOperatorFactory->Init();
+    return pOperatorFactory.release();
 }
 
-Operator *HashBuilderOperatorFactory::createOperator()
+Operator *HashBuilderOperatorFactory::CreateOperator()
 {
-    int32_t partitionIndex = operatorIndex++ % hashTables->getHashTableCount();
-    HashBuilderOperator *hashBuilderOperator = new HashBuilderOperator(
-        buildTypes,
-        buildTypesCount,
-        buildOutputCols,
-        buildOutputColsCount,
-        buildHashCols,
-        buildHashColsCount,
-        hashTables,
-        partitionIndex);
-    return hashBuilderOperator;
+    int32_t buildTypesCount = buildTypes.size();
+    std::unique_ptr<PagesIndex> pagesIndex = std::make_unique<PagesIndex>(&buildTypes[0], buildTypesCount);
+    int32_t partitionIndex = operatorIndex++ % hashTables->GetHashTableCount();
+
+    auto pHashBuilderOperator = std::make_unique<HashBuilderOperator>(buildTypes, buildOutputCols, buildHashCols,
+        hashTables, partitionIndex, pagesIndex);
+    return pHashBuilderOperator.release();
 }
 
-HashBuilderOperator::HashBuilderOperator(
-        int32_t *buildTypes,
-        int32_t buildTypesCount,
-        int32_t *buildOutputCols,
-        int32_t buildOutputColsCount,
-        int32_t *buildHashCols,
-        int32_t buildHashColsCount,
-        JoinHashTables *hashTables,
-        int32_t partitionIndex)
+HashBuilderOperator::HashBuilderOperator(std::vector<int32_t> &buildTypes, const std::vector<int32_t> &buildOutputCols,
+    std::vector<int32_t> &buildHashCols, JoinHashTables *hashTables, int32_t partitionIndex,
+    std::unique_ptr<PagesIndex> &pagesIndex)
 {
     this->buildTypes = buildTypes;
-    this->buildTypesCount = buildTypesCount;
     this->buildHashCols = buildHashCols;
-    this->buildHashColsCount = buildHashColsCount;
     this->hashTables = hashTables;
     this->partitionIndex = partitionIndex;
-    this->pagesIndex = new PagesIndex(buildTypes, buildTypesCount);
+    this->pagesIndex = std::move(pagesIndex);
 }
 
-HashBuilderOperator::~HashBuilderOperator()
-{
+HashBuilderOperator::~HashBuilderOperator() {}
 
-}
-
-int32_t HashBuilderOperator::addInput(VectorBatch *vecBatch)
+int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
     inputVecBatches.push_back(vecBatch);
     return 0;
 }
 
-int32_t HashBuilderOperator::getOutput(std::vector<VectorBatch *>& outputPages)
+int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
     // add vecBatches into PagesIndex
-    pagesIndex->addVecBatches(inputVecBatches);
+    pagesIndex->AddVecBatches(inputVecBatches);
 
     // build JoinHashTable
-    PagesHashStrategy *pagesHashStrategy = new PagesHashStrategy(pagesIndex->getColumns(),
-        buildTypes, buildTypesCount, buildHashCols, buildHashColsCount);
-    JoinHashTable *joinHashTable = new JoinHashTable(pagesHashStrategy, pagesIndex->getValueAddresses(), pagesIndex->getPositionCount());
-    //joinHashTable->printHashTable(partitionIndex);
-    hashTables->addHashTable(partitionIndex, joinHashTable);
-    setStatus(OMNI_STATUS_FINISHED);
+    PagesHashStrategy *pagesHashStrategy = std::make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), &buildTypes[0],
+        buildTypes.size(), &buildHashCols[0], buildHashCols.size()).release();
+    JoinHashTable *joinHashTable = std::make_unique<JoinHashTable>(pagesHashStrategy, pagesIndex->GetValueAddresses(),
+        pagesIndex->GetPositionCount()).release();
+    hashTables->AddHashTable(partitionIndex, joinHashTable);
+    SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
-int32_t *HashBuilderOperator::getSourceTypes()
+int32_t *HashBuilderOperator::GetSourceTypes()
 {
-    return buildTypes;
+    return buildTypes.data();
 }
 
-void HashBuilderOperator::close()
+void HashBuilderOperator::Close()
 {
-    hashTables->clear(partitionIndex);
+    hashTables->Clear(partitionIndex);
 }
 } // end of op
 } // end of omniruntime

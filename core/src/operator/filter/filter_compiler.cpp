@@ -1,42 +1,28 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Filter compiler source file
+ */
 #include "filter_compiler.h"
-#include "../../common/expressions.h"
-#include "../../codegen/filter_codegen.h"
-#include <cstring>
 
 namespace omniruntime {
 namespace op {
-
 using namespace std;
 
-//bool testExpressionEvaluater(VectorBatch *vecBatch, int32_t index)
-//{
-//    Vector *column = vecBatch->getColumn(0);
-//    switch (column->getType())
-//    {
-//    case OMNI_VEC_TYPE_INT:
-//        return *((int32_t*) column->getValue(index)) % 2 == 0;
-//    case OMNI_VEC_TYPE_LONG:
-//        return *((int64_t*) column->getValue(index)) % 2 == 0;
-//    case OMNI_VEC_TYPE_DOUBLE:
-//        return *((double*) column->getValue(index)) > 10;
-//    default:
-//        break;
-//    }
-//}
-
-Compiler::Compiler(Expr* expression, int32_t *inputTypes, int32_t vecCount)
+Compiler::Compiler(Expr *expression, int32_t *inputTypes, int32_t vecCount)
 {
     this->expression = expression;
     this->inputTypes = inputTypes;
     this->vecCount = vecCount;
 }
 
-Filter *Compiler::compile()
+unique_ptr<Filter> Compiler::Compile() const
 {
-    vector<DataType>* datatypes = new vector<DataType>();
-    for (int32_t i = 0; i < vecCount; i++) datatypes->push_back(expressions::colTypeTrans(inputTypes[i]));
-    FilterCodeGen* codeGenObj = new FilterCodeGen("comparisionFunc", expression, datatypes);
-    return new Filter(codeGenObj, expression);
+    vector<DataType> dataTypes;
+    for (int32_t i = 0; i < vecCount; i++) {
+        dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+    }
+    auto codeGenObj = make_unique<FilterCodeGen>("comparisonFunc", expression, dataTypes);
+    return make_unique<Filter>(std::move(codeGenObj), expression);
 }
 } // end of op
 } // end of omniruntime

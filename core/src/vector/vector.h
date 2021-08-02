@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by root on 6/1/21.
 //
@@ -5,12 +8,15 @@
 #ifndef __VECTOR_H__
 #define __VECTOR_H__
 
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 #include "../util/debug.h"
 #include "../util/bitmap_util.h"
 #include "vector_reference.h"
 #include "vector_allocator.h"
 #include "vector_type.h"
 
+namespace omniruntime {
+namespace vec {
 class Vector {
 public:
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type);
@@ -19,73 +25,73 @@ public:
 
     virtual ~Vector();
 
-    virtual int getSize();
+    virtual int GetSize();
 
-    void setSize(int size);
+    void SetSize(int size);
 
-    int getPositionOffset();
+    int GetPositionOffset();
 
-    VectorReference *getReference();
+    VectorReference *GetReference() const;
 
-    VectorAllocator *getAllocator();
+    VectorAllocator *GetAllocator() const;
 
-    virtual VecType getType();
+    virtual VecType GetType();
 
-    void *getValues();
+    void *GetValues() const;
 
-    void *getValueNulls();
+    void *GetValueNulls() const;
 
-    void *getValueOffsets();
+    void *GetValueOffsets() const;
 
-    bool isValueNull(int index) {
-        ASSERT(index < size);
-        ASSERT(valueNullsAddress != nullptr);
+    bool IsValueNull(int index)
+    {
         return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
     }
 
-    void setValueNull(int index) {
-        ASSERT(index < size);
-        ASSERT(valueNullsAddress != nullptr);
+    void SetValueNull(int index)
+    {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = true;
     }
 
-    void setValueNotNull(int index) {
-        ASSERT(index < size);
-        ASSERT(valueNullsAddress != nullptr);
+    void SetValueNotNull(int index)
+    {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
-    void setValueNulls(int startIndex, bool *nulls, int length);
+    void SetValueNulls(int startIndex, bool *nulls, int length);
 
-    void setValueNullBitMap(int startIndex);
+    void SetValueNullBitMap(int startIndex);
 
-    int getValueOffset(int index) {
-        ASSERT(index < size + 1);
-        return ((int32_t *) (valueOffsetsAddress))[index];
+    int GetValueOffset(int index)
+    {
+        return static_cast<int32_t *>(valueOffsetsAddress)[index];
     }
 
-    void setValueOffset(int index, int valueOffset) {
-        ASSERT(index < size + 1);
-        ((int32_t *) (valueOffsetsAddress))[index] = valueOffset;
+    void SetValueOffset(int index, int valueOffset)
+    {
+        (static_cast<int32_t *>(valueOffsetsAddress))[index] = valueOffset;
     }
 
-    virtual Vector *slice(int positionOffset, int length) = 0;
+    virtual Vector *Slice(int positionOffset, int length) = 0;
 
-    virtual Vector *copyPositions(int *positions, int offset, int length) = 0;
+    virtual Vector *CopyPositions(const int *positions, int offset, int length) = 0;
 
-    virtual Vector *copyRegion(int positionOffset, int length) = 0;
+    virtual Vector *CopyRegion(int positionOffset, int length) = 0;
 
-    virtual void append(Vector *other, int positionOffset, int length) = 0;
+    virtual void Append(Vector *other, int positionOffset, int length) = 0;
 
 protected:
     void *valuesAddress;
     void *valueNullsAddress;
     void *valueOffsetsAddress;
     int positionOffset = 0;
+    int capacityInBytes = 0;
+    int size = 0;
+
 private:
-    int size;
     VectorReference *reference;
     VectorAllocator *allocator;
 };
-
-#endif //__VECTOR_H__
+} // namespace vec
+} // namespace omniruntime
+#endif // __VECTOR_H__

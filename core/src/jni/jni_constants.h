@@ -1,10 +1,11 @@
-//
-// Created by root on 5/31/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Constants
+ */
+#ifndef JNI_CONSTANTS_H
+#define JNI_CONSTANTS_H
 
 #include <jni.h>
-#ifndef __JNI_CONSTANTS_H__
-#define __JNI_CONSTANTS_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,5 +17,4 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
 #ifdef __cplusplus
 }
 #endif
-
-#endif //__JNI_CONSTANTS_H__
+#endif

@@ -1,24 +1,28 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 //
 // Created by kkrazy on 2021-03-09.
 //
 #include "../../../operator/group_aggregation.h"
 
-int test_group_by() {
+int TestGroupBy()
+{
 
     // create 10 vecBatches
-    const int VEC_BATCH_NUM = 10;
+    const int vecBatchNum = 10;
     VectorBatch* input[VEC_BATCH_NUM];
-    const int DATA_SIZE = 10;
+    const int dataSize = 10;
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        VectorBatch* vecBatch = new VectorBatch(DATA_SIZE, 2);
+        VectorBatch* vecBatch = new VectorBatch(DATA_SIZE, 2); // 2
         int32_t* data1 = new int32_t[DATA_SIZE];
         for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data1[i] = i % 3;
+            data1[i] = i % 3; // 3
         }
         Vector* col1 = new Vector(data1, INT32, DATA_SIZE);
         int64_t* data2 = new int64_t[DATA_SIZE];
         for (int32_t i = 0; i < DATA_SIZE; ++i) {
-            data2[i] = i % 3;
+            data2[i] = i % 3; // 3
         }
         Vector* col2 = new Vector(data2, OMNI_VEC_TYPE_LONG, DATA_SIZE);
         vecBatch->setColumn(col1, INT32);
@@ -49,14 +53,14 @@ int test_group_by() {
     }
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        delete[] reinterpret_cast<int32_t*>(input[i]->getColumn(0)->getData());
-        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(1)->getData());
+        delete[] reinterpret_cast<int32_t*>(input[i]->getColumn(0)->GetData());
+        delete[] reinterpret_cast<int64_t*>(input[i]->getColumn(1)->GetData());
         delete input[i];
     }
 
     for (int32_t i = 0; i < result->getColumnNumber(); ++i) {
         Vector* col = result->getColumn(i);
-        delete col->getData();
+        delete col->GetData();
         delete col;
     }
     delete result;

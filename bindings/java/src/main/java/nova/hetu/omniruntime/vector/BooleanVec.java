@@ -1,39 +1,46 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_BOOLEAN;
 
+/**
+ * boolean vec
+ *
+ * @since 2021-07-17
+ */
 public class BooleanVec
-        extends FixedWidthVec
-{
+        extends FixedWidthVec {
     private static final int BYTES = 1;
 
-    public BooleanVec(int size)
-    {
+    public BooleanVec(int size) {
         super(size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
-    public BooleanVec(VecAllocator allocator, int size)
-    {
+    public BooleanVec(VecAllocator allocator, int size) {
         super(allocator, size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
     }
 
-    protected BooleanVec(long nativeVector)
-    {
+    public BooleanVec(long nativeVector) {
         super(nativeVector);
     }
 
-    private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice)
-    {
+    private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }
 
-    private BooleanVec(BooleanVec vector, int[] positions, int offset, int length)
-    {
+    private BooleanVec(BooleanVec vector, int[] positions, int offset, int length) {
         super(vector, positions, offset, length);
     }
 
-    public void set(int index, boolean value)
-    {
+    /**
+     * Sets the specified boolean at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @param value the value of vec
+     */
+    public void set(int index, boolean value) {
         if (value) {
             values.put(index, (byte) 1);
         }
@@ -42,39 +49,47 @@ public class BooleanVec
         }
     }
 
-    public boolean get(int index)
-    {
+    /**
+     *  get the specified boolean at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return if the value of 1 returns true, otherwise it returns false
+     */
+    public boolean get(int index) {
         return values.get((index + offset) * BYTES) == 1;
     }
 
-    public void put(boolean[] values, int offset, int start, int length)
-    {
+    /**
+     * Batch sets the specified boolean at the specified absolute
+     *
+     * @param values the value of the element to be written
+     * @param offset the element offset in vec
+     * @param start the element index in values
+     * @param length the number of elements that need to written
+     */
+    public void put(boolean[] values, int offset, int start, int length) {
         for (int i = 0; i < length; i++) {
             set(i + offset, values[i + start]);
         }
     }
 
     @Override
-    public BooleanVec slice(int startIdx, int endIdx)
-    {
+    public BooleanVec slice(int startIdx, int endIdx) {
         return new BooleanVec(this, startIdx, endIdx - startIdx, true);
     }
 
     @Override
-    public Vec copy()
-    {
+    public Vec copy() {
         return null;
     }
 
     @Override
-    public BooleanVec copyPositions(int[] positions, int offset, int length)
-    {
+    public BooleanVec copyPositions(int[] positions, int offset, int length) {
         return new BooleanVec(this, positions, offset, length);
     }
 
     @Override
-    public BooleanVec copyRegion(int positionOffset, int length)
-    {
+    public BooleanVec copyRegion(int positionOffset, int length) {
         return new BooleanVec(this, positionOffset, length, false);
     }
 }

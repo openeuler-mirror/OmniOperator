@@ -1,6 +1,6 @@
-//
-// Created by root on 6/21/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 
 #include "gtest/gtest.h"
 #include "../../src/operator/topn/topn.h"
@@ -12,27 +12,26 @@
 #include <src/operator/optimization.h>
 #include "../../src/jit/jit.h"
 
+using namespace omniruntime::vec;
 
-
-JitContext *createTestTopNJitContext(
-        int32_t *sourceTypes,
-        int32_t sourceTypesCount,
-        int32_t sortColsCount)
+JitContext *CreateTestTopNJitContext(int32_t *sourceTypes, int32_t *sortCols,int32_t sourceTypesCount, int32_t sortColsCount)
 {
     using namespace omniruntime::jit;
-    ParamValue p_sourceTypes = ParamValue(sourceTypes, sourceTypesCount);
-    ParamValue p_sortColCount= ParamValue(&sortColsCount);
+    ParamValue pSourceTypes = ParamValue(sourceTypes, sourceTypesCount);
+    ParamValue pSortCols = ParamValue(sortCols, sortColsCount);
+    ParamValue pSortColCount = ParamValue(&sortColsCount);
 
-    auto * topNCompareSp=new Specialization();
-    topNCompareSp->addSpecializedParam(4, &p_sortColCount);
-    topNCompareSp->addSpecializedParam(5, &p_sourceTypes);
+    auto * topNCompareSp = new Specialization();
+    topNCompareSp->AddSpecializedParam(4, &pSortColCount);
+    topNCompareSp->AddSpecializedParam(5, &pSortCols);
+    topNCompareSp->AddSpecializedParam(6, &pSourceTypes);
 
-    std::map<string,Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE,*topNCompareSp}};
+    std::map<std::string, Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
 
-    auto *topNContext=new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string>(),std::vector<std::string>(),true);
+    auto *topNContext = new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string >(),std::vector<std::string >(),true);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*topNContext});
-    auto createOperatorFunc = jit->specialize();
+    auto createOperatorFunc = jit->Specialize();
 
     JitContext *jitContext = new JitContext;
     jitContext->func =createOperatorFunc;
@@ -45,228 +44,279 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscOneColumn) {
     using namespace std;
 
     // construct input data
-    const int32_t DATA_SIZE = 6;
-    const int32_t EXPECTED_DATA_SIZE = 5;
+    const int32_t dataSize = 7;
+    const int32_t expectedDataSize = 5;
 
     // prepare data
-    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int32_t data0[dataSize] = {0, 1, 2, 4, 5, 2, 3};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
+    IntVector *column0 = new IntVector(nullptr, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    inputVecBatch->SetVector(0, column0);
 
     int32_t sourceTypes[1] = {1};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 1, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 1, expectedDataSize, sortCols, ascendings, nullFirsts,
                                                                      1);
-    JitContext *jitContext=createTestTopNJitContext(sourceTypes, 1, 1);
-    topNOperatorFactory->setJitContext(jitContext);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,1, 1);
+    topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
+    TopNOperator *topNOperator = dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    topNOperator->addInput(inputVecBatch);
+    topNOperator->AddInput(inputVecBatch);
     vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
-    int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
-    IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1,EXPECTED_DATA_SIZE);
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {0, 1, 2, 2, 3};
+    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->setVector(0,expectCol1);
+    expectVecorBatch->SetVector(0, expectCol1);
 
-    printVecBatch(outputVecorBatchs[0]);
-    EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn) {
     using namespace omniruntime::op;
     // construct input data
-    const int32_t DATA_SIZE = 6;
-    const int32_t EXPECTED_DATA_SIZE = 5;
+    const int32_t dataSize = 6;
+    const int32_t expectedDataSize = 5;
 
     // prepare data
-    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
+    IntVector *column0 = new IntVector(nullptr, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    inputVecBatch->SetVector(0, column0);
 
     int32_t sourceTypes[1] = {1};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 1, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 1, expectedDataSize, sortCols, ascendings, nullFirsts,
                                                                      1);
 
-    JitContext *jitContext=createTestTopNJitContext(sourceTypes, 1, 1);
-    topNOperatorFactory->setJitContext(jitContext);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,1, 1);
+    topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
+    TopNOperator *topNOperator =dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    topNOperator->addInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
-    int32_t expectData1[EXPECTED_DATA_SIZE] = {2, 2, 1, 1, 0};
-    IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1,EXPECTED_DATA_SIZE);
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {2, 2, 1, 1, 0};
+    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->setVector(0,expectCol1);
+    expectVecorBatch->SetVector(0, expectCol1);
 
-    printVecBatch(outputVecorBatchs[0]);
-    EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+	delete jitContext;
+	VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
 {
     using namespace omniruntime::op;
     // construct input data
-    const int32_t DATA_SIZE = 6;
+    const int32_t dataSize = 6;
     // prepare data
-    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
-    int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
-    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
     VectorBatch *inputVecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
-    LongVector * column1=new LongVector(nullptr,DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
-    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
-    inputVecBatch->setVector(1, column1);
-    inputVecBatch->setVector(2, column2);
-
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
+    IntVector *column0 = new IntVector(nullptr, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    LongVector * column1=new LongVector(nullptr, dataSize);
+    column1->SetValues(0, data1, dataSize);
+    DoubleVector *column2 = new DoubleVector(nullptr, dataSize);
+    column2->SetValues(0, data2, dataSize);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
 
     int32_t sourceTypes[3] = {1, 2, 3};
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {false, false};
-    const int32_t EXPECTED_DATA_SIZE = 5;
+    const int32_t expectedDataSize = 5;
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, expectedDataSize, sortCols, ascendings, nullFirsts,
                                                                      2);
-    JitContext *jitContext=createTestTopNJitContext(sourceTypes, 3, 2);
-    topNOperatorFactory->setJitContext(jitContext);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
+    TopNOperator *topNOperator = dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    topNOperator->addInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
-    int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
-    IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1, EXPECTED_DATA_SIZE);
-    int64_t expectData2[EXPECTED_DATA_SIZE] = {0, 3, 1, 4, 2};
-    LongVector *expectCol2 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol2->setValues(0, expectData2, EXPECTED_DATA_SIZE);
-    double expectData3[EXPECTED_DATA_SIZE] = {6.6, 3.3, 5.5, 2.2, 4.4};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol3->setValues(0, expectData3, EXPECTED_DATA_SIZE);
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
+    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    int64_t expectData2[expectedDataSize] = {0, 3, 1, 4, 2};
+    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    expectCol2->SetValues(0, expectData2, expectedDataSize);
+    double expectData3[expectedDataSize] = {6.6, 3.3, 5.5, 2.2, 4.4};
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->setVector(0,expectCol1);
-    expectVecorBatch->setVector(1,expectCol2);
-    expectVecorBatch->setVector(2,expectCol3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
 
-    printVecBatch(outputVecorBatchs[0]);
+    PrintVecBatch(outputVecorBatchs[0]);
 
-    EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+	delete jitContext;
+	VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn) {
     using namespace omniruntime::op;
     // construct input data
-    const int32_t DATA_SIZE = 6;
+    const int32_t dataSize = 6;
     // prepare data
-    int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
-    int64_t data1[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
-    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
     VectorBatch *inputVecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, DATA_SIZE);
-    column0->setValues(0,data0, DATA_SIZE);
-    LongVector * column1=new LongVector(nullptr,DATA_SIZE);
-    column1->setValues(0, data1, DATA_SIZE);
-    DoubleVector *column2 = new DoubleVector(nullptr, DATA_SIZE);
-    column2->setValues(0, data2, DATA_SIZE);
-    inputVecBatch->setVector(0, column0);
-    inputVecBatch->setVector(1, column1);
-    inputVecBatch->setVector(2, column2);
-
-
-    int32_t rowCount = DATA_SIZE;
-    int32_t rowCounts[1] = {rowCount};
+    IntVector *column0 = new IntVector(nullptr, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    LongVector * column1=new LongVector(nullptr, dataSize);
+    column1->SetValues(0, data1, dataSize);
+    DoubleVector *column2 = new DoubleVector(nullptr, dataSize);
+    column2->SetValues(0, data2, dataSize);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
 
     int32_t sourceTypes[3] = {1, 2, 3};
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, false};
     int32_t nullFirsts[2] = {false, false};
-    const int32_t EXPECTED_DATA_SIZE = 5;
+    const int32_t expectedDataSize = 5;
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, EXPECTED_DATA_SIZE, sortCols, ascendings, nullFirsts,
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, expectedDataSize, sortCols, ascendings, nullFirsts,
                                                                      2);
-    JitContext *jitContext=createTestTopNJitContext(sourceTypes, 3, 2);
-    topNOperatorFactory->setJitContext(jitContext);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator = (TopNOperator *)createTestOperator(topNOperatorFactory);
+    TopNOperator *topNOperator = dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
-    topNOperator->addInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->getOutput(outputVecorBatchs);
-    int32_t expectData1[EXPECTED_DATA_SIZE] = {0, 0, 1, 1, 2};
-    IntVector *expectCol1 = new IntVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol1->setValues(0, expectData1, EXPECTED_DATA_SIZE);
-    int64_t expectData2[EXPECTED_DATA_SIZE] = {3, 0, 4, 1, 5};
-    LongVector *expectCol2 = new LongVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol2->setValues(0, expectData2, EXPECTED_DATA_SIZE);
-    double expectData3[EXPECTED_DATA_SIZE] = {3.3, 6.6, 2.2, 5.5, 1.1};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, EXPECTED_DATA_SIZE);
-    expectCol3->setValues(0, expectData3, EXPECTED_DATA_SIZE);
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
+    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    int64_t expectData2[expectedDataSize] = {3, 0, 4, 1, 5};
+    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    expectCol2->SetValues(0, expectData2, expectedDataSize);
+    double expectData3[expectedDataSize] = {3.3, 6.6, 2.2, 5.5, 1.1};
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->setVector(0,expectCol1);
-    expectVecorBatch->setVector(1,expectCol2);
-    expectVecorBatch->setVector(2,expectCol3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
 
-    printVecBatch(outputVecorBatchs[0]);
-    EXPECT_TRUE(vecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
-    VectorHelper::freeVecBatch(inputVecBatch);
-    VectorHelper::freeVecBatch(expectVecorBatch);
-    VectorHelper::freeVecBatches(outputVecorBatchs);
+	delete jitContext;
+	VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
+
+TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumnSortColumn1) {
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+
+    VectorBatch *inputVecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(nullptr, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    LongVector * column1=new LongVector(nullptr, dataSize);
+    column1->SetValues(0, data1, dataSize);
+    DoubleVector *column2 = new DoubleVector(nullptr, dataSize);
+    column2->SetValues(0, data2, dataSize);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
+
+    int32_t sourceTypes[3] = {1, 2, 3};
+    int32_t sortCols[1] = {1};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+    const int32_t expectedDataSize = 5;
+
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, 3, expectedDataSize, sortCols, ascendings, nullFirsts,
+                                                                     2);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator = dynamic_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {2, 1, 0, 2, 1};
+    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    int64_t expectData2[expectedDataSize] = {5, 4, 3, 2, 1};
+    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    expectCol2->SetValues(0, expectData2, expectedDataSize);
+    double expectData3[expectedDataSize] = {1.1, 2.2, 3.3, 4.4, 5.5};
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
+
+    PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+	delete jitContext;
+	VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 

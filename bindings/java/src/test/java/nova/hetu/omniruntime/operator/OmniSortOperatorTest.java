@@ -1,12 +1,18 @@
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
+import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
+import static org.testng.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableList;
+
 import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
+
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -16,19 +22,30 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
-import static org.testng.Assert.assertEquals;
-
-public class OmniSortOperatorTest
-{
+/**
+ * The type Omni sort operator test.
+ */
+public class OmniSortOperatorTest {
+    /**
+     * The Total page count.
+     */
     int totalPageCount = 20;
+
+    /**
+     * The Page distinct count.
+     */
     int pageDistinctCount = 4;
+
+    /**
+     * The Page distinct value repeat count.
+     */
     int pageDistinctValueRepeatCount = 25000;
 
+    /**
+     * Test order by two column.
+     */
     @Test
-    public void testOrderByTwoColumn()
-    {
+    public void testOrderByTwoColumn() {
         int[] data1 = {5, 3, 2, 6, 1, 4, 7, 8};
         int[] data2 = {5, 3, 2, 6, 1, 4, 7, 8};
         IntVec vec1 = new IntVec(8);
@@ -46,8 +63,8 @@ public class OmniSortOperatorTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
-                sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+            ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -72,13 +89,14 @@ public class OmniSortOperatorTest
         assertEquals(actual1, expected1);
     }
 
+    /**
+     * Test order by performance.
+     */
     @Test
-    public void testOrderByPerformance()
-    {
+    public void testOrderByPerformance() {
         long start = System.currentTimeMillis();
         ImmutableList<VecBatch> vecs = buildVecs();
         long elapsed = System.currentTimeMillis() - start;
-        System.out.println("buildVecs elapsed time : " + elapsed + " ms");
 
         VecType[] sourceTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
         int[] outputCols = {0, 1};
@@ -86,8 +104,8 @@ public class OmniSortOperatorTest
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
-                sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+            ascendings, nullFirsts);
 
         start = System.currentTimeMillis();
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
@@ -96,12 +114,13 @@ public class OmniSortOperatorTest
         }
         sortOperator.getOutput();
         elapsed = System.currentTimeMillis() - start;
-        System.out.println("getResult elapsed time : " + elapsed + " ms");
     }
 
+    /**
+     * Test order by multi performance.
+     */
     @Test
-    public void testOrderByMultiPerformance()
-    {
+    public void testOrderByMultiPerformance() {
         ImmutableList<VecBatch> vecs = buildVecs();
 
         VecType[] sourceTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
@@ -109,8 +128,8 @@ public class OmniSortOperatorTest
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(
-                sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+            ascendings, nullFirsts);
 
         int threadNum = 4;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
@@ -122,23 +141,27 @@ public class OmniSortOperatorTest
                         sortOperator.addInput(vec);
                     }
                     sortOperator.getOutput();
-                }
-                finally {
+                } finally {
                     countDownLatch.countDown();
+                }
+            });
+            thread.setName("thread"+i);
+            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                @Override
+                public void uncaughtException(Thread thread1, Throwable throwable) {
+                    throwable.printStackTrace();
                 }
             });
             thread.start();
         }
         try {
             countDownLatch.await();
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private ImmutableList<VecBatch> buildVecs()
-    {
+    private ImmutableList<VecBatch> buildVecs() {
         ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
         int positionCount = pageDistinctCount * pageDistinctValueRepeatCount;
         List<Vec> vecs = new ArrayList<>();

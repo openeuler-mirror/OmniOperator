@@ -1,28 +1,34 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Type Util Class
+ */
 #include <cmath>
 #include <cfloat>
 #include "test_util.h"
 #include "../../src/vector/dictionary_vector.h"
 
-bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
-bool columnMatch(Vector *actualColumn, Vector *expectColumn);
+using namespace omniruntime::vec;
 
-bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
+bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
+bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
+
+bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
 {
-    if (outputPages->getRowCount() != expectPage->getRowCount()) {
+    if (outputPages->GetRowCount() != expectPage->GetRowCount()) {
         return false;
     }
 
-    int32_t columnNumber = outputPages->getVectorCount();
-    if (columnNumber != expectPage->getVectorCount()) {
+    int32_t columnNumber = outputPages->GetVectorCount();
+    if (columnNumber != expectPage->GetVectorCount()) {
         return false;
     }
 
-    if (!typesMatch(outputPages->getVectorTypes(), expectPage->getVectorTypes(), columnNumber)) {
+    if (!TypesMatch(outputPages->GetVectorTypes(), expectPage->GetVectorTypes(), columnNumber)) {
         return false;
     }
 
     for (int32_t i = 0; i < columnNumber; i++) {
-        if (!columnMatch(outputPages->getVector(i), expectPage->getVector(i))) {
+        if (!ColumnMatch(outputPages->GetVector(i), expectPage->GetVector(i))) {
             return false;
         }
     }
@@ -30,7 +36,7 @@ bool vecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
-bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber)
+bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber)
 {
     for (int32_t i = 0; i < columnNumber; i++) {
         if (actualTypes[i] != expectTypes[i]) {
@@ -41,20 +47,20 @@ bool typesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber
     return true;
 }
 
-bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
+bool ValueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
 {
-    VecType type = actualVector->getDictionary()->getType();
-    int32_t actualPosition = actualVector->getIds()[position];
-    int32_t expectPosition = expectedVector->getIds()[position];
+    VecType type = actualVector->GetDictionary()->GetType();
+    int32_t actualPosition = actualVector->GetIds()[position];
+    int32_t expectPosition = expectedVector->GetIds()[position];
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
-            int32_t actual = actualVector->getInt(actualPosition);
-            int32_t expect = expectedVector->getInt(expectPosition);
+            int32_t actual = actualVector->GetInt(actualPosition);
+            int32_t expect = expectedVector->GetInt(expectPosition);
             return actual == expect;
         }
         case OMNI_VEC_TYPE_LONG: {
-            int64_t actual = actualVector->getLong(actualPosition);
-            int64_t expect = expectedVector->getLong(expectPosition);
+            int64_t actual = actualVector->GetLong(actualPosition);
+            int64_t expect = expectedVector->GetLong(expectPosition);
             return actual == expect;
         }
         default:
@@ -62,39 +68,39 @@ bool valueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector
     }
 }
 
-bool columnMatch(Vector *actualColumn, Vector *expectColumn)
+bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 {
-    if (actualColumn->getType() != expectColumn->getType()) {
+    if (actualColumn->GetType() != expectColumn->GetType()) {
         return false;
     }
 
-    if (actualColumn->getSize() != expectColumn->getSize()) {
+    if (actualColumn->GetSize() != expectColumn->GetSize()) {
         return false;
     }
 
     bool result = true;
-    for (int32_t i = 0; i < actualColumn->getSize(); i++) {
-        switch (actualColumn->getType()) {
+    for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
+        switch (actualColumn->GetType()) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t actual = ((IntVector *)actualColumn)->getValue(i);
-                int32_t expect = ((IntVector *)expectColumn)->getValue(i);
+                int32_t actual = ((IntVector *)actualColumn)->GetValue(i);
+                int32_t expect = ((IntVector *)expectColumn)->GetValue(i);
                 result = (actual == expect) & result;
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t actual = ((LongVector *)actualColumn)->getValue(i);
-                int64_t expect = ((LongVector *)expectColumn)->getValue(i);
+                int64_t actual = ((LongVector *)actualColumn)->GetValue(i);
+                int64_t expect = ((LongVector *)expectColumn)->GetValue(i);
                 result = (actual == expect) & result;
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double actual = ((DoubleVector *)expectColumn)->getValue(i);
-                double expect = ((DoubleVector *)expectColumn)->getValue(i);
+                double actual = ((DoubleVector *)expectColumn)->GetValue(i);
+                double expect = ((DoubleVector *)expectColumn)->GetValue(i);
                 result = (std::fabs(actual - expect) <= DBL_EPSILON) & result;
                 break;
             }
             case OMNI_VEC_TYPE_DICTIONARY: {
-                result = valueMatch((DictionaryVector *)actualColumn, (DictionaryVector *)expectColumn, i);
+                result = ValueMatch((DictionaryVector *) actualColumn, (DictionaryVector *) expectColumn, i);
                 break;
             }
             default:
@@ -108,16 +114,16 @@ bool columnMatch(Vector *actualColumn, Vector *expectColumn)
     return result;
 }
 
-omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
+omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory)
 {
     omniruntime::op::Operator *nativeOperator = nullptr;
 
 #ifdef DEBUG_OPERATOR
-    nativeOperator = operatorFactory->createOperator();
+    nativeOperator = operatorFactory->CreateOperator();
 #else
-    JitContext *jitContext = operatorFactory->getJitContext();
+    JitContext *jitContext = operatorFactory->GetJitContext();
     if (jitContext == nullptr) {
-        nativeOperator = operatorFactory->createOperator();
+        nativeOperator = operatorFactory->CreateOperator();
     } else {
         opt_module operatorModule = (opt_module) (jitContext->func);
         nativeOperator = operatorModule(operatorFactory);
@@ -126,27 +132,44 @@ omniruntime::op::Operator *createTestOperator(OperatorFactory *operatorFactory)
     return nativeOperator;
 }
 
-void printVecBatch(VectorBatch* vecBatch)
+void DeleteOperatorFactory(OperatorFactory *operatorFactory)
 {
-    int32_t vectorCount = vecBatch->getVectorCount();
-    for (int32_t rowIdx = 0; rowIdx < vecBatch->getVector(0)->getSize(); ++rowIdx) {
+    if (operatorFactory->GetJitContext() != nullptr) {
+        delete operatorFactory->GetJitContext();
+    }
+    delete operatorFactory;
+}
+
+void PrintVecBatch(VectorBatch* vecBatch)
+{
+    int32_t vectorCount = vecBatch->GetVectorCount();
+    for (int32_t rowIdx = 0; rowIdx < vecBatch->GetVector(0)->GetSize(); ++rowIdx) {
         for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
-            auto vecType = vecBatch->getVector(colIdx)->getType();
-            auto vector = vecBatch->getVector(colIdx);
+            auto vecType = vecBatch->GetVector(colIdx)->GetType();
+            auto vector = vecBatch->GetVector(colIdx);
             switch (vecType) {
                 case OMNI_VEC_TYPE_INT: {
                     IntVector* vec = (IntVector*)vector;
-                    std::cout << vec->getValue(rowIdx) << "   ";
+                    std::cout << vec->GetValue(rowIdx) << "   ";
                     break;
                 }
                 case OMNI_VEC_TYPE_LONG: {
                     LongVector* vec = (LongVector*)vector;
-                    std::cout << vec->getValue(rowIdx) << "   ";
+                    std::cout << vec->GetValue(rowIdx) << "   ";
                     break;
                 }
                 case OMNI_VEC_TYPE_DOUBLE: {
                     DoubleVector* vec = (DoubleVector*)vector;
-                    std::cout << vec->getValue(rowIdx) << "   ";
+                    std::cout << vec->GetValue(rowIdx) << "   ";
+                    break;
+                }
+                case OMNI_VEC_TYPE_CONTAINER: {
+                    ContainerVector* vec = reinterpret_cast<ContainerVector*>(vector);
+                    DoubleVector* doubleVec = reinterpret_cast<DoubleVector*>(vec->getValue(0));
+                    double avgVal = doubleVec->GetValue(rowIdx);
+                    LongVector* longVec = reinterpret_cast<LongVector*>(vec->getValue(1));
+                    int64_t avgCnt = longVec->GetValue(rowIdx);
+                    std::cout << avgVal << "/" << avgCnt << std::endl;
                     break;
                 }
                 default:

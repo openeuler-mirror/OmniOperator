@@ -1,39 +1,46 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __INT_VECTOR__H__
 #define __INT_VECTOR__H__
 
 #include "fixed_width_vector.h"
 
+namespace omniruntime {
+namespace vec {
 class IntVector : public FixedWidthVector<int32_t> {
 public:
     IntVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
-    int32_t getValue(int index){
-        ASSERT(index < getSize());
-        return ((int32_t *) valuesAddress)[index + positionOffset];
+    int32_t GetValue(int index)
+    {
+        return ((int32_t *)valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.
-    void setValue(int index, int32_t value){
-        ASSERT(getReference()->isWritable());
-        ASSERT((uint)index < getSize());
-        ((int32_t *) valuesAddress)[index] = value;
+    void SetValue(int index, int32_t value)
+    {
+        ((int32_t *)valuesAddress)[index] = value;
     }
 
-    void setValues(int startIndex, int32_t *values, int length);
+    void SetValues(int startIndex, const int32_t *values, int length) override;
 
-    IntVector *slice(int positionOffset, int length);
+    IntVector *Slice(int positionOffset, int length) override;
 
-    IntVector *copyPositions(int *positions, int offset, int length);
+    IntVector *CopyPositions(const int *positions, int offset, int length) override;
 
-    IntVector *copyRegion(int positionOffset, int length);
+    IntVector *CopyRegion(int positionOffset, int length) override;
 
-    void append(Vector *other, int positionOffset, int length);
+    void Append(Vector *other, int positionOffset, int length) override;
+
+    ~IntVector() {}
 
 private:
     IntVector(IntVector *vector, int size, int positionOffset) : FixedWidthVector(vector, size, positionOffset) {};
 
     static const int BYTES = sizeof(int32_t);
 };
-
+} // namespace vec
+} // namespace omniruntime
 #endif // __INT_VECTOR__H__

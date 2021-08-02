@@ -8,17 +8,23 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestLongVec
-{
+/**
+ * test long vec
+ */
+public class TestLongVec {
+    /**
+     * tear down
+     */
     @AfterClass
-    public void tearDown()
-    {
+    public void tearDown() {
         VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
+    /**
+     * test new vector
+     */
     @Test
-    public void testNewVector()
-    {
+    public void testNewVector() {
         LongVec vec = new LongVec(256);
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
@@ -27,9 +33,11 @@ public class TestLongVec
         vec.close();
     }
 
+    /**
+     * test slice
+     */
     @Test
-    public void testSlice()
-    {
+    public void testSlice() {
         LongVec originalVec = new LongVec(10);
         for (int i = 0; i < originalVec.getSize(); i++) {
             originalVec.set(i, i);
@@ -52,9 +60,11 @@ public class TestLongVec
         slice2.close();
     }
 
+    /**
+     * test set and get value
+     */
     @Test
-    public void testSetAndGetValue()
-    {
+    public void testSetAndGetValue() {
         LongVec vec = new LongVec(256);
         for (int i = 0; i < vec.getSize(); i++) {
             vec.set(i, i * 2);
@@ -66,9 +76,11 @@ public class TestLongVec
         vec.close();
     }
 
+    /**
+     * test put value
+     */
     @Test
-    public void testPutValues()
-    {
+    public void testPutValues() {
         long[] values = {1, 3, 4, 6, 7};
         LongVec vec1 = new LongVec(values.length);
         vec1.put(values, 0, 0, values.length);
@@ -86,9 +98,11 @@ public class TestLongVec
         vec2.close();
     }
 
+    /**
+     * test value null
+     */
     @Test
-    public void testValueNull()
-    {
+    public void testValueNull() {
         LongVec longVec = new LongVec(256);
         for (int i = 0; i < longVec.getSize(); i++) {
             if (i % 5 == 0) {
@@ -110,9 +124,11 @@ public class TestLongVec
         longVec.close();
     }
 
+    /**
+     * test copy postion
+     */
     @Test
-    public void testCopyPositions()
-    {
+    public void testCopyPositions() {
         LongVec originalVector = new LongVec(4);
         for (int i = 0; i < originalVector.getSize(); i++) {
             originalVector.set(i, i);
@@ -129,9 +145,11 @@ public class TestLongVec
         copyPositionVector.close();
     }
 
+    /**
+     * test copy region
+     */
     @Test
-    public void testCopyRegion()
-    {
+    public void testCopyRegion() {
         LongVec originalVector = new LongVec(4);
         for (int i = 0; i < 4; i++) {
             originalVector.set(i, i * 2);
@@ -147,9 +165,11 @@ public class TestLongVec
         copyRegionVector.close();
     }
 
+    /**
+     * test zero sized allocate
+     */
     @Test
-    public void testZeroSizeAllocate()
-    {
+    public void testZeroSizeAllocate() {
         LongVec v1 = new LongVec(0);
         long[] values = new long[0];
         v1.put(values, 0, 0, values.length);

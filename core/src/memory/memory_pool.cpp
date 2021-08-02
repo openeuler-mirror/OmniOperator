@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 #include <iostream>
 #include "memory_pool.h"
 #include <jemalloc/jemalloc.h>
@@ -9,24 +13,24 @@
 std::atomic_long g_allocateCount(0);
 std::atomic_long g_releaseCount(0);
 #endif
-const size_t alignment = 64;
+const size_t ALIGNMENT = 64;
 
 class JemallocAllocator {
-        public:
-    static int allocate(int64_t size, uint8_t** buffer) {
+public:
+    static int Allocate(int64_t size, uint8_t** buffer)
+    {
         if (size < 0) {
             std::cout << "allocate size is negative." << std::endl;
             return -1;
         }
         // jemalloc alloc
-        //std::cout << "jemalloc allocate" << std::endl;
-        *buffer = reinterpret_cast<uint8_t*> (mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(alignment)));
+        *buffer = reinterpret_cast<uint8_t*>(mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(ALIGNMENT)));
         return 0;
     }
-    static int release(uint8_t* buffer) {
+    static int Release(uint8_t* buffer)
+    {
         // jemalloc free
-        //std::cout << "jemalloc allocate" << std::endl;
-        dallocx(reinterpret_cast<void*>(buffer), MALLOCX_ALIGN(alignment));
+        dallocx(reinterpret_cast<void*>(buffer), MALLOCX_ALIGN(ALIGNMENT));
         return 0;
     }
 };
@@ -34,43 +38,47 @@ class JemallocAllocator {
 template <typename Allocator>
 class BaseMemoryPoolImpl : public MemoryPool {
 public:
-   int allocate(int64_t size, uint8_t** buffer) override {
-       Allocator::allocate(size, buffer);
+   int Allocate(int64_t size, uint8_t** buffer) override
+   {
+       Allocator::Allocate(size, buffer);
        return 0;
    }
 
-    int release(uint8_t* buffer) override {
-         Allocator::release(buffer);
-         return 0;
+    int Release(uint8_t* buffer) override
+    {
+        Allocator::Release(buffer);
+        return 0;
     }
     ~BaseMemoryPoolImpl() override {}
 };
 
 
-class JemallocMemoryPool: public BaseMemoryPoolImpl<JemallocAllocator> {
+class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {
 };
 
 
 
-static JemallocMemoryPool jemallocMemoryPool;
+static JemallocMemoryPool g_jemallocMemoryPool;
 
-MemoryPool *getMemoryPool()
+MemoryPool *GetMemoryPool()
 {
-    return &jemallocMemoryPool;
+    return &g_jemallocMemoryPool;
 }
 
-void* omni_allocate(uint64_t size) {
-    uint8_t* buf;
-    jemallocMemoryPool.allocate(size, &buf);
+void* OmniAllocate(uint64_t size)
+{
+    uint8_t* buf = nullptr;
+    g_jemallocMemoryPool.Allocate(size, &buf);
 #ifdef DEBUG
     g_allocateCount += 1;
 #endif
-    return (void *)buf;
+    return reinterpret_cast<void *>(buf);
 }
 
-void omni_release(int64_t address) {
-    uint8_t* ptr = (uint8_t*)address;
-    jemallocMemoryPool.release(ptr);
+void OmniRelease(unsigned long address)
+{
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(address);
+    g_jemallocMemoryPool.Release(reinterpret_cast<uint8_t *>(ptr));
 #ifdef DEBUG
     g_releaseCount += 1;
 #endif
@@ -79,10 +87,10 @@ void omni_release(int64_t address) {
 #ifdef DEBUG
 void printStatistics()
 {
-    while (true)
-    {
-        std::cout << "Allocate Count=" << g_allocateCount << ", Release Count=" << g_releaseCount << ", Leak Count=" << (g_allocateCount - g_releaseCount) << std::endl;
-        sleep(10);
+    while (true) {
+        std::cout << "Allocate Count=" << g_allocateCount <<
+        ", Release Count=" << g_releaseCount << ", Leak Count=" << (g_allocateCount - g_releaseCount) << std::endl;
+        sleep(10);  // sleep for 10 ms
     }
 }
 

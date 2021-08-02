@@ -1,57 +1,78 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.operator;
+
+import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
 
-import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
-
-public final class OmniOperator
-        implements AutoCloseable
-{
+/**
+ * The type Omni operator.
+ *
+ * @since 20210630
+ */
+public final class OmniOperator implements AutoCloseable {
+    /**
+     * The Native operator.
+     */
     protected final long nativeOperator;
 
     private VecBatchIterator outputIterator;
 
-    protected OmniOperator(long nativeOperator)
-    {
+    /**
+     * Instantiates a new Omni operator.
+     *
+     * @param nativeOperator the native operator
+     */
+    protected OmniOperator(long nativeOperator) {
         this.nativeOperator = nativeOperator;
     }
 
-    public int addInput(VecBatch vecBatch)
-    {
+    /**
+     * Add input int.
+     *
+     * @param vecBatch the vec batch
+     * @return the int
+     */
+    public int addInput(VecBatch vecBatch) {
         return addInputNative(nativeOperator, vecBatch.getNativeVectorBatch());
     }
 
-    public Iterator<VecBatch> getOutput()
-    {
+    /**
+     * Gets output.
+     *
+     * @return the output
+     */
+    public Iterator<VecBatch> getOutput() {
         if (outputIterator == null) {
             outputIterator = new VecBatchIterator();
         }
         return outputIterator;
     }
 
-    public void close()
-    {
+    public void close() {
         closeNative(nativeOperator);
     }
 
-    private class VecBatchIterator
-            implements Iterator<VecBatch>
-    {
+    private class VecBatchIterator implements Iterator<VecBatch> {
         private OmniResults results;
 
         private int index;
 
-        public VecBatchIterator()
-        {
+        /**
+         * Instantiates a new Vec batch iterator.
+         */
+        public VecBatchIterator() {
             resetIterator();
             advanced();
         }
 
         @Override
-        public boolean hasNext()
-        {
+        public boolean hasNext() {
             // if it first, the results is null,
             // or index reach the count of vector batches but it don't finished,
             // then advanced().
@@ -76,24 +97,20 @@ public final class OmniOperator
         }
 
         @Override
-        public VecBatch next()
-        {
+        public VecBatch next() {
             return results.getVecBatches()[index++];
         }
 
-        private void resetIterator()
-        {
+        private void resetIterator() {
             results = null;
             index = 0;
         }
 
-        private void advanced()
-        {
+        private void advanced() {
             results = getOutputNative(nativeOperator);
         }
 
-        private boolean isFinished()
-        {
+        private boolean isFinished() {
             // TODO: Handle error.
             return !OMNI_STATUS_NORMAL.equals(results.getStatus());
         }

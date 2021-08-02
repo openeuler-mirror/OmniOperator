@@ -1,26 +1,29 @@
-//
-// Created by root on 6/1/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
+
 
 #ifndef __CHUNK_H__
 #define __CHUNK_H__
 
-#include <stdint.h>
+#include <iostream>
 
+namespace omniruntime {
+namespace vec {
 class Chunk {
 public:
-    Chunk(int64_t sizeInBytes);
+    explicit Chunk(int64_t sizeInBytes);
 
     ~Chunk();
 
-    void *getAddress();
+    void *GetAddress() const;
 
-    int64_t getSizeInBytes();
+    int64_t GetSizeInBytes();
 
 private:
     void *address;
     int64_t sizeInBytes;
 };
-
-
-#endif //__CHUNK_H__
+} // namespace vec
+} // namespace omniruntime
+#endif // __CHUNK_H__

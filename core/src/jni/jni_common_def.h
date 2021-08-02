@@ -1,9 +1,12 @@
-//
-// Created by root on 5/27/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI common functions
+ */
+#ifndef JNI_COMMON_DEF_H
+#define JNI_COMMON_DEF_H
+
 #include <jni.h>
-#ifndef __JNI_COMMON_DEF_H__
-#define __JNI_COMMON_DEF_H__
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,5 +20,4 @@ extern jmethodID omniResultsInitMethodId;
 #ifdef __cplusplus
 }
 #endif
-
-#endif //__JNI_COMMON_DEF_H__
+#endif

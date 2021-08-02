@@ -1,52 +1,59 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 #ifndef __VARCHAR_VECTOR__H__
 #define __VARCHAR_VECTOR__H__
 
 #include "variable_width_vector.h"
 
-class VarcharVector : public VariableWidthVector<char *>
-{
+namespace omniruntime {
+namespace vec {
+class VarcharVector : public VariableWidthVector<char *> {
 public:
     VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size);
-    
-    int getValue(int index, char **dst) {
-        ASSERT(index >= 0);
-        ASSERT(index < getSize());
+
+    int GetValue(int index, char **dst)
+    {
         int actualIndex = index + positionOffset;
-        
-        int startOffset = getValueOffset(actualIndex);
-        int dataLen =  getValueOffset(actualIndex + 1) - startOffset;
+        int startOffset = GetValueOffset(actualIndex);
+        int dataLen = GetValueOffset(actualIndex + 1) - startOffset;
+        if (dataLen < 0) {
+            return -1;
+        }
         *dst = new char[dataLen];
-        getData(startOffset, *dst, 0, dataLen);
+        GetData(startOffset, *dst, 0, dataLen);
         return dataLen;
     }
-    
-    void setValue(int index, const char *value, int length) {
-        ASSERT(getReference()->isWritable());
-        ASSERT(index >= 0);
-        ASSERT(index < getSize());
-        
-        fillSlots(index);
-        setData(index, value, 0, length);
+
+    void SetValue(int index, const char *value, int length)
+    {
+        FillSlots(index);
+        SetData(index, value, 0, length);
         lastOffsetPosition = index;
     }
 
-    VarcharVector *slice(int index, int length);
+    VarcharVector *Slice(int index, int length) override;
 
-    VarcharVector *copyPositions(int *positions, int offset, int length);
+    VarcharVector *CopyPositions(const int *positions, int offset, int length) override;
 
-    VarcharVector *copyRegion(int positionOffset, int length);
+    VarcharVector *CopyRegion(int positionOffset, int length) override;
 
-    void append(Vector *other, int positionOffset, int bytes);
+    void Append(Vector *other, int positionOffset, int bytes) override;
+
+    ~VarcharVector() {}
 
 private:
-    VarcharVector(VarcharVector *vector, int size, int positionOffset) : VariableWidthVector(vector, size, positionOffset) {};
+    VarcharVector(VarcharVector *vector, int size, int positionOffset)
+        : VariableWidthVector(vector, size, positionOffset) {};
 
-    void getData(int index, char* dst, int start, int length);
+    void GetData(int index, char *dst, int start, int length);
 
-    void setData(int index, const char* data, int start, int length);
-    
-    void fillSlots(int index);
+    void SetData(int index, const char *data, int start, int length);
 
-    int lastOffsetPosition = -1;    
+    void FillSlots(int index);
+
+    int lastOffsetPosition = -1;
 };
+}
+}
 #endif // __VARCHAR_VECTOR__H__

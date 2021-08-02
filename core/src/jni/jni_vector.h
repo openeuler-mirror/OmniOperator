@@ -1,9 +1,11 @@
-//
-// Created by root on 5/26/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Vector Operations Header
+ */
+#ifndef JNI_VECTOR_H
+#define JNI_VECTOR_H
 #include <jni.h>
-#ifndef __JNI_VECTOR_H__
-#define __JNI_VECTOR_H__
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -120,6 +122,22 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative
   (JNIEnv *, jclass, jlong, jint, jlong, jint);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_ContainerVec
+ * Method:    getPositionNative
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ContainerVec
+ * Method:    getVecTypesNative
+ * Signature: (J)[I;
+ */
+JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative
+        (JNIEnv *, jclass, jlong);
+
+/*
  * Class:     nova_hetu_omniruntime_vector_VariableWidthVec
  * Method:    getValueOffsetsNative
  * Signature: (J)Ljava/nio/ByteBuffer;
@@ -210,4 +228,4 @@ JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getI
 #ifdef __cplusplus
 }
 #endif
-#endif //__JNI_VECTOR_H__
+#endif

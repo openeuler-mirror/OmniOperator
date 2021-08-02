@@ -1,45 +1,70 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ */
 
 #include "debug.h"
 #include <cstring>
 #include "int_vector.h"
 
-IntVector::IntVector(VectorAllocator *allocator, int size) :
-        FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT) {}
+namespace omniruntime {
+namespace vec {
+IntVector::IntVector(VectorAllocator *allocator, int size)
+    : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT)
+{}
 
-void IntVector::setValues(int startIndex, int32_t *values, int length) {
-    ASSERT(getReference()->isWritable());
-    ASSERT(startIndex + length <= getSize());
-    void *startAddress = &(((int32_t *) valuesAddress)[startIndex]);
-    std::memcpy(startAddress, values, length * BYTES);
+void IntVector::SetValues(int startIndex, const int32_t *values, int length)
+{
+    if (!GetReference()->IsWritable() || startIndex + length > size) {
+        return;
+    }
+    void *startAddress = &(((int32_t *)valuesAddress)[startIndex]);
+    errno_t ret = memcpy_s(startAddress, capacityInBytes, values, length * BYTES);
+    if (ret != EOK) {
+        std::cerr << "set values failed in int vector." << std::endl;
+    }
 }
 
-IntVector *IntVector::slice(int positionOffset, int length) {
+IntVector *IntVector::Slice(int positionOffset, int length)
+{
     return new IntVector(this, length, positionOffset);
 }
 
-IntVector *IntVector::copyPositions(int *positions, int offset, int length) {
-    ASSERT(length <= getSize());
-    IntVector *vector = new IntVector(getAllocator(), length);
+IntVector *IntVector::CopyPositions(const int *positions, int offset, int length)
+{
+    if (length > size) {
+        return nullptr;
+    }
+    IntVector *vector = new IntVector(GetAllocator(), length);
     for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];
-        vector->setValue(i, getValue(position));
-        vector->setValueNulls(i, ((bool *) valueNullsAddress) + position + positionOffset, 1);
+        vector->SetValue(i, GetValue(position));
+        vector->SetValueNulls(i, ((bool *)valueNullsAddress) + position + positionOffset, 1);
     }
     return vector;
 }
 
-IntVector *IntVector::copyRegion(int positionOffset, int length) {
-    ASSERT(positionOffset + length <= getSize());
-    IntVector *vector = new IntVector(getAllocator(), length);
-    vector->setValues(0, (int32_t *) valuesAddress + positionOffset + this->positionOffset, length);
-    vector->setValueNulls(0, (bool *) valueNullsAddress + positionOffset + this->positionOffset, length);
+IntVector *IntVector::CopyRegion(int positionOffset, int length)
+{
+    if (positionOffset + length > size) {
+        return nullptr;
+    }
+    IntVector *vector = new IntVector(GetAllocator(), length);
+    vector->SetValues(0, (int32_t *)valuesAddress + positionOffset + this->positionOffset, length);
+    vector->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
     return vector;
 }
 
-void IntVector::append(Vector *other, int positionOffset, int length) {
-    ASSERT(positionOffset + length <= getSize());
-    uint8_t *destination = (uint8_t*) this->getValues() + positionOffset * BYTES;
-    uint8_t *src = (other->getPositionOffset() * BYTES) + ((uint8_t*) other->getValues());
-    std::memcpy(destination, src, length * BYTES);
+void IntVector::Append(Vector *other, int positionOffset, int length)
+{
+    if (positionOffset + length > size) {
+        return;
+    }
+    uint8_t *destination = (uint8_t *)this->GetValues() + positionOffset * BYTES;
+    uint8_t *src = (other->GetPositionOffset() * BYTES) + (reinterpret_cast<uint8_t *>(other->GetValues()));
+    errno_t ret = memcpy_s(destination, capacityInBytes, src, length * BYTES);
+    if (ret != EOK) {
+        std::cerr << "append failed in int vector." << std::endl;
+    }
 }
-
+} // namespace vec
+} // namespace omniruntime

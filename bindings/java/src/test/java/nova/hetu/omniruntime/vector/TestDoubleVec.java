@@ -2,23 +2,30 @@ package nova.hetu.omniruntime.vector;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
+import java.math.BigDecimal;
 
 import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestDoubleVec
-{
+/**
+ * test double vec
+ */
+public class TestDoubleVec {
+    /**
+     * tear down
+     */
     @AfterClass
-    public void tearDown()
-    {
+    public void tearDown() {
         VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
+    /**
+     * test new vector
+     */
     @Test
-    public void testNewVector()
-    {
+    public void testNewVector() {
         DoubleVec vec = new DoubleVec(256);
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
@@ -27,9 +34,11 @@ public class TestDoubleVec
         vec.close();
     }
 
+    /**
+     * test slice
+     */
     @Test
-    public void testSlice()
-    {
+    public void testSlice() {
         DoubleVec originalVec = new DoubleVec(10);
         for (int i = 0; i < originalVec.getSize(); i++) {
             originalVec.set(i, (double) i / 3);
@@ -52,9 +61,11 @@ public class TestDoubleVec
         slice2.close();
     }
 
+    /**
+     * test set and get value
+     */
     @Test
-    public void testSetAndGetValue()
-    {
+    public void testSetAndGetValue() {
         DoubleVec vec = new DoubleVec(256);
         for (int i = 0; i < vec.getSize(); i++) {
             vec.set(i, (double) i / 3);
@@ -66,9 +77,11 @@ public class TestDoubleVec
         vec.close();
     }
 
+    /**
+     * test put value
+     */
     @Test
-    public void testPutValues()
-    {
+    public void testPutValues() {
         double[] values = {1.13, 3.33, 4.44, 6.66, 7.81};
         DoubleVec doubleVec1 = new DoubleVec(values.length);
         doubleVec1.put(values, 0, 0, values.length);
@@ -86,9 +99,11 @@ public class TestDoubleVec
         doubleVec2.close();
     }
 
+    /**
+     * test value null
+     */
     @Test
-    public void testValueNull()
-    {
+    public void testValueNull() {
         DoubleVec doubleVec = new DoubleVec(256);
         for (int i = 0; i < doubleVec.getSize(); i++) {
             if (i % 5 == 0) {
@@ -110,9 +125,11 @@ public class TestDoubleVec
         doubleVec.close();
     }
 
+    /**
+     * test copy positions
+     */
     @Test
-    public void testCopyPositions()
-    {
+    public void testCopyPositions() {
         DoubleVec originalVector = new DoubleVec(4);
         for (int i = 0; i < originalVector.getSize(); i++) {
             originalVector.set(i, i);
@@ -129,12 +146,16 @@ public class TestDoubleVec
         copyPositionVector.close();
     }
 
+    /**
+     * test copy region
+     */
     @Test
-    public void testCopyRegion()
-    {
+    public void testCopyRegion() {
         DoubleVec originalVector = new DoubleVec(4);
         for (int i = 0; i < 4; i++) {
-            originalVector.set(i, i * 3.3);
+            BigDecimal bd1 = new BigDecimal(i);
+            BigDecimal bd2 = new BigDecimal("3.3");
+            originalVector.set(i, bd1.multiply(bd2).doubleValue());
         }
 
         DoubleVec copyRegionVector = originalVector.copyRegion(2, 2);
@@ -147,9 +168,11 @@ public class TestDoubleVec
         copyRegionVector.close();
     }
 
+    /**
+     * test zero sized allocate
+     */
     @Test
-    public void testZeroSizeAllocate()
-    {
+    public void testZeroSizeAllocate() {
         DoubleVec v1 = new DoubleVec(0);
         double[] values = new double[0];
         v1.put(values, 0, 0, values.length);

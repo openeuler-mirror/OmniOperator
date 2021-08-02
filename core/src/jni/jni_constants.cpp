@@ -1,11 +1,13 @@
-//
-// Created by root on 5/31/21.
-//
-
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: JNI Constants
+ */
 #include "jni_constants.h"
 #include "../operator/status.h"
 #include "../vector/vector_type.h"
 #include "src/operator/aggregation/aggregator.h"
+
+using namespace omniruntime::vec;
 
 #define DEFINE_CONSTANT(_value_name) do { \
     jfieldID field = env->GetStaticFieldID(cls, #_value_name, fieldName); \
@@ -32,6 +34,7 @@ Java_nova_hetu_omniruntime_constants_Constant_loadConstants(JNIEnv *env, jclass 
     DEFINE_CONSTANT(OMNI_VEC_TYPE_DOUBLE);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_BOOLEAN);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_SHORT);
+    DEFINE_CONSTANT(OMNI_VEC_TYPE_CONTAINER);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_128_DECIMAL);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_256_DECIMAL);
     DEFINE_CONSTANT(OMNI_VEC_TYPE_VARCHAR);

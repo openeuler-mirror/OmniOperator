@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Description: code generation methods
+ */
 #ifndef __LLVM_CODEGEN_H__
 #define __LLVM_CODEGEN_H__
 
@@ -38,70 +42,63 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
-using namespace llvm;
-using namespace orc;
-using namespace std;
-using namespace omniruntime::expressions;
-
 // Given an expression generates the function for it.
-class LLVMCodeGen
-{
+class LLVMCodeGen {
 
 public:
-    LLVMCodeGen(string name, Expr *expr, vector<DataType>* datatypes);
+    LLVMCodeGen(std::string name, Expr *expr, std::vector<DataType> &datatypes);
     ~LLVMCodeGen();
 
     std::string dumpCode();
-    virtual int64_t getFunction() = 0;
+    virtual int64_t GetFunction() = 0;
 
 // TODO: Figure out which of these can be private
 protected:
     // Parse a generic expression by calling the helper functions below
-    Value* parseExpr(Expr* root, map<string, Value*>& args);
+    Value* parseExpr(Expr* root, std::map<std::string, Value*>& args);
 
     Value* createConstantBool(bool n);
     Value* createConstantInt(int32_t n);
     Value* createConstantLong(int64_t n);
     Value* createConstantDouble(double n);
     Type* toLLVMType(DataType t);
-    
+
     Function* createFunction();
-    
+
     // Parsing different kinds of expressions
-    Value* parseDataExpr(DataExpr* dExpr, map<string, Value*>& args);
-    Value* parseBinaryExpr(BinaryExpr* bExpr, map<string, Value*>& args);
-    Value* parseUnaryExpr(UnaryExpr* uExpr, map<string, Value*>& args);
-    Value* parseIfExpr(IfExpr* ifExpr, map<string, Value*>& args);
-    Value* parseInExpr(InExpr* inExpr, map<string, Value*>& args);
-    Value* parseBetweenExpr(BetweenExpr* btExpr, map<string, Value*>& args);
-    Value* parseCoalesceExpr(CoalesceExpr* cExpr, map<string, Value*>& args);
-    Value* parseFuncExpr(FuncExpr* fExpr, map<string, Value*>& args);
+    Value* parseDataExpr(DataExpr* dExpr, std::map<std::string, Value*>& args);
+    Value* parseBinaryExpr(BinaryExpr* bExpr, std::map<std::string, Value*>& args);
+    Value* parseUnaryExpr(UnaryExpr* uExpr, std::map<std::string, Value*>& args);
+    Value* parseIfExpr(IfExpr* ifExpr, std::map<std::string, Value*>& args);
+    Value* parseInExpr(InExpr* inExpr, std::map<std::string, Value*>& args);
+    Value* parseBetweenExpr(BetweenExpr* btExpr, std::map<std::string, Value*>& args);
+    Value* parseCoalesceExpr(CoalesceExpr* cExpr, std::map<std::string, Value*>& args);
+    Value* parseFuncExpr(FuncExpr* fExpr, std::map<std::string, Value*>& args);
 
     // Helper functions for generating IR for operators and special forms
     Value* stringCmp(Value *LHS, Value *RHS);
     Function* createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse);
     Function* createCoalesceFunc(DataType retType, DataExpr* dExpr1, Expr* value2Expr);
-    
-    std::string _func_name;
-    Expr* _expr = nullptr;
-    vector<DataType>* datatypes;
+
+    std::string funcName;
+    Expr* expr = nullptr;
+    std::vector<DataType> &datatypes;
 
 
     // Returns a set of all the required functions for a given row expression
     // Currently a separate function
-    // Can be integrated with parseRowExpression, but then the method declaration would need refactoring
-    set<string> requiredFunctions(Expr* expr);
-    void requiredFunctionsHelper(Expr* expr, set<string>& s);
-    map<string, FunctionSignature*> funcNameToSignature;
+    // Can be integrated with ParseRowExpression, but then the method declaration would need refactoring
+    std::set<std::string> requiredFunctions(Expr* cpExpr);
+    void requiredFunctionsHelper(Expr* cpExpr, std::set<std::string>& s);
+    std::map<std::string, FunctionSignature*> funcNameToSignature;
 
-    unique_ptr<LLVMContext> context;
-    unique_ptr<IRBuilder<>> builder;
-    unique_ptr<Module> _module;
-    ExitOnError EOE; 
-    unique_ptr<LLJIT> JIT;
-    ResourceTrackerSP rt;
-    FunctionRegistry *FR;
-
+    std::unique_ptr<LLVMContext> context;
+    std::unique_ptr<IRBuilder<>> builder;
+    std::unique_ptr<Module> module;
+    ExitOnError EOE;
+    std::unique_ptr<llvm::orc::LLJIT> JIT;
+    orc::ResourceTrackerSP rt;
+    FunctionRegistry *fr;
 };
 
 #endif
