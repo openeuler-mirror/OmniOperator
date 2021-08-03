@@ -9,6 +9,7 @@
 #include "varchar_vector.h"
 #include "container_vector.h"
 #include "decimal128_vector.h"
+#include "boolean_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -55,6 +56,9 @@ void VectorBatch::NewVectors(const int *types)
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType)types[colIndex];
         switch (types[colIndex]) {
+            case OMNI_VEC_TYPE_BOOLEAN:
+                SetVector(colIndex, new BooleanVector(nullptr,rowCount));
+                break;
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
@@ -102,6 +106,9 @@ void VectorBatch::NewVectors(const std::vector<VecType> &types)
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType)types[colIndex];
         switch (types[colIndex].GetId()) {
+            case OMNI_VEC_TYPE_BOOLEAN:
+                SetVector(colIndex, new BooleanVector(nullptr,rowCount));
+                break;
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
