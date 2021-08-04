@@ -60,11 +60,11 @@ namespace omniruntime {
             llvm::Constant *
             to_array_llvm_value(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
 
-            llvm::Constant *to_int32_vector_llvm_value(ParamValue value, std::vector<llvm::Constant *> vecValues);
+            llvm::Constant *to_int32_vector_llvm_value(ParamValue value, std::vector<llvm::Constant *> &vecValues);
 
             llvm::Constant *ToInt32ArrayLlvmValue(
                 const std::string &name, ParamValue value,
-                const std::unique_ptr<llvm::Module> &module, std::vector<llvm::Constant *> vecValues);
+                const std::unique_ptr<llvm::Module> &module, std::vector<llvm::Constant *> &vecValues);
 
             llvm::Constant *to_vector_llvm_value(const std::string &name, ParamValue value,
                                                  const std::unique_ptr<llvm::Module> &module);
