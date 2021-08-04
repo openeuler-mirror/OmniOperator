@@ -59,17 +59,17 @@ int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
 
         switch (hashColTypes[columnIdx]) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t intValue = (dynamic_cast<IntVector *>(column))->GetValue(rowIndex);
+                int32_t intValue = static_cast<IntVector *>(column)->GetValue(rowIndex);
                 hash = HashUtil::HashValue(static_cast<int64_t>(intValue));
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t int64Value = (dynamic_cast<LongVector *>(column))->GetValue(rowIndex);
+                int64_t int64Value = static_cast<LongVector *>(column)->GetValue(rowIndex);
                 hash = HashUtil::HashValue(int64Value);
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double doubleValue = (dynamic_cast<DoubleVector *>(column))->GetValue(rowIndex);
+                double doubleValue = static_cast<DoubleVector *>(column)->GetValue(rowIndex);
                 hash = HashUtil::HashValue(static_cast<int64_t>(doubleValue));
                 break;
             }
@@ -83,20 +83,6 @@ int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
     }
     return result;
 }
-
-bool PagesHashStrategy::IsPositionNull(int32_t pageIndex, int rowIndex) const
-{
-    Vector *column = nullptr;
-    for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
-        column = buildHashColumns[columnIdx][pageIndex];
-        if (column->IsValueNull(rowIndex)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool ValueEqualsValueIgnoreNulls(VecType type, void *leftData, int32_t leftIndex, void *rightData, int32_t rightIndex);
 
 bool IntValueEqualsIgnoreNulls(const int32_t *leftData, int32_t leftIndex, const int32_t *rightData, int32_t rightIndex)
 {

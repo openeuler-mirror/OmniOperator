@@ -101,26 +101,6 @@ void VectorBatch::SetVector(int index, Vector *vector)
     }
 }
 
-Vector *VectorBatch::GetVector(int index)
-{
-    return vectors[index];
-}
-
-Vector **VectorBatch::GetVectors() const
-{
-    return vectors;
-}
-
-int VectorBatch::GetVectorCount()
-{
-    return vectorCount;
-}
-
-int VectorBatch::GetRowCount()
-{
-    return rowCount;
-}
-
 VecType *VectorBatch::GetVectorTypes() const
 {
     return vectorTypes;

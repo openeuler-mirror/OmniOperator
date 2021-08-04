@@ -49,8 +49,20 @@ private:
     int32_t positionCount;
 };
 
-int64_t EncodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset);
-int32_t DecodeSliceIndex(int64_t sliceAddress);
-int32_t DecodePosition(int64_t sliceAddress);
+const int32_t SHIFT_SIZE_32 = 32;
+inline int64_t EncodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset)
+{
+    return (static_cast<int64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
+}
+
+inline int32_t DecodeSliceIndex(int64_t sliceAddress)
+{
+    return static_cast<int32_t>(sliceAddress >> SHIFT_SIZE_32);
+}
+
+inline int32_t DecodePosition(int64_t sliceAddress)
+{
+    return static_cast<int32_t>(sliceAddress);
+}
 
 #endif

@@ -21,15 +21,27 @@ public:
 
     ~VectorBatch();
 
-    omniruntime::vec::Vector *GetVector(int index);
+    Vector *GetVector(int index)
+    {
+        return vectors[index];
+    }
 
-    omniruntime::vec::Vector **GetVectors() const;
+    Vector **GetVectors() const
+    {
+        return vectors;
+    }
 
     void SetVector(int index, omniruntime::vec::Vector *vector);
 
-    int GetVectorCount();
+    int GetVectorCount()
+    {
+        return vectorCount;
+    }
 
-    int GetRowCount();
+    int GetRowCount()
+    {
+        return rowCount;
+    }
 
     omniruntime::vec::VecType *GetVectorTypes() const;
 

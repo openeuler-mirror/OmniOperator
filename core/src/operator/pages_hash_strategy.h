@@ -19,7 +19,17 @@ public:
     PagesHashStrategy(omniruntime::vec::Vector ***columns, int32_t *columnTypes, int32_t columnCount, int32_t *joinCols,
         int32_t joinColsCount);
     ~PagesHashStrategy();
-    bool IsPositionNull(int32_t pageIndex, int32_t rowIndex) const;
+
+    bool IsPositionNull(int32_t pageIndex, int rowIndex) const
+    {
+        for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
+            if (buildHashColumns[columnIdx][pageIndex]->IsValueNull(rowIndex)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool PositionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
         int32_t rightRowIndex) const;
     bool ValuePositionEqualsPosition(omniruntime::vec::VecType type, omniruntime::vec::Vector *leftColumn,

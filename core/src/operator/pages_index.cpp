@@ -11,7 +11,6 @@
 
 using namespace omniruntime::vec;
 
-const int32_t SHIFT_SIZE_32 = 32;
 const int32_t QUICK_SORT_SMALL_LEN = 7;
 const int32_t QUICK_SORT_BIG_LEN = 40;
 const int32_t QUICK_SORT_STEP_SIZE = 8;
@@ -27,21 +26,6 @@ DoubleVector *ConstructDoubleVector(int64_t *valueAddresses, int32_t offset, int
 int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t len);
-
-int64_t EncodeSyntheticAddress(int32_t sliceIndex, int32_t sliceOffset)
-{
-    return (static_cast<int64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
-}
-
-int32_t DecodeSliceIndex(int64_t sliceAddress)
-{
-    return static_cast<int32_t>(sliceAddress >> SHIFT_SIZE_32);
-}
-
-int32_t DecodePosition(int64_t sliceAddress)
-{
-    return static_cast<int32_t>(sliceAddress);
-}
 
 // function implements for class PagesIndex
 PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
@@ -142,14 +126,14 @@ PagesIndex::~PagesIndex()
     }
 }
 
-void Swap(int64_t *valueAddresses, int32_t a, int32_t b)
+inline void Swap(int64_t *valueAddresses, int32_t a, int32_t b)
 {
     int64_t temp = valueAddresses[a];
     valueAddresses[a] = valueAddresses[b];
     valueAddresses[b] = temp;
 }
 
-void VectorSwap(int64_t *valueAddresses, int32_t from, int32_t l, int32_t s)
+inline void VectorSwap(int64_t *valueAddresses, int32_t from, int32_t l, int32_t s)
 {
     for (int32_t i = 0; i < s; i++, from++, l++) {
         Swap(valueAddresses, from, l);
@@ -198,20 +182,16 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
     for (int32_t i = 0; i < sortColCount; i++) {
         int32_t sortCol = sortCols[i];
         Vector *leftColumn = columns[sortCol][leftColumnIndex];
-        void *leftData = leftColumn->GetValues();
         void *leftNulls = leftColumn->GetValueNulls();
         int32_t colType = sortColTypes[i];
         Vector *rightColumn = nullptr;
-        void *rightData = nullptr;
         void *rightNulls = nullptr;
 
         if (isSameColumn) {
             rightColumn = leftColumn;
-            rightData = leftData;
             rightNulls = leftNulls;
         } else {
             rightColumn = columns[sortCol][rightColumnIndex];
-            rightData = rightColumn->GetValues();
             rightNulls = rightColumn->GetValueNulls();
         }
 
@@ -220,7 +200,7 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
         //     break;
         // }
 
-        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType), leftColumn, leftColumnPosition,
+        compare = OperatorUtil::CompareVectorAtPosition(static_cast<VecType>(colType), leftColumn, leftColumnPosition,
             rightColumn, rightColumnPosition);
 
         if (sortAscendings[i] == 0) {
@@ -248,7 +228,7 @@ int32_t Median3(const int32_t *sortCols, const int32_t *sortColTypes, const int3
     return (ab < 0 ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-inline void QuickSortSmall(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
+void QuickSortSmall(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to)
 {
@@ -261,7 +241,7 @@ inline void QuickSortSmall(const int32_t *sortCols, const int32_t *sortColTypes,
     }
 }
 
-void Loop1(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
+void LeftAdvance(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t c,
     int32_t &m, int32_t &a, int32_t &b)
 {
@@ -280,7 +260,7 @@ void Loop1(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *
     }
 }
 
-void Loop2(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
+void RightAdvance(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t b,
     int32_t &m, int32_t &c, int32_t &d)
 {
@@ -341,10 +321,10 @@ void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32
     int32_t c = to - 1;
     int32_t d = c;
     while (true) {
-        Loop1(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns, c, m, a,
-            b);
-        Loop2(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns, b, m, c,
-            d);
+        LeftAdvance(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns, c, m,
+            a, b);
+        RightAdvance(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses, columns, b,
+            m, c, d);
         if (b > c) {
             break;
         }

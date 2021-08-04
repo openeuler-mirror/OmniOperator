@@ -145,7 +145,7 @@ int32_t TopNOperator::Compare(int32_t position, VectorBatch *vectorBatch, Vector
     for (int i = 0; i < sortColCount; ++i) {
         int32_t sortCol = sortCols[i];
         int32_t colType = sourceTypes[sortCol];
-        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType), vectorBatch->GetVector(sortCol),
+        compare = OperatorUtil::CompareVectorAtPosition(static_cast<VecType>(colType), vectorBatch->GetVector(sortCol),
                                                         position, currentMaxVectorBatch->GetVector(sortCol), 0);
         if (sortAscendings[i] == 0) {
             compare = -compare;
@@ -204,7 +204,7 @@ bool operator < (const RowComparator &left, const RowComparator &right)
         int32_t sortCol = left.GetSortCols()[i];
         int32_t colType = left.GetSourceTypes()[sortCol];
 
-        compare = OperatorUtil::compareVectorAtPosition(static_cast<VecType>(colType),
+        compare = OperatorUtil::CompareVectorAtPosition(static_cast<VecType>(colType),
                                                         left.GetVecBatch()->GetVector(sortCol), 0,
                                                         right.GetVecBatch()->GetVector(sortCol), 0);
 
