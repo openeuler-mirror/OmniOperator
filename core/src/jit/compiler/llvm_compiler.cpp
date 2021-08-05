@@ -256,10 +256,13 @@ namespace omniruntime {
             switch (value.type) {
                 case ParamType::INT32:
                     llvmValue = ConstantInt::get(IntegerType::get(*context, 32), value.ToInt32(), true); // 32
+                    break;
                 case ParamType::INT64:
                     llvmValue = ConstantInt::get(IntegerType::get(*context, 64), value.ToInt64(), true); // 64
+                    break;
                 case ParamType::FP64:
                     llvmValue = ConstantFP::get(*context, APFloat(value.ToFp64()));
+                    break;
                 default:
                     break;
             }
@@ -296,13 +299,14 @@ namespace omniruntime {
         }
 
         llvm::Constant *LLVMCompiler::to_int32_vector_llvm_value(
-            ParamValue value, std::vector<llvm::Constant *> vecValues)
+            ParamValue value, std::vector<llvm::Constant *> &vecValues)
         {
             using namespace llvm;
             auto values = *value.ToInt32Vec();
             auto i32 = IntegerType::get(*context, 32); // 32
             for (int i = 0; i < value.size; ++i) {
                 Constant *c = ConstantInt::get(i32, values[i]);
+                vecValues.push_back(c);
             }
             auto vec = ConstantVector::get(vecValues);
             return vec;
@@ -363,7 +367,7 @@ namespace omniruntime {
 
         llvm::Constant *LLVMCompiler::ToInt32ArrayLlvmValue(
             const std::string &name, ParamValue value, const std::unique_ptr<Module> &module,
-            std::vector<llvm::Constant *> vecValues)
+            std::vector<llvm::Constant *> &vecValues)
         {
             using namespace llvm;
             auto values = value.ToInt32Array();
@@ -371,6 +375,7 @@ namespace omniruntime {
             auto arrayType = ArrayType::get(i32, value.size);
             for (int i = 0; i < value.size; ++i) {
                 Constant *c = ConstantInt::get(i32, values[i]);
+                vecValues.push_back(c);
             }
 
             module->getOrInsertGlobal(name, arrayType);
@@ -445,7 +450,7 @@ namespace omniruntime {
             return true;
         }
 
-        void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> annotFuncs)
+        void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &annotFuncs)
         {
             using namespace llvm;
             if (I->getName() == "llvm.global.annotations") {
