@@ -106,6 +106,34 @@ void VarcharVector::FillSlots(int index)
     lastOffsetPosition = index - 1;
 }
 
-void VarcharVector::Append(Vector *other, int positionOffset, int length) {}
+void VarcharVector::Append(Vector *other, int positionOffset, int length) 
+{
+    if (positionOffset + length > size) {
+        return;
+    }
+    // set offset
+    int startOffset = GetValueOffset(positionOffset);
+    int otherPositionOffset = other->GetPositionOffset();
+    for (int i = 1; i <= length; i++) {
+        int newPosition = otherPositionOffset + i;
+        int originalDataLen = other->GetValueOffset(newPosition) - other->GetValueOffset(otherPositionOffset);
+        SetValueOffset(positionOffset + i, originalDataLen + startOffset);
+    }
+
+    int originalStartOffset = other->GetValueOffset(otherPositionOffset);
+    int dataLength = other->GetValueOffset(otherPositionOffset + length) -  other->GetValueOffset(otherPositionOffset);
+    errno_t ret = EOK;
+    if (dataLength > 0) {
+        // set nulls
+        SetValueNulls(positionOffset, (bool *)other->GetValueNulls() + otherPositionOffset, length);
+        // set data
+        ret = memcpy_s((reinterpret_cast<char *>(valuesAddress)) + startOffset,
+            capacityInBytes,
+            reinterpret_cast<char *>(other->GetValues()) + originalStartOffset, dataLength);
+    }
+    if (ret != EOK) {
+        std::cerr << "append varchar failed." << std::endl;
+    }
+}
 }
 }
