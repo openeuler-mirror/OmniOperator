@@ -4,15 +4,15 @@
 
 package nova.hetu.omniruntime.operator.filter;
 
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
-import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The type Omni filter and project operator factory.
@@ -20,26 +20,26 @@ import java.util.Objects;
  * @since 20210630
  */
 public class OmniFilterAndProjectOperatorFactory
-    extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.Context> {
+        extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.Context> {
     /**
      * Instantiates a new Omni filter and project operator factory.
      *
-     * @param expression the expression
-     * @param inputTypes the input types
+     * @param expression     the expression
+     * @param inputTypes     the input types
      * @param projectIndices the project indices
      */
     public OmniFilterAndProjectOperatorFactory(String expression, VecType[] inputTypes, int[] projectIndices) {
         super(new Context(expression, inputTypes, projectIndices));
     }
 
+    private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
+            String expression, int[] projectIndices, int projectLength);
+
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createFilterAndProjectOperatorFactory(toNativeConstants(context.inputTypes), context.inputTypes.length,
-            context.expression, context.projectIndices, context.projectIndices.length);
+        return createFilterAndProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes),
+                context.inputTypes.length, context.expression, context.projectIndices, context.projectIndices.length);
     }
-
-    private static native long createFilterAndProjectOperatorFactory(int[] inputTypes, int inputLength,
-        String expression, int[] projectIndices, int projectLength);
 
     /**
      * The type Context.
@@ -56,8 +56,8 @@ public class OmniFilterAndProjectOperatorFactory
         /**
          * Instantiates a new Context.
          *
-         * @param expression the expression
-         * @param inputTypes the input types
+         * @param expression     the expression
+         * @param inputTypes     the input types
          * @param projectIndices the project indices
          */
         public Context(String expression, VecType[] inputTypes, int[] projectIndices) {
@@ -81,7 +81,7 @@ public class OmniFilterAndProjectOperatorFactory
             }
             Context that = (Context) obj;
             return Objects.equals(expression, that.expression) && Arrays.equals(inputTypes, that.inputTypes)
-                && Arrays.equals(projectIndices, that.projectIndices);
+                    && Arrays.equals(projectIndices, that.projectIndices);
         }
     }
 }

@@ -1,49 +1,40 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.constants.VecType;
-
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_SHORT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
+import nova.hetu.omniruntime.type.DictionaryVecType;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 /**
  * dictionary vec
  *
  * @since 2021-07-17
  */
-public class DictionaryVec
-        extends Vec {
+public class DictionaryVec extends Vec {
     private Vec dictionary;
+
     private int[] ids;
 
     public DictionaryVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, DictionaryVecType.DICTIONARY);
         long dictionaryNative = getDictionaryNative(nativeVector);
-        VecType type = new VecType(getTypeNative(dictionaryNative));
-        if (OMNI_VEC_TYPE_INT.equals(type)) {
-            this.dictionary = new IntVec(dictionaryNative);
-        }
-        else if (OMNI_VEC_TYPE_SHORT.equals(type)) {
-            this.dictionary = new ShortVec(dictionaryNative);
-        }
-        else if (OMNI_VEC_TYPE_LONG.equals(type)) {
-            this.dictionary = new LongVec(dictionaryNative);
-        }
-        else if (OMNI_VEC_TYPE_VARCHAR.equals(type)) {
-            this.dictionary = new VarcharVec(dictionaryNative);
-        }
+        VecType type = VecTypeSerializer.deserializeSingle(getTypeNative(dictionaryNative));
+        this.dictionary = VecFactory.create(dictionaryNative, type);
         this.ids = getIdsNative(nativeVector);
     }
 
     public DictionaryVec(Vec dictionary, int[] ids) {
-        super(dictionary.getNativeVector());
+        super(dictionary.getNativeVector(), DictionaryVecType.DICTIONARY);
         this.dictionary = dictionary;
         this.ids = ids;
     }
+
+    private static native long getDictionaryNative(long nativeVector);
+
+    private static native int[] getIdsNative(long nativeVector);
 
     public Vec getDictionary() {
         return dictionary;
@@ -101,8 +92,4 @@ public class DictionaryVec
     public Vec copyRegion(int positionOffset, int length) {
         return null;
     }
-
-    private static native long getDictionaryNative(long nativeVector);
-
-    private static native int[] getIdsNative(long nativeVector);
 }

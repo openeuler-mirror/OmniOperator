@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-
 import nova.hetu.omniruntime.OmniLibs;
 
 import java.util.concurrent.ExecutionException;
@@ -19,24 +18,15 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> {
     private static final Cache<OmniOperatorFactoryContext, Long> FACTORY_CACHE = CacheBuilder.newBuilder()
-        .expireAfterAccess(java.time.Duration.ofHours(24))
-        .maximumSize(100000)
-        .build();
-
-    private final long nativeOperatorFactory;
+            .expireAfterAccess(java.time.Duration.ofHours(24))
+            .maximumSize(100000)
+            .build();
 
     static {
         OmniLibs.load();
     }
 
-    /**
-     * Gets native operator factory.
-     *
-     * @return the native operator factory
-     */
-    public long getNativeOperatorFactory() {
-        return nativeOperatorFactory;
-    }
+    private final long nativeOperatorFactory;
 
     /**
      * Instantiates a new Omni operator factory.
@@ -49,6 +39,18 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
         } catch (ExecutionException e) {
             throw new RuntimeException("Get instance failed.");
         }
+    }
+
+    // createOperator
+    private static native long createOperatorNative(long factoryAddress);
+
+    /**
+     * Gets native operator factory.
+     *
+     * @return the native operator factory
+     */
+    public long getNativeOperatorFactory() {
+        return nativeOperatorFactory;
     }
 
     /**
@@ -68,7 +70,4 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      * @return the long
      */
     protected abstract long createNativeOperatorFactory(T context);
-
-    // createOperator
-    private static native long createOperatorNative(long factoryAddress);
 }

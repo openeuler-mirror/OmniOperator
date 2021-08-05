@@ -1,28 +1,27 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
+import nova.hetu.omniruntime.type.VarcharVecType;
 
 /**
- *
  * varchar vec
  *
  * @since 2021-07-17
  */
-public class VarcharVec
-        extends VariableWidthVec {
+public class VarcharVec extends VariableWidthVec {
     private static final byte[] EMPTY_BYTE_ARRAY = new byte[] {};
 
     private int lastOffsetPosition = -1;
 
     public VarcharVec(int capacityInBytes, int size) {
-        super(capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR);
+        super(capacityInBytes, size, VarcharVecType.VARCHAR);
     }
 
     public VarcharVec(VecAllocator allocator, int capacityInBytes, int size) {
-        super(allocator, capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR);
+        super(allocator, capacityInBytes, size, VarcharVecType.VARCHAR);
     }
 
     private VarcharVec(VarcharVec vector, int offset, int length, boolean isSlice) {
@@ -34,7 +33,7 @@ public class VarcharVec
     }
 
     public VarcharVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, VarcharVecType.VARCHAR);
     }
 
     /**
@@ -52,8 +51,9 @@ public class VarcharVec
 
     /**
      * according to the specified offset and length, read data from the buffer
+     *
      * @param offsetInBytes offset bytes in buffer
-     * @param length the length of the data to be read
+     * @param length        the length of the data to be read
      * @return byte array
      */
     public byte[] getData(int offsetInBytes, int length) {

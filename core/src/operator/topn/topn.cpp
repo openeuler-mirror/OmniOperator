@@ -58,7 +58,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
             Compare(position, vectorBatch, pq.top().GetVecBatch(), sortColCount,
                     sortCols, sourceTypes, sortAscendings) < 0) {
             VectorBatch* singleRowTable = new VectorBatch(sourceTypesCount, 1);
-            singleRowTable->SetVectors(sourceTypes);
+            singleRowTable->NewVectors(sourceTypes);
             SetValueForSingleRowTable(vectorBatch, position, singleRowTable);
             RowComparator* rowComparator = new RowComparator(sourceTypes, sortCols, sortAscendings,
                                                              sortColCount, singleRowTable);
@@ -102,7 +102,7 @@ void TopNOperator::SetValueForSingleRowTable(VectorBatch *vectorBatch, int32_t p
         return 0;
     }
     VectorBatch* tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
-    tmpVecBatch->SetVectors(sourceTypes);
+    tmpVecBatch->NewVectors(sourceTypes);
     int32_t outputCols[sourceTypesCount];
     for (int32_t i = 0; i < sourceTypesCount; ++i) {
         outputCols[i] = i;

@@ -6,7 +6,7 @@ import org.testng.annotations.Test;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
+import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_VARCHAR;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -20,7 +20,6 @@ public class TestVarcharVec {
      */
     @AfterClass
     public void tearDown() {
-        VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
     /**
@@ -32,7 +31,7 @@ public class TestVarcharVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 1024);
-        assertEquals(vec.getType(), OMNI_VEC_TYPE_VARCHAR);
+        assertEquals(vec.getType().getId(), OMNI_VEC_TYPE_VARCHAR);
         vec.close();
     }
 

@@ -1,31 +1,31 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import java.nio.ShortBuffer;
+import nova.hetu.omniruntime.type.ShortVecType;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
+import java.nio.ShortBuffer;
 
 /**
  * short vec
  *
  * @since 2021-07-17
  */
-public class ShortVec
-        extends FixedWidthVec {
+public class ShortVec extends FixedWidthVec {
     private static final int BYTES = Short.BYTES;
 
     public ShortVec(int size) {
-        super(size * BYTES, size, OMNI_VEC_TYPE_LONG);
+        super(size * BYTES, size, ShortVecType.SHORT);
     }
 
     public ShortVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG);
+        super(allocator, size * BYTES, size, ShortVecType.SHORT);
     }
 
     public ShortVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, ShortVecType.SHORT);
     }
 
     private ShortVec(ShortVec vector, int offset, int length, boolean isSlice) {
@@ -33,7 +33,7 @@ public class ShortVec
     }
 
     /**
-     *  get the specified short at the specified absolute
+     * get the specified short at the specified absolute
      *
      * @param index the element offset in vec
      * @return int value
@@ -57,7 +57,7 @@ public class ShortVec
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start the element index in values
+     * @param start  the element index in values
      * @param length the number of elements that need to written
      */
     public void put(short[] values, int offset, int start, int length) {

@@ -1,9 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
-//
-// Created by root on 6/1/21.
-//
 
 #ifndef __VECTOR_H__
 #define __VECTOR_H__
@@ -39,9 +36,9 @@ public:
         return positionOffset;
     }
 
-    VectorReference *GetReference() const
+    int64_t GetReference() const
     {
-        return reference;
+        return reference->GetRef();
     }
 
     VectorAllocator *GetAllocator() const
@@ -49,14 +46,29 @@ public:
         return allocator;
     }
 
-    virtual VecType GetType()
+    void *GetValues() const
+    {
+        return valuesAddress;
+    }
+
+    virtual const VecType &GetType()
     {
         return reference->GetType();
     }
 
-    void *GetValues() const
+    int GetCapacityInBytes() const
     {
-        return valuesAddress;
+        return reference->GetValueChunk()->GetSizeInBytes();
+    }
+
+    void *GetValueNulls() const
+    {
+        return valueNullsAddress;
+    }
+
+    int GetValueNullsSizeInBytes() const
+    {
+        return reference->GetValueNullChunk()->GetSizeInBytes();
     }
 
     void *GetValueOffsets() const
@@ -64,9 +76,9 @@ public:
         return valueOffsetsAddress;
     }
 
-    void *GetValueNulls() const
+    int GetValueOffsetsInBytes() const
     {
-        return valueNullsAddress;
+        return reference->GetValueOffsetChunk()->GetSizeInBytes();
     }
 
     bool IsValueNull(int index)
@@ -113,8 +125,6 @@ protected:
     int positionOffset = 0;
     int capacityInBytes = 0;
     int size = 0;
-
-private:
     VectorReference *reference;
     VectorAllocator *allocator;
 };

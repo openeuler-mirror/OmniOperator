@@ -1,9 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
-//
-// Created by root on 6/1/21.
-//
 
 #include <stdint.h>
 #include "vector.h"
@@ -22,8 +19,7 @@ extern "C" int32_t GetMinorVersion()
 
 omniruntime::vec::VectorAllocatorManager g_vectorAllocatorManager =
     omniruntime::vec::VectorAllocatorManager::GetInstance();
-omniruntime::vec::VectorAllocator *g_vectorAllocator =
-    g_vectorAllocatorManager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
+omniruntime::vec::VectorAllocator *g_vectorAllocator = g_vectorAllocatorManager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
@@ -45,13 +41,14 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
     : allocator(vector->allocator),
       reference(vector->reference),
       size(size),
-      positionOffset(vector->positionOffset + positionOffset)
+      positionOffset(vector->positionOffset + positionOffset),
+      capacityInBytes(vector->GetCapacityInBytes())
+
 {
     reference->IncRef();
     valuesAddress = reference->GetValuesAddress();
     valueNullsAddress = reference->GetValueNullsAddress();
     valueOffsetsAddress = reference->GetValueOffsetsAddress();
-    capacityInBytes = reference->GetCapacityInBytes();
 }
 
 Vector::~Vector()

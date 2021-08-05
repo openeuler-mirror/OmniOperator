@@ -1,6 +1,7 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime;
 
 /**
@@ -8,8 +9,7 @@ package nova.hetu.omniruntime;
  *
  * @since 2021-07-17
  */
-public class OmniLibs
-{
+public class OmniLibs {
     private static final String OMNI_RUNTIME = "omruntime";
 
     private OmniLibs() {

@@ -4,6 +4,9 @@
 
 package nova.hetu.omniruntime.constants;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * The type Window function type.
  *
@@ -51,7 +54,8 @@ public class WindowFunctionType extends Constant {
      *
      * @param value the value
      */
-    public WindowFunctionType(int value) {
+    @JsonCreator
+    public WindowFunctionType(@JsonProperty("value") int value) {
         super(value);
     }
 }

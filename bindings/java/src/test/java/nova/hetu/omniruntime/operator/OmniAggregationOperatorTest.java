@@ -2,7 +2,6 @@ package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
 import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
@@ -10,7 +9,8 @@ import static org.testng.Assert.fail;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.AggType;
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -32,11 +32,11 @@ public class OmniAggregationOperatorTest {
      */
     @Test
     public void testExecuteAggMultiplePage() {
-        VecType[] aggTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
         AggType[] aggFunctionTypes = {
             OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM
         };
-        VecType[] aggOutputTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(aggTypes, aggFunctionTypes,
             aggOutputTypes, true, false);
 
@@ -94,14 +94,14 @@ public class OmniAggregationOperatorTest {
             Thread thread = new Thread(() -> {
                 try {
                     VecType[] aggTypes = {
-                        OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG
+                        LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG
                     };
                     AggType[] aggFunctionTypes = {
                         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                         OMNI_AGGREGATION_TYPE_SUM
                     };
                     VecType[] aggOutputTypes = {
-                        OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG
+                        LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG
                     };
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(aggTypes,
                         aggFunctionTypes, aggOutputTypes, true, false);

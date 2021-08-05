@@ -1,34 +1,32 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
+import nova.hetu.omniruntime.type.Decimal128VecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
-import java.math.BigDecimal;
-
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_128_DECIMAL;
-
 /**
- *  128-bit decimal vec
+ * 128-bit decimal vec
  *
  * @since 2021-07-17
  */
-public class Decimal128Vec
-        extends DecimalVec {
+public class Decimal128Vec extends DecimalVec {
     private static final int BYTES = Long.BYTES * 2;
 
     public Decimal128Vec(int size, int precision, int scale) {
-        super(size, precision, scale, BYTES, OMNI_VEC_TYPE_128_DECIMAL);
+        super(size, BYTES, new Decimal128VecType(precision, scale));
     }
 
     public Decimal128Vec(VecAllocator allocator, int size, int precision, int scale) {
-        super(allocator, size, precision, scale, BYTES, OMNI_VEC_TYPE_128_DECIMAL);
+        super(allocator, size, BYTES, new Decimal128VecType(precision, scale));
     }
 
-    public Decimal128Vec(long nativeVector) {
-        super(nativeVector);
+    public Decimal128Vec(long nativeVector, VecType type) {
+        super(nativeVector, BYTES, type);
     }
 
     private Decimal128Vec(Decimal128Vec vector, int offset, int length, boolean isSlice) {
@@ -39,21 +37,11 @@ public class Decimal128Vec
         super(vector, positions, offset, length);
     }
 
-    @Override
-    public void set(int index, BigDecimal value) {
-        set(index, value, BYTES);
-    }
-
-    @Override
-    public BigDecimal get(int index) {
-        return get(index, BYTES);
-    }
-
     /**
      * split a vec into two vec according to the specified index and length
      *
      * @param start starting index
-     * @param end ending index
+     * @param end   ending index
      * @return new vec
      */
     @Override
@@ -75,8 +63,8 @@ public class Decimal128Vec
      * copy a new vec based on the positions
      *
      * @param positions all positions in vec
-     * @param offset position offset
-     * @param length the number of elements to be copied
+     * @param offset    position offset
+     * @param length    the number of elements to be copied
      * @return new vec
      */
     @Override
@@ -88,11 +76,11 @@ public class Decimal128Vec
      * copy a vec based on the starting position and the number of elements
      *
      * @param positionOffset staring position
-     * @param length the number of elements
+     * @param length         the number of elements
      * @return new vec
      */
     @Override
-    public Vec copyRegion(int positionOffset, int length) {
+    public Decimal128Vec copyRegion(int positionOffset, int length) {
         return new Decimal128Vec(this, positionOffset, length, false);
     }
 }

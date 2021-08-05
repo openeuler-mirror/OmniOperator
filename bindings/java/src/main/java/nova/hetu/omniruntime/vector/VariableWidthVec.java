@@ -1,9 +1,10 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.VecType;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -13,8 +14,7 @@ import java.nio.ByteOrder;
  *
  * @since 2021-07-17
  */
-public abstract class VariableWidthVec
-        extends Vec {
+public abstract class VariableWidthVec extends Vec {
     protected final ValueOffsets valueOffsets;
 
     public VariableWidthVec(int capacityInBytes, int size, VecType type) {
@@ -37,10 +37,18 @@ public abstract class VariableWidthVec
         this.valueOffsets = new ValueOffsets((getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN)));
     }
 
-    protected VariableWidthVec(long nativeVector) {
-        super(nativeVector);
+    protected VariableWidthVec(long nativeVector, VecType vecType) {
+        super(nativeVector, vecType);
         this.valueOffsets = new ValueOffsets(getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
     }
+
+    /**
+     * get value offset buffer from native vector
+     *
+     * @param nativeVector native vector address
+     * @return value offset buffer
+     */
+    protected static native ByteBuffer getValueOffsetsNative(long nativeVector);
 
     /**
      * get the offset value of the specified position
@@ -55,7 +63,7 @@ public abstract class VariableWidthVec
     /**
      * set the offset value of the specified position
      *
-     * @param index the element offset in vec
+     * @param index  the element offset in vec
      * @param offset offset value
      */
     protected void setValueOffset(int index, int offset) {
@@ -67,12 +75,4 @@ public abstract class VariableWidthVec
         valueOffsets.getOffsets(0, rawValueOffset, 0, rawValueOffset.length);
         return rawValueOffset;
     }
-
-    /**
-     * get value offset buffer from native vector
-     *
-     * @param nativeVector native vector address
-     * @return value offset buffer
-     */
-    protected static native ByteBuffer getValueOffsetsNative(long nativeVector);
 }

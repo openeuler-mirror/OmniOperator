@@ -4,15 +4,14 @@
 
 package nova.hetu.omniruntime.operator.partitioned;
 
-import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.OptionalInt;
-
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
 /**
  * The type Omni PartitionedOutPut operator factory.
@@ -22,29 +21,26 @@ import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 public class OmniPartitionedOutPutOperatorFactory
         extends OmniOperatorFactory<OmniPartitionedOutPutOperatorFactory.Context> {
     public OmniPartitionedOutPutOperatorFactory(VecType[] sourceTypes, boolean replicatesAnyRow,
-                                                OptionalInt nullChannel, int[] partitionChannels, int partitionCount,
-                                                int[] bucketToPartition) {
+            OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition) {
         super(new Context(sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount,
                 bucketToPartition));
     }
 
+    private static native long createPartitionedOperatorFactory(String sourceTypes, boolean replicatesAnyRow,
+            int nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition);
+
     @Override
     protected long createNativeOperatorFactory(Context context) {
         int nullChannel = context.nullChannel.isPresent() ? context.nullChannel.getAsInt() : -1;
-        return createPartitionedOperatorFactory(
-            toNativeConstants(context.sourceTypes), context.replicatesAnyRow, nullChannel,
-            context.partitionChannels, context.partitionCount, context.bucketToPartition);
+        return createPartitionedOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+                context.replicatesAnyRow, nullChannel, context.partitionChannels, context.partitionCount,
+                context.bucketToPartition);
     }
-
-    private static native long createPartitionedOperatorFactory(int[] sourceTypes, boolean replicatesAnyRow,
-        int nullChannel, int[] partitionChannels,
-        int partitionCount, int[] bucketToPartition);
 
     /**
      * The type Context.
      */
-    public static class Context
-            extends OmniOperatorFactoryContext {
+    public static class Context extends OmniOperatorFactoryContext {
         private final VecType[] sourceTypes;
 
         private final boolean replicatesAnyRow;
@@ -58,7 +54,7 @@ public class OmniPartitionedOutPutOperatorFactory
         private final int[] bucketToPartition;
 
         public Context(VecType[] sourceTypes, boolean replicatesAnyRow, OptionalInt nullChannel,
-            int[] partitionChannels, int partitionCount, int[] bucketToPartition) {
+                int[] partitionChannels, int partitionCount, int[] bucketToPartition) {
             this.sourceTypes = sourceTypes;
             this.replicatesAnyRow = replicatesAnyRow;
             this.nullChannel = nullChannel;
@@ -76,19 +72,19 @@ public class OmniPartitionedOutPutOperatorFactory
                 return false;
             }
             Context context = null;
-            if (obj instanceof  Context) {
+            if (obj instanceof Context) {
                 context = (Context) obj;
             }
             return replicatesAnyRow == context.replicatesAnyRow && partitionCount == context.partitionCount
-                && Arrays.equals(sourceTypes, context.sourceTypes) && Objects.equals(nullChannel, context.nullChannel)
-                && Arrays.equals(partitionChannels, context.partitionChannels) && Arrays.equals(bucketToPartition,
-                context.bucketToPartition);
+                    && Arrays.equals(sourceTypes, context.sourceTypes) && Objects.equals(nullChannel,
+                    context.nullChannel) && Arrays.equals(partitionChannels, context.partitionChannels)
+                    && Arrays.equals(bucketToPartition, context.bucketToPartition);
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), replicatesAnyRow, nullChannel, partitionCount,
-                Arrays.hashCode(bucketToPartition));
+                    Arrays.hashCode(bucketToPartition));
         }
     }
 }

@@ -4,7 +4,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 import java.math.BigDecimal;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
+import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DOUBLE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -18,7 +18,6 @@ public class TestDoubleVec {
      */
     @AfterClass
     public void tearDown() {
-        VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
     /**
@@ -30,7 +29,7 @@ public class TestDoubleVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 2048);
-        assertEquals(vec.getType(), OMNI_VEC_TYPE_DOUBLE);
+        assertEquals(vec.getType().getId(), OMNI_VEC_TYPE_DOUBLE);
         vec.close();
     }
 

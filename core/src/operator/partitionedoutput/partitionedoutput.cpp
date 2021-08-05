@@ -153,7 +153,7 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t v
 void PartitionedOutputOperator::BuildVecBatch(int32_t vecCount, int32_t rowCount)
 {
     VectorBatch *vectorBatch = std::make_unique<VectorBatch>(vecCount, rowCount).release();
-    vectorBatch->SetVectors(sourceTypes);
+    vectorBatch->NewVectors(sourceTypes);
     vectorBatches.push_back(vectorBatch);
 }
 

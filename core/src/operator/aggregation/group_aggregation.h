@@ -51,7 +51,7 @@ public:
         // delete map
         for (auto &item : groupedRows) {
             for (int32_t idx = 0; idx < item.second.size(); ++idx) {
-                switch (groupByCols[idx].type) {
+                switch (groupByCols[idx].type.GetId()) {
                     case omniruntime::vec::OMNI_VEC_TYPE_INT: {
                         delete reinterpret_cast<int32_t *>(item.second[idx].val);
                         break;

@@ -84,7 +84,8 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
             vectorCount, aggColNum);
     }
 
-    int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->GetVectorTypes());
+    auto vectorTypes = std::make_unique<int32_t[]>(vectorCount);
+    vecBatch->GetVectorTypeIds(vectorTypes.get());
 
     auto aggFuncTypes = std::make_unique<int32_t[]>(aggColNum);
 
@@ -94,7 +95,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t rowCount = vecBatch->GetRowCount();
     for (int32_t rowOffst = 0; rowOffst < rowCount; ++rowOffst) {
-        this->InLoop(vecBatch->GetVectors(), rowOffst, vectorCount, vectorTypes, aggFuncTypes.get());
+        this->InLoop(vecBatch->GetVectors(), rowOffst, vectorCount, vectorTypes.get(), aggFuncTypes.get());
     }
 
     this->PostLoop(vecBatch);
@@ -127,7 +128,7 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                switch (vector->GetType()) {
+                switch (vector->GetType().GetId()) {
                     case OMNI_VEC_TYPE_INT: {
                         dynamic_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
                         break;
@@ -157,7 +158,7 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
                 break;
             }
             default: {
-                DebugError("Not support %d aggregate type!", aggType);
+                DebugError("Not support %d aggregate id!", aggType);
                 break;
             }
         }
@@ -180,11 +181,11 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             types[i] = OMNI_VEC_TYPE_DOUBLE;
             continue;
         }
-        types[i] = aggCols[i].type;
+        types[i] = aggCols[i].type.GetId();
     }
 
     VectorBatch *vecBatch = new VectorBatch(colSize, 1);
-    vecBatch->SetVectors(types.get());
+    vecBatch->NewVectors(types.get());
     FillResultVectors(vecBatch);
     result.push_back(vecBatch);
 #ifdef DEBUG_LEVEL_LOW

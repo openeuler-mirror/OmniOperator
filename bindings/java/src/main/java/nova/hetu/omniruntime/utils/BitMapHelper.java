@@ -41,7 +41,7 @@ public class BitMapHelper {
      * Set.
      *
      * @param bitMap the bit map
-     * @param index the index
+     * @param index  the index
      */
     public static void set(ByteBuffer bitMap, int index) {
         final int byteIndex = byteIndex(index);
@@ -58,7 +58,7 @@ public class BitMapHelper {
      * Unset.
      *
      * @param bitMap the bit map
-     * @param index the index
+     * @param index  the index
      */
     public static void unset(ByteBuffer bitMap, int index) {
         final int byteIndex = byteIndex(index);
@@ -75,7 +75,7 @@ public class BitMapHelper {
      * Get int.
      *
      * @param bitMap the bit map
-     * @param index the index
+     * @param index  the index
      * @return the int
      */
     public static int get(ByteBuffer bitMap, int index) {

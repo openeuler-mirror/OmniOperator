@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description:
  */
 #ifndef __EXPRESSIONS_H__
@@ -47,7 +47,7 @@ enum DataType {
     INT32D = 1,
     INT64D = 2,
     DOUBLED = 3,
-    STRINGD = 100,
+    STRINGD = 15,
     INVALIDDATAD
 };
 

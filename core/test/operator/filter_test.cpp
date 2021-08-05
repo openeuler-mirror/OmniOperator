@@ -19,7 +19,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
-    vecBatch->SetVectors(inputTypes);
+    vecBatch->NewVectors(inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypes[i]) {
             case OMNI_VEC_TYPE_INT:
@@ -1244,7 +1244,7 @@ TEST(FilterTest, FilterString1) {
 
     const int32_t numCols = 1;
     int32_t* inputTypes = new int32_t[numCols];
-    inputTypes[0] = 100;
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
 
     const int32_t numRows = 100000;
     int64_t* col1 = new int64_t[numRows];
@@ -1356,7 +1356,7 @@ TEST(FilterTest, Coalesce2) {
 
     const int32_t numCols = 1;
     int32_t* inputTypes = new int32_t[numCols];
-    inputTypes[0] = 100;
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
 
     const int32_t numRows = 1000;
     int64_t* col1 = new int64_t[numRows];

@@ -8,13 +8,13 @@
 
 namespace omniruntime {
 namespace vec {
-// template<class T>
 class DictionaryVector : public Vector {
 public:
-    DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount);
+    DictionaryVector(Vector *dictionary, int32_t *ids, uint32_t idsCount);
 
     ~DictionaryVector()
     {
+        delete[] ids;
         delete dictionary;
     }
 
@@ -38,9 +38,9 @@ public:
         return idsCount;
     }
 
-    VecType GetType() override
+    const VecType &GetType() override
     {
-        return OMNI_VEC_TYPE_DICTIONARY;
+        return DictionaryVecType::Instance();
     }
 
     int32_t GetInt(int32_t position);
@@ -56,9 +56,10 @@ public:
     void Append(Vector *other, int positionOffset, int length) override;
 
 private:
+    void InitIds(int32_t *ids, uint32_t idsCount, uint32_t maxIdsCount);
     Vector *dictionary;
     int32_t *ids;
-    int32_t idsCount;
+    uint32_t idsCount;
     int32_t idsOffset;
 };
 } // namespace vec

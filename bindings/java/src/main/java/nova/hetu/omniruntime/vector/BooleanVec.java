@@ -1,29 +1,29 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_BOOLEAN;
+import nova.hetu.omniruntime.type.BooleanVecType;
 
 /**
  * boolean vec
  *
  * @since 2021-07-17
  */
-public class BooleanVec
-        extends FixedWidthVec {
+public class BooleanVec extends FixedWidthVec {
     private static final int BYTES = 1;
 
     public BooleanVec(int size) {
-        super(size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
+        super(size * BYTES, size, BooleanVecType.BOOLEAN);
     }
 
     public BooleanVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_BOOLEAN);
+        super(allocator, size * BYTES, size, BooleanVecType.BOOLEAN);
     }
 
     public BooleanVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, BooleanVecType.BOOLEAN);
     }
 
     private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice) {
@@ -43,14 +43,13 @@ public class BooleanVec
     public void set(int index, boolean value) {
         if (value) {
             values.put(index, (byte) 1);
-        }
-        else {
+        } else {
             values.put(index, (byte) 0);
         }
     }
 
     /**
-     *  get the specified boolean at the specified absolute
+     * get the specified boolean at the specified absolute
      *
      * @param index the element offset in vec
      * @return if the value of 1 returns true, otherwise it returns false
@@ -64,7 +63,7 @@ public class BooleanVec
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start the element index in values
+     * @param start  the element index in values
      * @param length the number of elements that need to written
      */
     public void put(boolean[] values, int offset, int start, int length) {

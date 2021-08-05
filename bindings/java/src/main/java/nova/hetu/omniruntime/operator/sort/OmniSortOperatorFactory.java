@@ -4,11 +4,10 @@
 
 package nova.hetu.omniruntime.operator.sort;
 
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
-import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -22,25 +21,25 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
     /**
      * Instantiates a new Omni sort operator factory.
      *
-     * @param sourceTypes the source types
-     * @param outputColumns the output columns
-     * @param sortColumns the sort columns
+     * @param sourceTypes    the source types
+     * @param outputColumns  the output columns
+     * @param sortColumns    the sort columns
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
      */
     public OmniSortOperatorFactory(VecType[] sourceTypes, int[] outputColumns, int[] sortColumns, int[] sortAscendings,
-        int[] sortNullFirsts) {
+            int[] sortNullFirsts) {
         super(new Context(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts));
     }
 
+    private static native long createSortOperatorFactory(String sourceTypes, int[] outputCols, int[] sortCols,
+            int[] ascendings, int[] nullFirsts);
+
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createSortOperatorFactory(toNativeConstants(context.sourceTypes), context.outputColumns,
-            context.sortColumns, context.sortAscendings, context.sortNullFirsts);
+        return createSortOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
+                context.sortColumns, context.sortAscendings, context.sortNullFirsts);
     }
-
-    private static native long createSortOperatorFactory(int[] sourceTypes, int[] outputCols, int[] sortCols,
-        int[] ascendings, int[] nullFirsts);
 
     /**
      * The type Context.
@@ -61,14 +60,14 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
         /**
          * Instantiates a new Context.
          *
-         * @param sourceTypes the source types
-         * @param outputColumns the output columns
-         * @param sortColumns the sort columns
+         * @param sourceTypes    the source types
+         * @param outputColumns  the output columns
+         * @param sortColumns    the sort columns
          * @param sortAscendings the sort ascendings
          * @param sortNullFirsts the sort null firsts
          */
         public Context(VecType[] sourceTypes, int[] outputColumns, int[] sortColumns, int[] sortAscendings,
-            int[] sortNullFirsts) {
+                int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
             this.sortColumns = sortColumns;
@@ -79,7 +78,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns),
-                Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -92,8 +91,8 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
             }
             Context that = (Context) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
-                && Arrays.equals(sortColumns, that.sortColumns) && Arrays.equals(sortAscendings, that.sortAscendings)
-                && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
+                    && Arrays.equals(sortColumns, that.sortColumns) && Arrays.equals(sortAscendings,
+                    that.sortAscendings) && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
 }

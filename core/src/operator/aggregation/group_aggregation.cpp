@@ -95,18 +95,18 @@ void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
     sourceTypes = std::make_unique<int32_t[]>(colSize).release();
     int32_t idx = 0;
     for (auto &c : groupByCols) {
-        sourceTypes[idx++] = static_cast<int32_t>(c.type);
+        sourceTypes[idx++] = static_cast<int32_t>(c.type.GetId());
     }
     for (auto &c : aggCols) {
-        sourceTypes[idx++] = static_cast<int32_t>(c.type);
+        sourceTypes[idx++] = static_cast<int32_t>(c.type.GetId());
     }
 }
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) {}
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_PROCESS_AGG)
-extern "C" void ProcessAgg(uint64_t key, std::vector<std::unique_ptr<Aggregator>> &aggs, int32_t aggNum, const int32_t *types,
-    const int32_t *aggIdx, void **head, uint32_t offset)
+extern "C" void ProcessAgg(uint64_t key, std::vector<std::unique_ptr<Aggregator>> &aggs, int32_t aggNum,
+    const int32_t *types, const int32_t *aggIdx, void **head, uint32_t offset)
 {
     for (int32_t i = 0; i < aggNum; ++i) {
         int32_t idx = aggIdx[i];
@@ -123,7 +123,8 @@ extern "C" void ProcessAgg(uint64_t key, std::vector<std::unique_ptr<Aggregator>
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
 void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum,
-    const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes)
+    const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum,
+    const int32_t *aggFuncTypes)
 {
     int64_t combineHashVal = 0;
     MultiChannelHash hashFunc;
@@ -166,12 +167,14 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const in
                     break;
                 }
                 case OMNI_VEC_TYPE_LONG: {
-                    auto copyVal = std::make_unique<int64_t>(dynamic_cast<LongVector *>(vectors[idx])->GetValue(offset));
+                    auto copyVal =
+                        std::make_unique<int64_t>(dynamic_cast<LongVector *>(vectors[idx])->GetValue(offset));
                     rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
                 case OMNI_VEC_TYPE_DOUBLE: {
-                    auto copyVal = std::make_unique<double>(dynamic_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
+                    auto copyVal =
+                        std::make_unique<double>(dynamic_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
                     rowPtr = reinterpret_cast<void *>(copyVal.release());
                     break;
                 }
@@ -194,8 +197,10 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     DebugFuncEntry;
 #endif
     this->PreLoop(vecBatch);
-    int32_t *vectorTypes = reinterpret_cast<int32_t *>(vecBatch->GetVectorTypes());
     int32_t vectorCount = vecBatch->GetVectorCount();
+    auto vectorTypes = std::make_unique<int32_t[]>(vectorCount);
+    vecBatch->GetVectorTypeIds(vectorTypes.get());
+
     int32_t groupColNum = this->groupByCols.size();
     auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
     int32_t aggColNum = this->aggCols.size();
@@ -212,20 +217,20 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     int32_t rowCount = vecBatch->GetRowCount();
     Vector **vectors = vecBatch->GetVectors();
     for (int32_t i = 0; i < rowCount; ++i) {
-        this->InLoop(vectors, i, vectorTypes, vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggColNum,
-            aggFuncTypes.get());
+        this->InLoop(vectors, i, vectorTypes.get(), vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(),
+            aggColNum, aggFuncTypes.get());
     }
     this->PostLoop(vecBatch);
     return 0;
 }
 
-int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t>& types, int32_t columnCount)
+int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t> &types, int32_t columnCount)
 {
     int32_t rowSize = 0;
     int32_t typeIndex = 0;
     for (auto &i : groupByCols) {
-        types.push_back(i.type);
-        rowSize += TypeUtil::GetVarByteSize(i.type);
+        types.push_back(i.type.GetId());
+        rowSize += TypeUtil::GetVarByteSize(i.type.GetId());
     }
     for (int32_t i = 0; i < aggCols.size(); ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
@@ -243,8 +248,8 @@ int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t>& types, int32_t
             rowSize += sizeof(double);
             continue;
         }
-        types.push_back(aggCols[i].type);
-        rowSize += TypeUtil::GetVarByteSize(aggCols[i].type);
+        types.push_back(aggCols[i].type.GetId());
+        rowSize += TypeUtil::GetVarByteSize(aggCols[i].type.GetId());
     }
     return rowSize;
 }
@@ -256,7 +261,7 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
     RowIterator tempRowIterator = rowIterator;
     for (int colIndex = startIndex, groupByIndex = 0; colIndex < endIndex; ++colIndex, ++groupByIndex) {
         tempRowIterator = rowIterator;
-        switch (groupByCols[groupByIndex].type) {
+        switch (groupByCols[groupByIndex].type.GetId()) {
             case OMNI_VEC_TYPE_INT: {
                 IntVector *vector = dynamic_cast<IntVector *>(vecBatch->GetVector(colIndex));
                 for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
@@ -282,7 +287,7 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
                 break;
             }
             default: {
-                DebugError("Type %d doesn't support", groupByCols[groupByIndex].type);
+                DebugError("Type %d doesn't support", groupByCols[groupByIndex].type.GetId());
                 break;
             }
         }
@@ -302,7 +307,7 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                switch (aggCols[aggIndex].type) {
+                switch (aggCols[aggIndex].type.GetId()) {
                     case OMNI_VEC_TYPE_INT: {
                         IntVector *vector = dynamic_cast<IntVector *>(vecBatch->GetVector(colIndex));
                         for (int32_t rIdx = 0;
@@ -322,7 +327,7 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
                         break;
                     }
                     case OMNI_VEC_TYPE_DOUBLE: {
-                        DoubleVector *vector = dynamic_cast<DoubleVector*>(vecBatch->GetVector(colIndex));
+                        DoubleVector *vector = dynamic_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
                         for (int32_t rIdx = 0;
                             rIdx < rowCount && resultIterator != aggregators[aggIndex]->GetGroupState().end();
                             ++rIdx, resultIterator++) {
@@ -384,7 +389,7 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
 #endif
 }
 
-void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t>& types, int32_t rowCount)
+void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t> &types, int32_t rowCount)
 {
     for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
         switch (types[colIndex]) {
@@ -407,9 +412,10 @@ void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t>& types, int
                 vectorAddresses[0] = doubleVector;
                 vectorAddresses[1] = longVector;
                 VecType *vecTypes = new VecType[2];
-                vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
-                vecTypes[1] = OMNI_VEC_TYPE_LONG;
-                ContainerVector *containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, AVG_VECTOR_COUNT, vecTypes);
+                vecTypes[0] = DoubleVecType::Instance();
+                vecTypes[1] = LongVecType::Instance();
+                ContainerVector *containerVector =
+                    new ContainerVector(nullptr, rowCount, vectorAddresses, AVG_VECTOR_COUNT, vecTypes);
                 vectorBatch->SetVector(colIndex, containerVector);
                 break;
             }

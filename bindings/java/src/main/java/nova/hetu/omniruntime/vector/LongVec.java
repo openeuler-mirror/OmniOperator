@@ -1,32 +1,32 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
+
+import nova.hetu.omniruntime.type.LongVecType;
 
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
-
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 
 /**
  * long vec
  *
  * @since 2021-07-17
  */
-public class LongVec
-        extends FixedWidthVec {
+public class LongVec extends FixedWidthVec {
     private static final int BYTES = Long.BYTES;
 
     public LongVec(int size) {
-        super(size * BYTES, size, OMNI_VEC_TYPE_LONG);
+        super(size * BYTES, size, LongVecType.LONG);
     }
 
     public LongVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG);
+        super(allocator, size * BYTES, size, LongVecType.LONG);
     }
 
     public LongVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, LongVecType.LONG);
     }
 
     private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
@@ -40,16 +40,16 @@ public class LongVec
     /**
      * This constructor of vector is just for shuffle compilation to pass, it will be removed later
      *
-     * @param data data of vector
+     * @param data            data of vector
      * @param capacityInBytes size in bytes of data
      */
     @Deprecated
     public LongVec(ByteBuffer data, int capacityInBytes) {
-        super(capacityInBytes, data.limit(), OMNI_VEC_TYPE_LONG);
+        super(capacityInBytes, data.limit(), LongVecType.LONG);
     }
 
     /**
-     *  get the specified long at the specified absolute
+     * get the specified long at the specified absolute
      *
      * @param index the element offset in vec
      * @return long value
@@ -73,7 +73,7 @@ public class LongVec
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start the element index in values
+     * @param start  the element index in values
      * @param length the number of elements that need to written
      */
     public void put(long[] values, int offset, int start, int length) {

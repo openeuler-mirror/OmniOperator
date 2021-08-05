@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-//
-// Created by root on 6/16/21.
-//
 
 #ifndef OMNI_RUNTIME_VECTOR_HELPER_H
 #define OMNI_RUNTIME_VECTOR_HELPER_H
@@ -17,11 +14,23 @@
 
 namespace omniruntime {
 namespace vec {
+#define STATIC_CAST_VEC_GET(CLASS, VEC, INDEX) static_cast<CLASS *>(VEC)->GetValue(INDEX)
+#define STATIC_CAST_VEC_SET(CLASS, VEC, INDEX, VALUE) static_cast<CLASS *>(VEC)->SetValue(INDEX, VALUE)
+
+#define INT32_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
+#define INT32_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
+
+#define LONG_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
+#define LONG_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
+
+#define DOUBLE_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
+#define DOUBLE_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
+
 class VectorHelper {
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
-        switch (vector->GetType()) {
+        switch (vector->GetType().GetId()) {
             case OMNI_VEC_TYPE_INT:
                 ((IntVector *)vector)->SetValue(index, *(int32_t *)value);
                 break;
@@ -38,7 +47,7 @@ public:
 
     static void GetValue(Vector *vector, int32_t index, void *value)
     {
-        switch (vector->GetType()) {
+        switch (vector->GetType().GetId()) {
             case OMNI_VEC_TYPE_INT:
                 *(int32_t *)value = ((IntVector *)vector)->GetValue(index);
                 break;

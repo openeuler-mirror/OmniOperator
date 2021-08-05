@@ -16,7 +16,7 @@ public class OmniRuntimeException extends RuntimeException {
      * Instantiates a new Omni runtime exception.
      *
      * @param errorType the error type
-     * @param msg the msg
+     * @param msg       the msg
      */
     public OmniRuntimeException(OmniErrorType errorType, String msg) {
         super(msg);
@@ -27,7 +27,7 @@ public class OmniRuntimeException extends RuntimeException {
      * Instantiates a new Omni runtime exception.
      *
      * @param errorType the error type
-     * @param string the string
+     * @param string    the string
      * @param throwable the throwable
      */
     public OmniRuntimeException(OmniErrorType errorType, String string, Throwable throwable) {

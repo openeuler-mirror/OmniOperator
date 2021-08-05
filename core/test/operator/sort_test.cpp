@@ -154,7 +154,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     delete[] data1;
     delete sortOperator;
     DeleteOperatorFactory(operatorFactory);
-    vecBatch->FreeAllVectors();
+    vecBatch->ReleaseAllVectors();
     delete vecBatch;
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -192,14 +192,14 @@ TEST(NativeOmniSortTest, TestOrderByOneColumn)
     sortOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
-    IntVector expectCol1(nullptr, dataSize);
-    expectCol1.SetValues(0, expectData1, dataSize);
+    IntVector *expectCol1 = new IntVector(nullptr, dataSize);
+    expectCol1->SetValues(0, expectData1, dataSize);
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    LongVector expectCol2(nullptr, dataSize);
-    expectCol2.SetValues(0, expectData2, dataSize);
+    LongVector *expectCol2 = new LongVector(nullptr, dataSize);
+    expectCol2->SetValues(0, expectData2, dataSize);
     VectorBatch expectVecBatch(2);
-    expectVecBatch.SetVector(0, &expectCol1);
-    expectVecBatch.SetVector(1, &expectCol2);
+    expectVecBatch.SetVector(0, expectCol1);
+    expectVecBatch.SetVector(1, expectCol2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], &expectVecBatch));
 

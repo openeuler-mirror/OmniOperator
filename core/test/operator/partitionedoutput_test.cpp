@@ -57,11 +57,9 @@ TEST (PartitionedOutputOperatorTest, TestOnePartitionedOutput) {
     delete[]data0;
     delete[]data1;
     delete[]data2;
-    delete column0;
-    delete column1;
-    delete column2;
     delete partitionedOperator;
     delete partitionedOutputOperatorFactory;
+    vecBatch->ReleaseAllVectors();
     delete vecBatch;
 }
 
@@ -112,10 +110,8 @@ TEST (PartitionedOutputOperatorTest, TestMultiPartitionedOutput) {
     delete[]data0;
     delete[]data1;
     delete[]data2;
-    delete column0;
-    delete column1;
-    delete column2;
     delete partitionedOutputOperatorFactory;
     delete partitionedOperator;
+    vecBatch->ReleaseAllVectors();
     delete vecBatch;
 }

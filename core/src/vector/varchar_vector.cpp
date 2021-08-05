@@ -8,7 +8,7 @@
 namespace omniruntime {
 namespace vec {
 VarcharVector::VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size)
-    : VariableWidthVector(allocator, capacityInBytes, size, OMNI_VEC_TYPE_VARCHAR)
+    : VariableWidthVector(allocator, capacityInBytes, size, VarcharVecType::Instance())
 {}
 
 VarcharVector *VarcharVector::Slice(int positionOffset, int length)
@@ -106,7 +106,7 @@ void VarcharVector::FillSlots(int index)
     lastOffsetPosition = index - 1;
 }
 
-void VarcharVector::Append(Vector *other, int positionOffset, int length) 
+void VarcharVector::Append(Vector *other, int positionOffset, int length)
 {
     if (positionOffset + length > size) {
         return;
@@ -121,14 +121,13 @@ void VarcharVector::Append(Vector *other, int positionOffset, int length)
     }
 
     int originalStartOffset = other->GetValueOffset(otherPositionOffset);
-    int dataLength = other->GetValueOffset(otherPositionOffset + length) -  other->GetValueOffset(otherPositionOffset);
+    int dataLength = other->GetValueOffset(otherPositionOffset + length) - other->GetValueOffset(otherPositionOffset);
     errno_t ret = EOK;
     if (dataLength > 0) {
         // set nulls
         SetValueNulls(positionOffset, (bool *)other->GetValueNulls() + otherPositionOffset, length);
         // set data
-        ret = memcpy_s((reinterpret_cast<char *>(valuesAddress)) + startOffset,
-            capacityInBytes,
+        ret = memcpy_s((reinterpret_cast<char *>(valuesAddress)) + startOffset, capacityInBytes,
             reinterpret_cast<char *>(other->GetValues()) + originalStartOffset, dataLength);
     }
     if (ret != EOK) {

@@ -1,14 +1,12 @@
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
-import com.sun.org.apache.xml.internal.utils.IntVector;
-
-import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.topn.OmniTopNOperatorFactory;
+import nova.hetu.omniruntime.type.DoubleVecType;
+import nova.hetu.omniruntime.type.IntVecType;
+import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -34,7 +32,7 @@ public class OmniTopNOperatorTest {
         ArrayList<Vec> longVecs = new ArrayList<>();
         longVecs.add(longVec);
 
-        VecType[] sourceTypes = {OMNI_VEC_TYPE_LONG};
+        VecType[] sourceTypes = {LongVecType.LONG};
         int[] sortCols = {0};
         int[] sortAsc = {0};
         int[] nullFirst = {0};
@@ -72,7 +70,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(vec2);
         longVecs.add(vec3);
 
-        VecType[] sourceTypes = {OMNI_VEC_TYPE_INT,OMNI_VEC_TYPE_LONG,OMNI_VEC_TYPE_DOUBLE};
+        VecType[] sourceTypes = {IntVecType.INTEGER,LongVecType.LONG, DoubleVecType.DOUBLE};
         int[] sortCols = {0,1};
         int[] sortAsc = {1,1};
         int[] nullFirst = {0,0};
@@ -122,7 +120,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(vec2);
         longVecs.add(vec3);
 
-        VecType[] sourceTypes = {OMNI_VEC_TYPE_INT,OMNI_VEC_TYPE_LONG,OMNI_VEC_TYPE_DOUBLE};
+        VecType[] sourceTypes = {IntVecType.INTEGER,LongVecType.LONG,DoubleVecType.DOUBLE};
         int[] sortCols = {1};
         int[] sortAsc = {0};
         int[] nullFirst = {0};

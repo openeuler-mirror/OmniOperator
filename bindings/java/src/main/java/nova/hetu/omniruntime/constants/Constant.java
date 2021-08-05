@@ -4,9 +4,11 @@
 
 package nova.hetu.omniruntime.constants;
 
-import nova.hetu.omniruntime.OmniLibs;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
+import nova.hetu.omniruntime.OmniLibs;
 
 /**
  * The type Constant.
@@ -27,7 +29,8 @@ public abstract class Constant {
      *
      * @param value the value
      */
-    public Constant(int value) {
+    @JsonCreator
+    public Constant(@JsonProperty("value") int value) {
         this.value = value;
     }
 

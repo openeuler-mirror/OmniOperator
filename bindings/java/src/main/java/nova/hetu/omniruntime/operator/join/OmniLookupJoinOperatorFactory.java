@@ -4,15 +4,15 @@
 
 package nova.hetu.omniruntime.operator.join;
 
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
-import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The type Omni lookup join operator factory.
@@ -23,28 +23,29 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
     /**
      * Instantiates a new Omni lookup join operator factory.
      *
-     * @param probeTypes the probe types
-     * @param probeOutputCols the probe output cols
-     * @param probeHashCols the probe hash cols
-     * @param buildOutputCols the build output cols
-     * @param buildOutputTypes the build output types
+     * @param probeTypes                 the probe types
+     * @param probeOutputCols            the probe output cols
+     * @param probeHashCols              the probe hash cols
+     * @param buildOutputCols            the build output cols
+     * @param buildOutputTypes           the build output types
      * @param hashBuilderOperatorFactory the hash builder operator factory
      */
     public OmniLookupJoinOperatorFactory(VecType[] probeTypes, int[] probeOutputCols, int[] probeHashCols,
-        int[] buildOutputCols, VecType[] buildOutputTypes, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
+            int[] buildOutputCols, VecType[] buildOutputTypes,
+            OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
         super(new Context(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes,
-            hashBuilderOperatorFactory));
+                hashBuilderOperatorFactory));
     }
+
+    private static native long createLookupJoinOperatorFactory(String probeTypes, int[] probeOutputCols,
+            int[] probeHashCols, int[] buildOutputCols, String buildOutputTypes, long hashBuilderOperatorFactory);
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createLookupJoinOperatorFactory(toNativeConstants(context.probeTypes), context.probeOutputCols,
-            context.probeHashCols, context.buildOutputCols, toNativeConstants(context.buildOutputTypes),
-            context.hashBuilderOperatorFactory);
+        return createLookupJoinOperatorFactory(VecTypeSerializer.serialize(context.probeTypes), context.probeOutputCols,
+                context.probeHashCols, context.buildOutputCols, VecTypeSerializer.serialize(context.buildOutputTypes),
+                context.hashBuilderOperatorFactory);
     }
-
-    private static native long createLookupJoinOperatorFactory(int[] probeTypes, int[] probeOutputCols,
-        int[] probeHashCols, int[] buildOutputCols, int[] buildOutputTypes, long hashBuilderOperatorFactory);
 
     /**
      * The type Context.
@@ -67,15 +68,15 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
         /**
          * Instantiates a new Context.
          *
-         * @param probeTypes the probe types
-         * @param probeOutputCols the probe output cols
-         * @param probeHashCols the probe hash cols
-         * @param buildOutputCols the build output cols
-         * @param buildOutputTypes the build output types
+         * @param probeTypes                 the probe types
+         * @param probeOutputCols            the probe output cols
+         * @param probeHashCols              the probe hash cols
+         * @param buildOutputCols            the build output cols
+         * @param buildOutputTypes           the build output types
          * @param hashBuilderOperatorFactory the hash builder operator factory
          */
         public Context(VecType[] probeTypes, int[] probeOutputCols, int[] probeHashCols, int[] buildOutputCols,
-            VecType[] buildOutputTypes, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
+                VecType[] buildOutputTypes, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
             this.probeOutputCols = requireNonNull(probeOutputCols, "probeOutputCols");
             this.probeHashCols = requireNonNull(probeHashCols, "probeHashCols");
@@ -88,8 +89,8 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
-                Arrays.hashCode(probeHashCols), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
-                hashBuilderOperatorFactory);
+                    Arrays.hashCode(probeHashCols), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
+                    hashBuilderOperatorFactory);
         }
 
         @Override
@@ -102,9 +103,9 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
             }
             Context that = (Context) obj;
             return hashBuilderOperatorFactory == that.hashBuilderOperatorFactory && Arrays.equals(probeTypes,
-                that.probeTypes) && Arrays.equals(probeOutputCols, that.probeOutputCols) && Arrays.equals(probeHashCols,
-                that.probeHashCols) && Arrays.equals(buildOutputCols, that.buildOutputCols) && Arrays.equals(
-                buildOutputTypes, that.buildOutputTypes);
+                    that.probeTypes) && Arrays.equals(probeOutputCols, that.probeOutputCols) && Arrays.equals(
+                    probeHashCols, that.probeHashCols) && Arrays.equals(buildOutputCols, that.buildOutputCols) && Arrays
+                    .equals(buildOutputTypes, that.buildOutputTypes);
         }
     }
 }

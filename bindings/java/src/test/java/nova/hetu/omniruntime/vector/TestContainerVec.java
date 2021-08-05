@@ -8,7 +8,6 @@ public class TestContainerVec
     @AfterClass
     public void tearDown()
     {
-        VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
     @Test

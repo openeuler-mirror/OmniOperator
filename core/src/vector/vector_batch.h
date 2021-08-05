@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-//
-// Created by root on 6/9/21.
-//
 
 #ifndef OMNI_RUNTIME_VECTOR_BATCH_H
 #define OMNI_RUNTIME_VECTOR_BATCH_H
@@ -31,7 +28,7 @@ public:
         return vectors;
     }
 
-    void SetVector(int index, omniruntime::vec::Vector *vector);
+    void SetVector(int index, Vector *vector);
 
     int GetVectorCount()
     {
@@ -43,19 +40,24 @@ public:
         return rowCount;
     }
 
-    omniruntime::vec::VecType *GetVectorTypes() const;
+    const VecType *GetVectorTypes() const
+    {
+        return vectorTypes;
+    }
 
-    void FreeAllVectors();
+    void GetVectorTypeIds(int32_t *typeIds);
 
-    void SetVectors(int *types);
+    void NewVectors(int *types);
+
+    void ReleaseAllVectors();
 
 private:
     void Init();
 
     int vectorCount;
     int rowCount;
-    omniruntime::vec::Vector **vectors;
-    omniruntime::vec::VecType *vectorTypes;
+    Vector **vectors;
+    VecType *vectorTypes;
 };
 } // namespace vec
 } // namespace omniruntime

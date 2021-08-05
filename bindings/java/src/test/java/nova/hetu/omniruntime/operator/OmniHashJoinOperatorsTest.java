@@ -1,10 +1,10 @@
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DICTIONARY;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
+import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY;
 import static org.testng.Assert.assertEquals;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.vector.DictionaryVec;
@@ -35,7 +35,7 @@ public class OmniHashJoinOperatorsTest {
         }
         VecBatch buildVecBatch = new VecBatch(new Vec[] {buildVec1, buildVec2});
 
-        VecType[] buildTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 1;
@@ -60,10 +60,10 @@ public class OmniHashJoinOperatorsTest {
 
     private void assertResult(int[] buildOutputCols, OmniHashBuilderOperatorFactory hashBuilderOperatorFactory,
         VecBatch probeVecBatch) {
-        VecType[] probeTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] probeOutputCols = {1};
         int[] probeHashCols = {0};
-        VecType[] buildOutputTypes = {OMNI_VEC_TYPE_LONG};
+        VecType[] buildOutputTypes = {LongVecType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
             probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, hashBuilderOperatorFactory);
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
@@ -79,7 +79,7 @@ public class OmniHashJoinOperatorsTest {
         long[] actual0 = new long[len];
         long[] actual1 = new long[len];
         for (int i = 0; i < len; i++) {
-            if (actualVec0.getType().equals(OMNI_VEC_TYPE_DICTIONARY)) {
+            if (actualVec0.getType().getId() == OMNI_VEC_TYPE_DICTIONARY) {
                 actual0[i] = ((DictionaryVec) actualVec0).getLong(i);
             } else {
                 actual0[i] = ((LongVec) actualVec0).get(i);
@@ -118,7 +118,7 @@ public class OmniHashJoinOperatorsTest {
         }
         VecBatch buildVecBatch2 = new VecBatch(new Vec[] {buildVec21, buildVec22});
 
-        VecType[] buildTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] buildOutputCols = {1};
         int[] buildJoinCols = {0};
         int operatorCount = 2;

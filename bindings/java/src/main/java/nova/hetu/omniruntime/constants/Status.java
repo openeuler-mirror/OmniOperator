@@ -4,6 +4,9 @@
 
 package nova.hetu.omniruntime.constants;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * The type Status.
  *
@@ -31,7 +34,8 @@ public class Status extends Constant {
      *
      * @param value the value
      */
-    public Status(int value) {
+    @JsonCreator
+    public Status(@JsonProperty("value") int value) {
         super(value);
     }
 }

@@ -46,7 +46,7 @@ std::vector<int64_t> Projection::GetData(omniruntime::vec::VectorBatch *&vecBatc
 
     for (int32_t i = 0; i < nCols; i++) {
         // varchar vec GetValues is different from the rest
-        if (vecBatch->GetVector(i)->GetType() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
+        if (vecBatch->GetVector(i)->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
             auto *vcVec = reinterpret_cast<omniruntime::vec::VarcharVector *>(vecBatch->GetVector(i));
             // Create array to hold addresses
             std::vector<int64_t> vcdata;

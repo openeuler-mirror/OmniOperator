@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry external function
  */
 #ifndef __EXTERNAL_FUNC_REGISTERY_H__

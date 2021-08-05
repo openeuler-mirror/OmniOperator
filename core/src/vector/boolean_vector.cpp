@@ -9,12 +9,12 @@
 namespace omniruntime {
 namespace vec {
 BooleanVector::BooleanVector(VectorAllocator *allocator, int size)
-    : FixedWidthVector(allocator, size, size, OMNI_VEC_TYPE_BOOLEAN)
+    : FixedWidthVector(allocator, size, size, BooleanVecType::Instance())
 {}
 
 void BooleanVector::SetValues(int startIndex, const bool *values, int length)
 {
-    if (!GetReference()->IsWritable() || length > size) {
+    if (!reference->IsWritable() || length > size) {
         return;
     }
     bool *startAddr = reinterpret_cast<bool *>(valuesAddress);

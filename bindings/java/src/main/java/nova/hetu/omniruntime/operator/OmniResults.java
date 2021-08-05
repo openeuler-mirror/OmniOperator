@@ -23,7 +23,7 @@ public class OmniResults implements Closeable {
      * Instantiates a new Omni results.
      *
      * @param vecBatches the vec batches
-     * @param status the status
+     * @param status     the status
      */
     public OmniResults(VecBatch[] vecBatches, int status) {
         this.vecBatches = vecBatches;

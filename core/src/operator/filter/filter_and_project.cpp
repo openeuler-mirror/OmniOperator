@@ -104,7 +104,7 @@ std::vector<int64_t> Filter::GetData(VectorBatch *&vecBatch, vector<vector<int64
 
     for (int32_t i = 0; i < nCols; i++) {
         // varchar vec GetValues is different from the rest
-        if (vecBatch->GetVector(i)->GetType() == OMNI_VEC_TYPE_VARCHAR) {
+        if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
             VarcharVector *vcVec = reinterpret_cast<VarcharVector *>(vecBatch->GetVector(i));
             // Create array to hold addresses
             std::vector<int64_t> vcData;

@@ -20,7 +20,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
-    vecBatch->SetVectors(inputTypes);
+    vecBatch->NewVectors(inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypes[i]) {
             case OMNI_VEC_TYPE_INT:
