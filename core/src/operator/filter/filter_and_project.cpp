@@ -59,6 +59,10 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     const int rowCount = vecBatch->GetRowCount();
     int32_t selectedRows[rowCount];
     int32_t numSelectedRows = this->filter->DoFilter(vecBatch, selectedRows, rowCount);
+    if (numSelectedRows <= 0) {
+        return 0;
+    }
+
     auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         Vector *col = this->projections[i]->Project(vecBatch, selectedRows, numSelectedRows);
@@ -145,9 +149,7 @@ int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t *selectedRows, int rowC
 
     // contents of bitmap are appropriately modified in GetData
     std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap);
-
     int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap);
-
 
     for (auto v : vcdataVec) {
         v.clear();
