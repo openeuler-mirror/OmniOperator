@@ -5,16 +5,25 @@
 // Created by root on 6/1/21.
 //
 
-#include <cstring>
 #include <stdint.h>
 #include "vector.h"
 #include "../util/debug.h"
 #include "vector_allocator_manager.h"
 
-omniruntime::vec::VectorAllocatorManager g_vector_allocator_manager =
+extern "C" int32_t GetMajorVersion()
+{
+    return 1;
+}
+
+extern "C" int32_t GetMinorVersion()
+{
+    return 0;
+}
+
+omniruntime::vec::VectorAllocatorManager g_vectorAllocatorManager =
     omniruntime::vec::VectorAllocatorManager::GetInstance();
-omniruntime::vec::VectorAllocator *g_vector_allocator =
-    g_vector_allocator_manager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
+omniruntime::vec::VectorAllocator *g_vectorAllocator =
+    g_vectorAllocatorManager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
@@ -24,8 +33,8 @@ Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecTyp
         reference = allocator->NewVector(capacityInBytes, size, type);
         this->allocator = allocator;
     } else {
-        reference = g_vector_allocator->NewVector(capacityInBytes, size, type);
-        this->allocator = g_vector_allocator;
+        reference = g_vectorAllocator->NewVector(capacityInBytes, size, type);
+        this->allocator = g_vectorAllocator;
     }
     valuesAddress = reference->GetValuesAddress();
     valueNullsAddress = reference->GetValueNullsAddress();
@@ -55,7 +64,7 @@ Vector::~Vector()
     }
 }
 
-void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
+void Vector::SetValueNulls(int startIndex, bool *nulls, int length) const
 {
     errno_t ret = memcpy_s(((bool *)valueNullsAddress) + startIndex, capacityInBytes, nulls, length);
     if (ret != EOK) {
@@ -63,7 +72,7 @@ void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
     }
 }
 
-void Vector::SetValueNullBitMap(int index)
+void Vector::SetValueNullBitMap(int index) const
 {
     if (valueNullsAddress != nullptr) {
         // std::cout << "set value null BitMap" << std::endl;
