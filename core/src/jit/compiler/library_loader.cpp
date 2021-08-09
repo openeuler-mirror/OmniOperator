@@ -124,13 +124,12 @@ LibraryVersion GetVersionStdcpp(string path)
     return LibraryVersion(major, minor);
 }
 
-LibraryVersion ParseVersionJemalloc(int8_t *&detectedVersion)
+LibraryVersion ParseVersionJemalloc(void *&detectedVersion)
 {
-    string versionString;
-    int32_t idx = 0;
-    while (detectedVersion[idx] != 0) {
-        versionString += static_cast<char>(detectedVersion[idx++]);
+    if (detectedVersion == nullptr) {
+        return LibraryVersion();
     }
+    string versionString = static_cast<const char*>(detectedVersion);
     int32_t majorTerminator = versionString.find(".");
     if (majorTerminator == string::npos) {
         return LibraryVersion();
@@ -178,8 +177,8 @@ LibraryVersion GetVersionJemalloc(string path)
         dlclose(handle);
         return false;
     }
-    int8_t *detectedVersion = nullptr;
-    auto s = make_unique<size_t>(sizeof(detectedVersion)).release();
+    void *detectedVersion = nullptr;
+    auto s = make_unique<size_t>(sizeof(const char*)).release();
     // "version\0"
     const uint32_t versionWordLength = 8;
     auto versionLiteral = make_unique<int8_t[]>(versionWordLength).release();
@@ -192,11 +191,15 @@ LibraryVersion GetVersionJemalloc(string path)
     auto carg2 = static_cast<int64_t*>(arg2t2);
     void *arg3 = &s;
     auto carg3 = static_cast<int64_t*>(arg3);
-    loadedMallctl(*carg1, *carg2, *carg3, 0, 0);
+    int32_t errCode = loadedMallctl(*carg1, *carg2, *carg3, 0, 0);
     int32_t res = dlclose(handle);
     if (res != 0 && (error = dlerror()).isPresent()) {
         cerr << "Failed to unload the library: " << error.msg() << endl;
         dlclose(handle);
+        return false;
+    }
+    if (errCode != 0) {
+        cerr << "Could not call jemalloc mallctl method." << endl;
         return false;
     }
     return ParseVersionJemalloc(detectedVersion);
