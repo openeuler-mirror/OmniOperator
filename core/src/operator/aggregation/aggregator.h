@@ -5,11 +5,11 @@
 #ifndef AGGREGATOR_H
 #define AGGREGATOR_H
 
-#include <cstdint>
 #include <unordered_map>
 #include <memory>
 
 #include "../../vector/vector_type.h"
+#include "../../vector/vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -44,6 +44,23 @@ using GroupBySlot = union GroupBySlot {
     int64_t count;
 };
 
+class MultiChannelHash {
+public:
+    MultiChannelHash() : result(0) {}
+    virtual ~MultiChannelHash() {}
+    uint64_t CombineHash(uint64_t res, uint64_t value) const
+    {
+        return (31 * res + value);
+    }
+
+    uint64_t operator()(uint64_t combinedHash) const
+    {
+        return combinedHash;
+    }
+private:
+    uint64_t result;
+};
+
 class AggregatorFactory;
 
 // TODO check if it can merge subtype aggregators to one aggregator class.
@@ -54,49 +71,20 @@ public:
         : type(ty), dataType(dataTy), initiated(false), inputRaw(inputRaw), outputPartial(outputParitial), nonGroupState({ nullptr })
     {}
     virtual ~Aggregator()
-    {
-        if (type == OMNI_AGGREGATION_TYPE_COUNT) {
-            // do nothing
-        } else {
-            for (auto &i : groupState) {
-                switch (dataType) {
-                    case omniruntime::vec::OMNI_VEC_TYPE_INT: {
-                        delete reinterpret_cast<int32_t *>(i.second.val);
-                        break;
-                    }
-                    case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
-                        delete reinterpret_cast<int64_t *>(i.second.val);
-                        break;
-                    }
-                    case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
-                        delete reinterpret_cast<double *>(i.second.val);
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
-        }
-        groupState.clear();
-    }
+    {}
     virtual void Process(void *valuePtr, omniruntime::vec::VecType type) = 0;
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
-    virtual void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) = 0;
+    virtual void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) = 0;
     virtual void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) = 0;
-    virtual void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) = 0;
+    virtual void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) = 0;
     virtual void Initiate(void *colPtr, int32_t type, uint32_t offset) = 0;
     bool IsInputRaw() const;
     bool IsOutputPartial() const;
     AggregateType GetType() const
     {
         return type;
-    }
-    // Provide the final state to operators. Operators can use the state to construct final output.
-    std::unordered_map<uint64_t, GroupBySlot> &GetGroupState()
-    {
-        return groupState;
     }
     const GroupBySlot &GetNonGroupState()
     {
@@ -110,8 +98,6 @@ public:
 protected:
     AggregateType type;
     int32_t dataType;
-    // state for grouping aggregate
-    std::unordered_map<uint64_t, GroupBySlot> groupState;
     // state for non-grouping aggregate
     GroupBySlot nonGroupState;
     bool initiated;
@@ -126,9 +112,9 @@ public:
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty, inputRaw, outputPartial)
     { }
     ~SumAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
@@ -140,9 +126,9 @@ public:
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty, inputRaw, outputPartial)
     { }
     ~AverageAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
@@ -156,9 +142,9 @@ public:
 
     }
     ~CountAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
@@ -170,9 +156,9 @@ public:
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty, inputRaw, outputPartial)
     {}
     ~MinAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
@@ -184,9 +170,9 @@ public:
         : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty, inputRaw, outputPartial)
     {}
     ~MaxAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, void *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(int64_t key, void *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
 };
@@ -195,7 +181,7 @@ class AggregatorFactory {
 public:
     AggregatorFactory() {}
     virtual ~AggregatorFactory() {}
-    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw = true, bool outputPartial = false) = 0;
+    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) = 0;
 };
 
 class SumAggregatorFactory : public AggregatorFactory {

@@ -116,10 +116,10 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
     inloopSp->AddSpecializedParam(8, &p_agg_num);
     inloopSp->AddSpecializedParam(9, &p_agg_types);
 
-    Specialization *processAggSp = new Specialization();
-    processAggSp->AddSpecializedParam(2, &p_agg_num);
-    processAggSp->AddSpecializedParam(3, &p_col_type);
-    processAggSp->AddSpecializedParam(4, &p_aggColIdx);
+//    Specialization *processAggSp = new Specialization();
+//    processAggSp->AddSpecializedParam(2, &p_agg_num);
+//    processAggSp->AddSpecializedParam(3, &p_col_type);
+//    processAggSp->AddSpecializedParam(4, &p_aggColIdx);
 
     Specialization *hashColumnSp = new Specialization();
     hashColumnSp->AddSpecializedParam(2, &p_col_type);
@@ -133,7 +133,7 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
             {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
 //        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
 //        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
-            {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
+//            {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
     };
 
     omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
@@ -482,7 +482,7 @@ TEST(HashAggregationOperatorTest, Original_Multiple_Threads)
     nativeOperatorFactory->Init();
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
 
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
@@ -492,7 +492,7 @@ TEST(HashAggregationOperatorTest, Original_Multiple_Threads)
         std::vector<std::thread> vecOfThreads;
         Timer timer;
         timer.setStart();
-        for (int32_t i = 0; i < threadNum; ++i) {
+        for (int32_t j = 0; j < threadNum; ++j) {
             // same stage Id
             std::thread t(perfTestOriginal, factoryObjAddr, input);
             vecOfThreads.push_back(std::move(t));
@@ -876,14 +876,9 @@ TEST(HashAggregationOperatorTest, compare_perf)
     inloopSp->AddSpecializedParam(8, &p_agg_num);
     inloopSp->AddSpecializedParam(9, &p_agg_types);
 
-    auto *processAggSp = new Specialization();
-    processAggSp->AddSpecializedParam(2, &p_agg_num);
-    processAggSp->AddSpecializedParam(3, &p_col_type);
-    processAggSp->AddSpecializedParam(4, &p_aggColIdx);
-
     std::map<std::string, Specialization> hashGroupbySps = {
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
-        {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
+//        {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
     };
 
     auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
@@ -983,4 +978,9 @@ TEST(HashAggregationOperatorTest, MultiStage)
         PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(resultFromFinal);
+}
+
+TEST(HashTableTest, test)
+{
+
 }

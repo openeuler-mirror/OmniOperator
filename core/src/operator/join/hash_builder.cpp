@@ -90,9 +90,10 @@ int32_t *HashBuilderOperator::GetSourceTypes()
     return buildTypes.data();
 }
 
-void HashBuilderOperator::Close()
+OmniStatus HashBuilderOperator::Close()
 {
     hashTables->Clear(partitionIndex);
+    return OMNI_STATUS_NORMAL;
 }
 } // end of op
 } // end of omniruntime
