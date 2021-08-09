@@ -9,7 +9,7 @@
 
 using namespace omniruntime::vec;
 
-bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber);
+bool TypesMatch(const VecType *actualTypes, const VecType *expectTypes, int32_t columnNumber);
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
 bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
@@ -36,7 +36,7 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
-bool TypesMatch(VecType *actualTypes, VecType *expectTypes, int32_t columnNumber)
+bool TypesMatch(const VecType *actualTypes, const VecType *expectTypes, int32_t columnNumber)
 {
     for (int32_t i = 0; i < columnNumber; i++) {
         if (actualTypes[i] != expectTypes[i]) {
@@ -52,7 +52,7 @@ bool ValueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector
     VecType type = actualVector->GetDictionary()->GetType();
     int32_t actualPosition = actualVector->GetIds()[position];
     int32_t expectPosition = expectedVector->GetIds()[position];
-    switch (type) {
+    switch (type.GetId()) {
         case OMNI_VEC_TYPE_INT: {
             int32_t actual = actualVector->GetInt(actualPosition);
             int32_t expect = expectedVector->GetInt(expectPosition);
@@ -80,7 +80,7 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
     bool result = true;
     for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
-        switch (actualColumn->GetType()) {
+        switch (actualColumn->GetType().GetId()) {
             case OMNI_VEC_TYPE_INT: {
                 int32_t actual = ((IntVector *)actualColumn)->GetValue(i);
                 int32_t expect = ((IntVector *)expectColumn)->GetValue(i);
@@ -147,7 +147,7 @@ void PrintVecBatch(VectorBatch* vecBatch)
         for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
             auto vecType = vecBatch->GetVector(colIdx)->GetType();
             auto vector = vecBatch->GetVector(colIdx);
-            switch (vecType) {
+            switch (vecType.GetId()) {
                 case OMNI_VEC_TYPE_INT: {
                     IntVector* vec = (IntVector*)vector;
                     std::cout << vec->GetValue(rowIdx) << "   ";
@@ -173,7 +173,7 @@ void PrintVecBatch(VectorBatch* vecBatch)
                     break;
                 }
                 default:
-                    DebugError("Error vector type %d", vecType);
+                    DebugError("Error vector type %d", vecType.GetId());
             }
         }
         std::cout << std::endl;

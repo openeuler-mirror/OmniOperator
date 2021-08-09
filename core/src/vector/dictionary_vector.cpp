@@ -7,15 +7,23 @@
 
 namespace omniruntime {
 namespace vec {
-DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount)
+DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, uint32_t idsCount)
     : Vector(dictionary, dictionary->GetSize(), 0), dictionary(dictionary), ids(ids), idsCount(idsCount), idsOffset(0)
 {
-    this->dictionary->GetReference()->IncRef();
+    InitIds(ids, idsCount, dictionary->GetSize());
+}
+
+void DictionaryVector::InitIds(int32_t *ids, uint32_t idsCount, uint32_t maxIdsCount)
+{
+    if (idsCount <= maxIdsCount) {
+        this->ids = new int32_t[idsCount];
+        memcpy_s(this->ids, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
+    }
 }
 
 int32_t DictionaryVector::GetInt(int32_t position)
 {
-    if (dictionary->GetType() != OMNI_VEC_TYPE_INT) {
+    if (dictionary->GetType().GetId() != OMNI_VEC_TYPE_INT) {
         return -1;
     }
     return ((IntVector *)dictionary)->GetValue(ids[position]);
@@ -23,7 +31,7 @@ int32_t DictionaryVector::GetInt(int32_t position)
 
 int64_t DictionaryVector::GetLong(int32_t position)
 {
-    if (dictionary->GetType() != OMNI_VEC_TYPE_LONG) {
+    if (dictionary->GetType().GetId() != OMNI_VEC_TYPE_LONG) {
         return -1;
     }
     return ((LongVector *)dictionary)->GetValue(ids[position]);

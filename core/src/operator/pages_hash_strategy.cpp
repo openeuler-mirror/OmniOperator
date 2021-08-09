@@ -249,7 +249,7 @@ bool PagesHashStrategy::ValueEqualsValueIgnoreNulls(VecType type, void *leftData
     int32_t rightIndex) const
 {
     bool result = false;
-    switch (type) {
+    switch (type.GetId()) {
         case OMNI_VEC_TYPE_INT:
             result = (static_cast<int32_t *>(leftData)[leftIndex] == (static_cast<int32_t *>(rightData))[rightIndex]);
             break;

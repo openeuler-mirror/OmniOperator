@@ -3,7 +3,7 @@ package nova.hetu.omniruntime.vector;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_BOOLEAN;
+import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_BOOLEAN;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -17,7 +17,6 @@ public class TestBooleanVec {
      */
     @AfterClass
     public void tearDown() {
-        VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
     /**
@@ -29,14 +28,14 @@ public class TestBooleanVec {
         assertEquals(vector1.getSize(), 256);
         assertEquals(vector1.getOffset(), 0);
         assertEquals(vector1.getCapacityInBytes(), 256);
-        assertEquals(vector1.getType(), OMNI_VEC_TYPE_BOOLEAN);
+        assertEquals(vector1.getType().getId(), OMNI_VEC_TYPE_BOOLEAN);
         vector1.close();
 
         BooleanVec vector2 = new BooleanVec(251);
         assertEquals(vector2.getSize(), 251);
         assertEquals(vector2.getOffset(), 0);
         assertEquals(vector2.getCapacityInBytes(), 251);
-        assertEquals(vector2.getType(), OMNI_VEC_TYPE_BOOLEAN);
+        assertEquals(vector2.getType().getId(), OMNI_VEC_TYPE_BOOLEAN);
         vector2.close();
     }
 

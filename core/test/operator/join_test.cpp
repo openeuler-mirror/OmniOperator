@@ -240,7 +240,7 @@ VectorBatch *ConstructSimpleProbeData()
 
 VectorBatch *ConstructSimpleExpectedData()
 {
-    const int32_t expectedDataSize = 18;
+    const uint32_t expectedDataSize = 18;
     int64_t expectedData0[expectedDataSize] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
     int64_t expectedData1[expectedDataSize] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
     LongVector *expectedCol0 = new LongVector(nullptr, expectedDataSize);
@@ -487,6 +487,7 @@ void TestHashBuilder(struct HashJoinThreadArgs *hashJoinThreadArgs)
     }
     std::vector<VectorBatch *> buildOutputTables;
     hashBuilderOperator->GetOutput(buildOutputTables);
+    VectorHelper::FreeVecBatches(buildOutputTables);
 }
 
 void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)

@@ -1,13 +1,15 @@
-//
-// Created by root on 6/17/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ */
+
 #include <long_vector.h>
 #include "gtest/gtest.h"
 #include "vector_batch.h"
 
 using namespace omniruntime::vec;
 
-TEST(VectorBatch, constructVectorBatchWithVectorCount) {
+TEST(VectorBatch, constructVectorBatchWithVectorCount)
+{
     VectorBatch *vectorBatch = new VectorBatch(4);
     LongVector *vector0 = new LongVector(nullptr, 1024);
     LongVector *vector1 = new LongVector(nullptr, 1024);
@@ -22,45 +24,41 @@ TEST(VectorBatch, constructVectorBatchWithVectorCount) {
     for (int i = 0; i < 4; ++i) {
         EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
     }
+    delete vectorBatch;
 }
 
-TEST(VectorBatch, constructVectorBatchWithTypes) {
+TEST(VectorBatch, constructVectorBatchWithTypes)
+{
     int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->SetVectors(types);
+    vectorBatch->NewVectors(types);
 
     for (int i = 0; i < 4; ++i) {
         EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
     }
+    delete vectorBatch;
 }
 
-TEST(VectorBatch, getVectorCount) {
+TEST(VectorBatch, getVectorCount)
+{
     int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->SetVectors(types);
+    vectorBatch->NewVectors(types);
 
     EXPECT_EQ(4, vectorBatch->GetVectorCount());
     EXPECT_EQ(1024, vectorBatch->GetRowCount());
+    delete vectorBatch;
 }
 
-TEST(VectorBatch, getVectorTypes) {
+TEST(VectorBatch, getVectorTypes)
+{
     int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->SetVectors(types);
+    vectorBatch->NewVectors(types);
 
-    VecType *vectorTypes = vectorBatch->GetVectorTypes();
+    const VecType *vectorTypes = vectorBatch->GetVectorTypes();
     for (int i = 0; i < 4; ++i) {
-        EXPECT_EQ(types[i], vectorTypes[i]);
+        EXPECT_EQ(types[i], vectorTypes[i].GetId());
     }
-}
-
-TEST(VectorBatch, freeAllVectors) {
-    int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
-    VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->SetVectors(types);
-
-    vectorBatch->FreeAllVectors();
-    for (int i = 0; i < 4; ++i) {
-        EXPECT_EQ(nullptr, vectorBatch->GetVector(i));
-    }
+    delete vectorBatch;
 }

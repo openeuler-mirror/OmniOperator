@@ -1,6 +1,6 @@
-//
-// Created by root on 6/2/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ */
 
 #include "gtest/gtest.h"
 #include "vector.h"
@@ -10,22 +10,24 @@
 
 using namespace omniruntime::vec;
 
-TEST(IntVector, newVector) {
+TEST(IntVector, newVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     IntVector *vector = new IntVector(allocator, 256);
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
-    EXPECT_EQ(vector->GetReference()->GetCapacityInBytes(), 1024);
-    EXPECT_EQ(vector->GetReference()->GetType(), OMNI_VEC_TYPE_INT);
+    EXPECT_EQ(vector->GetCapacityInBytes(), 1024);
+    EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_INT);
     delete vector;
 
     manager.DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
-TEST(IntVector, sliceVector) {
+TEST(IntVector, sliceVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -39,7 +41,7 @@ TEST(IntVector, sliceVector) {
     IntVector *slice1 = originalVector->Slice(offset, 4);
     EXPECT_EQ(slice1->GetPositionOffset(), offset);
     EXPECT_EQ(slice1->GetSize(), 4);
-    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
+    EXPECT_EQ(slice1->GetReference(), 2);
     for (int i = 0; i < slice1->GetSize(); i++) {
         EXPECT_EQ(slice1->GetValue(i), originalVector->GetValue(i + offset));
     }
@@ -50,17 +52,18 @@ TEST(IntVector, sliceVector) {
     }
 
     delete originalVector;
-    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
+    EXPECT_EQ(slice1->GetReference(), 2);
 
     delete slice1;
-    EXPECT_EQ(slice2->GetReference()->GetRef(), 1);
+    EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
     manager.DeleteAllocator(&allocator);
 }
 
 // Test set/get
-TEST(IntVector, setAndGetValue) {
+TEST(IntVector, setAndGetValue)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -78,7 +81,8 @@ TEST(IntVector, setAndGetValue) {
 }
 
 // Test SetValues
-TEST(IntVector, SetValues) {
+TEST(IntVector, SetValues)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != NULL);
@@ -91,7 +95,7 @@ TEST(IntVector, SetValues) {
     for (int i = 0; i < size; i++) {
         EXPECT_EQ(intVector1->GetValue(i), values[i]);
     }
-    
+
     IntVector *intVector2 = new IntVector(allocator, size);
     intVector2->SetValues(1, p + 2, 3);
     for (int i = 0; i < 3; i++) {
@@ -105,7 +109,8 @@ TEST(IntVector, SetValues) {
 
 // Test out of bounds
 #ifdef DEBUG
-TEST(IntVector, SetValueOutOfBounds1) {
+TEST(IntVector, SetValueOutOfBounds1)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -120,7 +125,8 @@ TEST(IntVector, SetValueOutOfBounds1) {
 
 // Test out of bounds
 #ifdef DEBUG
-TEST(IntVector, SetValueOutOfBounds2) {
+TEST(IntVector, SetValueOutOfBounds2)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -134,7 +140,8 @@ TEST(IntVector, SetValueOutOfBounds2) {
 #endif
 
 // Test SetValues/get
-TEST(IntVector, SetValuesWithoutOffset) {
+TEST(IntVector, SetValuesWithoutOffset)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -155,7 +162,8 @@ TEST(IntVector, SetValuesWithoutOffset) {
 }
 
 // Test SetValues/get with offset
-TEST(IntVector, SetValuesWithOffset) {
+TEST(IntVector, SetValuesWithOffset)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -177,7 +185,8 @@ TEST(IntVector, SetValuesWithOffset) {
 
 // Test out of bounds
 #ifdef DEBUG
-TEST(IntVector, SetValuesWithoutOffsetOutOfBounds) {
+TEST(IntVector, SetValuesWithoutOffsetOutOfBounds)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -197,7 +206,8 @@ TEST(IntVector, SetValuesWithoutOffsetOutOfBounds) {
 #endif
 
 // Test is null
-TEST(IntVector, SetValueNull) {
+TEST(IntVector, SetValueNull)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -222,7 +232,8 @@ TEST(IntVector, SetValueNull) {
 }
 
 // Test is copyPosition
-TEST(IntVector, CopyPositions) {
+TEST(IntVector, CopyPositions)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("intVector");
     EXPECT_TRUE(allocator != nullptr);
@@ -235,7 +246,7 @@ TEST(IntVector, CopyPositions) {
     int *possions = new int[2];
     possions[0] = 1;
     possions[1] = 3;
-    IntVector* copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
+    IntVector *copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
 
     for (int i = 0; i < copyPostionVector->GetSize(); i++) {
         EXPECT_EQ(copyPostionVector->GetValue(i), originalVector->GetValue(possions[i]));
@@ -247,7 +258,8 @@ TEST(IntVector, CopyPositions) {
 }
 
 // Test is CopyRegion
-TEST(IntVector, CopyRegion) {
+TEST(IntVector, CopyRegion)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("intVector");
     EXPECT_TRUE(allocator != NULL);
@@ -268,13 +280,13 @@ TEST(IntVector, CopyRegion) {
     manager.DeleteAllocator(&allocator);
 }
 
-TEST(IntVector, jniFreeVector) {
+TEST(IntVector, jniFreeVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-   IntVector *oritianlVector = new IntVector(allocator, 256);
-    Vector *vector = (Vector *) oritianlVector;
+    IntVector *oritianlVector = new IntVector(allocator, 256);
+    Vector *vector = (Vector *)oritianlVector;
     delete vector;
 }
-

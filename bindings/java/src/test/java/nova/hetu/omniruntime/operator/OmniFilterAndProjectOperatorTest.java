@@ -1,14 +1,14 @@
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.DoubleVecType;
+import nova.hetu.omniruntime.type.IntVecType;
+import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
@@ -37,7 +37,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void doubles() {
-        VecType[] types = {OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {DoubleVecType.DOUBLE};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$LESS_THAN(#0, 1.0)", types, projectIndices);
@@ -65,7 +65,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void lessThan() {
-        VecType[] types = {OMNI_VEC_TYPE_INT};
+        VecType[] types = {IntVecType.INTEGER};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$LESS_THAN(#0, 2000)", types, projectIndices);
@@ -93,7 +93,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void greaterThan() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG};
+        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
         int[] projectIndices = {0, 1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$GREATER_THAN(#0, 20)", types, projectIndices);
@@ -125,7 +125,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void equalTo() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         int[] projectIndices = {1, 2};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory("$operator$EQUAL(#1, 50)",
             types, projectIndices);
@@ -158,7 +158,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void greaterThanOrEqualTo() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER};
         int[] projectIndices = {1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$GREATER_THAN_OR_EQUAL(#1, 30)", types, projectIndices);
@@ -192,7 +192,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void notEqualTo() {
-        VecType[] types = {OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {DoubleVecType.DOUBLE};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$NOT_EQUAL(#0, 0)", types, projectIndices);
@@ -221,7 +221,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void allPass() {
-        VecType[] types = {OMNI_VEC_TYPE_INT};
+        VecType[] types = {IntVecType.INTEGER};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$EQUAL(#0, 9348)", types, projectIndices);
@@ -249,7 +249,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void multipleInputs() {
-        VecType[] types = {OMNI_VEC_TYPE_INT};
+        VecType[] types = {IntVecType.INTEGER};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$LESS_THAN_OR_EQUAL(#0, 4)", types, projectIndices);
@@ -293,7 +293,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void negativeValues() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG};
+        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
         int[] projectIndices = {0, 1};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "AND($operator$LESS_THAN_OR_EQUAL(#0, -1), $operator$LESS_THAN_OR_EQUAL(#1, -1))", types, projectIndices);
@@ -334,7 +334,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test(enabled = false)
     public void allTypes() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         int[] projectIndices = {0, 1, 2};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "AND($operator$EQUAL(#0, 0), AND($operator$EQUAL(#1, 3000000000), $operator$GREATER_THAN_OR_EQUAL(#2, 0.4)))",
@@ -372,7 +372,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test(enabled = false)
     public void compileTest() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, DoubleVecType.DOUBLE, DoubleVecType.DOUBLE};
         int[] projectIndices = {0};
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
@@ -409,8 +409,8 @@ public class OmniFilterAndProjectOperatorTest {
     @Test
     public void logicalOperators1() {
         VecType[] types = {
-            OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE,
-            OMNI_VEC_TYPE_LONG
+            IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE,
+            LongVecType.LONG
         };
         int[] projectIndices = {0, 2, 4, 5};
         String str
@@ -454,7 +454,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators2() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
         int[] projectIndices = {3, 2, 1, 0};
         String str
             = "AND(OR($operator$LESS_THAN(#0, 50), $operator$EQUAL(#1, -12)), OR($operator$LESS_THAN_OR_EQUAL(#2, -3000000000), $operator$GREATER_THAN_OR_EQUAL(#3, 0)))";
@@ -497,7 +497,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators3() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
         int[] projectIndices = {1, 0};
         String expr
             = "AND($operator$NOT_EQUAL(#1, 0), OR(OR(OR($operator$EQUAL(#0, 1), $operator$EQUAL(#0, 2)), $operator$EQUAL(#0, 3)), OR(OR(OR($operator$EQUAL(55, #0), $operator$EQUAL(5, #0)), $operator$EQUAL(#0, 8)), $operator$EQUAL(#0, 13))))";
@@ -542,7 +542,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void arithmeticAdd() {
-        VecType[] types = {OMNI_VEC_TYPE_INT};
+        VecType[] types = {IntVecType.INTEGER};
         int[] projectIndices = {0};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "$operator$GREATER_THAN(ADD(#0, 1), 4)", types, projectIndices);
@@ -590,7 +590,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void multithreadTest() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_DOUBLE};
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, DoubleVecType.DOUBLE, DoubleVecType.DOUBLE};
         int[] projectIndices = {0, 1, 2, 3};
         String str = "$operator$LESS_THAN_OR_EQUAL(#0, 500)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projectIndices);
@@ -627,7 +627,7 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void conditional() {
-        VecType[] types = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
         int[] projectIndices = {0, 1, 2};
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
             "AND(IF($operator$EQUAL(#0, 0), $operator$LESS_THAN(#1, 3), $operator$EQUAL(#1, 4)), $operator$GREATER_THAN(#2, 3))",

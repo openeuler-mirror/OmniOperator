@@ -4,11 +4,10 @@
 
 package nova.hetu.omniruntime.operator.topn;
 
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
-import nova.hetu.omniruntime.constants.VecType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -22,24 +21,24 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
     /**
      * Instantiates a new Omni top n operator factory.
      *
-     * @param sourceTypes the source types
-     * @param limitN the limit n
-     * @param sortCols the sort cols
+     * @param sourceTypes    the source types
+     * @param limitN         the limit n
+     * @param sortCols       the sort cols
      * @param sortAssendings the sort assendings
      * @param sortNullFirsts the sort null firsts
      */
     public OmniTopNOperatorFactory(VecType[] sourceTypes, int limitN, int[] sortCols, int[] sortAssendings,
-        int[] sortNullFirsts) {
+            int[] sortNullFirsts) {
         super(new Context(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts));
     }
 
-    private static native long createTopNOperatorFactory(int[] sourceTypes, int limitN, int[] sortCols, int[] sortAssendings,
-        int[] sortNullFirsts);
+    private static native long createTopNOperatorFactory(String sourceTypes, int limitN, int[] sortCols,
+            int[] sortAssendings, int[] sortNullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createTopNOperatorFactory(toNativeConstants(context.sourceTypes), context.limitN, context.sortCols,
-            context.sortAssendings, context.sortNullFirsts);
+        return createTopNOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.limitN,
+                context.sortCols, context.sortAssendings, context.sortNullFirsts);
     }
 
     /**
@@ -61,9 +60,9 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
         /**
          * Instantiates a new Context.
          *
-         * @param sourceTypes the source types
-         * @param limitN the limit n
-         * @param sortCols the sort cols
+         * @param sourceTypes    the source types
+         * @param limitN         the limit n
+         * @param sortCols       the sort cols
          * @param sortAssendings the sort assendings
          * @param sortNullFirsts the sort null firsts
          */
@@ -92,9 +91,9 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
                 return false;
             }
             Context context = (Context) obj;
-            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(sortCols,
-                context.sortCols) && Arrays.equals(sortAssendings, context.sortAssendings) && Arrays.equals(
-                sortNullFirsts, context.sortNullFirsts);
+            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(
+                    sortCols, context.sortCols) && Arrays.equals(sortAssendings, context.sortAssendings)
+                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts);
         }
     }
 }

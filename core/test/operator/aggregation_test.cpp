@@ -53,7 +53,6 @@ VectorBatch** buildInput(int32_t vecBatchNum, int32_t colNum, int32_t rowPerVecB
 void destroyInput(VectorBatch** input, int32_t vecBatchNum, int32_t colNum)
 {
     for (int32_t i = 0; i < vecBatchNum; ++i) {
-        input[i]->FreeAllVectors();
         delete input[i];
     }
 }
@@ -255,10 +254,7 @@ double total_wall_time;
 void perfTestOriginal(int64_t moduleAddr, VectorBatch** input)
 {
     using namespace omniruntime::op;
-    uint32_t* columnTypes1 = new uint32_t[input[0]->GetVectorCount()];
-    for (int32_t i = 0; i < input[0]->GetVectorCount(); ++i) {
-        columnTypes1[i] = (int32_t)input[0]->GetVectorTypes()[i];
-    }
+
     // create operator
     HashAggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<HashAggregationOperatorFactory*>(moduleAddr);
     auto groupBy = nativeOperatorFactory->CreateOperator();
@@ -271,7 +267,6 @@ void perfTestOriginal(int64_t moduleAddr, VectorBatch** input)
     int32_t vecBatchCount = groupBy->GetOutput(result);
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
     EXPECT_EQ(result[0]->GetRowCount(), 4);
-    delete[] columnTypes1;
 }
 
 void perfTest(int64_t moduleAddr, VectorBatch** input, int32_t vecBatchNum, int32_t* rowCount)
@@ -305,13 +300,13 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     VectorBatch** input = buildInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
 
     // First stage
-    ColumnIndex c0 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c1 = {1, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c2 = {2, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c3 = {3, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c4 = {4, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c5 = {5, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c6 = {6, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c0 = {0, LongVecType::Instance()};
+    ColumnIndex c1 = {1, LongVecType::Instance()};
+    ColumnIndex c2 = {2, LongVecType::Instance()};
+    ColumnIndex c3 = {3, LongVecType::Instance()};
+    ColumnIndex c4 = {4, LongVecType::Instance()};
+    ColumnIndex c5 = {5, LongVecType::Instance()};
+    ColumnIndex c6 = {6, LongVecType::Instance()};
     std::vector<ColumnIndex> groupByColumns1 = {c0, c1};
     std::vector<ColumnIndex> aggregateColumns1 = {c2, c3, c4, c5, c6};
     std::vector<std::unique_ptr<Aggregator>> aggs1;
@@ -330,13 +325,13 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     int32_t vecBatchCount = groupBy1->GetOutput(result1);
     delete groupBy1;
 
-    ColumnIndex c7 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c8 = {1, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c9 = {2, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c10 = {3, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c11 = {4, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c12 = {5, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c13 = {6, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c7 = {0, LongVecType::Instance()};
+    ColumnIndex c8 = {1, LongVecType::Instance()};
+    ColumnIndex c9 = {2, LongVecType::Instance()};
+    ColumnIndex c10 = {3, LongVecType::Instance()};
+    ColumnIndex c11 = {4, LongVecType::Instance()};
+    ColumnIndex c12 = {5, LongVecType::Instance()};
+    ColumnIndex c13 = {6, LongVecType::Instance()};
     groupByColumns1 = {c7, c8};
     aggregateColumns1 = {c9, c10, c11, c12, c13};
     aggs1.clear();
@@ -364,13 +359,13 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 
     // Second stage
-    ColumnIndex c14 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c15 = {1, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c16 = {2, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c17 = {3, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c18 = {4, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c19 = {5, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c20 = {6, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c14 = {0, LongVecType::Instance()};
+    ColumnIndex c15 = {1, LongVecType::Instance()};
+    ColumnIndex c16 = {2, LongVecType::Instance()};
+    ColumnIndex c17 = {3, LongVecType::Instance()};
+    ColumnIndex c18 = {4, LongVecType::Instance()};
+    ColumnIndex c19 = {5, LongVecType::Instance()};
+    ColumnIndex c20 = {6, LongVecType::Instance()};
     std::vector<ColumnIndex> groupByColumns2 = {c14, c15};
     std::vector<ColumnIndex> aggregateColumns2 = {c16, c17, c18, c19, c20};
     std::vector<std::unique_ptr<Aggregator>> aggs2;
@@ -424,8 +419,8 @@ TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
         vecBatch->SetVector(1, col2);
         input[i] = vecBatch;
     }
-    ColumnIndex c0 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c1 = {1, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c0 = {0, LongVecType::Instance()};
+    ColumnIndex c1 = {1, LongVecType::Instance()};
     std::vector<ColumnIndex> v1 = {c0, c1};
     std::vector<ColumnIndex> v2 = {c0, c1};
     std::vector<std::unique_ptr<Aggregator>> aggs;
@@ -446,9 +441,6 @@ TEST(HashAggregationOperatorTest, VerfifyCorrectness_GroupByAggSameCols)
         Vector* col = result[0]->GetVector(i);
         // TODO: print data;
 //        col->printColumn();
-    }
-    for (int i = 0; i < VEC_BATCH_NUM; ++i) {
-        input[i]->FreeAllVectors();
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
@@ -576,11 +568,11 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     std::string aggNames[] = {"sum", "avg", "count", "min", "max"};
     VectorBatch** input = buildInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
 
-    ColumnIndex c0 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c1 = {1, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c2 = {2, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c3 = {3, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c4 = {4, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c0 = {0, LongVecType::Instance()};
+    ColumnIndex c1 = {1, LongVecType::Instance()};
+    ColumnIndex c2 = {2, LongVecType::Instance()};
+    ColumnIndex c3 = {3, LongVecType::Instance()};
+    ColumnIndex c4 = {4, LongVecType::Instance()};
     std::vector<ColumnIndex> aggregateColumns = {c0, c1, c2, c3, c4};
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(std::make_unique<SumAggregator>(2, INPUT_MODE, OUTPUT_MODE));
@@ -598,11 +590,11 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     int32_t tableCount1 = aggregate1->GetOutput(result);
     delete aggregate1;
 
-    ColumnIndex c5 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c6 = {1, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c7 = {2, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c8 = {3, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c9 = {4, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c5 = {0, LongVecType::Instance()};
+    ColumnIndex c6 = {1, LongVecType::Instance()};
+    ColumnIndex c7 = {2, LongVecType::Instance()};
+    ColumnIndex c8 = {3, LongVecType::Instance()};
+    ColumnIndex c9 = {4, LongVecType::Instance()};
     aggregateColumns = {c5, c6, c7, c8, c9};
     aggs.clear();
     aggs.push_back(std::make_unique<SumAggregator>(2, INPUT_MODE, OUTPUT_MODE));
@@ -619,11 +611,11 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     delete aggregate2;
 
     // Second stage
-    ColumnIndex c10 = {0, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c11 = {1, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c12 = {2, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c13 = {3, OMNI_VEC_TYPE_LONG};
-    ColumnIndex c14 = {4, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c10 = {0, LongVecType::Instance()};
+    ColumnIndex c11 = {1, LongVecType::Instance()};
+    ColumnIndex c12 = {2, LongVecType::Instance()};
+    ColumnIndex c13 = {3, LongVecType::Instance()};
+    ColumnIndex c14 = {4, LongVecType::Instance()};
     aggregateColumns = {c10, c11, c12, c13, c14};
     std::vector<std::unique_ptr<Aggregator>> aggs1;
     aggs1.push_back(std::make_unique<SumAggregator>(2, false, false));
@@ -667,7 +659,7 @@ TEST(AggregatorTest, avg_correctness_test)
     const int COLUMN_COUNT = 1;
     VectorBatch** input = buildInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE, CARDINALITY);
 
-    ColumnIndex c0 = {0, OMNI_VEC_TYPE_LONG};
+    ColumnIndex c0 = {0, LongVecType::Instance()};
     std::vector<ColumnIndex> aggregateColumns = {c0};
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(std::make_unique<AverageAggregator>(2));
@@ -698,10 +690,7 @@ TEST(AggregatorTest, avg_correctness_test)
 void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch** input, int32_t vecBatchNum, int32_t* rowCount)
 {
     using namespace omniruntime::op;
-    uint32_t* columnTypes1 = new uint32_t[input[0]->GetVectorCount()];
-    for (int32_t i = 0; i < input[0]->GetVectorCount(); ++i) {
-        columnTypes1[i] = (int32_t)input[0]->GetVectorTypes()[i];
-    }
+
     // create operatory
     AggregationOperatorFactory* nativeOperatorFactory  = reinterpret_cast<AggregationOperatorFactory*>(moduleAddr);
     Operator* aggregation;
@@ -719,7 +708,6 @@ void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch** input,
     int32_t vecBatchCount = aggregation->GetOutput(result);
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
     EXPECT_EQ(result[0]->GetRowCount(), 1);
-    delete[] columnTypes1;
 }
 
 TEST(AggregationOperatorTest, Perf_Original)

@@ -1,9 +1,9 @@
 package nova.hetu.omniruntime.vector;
 
+import nova.hetu.omniruntime.type.LongVecType;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -17,7 +17,6 @@ public class TestLongVec {
      */
     @AfterClass
     public void tearDown() {
-        VecAllocator.GLOBAL_VECTOR_ALLOCATOR.close();
     }
 
     /**
@@ -29,7 +28,7 @@ public class TestLongVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 2048);
-        assertEquals(vec.getType(), OMNI_VEC_TYPE_LONG);
+        assertEquals(vec.getType(), LongVecType.LONG);
         vec.close();
     }
 

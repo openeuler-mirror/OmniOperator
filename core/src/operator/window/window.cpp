@@ -202,7 +202,7 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = std::make_unique<VectorBatch>(finalOutputColsCount, rowCount).release();
-    vecBatch->SetVectors(outputTypes);
+    vecBatch->NewVectors(outputTypes);
     pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.data(), position, rowCount);
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {

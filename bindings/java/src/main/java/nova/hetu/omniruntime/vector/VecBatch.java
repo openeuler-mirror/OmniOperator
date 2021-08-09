@@ -1,22 +1,16 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.io.Closeable;
+import java.util.Arrays;
 import java.util.List;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_128_DECIMAL;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_256_DECIMAL;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_CONTAINER;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DICTIONARY;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_SHORT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_VARCHAR;
 import static nova.hetu.omniruntime.vector.Vec.getTypeNative;
 
 /**
@@ -24,30 +18,26 @@ import static nova.hetu.omniruntime.vector.Vec.getTypeNative;
  *
  * @since 2021-07-17
  */
-public class VecBatch
-        implements Closeable {
+public class VecBatch implements Closeable {
     private final Vec[] vectors;
 
     private final int rowCount;
 
     private final long nativeVectorBatch;
 
-    public VecBatch(Vec[] vectors, int size) {
+    public VecBatch(Vec[] vectors, int rowCount) {
         this.vectors = vectors;
-        this.rowCount = size;
-        this.nativeVectorBatch = newVectorBatchNative(vectors.length);
-        int index = 0;
-        for (Vec vector : vectors) {
-            setVectorNative(this.nativeVectorBatch, index++, vector.getNativeVector());
-        }
+        this.rowCount = rowCount;
+        long[] nativeVectors = Arrays.asList(vectors).stream().mapToLong(vec -> vec.getNativeVector()).toArray();
+        this.nativeVectorBatch = newVectorBatchNative(nativeVectors, rowCount);
     }
 
     public VecBatch(Vec[] vectors) {
         this(vectors, vectors[0].getSize());
     }
 
-    public VecBatch(List<Vec> vectors, int size) {
-        this(vectors.toArray(new Vec[vectors.size()]), size);
+    public VecBatch(List<Vec> vectors, int rowCount) {
+        this(vectors.toArray(new Vec[vectors.size()]), rowCount);
     }
 
     public VecBatch(List<Vec> vectors) {
@@ -57,93 +47,36 @@ public class VecBatch
     /**
      * This constructor is for native to call
      *
-     * @param nativeVectorBatch
+     * @param nativeVecBatch
      */
-    public VecBatch(long nativeVectorBatch, int size) {
-        this.nativeVectorBatch = nativeVectorBatch;
-        int vectorCount = getVectorCountNative(nativeVectorBatch);
-        vectors = new Vec[vectorCount];
-        for (int idx = 0; idx < vectorCount; idx++) {
-            Vec vector;
-            long nativeVector = getVectorNative(nativeVectorBatch, idx);
-            VecType type = new VecType(getTypeNative(nativeVector));
-            if (OMNI_VEC_TYPE_INT.equals(type)) {
-                vector = new IntVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_LONG.equals(type)) {
-                vector = new LongVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_DOUBLE.equals(type)) {
-                vector = new DoubleVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_SHORT.equals(type)) {
-                vector = new ShortVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_VARCHAR.equals(type)) {
-                vector = new VarcharVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_128_DECIMAL.equals(type)) {
-                vector = new Decimal128Vec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_256_DECIMAL.equals(type)) {
-                vector = new Decimal256Vec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_DICTIONARY.equals(type)) {
-                vector = new DictionaryVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_CONTAINER.equals(type)) {
-                vector = new ContainerVec(nativeVector);
-            }
-            else {
-                throw new IllegalArgumentException(String.format("Not Support Vec Type %s", type));
-            }
-            vectors[idx] = vector;
+    public VecBatch(long nativeVecBatch, long[] nativeVectors, int rowCount) {
+        int vecCount = nativeVectors.length;
+        Vec[] newVectors = new Vec[vecCount];
+        for (int idx = 0; idx < vecCount; idx++) {
+            long nativeVector = nativeVectors[idx];
+            VecType vecType = VecTypeSerializer.deserializeSingle(getTypeNative(nativeVector));
+            newVectors[idx] = VecFactory.create(nativeVector, vecType);
         }
-        this.rowCount = size;
+        this.rowCount = rowCount;
+        this.nativeVectorBatch = nativeVecBatch;
+        this.vectors = newVectors;
     }
 
-    public VecBatch(long nativeVectorBatch) {
-        this.nativeVectorBatch = nativeVectorBatch;
-        int vectorCount = getVectorCountNative(nativeVectorBatch);
-        if (vectorCount == 0) {
-            throw new IllegalArgumentException("There is no vector in the vec batch.");
-        }
-        vectors = new Vec[vectorCount];
-        for (int idx = 0; idx < vectorCount; idx++) {
-            Vec vector;
-            long nativeVector = getVectorNative(nativeVectorBatch, idx);
-            VecType type = new VecType(getTypeNative(nativeVector));
-            if (OMNI_VEC_TYPE_INT.equals(type)) {
-                vector = new IntVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_LONG.equals(type)) {
-                vector = new LongVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_DOUBLE.equals(type)) {
-                vector = new DoubleVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_SHORT.equals(type)) {
-                vector = new ShortVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_CONTAINER.equals(type)) {
-                vector = new ContainerVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_VARCHAR.equals(type)) {
-                vector = new VarcharVec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_128_DECIMAL.equals(type)) {
-                vector = new Decimal128Vec(nativeVector);
-            }
-            else if (OMNI_VEC_TYPE_256_DECIMAL.equals(type)) {
-                vector = new Decimal256Vec(nativeVector);
-            }
-            else {
-                throw new IllegalArgumentException(String.format("Not Support Vec Type %s", type));
-            }
-            vectors[idx] = vector;
-        }
-        this.rowCount = vectors[0].getSize();
-    }
+    /**
+     * create vector batch based on the number of vectors
+     *
+     * @param nativeVectors native vector array.
+     * @param rowCount      the row count of vector batch
+     * @return vector batch address
+     */
+    public static native long newVectorBatchNative(long[] nativeVectors, int rowCount);
+
+    /**
+     * release vector batch
+     *
+     * @param nativeVectorBatch vector batch address
+     */
+    public static native void freeVectorBatchNative(long nativeVectorBatch);
 
     /**
      * row count in the vecBatch
@@ -171,52 +104,17 @@ public class VecBatch
         return nativeVectorBatch;
     }
 
-    @Override
-    public void close() {
+    /**
+     * release all vectors resource of vector batch.
+     */
+    public void releaseAllVectors() {
         for (Vec vector : vectors) {
             vector.close();
         }
-        freeVectorBatchNative(nativeVectorBatch);
     }
 
-    /**
-     * create vector batch based on the number of vectors
-     *
-     * @param vectorCount vector count
-     * @return vecotr batch address
-     */
-    public static native long newVectorBatchNative(int vectorCount);
-
-    /**
-     * release vector batch
-     *
-     * @param nativeVectorBatch vector batch address
-     */
-    public static native void freeVectorBatchNative(long nativeVectorBatch);
-
-    /**
-     * get vector count
-     *
-     * @param nativeVectorBatch vector batch address
-     * @return vector count
-     */
-    public static native int getVectorCountNative(long nativeVectorBatch);
-
-    /**
-     * set vector
-     *
-     * @param nativeVectorBatch vector batch address
-     * @param index vector offset in vector batch
-     * @param nativeVector vector address
-     */
-    public static native void setVectorNative(long nativeVectorBatch, int index, long nativeVector);
-
-    /**
-     * get vector
-     *
-     * @param nativeVectorBatch vector batch address
-     * @param index vector offset in vector batch
-     * @return vector address
-     */
-    public static native long getVectorNative(long nativeVectorBatch, int index);
+    @Override
+    public void close() {
+        freeVectorBatchNative(nativeVectorBatch);
+    }
 }

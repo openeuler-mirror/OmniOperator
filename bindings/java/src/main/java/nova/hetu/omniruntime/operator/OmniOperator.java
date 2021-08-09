@@ -4,11 +4,11 @@
 
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
-
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
+
+import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
 /**
  * The type Omni operator.
@@ -31,6 +31,15 @@ public final class OmniOperator implements AutoCloseable {
     protected OmniOperator(long nativeOperator) {
         this.nativeOperator = nativeOperator;
     }
+
+    // addInput
+    private static native int addInputNative(long nativeOperator, long nativeVectorBatch);
+
+    // getOutput
+    private static native OmniResults getOutputNative(long nativeOperator);
+
+    // close
+    private static native void closeNative(long nativeOperator);
 
     /**
      * Add input int.
@@ -115,13 +124,4 @@ public final class OmniOperator implements AutoCloseable {
             return !OMNI_STATUS_NORMAL.equals(results.getStatus());
         }
     }
-
-    // addInput
-    private static native int addInputNative(long nativeOperator, long nativeVectorBatch);
-
-    // getOutput
-    private static native OmniResults getOutputNative(long nativeOperator);
-
-    // close
-    private static native void closeNative(long nativeOperator);
 }

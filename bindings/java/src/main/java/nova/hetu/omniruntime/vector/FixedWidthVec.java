@@ -1,17 +1,17 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.VecType;
 
 /**
  * base class of fixed width vec
  *
  * @since 2021-07-17
  */
-public abstract class FixedWidthVec
-        extends Vec {
+public abstract class FixedWidthVec extends Vec {
     public FixedWidthVec(int capacityInBytes, int size, VecType type) {
         super(capacityInBytes, size, type);
     }
@@ -28,7 +28,7 @@ public abstract class FixedWidthVec
         super(vector, positions, offset, length);
     }
 
-    public FixedWidthVec(long nativeVector) {
-        super(nativeVector);
+    public FixedWidthVec(long nativeVector, VecType type) {
+        super(nativeVector, type);
     }
 }

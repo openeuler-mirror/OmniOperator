@@ -180,7 +180,7 @@ void AggregateWindowFunction::Accumulate(int32_t start, int32_t end)
         int32_t leftColumnPosition = DecodePosition(leftValueAddress);
         Vector *tempColumn = leftColumns[argumentChannels][leftColumnIndex];
         if (!tempColumn->IsValueNull(leftColumnPosition)) {
-            switch (tempColumn->GetType()) {
+            switch (tempColumn->GetType().GetId()) {
                 case OMNI_VEC_TYPE_INT: {
                     int32_t actual = ((IntVector *)tempColumn)->GetValue(leftColumnPosition);
                     ((IntVector *)vector)->SetValue(position - start, actual);

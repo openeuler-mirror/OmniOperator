@@ -14,7 +14,7 @@ public:
     static int32_t CompareVectorAtPosition(omniruntime::vec::VecType colType, omniruntime::vec::Vector *leftColumn,
         int32_t leftColumnPosition, omniruntime::vec::Vector *rightColumn, int32_t rightColumnPosition)
     {
-        switch (colType) {
+        switch (colType.GetId()) {
             case omniruntime::vec::OMNI_VEC_TYPE_INT:
                 return ((omniruntime::vec::IntVector *)leftColumn)->GetValue(leftColumnPosition) -
                     ((omniruntime::vec::IntVector *)rightColumn)->GetValue(rightColumnPosition);

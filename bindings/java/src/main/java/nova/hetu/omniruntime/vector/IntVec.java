@@ -1,32 +1,31 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
+
+import nova.hetu.omniruntime.type.IntVecType;
 
 import java.nio.IntBuffer;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-
 /**
- *
  * int vec
  *
  * @since 2021-07-17
  */
-public class IntVec
-        extends FixedWidthVec {
+public class IntVec extends FixedWidthVec {
     private static final int BYTES = Integer.BYTES;
 
     public IntVec(int size) {
-        super(size * BYTES, size, OMNI_VEC_TYPE_INT);
+        super(size * BYTES, size, IntVecType.INTEGER);
     }
 
     public IntVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT);
+        super(allocator, size * BYTES, size, IntVecType.INTEGER);
     }
 
     public IntVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, IntVecType.INTEGER);
     }
 
     private IntVec(IntVec vector, int offset, int length, boolean isSlice) {
@@ -38,7 +37,7 @@ public class IntVec
     }
 
     /**
-     *  get the specified integer at the specified absolute
+     * get the specified integer at the specified absolute
      *
      * @param index the element offset in vec
      * @return int value
@@ -62,7 +61,7 @@ public class IntVec
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start the element index in values
+     * @param start  the element index in values
      * @param length the number of elements that need to written
      */
     public void put(int[] values, int offset, int start, int length) {

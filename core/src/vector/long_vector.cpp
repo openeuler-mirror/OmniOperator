@@ -8,12 +8,12 @@
 namespace omniruntime {
 namespace vec {
 LongVector::LongVector(VectorAllocator *allocator, int size)
-    : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_LONG)
+    : FixedWidthVector(allocator, size * BYTES, size, LongVecType::Instance())
 {}
 
 void LongVector::SetValues(int startIndex, const int64_t *values, int length)
 {
-    if (!GetReference()->IsWritable() || startIndex + length > size) {
+    if (!reference->IsWritable() || startIndex + length > size) {
         return;
     }
     void *startAddress = &(((int64_t *)valuesAddress)[startIndex]);

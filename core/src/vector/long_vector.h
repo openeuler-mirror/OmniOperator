@@ -11,7 +11,7 @@ namespace omniruntime {
 namespace vec {
 class LongVector : public FixedWidthVector<int64_t> {
 public:
-    LongVector(omniruntime::vec::VectorAllocator *allocator, int size);
+    LongVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
     int64_t GetValue(int index)

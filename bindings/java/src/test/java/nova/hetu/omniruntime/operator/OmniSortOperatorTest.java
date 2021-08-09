@@ -1,12 +1,12 @@
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.IntVecType;
+import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -57,7 +57,7 @@ public class OmniSortOperatorTest {
 
         VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2});
 
-        VecType[] sourceTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
+        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -98,7 +98,7 @@ public class OmniSortOperatorTest {
         ImmutableList<VecBatch> vecs = buildVecs();
         long elapsed = System.currentTimeMillis() - start;
 
-        VecType[] sourceTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
+        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
@@ -123,7 +123,7 @@ public class OmniSortOperatorTest {
     public void testOrderByMultiPerformance() {
         ImmutableList<VecBatch> vecs = buildVecs();
 
-        VecType[] sourceTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};

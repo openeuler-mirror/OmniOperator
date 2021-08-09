@@ -32,10 +32,10 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative(JNIEnv *, jobject, jlong);
 
 /*
-* Class:     nova_hetu_omniruntime_operator_OmniOperator
-* Method:    close
-* Signature: (J)[Lnova/hetu/omniruntime/operator/void;
-*/
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    close
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/void;
+ */
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative(JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus

@@ -9,12 +9,12 @@
 namespace omniruntime {
 namespace vec {
 IntVector::IntVector(VectorAllocator *allocator, int size)
-    : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_INT)
+    : FixedWidthVector(allocator, size * BYTES, size, IntVecType::Instance())
 {}
 
 void IntVector::SetValues(int startIndex, const int32_t *values, int length)
 {
-    if (!GetReference()->IsWritable() || startIndex + length > size) {
+    if (!reference->IsWritable() || startIndex + length > size) {
         return;
     }
     void *startAddress = &(((int32_t *)valuesAddress)[startIndex]);

@@ -4,6 +4,9 @@
 
 package nova.hetu.omniruntime.constants;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * The type Agg type.
  *
@@ -46,7 +49,8 @@ public class AggType extends Constant {
      *
      * @param value the value
      */
-    public AggType(int value) {
+    @JsonCreator
+    public AggType(@JsonProperty("value") int value) {
         super(value);
     }
 }

@@ -1,13 +1,13 @@
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_INT;
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_LONG;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 
-import nova.hetu.omniruntime.constants.VecType;
+import nova.hetu.omniruntime.type.IntVecType;
+import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -34,7 +34,7 @@ public class OmniProjectOperatorTest {
     @Test
     public void simpleTest() {
         String[] exprs = {"$operator$ADD(#0, 5)"};
-        VecType[] inputTypes = {OMNI_VEC_TYPE_INT};
+        VecType[] inputTypes = {IntVecType.INTEGER};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
@@ -61,7 +61,7 @@ public class OmniProjectOperatorTest {
     @Test
     public void complexTest() {
         String[] exprs = {"$operator$MULTIPLY(#0, #1)", "IF($operator$LESS_THAN(#0, 500), 4000000000, #2)"};
-        VecType[] inputTypes = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG};
+        VecType[] inputTypes = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);

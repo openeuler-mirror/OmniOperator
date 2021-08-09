@@ -1,6 +1,6 @@
-//
-// Created by root on 6/2/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ */
 
 #include "gtest/gtest.h"
 #include "vector.h"
@@ -10,29 +10,31 @@
 
 using namespace omniruntime::vec;
 
-TEST(BooleanVector, newVector) {
+TEST(BooleanVector, newVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     BooleanVector *vector = new BooleanVector(allocator, 256);
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
-    EXPECT_EQ(vector->GetReference()->GetCapacityInBytes(), 256);
-    EXPECT_EQ(vector->GetReference()->GetType(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(vector->GetCapacityInBytes(), 256);
+    EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_BOOLEAN);
     delete vector;
 
     BooleanVector *vector1 = new BooleanVector(allocator, 251);
     EXPECT_EQ(vector1->GetSize(), 251);
     EXPECT_EQ(vector1->GetPositionOffset(), 0);
-    EXPECT_EQ(vector1->GetReference()->GetCapacityInBytes(), 251);
-    EXPECT_EQ(vector1->GetReference()->GetType(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(vector1->GetCapacityInBytes(), 251);
+    EXPECT_EQ(vector1->GetType().GetId(), OMNI_VEC_TYPE_BOOLEAN);
     delete vector1;
 
     manager.DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
-TEST(BooleanVector, sliceVector) {
+TEST(BooleanVector, sliceVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -46,7 +48,7 @@ TEST(BooleanVector, sliceVector) {
     BooleanVector *slice1 = originalVector->Slice(offset, 4);
     EXPECT_EQ(slice1->GetPositionOffset(), offset);
     EXPECT_EQ(slice1->GetSize(), 4);
-    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
+    EXPECT_EQ(slice1->GetReference(), 2);
     for (int i = 0; i < slice1->GetSize(); i++) {
         EXPECT_EQ(slice1->GetValue(i), originalVector->GetValue(i + offset));
     }
@@ -57,17 +59,18 @@ TEST(BooleanVector, sliceVector) {
     }
 
     delete originalVector;
-    EXPECT_EQ(slice1->GetReference()->GetRef(), 2);
+    EXPECT_EQ(slice1->GetReference(), 2);
 
     delete slice1;
-    EXPECT_EQ(slice2->GetReference()->GetRef(), 1);
+    EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
     manager.DeleteAllocator(&allocator);
 }
 
 // Test set/get
-TEST(BooleanVector, setAndGetValue) {
+TEST(BooleanVector, setAndGetValue)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -85,7 +88,8 @@ TEST(BooleanVector, setAndGetValue) {
 }
 
 // Test setValues
-TEST(BooleanVector, setValues) {
+TEST(BooleanVector, setValues)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -98,7 +102,7 @@ TEST(BooleanVector, setValues) {
     for (int i = 0; i < size; i++) {
         EXPECT_EQ(boolVector1->GetValue(i), values[i]);
     }
-    
+
     BooleanVector *boolVector2 = new BooleanVector(allocator, size);
     boolVector2->SetValues(1, p + 2, 3);
     for (int i = 0; i < 3; i++) {
@@ -111,7 +115,8 @@ TEST(BooleanVector, setValues) {
 }
 
 // Test is null
-TEST(BooleanVector, setValueNull) {
+TEST(BooleanVector, setValueNull)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -136,7 +141,8 @@ TEST(BooleanVector, setValueNull) {
 }
 
 // Test is copyPosition
-TEST(BooleanVector, copyPositions) {
+TEST(BooleanVector, copyPositions)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -149,7 +155,7 @@ TEST(BooleanVector, copyPositions) {
     int *possions = new int[2];
     possions[0] = 1;
     possions[1] = 3;
-    BooleanVector* copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
+    BooleanVector *copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
 
     for (int i = 0; i < copyPostionVector->GetSize(); i++) {
         EXPECT_EQ(copyPostionVector->GetValue(i), originalVector->GetValue(possions[i]));
@@ -161,7 +167,8 @@ TEST(BooleanVector, copyPositions) {
 }
 
 // Test is copyRegion
-TEST(BooleanVector, copyRegion) {
+TEST(BooleanVector, copyRegion)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
@@ -182,13 +189,13 @@ TEST(BooleanVector, copyRegion) {
     manager.DeleteAllocator(&allocator);
 }
 
-TEST(BooleanVector, jniFreeVector) {
+TEST(BooleanVector, jniFreeVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-   BooleanVector *oritianlVector = new BooleanVector(allocator, 256);
-    Vector *vector = (Vector *) oritianlVector;
+    BooleanVector *oritianlVector = new BooleanVector(allocator, 256);
+    Vector *vector = (Vector *)oritianlVector;
     delete vector;
 }
-

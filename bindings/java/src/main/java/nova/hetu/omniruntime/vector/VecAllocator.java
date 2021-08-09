@@ -1,6 +1,7 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
 /**
@@ -8,12 +9,16 @@ package nova.hetu.omniruntime.vector;
  *
  * @since 2021-07-17
  */
-public class VecAllocator
-        implements AutoCloseable {
+public class VecAllocator implements AutoCloseable {
+    /**
+     * global vector allocator scope
+     */
+    public static String GLOBAL_SCOPE = "___GLOBAL_SCOPE___";
+
     /**
      * global vector allocator
      */
-    public static final VecAllocator GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(getGlobalAllocatorNative());
+    public static final VecAllocator GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(newAllocatorNative(GLOBAL_SCOPE));
 
     private long nativeAllocator;
 
@@ -25,6 +30,10 @@ public class VecAllocator
         this.nativeAllocator = nativeAllocator;
     }
 
+    private static native long newAllocatorNative(String scope);
+
+    private static native long freeAllocatorNative(long nativeAllocator);
+
     public long getNativeAllocator() {
         return nativeAllocator;
     }
@@ -33,10 +42,4 @@ public class VecAllocator
     public void close() {
         freeAllocatorNative(nativeAllocator);
     }
-
-    private static native long newAllocatorNative(String scope);
-
-    private static native long freeAllocatorNative(long nativeAllocator);
-
-    private static native long getGlobalAllocatorNative();
 }

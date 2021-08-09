@@ -1,6 +1,7 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
 import java.nio.ByteBuffer;
@@ -45,7 +46,7 @@ public class ValueNulls {
     }
 
     /**
-     *  get the specified boolean at the specified absolute
+     * get the specified boolean at the specified absolute
      *
      * @param index the element offset in vec
      * @return if the value of 1 returns true, otherwise it returns false
@@ -54,8 +55,7 @@ public class ValueNulls {
         return bitmap.get(index) == 1;
     }
 
-    public void get(int index, boolean[] targetValueNulls, int start, int length)
-    {
+    public void get(int index, boolean[] targetValueNulls, int start, int length) {
         byte[] nulls = new byte[length];
         bitmap.position(index);
         bitmap.get(nulls, 0, length);
@@ -64,8 +64,7 @@ public class ValueNulls {
         }
     }
 
-    public void set(int index, boolean[] isNulls, int start, int length)
-    {
+    public void set(int index, boolean[] isNulls, int start, int length) {
         for (int i = 0; i < length; i++) {
             if (isNulls[i + start]) {
                 bitmap.put(i + index, (byte) 1);

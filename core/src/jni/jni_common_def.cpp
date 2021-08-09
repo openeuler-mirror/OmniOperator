@@ -12,7 +12,7 @@ jmethodID vecBatchInitMethodId;
 jmethodID omniResultsInitMethodId;
 jint JNI_VERSION = JNI_VERSION_1_6;
 
-jclass createGlobalClassRef(JNIEnv* env, const char *className)
+jclass createGlobalClassRef(JNIEnv *env, const char *className)
 {
     jclass local_class = env->FindClass(className);
     jclass global_class = (jclass)env->NewGlobalRef(local_class);
@@ -22,22 +22,23 @@ jclass createGlobalClassRef(JNIEnv* env, const char *className)
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
-    JNIEnv* env = nullptr;
-    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION) != JNI_OK) {
+    JNIEnv *env = nullptr;
+    if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION) != JNI_OK) {
         return JNI_ERR;
     }
     bufCls = createGlobalClassRef(env, "java/nio/ByteBuffer");
-    vecBatchCls = createGlobalClassRef(env,"nova/hetu/omniruntime/vector/VecBatch");
-    vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(JI)V");
-    omniResultsCls = createGlobalClassRef(env,"nova/hetu/omniruntime/operator/OmniResults");
-    omniResultsInitMethodId = env->GetMethodID(omniResultsCls, "<init>", "([Lnova/hetu/omniruntime/vector/VecBatch;I)V");
+    vecBatchCls = createGlobalClassRef(env, "nova/hetu/omniruntime/vector/VecBatch");
+    vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J[JI)V");
+    omniResultsCls = createGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
+    omniResultsInitMethodId =
+        env->GetMethodID(omniResultsCls, "<init>", "([Lnova/hetu/omniruntime/vector/VecBatch;I)V");
     return JNI_VERSION;
 }
 
 void JNI_OnUnload(JavaVM *vm, const void *reserved)
 {
-    JNIEnv* env;
-    vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+    JNIEnv *env = nullptr;
+    vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
     env->DeleteGlobalRef(vecBatchCls);
     env->DeleteGlobalRef(bufCls);
 }

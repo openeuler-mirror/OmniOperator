@@ -1,24 +1,13 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-//
-// Created by root on 6/1/21.
-//
 
-#include <stddef.h>
 #include "vector_reference.h"
 
 namespace omniruntime {
 namespace vec {
-VectorReference::VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, int capacityInBytes,
-    VecType type)
-    : values(values),
-      valueNulls(valueNulls),
-      valueOffsets(valueOffsets),
-      reference(1),
-      capacityInBytes(capacityInBytes),
-      type(type),
-      writable(true)
+VectorReference::VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, VecType type)
+    : values(values), valueNulls(valueNulls), valueOffsets(valueOffsets), reference(1), type(type), writable(true)
 {}
 
 VectorReference::~VectorReference() {}
@@ -77,14 +66,9 @@ void *VectorReference::GetValueOffsetsAddress()
     return nullptr;
 }
 
-VecType VectorReference::GetType()
+const VecType &VectorReference::GetType()
 {
     return type;
-}
-
-int VectorReference::GetCapacityInBytes()
-{
-    return capacityInBytes;
 }
 
 bool VectorReference::IsWritable()

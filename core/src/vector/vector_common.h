@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-//
-// Created by root on 6/16/21.
-//
 
 #ifndef OMNI_RUNTIME_VECTOR_COMMON_H
 #define OMNI_RUNTIME_VECTOR_COMMON_H
@@ -17,5 +14,9 @@
 #include "vector.h"
 #include "vector_batch.h"
 #include "container_vector.h"
+#include "decimal128_vector.h"
+#include "decimal128.h"
+#include "vector_allocator_manager.h"
+#include "vector_allocator.h"
 
 #endif // OMNI_RUNTIME_VECTOR_COMMON_H

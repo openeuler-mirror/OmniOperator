@@ -19,19 +19,38 @@
 #include "../operator/topn/topn.h"
 #include "../operator/partitionedoutput/partitionedoutput.h"
 #include "../operator/optimization.h"
+#include "../vector/vector_type_serializer.h"
 #include "config.h"
 
 using omniruntime::jit::ParamValue;
 using omniruntime::jit::Specialization;
+using omniruntime::vec::Deserialize;
+using omniruntime::vec::VecType;
 
 using namespace omniruntime::op;
+
+int32_t *CreateTypeIds(const std::vector<VecType> &types)
+{
+    int32_t size = types.size();
+    int32_t *typeIds = new int32_t[size];
+    for (int i = 0; i < size; ++i) {
+        typeIds[i] = types[i].GetId();
+    }
+    return typeIds;
+}
+
+void DestroyTypeIds(int32_t *typeIds)
+{
+    delete[] typeIds;
+}
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
  * Method:    createOperatorNative
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *env, jobject jObj, jlong jNativeFactoryObj)
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *env,
+    jobject jObj, jlong jNativeFactoryObj)
 {
     JNI_DEBUG_LOG("create omni operator starting.");
     auto start = START();
@@ -57,34 +76,42 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 
 /**
  * Return an HashAggregationFactory object address.
- **/
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jintArray jGroupByType, jintArray jAggChannel, jintArray jAggType,
-    jintArray jAggFuncType, jintArray jOutPutTye, jboolean inputRaw, jboolean outputPartial)
+ *     */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
+    JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jstring jGroupByType, jintArray jAggChannel, jstring jAggType,
+    jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
-    // groupby channel and type
+    // groupby channel and id
     jint *groupByCols = env->GetIntArrayElements(jGroupByChannel, JNI_FALSE);
-    jint *groupByTypes = env->GetIntArrayElements(jGroupByType, JNI_FALSE);
+    const char *groupByTypesCharPtr = env->GetStringUTFChars(jGroupByType, JNI_FALSE);
     jint *aggCols = env->GetIntArrayElements(jAggChannel, JNI_FALSE);
-    jint *aggTypes = env->GetIntArrayElements(jAggType, JNI_FALSE);
+    const char *aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    const char *outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
 
     size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
     size_t aggNum = (size_t)env->GetArrayLength(jAggChannel);
 
-    PrepareContext groupByColContext = {(uint32_t*)groupByCols, groupByNum};
-    PrepareContext groupByTypeContext = {(uint32_t*)groupByTypes, groupByNum};
-    PrepareContext aggColContext = {(uint32_t*)aggCols, aggNum};
-    PrepareContext aggTypeContext = {(uint32_t*)aggTypes, aggNum};
-    PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
+    std::vector<VecType> groupByTypes = Deserialize(groupByTypesCharPtr);
+    std::vector<VecType> aggTypes = Deserialize(aggTypesCharPtr);
+
+    auto groupByTypeIds = CreateTypeIds(groupByTypes);
+    auto aggTypeIds = CreateTypeIds(aggTypes);
+
+    PrepareContext groupByColContext = { (uint32_t *)groupByCols, groupByNum };
+    PrepareContext groupByTypeContext = { (uint32_t *)groupByTypeIds, groupByNum };
+    PrepareContext aggColContext = { (uint32_t *)aggCols, aggNum };
+    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggNum };
+    PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
 
     using namespace omniruntime::jit;
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
     int32_t colNum = groupByColContext.len + aggColContext.len;
-    int32_t* colTypes = new int32_t[colNum];
+    int32_t *colTypes = new int32_t[colNum];
 
     for (int i = 0; i < groupColNum; ++i) {
         colTypes[groupByColContext.context[i]] = groupByTypeContext.context[i];
@@ -95,12 +122,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
 
     ParamValue p_col_type = ParamValue(colTypes, colNum);
     ParamValue p_col_count = ParamValue(&colNum);
-    ParamValue p_groupByColIdx = ParamValue((int32_t*)groupByColContext.context, groupColNum);
+    ParamValue p_groupByColIdx = ParamValue((int32_t *)groupByColContext.context, groupColNum);
     ParamValue p_group_num = ParamValue(&groupColNum);
-    ParamValue p_aggColIdx = ParamValue((int32_t*)aggColContext.context, aggColNum);
+    ParamValue p_aggColIdx = ParamValue((int32_t *)aggColContext.context, aggColNum);
     ParamValue p_agg_num = ParamValue(&aggColNum);
-    ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
-    ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
+    ParamValue p_agg_data_type = ParamValue((int32_t *)aggTypeContext.context, aggColNum);
+    ParamValue p_agg_types = ParamValue((int32_t *)aggFuncTypeContext.context, aggColNum);
 
     auto *inloopSp = new Specialization();
     inloopSp->AddSpecializedParam(3, &p_col_type);
@@ -121,140 +148,138 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniHashA
     aggColumnSp->AddSpecializedParam(2, &p_col_type);
     aggColumnSp->AddSpecializedParam(3, &p_agg_num);
 
-    std::map<std::string, Specialization> hashGroupbySps = {
-        {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
+    std::map<std::string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp },
         // TODO: open this optimization
-//        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
-//        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
-        {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
-    };
+        //        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
+        //        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
+        { OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp } };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps,
+        std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(
+        std::vector<omniruntime::jit::Context> { *groupAggregationContext, *memoryPoolContext, *aggregatorContext });
     auto createOperatorFunc = jit->Specialize();
 
-    JitContext* jitContext = new JitContext;
+    JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
+    omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext,
+        aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(jitContext);
     nativeOperatorFactory->Init();
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
+
+    env->ReleaseStringUTFChars(jGroupByType, groupByTypesCharPtr);
+    env->ReleaseStringUTFChars(jAggType, aggTypesCharPtr);
+    env->ReleaseStringUTFChars(jOutPutTye, outTypesCharPtr);
+
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
 /**
  * Return an AggregationFactory object address.
- **/
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jAggType, jintArray jAggFuncType, jboolean inputRaw, jboolean outputPartial)
+ *     */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
+    JNIEnv *env, jobject jObj, jstring jAggType, jintArray jAggFuncType, jboolean inputRaw, jboolean outputPartial)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
-    jint *aggTypes = env->GetIntArrayElements(jAggType, JNI_FALSE);
+    const char *aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
+    std::vector<VecType> aggTypes = Deserialize(aggTypesCharPtr);
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
-    size_t aggNum = (size_t)env->GetArrayLength(jAggType);
+    size_t aggNum = aggTypes.size();
 
-    PrepareContext aggTypeContext = {(uint32_t*)aggTypes, aggNum};
-    PrepareContext aggFuncTypeContext = {(uint32_t*)aggFuncTypes, aggNum};
+    auto aggTypeIds = CreateTypeIds(aggTypes);
+    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggNum };
+    PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
     int32_t aggColNum = aggTypeContext.len;
 
     using namespace omniruntime::jit;
     std::map<std::string, ParamValue *> testParam;
 
-    ParamValue p_col_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
+    ParamValue p_col_type = ParamValue((int32_t *)aggTypeContext.context, aggColNum);
     ParamValue p_agg_num = ParamValue(&aggColNum);
-    ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
+    ParamValue p_agg_types = ParamValue((int32_t *)aggFuncTypeContext.context, aggColNum);
 
     auto *inloopSp = new Specialization();
     inloopSp->AddSpecializedParam(3, &p_agg_num);
     inloopSp->AddSpecializedParam(4, &p_col_type);
     inloopSp->AddSpecializedParam(5, &p_agg_types);
 
-    std::map<std::string, Specialization> nonGroupSps = {
-            {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
-    };
+    std::map<std::string, Specialization> nonGroupSps = { { OMNIJIT_NON_GROUP_INLOOP, *inloopSp } };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation", nonGroupSps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
+    auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation", nonGroupSps,
+        std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    Jit *jit = new Jit(
+        std::vector<omniruntime::jit::Context> { *groupAggregationContext, *memoryPoolContext, *aggregatorContext });
     auto createOperatorFunc = jit->Specialize();
 
-    JitContext* jitContext = new JitContext;
+    JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
+    omniruntime::op::AggregationOperatorFactory *nativeOperatorFactory =
+        new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(jitContext);
     nativeOperatorFactory->Init();
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
-JitContext *createSortJitContext(
-    int32_t *sourceTypes,
-    int32_t typesCount,
-    int32_t *outputCols,
-    int32_t outputColsCount,
-    int32_t *sortCols,
-    int32_t *sortAscendings,
-    int32_t *sortNullFirsts,
-    int32_t sortColsCount);
+JitContext *createSortJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols, int32_t outputColsCount,
+    int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory
  * Method:    createSortOperatorFactory
  * Signature: ([I[I[I[I[I)J
  */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jSourceTypes, jintArray jOutputCols, jintArray jSortCols, jintArray jAscendings, jintArray jNullFirsts)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(JNIEnv *env, jobject jObj,
+    jstring jSourceTypes, jintArray jOutputCols, jintArray jSortCols, jintArray jAscendings, jintArray jNullFirsts)
 {
     JNI_DEBUG_LOG("create sort operator factory starting.");
     auto start = START();
-    jint *sourceTypesArr = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    const char *sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputColsArr = env->GetIntArrayElements(jOutputCols, JNI_FALSE);
     jint *sortColsArr = env->GetIntArrayElements(jSortCols, JNI_FALSE);
     jint *ascendingsArr = env->GetIntArrayElements(jAscendings, JNI_FALSE);
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
-    jint sourceTypesCount = env->GetArrayLength(jSourceTypes);
+    std::vector<VecType> sourceTypes = Deserialize(sourceTypesCharPtr);
+    auto sourceTypesArr = CreateTypeIds(sourceTypes);
+    jint sourceTypesCount = sourceTypes.size();
     jint outputColsCount = env->GetArrayLength(jOutputCols);
     jint sortColsCount = env->GetArrayLength(jSortCols);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
-    omniruntime::op::SortOperatorFactory *sortOperatorFactory = omniruntime::op::SortOperatorFactory::CreateSortOperatorFactory(
-        sourceTypesArr,
-        sourceTypesCount,
-        outputColsArr,
-        outputColsCount,
-        sortColsArr,
-        ascendingsArr,
-        nullFirstsArr,
-        sortColsCount);
-    JitContext *jitContext = createSortJitContext(
-        sortOperatorFactory->GetSourceTypes(),
-        sortOperatorFactory->GetSourceTypeCount(),
-        sortOperatorFactory->GetOutputCols(),
-        sortOperatorFactory->GetOutputColCount(),
-        sortOperatorFactory->GetSortCols(),
-        sortOperatorFactory->GetSortAscendings(),
-        sortOperatorFactory->GetSortNullFirsts(),
-        sortOperatorFactory->GetSortColCount());
+    omniruntime::op::SortOperatorFactory *sortOperatorFactory =
+        omniruntime::op::SortOperatorFactory::CreateSortOperatorFactory(sourceTypesArr, sourceTypesCount, outputColsArr,
+        outputColsCount, sortColsArr, ascendingsArr, nullFirstsArr, sortColsCount);
+    JitContext *jitContext =
+        createSortJitContext(sortOperatorFactory->GetSourceTypes(), sortOperatorFactory->GetSourceTypeCount(),
+        sortOperatorFactory->GetOutputCols(), sortOperatorFactory->GetOutputColCount(),
+        sortOperatorFactory->GetSortCols(), sortOperatorFactory->GetSortAscendings(),
+        sortOperatorFactory->GetSortNullFirsts(), sortOperatorFactory->GetSortColCount());
     sortOperatorFactory->SetJitContext(jitContext);
     JNI_DEBUG_LOG("create sort operator factory finished, elapsed time: %ld ms.", END(start));
+
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    DestroyTypeIds(sourceTypesArr);
+
     return (int64_t)sortOperatorFactory;
 }
 
-JitContext *createSortJitContext(
-    int32_t *sourceTypes,
-    int32_t typesCount,
-    int32_t *outputCols,
-    int32_t outputColsCount,
-    int32_t *sortCols,
-    int32_t *sortAscendings,
-    int32_t *sortNullFirsts,
-    int32_t sortColsCount)
+JitContext *createSortJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols, int32_t outputColsCount,
+    int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount)
 {
     JNI_DEBUG_LOG("create sort JIT context starting.");
     auto start = START();
@@ -292,15 +317,16 @@ JitContext *createSortJitContext(
     getOutputSp->AddSpecializedParam(2, &p_outputColCount);
     getOutputSp->AddSpecializedParam(4, &p_sourceTypes);
 
-    std::map<std::string, Specialization> pagesIndexSps = {
-        {OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp},
-        {OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp}
-    };
+    std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
+        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
 
-    auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(), std::vector<std::string>());
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*sortContext, *memoryPoolContext, *pagesIndexContext});
+    auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(),
+        std::vector<std::string>());
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *memoryPoolContext, *pagesIndexContext });
     auto createOperatorFunc = jit->Specialize();
 
     JitContext *jitContext = new JitContext;
@@ -310,13 +336,18 @@ JitContext *createSortJitContext(
     return jitContext;
 }
 
-JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols, int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
+JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
+    int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount);
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction, jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder, jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels, jintArray jWindowFunctionReturnType)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindowOperatorFactory(JNIEnv *env,
+    jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
+    jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
+    jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jintArray jArgumentChannels,
+    jstring jWindowFunctionReturnType)
 {
-    jint *sourceTypes = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    const char *sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
     jint *windowFunction = env->GetIntArrayElements(jWindowFunction, JNI_FALSE);
     jint *partitionChannels = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
@@ -325,115 +356,101 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_window_OmniWindowOpe
     jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     jint *argumentChannels = env->GetIntArrayElements(jArgumentChannels, JNI_FALSE);
-    jint *windowFunctionReturnType = env->GetIntArrayElements(jWindowFunctionReturnType, JNI_FALSE);
+    const char *windowFunctionReturnTypeCharPtr = env->GetStringUTFChars(jWindowFunctionReturnType, JNI_FALSE);
 
-    jint sourceTypeCount = env->GetArrayLength(jSourceTypes);
+    std::vector<VecType> sourceVecTypes = Deserialize(sourceTypesCharPtr);
+    std::vector<VecType> windowFunctionReturnVecType = Deserialize(windowFunctionReturnTypeCharPtr);
+
+    jint sourceTypeCount = sourceVecTypes.size();
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
     jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
     jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
-    jint windowFunctionReturnTypeCount = env->GetArrayLength(jWindowFunctionReturnType);
+    jint windowFunctionReturnTypeCount = windowFunctionReturnVecType.size();
 
-    int32_t allCount = sourceTypeCount+windowFunctionReturnTypeCount;
+    int32_t allCount = sourceTypeCount + windowFunctionReturnTypeCount;
     int32_t *allTypes = new int32_t[allCount];
-    for (int i = 0; i <sourceTypeCount ; ++i) {
-        allTypes[i] = sourceTypes[i];
+    auto sourceTypeIds = new int32_t[sourceTypeCount];
+    for (int i = 0; i < sourceTypeCount; ++i) {
+        allTypes[i] = sourceVecTypes[i].GetId();
+        sourceTypeIds[i] = sourceVecTypes[i].GetId();
     }
     for (int i = sourceTypeCount; i < allCount; ++i) {
-        allTypes[i] = windowFunctionReturnType[i - sourceTypeCount];
+        allTypes[i] = windowFunctionReturnVecType[i - sourceTypeCount].GetId();
     }
 
-    omniruntime::op::WindowOperatorFactory *windowOperatorFactory = new omniruntime::op::WindowOperatorFactory(
-        sourceTypes,
-        sourceTypeCount,
-        outputChannels,
-        outputColsCount,
-        windowFunction,
-        windowFunctionCount,
-        partitionChannels,
-        partitionCount,
-        preGroupedChannels,
-        preGroupedCount,
-        sortChannels,
-        sortOrder,
-        sortNullFirsts,
-        sortColCount,
-        preSortedChannelPrefix,
-        expectedPositions,
-        allTypes,
-        allCount,
-        argumentChannels,
-        argumentChannelsCount
-        );
-    JitContext *jitContext = createWindowJitContext(
-        windowOperatorFactory->GetSourceTypes(),
-        windowOperatorFactory->GetTypesCount(),
-        windowOperatorFactory->GetOutputCols(),
-        windowOperatorFactory->GetOutputColsCount(),
-        windowOperatorFactory->GetPartitionCols(),
-        windowOperatorFactory->GetPartitionCount(),
-        windowOperatorFactory->GetSortCols(),
-        windowOperatorFactory->GetSortAscendings(),
-        windowOperatorFactory->GetSortNullFirsts(),
-        windowOperatorFactory->GetSortColCount(),
-        windowOperatorFactory->GetAllTypes(),
-        windowOperatorFactory->GetAllCount());
+    omniruntime::op::WindowOperatorFactory *windowOperatorFactory =
+        new omniruntime::op::WindowOperatorFactory(sourceTypeIds, sourceTypeCount, outputChannels, outputColsCount,
+        windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels, preGroupedCount,
+        sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes,
+        allCount, argumentChannels, argumentChannelsCount);
+    JitContext *jitContext =
+        createWindowJitContext(windowOperatorFactory->GetSourceTypes(), windowOperatorFactory->GetTypesCount(),
+        windowOperatorFactory->GetOutputCols(), windowOperatorFactory->GetOutputColsCount(),
+        windowOperatorFactory->GetPartitionCols(), windowOperatorFactory->GetPartitionCount(),
+        windowOperatorFactory->GetSortCols(), windowOperatorFactory->GetSortAscendings(),
+        windowOperatorFactory->GetSortNullFirsts(), windowOperatorFactory->GetSortColCount(),
+        windowOperatorFactory->GetAllTypes(), windowOperatorFactory->GetAllCount());
     windowOperatorFactory->Init();
     windowOperatorFactory->SetJitContext(jitContext);
-    return (int64_t) windowOperatorFactory;
+
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
+    delete[] allTypes;
+    delete[] sourceTypeIds;
+    return (int64_t)windowOperatorFactory;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jobject jObj,
+    jstring jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
 {
     using namespace omniruntime::jit;
-    jint *sourceTypes = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    const char *sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *sortCols = env->GetIntArrayElements(jSortCols, JNI_FALSE);
     jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
-    int32_t n = (int32_t) jN;
+    int32_t n = (int32_t)jN;
 
-    jint sourceTypesCount = env->GetArrayLength(jSourceTypes);
+    std::vector<VecType> sourceTypes = Deserialize(sourceTypesCharPtr);
+
+    int32_t sourceTypesCount = sourceTypes.size();
+    auto sourceTypeIds = CreateTypeIds(sourceTypes);
     jint sortColCount = env->GetArrayLength(jSortCols);
 
-    omniruntime::op::TopNOperatorFactory *topNOperatorFactory = new omniruntime::op::TopNOperatorFactory(
-            sourceTypes,
-            sourceTypesCount,
-            n,
-            sortCols,
-            sortAsc,
-            sortNullFirsts,
-            sortColCount
-    );
+    omniruntime::op::TopNOperatorFactory *topNOperatorFactory = new omniruntime::op::TopNOperatorFactory(sourceTypeIds,
+        sourceTypesCount, n, sortCols, sortAsc, sortNullFirsts, sortColCount);
 
-    ParamValue p_sourceTypes = ParamValue(sourceTypes, sourceTypesCount);
+    ParamValue p_sourceTypes = ParamValue(sourceTypeIds, sourceTypesCount);
     ParamValue p_sortColCount = ParamValue(&sortColCount);
     ParamValue p_sortCols = ParamValue(sortCols, sortColCount);
 
-    auto * topNCompareSp = new Specialization();
+    auto *topNCompareSp = new Specialization();
     topNCompareSp->AddSpecializedParam(4, &p_sortColCount); // 4teh parameter
-    topNCompareSp->AddSpecializedParam(5, &p_sortCols); // 5teh parameter
-    topNCompareSp->AddSpecializedParam(6, &p_sourceTypes); // 6teh parameter
+    topNCompareSp->AddSpecializedParam(5, &p_sortCols);     // 5teh parameter
+    topNCompareSp->AddSpecializedParam(6, &p_sourceTypes);  // 6teh parameter
 
-    std::map<std::string, Specialization> topNCompareSps={{OMNIJIT_TOPN_COMPARE, *topNCompareSp}};
+    std::map<std::string, Specialization> topNCompareSps = { { OMNIJIT_TOPN_COMPARE, *topNCompareSp } };
 
-    auto *topNContext = new omniruntime::jit::Context("topn",topNCompareSps,std::vector<std::string >(),std::vector<std::string >(),true);
+    auto *topNContext = new omniruntime::jit::Context("topn", topNCompareSps, std::vector<std::string>(),
+        std::vector<std::string>(), true);
 
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*topNContext});
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *topNContext });
 
     auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = createOperatorFunc;
 
     topNOperatorFactory->SetJitContext(jitContext);
-    return (int64_t) topNOperatorFactory;
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    return (int64_t)topNOperatorFactory;
 }
 
 JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
-                                   int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
-                                   int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount)
+    int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
+    int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount)
 {
     using namespace omniruntime::jit;
     int32_t finalSortColsCount = sortColsCount + partitionCount;
@@ -483,7 +500,7 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     getOutputSp->AddSpecializedParam(2, &p_outputColCount);
     getOutputSp->AddSpecializedParam(4, &p_sourceTypes);
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
-                                                            { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
+        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
     auto *windowContext = new omniruntime::jit::Context("window", std::map<std::string, Specialization>(),
         std::vector<std::string>(), std::vector<std::string>(), true);
     auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
@@ -511,91 +528,81 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     return jitContext;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jInputTypes, jint jInputLength, jstring jExpression, jintArray jProjectIndices, jint jProjectLength)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
+    JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jintArray jProjectIndices,
+    jint jProjectLength)
 {
     std::string filterExpression = std::string(env->GetStringUTFChars(jExpression, JNI_FALSE));
-    jint *inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
-    int32_t inputLength = (int32_t) jInputLength;
+    const char *inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
+    std::vector<VecType> inputTypes = Deserialize(inputTypesCharPtr);
+    auto inputTypeIds = CreateTypeIds(inputTypes);
+    int32_t inputLength = (int32_t)jInputLength;
     jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
-    int32_t projectLength = (int32_t) jProjectLength;
-    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputTypes, inputLength, projectIndices, projectLength);
-    return (int64_t) factory;
+    int32_t projectLength = (int32_t)jProjectLength;
+    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
+        filterExpression, inputTypeIds, inputLength, projectIndices, projectLength);
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
+    return (int64_t)factory;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(
-    JNIEnv *env, jobject jobj, jintArray jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *env,
+    jobject jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength)
 {
-    std::string* exprs = new std::string[jExprsLength];
+    std::string *exprs = new std::string[jExprsLength];
     for (int32_t i = 0; i < jExprsLength; i++) {
-        jstring st = (jstring) (env->GetObjectArrayElement(jExprs, i));
+        jstring st = (jstring)(env->GetObjectArrayElement(jExprs, i));
         const char *rawString = env->GetStringUTFChars(st, 0);
         exprs[i] = rawString;
     }
-    int32_t exprLength = (int32_t) jExprsLength;
-    jint* inputTypes = env->GetIntArrayElements(jInputTypes, JNI_FALSE);
-    int32_t inputLength = (int32_t) jInputLength;
-    omniruntime::op::ProjectionOperatorFactory* factory = new omniruntime::op::ProjectionOperatorFactory(
-        exprs,
-        exprLength,
-        inputTypes,
-        inputLength);
-    return (int64_t) factory;
+    int32_t exprLength = (int32_t)jExprsLength;
+    const char *inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
+    std::vector<VecType> inputTypes = Deserialize(inputTypesCharPtr);
+    auto inputTypeIds = CreateTypeIds(inputTypes);
+    int32_t inputLength = (int32_t)jInputLength;
+    omniruntime::op::ProjectionOperatorFactory *factory =
+        new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputTypeIds, inputLength);
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
+    return (int64_t)factory;
 
     // TODO: ReleaseStringUTFChars
 }
-JitContext *createHashBuilderJitContext(
-    int32_t *buildTypes,
-    int32_t buildTypesCount,
-    int32_t *buildOutputCols,
-    int32_t buildOutputColsCount,
-    int32_t *buildHashCols,
-    int32_t buildHashColsCount,
-    int32_t operatorCount);
+JitContext *createHashBuilderJitContext(int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildOutputCols,
+    int32_t buildOutputColsCount, int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jBuildTypes, jintArray jBuildOutputCols, jintArray jBuildHashCols, jint jOperatorCount)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory(JNIEnv *env,
+    jobject jObj, jstring jBuildTypes, jintArray jBuildOutputCols, jintArray jBuildHashCols, jint jOperatorCount)
 {
     JNI_DEBUG_LOG("create hash builder operator factory starting.");
     auto start = START();
-    jint *buildTypesArr = env->GetIntArrayElements(jBuildTypes, JNI_FALSE);
+    const char *buildTypesCharPtr = (env)->GetStringUTFChars(jBuildTypes, JNI_FALSE);
     jint *buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
     jint *buildHashColsArr = env->GetIntArrayElements(jBuildHashCols, JNI_FALSE);
 
-    jint buildTypesCount = env->GetArrayLength(jBuildTypes);
     jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
     jint buildHashColsCount = env->GetArrayLength(jBuildHashCols);
 
+    std::vector<VecType> buildTypes = Deserialize(buildTypesCharPtr);
+    auto buildTypesCount = buildTypes.size();
+    auto buildTypesArr = CreateTypeIds(buildTypes);
+
     JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
-    omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory = omniruntime::op::HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
-        buildTypesArr,
-        buildTypesCount,
-        buildOutputColsArr,
-        buildOutputColsCount,
-        buildHashColsArr,
-        buildHashColsCount,
-        jOperatorCount);
-    JitContext *jitContext = createHashBuilderJitContext(
-        buildTypesArr,
-        buildTypesCount,
-        buildOutputColsArr,
-        buildOutputColsCount,
-        buildHashColsArr,
-        buildHashColsCount,
-        jOperatorCount);
+    omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory =
+        omniruntime::op::HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypesArr, buildTypesCount,
+        buildOutputColsArr, buildOutputColsCount, buildHashColsArr, buildHashColsCount, jOperatorCount);
+    JitContext *jitContext = createHashBuilderJitContext(buildTypesArr, buildTypesCount, buildOutputColsArr,
+        buildOutputColsCount, buildHashColsArr, buildHashColsCount, jOperatorCount);
     hashBuilderOperatorFactory->SetJitContext(jitContext);
     JNI_DEBUG_LOG("create hash builder operator factory finished, elapsed time: %ld ms.", END(start));
+    env->ReleaseStringUTFChars(jBuildTypes, buildTypesCharPtr);
+    DestroyTypeIds(buildTypesArr);
     return (int64_t)hashBuilderOperatorFactory;
 }
 
-JitContext *createHashBuilderJitContext(
-    int32_t *buildTypes,
-    int32_t buildTypesCount,
-    int32_t *buildOutputCols,
-    int32_t buildOutputColsCount,
-    int32_t *buildHashCols,
-    int32_t buildHashColsCount,
-    int32_t operatorCount)
+JitContext *createHashBuilderJitContext(int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildOutputCols,
+    int32_t buildOutputColsCount, int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
 {
     JNI_DEBUG_LOG("create hash builder JIT context starting.");
     auto start = START();
@@ -621,18 +628,22 @@ JitContext *createHashBuilderJitContext(
     positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
     positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
 
-    std::map<std::string, Specialization> hashStrategySps = {
-        {OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp},
-        {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp}
-    };
+    std::map<std::string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp },
+        { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp } };
 
-    auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
-    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>(), true);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table",
+        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps,
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
 
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*hashBuilderContext, *pagesIndexContext, *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext});
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *pagesIndexContext,
+        *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext });
     auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -641,85 +652,78 @@ JitContext *createHashBuilderJitContext(
     return jitContext;
 }
 
-JitContext *createLookupJoinJitContext(
-    int32_t *probeTypes,
-    int32_t probeTypesCount,
-    int32_t *probeOutputCols,
-    int32_t probeOutputColsCount,
-    int32_t *probeHashCols,
-    int32_t probeHashColsCount,
-    int32_t *buildOutputCols,
-    int32_t *buildOutputTypes,
-    int32_t buildOutputColsCount,
-    int64_t hashBuilderFactoryAddr);
+JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
+    int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
+    int32_t *buildOutputTypes, int32_t buildOutputColsCount, int64_t hashBuilderFactoryAddr);
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols,
-    jintArray jBuildOutputCols, jintArray jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
+    jobject jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
+    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory)
 {
     JNI_DEBUG_LOG("create lookup join operator factory starting.");
     auto start = START();
-    jint *probeTypesArr = env->GetIntArrayElements(jProbeTypes, JNI_FALSE);
+    const char *probeTypesCharPtr = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     jint *probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
     jint *probeHashColsArr = env->GetIntArrayElements(jProbeHashCols, JNI_FALSE);
     jint *buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
-    jint *buildOutputTypesArr = env->GetIntArrayElements(jBuildOutputTypes, JNI_FALSE);
 
-    jint probeTypesCount = env->GetArrayLength(jProbeTypes);
+    const char *buildOutputTypesCharPtr = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
+
     jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
     jint probeHashColsCount = env->GetArrayLength(jProbeHashCols);
     jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
 
+    std::vector<VecType> probeTypes = Deserialize(probeTypesCharPtr);
+    int32_t probeTypesCount = probeTypes.size();
+    auto probeTypesArr = CreateTypeIds(probeTypes);
+
+    std::vector<VecType> buildOutputTypes = Deserialize(buildOutputTypesCharPtr);
+    int32_t buildOutputTypesCount = buildOutputTypes.size();
+    auto buildOutputTypesArr = CreateTypeIds(buildOutputTypes);
+
     JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
-    omniruntime::op::LookupJoinOperatorFactory *lookupJoinOperatorFactory = omniruntime::op::LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypesArr,
-        probeTypesCount,
-        probeOutputColsArr,
-        probeOutputColsCount,
-        probeHashColsArr,
-        probeHashColsCount,
-        buildOutputColsArr,
-        buildOutputTypesArr,
-        buildOutputColsCount,
-        jHashBuilderOperatorFactory);
-    JitContext *jitContext = createLookupJoinJitContext(
-        probeTypesArr, probeTypesCount, probeOutputColsArr,
+    omniruntime::op::LookupJoinOperatorFactory *lookupJoinOperatorFactory =
+        omniruntime::op::LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypesArr, probeTypesCount,
+        probeOutputColsArr, probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr,
+        buildOutputTypesArr, buildOutputColsCount, jHashBuilderOperatorFactory);
+    JitContext *jitContext = createLookupJoinJitContext(probeTypesArr, probeTypesCount, probeOutputColsArr,
         probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr, buildOutputTypesArr,
         buildOutputColsCount, jHashBuilderOperatorFactory);
     lookupJoinOperatorFactory->SetJitContext(jitContext);
     JNI_DEBUG_LOG("create lookup join operator factory finished, elapsed time: %ld ms.", END(start));
+    env->ReleaseStringUTFChars(jProbeTypes, probeTypesCharPtr);
+    env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesCharPtr);
+    DestroyTypeIds(probeTypesArr);
+    DestroyTypeIds(buildOutputTypesArr);
     return (int64_t)lookupJoinOperatorFactory;
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory
-    (JNIEnv *env, jobject jObj, jintArray jSourceTypes, jboolean jReplicatesAnyRow, jint jNullChannel,
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory(
+    JNIEnv *env, jobject jObj, jstring jSourceTypes, jboolean jReplicatesAnyRow, jint jNullChannel,
     jintArray jPartitionChannels, jint jPartitionCount, jintArray jBucketToPartition)
 {
     JNI_DEBUG_LOG("create partitionedoutput operator factory starting.");
     auto start = START();
-    jint *sourceTypesArr = env->GetIntArrayElements(jSourceTypes, JNI_FALSE);
+    const char *sourceTypesArrCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *partitionChannelsArr = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
     jint *bucketToPartitionArr = env->GetIntArrayElements(jBucketToPartition, JNI_FALSE);
 
-    jint sourceTypesCount = env->GetArrayLength(jSourceTypes);
+    std::vector<VecType> sourceTypes = Deserialize(sourceTypesArrCharPtr);
+    jint sourceTypesCount = sourceTypes.size();
     jint partitionChannelsCount = env->GetArrayLength(jPartitionChannels);
     jint bucketToPartitionCount = env->GetArrayLength(jBucketToPartition);
 
+    auto sourceTypesArr = CreateTypeIds(sourceTypes);
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
-        omniruntime::op::PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
-            sourceTypesArr,
-            sourceTypesCount,
-            jReplicatesAnyRow,
-            jNullChannel,
-            partitionChannelsArr,
-            partitionChannelsCount,
-            jPartitionCount,
-            bucketToPartitionArr,
-            bucketToPartitionCount);
+        omniruntime::op::PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypesArr,
+        sourceTypesCount, jReplicatesAnyRow, jNullChannel, partitionChannelsArr, partitionChannelsCount,
+        jPartitionCount, bucketToPartitionArr, bucketToPartitionCount);
     JNI_DEBUG_LOG("create partitionedoutput operator factory finished, elapsed time: %ld ms.", END(start));
     partitionedOutputOperatorFactory->SetJitContext(nullptr);
-    return (int64_t) partitionedOutputOperatorFactory;
+    return (int64_t)partitionedOutputOperatorFactory;
 }
 
 JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
@@ -758,10 +762,9 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     buildBuildColumnsSp->AddSpecializedParam(4, &p_buildOutputColsCount);
     buildBuildColumnsSp->AddSpecializedParam(5, &p_probeOutputColsCount);
 
-    std::map<std::string, Specialization> lookupJoinSps = {
-            {OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY, *buildProbeColumnsSp},
-            {OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp}
-    };
+    std::map<std::string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY,
+        *buildProbeColumnsSp },
+        { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp } };
 
     ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
     ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
@@ -769,26 +772,30 @@ JitContext *createLookupJoinJitContext(int32_t *probeTypes, int32_t probeTypesCo
     auto *hashRowSp = new Specialization();
     hashRowSp->AddSpecializedParam(2, &p_hashColTypes);
     hashRowSp->AddSpecializedParam(3, &p_hashColCount);
-    std::map<std::string, Specialization> joinHashTableSps = {
-            {OMNIJIT_HASH_ROW, *hashRowSp}
-    };
+    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
 
     auto *positionEqualsRowIgnoreNullsSp = new Specialization();
     positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
     positionEqualsRowIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
 
-    std::map<std::string, Specialization> hashStrategySps = {
-        {OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS, *positionEqualsRowIgnoreNullsSp}
-    };
+    std::map<std::string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
+        *positionEqualsRowIgnoreNullsSp } };
 
-    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join", lookupJoinSps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps, std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps, std::vector<std::string>(), std::vector<std::string>());
-    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join", lookupJoinSps, std::vector<std::string>(),
+        std::vector<std::string>(), true);
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps,
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps,
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
+        std::vector<std::string>(), std::vector<std::string>());
 
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*lookupJoinContext, *joinHashTableContext, *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext});
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
+        *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext });
     auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);

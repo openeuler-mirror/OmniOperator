@@ -9,12 +9,12 @@
 namespace omniruntime {
 namespace vec {
 DoubleVector::DoubleVector(VectorAllocator *allocator, int size)
-    : FixedWidthVector(allocator, size * BYTES, size, OMNI_VEC_TYPE_DOUBLE)
+    : FixedWidthVector(allocator, size * BYTES, size, DoubleVecType::Instance())
 {}
 
 void DoubleVector::SetValues(int startIndex, const double *values, int length)
 {
-    if (!const_cast<VectorReference *>(GetReference())->IsWritable() || startIndex + length > size) {
+    if (!reference->IsWritable() || startIndex + length > size) {
         return;
     }
     void *startAddress = &(((double *)valuesAddress)[startIndex]);

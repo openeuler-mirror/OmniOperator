@@ -1,9 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-//
-// Created by root on 6/9/21.
-//
 
 #include "vector_batch.h"
 #include "int_vector.h"
@@ -11,15 +8,18 @@
 #include "double_vector.h"
 #include "varchar_vector.h"
 #include "container_vector.h"
+#include "decimal128_vector.h"
 
 namespace omniruntime {
 namespace vec {
-VectorBatch::VectorBatch(int vectorCount) : vectorCount(vectorCount), rowCount(0)
+VectorBatch::VectorBatch(int vectorCount, int rowCount) : vectorCount(vectorCount), rowCount(rowCount)
 {
     vectors = nullptr;
     vectorTypes = nullptr;
     Init();
 }
+
+VectorBatch::VectorBatch(int vectorCount) : VectorBatch(vectorCount, 0) {}
 
 void VectorBatch::Init()
 {
@@ -32,19 +32,15 @@ void VectorBatch::Init()
 
 VectorBatch::~VectorBatch()
 {
+    for (int vecIndex = 0; vecIndex < vectorCount; ++vecIndex) {
+        delete vectors[vecIndex];
+    }
     delete[] vectors;
     delete[] vectorTypes;
 }
 
-VectorBatch::VectorBatch(int vectorCount, int rowCount) : vectorCount(vectorCount), rowCount(rowCount)
+void VectorBatch::NewVectors(int *types)
 {
-    vectors = nullptr;
-    vectorTypes = nullptr;
-}
-
-void VectorBatch::SetVectors(int *types)
-{
-    Init();
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType)types[colIndex];
         switch (types[colIndex]) {
@@ -67,8 +63,8 @@ void VectorBatch::SetVectors(int *types)
                 vectorAddresses[0] = doubleVector;
                 vectorAddresses[1] = longVector;
                 VecType *vecTypes = new VecType[2];
-                vecTypes[0] = OMNI_VEC_TYPE_DOUBLE;
-                vecTypes[1] = OMNI_VEC_TYPE_LONG;
+                vecTypes[0] = DoubleVecType::Instance();
+                vecTypes[1] = LongVecType::Instance();
                 ContainerVector *containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
                 SetVector(colIndex, containerVector);
                 break;
@@ -83,8 +79,13 @@ void VectorBatch::SetVectors(int *types)
                 // TODO: set capacity appropriately
                 // capacity = rowCount * 50 can't handle a vector of strings with average length above 50
                 SetVector(colIndex, new VarcharVector(va, rowCount * 50, rowCount));
+                break;
             }
-                // TODO: support other types!!!
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                SetVector(colIndex,
+                    new Decimal128Vector(nullptr, rowCount, Decimal128Vector::DECIMAL128_TYPE_WIDTH, 0));
+                break;
+            }
             default: {
                 break;
             }
@@ -101,12 +102,14 @@ void VectorBatch::SetVector(int index, Vector *vector)
     }
 }
 
-VecType *VectorBatch::GetVectorTypes() const
+void VectorBatch::GetVectorTypeIds(int32_t *typeIds)
 {
-    return vectorTypes;
+    for (int32_t i = 0; i < vectorCount; ++i) {
+        typeIds[i] = vectorTypes[i].GetId();
+    }
 }
 
-void VectorBatch::FreeAllVectors()
+void VectorBatch::ReleaseAllVectors()
 {
     for (int vecIndex = 0; vecIndex < vectorCount; ++vecIndex) {
         delete vectors[vecIndex];

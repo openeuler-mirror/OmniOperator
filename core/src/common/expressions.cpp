@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2027. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description:
  */
 #include "expressions.h"
@@ -17,7 +17,7 @@ const int TYPE_INT64D = 2;
 const int TYPE_DOUBLED = 3;
 const int TYPE_BOOLD = 4;
 const int TYPE_INT32D_2ND = 5;
-const int TYPE_STRINGD = 100;
+const int TYPE_STRINGD = 15;
 // Helper function to get DataType from jint type
 // Find types in core/src/types/vector_type.h
 DataType ColTypeTrans(int32_t colType)

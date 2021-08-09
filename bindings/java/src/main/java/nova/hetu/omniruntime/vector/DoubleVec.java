@@ -1,31 +1,31 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
-import java.nio.DoubleBuffer;
+import nova.hetu.omniruntime.type.DoubleVecType;
 
-import static nova.hetu.omniruntime.constants.VecType.OMNI_VEC_TYPE_DOUBLE;
+import java.nio.DoubleBuffer;
 
 /**
  * double vec
  *
  * @since 2021-07-17
  */
-public class DoubleVec
-        extends FixedWidthVec {
+public class DoubleVec extends FixedWidthVec {
     private static final int BYTES = Double.BYTES;
 
     public DoubleVec(int size) {
-        super(size * BYTES, size, OMNI_VEC_TYPE_DOUBLE);
+        super(size * BYTES, size, DoubleVecType.DOUBLE);
     }
 
     public DoubleVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, OMNI_VEC_TYPE_DOUBLE);
+        super(allocator, size * BYTES, size, DoubleVecType.DOUBLE);
     }
 
     public DoubleVec(long nativeVector) {
-        super(nativeVector);
+        super(nativeVector, DoubleVecType.DOUBLE);
     }
 
     private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice) {
@@ -37,7 +37,7 @@ public class DoubleVec
     }
 
     /**
-     *  get the specified double at the specified absolute
+     * get the specified double at the specified absolute
      *
      * @param index the element offset in vec
      * @return double value
@@ -61,7 +61,7 @@ public class DoubleVec
      *
      * @param values the value of the element to be written
      * @param offset the element offset in vec
-     * @param start the element index in values
+     * @param start  the element index in values
      * @param length the number of elements that need to written
      */
     public void put(double[] values, int offset, int start, int length) {

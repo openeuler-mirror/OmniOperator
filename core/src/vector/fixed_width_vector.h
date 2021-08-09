@@ -12,7 +12,7 @@ template <class T> class FixedWidthVector : public Vector {
 public:
     FixedWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {};
 
-    FixedWidthVector(omniruntime::vec::VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
+    FixedWidthVector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
         : Vector(allocator, capacityInBytes, size, type)
     {}
 

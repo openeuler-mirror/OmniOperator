@@ -20,17 +20,21 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
     jobjectArray res = env->NewObjectArray(result.size(), vecBatchCls, nullptr);
     int32_t idx = 0;
     for (auto vecBatch : result) {
-        jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), vecBatch->GetRowCount());
+        int32_t vecCount = vecBatch->GetVectorCount();
+        jlongArray vecAddresses = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(vecAddresses, 0, vecCount, (const jlong *)vecBatch->GetVectors());
+        jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), vecAddresses,
+            vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }
     return res;
 }
 
-JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInputNative
-        (JNIEnv *env, jobject jObj, jlong jOperatorAddress, jlong jVecBatchAddress)
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInputNative(JNIEnv *env, jobject jObj,
+    jlong jOperatorAddress, jlong jVecBatchAddress)
 {
-    VectorBatch *vecBatch = (VectorBatch *) jVecBatchAddress;
-    Operator *nativeOperator = (Operator *) jOperatorAddress;
+    VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
+    Operator *nativeOperator = (Operator *)jOperatorAddress;
     int32_t ret = nativeOperator->AddInput(vecBatch);
     return ret;
 }
@@ -40,12 +44,12 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
  * Method:    getOutputNative
  * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative
-        (JNIEnv *env, jobject jObj, jlong jOperatorAddr)
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative(JNIEnv *env, jobject jObj,
+    jlong jOperatorAddr)
 {
     JNI_DEBUG_LOG("get output starting.");
     auto start = START();
-    Operator *nativeOperator = (Operator *) jOperatorAddr;
+    Operator *nativeOperator = (Operator *)jOperatorAddr;
     std::vector<VectorBatch *> outputPages;
     int32_t errNo = nativeOperator->GetOutput(outputPages);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
@@ -55,15 +59,16 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 }
 
 /*
-* Class:     nova_hetu_omniruntime_operator_OmniOperator
-* Method:    close
-* Signature: (J)[Lnova/hetu/omniruntime/operator/void;
-*/
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative
-        (JNIEnv *env, jobject jObj, jlong jOperatorAddr) {
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    close
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/void;
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative(JNIEnv *env, jobject jObj,
+    jlong jOperatorAddr)
+{
     JNI_DEBUG_LOG("close starting.");
     auto start = START();
-    Operator *nativeOperator = (Operator *) jOperatorAddr;
+    Operator *nativeOperator = (Operator *)jOperatorAddr;
     delete nativeOperator;
     JNI_DEBUG_LOG("close finished, elapsed time: %ld ms.", END(start));
 }

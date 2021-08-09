@@ -27,7 +27,7 @@ public:
         sourceTypes = new int32_t[aggCols.size()];
         int32_t idx = 0;
         for (auto &c : aggCols) {
-            sourceTypes[idx++] = static_cast<int32_t>(c.type);
+            sourceTypes[idx++] = static_cast<int32_t>(c.type.GetId());
         }
     }
     inline void PostLoop(omniruntime::vec::VectorBatch *vecBatch) const {}

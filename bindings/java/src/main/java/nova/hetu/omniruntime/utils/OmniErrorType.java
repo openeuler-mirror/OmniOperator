@@ -21,7 +21,17 @@ public enum OmniErrorType {
     /**
      * Omni native error omni error type.
      */
-    OMNI_NATIVE_ERROR(3);
+    OMNI_NATIVE_ERROR(3),
+
+    /**
+     * Omni runtime param error.
+     */
+    OMNI_PARAM_ERROR(4),
+
+    /**
+     * Omni inner error.
+     */
+    OMNI_INNER_ERROR(5);
 
     private final int value;
 

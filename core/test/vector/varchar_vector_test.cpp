@@ -1,6 +1,6 @@
-//
-// Created by root on 6/2/21.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ */
 
 #include <sstream>
 #include "gtest/gtest.h"
@@ -11,22 +11,24 @@
 
 using namespace omniruntime::vec;
 
-TEST(VarcharVector, newVector) {
+TEST(VarcharVector, newVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
-    VarcharVector *vector = new VarcharVector(allocator,1024, 256);
+    VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
-    EXPECT_EQ(vector->GetReference()->GetCapacityInBytes(), 1024);
-    EXPECT_EQ(vector->GetReference()->GetType(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(vector->GetCapacityInBytes(), 1024);
+    EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_VARCHAR);
     delete vector;
 
     manager.DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
-TEST(VarcharVector, sliceVector) {
+TEST(VarcharVector, sliceVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
@@ -44,7 +46,7 @@ TEST(VarcharVector, sliceVector) {
     VarcharVector *sliceVector1 = vector->Slice(offset, 4);
     EXPECT_EQ(sliceVector1->GetPositionOffset(), offset);
     EXPECT_EQ(sliceVector1->GetSize(), 4);
-    EXPECT_EQ(sliceVector1->GetReference()->GetRef(), 2);
+    EXPECT_EQ(sliceVector1->GetReference(), 2);
 
     for (int i = 0; i < sliceVector1->GetSize(); i++) {
         std::string str(s, 0, i + 3);
@@ -59,7 +61,7 @@ TEST(VarcharVector, sliceVector) {
     VarcharVector *sliceVector2 = sliceVector1->Slice(1, 2);
     EXPECT_EQ(sliceVector2->GetPositionOffset(), offset + 1);
     EXPECT_EQ(sliceVector2->GetSize(), 2);
-    EXPECT_EQ(sliceVector2->GetReference()->GetRef(), 3);
+    EXPECT_EQ(sliceVector2->GetReference(), 3);
 
     for (int i = 0; i < sliceVector2->GetSize(); i++) {
         std::string str(s, 0, i + 4);
@@ -72,17 +74,18 @@ TEST(VarcharVector, sliceVector) {
     }
 
     delete vector;
-    EXPECT_EQ(sliceVector1->GetReference()->GetRef(), 2);
+    EXPECT_EQ(sliceVector1->GetReference(), 2);
 
     delete sliceVector1;
-    EXPECT_EQ(sliceVector2->GetReference()->GetRef(), 1);
+    EXPECT_EQ(sliceVector2->GetReference(), 1);
 
     delete sliceVector2;
     manager.DeleteAllocator(&allocator);
 }
 
 // Test set/get
-TEST(VarcharVector, setAndGetValue) {
+TEST(VarcharVector, setAndGetValue)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
@@ -110,18 +113,19 @@ TEST(VarcharVector, setAndGetValue) {
 }
 
 // Test is null
-TEST(VarcharVector, SetValueNull) {
+TEST(VarcharVector, SetValueNull)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
-    VarcharVector *vector = new VarcharVector(allocator,1024, 256);
+    VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
     std::string s = "test";
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             vector->SetValueNull(i);
         } else {
-            vector->SetValue(i,s.c_str(), s.length());
+            vector->SetValue(i, s.c_str(), s.length());
         }
     }
     for (int i = 0; i < 256; i++) {
@@ -137,7 +141,8 @@ TEST(VarcharVector, SetValueNull) {
 
 
 // Test is copyPosition
-TEST(VarcharVector, CopyPositions) {
+TEST(VarcharVector, CopyPositions)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
@@ -153,7 +158,7 @@ TEST(VarcharVector, CopyPositions) {
     int *positions = new int[2];
     positions[0] = 1;
     positions[1] = 3;
-    VarcharVector* copyPostionVector = vector->CopyPositions(positions, 0, 2);
+    VarcharVector *copyPostionVector = vector->CopyPositions(positions, 0, 2);
 
     for (int i = 0; i < copyPostionVector->GetSize(); i++) {
         char *expectedChar;
@@ -173,7 +178,8 @@ TEST(VarcharVector, CopyPositions) {
 }
 
 // Test is CopyRegion
-TEST(VarcharVector, CopyRegion) {
+TEST(VarcharVector, CopyRegion)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
@@ -205,12 +211,13 @@ TEST(VarcharVector, CopyRegion) {
     manager.DeleteAllocator(&allocator);
 }
 
-TEST(VarcharVector, jniFreeVector) {
+TEST(VarcharVector, jniFreeVector)
+{
     VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-   VarcharVector *oritianlVector = new VarcharVector(allocator, 1024, 256);
-    Vector *vector = (Vector *) oritianlVector;
+    VarcharVector *oritianlVector = new VarcharVector(allocator, 1024, 256);
+    Vector *vector = (Vector *)oritianlVector;
     delete vector;
 }
