@@ -32,9 +32,6 @@ void VectorBatch::Init()
 
 VectorBatch::~VectorBatch()
 {
-    for (int vecIndex = 0; vecIndex < vectorCount; ++vecIndex) {
-        delete vectors[vecIndex];
-    }
     delete[] vectors;
     delete[] vectorTypes;
 }
