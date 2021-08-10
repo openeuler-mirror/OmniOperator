@@ -6,11 +6,12 @@
 #define GROUP_AGGREGATION_H
 
 #include "aggregation.h"
+#include "../hash_util.h"
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
 namespace op {
-using RowIterator = std::unordered_map<uint64_t, std::vector<GroupBySlot>, MultiChannelHash>::iterator;
+using RowIterator = std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashUtil>::iterator;
 
 class HashAggregationOperatorFactory;
 
@@ -53,7 +54,7 @@ private:
 
 private:
     friend class HashAggregationOperatorFactory;
-    std::unordered_map<uint64_t, std::vector<GroupBySlot>, MultiChannelHash> groupedRows;
+    std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
 };

@@ -12,6 +12,7 @@
 #include "../optimization.h"
 #include "../../vector/container_vector.h"
 #include "../../util/type_util.h"
+#include "../hash_util.h"
 
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
 #include <sstream>
@@ -108,7 +109,7 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
     const int32_t* colIdx)
 {
     int64_t combineHashVal = 0;
-    MultiChannelHash hashFunc;
+    HashUtil hashFunc;
     for (int32_t i = 0; i < colNum; ++i) {
         uint64_t hash = 0;
         uint32_t idx = colIdx[i];
@@ -133,7 +134,7 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
                 break;
             }
         }
-        combineHashVal = hashFunc.CombineHash(combineHashVal, hash);
+        combineHashVal = hashFunc.GetHash(combineHashVal, hash);
     }
     return combineHashVal;
 }

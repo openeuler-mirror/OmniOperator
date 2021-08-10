@@ -44,23 +44,6 @@ using GroupBySlot = union GroupBySlot {
     int64_t count;
 };
 
-class MultiChannelHash {
-public:
-    MultiChannelHash() : result(0) {}
-    virtual ~MultiChannelHash() {}
-    uint64_t CombineHash(uint64_t res, uint64_t value) const
-    {
-        return (31 * res + value);
-    }
-
-    uint64_t operator()(uint64_t combinedHash) const
-    {
-        return combinedHash;
-    }
-private:
-    uint64_t result;
-};
-
 class AggregatorFactory;
 
 // TODO check if it can merge subtype aggregators to one aggregator class.
