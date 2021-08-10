@@ -39,7 +39,7 @@ private:
     Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen;
     std::vector<int64_t> GetData(omniruntime::vec::VectorBatch *&vecBatch, std::vector<std::vector<int64_t>> &vcdataVec,
-        std::vector<char *> &stringvalVec, bool *bitmap) const;
+        std::vector<uint8_t *> &stringvalVec, bool *bitmap) const;
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)

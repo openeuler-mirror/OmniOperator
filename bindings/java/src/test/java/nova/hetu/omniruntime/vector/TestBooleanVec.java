@@ -128,7 +128,7 @@ public class TestBooleanVec {
                 assertTrue(vector1.isNull(i));
             }
             else {
-                assertFalse(vector1.isNull(i));
+                assertEquals(vector1.get(i), i % 2 == 0);
             }
         }
 
@@ -174,5 +174,18 @@ public class TestBooleanVec {
 
         originalVector.close();
         copyRegionVector.close();
+    }
+
+    @Test
+    public void testGetValues() {
+        boolean[] values = new boolean[1024];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = i % 3 == 0;
+        }
+        BooleanVec originalVec = new BooleanVec(values.length);
+        originalVec.put(values, 0, 0, values.length);
+
+        boolean[] actual = originalVec.get(0, values.length);
+        assertEquals(actual, values);
     }
 }

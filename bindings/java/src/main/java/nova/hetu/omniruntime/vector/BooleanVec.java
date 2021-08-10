@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -41,11 +41,7 @@ public class BooleanVec extends FixedWidthVec {
      * @param value the value of vec
      */
     public void set(int index, boolean value) {
-        if (value) {
-            values.put(index, (byte) 1);
-        } else {
-            values.put(index, (byte) 0);
-        }
+        valuesBuf.setByte(index, value ? (byte) 1 : (byte) 0);
     }
 
     /**
@@ -55,7 +51,20 @@ public class BooleanVec extends FixedWidthVec {
      * @return if the value of 1 returns true, otherwise it returns false
      */
     public boolean get(int index) {
-        return values.get((index + offset) * BYTES) == 1;
+        return valuesBuf.getByte((index + offset) * BYTES) == 1;
+    }
+
+    /**
+     *
+     * get boolean values from the specified position
+     *
+     * @param index the position of element
+     * @param length the number of element
+     * @return boolean value array
+     */
+    public boolean[] get(int index, int length) {
+        byte[] target = valuesBuf.getBytes((index + offset) * BYTES, length);
+        return transformByteToBoolean(target, 0, length);
     }
 
     /**
@@ -67,9 +76,8 @@ public class BooleanVec extends FixedWidthVec {
      * @param length the number of elements that need to written
      */
     public void put(boolean[] values, int offset, int start, int length) {
-        for (int i = 0; i < length; i++) {
-            set(i + offset, values[i + start]);
-        }
+        byte[] data = transformBooleanToByte(values, start, length);
+        valuesBuf.setBytes(offset, data, 0 , length);
     }
 
     @Override

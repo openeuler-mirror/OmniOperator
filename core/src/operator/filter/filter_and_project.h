@@ -32,7 +32,7 @@ private:
     std::unique_ptr<FilterCodeGen> codeGen;
     expressions::Expr *expr;
     std::vector<int64_t> GetData(omniruntime::vec::VectorBatch *&vecBatch, std::vector<std::vector<int64_t>> &vcdataVec,
-        std::vector<char *> &stringvalVec, bool *bitmap) const;
+        std::vector<uint8_t *> &stringvalVec, bool *bitmap) const;
     // Filter function is retrieved from FilterCodeGen
     // func(data, numSelectedRows, rowCount, bitmap)
     // data: 2D array containing vector values

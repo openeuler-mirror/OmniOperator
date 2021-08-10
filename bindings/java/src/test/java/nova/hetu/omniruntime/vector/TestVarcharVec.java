@@ -3,6 +3,7 @@ package nova.hetu.omniruntime.vector;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -45,7 +46,7 @@ public class TestVarcharVec {
         String tmpStr = "testvarchar";
         for (int i = 0; i < size; i++) {
             String str = tmpStr.substring(0, i) + i;
-            originalVec.setValue(i, str.getBytes(StandardCharsets.UTF_8));
+            originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
         int offset = 3;
@@ -54,8 +55,8 @@ public class TestVarcharVec {
         assertEquals(sliceVec1.getSize(), 4);
 
         for (int i = 0; i < sliceVec1.getSize(); i++) {
-            byte[] actualValue = sliceVec1.getValue(i);
-            byte[] expectedValue = originalVec.getValue(i + offset);
+            byte[] actualValue = sliceVec1.get(i);
+            byte[] expectedValue = originalVec.get(i + offset);
             assertEquals(actualValue, expectedValue);
         }
 
@@ -64,8 +65,8 @@ public class TestVarcharVec {
         assertEquals(sliceVec2.getSize(), 2);
 
         for (int i = 0; i < sliceVec2.getSize(); i++) {
-            byte[] actualValue = sliceVec2.getValue(i);
-            byte[] expectedValue = originalVec.getValue(i + offset + 1);
+            byte[] actualValue = sliceVec2.get(i);
+            byte[] expectedValue = originalVec.get(i + offset + 1);
             assertEquals(actualValue, expectedValue);
         }
         sliceVec2.close();
@@ -83,12 +84,12 @@ public class TestVarcharVec {
         String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
             String str = tmpStr.substring(0, i) + i;
-            varcharVec.setValue(i, str.getBytes(StandardCharsets.UTF_8));
+            varcharVec.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
         for (int i = 0; i < 4; i++) {
             String str = tmpStr.substring(0, i) + i;
-            byte[] actualValue = varcharVec.getValue(i);
+            byte[] actualValue = varcharVec.get(i);
             assertEquals(actualValue, str.getBytes(StandardCharsets.UTF_8));
         }
 
@@ -98,18 +99,26 @@ public class TestVarcharVec {
     @Test
     public void testPutValues() {
         int size = 100;
-        int[] offsets = new int[size + 1];
+        int[] offsets = new int[size * 2 + 1];
         StringBuilder data = new StringBuilder();
         for (int i = 0; i < size; i++) {
             String str = "test" + i;
             offsets[i + 1] = str.length() + offsets[i];
             data.append(str);
         }
-        VarcharVec values = new VarcharVec(data.toString().length(), size);
-        values.put(0, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, 0, size);
-        ByteBuffer buffer = ByteBuffer.wrap(data.toString().getBytes(StandardCharsets.UTF_8));
+
         for (int i = 0; i < size; i++) {
-            assertEquals(values.getValue(i), getDataFromBuffer(buffer, offsets[i], offsets[i + 1] - offsets[i]));
+            String str = i + "put";
+            offsets[size + i + 1] = str.length() + offsets[size + i];
+            data.append(str);
+        }
+
+        VarcharVec values = new VarcharVec(data.toString().length(), size * 2);
+        values.put(0, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, 0, size);
+        values.put(size, data.toString().getBytes(StandardCharsets.UTF_8),  0, offsets, size, size);
+        ByteBuffer buffer = ByteBuffer.wrap(data.toString().getBytes(StandardCharsets.UTF_8));
+        for (int i = 0; i < size * 2; i++) {
+            assertEquals(new String(values.get(i)), new String(getDataFromBuffer(buffer, offsets[i], offsets[i + 1] - offsets[i])));
         }
 
         assertEquals(offsets, values.getRawValueOffset());
@@ -134,7 +143,7 @@ public class TestVarcharVec {
                 varcharVec.setNull(i);
             }
             else {
-                varcharVec.setValue(i, "test".getBytes(StandardCharsets.UTF_8));
+                varcharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
             }
         }
         for (int i = 0; i < varcharVec.getSize(); i++) {
@@ -142,7 +151,7 @@ public class TestVarcharVec {
                 assertTrue(varcharVec.isNull(i));
             }
             else {
-                assertFalse(varcharVec.isNull(i));
+                assertEquals("test" + i, new String (varcharVec.get(i), StandardCharsets.UTF_8));
             }
         }
 
@@ -160,6 +169,12 @@ public class TestVarcharVec {
         varcharVec.setNulls(0, isNulls, 0, isNulls.length);
         assertTrue(varcharVec.hasNullValue());
         assertEquals(isNulls, varcharVec.getRawValueNulls());
+        assertEquals(varcharVec.getValuesNulls(0, size) ,isNulls);
+        int offset = 3;
+        boolean[] acutal = varcharVec.getValuesNulls(offset, size / 2);
+        for (int i = 0; i < size / 2; i++) {
+            assertEquals(acutal[i], isNulls[i + offset]);
+        }
         varcharVec.close();
     }
 
@@ -172,15 +187,15 @@ public class TestVarcharVec {
         String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
             String str = tmpStr.substring(0, i) + i;
-            originalVector.setValue(i, str.getBytes(StandardCharsets.UTF_8));
+            originalVector.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
         int[] positions = {1, 3};
         VarcharVec copyPostionVector = originalVector.copyPositions(positions, 0, 2);
 
         for (int i = 0; i < copyPostionVector.getSize(); i++) {
-            byte[] expectedValue = originalVector.getValue(positions[i]);
-            byte[] actualValue = copyPostionVector.getValue(i);
+            byte[] expectedValue = originalVector.get(positions[i]);
+            byte[] actualValue = copyPostionVector.get(i);
             assertEquals(actualValue, expectedValue);
         }
 
@@ -197,18 +212,54 @@ public class TestVarcharVec {
         String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
             String str = tmpStr.substring(0, i) + i;
-            originalVector.setValue(i, str.getBytes(StandardCharsets.UTF_8));
+            originalVector.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
         VarcharVec copyRegionVector = originalVector.copyRegion(2, 2);
 
         for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            byte[] expectedValue = originalVector.getValue(i + 2);
-            byte[] actualValue = copyRegionVector.getValue(i);
+            byte[] expectedValue = originalVector.get(i + 2);
+            byte[] actualValue = copyRegionVector.get(i);
             assertEquals(actualValue, expectedValue);
         }
 
         originalVector.close();
         copyRegionVector.close();
+    }
+
+    @Test
+    public void testGetValues() {
+        int size = 10;
+        StringBuilder getData = new StringBuilder();
+        VarcharVec getVec = new VarcharVec(1024 * 1024, size);
+        for (int i = 0; i < size; i++) {
+            String str = "gets" + i;
+            getVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+            getData.append(str);
+        }
+
+        byte[] actual = getVec.get(0, size / 2);
+        ByteBuffer buffer = ByteBuffer.wrap(getData.toString().getBytes(StandardCharsets.UTF_8));
+        int total = 0;
+        for (int i = 0; i < size / 2; i++) {
+            total += getVec.getDataLength(i);
+        }
+        byte[] expected = getDataFromBuffer(buffer, getVec.getValueOffset(0), total);
+        assertEquals(getString(actual), getString(expected));
+
+        int getLen = 5;
+        int offset = 2;
+        byte[] acutal1 = getVec.get(offset, getLen);
+        ByteBuffer buffer1 = ByteBuffer.wrap(acutal1);
+        int[] offsets = getVec.getValueOffset(offset, getLen);
+        for (int i = 0; i < getLen; i++) {
+            assertEquals(getString(getDataFromBuffer(buffer1, offsets[i], offsets[i + 1] - offsets[i])), getString(getVec.get(i + offset)));
+        }
+        getVec.close();
+    }
+
+    private String getString(byte[] strInBytes)
+    {
+        return new String(strInBytes, StandardCharsets.UTF_8);
     }
 }

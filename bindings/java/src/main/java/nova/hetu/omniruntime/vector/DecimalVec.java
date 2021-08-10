@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -58,7 +58,7 @@ public abstract class DecimalVec extends FixedWidthVec {
         long[] value = new long[this.typeWidth];
         int offset = (this.offset + index) * this.typeWidth;
         for (int i = 0; i < this.typeWidth; i++) {
-            value[i] = this.values.getLong((offset + i) * Long.BYTES);
+            value[i] = valuesBuf.getLong((offset + i) * Long.BYTES);
         }
         return value;
     }
@@ -72,7 +72,7 @@ public abstract class DecimalVec extends FixedWidthVec {
     public void set(int index, long[] value) {
         int offset = index * this.typeWidth;
         for (int i = 0; i < this.typeWidth; i++) {
-            this.values.putLong((offset + i) * Long.BYTES, value[i]);
+            valuesBuf.setLong((offset + i) * Long.BYTES, value[i]);
         }
     }
 
@@ -88,8 +88,6 @@ public abstract class DecimalVec extends FixedWidthVec {
         if (length % this.typeWidth != 0) {
             throw new OmniRuntimeException(OMNI_PARAM_ERROR, "length " + length + "is error.");
         }
-        LongBuffer buffer = this.values.asLongBuffer();
-        buffer.position(offset * 2);
-        buffer.put(values, start, length);
+        valuesBuf.setLongArray(offset * 2 * Long.BYTES, values, start * Long.BYTES, length * Long.BYTES);
     }
 }

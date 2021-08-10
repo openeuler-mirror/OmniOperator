@@ -8,11 +8,11 @@
 
 namespace omniruntime {
 namespace vec {
-class VarcharVector : public VariableWidthVector<char *> {
+class VarcharVector : public VariableWidthVector<uint8_t *> {
 public:
     VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size);
 
-    int GetValue(int index, char **dst)
+    int GetValue(int index, uint8_t **dst)
     {
         int actualIndex = index + positionOffset;
         int startOffset = GetValueOffset(actualIndex);
@@ -20,12 +20,11 @@ public:
         if (dataLen < 0) {
             return -1;
         }
-        *dst = new char[dataLen];
-        GetData(startOffset, *dst, 0, dataLen);
+        *dst = static_cast<uint8_t *>(valuesAddress) + startOffset;
         return dataLen;
     }
 
-    void SetValue(int index, const char *value, int length)
+    void SetValue(int index, const uint8_t *value, int length)
     {
         FillSlots(index);
         SetData(index, value, 0, length);
@@ -46,9 +45,9 @@ private:
     VarcharVector(VarcharVector *vector, int size, int positionOffset)
         : VariableWidthVector(vector, size, positionOffset) {};
 
-    void GetData(int index, char *dst, int start, int length);
+    void GetData(int index, uint8_t *dst, int start, int length);
 
-    void SetData(int index, const char *data, int start, int length);
+    void SetData(int index, const uint8_t *data, int start, int length);
 
     void FillSlots(int index);
 

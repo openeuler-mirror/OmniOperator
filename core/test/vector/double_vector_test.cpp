@@ -223,7 +223,7 @@ TEST(DoubleVector, SetValueNull)
         if (i % 5 == 0) {
             EXPECT_TRUE(vector->IsValueNull(i));
         } else {
-            EXPECT_FALSE(vector->IsValueNull(i));
+            EXPECT_EQ(vector->GetValue(i), i * 2.3);
         }
     }
     delete vector;

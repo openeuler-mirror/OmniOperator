@@ -3,6 +3,7 @@ package nova.hetu.omniruntime.vector;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DOUBLE;
 import static org.testng.Assert.assertEquals;
@@ -117,7 +118,7 @@ public class TestDoubleVec {
                 assertTrue(doubleVec.isNull(i));
             }
             else {
-                assertFalse(doubleVec.isNull(i));
+                assertEquals(doubleVec.get(i), (double) i / 3);
             }
         }
 
@@ -176,5 +177,34 @@ public class TestDoubleVec {
         double[] values = new double[0];
         v1.put(values, 0, 0, values.length);
         v1.close();
+    }
+
+    @Test
+    public void testGetValues() {
+        double[] values = {1.13, 3.33, 4.44, 6.66, 7.81};
+        DoubleVec doubleVec1 = new DoubleVec(values.length);
+        doubleVec1.put(values, 0, 0, values.length);
+        assertEquals(doubleVec1.get(0, values.length), values);
+        double[] expected = {3.33, 4.44, 6.66};
+        double[] actual = doubleVec1.get(1, 3);
+        for (int i = 0; i < actual.length; i++) {
+            assertEquals(actual[i], expected[i]);
+        }
+    }
+
+    @Test
+    public void setDoubleMax() {
+        int len = 1024 * 1024;
+        double[] values = new double[len];
+        Arrays.fill(values, Double.MAX_VALUE);
+        DoubleVec max = new DoubleVec(len);
+        max.put(values, 0, 0, values.length);
+
+        for (int i = 0; i < max.getSize(); i++) {
+            assertEquals(max.get(i), Double.MAX_VALUE);
+        }
+
+        assertEquals(max.get(0, values.length), values);
+        max.close();
     }
 }

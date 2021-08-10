@@ -1,24 +1,20 @@
 /*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
+
 package nova.hetu.omniruntime.vector;
 
+import nova.hetu.omniruntime.utils.OmniErrorType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 
 /**
- * jmv utils
+ * jvm utils
+ *
+ * @since 2021-08-05
+ *
  */
 final class JvmUtils {
     /**
@@ -28,7 +24,8 @@ final class JvmUtils {
 
     private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
         if (actualIndexScale != expectedIndexScale) {
-            throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
+            throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " +
+                    actualIndexScale);
         }
     }
 
@@ -39,11 +36,15 @@ final class JvmUtils {
         try {
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
-            UNSAFE = (Unsafe) field.get((Object) null);
-            if (UNSAFE == null) {
-                throw new RuntimeException("Unsafe access not available");
+            Object obj = field.get(null);
+            if (obj instanceof Unsafe) {
+                UNSAFE = (Unsafe) obj;
+            } else {
+                UNSAFE = null;
             }
-            else {
+            if (UNSAFE == null) {
+                throw new OmniRuntimeException(OmniErrorType.OMNI_NATIVE_ERROR, "Unsafe access not available");
+            } else {
                 assertArrayIndexScale("Boolean", Unsafe.ARRAY_BOOLEAN_INDEX_SCALE, 1);
                 assertArrayIndexScale("Byte", Unsafe.ARRAY_BYTE_INDEX_SCALE, 1);
                 assertArrayIndexScale("Short", Unsafe.ARRAY_SHORT_INDEX_SCALE, 2);
@@ -52,9 +53,8 @@ final class JvmUtils {
                 assertArrayIndexScale("Float", Unsafe.ARRAY_FLOAT_INDEX_SCALE, 4);
                 assertArrayIndexScale("Double", Unsafe.ARRAY_DOUBLE_INDEX_SCALE, 8);
             }
-        }
-        catch (ReflectiveOperationException var1) {
-            throw new RuntimeException(var1);
+        } catch (ReflectiveOperationException var1) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_NATIVE_ERROR, var1);
         }
     }
 }

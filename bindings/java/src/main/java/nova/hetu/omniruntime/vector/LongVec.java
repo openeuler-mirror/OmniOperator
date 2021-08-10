@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -7,7 +7,6 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.LongVecType;
 
 import java.nio.ByteBuffer;
-import java.nio.LongBuffer;
 
 /**
  * long vec
@@ -55,7 +54,20 @@ public class LongVec extends FixedWidthVec {
      * @return long value
      */
     public long get(int index) {
-        return values.getLong((index + offset) * BYTES);
+        return valuesBuf.getLong((index + offset) * BYTES);
+    }
+
+    /**
+     * get long values from the specified position
+     *
+     * @param index the position of element
+     * @param length the number of element
+     * @return long value array
+     */
+    public long[] get(int index, int length) {
+        long[] target = new long[length];
+        valuesBuf.getLongArray((index + offset) * BYTES, target, 0, length * BYTES);
+        return target;
     }
 
     /**
@@ -65,7 +77,7 @@ public class LongVec extends FixedWidthVec {
      * @param value the value of vec
      */
     public void set(int index, long value) {
-        values.putLong(index * BYTES, value);
+        valuesBuf.setLong(index * BYTES, value);
     }
 
     /**
@@ -77,9 +89,7 @@ public class LongVec extends FixedWidthVec {
      * @param length the number of elements that need to written
      */
     public void put(long[] values, int offset, int start, int length) {
-        LongBuffer buffer = this.values.asLongBuffer();
-        buffer.position(offset);
-        buffer.put(values, start, length);
+        valuesBuf.setLongArray(offset * BYTES, values, start * BYTES, length * BYTES);
     }
 
     @Override

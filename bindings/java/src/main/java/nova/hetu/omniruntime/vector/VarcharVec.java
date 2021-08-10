@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -42,10 +42,22 @@ public class VarcharVec extends VariableWidthVec {
      * @param index the element offset in vec
      * @return byte array
      */
-    public byte[] getValue(int index) {
-        final int actualIndex = index + offset;
-        final int startOffset = getValueOffset(actualIndex);
-        final int dataLen = getValueOffset(actualIndex + 1) - startOffset;
+    public byte[] get(int index) {
+        final int startOffset = getValueOffset(index);
+        final int dataLen = getValueOffset(index + 1) - startOffset;
+        return getData(startOffset, dataLen);
+    }
+
+    /**
+     * Batch gets the specified bytes at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @param length the number of element
+     * @return byte array
+     */
+    public byte[] get(int index, int length) {
+        final int startOffset = getValueOffset(index);
+        final int dataLen = getValueOffset(index + length) - startOffset;
         return getData(startOffset, dataLen);
     }
 
@@ -57,10 +69,7 @@ public class VarcharVec extends VariableWidthVec {
      * @return byte array
      */
     public byte[] getData(int offsetInBytes, int length) {
-        byte[] data = new byte[length];
-        values.position(offsetInBytes);
-        values.get(data, 0, length);
-        return data;
+        return valuesBuf.getBytes(offsetInBytes, length);
     }
 
     /**
@@ -69,7 +78,7 @@ public class VarcharVec extends VariableWidthVec {
      * @param index the element offset in vec
      * @param value byte array
      */
-    public void setValue(int index, byte[] value) {
+    public void set(int index, byte[] value) {
         fillSlots(index);
         final int startOffset = getValueOffset(index);
         setValueOffset(index + 1, startOffset + value.length);
@@ -77,38 +86,50 @@ public class VarcharVec extends VariableWidthVec {
         lastOffsetPosition = index;
     }
 
+    /**
+     * Batch sets the specified bytes at the specified absolute
+     *
+     * @param index the value of the element to be written
+     * @param values the bytes array
+     * @param offsetInArray the element offset in bytes array
+     * @param offsets offsets array
+     * @param offsetsIndex the offset of the offsets array
+     * @param length the number of elements
+     */
     public void put(int index, byte[] values, int offsetInArray, int[] offsets, int offsetsIndex, int length) {
         if (values == null || length == 0) {
             return;
         }
-        int[] newOffsets = compactOffsets(index, offsets, offsetsIndex, length);
+        fillSlots(index);
+        int startOffset = getValueOffset(index);
+        int[] newOffsets = compactOffsets(startOffset, offsets, offsetsIndex, length);
         int dataLength = offsets[offsetsIndex + length] - offsets[offsetsIndex];
         // set offsets
-        valueOffsets.put(index, newOffsets);
+        offsetsBuf.setIntArray((index + 1) * Integer.BYTES, newOffsets, Integer.BYTES,
+                newOffsets.length * Integer.BYTES);
         // set data
-        setData(getValueOffset(index), values, offsetInArray + offsets[offsetsIndex], dataLength);
+        setData(startOffset, values, offsetInArray + offsets[offsetsIndex], dataLength);
         lastOffsetPosition = index + length - 1;
     }
 
-    private int[] compactOffsets(int index, int[] srcOffsets, int offsetIndex, int length) {
-        int originalOffset = getValueOffset(index);
+    private int[] compactOffsets(int startOffset, int[] srcOffsets, int offsetIndex, int length) {
         int[] newOffsets = new int[length + 1];
         for (int i = 1; i <= length; i++) {
-            newOffsets[i] = srcOffsets[offsetIndex + i] - srcOffsets[offsetIndex] + originalOffset;
+            newOffsets[i] = srcOffsets[offsetIndex + i] - srcOffsets[offsetIndex] + startOffset;
         }
         return newOffsets;
     }
 
     private void fillSlots(int index) {
         for (int i = lastOffsetPosition + 1; i < index; i++) {
-            setData(i, EMPTY_BYTE_ARRAY, 0, EMPTY_BYTE_ARRAY.length);
+            int startOffset = getValueOffset(i);
+            setValueOffset(i + 1, startOffset);
         }
         lastOffsetPosition = index - 1;
     }
 
     private void setData(int offsetInBytes, byte[] data, int start, int length) {
-        values.position(offsetInBytes);
-        values.put(data, start, length);
+        valuesBuf.setBytes(offsetInBytes, data, start, length);
     }
 
     @Override

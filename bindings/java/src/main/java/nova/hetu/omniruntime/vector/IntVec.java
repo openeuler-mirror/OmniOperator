@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -43,7 +43,20 @@ public class IntVec extends FixedWidthVec {
      * @return int value
      */
     public int get(int index) {
-        return values.getInt((index + offset) * BYTES);
+        return valuesBuf.getInt((index + offset) * BYTES);
+    }
+
+    /**
+     * get int values from the specified position
+     *
+     * @param index the position of element
+     * @param length the number of element
+     * @return int value array
+     */
+    public int[] get(int index, int length) {
+        int[] target = new int[length];
+        valuesBuf.getIntArray((index + offset) * BYTES, target, 0, length * BYTES);
+        return target;
     }
 
     /**
@@ -53,7 +66,7 @@ public class IntVec extends FixedWidthVec {
      * @param value the value of vec
      */
     public void set(int index, int value) {
-        values.putInt(index * BYTES, value);
+        valuesBuf.setInt(index * BYTES, value);
     }
 
     /**
@@ -65,9 +78,7 @@ public class IntVec extends FixedWidthVec {
      * @param length the number of elements that need to written
      */
     public void put(int[] values, int offset, int start, int length) {
-        IntBuffer buffer = this.values.asIntBuffer();
-        buffer.position(offset);
-        buffer.put(values, start, length);
+        valuesBuf.setIntArray(offset * BYTES, values, start * BYTES, length * BYTES);
     }
 
     @Override

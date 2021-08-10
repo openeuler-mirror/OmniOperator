@@ -126,14 +126,14 @@ TEST(BooleanVector, setValueNull)
         if (i % 5 == 0) {
             vector->SetValueNull(i);
         } else {
-            vector->SetValue(i, i);
+            vector->SetValue(i, i % 2 == 0);
         }
     }
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             EXPECT_TRUE(vector->IsValueNull(i));
         } else {
-            EXPECT_FALSE(vector->IsValueNull(i));
+            EXPECT_EQ(vector->GetValue(i), i % 2 == 0);
         }
     }
     delete vector;

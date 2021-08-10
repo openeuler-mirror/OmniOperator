@@ -40,7 +40,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                     int64_t addr = ((int64_t *)(allData[i]))[j];
                     std::string s ((char *)(addr));
                     // std::cout << "s: " << s << std::endl;
-                    ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, const_cast<char *>(s.c_str()),
+                    ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()),
                                                                         s.length() + 1);
                 }
                 break;
