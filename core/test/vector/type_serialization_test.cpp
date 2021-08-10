@@ -19,7 +19,8 @@ TEST(VecTypeSerializer, Serialization)
         LongVecType(),       Date32VecType(MILLI), Date64VecType(MILLI),
         VarcharVecType(1024) };
     std::string typesJson = omniruntime::vec::Serialize(types);
-    std::vector<VecType> check = omniruntime::vec::Deserialize(typesJson);
+    auto vecTypes = omniruntime::vec::Deserialize(typesJson);
+    auto check = vecTypes->Get();
     EXPECT_EQ(check.size(), types.size());
     EXPECT_EQ(check[0].GetId(), OMNI_VEC_TYPE_INT);
     EXPECT_EQ(check[1].GetId(), OMNI_VEC_TYPE_DOUBLE);
