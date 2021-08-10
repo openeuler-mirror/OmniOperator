@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -15,31 +15,39 @@ import java.nio.ByteOrder;
  * @since 2021-07-17
  */
 public abstract class VariableWidthVec extends Vec {
-    protected final ValueOffsets valueOffsets;
+    /**
+     * offsets buffer
+     */
+    protected  OmniBuf offsetsBuf;
 
     public VariableWidthVec(int capacityInBytes, int size, VecType type) {
         super(capacityInBytes, size, type);
-        this.valueOffsets = new ValueOffsets(getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
+        this.offsetsBuf = OmniBufFactory.create(
+                getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     public VariableWidthVec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
         super(allocator, capacityInBytes, size, type);
-        this.valueOffsets = new ValueOffsets(getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
+        this.offsetsBuf = OmniBufFactory.create(
+                getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     protected VariableWidthVec(Vec vec, int offset, int length, boolean isSlice) {
         super(vec, offset, length, isSlice);
-        this.valueOffsets = new ValueOffsets(getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
+        this.offsetsBuf = OmniBufFactory.create(
+                getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     protected VariableWidthVec(Vec vec, int[] positions, int offset, int length) {
         super(vec, positions, offset, length);
-        this.valueOffsets = new ValueOffsets((getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN)));
+        this.offsetsBuf = OmniBufFactory.create(
+                getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     protected VariableWidthVec(long nativeVector, VecType vecType) {
         super(nativeVector, vecType);
-        this.valueOffsets = new ValueOffsets(getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
+        this.offsetsBuf = OmniBufFactory.create(
+                getValueOffsetsNative(getNativeVector()).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     /**
@@ -56,8 +64,8 @@ public abstract class VariableWidthVec extends Vec {
      * @param index the element offset in vec
      * @return offset value
      */
-    protected int getValueOffset(int index) {
-        return valueOffsets.get(index);
+    public int getValueOffset(int index) {
+        return offsetsBuf.getInt((index + offset) * Integer.BYTES);
     }
 
     /**
@@ -66,13 +74,46 @@ public abstract class VariableWidthVec extends Vec {
      * @param index  the element offset in vec
      * @param offset offset value
      */
-    protected void setValueOffset(int index, int offset) {
-        valueOffsets.set(index, offset);
+    public void setValueOffset(int index, int offset) {
+        offsetsBuf.setInt(index * Integer.BYTES, offset);
     }
 
+    /**
+     * get the data length of the specified position
+     *
+     * @param index the element offset in vec
+     * @return data length in bytes
+     */
+    public int getDataLength(int index) {
+        return getValueOffset(index + 1) - getValueOffset(index);
+    }
+
+    /**
+     * return null value array from 0 to size + offset length
+     *
+     * @return raw value of offsets
+     */
     public int[] getRawValueOffset() {
+        // the length of the array is size + offset, so that the caller
+        // and vec can have the same offset.
         int[] rawValueOffset = new int[offset + size + 1];
-        valueOffsets.getOffsets(0, rawValueOffset, 0, rawValueOffset.length);
+        offsetsBuf.getIntArray(0, rawValueOffset, 0, rawValueOffset.length * Integer.BYTES);
         return rawValueOffset;
+    }
+
+    /**
+     * get the value offset of the specified position
+     *
+     * @param index the offset of element
+     * @param length the number of element
+     * @return the offsets
+     */
+    public int[] getValueOffset(int index, int length) {
+        int startOffset = getValueOffset(index);
+        int[] offsets = new int[length + 1];
+        for (int i = 1; i <= length; i++) {
+            offsets[i] = getValueOffset(index + i) - startOffset;
+        }
+        return offsets;
     }
 }

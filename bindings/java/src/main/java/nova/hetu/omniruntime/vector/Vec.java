@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -35,7 +35,7 @@ public abstract class Vec implements Closeable {
     /**
      * The value buffer.
      */
-    protected final ByteBuffer values;
+    protected final OmniBuf valuesBuf;
 
     /**
      * The specialized vector allocator.
@@ -55,7 +55,7 @@ public abstract class Vec implements Closeable {
     /**
      * The nulls of vector, it is a bitmap.
      */
-    private final ValueNulls valueNulls;
+    private final OmniBuf nullsBuf;
 
     /**
      * The capacity in bytes of this vector.
@@ -83,8 +83,8 @@ public abstract class Vec implements Closeable {
         this.type = type;
         this.offset = offset;
         this.nativeVector = nativeVector;
-        this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
-        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
+        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
+        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
         this.isWritable = isWritable;
     }
 
@@ -153,8 +153,8 @@ public abstract class Vec implements Closeable {
         this.type = type;
         this.offset = getOffsetNative(nativeVector);
         this.nativeVector = nativeVector;
-        this.values = getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN);
-        this.valueNulls = new ValueNulls(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
+        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
+        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
     }
 
     private static native long newVectorNative(long allocator, int capacityInBytes, int size, String type);
@@ -261,7 +261,7 @@ public abstract class Vec implements Closeable {
      * @return values buffer
      */
     public ByteBuffer getValues() {
-        return values;
+        return valuesBuf.getBuffer();
     }
 
     /**
@@ -269,8 +269,8 @@ public abstract class Vec implements Closeable {
      *
      * @return nulls value buffer
      */
-    public ValueNulls getValueNulls() {
-        return valueNulls;
+    public ByteBuffer getValueNulls() {
+        return nullsBuf.getBuffer();
     }
 
     /**
@@ -280,7 +280,7 @@ public abstract class Vec implements Closeable {
      * @return if it is null, return true, otherwise return false
      */
     public boolean isNull(int index) {
-        return valueNulls.get(index + offset);
+        return nullsBuf.getByte(index + offset) == 1;
     }
 
     /**
@@ -289,21 +289,35 @@ public abstract class Vec implements Closeable {
      * @param index the element offset in vec
      */
     public void setNull(int index) {
-        valueNulls.set(index + offset);
+        nullsBuf.setByte(index + offset, (byte) 1);
     }
 
+    /**
+     * set nulls in batch
+     *
+     * @param index the offset of the element
+     * @param isNulls array of null values, true is null otherwise non-null.
+     * @param start array offset
+     * @param length number of elements
+     */
     public void setNulls(int index, boolean[] isNulls, int start, int length) {
-        valueNulls.set(index, isNulls, start, length);
+        byte[] values = transformBooleanToByte(isNulls, start, length);
+        nullsBuf.setBytes(index, values, 0, length);
     }
 
+    /**
+     * whether there is a null value
+     *
+     * @return if yes, return true otherwise false
+     */
     public boolean hasNullValue() {
-        boolean[] currentValueNulls = new boolean[size];
-        valueNulls.get(offset, currentValueNulls, 0, size);
+        byte[] currentValueNulls = new byte[size];
+        nullsBuf.getBytes(offset, currentValueNulls, 0, size);
         boolean hasNullValue = false;
         int start = 0;
         int end = currentValueNulls.length - 1;
         while (start <= end) {
-            if (currentValueNulls[start] || currentValueNulls[end]) {
+            if (currentValueNulls[start] == 1 || currentValueNulls[end] == 1) {
                 hasNullValue = true;
                 break;
             }
@@ -314,16 +328,68 @@ public abstract class Vec implements Closeable {
     }
 
     /**
+     * transform boolean array to byte array
+     *
+     * @param values nulls array
+     * @param start array offset
+     * @param length number of elements
+     * @return byte array
+     */
+    protected byte[] transformBooleanToByte(boolean[] values, int start, int length) {
+        byte[] transformedBytes = new byte[length];
+        for (int i = 0; i < length; i++) {
+            if (values[i + start]) {
+                transformedBytes[i] = (byte) 1;
+            } else {
+                transformedBytes[i] = (byte) 0;
+            }
+        }
+
+        return transformedBytes;
+    }
+
+    /**
+     * transform byte array to boolean array
+     *
+     * @param values byte array, 1 means null, 0 means non-null
+     * @param start array offset
+     * @param length number of elements
+     * @return boolean array
+     */
+    protected boolean[] transformByteToBoolean(byte[] values, int start, int length) {
+        boolean[] transformedBoolean = new boolean[length];
+        for (int i = 0; i < length; i++) {
+            transformedBoolean[i] = values[i + start] == 1;
+        }
+        return transformedBoolean;
+    }
+
+    /**
      * return null value array from 0 to size + offset length
      *
      * @return raw value nulls
+     *
+     * @return raw nulls array
      */
     public boolean[] getRawValueNulls() {
         // the length of the array is size + offset, so that the caller
         // and vec can have the same offset.
-        boolean[] rawValueNulls = new boolean[size + offset];
-        valueNulls.get(0, rawValueNulls, 0, rawValueNulls.length);
-        return rawValueNulls;
+        byte[] rawValueNulls = new byte[size + offset];
+        nullsBuf.getBytes(0, rawValueNulls, 0, rawValueNulls.length);
+        return transformByteToBoolean(rawValueNulls, 0, rawValueNulls.length);
+    }
+
+    /**
+     * get the specified nulls array at the specified absolute
+     *
+     * @param index the offset of element in vec
+     * @param length the number of element
+     * @return boolean array
+     */
+    public boolean[] getValuesNulls(int index, int length) {
+        byte[] nullsArray = new byte[length];
+        nullsBuf.getBytes(index, nullsArray, 0, length);
+        return transformByteToBoolean(nullsArray, 0, length);
     }
 
     /**

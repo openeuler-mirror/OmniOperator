@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -39,7 +39,7 @@ public class ShortVec extends FixedWidthVec {
      * @return int value
      */
     public short get(int index) {
-        return getValues().getShort((index + offset) * BYTES);
+        return valuesBuf.getShort((index + offset) * BYTES);
     }
 
     /**
@@ -49,7 +49,7 @@ public class ShortVec extends FixedWidthVec {
      * @param value the value of vec
      */
     public void set(int index, short value) {
-        getValues().putShort(index * BYTES, value);
+        valuesBuf.setShort(index * BYTES, value);
     }
 
     /**
@@ -61,9 +61,7 @@ public class ShortVec extends FixedWidthVec {
      * @param length the number of elements that need to written
      */
     public void put(short[] values, int offset, int start, int length) {
-        ShortBuffer buffer = getValues().asShortBuffer();
-        buffer.position(offset);
-        buffer.put(values, start, length);
+        valuesBuf.setShortArray(offset * BYTES, values, start * BYTES, length * BYTES);
     }
 
     @Override

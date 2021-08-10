@@ -3,6 +3,7 @@
  */
 
 #include <sstream>
+#include <cstring>
 #include "gtest/gtest.h"
 #include "vector.h"
 #include "vector_allocator.h"
@@ -39,7 +40,7 @@ TEST(VarcharVector, sliceVector)
     for (int i = 0; i < size; i++) {
         std::string str(s, 0, i);
         str.append(std::to_string(i));
-        vector->SetValue(i, str.c_str(), str.length());
+        vector->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
     int offset = 3;
@@ -51,11 +52,10 @@ TEST(VarcharVector, sliceVector)
     for (int i = 0; i < sliceVector1->GetSize(); i++) {
         std::string str(s, 0, i + 3);
         str.append(std::to_string(i + 3));
-        char *actualChar;
+        uint8_t *actualChar = nullptr;
         int len = sliceVector1->GetValue(i, &actualChar);
-        std::string actualStr(actualChar, 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
         EXPECT_EQ(actualStr, str);
-        delete[] actualChar;
     }
 
     VarcharVector *sliceVector2 = sliceVector1->Slice(1, 2);
@@ -66,11 +66,10 @@ TEST(VarcharVector, sliceVector)
     for (int i = 0; i < sliceVector2->GetSize(); i++) {
         std::string str(s, 0, i + 4);
         str.append(std::to_string(i + 4));
-        char *actualChar;
+        uint8_t *actualChar = nullptr;
         int len = sliceVector2->GetValue(i, &actualChar);
-        std::string actualStr(actualChar, 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
         EXPECT_EQ(actualStr, str);
-        delete[] actualChar;
     }
 
     delete vector;
@@ -95,17 +94,16 @@ TEST(VarcharVector, setAndGetValue)
     for (int i = 0; i < 4; i++) {
         std::string str(s, 0, i);
         str.append(std::to_string(i));
-        vector->SetValue(i, str.c_str(), str.length());
+        vector->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
     for (int i = 0; i < 4; i++) {
         std::string str(s, 0, i);
         str.append(std::to_string(i));
-        char *actualChar;
+        uint8_t *actualChar = nullptr;
         int len = vector->GetValue(i, &actualChar);
-        std::string actualStr(actualChar, 0, len);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
         EXPECT_EQ(actualStr, str);
-        delete[] actualChar;
     }
 
     delete vector;
@@ -119,20 +117,24 @@ TEST(VarcharVector, SetValueNull)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
-    VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
-    std::string s = "test";
+    VarcharVector *vector = new VarcharVector(allocator,1024, 256);
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             vector->SetValueNull(i);
         } else {
-            vector->SetValue(i, s.c_str(), s.length());
+            std::string str = std::to_string(i);
+            vector->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
         }
     }
+
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             EXPECT_TRUE(vector->IsValueNull(i));
         } else {
-            EXPECT_FALSE(vector->IsValueNull(i));
+            uint8_t *actual = nullptr;
+            int len = vector->GetValue(i, &actual);
+            std::string actualStr(reinterpret_cast<char *>(actual), 0, len);
+            EXPECT_EQ(actualStr, std::to_string(i));
         }
     }
     delete vector;
@@ -152,7 +154,7 @@ TEST(VarcharVector, CopyPositions)
     for (int i = 0; i < 4; i++) {
         std::string str(s, 0, i);
         str.append(std::to_string(i));
-        vector->SetValue(i, str.c_str(), str.length());
+        vector->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
     int *positions = new int[2];
@@ -161,16 +163,14 @@ TEST(VarcharVector, CopyPositions)
     VarcharVector *copyPostionVector = vector->CopyPositions(positions, 0, 2);
 
     for (int i = 0; i < copyPostionVector->GetSize(); i++) {
-        char *expectedChar;
+        uint8_t *expectedChar = nullptr;
         int len = vector->GetValue(positions[i], &expectedChar);
-        std::string expectedStr(expectedChar, 0, len);
+        std::string expectedStr(reinterpret_cast<char *>(expectedChar), 0, len);
 
-        char *actualChar;
+        uint8_t *actualChar = nullptr;
         int len1 = copyPostionVector->GetValue(i, &actualChar);
-        std::string actualStr(actualChar, 0, len1);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len1);
         EXPECT_EQ(actualStr, expectedStr);
-        delete[] actualChar;
-        delete[] actualChar;
     }
 
     delete vector;
@@ -189,22 +189,20 @@ TEST(VarcharVector, CopyRegion)
     for (int i = 0; i < 4; i++) {
         std::string str(s, 0, i);
         str.append(std::to_string(i));
-        vector->SetValue(i, str.c_str(), str.length());
+        vector->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
     }
 
     VarcharVector *copyRegionVector = vector->CopyRegion(2, 2);
 
     for (int i = 0; i < copyRegionVector->GetSize(); i++) {
-        char *expectedChar;
+        uint8_t *expectedChar = nullptr;
         int len = vector->GetValue(i + 2, &expectedChar);
-        std::string expectedStr(expectedChar, 0, len);
+        std::string expectedStr(reinterpret_cast<char *>(expectedChar), 0, len);
 
-        char *actualChar;
+        uint8_t *actualChar = nullptr;
         int len1 = copyRegionVector->GetValue(i, &actualChar);
-        std::string actualStr(actualChar, 0, len1);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len1);
         EXPECT_EQ(actualStr, expectedStr);
-        delete[] actualChar;
-        delete[] expectedChar;
     }
 
     delete vector;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -43,7 +43,20 @@ public class DoubleVec extends FixedWidthVec {
      * @return double value
      */
     public double get(int index) {
-        return values.getDouble((index + offset) * BYTES);
+        return valuesBuf.getDouble((index + offset) * BYTES);
+    }
+
+    /**
+     * get double values from the specified position
+     *
+     * @param index the position of element
+     * @param length the number of element
+     * @return double value array
+     */
+    public double[] get(int index, int length) {
+        double[] target = new double[length];
+        valuesBuf.getDoubleArray((index + offset) * BYTES, target, 0, length * BYTES);
+        return target;
     }
 
     /**
@@ -53,7 +66,7 @@ public class DoubleVec extends FixedWidthVec {
      * @param value the value of vec
      */
     public void set(int index, double value) {
-        values.putDouble(index * BYTES, value);
+        valuesBuf.setDouble(index * BYTES, value);
     }
 
     /**
@@ -65,9 +78,7 @@ public class DoubleVec extends FixedWidthVec {
      * @param length the number of elements that need to written
      */
     public void put(double[] values, int offset, int start, int length) {
-        DoubleBuffer buffer = this.values.asDoubleBuffer();
-        buffer.position(offset);
-        buffer.put(values, start, length);
+        valuesBuf.setDoubleArray(offset * BYTES, values, start * BYTES, length * BYTES);
     }
 
     @Override

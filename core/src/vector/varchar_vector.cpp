@@ -31,7 +31,7 @@ VarcharVector *VarcharVector::CopyPositions(const int *positions, int offset, in
         int position = positions[offset + i] + positionOffset;
         int startOffset = GetValueOffset(position);
         int dataLen = GetValueOffset(position + 1) - startOffset;
-        char *data = reinterpret_cast<char *>(valuesAddress);
+        uint8_t *data = reinterpret_cast<uint8_t *>(valuesAddress);
         vector->SetValue(i, data + startOffset, dataLen);
         vector->SetValueNulls(i, ((bool *)valueNullsAddress) + position, 1);
         data = nullptr;
@@ -67,7 +67,7 @@ VarcharVector *VarcharVector::CopyRegion(int positionOffset, int length)
     return vector;
 }
 
-void VarcharVector::GetData(int startOffset, char *dst, int start, int length)
+void VarcharVector::GetData(int startOffset, uint8_t *dst, int start, int length)
 {
     if (dst == nullptr || start + length > capacityInBytes) {
         return;
@@ -80,7 +80,7 @@ void VarcharVector::GetData(int startOffset, char *dst, int start, int length)
     data = nullptr;
 }
 
-void VarcharVector::SetData(int index, const char *value, int start, int length)
+void VarcharVector::SetData(int index, const uint8_t *value, int start, int length)
 {
     if (value == nullptr) {
         return;
@@ -101,7 +101,8 @@ void VarcharVector::SetData(int index, const char *value, int start, int length)
 void VarcharVector::FillSlots(int index)
 {
     for (int i = lastOffsetPosition + 1; i < index; i++) {
-        SetData(i, nullptr, 0, 0);
+        int startOffset = GetValueOffset(i);
+        SetValueOffset(i + 1, startOffset);
     }
     lastOffsetPosition = index - 1;
 }

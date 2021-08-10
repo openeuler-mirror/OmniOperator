@@ -4,8 +4,9 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_INT;
+import java.util.Arrays;
+
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -116,7 +117,7 @@ public class TestIntVec {
                 assertTrue(vec.isNull(i));
             }
             else {
-                assertFalse(vec.isNull(i));
+                assertEquals(vec.get(i), i);
             }
         }
 
@@ -173,5 +174,34 @@ public class TestIntVec {
         int[] values = new int[0];
         v1.put(values, 0, 0, values.length);
         v1.close();
+    }
+
+    @Test
+    public void testGetValues() {
+        int[] values = {1, 3, 4, 6, 7};
+        IntVec vec = new IntVec(values.length);
+        vec.put(values, 0, 0, values.length);
+        assertEquals(vec.get(0, values.length), values);
+        int[] expected = {3, 4, 6};
+        int[] actual = vec.get(1, 3);
+        for (int i = 0; i < actual.length; i++) {
+            assertEquals(actual[i], expected[i]);
+        }
+    }
+
+    @Test
+    public void setIntMax() {
+        int len = 1024 * 1024;
+        int[] values = new int[len];
+        Arrays.fill(values, Integer.MAX_VALUE);
+        IntVec max = new IntVec(len);
+        max.put(values, 0, 0, values.length);
+
+        for (int i = 0; i < max.getSize(); i++) {
+            assertEquals(max.get(i), Integer.MAX_VALUE);
+        }
+
+        assertEquals(max.get(0, values.length), values);
+        max.close();
     }
 }

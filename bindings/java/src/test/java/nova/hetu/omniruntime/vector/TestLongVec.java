@@ -4,8 +4,9 @@ import nova.hetu.omniruntime.type.LongVecType;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import java.util.Arrays;
+
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -116,7 +117,7 @@ public class TestLongVec {
                 assertTrue(longVec.isNull(i));
             }
             else {
-                assertFalse(longVec.isNull(i));
+                assertEquals(longVec.get(i), i);
             }
         }
 
@@ -173,5 +174,34 @@ public class TestLongVec {
         long[] values = new long[0];
         v1.put(values, 0, 0, values.length);
         v1.close();
+    }
+
+    @Test
+    public void testGetValues() {
+        long[] values = {1, 3, 4, 6, 7};
+        LongVec vec = new LongVec(values.length);
+        vec.put(values, 0, 0, values.length);
+        assertEquals(vec.get(0, values.length), values);
+        long[] expected = {3, 4, 6};
+        long[] actual = vec.get(1, 3);
+        for (int i = 0; i < actual.length; i++) {
+            assertEquals(actual[i], expected[i]);
+        }
+    }
+
+    @Test
+    public void setLongMax() {
+        int len = 1024 * 1024;
+        long[] values = new long[len];
+        Arrays.fill(values, Long.MAX_VALUE);
+        LongVec max = new LongVec(len);
+        max.put(values, 0, 0, values.length);
+
+        for (int i = 0; i < max.getSize(); i++) {
+            assertEquals(max.get(i), Long.MAX_VALUE);
+        }
+
+        assertEquals(max.get(0, values.length), values);
+        max.close();
     }
 }

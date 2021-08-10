@@ -37,7 +37,7 @@ Projection::Projection(int32_t *inputTypes, int32_t nCols, Expr *expr, bool filt
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 std::vector<int64_t> Projection::GetData(omniruntime::vec::VectorBatch *&vecBatch, std::vector<std::vector<int64_t>> &vcdataVec,
-    std::vector<char *> &stringvalVec, bool *bitmap) const
+    std::vector<uint8_t *> &stringvalVec, bool *bitmap) const
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     uint32_t nRows = vecBatch->GetRowCount();
@@ -53,7 +53,7 @@ std::vector<int64_t> Projection::GetData(omniruntime::vec::VectorBatch *&vecBatc
 
             for (int32_t j = 0; j < nRows; j++) {
                 // get data
-                char *actualChar = nullptr;
+                uint8_t *actualChar = nullptr;
                 int len = vcVec->GetValue(j, &actualChar);
                 // add to vector so it can be freed later
                 stringvalVec.push_back(actualChar);
@@ -116,7 +116,7 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
     // Contains arrays with addresses for varchar vecs
     std::vector<std::vector<int64_t>> vcdataVec;
     // Contains all strings created in VarcharVector::GetValue method which need to be freed
-    std::vector<char *> stringvalVec;
+    std::vector<uint8_t *> stringvalVec;
 
     const int totalRowCount = vecBatch->GetRowCount() * vecBatch->GetVectorCount();
     bool bitmap[totalRowCount];
@@ -129,9 +129,6 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
 
     for (auto v : vcdataVec) {
         v.clear();
-    }
-    for (auto v : stringvalVec) {
-        delete[] v;
     }
 
     data.clear();

@@ -95,7 +95,7 @@ Filter::Filter(unique_ptr<FilterCodeGen> codeGen, Expr *expr)
 
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
-std::vector<int64_t> Filter::GetData(VectorBatch *&vecBatch, vector<vector<int64_t>> &vcdataVec, vector<char *> &stringvalVec,
+std::vector<int64_t> Filter::GetData(VectorBatch *&vecBatch, vector<vector<int64_t>> &vcdataVec, vector<uint8_t *> &stringvalVec,
     bool *bitmap) const
 {
     uint32_t nCols = vecBatch->GetVectorCount();
@@ -111,7 +111,7 @@ std::vector<int64_t> Filter::GetData(VectorBatch *&vecBatch, vector<vector<int64
 
             for (int32_t j = 0; j < nRows; j++) {
                 // get data
-                char *actualChar = nullptr;
+                uint8_t *actualChar = nullptr;
                 int len = vcVec->GetValue(j, &actualChar);
                 // add to vector so it can be freed later
                 stringvalVec.push_back(actualChar);
@@ -142,7 +142,7 @@ int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t *selectedRows, int rowC
     // Contains arrays with addresses for varchar vecs
     vector<vector<int64_t>> vcdataVec;
     // Contains all strings created in VarcharVector::GetValue method which need to be freed
-    vector<char *> stringvalVec;
+    vector<uint8_t *> stringvalVec;
 
     const int totalRowCount = rowCount * vecBatch->GetVectorCount();
     bool bitmap[totalRowCount];
@@ -154,10 +154,6 @@ int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t *selectedRows, int rowC
     for (auto v : vcdataVec) {
         v.clear();
     }
-    for (auto v : stringvalVec) {
-        delete[] v;
-    }
-
     data.clear();
 
     return ret;
