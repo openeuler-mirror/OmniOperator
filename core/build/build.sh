@@ -1,6 +1,8 @@
 #!/bin/bash
 
-find . -type f ! -name 'build.sh' -delete
+echo "enter" $(dirname $(readlink -f $0))
+cd $(dirname $(readlink -f $0))
+rm -rf `ls | grep -v "build.sh"`
 if [ $# != 0 ] ; then
   if [ $1 = 'debug' ] && [ $2 = 'low' ];then
     echo "-- Enable low level debug"

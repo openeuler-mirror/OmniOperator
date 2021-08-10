@@ -6,6 +6,7 @@
 #define OMNI_RUNTIME_VECTOR_TYPE_SERIALIZER_H
 
 #include "vector_type.h"
+#include "vector_types.h"
 
 namespace omniruntime {
 namespace vec {
@@ -13,7 +14,7 @@ std::string Serialize(const std::vector<VecType> &types);
 
 std::string SerializeSingle(const VecType &type);
 
-std::vector<VecType> Deserialize(const std::string &vecTypeExts);
+const VecTypesPtr Deserialize(const std::string &vecTypes);
 
 VecType DeserializeSingle(const std::string &vecTypeExt);
 }

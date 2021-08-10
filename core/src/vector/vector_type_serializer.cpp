@@ -19,9 +19,9 @@ std::string SerializeSingle(const VecType &type)
     return json(type).dump();
 }
 
-std::vector<VecType> Deserialize(const std::string &vecTypes)
+const VecTypesPtr Deserialize(const std::string &vecTypes)
 {
-    return json::parse(vecTypes);
+    return std::make_shared<VecTypes>(json::parse(vecTypes));
 }
 
 VecType DeserializeSingle(const std::string &vecType)
