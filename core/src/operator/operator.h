@@ -36,7 +36,10 @@ namespace op {
             this->status = status;
         };
 
-        virtual void Close() {}
+        virtual OmniStatus Close()
+        {
+            return OMNI_STATUS_NORMAL;
+        }
 
     protected:
         int32_t* sourceTypes;

@@ -6,29 +6,12 @@
 #define GROUP_AGGREGATION_H
 
 #include "aggregation.h"
+#include "../hash_util.h"
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
 namespace op {
-using RowIterator = std::unordered_map<uint64_t, std::vector<GroupBySlot>>::iterator;
-
-class MultiChannelHash {
-public:
-    MultiChannelHash() : result(0) {}
-    virtual ~MultiChannelHash() {}
-    uint64_t CombineHash(uint64_t res, uint64_t value) const
-    {
-        return (31 * res + value);
-    }
-
-private:
-    uint64_t result;
-};
-
-using HashPosition = struct HashPosition {
-    uint64_t hashVal;
-    uint32_t offset;
-};
+using RowIterator = std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashUtil>::iterator;
 
 class HashAggregationOperatorFactory;
 
@@ -46,30 +29,11 @@ public:
     explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
     {}
 
+    OmniStatus Close() override;
+
     ~HashAggregationOperator() override
     {
-        // delete map
-        for (auto &item : groupedRows) {
-            for (int32_t idx = 0; idx < item.second.size(); ++idx) {
-                switch (groupByCols[idx].type.GetId()) {
-                    case omniruntime::vec::OMNI_VEC_TYPE_INT: {
-                        delete reinterpret_cast<int32_t *>(item.second[idx].val);
-                        break;
-                    }
-                    case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
-                        delete reinterpret_cast<int64_t *>(item.second[idx].val);
-                        break;
-                    }
-                    case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
-                        delete reinterpret_cast<double *>(item.second[idx].val);
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
-        }
-        groupedRows.clear();
+        Close();
     }
     void PreLoop(omniruntime::vec::VectorBatch *vecBatch);
 
@@ -77,7 +41,7 @@ public:
         const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum,
         const int32_t *aggFuncTypes);
 
-    void PostLoop(omniruntime::vec::VectorBatch *vecBatch);
+    void PostLoop(omniruntime::vec::VectorBatch *vecBatch) const;
 
 private:
     int32_t GetRowSize(std::vector<int32_t>& types, int32_t columnCount);
@@ -85,11 +49,12 @@ private:
     void FillGroupByVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
         RowIterator &rowIterator, int32_t rowCount);
 
-    void FillAggVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex, int32_t rowCount);
+    void FillAggVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
+        RowIterator &rowIterator, int32_t rowCount);
 
 private:
     friend class HashAggregationOperatorFactory;
-    std::unordered_map<uint64_t, std::vector<GroupBySlot>> groupedRows;
+    std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
 };

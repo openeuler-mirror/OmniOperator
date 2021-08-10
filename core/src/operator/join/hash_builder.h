@@ -45,7 +45,7 @@ public:
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
     int32_t *GetSourceTypes() override;
-    void Close() override;
+    OmniStatus Close() override;
 
 private:
     std::vector<int32_t> buildTypes;

@@ -10,12 +10,10 @@
 
 #include "../operator_factory.h"
 #include "aggregator.h"
-#include "../../util/debug.h"
 #include "../../memory/memory_pool.h"
 #include "../status.h"
 
 #include <vector>
-#include <cstdint>
 #include <thread>
 
 namespace omniruntime {

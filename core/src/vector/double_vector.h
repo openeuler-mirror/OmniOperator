@@ -5,6 +5,7 @@
 #define __DOUBLE_VECTOR__H__
 
 #include "fixed_width_vector.h"
+#include "../util/compiler_util.h"
 
 namespace omniruntime {
 namespace vec {
@@ -13,13 +14,13 @@ public:
     DoubleVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
-    double GetValue(int index)
+    double ALWAYS_INLINE GetValue(int index)
     {
         return reinterpret_cast<double *>(valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.
-    void SetValue(int index, double value)
+    void ALWAYS_INLINE SetValue(int index, double value)
     {
         reinterpret_cast<double *>(valuesAddress)[index] = value;
     }

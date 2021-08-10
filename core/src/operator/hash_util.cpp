@@ -52,7 +52,7 @@ int64_t RotateLeft(int64_t i, int32_t distance)
 // for hashing a real data value
 // from AbstractLongType#hash()
 // for type double, how to convert double value to long value?
-int64_t HashUtil::HashValue(int64_t value)
+int64_t HashUtil::HashValue(uint64_t value)
 {
     return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
 }
@@ -61,7 +61,7 @@ int64_t Reverse(int64_t rawHash);
 int64_t UpdateTail(int64_t hash, int64_t value);
 int64_t FinalShuffle(int64_t hash);
 
-int32_t HashUtil::GetRawHashPartition(int64_t rawHash, int32_t mask)
+int32_t HashUtil::GetRawHashPartition(uint64_t rawHash, uint32_t mask)
 {
     int64_t value = Reverse(rawHash);
     int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
