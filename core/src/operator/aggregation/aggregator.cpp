@@ -11,7 +11,7 @@
 
 namespace omniruntime {
 namespace op {
-    using namespace omniruntime::vec;
+using namespace omniruntime::vec;
 int32_t CompareInt(int32_t leftVal, int32_t rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
@@ -37,7 +37,8 @@ bool Aggregator::IsOutputPartial() const
     return this->outputPartial;
 }
 
-void ALWAYS_INLINE SumAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void ALWAYS_INLINE SumAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
+    uint32_t offset)
 {
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
@@ -65,7 +66,8 @@ void ALWAYS_INLINE SumAggregator::Insert(GroupBySlot &groupSlot, omniruntime::ve
     }
 }
 
-void ALWAYS_INLINE SumAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void ALWAYS_INLINE SumAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
+    uint32_t offset)
 {
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
@@ -144,7 +146,8 @@ void SumAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset)
     }
 }
 
-void CountAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void CountAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
+    uint32_t offset)
 {
     if (inputRaw) {
         groupSlot.count++;
@@ -280,10 +283,10 @@ void AverageAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector 
         }
         case OMNI_VEC_TYPE_CONTAINER: {
             // get intermediate state from container vector
-            ContainerVector* containerVector = reinterpret_cast<ContainerVector*>(colPtr);
-            DoubleVector* avgValVector = reinterpret_cast<DoubleVector*>(containerVector->getValue(0));
+            ContainerVector *containerVector = reinterpret_cast<ContainerVector *>(colPtr);
+            DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
             double avgVal = avgValVector->GetValue(offset);
-            LongVector* avgCountVector = reinterpret_cast<LongVector*>(containerVector->getValue(1));
+            LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
             int64_t avgCnt = avgCountVector->GetValue(offset);
             *val = avgVal * avgCnt / avgCnt;
             groupSlot.avgVal = val.release();
@@ -297,7 +300,8 @@ void AverageAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector 
     }
 }
 
-void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
+    uint32_t offset)
 {
     double *currentVal = static_cast<double *>(groupSlot.avgVal);
     int64_t currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
@@ -318,10 +322,10 @@ void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::V
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {
-            ContainerVector* containerVector = reinterpret_cast<ContainerVector*>(colPtr);
-            DoubleVector* avgValVector = reinterpret_cast<DoubleVector*>(containerVector->getValue(0));
+            ContainerVector *containerVector = reinterpret_cast<ContainerVector *>(colPtr);
+            DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
             double avgVal = avgValVector->GetValue(offset);
-            LongVector* avgCountVector = reinterpret_cast<LongVector*>(containerVector->getValue(1));
+            LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
             int64_t avgCnt = avgCountVector->GetValue(offset);
             groupSlot.avgCnt += avgCnt;
             *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;
@@ -334,7 +338,8 @@ void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::V
     }
 }
 
-void MinAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void MinAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
+    uint32_t offset)
 {
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
@@ -450,7 +455,8 @@ void MinAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *col
     }
 }
 
-void MaxAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void MaxAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
+    uint32_t offset)
 {
     switch (type) {
         case OMNI_VEC_TYPE_INT: {
@@ -574,7 +580,8 @@ std::unique_ptr<Aggregator> SumAggregatorFactory::CreateAggregator(int32_t dataT
     return std::make_unique<SumAggregator>(dataType, inputRaw, outputPartial);
 }
 
-std::unique_ptr<Aggregator> CountAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
+std::unique_ptr<Aggregator> CountAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw,
+    bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
         throw std::exception();
@@ -598,7 +605,8 @@ std::unique_ptr<Aggregator> MaxAggregatorFactory::CreateAggregator(int32_t dataT
     return std::make_unique<MaxAggregator>(dataType, inputRaw, outputPartial);
 }
 
-std::unique_ptr<Aggregator> AverageAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial)
+std::unique_ptr<Aggregator> AverageAggregatorFactory::CreateAggregator(int32_t dataType, bool inputRaw,
+    bool outputPartial)
 {
     if (dataType >= OMNI_VEC_TYPE_INVALID) {
         throw std::exception();
