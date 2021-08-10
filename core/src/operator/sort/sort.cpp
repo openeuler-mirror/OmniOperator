@@ -1,26 +1,28 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: sort implementations
  */
 #include "sort.h"
-#include "../../util/type_util.h"
-#include "../../util/debug.h"
-#include "../../memory/memory_pool.h"
-#include "../../vector/vector_common.h"
-#include "../status.h"
 #include <iostream>
 #include <algorithm>
+#include "../../util/type_util.h"
+#include "../../util/debug.h"
+#include "../../vector/vector_common.h"
+#include "../status.h"
+#include "../../vector/vector_helper.h"
+#include "../../vector/vector_types.h"
 
 using namespace std;
 namespace omniruntime {
 namespace op {
-    using namespace omniruntime::vec;
-int32_t GetMaxRowCount(const int32_t *sourceTypes, const int32_t *outputCols, int32_t outputColsCount)
+using namespace omniruntime::vec;
+int32_t GetMaxRowCount(const std::vector<VecType> &vecTypes, const int32_t *outputCols, int32_t outputColsCount)
 {
     int32_t rowSize = 0;
-    int type;
+    VecType type;
     for (int32_t i = 0; i < outputColsCount; i++) {
-        type = sourceTypes[outputCols[i]];
-        switch (type) {
+        type = vecTypes[outputCols[i]];
+        switch (type.GetId()) {
             case OMNI_VEC_TYPE_INT:
                 rowSize = rowSize + sizeof(int32_t);
                 break;
@@ -29,6 +31,9 @@ int32_t GetMaxRowCount(const int32_t *sourceTypes, const int32_t *outputCols, in
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
                 rowSize = rowSize + sizeof(double);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR:
+                rowSize = rowSize + static_cast<VarcharVecType *>(&type)->GetWidth();
                 break;
             default:
                 break;
@@ -44,10 +49,10 @@ int32_t GetPageCount(int32_t positionCount, int32_t maxRowCount)
     return ((positionCount + maxRowCount - 1) / maxRowCount);
 }
 
-SortOperatorFactory::SortOperatorFactory(int32_t *sourceTypes, int32_t sourceTypeCount, int32_t *outputCols,
-    int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
+SortOperatorFactory::SortOperatorFactory(const VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColCount,
+    int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
-    this->sourceTypes.insert(this->sourceTypes.end(), sourceTypes, sourceTypes + sourceTypeCount);
+    this->sourceTypes = std::make_unique<VecTypes>(sourceTypes);
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
@@ -56,32 +61,30 @@ SortOperatorFactory::SortOperatorFactory(int32_t *sourceTypes, int32_t sourceTyp
 
 SortOperatorFactory::~SortOperatorFactory() {}
 
-SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(int32_t *sourceTypes, int32_t sourceTypeCount,
-    int32_t *outputCols, int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
-    int32_t sortColCount)
+SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const VecTypes &vecTypes, int32_t *outputCols,
+    int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
 {
-    auto pOperatorFactory = std::make_unique<SortOperatorFactory>(sourceTypes, sourceTypeCount, outputCols,
-        outputColCount, sortCols, sortAscendings, sortNullFirsts, sortColCount);
+    auto pOperatorFactory = std::make_unique<SortOperatorFactory>(vecTypes, outputCols, outputColCount, sortCols,
+        sortAscendings, sortNullFirsts, sortColCount);
     return pOperatorFactory.release();
 }
 
 Operator *SortOperatorFactory::CreateOperator()
 {
     auto pSortOperator =
-        std::make_unique<SortOperator>(sourceTypes, outputCols, sortCols, sortAscendings, sortNullFirsts);
+        std::make_unique<SortOperator>(*(sourceTypes.get()), outputCols, sortCols, sortAscendings, sortNullFirsts);
     return pSortOperator.release();
 }
 
 // function implements for class Sort
-SortOperator::SortOperator(std::vector<int32_t> &sourceTypes, std::vector<int32_t> &outputCols,
-    std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts)
+SortOperator::SortOperator(const VecTypes &vecTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
+    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts) : sourceTypes(vecTypes)
 {
-    this->sourceTypes = sourceTypes;
     this->outputCols = outputCols;
     this->sortCols = sortCols;
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
-    this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes.data(), sourceTypes.size());
+    this->pagesIndex = std::make_unique<PagesIndex>(vecTypes);
 }
 
 SortOperator::~SortOperator() {}
@@ -110,7 +113,7 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
     int32_t from = 0;
     int32_t sortColTypes[sortColCount];
     for (int32_t i = 0; i < sortColCount; i++) {
-        sortColTypes[i] = sourceTypes[sortCols[i]];
+        sortColTypes[i] = sourceTypes.GetIds()[sortCols[i]];
     }
 
     auto quickSortStart = START();
@@ -119,13 +122,9 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
     OP_DEBUG_LOG("quick sort elapsed time : %ld ms.", END(quickSortStart));
 
     // next, get output
-    int32_t maxRowCount = GetMaxRowCount(sourceTypes.data(), outputCols.data(), outputColsCount);
+    int32_t maxRowCount = GetMaxRowCount(sourceTypes.Get(), outputCols.data(), outputColsCount);
     int32_t vecBatchCount = GetPageCount(positionCount, maxRowCount);
     outputPages.reserve(vecBatchCount);
-    int32_t outputTypes[outputColsCount];
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        outputTypes[i] = sourceTypes[outputCols[i]];
-    }
 
     VectorBatch *vecBatch = nullptr;
     int32_t position = 0;
@@ -135,7 +134,7 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
         auto start = START();
         OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
         vecBatch = std::make_unique<VectorBatch>(outputColsCount).release();
-        pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.data(), position, rowCount);
+        pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount);
         OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));
         position += rowCount;
         outputPages.push_back(vecBatch);

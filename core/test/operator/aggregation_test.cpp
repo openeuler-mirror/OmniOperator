@@ -342,7 +342,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
     }
     std::cout << std::endl;
     for (auto vecBatch : result1) {
-        PrintVecBatch(vecBatch);
+        VectorHelper::PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 
@@ -379,7 +379,7 @@ TEST(HashAggregationOperatorTest, VerifyCorrectness)
 
     std::cout << std::endl;
     for (auto vecBatch : result2) {
-        PrintVecBatch(vecBatch);
+        VectorHelper::PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(result2);
 }
@@ -629,7 +629,7 @@ TEST(AggregationOperatorTest, VerifyCorrectness)
     }
     std::cout << std::endl;
     for (auto vecBatch : result1) {
-        PrintVecBatch(vecBatch);
+        VectorHelper::PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     VectorHelper::FreeVecBatches(result1);
@@ -932,7 +932,7 @@ TEST(HashAggregationOperatorTest, MultiStage)
     std::vector<VectorBatch*> resultFromPartial;
     partialOperator1->GetOutput(resultFromPartial);
     for (auto vecBatch : resultFromPartial) {
-        PrintVecBatch(vecBatch);
+        VectorHelper::PrintVecBatch(vecBatch);
     }
 
     uintptr_t partialFactoryAddr2 = CreateHashFactoryWithoutJit(true, true);
@@ -944,7 +944,7 @@ TEST(HashAggregationOperatorTest, MultiStage)
     partialOperator2->GetOutput(resultFromPartial);
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     for (auto vecBatch : resultFromPartial) {
-        PrintVecBatch(vecBatch);
+        VectorHelper::PrintVecBatch(vecBatch);
     }
 
     uintptr_t finalFactoryAddr = CreateHashFactoryWithoutJit(false, false);
@@ -957,7 +957,7 @@ TEST(HashAggregationOperatorTest, MultiStage)
     operator2->GetOutput(resultFromFinal);
 
     for (auto vecBatch : resultFromFinal) {
-        PrintVecBatch(vecBatch);
+        VectorHelper::PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(resultFromFinal);
 }

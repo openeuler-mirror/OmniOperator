@@ -1,10 +1,9 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: hash table implementations
  */
 #include "join_hash_table.h"
 #include "../pages_hash_strategy.h"
-#include "../hash_util.h"
-#include "../../vector/vector_common.h"
 #include "../../vector/vector_helper.h"
 #include "../optimization.h"
 #include "../../jit/annotation.h"
@@ -73,7 +72,11 @@ JoinHashTables::JoinHashTables(int32_t hashTableCount)
     this->shiftSize = NumberOfTrailingZeros(hashTableCount) + 1;
 }
 
-JoinHashTables::~JoinHashTables() {}
+JoinHashTables::~JoinHashTables()
+{
+    delete[] hashTables;
+    hashTables = nullptr;
+}
 
 void JoinHashTables::AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable)
 {
@@ -111,6 +114,53 @@ int64_t JoinHashTables::GetNextJoinPosition(int64_t currentJoinPosition, int32_t
     }
 }
 
+__attribute__((always_inline)) int64_t ReadHash(int32_t vecType, omniruntime::vec::Vector *vector, int32_t rowIndex)
+{
+    switch (vecType) {
+        case omniruntime::vec::OMNI_VEC_TYPE_INT: {
+            int32_t intValue = static_cast<omniruntime::vec::IntVector *>(vector)->GetValue(rowIndex);
+            return HashUtil::HashValue(static_cast<int64_t>(intValue));
+        }
+        case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
+            int64_t int64Value = static_cast<omniruntime::vec::LongVector *>(vector)->GetValue(rowIndex);
+            return HashUtil::HashValue(int64Value);
+        }
+        case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
+            double doubleValue = static_cast<omniruntime::vec::DoubleVector *>(vector)->GetValue(rowIndex);
+            return HashUtil::HashValue(static_cast<int64_t>(doubleValue));
+        }
+        case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
+            uint8_t *varcharValue = nullptr;
+            int32_t valueLength =
+                    static_cast<omniruntime::vec::VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
+            return HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+        }
+        default: {
+            return 0;
+        }
+    }
+}
+
+SPECIALIZE(OMNIJIT_HASH_STRATEGY_HASH_POSITION)
+int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes,
+                     int32_t hashColCount)
+{
+    int64_t result = 0;
+    Vector *column = nullptr;
+    int64_t hash = 0;
+
+    for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
+        column = buildHashColumns[columnIdx][vecBatchIdx];
+        if (column->IsValueNull(rowIndex)) {
+            continue;
+        }
+
+        hash = ReadHash(hashColTypes[columnIdx], column, rowIndex);
+        result = HashUtil::CombineHash(result, hash);
+    }
+    return result;
+}
+
 SPECIALIZE(OMNIJIT_HASH_ROW)
 int64_t HashRow(int32_t rowIndex, Vector **columns, const int32_t *columnTypes, int32_t columnCount)
 {
@@ -124,29 +174,8 @@ int64_t HashRow(int32_t rowIndex, Vector **columns, const int32_t *columnTypes, 
             continue;
         }
 
-        switch (columnTypes[columnIdx]) {
-            case OMNI_VEC_TYPE_INT: {
-                int32_t intValue = static_cast<IntVector *>(column)->GetValue(rowIndex);
-                hash = HashUtil::HashValue(static_cast<int64_t>(intValue));
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG: {
-                int64_t int64Value = static_cast<LongVector *>(column)->GetValue(rowIndex);
-                hash = HashUtil::HashValue(int64Value);
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                double doubleValue = static_cast<DoubleVector *>(column)->GetValue(rowIndex);
-                hash = HashUtil::HashValue(static_cast<int64_t>(doubleValue));
-                break;
-            }
-            default: {
-                hash = 0;
-                break;
-            }
-        }
-
-        result = HashUtil::GetHash(result, hash);
+        hash = ReadHash(columnTypes[columnIdx], column, rowIndex);
+        result = HashUtil::CombineHash(result, hash);
     }
 
     return result;
@@ -179,17 +208,17 @@ int64_t JoinHashTables::GetJoinPosition(int32_t position, Vector **joinColumns, 
     }
 }
 
-void JoinHashTables::GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const
+int32_t JoinHashTables::GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const
 {
     JoinHashTable *hashTable = nullptr;
     if (hashTableCount != 1) {
         int32_t partition = DecodePartition(partitionedJoinPosition);
         int32_t joinPosition = DecodeJoinPosition(partitionedJoinPosition);
         hashTable = hashTables[partition];
-        hashTable->GetBuildValue(value, joinPosition, outputCol);
+        return hashTable->GetBuildValue(value, joinPosition, outputCol);
     } else {
         hashTable = hashTables[0];
-        hashTable->GetBuildValue(value, static_cast<int32_t>(partitionedJoinPosition), outputCol);
+        return hashTable->GetBuildValue(value, static_cast<int32_t>(partitionedJoinPosition), outputCol);
     }
 }
 
@@ -267,9 +296,9 @@ int32_t JoinHashTable::StartJoinPosition(int32_t currentJoinPosition, int32_t pr
     return positionLinks->Start(currentJoinPosition);
 }
 
-void JoinHashTable::GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const
+int32_t JoinHashTable::GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const
 {
-    pagesHash->GetBuildValue(value, joinPosition, outputCol);
+    return pagesHash->GetBuildValue(value, joinPosition, outputCol);
 }
 
 void JoinHashTable::PrintHashTable(int32_t partitionIndex) const
@@ -362,6 +391,7 @@ PagesHash::~PagesHash()
 {
     delete[] key;
     delete[] positionToHashes;
+    delete pagesHashStrategy;
 }
 
 int32_t PagesHash::GetAddressIndex(int probePosition, Vector **joinColumns, int32_t joinColumnsCount,
@@ -379,13 +409,13 @@ int32_t PagesHash::GetAddressIndex(int probePosition, Vector **joinColumns, int3
     return -1;
 }
 
-void PagesHash::GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const
+int32_t PagesHash::GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const
 {
     int64_t address = addresses[joinPosition];
     int32_t vecBatchIndex = DecodeSliceIndex(address);
     int32_t rowIndex = DecodePosition(address);
 
-    VectorHelper::GetValue(pagesHashStrategy->GetBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
+    return VectorHelper::GetValue(pagesHashStrategy->GetBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
 }
 
 int64_t PagesHash::GetRawHash(int32_t position) const

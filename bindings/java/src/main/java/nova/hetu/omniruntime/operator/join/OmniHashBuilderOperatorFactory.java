@@ -4,6 +4,8 @@
 
 package nova.hetu.omniruntime.operator.join;
 
+import static java.util.Objects.requireNonNull;
+
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.VecType;
@@ -11,8 +13,6 @@ import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * The type Omni hash builder operator factory.
@@ -28,18 +28,21 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      * @param buildHashCols   the build hash cols
      * @param operatorCount   the operator count
      */
-    public OmniHashBuilderOperatorFactory(VecType[] buildTypes, int[] buildOutputCols, int[] buildHashCols,
-            int operatorCount) {
+    public OmniHashBuilderOperatorFactory(
+            VecType[] buildTypes, int[] buildOutputCols, int[] buildHashCols, int operatorCount) {
         super(new Context(buildTypes, buildOutputCols, buildHashCols, operatorCount));
     }
 
-    private static native long createHashBuilderOperatorFactory(String buildTypes, int[] buildOutputCols,
-            int[] buildHashCols, int operatorCount);
+    private static native long createHashBuilderOperatorFactory(
+            String buildTypes, int[] buildOutputCols, int[] buildHashCols, int operatorCount);
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createHashBuilderOperatorFactory(VecTypeSerializer.serialize(context.buildTypes),
-                context.buildOutputCols, context.buildHashCols, context.operatorCount);
+        return createHashBuilderOperatorFactory(
+                VecTypeSerializer.serialize(context.buildTypes),
+                context.buildOutputCols,
+                context.buildHashCols,
+                context.operatorCount);
     }
 
     /**
@@ -73,8 +76,11 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildOutputCols),
-                    Arrays.hashCode(buildHashCols), operatorCount);
+            return Objects.hash(
+                    Arrays.hashCode(buildTypes),
+                    Arrays.hashCode(buildOutputCols),
+                    Arrays.hashCode(buildHashCols),
+                    operatorCount);
         }
 
         @Override
@@ -86,8 +92,10 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
                 return false;
             }
             Context that = (Context) obj;
-            return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildOutputCols, that.buildOutputCols)
-                    && Arrays.equals(buildHashCols, that.buildHashCols) && operatorCount == that.operatorCount;
+            return Arrays.equals(buildTypes, that.buildTypes)
+                    && Arrays.equals(buildOutputCols, that.buildOutputCols)
+                    && Arrays.equals(buildHashCols, that.buildHashCols)
+                    && operatorCount == that.operatorCount;
         }
     }
 }

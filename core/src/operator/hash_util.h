@@ -1,5 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: hash util implementations
  */
 #ifndef __HASH_UTIL_H__
 #define __HASH_UTIL_H__
@@ -9,8 +10,13 @@
 const int32_t ROTATE_DISTANCE_1 = 1;
 const int32_t ROTATE_DISTANCE_2 = 2;
 const int32_t ROTATE_DISTANCE_4 = 4;
+const int32_t ROTATE_DISTANCE_7 = 7;
 const int32_t ROTATE_DISTANCE_8 = 8;
+const int32_t ROTATE_DISTANCE_11 = 11;
+const int32_t ROTATE_DISTANCE_12 = 12;
 const int32_t ROTATE_DISTANCE_16 = 16;
+const int32_t ROTATE_DISTANCE_18 = 18;
+const int32_t ROTATE_DISTANCE_23 = 23;
 const int32_t ROTATE_DISTANCE_27 = 27;
 const int32_t ROTATE_DISTANCE_29 = 29;
 const int32_t ROTATE_DISTANCE_31 = 31;
@@ -24,14 +30,16 @@ class HashUtil {
 public:
     static int32_t HashArraySize(int32_t expected, float f);
 
-    static int64_t HashValue(uint64_t value);
+    static int64_t HashValue(int64_t value);
+
+    static int64_t HashValue(int8_t *value, int32_t length);
 
     uint64_t operator()(uint64_t combinedHash) const
     {
         return combinedHash;
     }
 
-    static int64_t GetHash(uint64_t previousHashValue, uint64_t value)
+    static int64_t CombineHash(int64_t previousHashValue, int64_t value)
     {
         return (ROTATE_DISTANCE_31 * previousHashValue + value);
     }
@@ -39,7 +47,7 @@ public:
     /*
      * it is used to get position for rawHash when reading or writing join hash vecBatch
      */
-    static int32_t GetRawHashPosition(uint64_t rawHash, uint64_t mask)
+    static int32_t GetRawHashPosition(int64_t rawHash, int64_t mask)
     {
         uint64_t hashValue = (static_cast<uint64_t>(rawHash)) >> ROTATE_DISTANCE_33;
         rawHash ^= static_cast<int64_t>(hashValue);
@@ -58,7 +66,7 @@ public:
     /*
      * it is used to get partition for rawHash when getting partition for probe of join and local exchange
      */
-    static int32_t GetRawHashPartition(uint64_t rawHash, uint32_t mask);
+    static int32_t GetRawHashPartition(int64_t rawHash, int32_t mask);
 };
 
 #endif

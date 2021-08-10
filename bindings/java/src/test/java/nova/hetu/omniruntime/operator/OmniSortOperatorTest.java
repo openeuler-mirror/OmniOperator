@@ -1,11 +1,14 @@
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static org.testng.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
 import nova.hetu.omniruntime.vector.IntVec;
@@ -46,47 +49,56 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testOrderByTwoColumn() {
-        int[] data1 = {5, 3, 2, 6, 1, 4, 7, 8};
-        int[] data2 = {5, 3, 2, 6, 1, 4, 7, 8};
-        IntVec vec1 = new IntVec(8);
-        IntVec vec2 = new IntVec(8);
-        for (int i = 0; i < 8; i++) {
-            vec1.set(i, data1[i]);
-            vec2.set(i, data2[i]);
-        }
-
-        VecBatch vecBatch = new VecBatch(new Vec[] {vec1, vec2});
-
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
         int[] outputCols = {0, 1};
         int[] sortCols = {0, 1};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-
         OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
             ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
 
-        results.hasNext();
         VecBatch resultVecBatch = results.next();
-        ByteBuffer output0 = resultVecBatch.getVectors()[0].getValues();
-        ByteBuffer output1 = resultVecBatch.getVectors()[1].getValues();
         int len = resultVecBatch.getRowCount();
+        assertEquals(len, sourceDatas[0].length);
 
-        int[] actual0 = new int[len];
-        int[] actual1 = new int[len];
-        output0.order(ByteOrder.LITTLE_ENDIAN);
-        output1.order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < len; i++) {
-            actual0[i] = output0.getInt(i * Integer.BYTES);
-            actual1[i] = output1.getInt(i * Integer.BYTES);
-        }
-        int[] expected0 = {1, 2, 3, 4, 5, 6, 7, 8};
-        int[] expected1 = {1, 2, 3, 4, 5, 6, 7, 8};
-        assertEquals(actual0, expected0);
-        assertEquals(actual1, expected1);
+        Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        vecBatch.close();
+        resultVecBatch.close();
+    }
+
+    /**
+     * Test order by two varchar column.
+     */
+    @Test
+    public void testOrderByTwoVarcharColumn() {
+        VecType[] sourceTypes = {new VarcharVecType(1), LongVecType.LONG, new VarcharVecType(3)};
+        Object[][] sourceDatas = {
+                {"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L}, {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}
+        };
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
+        int[] outputCols = {1, 2};
+        int[] sortCols = {0, 2};
+        int[] ascendings = {0, 1};
+        int[] nullFirsts = {1, 1};
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
+        OmniOperator sortOperator = sortOperatorFactory.createOperator();
+        sortOperator.addInput(vecBatch);
+        Iterator<VecBatch> results = sortOperator.getOutput();
+
+        VecBatch resultVecBatch = results.next();
+        Object[][] expectedDatas = {{5L, 2L, 4L, 1L, 3L, 0L}, {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        vecBatch.close();
+        resultVecBatch.close();
     }
 
     /**
@@ -94,9 +106,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testOrderByPerformance() {
-        long start = System.currentTimeMillis();
         ImmutableList<VecBatch> vecs = buildVecs();
-        long elapsed = System.currentTimeMillis() - start;
 
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         int[] outputCols = {0, 1};
@@ -107,13 +117,19 @@ public class OmniSortOperatorTest {
         OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
             ascendings, nullFirsts);
 
-        start = System.currentTimeMillis();
+       long start = System.currentTimeMillis();
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         for (VecBatch vec : vecs) {
             sortOperator.addInput(vec);
         }
-        sortOperator.getOutput();
-        elapsed = System.currentTimeMillis() - start;
+        Iterator<VecBatch> iterator = sortOperator.getOutput();
+        long elapsed = System.currentTimeMillis() - start;
+        System.out.println("testOrderByPerformance elapsed time : " + elapsed + "ms");
+
+        vecs.forEach(VecBatch::close);
+        while (iterator.hasNext()) {
+            iterator.next().close();
+        }
     }
 
     /**
@@ -140,7 +156,10 @@ public class OmniSortOperatorTest {
                     for (VecBatch vec : vecs) {
                         sortOperator.addInput(vec);
                     }
-                    sortOperator.getOutput();
+                    Iterator<VecBatch> iterator = sortOperator.getOutput();
+                    while (iterator.hasNext()) {
+                        iterator.next().close();
+                    }
                 } finally {
                     countDownLatch.countDown();
                 }
@@ -159,6 +178,7 @@ public class OmniSortOperatorTest {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        vecs.forEach(VecBatch::close);
     }
 
     private ImmutableList<VecBatch> buildVecs() {

@@ -134,7 +134,7 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
                 break;
             }
         }
-        combineHashVal = hashFunc.GetHash(combineHashVal, hash);
+        combineHashVal = hashFunc.CombineHash(combineHashVal, hash);
     }
     return combineHashVal;
 }

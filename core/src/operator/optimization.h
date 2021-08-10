@@ -49,10 +49,6 @@
 #define OMNIJIT_HASH_ROW "hash-row"
 #endif
 
-#ifndef OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY
-#define OMNIJIT_CONSTRUCT_PROBE_COLUMNS_FROM_COPY "construct-probe-columns-from-copy"
-#endif
-
 #ifndef OMNIJIT_CONSTRUCT_BUILD_COLUMNS
 #define OMNIJIT_CONSTRUCT_BUILD_COLUMNS "construct-build-columns"
 #endif
