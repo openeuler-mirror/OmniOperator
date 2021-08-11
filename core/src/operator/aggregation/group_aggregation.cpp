@@ -143,6 +143,14 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
                 hash = HashUtil::HashValue(val.LowBits(), val.HighBits());
                 break;
             }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                std::hash<std::string> hashVarChar;
+                uint8_t *data = nullptr;
+                int valLen = (static_cast<VarcharVector *>(vectors[idx]))->GetValue(offset, &data);
+                std::string val(reinterpret_cast<char *>(data), 0, valLen);
+                hash = hashVarChar(val);
+                break;
+            }
             default: {
                 DebugError("No such data type %d", types[idx]);
                 break;
@@ -177,6 +185,12 @@ void* ALWAYS_INLINE DuplicateGroupByTuple(int32_t type, Vector* vector, uint32_t
         case OMNI_VEC_TYPE_DECIMAL128: {
             rowPtr = std::make_unique<Decimal128>(
                     static_cast<Decimal128Vector *>(vector)->GetValue(offset)).release();
+            break;
+        }
+        case OMNI_VEC_TYPE_VARCHAR: {
+            uint8_t *data = nullptr;
+            int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &data));
+            rowPtr = reinterpret_cast<void *>(new std::string(reinterpret_cast<char *>(data), 0, valLen));
             break;
         }
         default: {
@@ -259,83 +273,131 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t> &types, int32_t columnCount)
+int32_t HashAggregationOperator::GetRowSize(std::vector<omniruntime::vec::VecType> &types, int32_t columnCount)
 {
     int32_t rowSize = 0;
     int32_t typeIndex = 0;
     for (auto &i : groupByCols) {
-        types.push_back(i.type.GetId());
+        types.push_back(i.type);
         rowSize += OperatorUtil::GetTypeSize(i.type);
     }
     for (int32_t i = 0; i < aggCols.size(); ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
-            types.push_back(OMNI_VEC_TYPE_LONG);
+            types.push_back(LongVecType::Instance());
             rowSize += sizeof(int64_t);
             continue;
         }
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
             if (aggregators[i]->IsOutputPartial()) {
-                types.push_back(OMNI_VEC_TYPE_CONTAINER);
+                types.push_back(ContainerVecType::Instance());
                 rowSize += sizeof(int64_t);
             } else {
-                types.push_back(OMNI_VEC_TYPE_DOUBLE);
+                types.push_back(DoubleVecType::Instance());
             }
             rowSize += sizeof(double);
             continue;
         }
-        types.push_back(aggCols[i].type.GetId());
+        types.push_back(aggCols[i].type);
         rowSize += OperatorUtil::GetTypeSize(aggCols[i].type);
     }
     return rowSize;
 }
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_HASH_COLUMN)
+
+
+    void HashAggregationOperator::FillGroupByDate32(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                                                    IntVector *vector)
+    {
+        for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+         ++rowIndex, ++tempRowIterator) {
+            vector->SetValue(rowIndex, *(int32_t *)tempRowIterator->second[colIndex].val);
+        }
+    }
+
+    void HashAggregationOperator::FillVectorVal(VectorBatch *vecBatch, int32_t rowCount, RowIterator &tempRowIterator,
+                                                int colIndex, int groupByIndex)
+{
+    switch (groupByCols[groupByIndex].type.GetId()) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
+            FillGroupByDate32(rowCount, tempRowIterator, colIndex, vector);
+            break;
+        }
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
+            LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
+            FillGroupByDecimal64(rowCount, tempRowIterator, colIndex, vector);
+            break;
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
+            FillGroupByDouble(rowCount, tempRowIterator, colIndex, vector);
+            break;
+        }
+        case OMNI_VEC_TYPE_VARCHAR: {
+            VarcharVector *vector = static_cast<VarcharVector *>(vecBatch->GetVector(colIndex));
+            FillGroupByVarChar(rowCount, tempRowIterator, colIndex, vector);
+            break;
+                    }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128Vector *vector = static_cast<Decimal128Vector *>(vecBatch->GetVector(colIndex));
+            FillGroupByDecimal128(rowCount, tempRowIterator, colIndex, vector);
+            break;
+        }
+        default: {
+            DebugError("Type %d doesn't support", groupByCols[groupByIndex].type.GetId());
+            break;
+        }
+    }
+}
+
+    void HashAggregationOperator::FillGroupByDecimal128(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                                                        Decimal128Vector *vector)
+    {
+        for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+         ++rowIndex, ++tempRowIterator) {
+            vector->SetValue(rowIndex, *(Decimal128 *) tempRowIterator->second[colIndex].val);
+        }
+    }
+
+    void HashAggregationOperator::FillGroupByVarChar(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                                                     VarcharVector *vector)
+    {
+        for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+         ++rowIndex, ++tempRowIterator) {
+            vector->SetValue(rowIndex, reinterpret_cast<const uint8_t *>(
+                    (*((std::string *) tempRowIterator->second[colIndex].val)).c_str()),
+                             (*((std::string *) tempRowIterator->second[colIndex].val)).size());
+                    }
+    }
+
+    void HashAggregationOperator::FillGroupByDouble(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                                                    DoubleVector *vector)
+    {
+        for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+         ++rowIndex, ++tempRowIterator) {
+            vector->SetValue(rowIndex, *(double *)tempRowIterator->second[colIndex].val);
+        }
+    }
+
+    void HashAggregationOperator::FillGroupByDecimal64(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                                                       LongVector *vector)
+    {
+        for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+         ++rowIndex, ++tempRowIterator) {
+            vector->SetValue(rowIndex, *(int64_t *)tempRowIterator->second[colIndex].val);
+        }
+    }
+
 void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
     RowIterator &rowIterator, int32_t rowCount)
 {
     RowIterator tempRowIterator = rowIterator;
     for (int colIndex = startIndex, groupByIndex = 0; colIndex < endIndex; ++colIndex, ++groupByIndex) {
         tempRowIterator = rowIterator;
-        switch (groupByCols[groupByIndex].type.GetId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
-                IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
-                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
-                    ++rowIndex, ++tempRowIterator) {
-                    vector->SetValue(rowIndex, *(int32_t *)tempRowIterator->second[colIndex].val);
-                }
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
-                LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
-                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
-                    ++rowIndex, ++tempRowIterator) {
-                    vector->SetValue(rowIndex, *(int64_t *)tempRowIterator->second[colIndex].val);
-                }
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
-                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
-                    ++rowIndex, ++tempRowIterator) {
-                    vector->SetValue(rowIndex, *(double *)tempRowIterator->second[colIndex].val);
-                }
-                break;
-            }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                Decimal128Vector* vector = static_cast<Decimal128Vector*>(vecBatch->GetVector(colIndex));
-                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
-                     ++rowIndex, ++tempRowIterator) {
-                    vector->SetValue(rowIndex, *(Decimal128 *)tempRowIterator->second[colIndex].val);
-                }
-                break;
-            }
-            default: {
-                DebugError("Type %d doesn't support", groupByCols[groupByIndex].type.GetId());
-                break;
-            }
-        }
+        FillVectorVal(vecBatch, rowCount, tempRowIterator, colIndex, groupByIndex);
     }
 }
 
@@ -346,35 +408,28 @@ void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
-            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
-                 ++rIdx, rowIterator++) {
-                vector->SetValue(rIdx, *reinterpret_cast<int32_t *>(rowIterator->second[colIndex].val));
-            }
+            FillAggDateValue(colIndex, rowCount, rowIterator, vector);
             break;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64: {
             LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
-            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
-                 ++rIdx, rowIterator++) {
-                vector->SetValue(rIdx, *reinterpret_cast<int64_t *>(rowIterator->second[colIndex].val));
-            }
+            FillAggDecimal64Value(colIndex, rowCount, rowIterator, vector);
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
-            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
-                 ++rIdx, rowIterator++) {
-                vector->SetValue(rIdx, *reinterpret_cast<double *>(rowIterator->second[colIndex].val));
-            }
+            FillAggDoubleValue(colIndex, rowCount, rowIterator, vector);
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
             Decimal128Vector *vector = static_cast<Decimal128Vector *>(vecBatch->GetVector(colIndex));
-            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
-                 ++rIdx, rowIterator++) {
-                vector->SetValue(rIdx, *reinterpret_cast<Decimal128 *>(rowIterator->second[colIndex].val));
-            }
+            FillAggDecimal128Value(colIndex, rowCount, rowIterator, vector);
+            break;
+        }
+        case OMNI_VEC_TYPE_VARCHAR: {
+            VarcharVector *vector = static_cast<VarcharVector *>(vecBatch->GetVector(colIndex));
+            FillAggVarCharValue(colIndex, rowCount, rowIterator, vector);
             break;
         }
         default: {
@@ -383,6 +438,54 @@ void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
         }
     }
 }
+
+void HashAggregationOperator::FillAggVarCharValue(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                                                  VarcharVector *vector)
+{
+    for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+         ++rIdx, rowIterator++) {
+            vector->SetValue(rIdx,
+                             reinterpret_cast<const uint8_t *>(
+                                     (*(std::string *) (rowIterator->second[colIndex].val)).c_str()),
+                             (*(std::string *) (rowIterator->second[colIndex].val)).size());
+        }
+    }
+
+void HashAggregationOperator::FillAggDecimal128Value(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                                                     Decimal128Vector *vector)
+{
+    for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+         ++rIdx, rowIterator++) {
+            vector->SetValue(rIdx, *reinterpret_cast<Decimal128 *>(rowIterator->second[colIndex].val));
+        }
+    }
+
+void HashAggregationOperator::FillAggDoubleValue(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                                                 DoubleVector *vector)
+{
+    for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+         ++rIdx, rowIterator++) {
+            vector->SetValue(rIdx, *reinterpret_cast<double *>(rowIterator->second[colIndex].val));
+        }
+    }
+
+void HashAggregationOperator::FillAggDecimal64Value(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                                                    LongVector *vector)
+{
+    for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+         ++rIdx, rowIterator++) {
+            vector->SetValue(rIdx, *reinterpret_cast<int64_t *>(rowIterator->second[colIndex].val));
+    }
+}
+
+void HashAggregationOperator::FillAggDateValue(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                                               IntVector *vector)
+{
+    for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+         ++rIdx, rowIterator++) {
+            vector->SetValue(rIdx, *reinterpret_cast<int32_t *>(rowIterator->second[colIndex].val));
+        }
+    }
 
 void HashAggregationOperator::FillAvgAgg(VectorBatch* vecBatch,
     int32_t aggIndex, int32_t colIndex, int32_t rowCount, RowIterator &rowIterator)
@@ -455,10 +558,10 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
 #endif
 }
 
-void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t> &types, int32_t rowCount)
+void SetVectors(VectorBatch *vectorBatch, const std::vector<omniruntime::vec::VecType> &types, int32_t rowCount)
 {
     for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
-        switch (types[colIndex]) {
+        switch (types[colIndex].GetId()) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
                 vectorBatch->SetVector(colIndex, new IntVector(nullptr, rowCount));
@@ -477,6 +580,14 @@ void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t> &types, int
                 vectorBatch->SetVector(colIndex, new Decimal128Vector(nullptr, rowCount));
                 break;
             }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                vectorBatch->SetVector(colIndex,
+                                       new VarcharVector(static_cast<VectorAllocator *>(nullptr),
+                                                         rowCount * (((omniruntime::vec::VarcharVecType &)
+                                                         types[colIndex]).GetWidth()),
+                                                         rowCount));
+                break;
+            }
             case OMNI_VEC_TYPE_CONTAINER: {
                 DoubleVector *doubleVector = new DoubleVector(nullptr, rowCount);
                 LongVector *longVector = new LongVector(nullptr, rowCount);
@@ -493,7 +604,7 @@ void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t> &types, int
             }
                 // TODO: support other types!!!
             default: {
-                DebugError("No such data type %d", types[colIndex]);
+                DebugError("No such data type %d", types[colIndex].GetId());
                 break;
             }
         }
@@ -505,7 +616,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t groupByColSize = groupByCols.size();
     uint32_t aggColSize = aggCols.size();
     uint32_t colCount = groupByColSize + aggColSize;
-    std::vector<int32_t> types;
+    std::vector<omniruntime::vec::VecType> types;
     int32_t vecBatchCount;
     int32_t rowSize = GetRowSize(types, colCount);
     try {
@@ -557,6 +668,10 @@ OmniStatus HashAggregationOperator::CloseGroupBy()
                 }
                 case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
                     delete reinterpret_cast<Decimal128 *>(item.second[idx].val);
+                            break;
+                        }
+                case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
+                    delete reinterpret_cast<std::string *>(item.second[idx].val);
                     break;
                 }
                 default: {
@@ -597,13 +712,16 @@ OmniStatus HashAggregationOperator::CloseAgg()
                     delete reinterpret_cast<double *>(item.second[groupByColSize + idx].val);
                     break;
                 }
+                case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
+                    delete reinterpret_cast<std::string *>(item.second[groupByColSize + idx].val);
+                    break;
+                }
                 case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
                     delete reinterpret_cast<Decimal128 *>(item.second[groupByColSize + idx].val);
                     break;
                 }
                 default: {
                     return OMNI_STATUS_ERROR;
-                    break;
                 }
             }
         }

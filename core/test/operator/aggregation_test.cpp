@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <time.h>
 #include <mutex>
+#include <stdarg.h>
 
 const int32_t VEC_BATCH_NUM = 10;
 const int32_t ROW_PER_VEC_BATCH = 200;
@@ -180,7 +181,28 @@ VectorBatch** buildAggInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t
     }
     return input;
 }
-
+VectorBatch** buildVarCharInput(int32_t vecBatchNum, int32_t colNum, int32_t rowPerVecBatch,...)
+{
+    va_list args;
+    va_start(args, rowPerVecBatch);
+    VectorBatch** input = new VectorBatch*[vecBatchNum];
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        VectorBatch* vecBatch = new VectorBatch(colNum);
+        for (int32_t c = 0; c < colNum; ++ c) {
+            VarcharVector *col =
+                    std::make_unique<VarcharVector>(static_cast<VectorAllocator *>(nullptr), rowPerVecBatch*10, rowPerVecBatch)
+                            .release();
+            std::string *values = va_arg(args, std::string *);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValue(j,reinterpret_cast<const uint8_t *>(values[j].c_str()), values[j].length());
+            }
+            vecBatch->SetVector(c, col);
+        }
+        input[i] = vecBatch;
+    }
+    va_end(args);
+    return input;
+}
 void destroyInput(VectorBatch** input, int32_t vecBatchNum, int32_t colNum)
 {
     for (int32_t i = 0; i < vecBatchNum; ++i) {
@@ -522,6 +544,131 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     }
     VectorHelper::FreeVecBatches(result2);
 }
+TEST(HashAggregationOperatorTest, VerifyVarCharCorrectness)
+{
+    using namespace omniruntime::op;
+    // create 10 pages
+    const int VEC_BATCH_NUM = 1;
+    const int ROW_SIZE = 8;
+    const int COLUMN_COUNT = 4; // groupby + count + min + max
+    std::string aggNames[] = {"group", "count","min","max" };
+    std::string data0[8] = {"0", "1", "2", "0", "1", "2", "0", "1"};
+    std::string data1[8] = {"0", "1", "2", "0", "1", "2", "0", "1"};
+    std::string data2[8] = {"0", "1", "2", "0", "1", "2", "0", "1"};
+    std::string data3[8] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1", "1.1", "1"};
+    VectorBatch** input = buildVarCharInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE,data0,data1,data2,data3);
+    // First stage
+    VarcharVecType type1(1);
+    ColumnIndex c0 = {0,   type1};
+    VarcharVecType type2(1);
+    ColumnIndex c1 = {1, type2};
+    VarcharVecType type3(1);
+    ColumnIndex c2 = {2,  type3};
+    VarcharVecType type4(4);
+    ColumnIndex c3 = {3, type4};
+
+    std::vector<ColumnIndex> groupByColumns1 = {c0};
+    std::vector<ColumnIndex> aggregateColumns1 = {c1,c2,c3};
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<CountAggregator>(15, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinAggregator>(15, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxAggregator>(15, INPUT_MODE, OUTPUT_MODE));
+    HashAggregationOperator* groupByVarChar = new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, false);
+
+    for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
+        groupByVarChar->AddInput(input[i]);
+    }
+    std::vector<VectorBatch*> result1;
+    int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+     for(auto &i:aggs1){
+         delete i.release();
+
+     }
+    delete groupByVarChar;
+    std::string expectData1[3] = {"2", "0","1"};
+    int64_t expectData2[3] = {2,3,3};
+    std::string expectData3[3] = {"2", "0","1"};
+    std::string expectData4[3] = {"4.4", "6.6","5.5"};
+    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(),VarcharVecType(1), VarcharVecType(3) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
+    EXPECT_TRUE(VecBatchMatch(result1[0], expectVecBatch));
+}
+
+TEST(HashAggregationOperatorTest, VerifyNULLCorrectness)
+{
+    using namespace omniruntime::op;
+    // create 10 pages
+    const int VEC_BATCH_NUM = 1;
+    const int ROW_SIZE = 6;
+    const int CARDINALITY = 1;
+    const int COLUMN_COUNT = 6; // groupby + sum + avg + count + min + max
+    std::string aggNames[] = {"group", "sum", "avg", "count", "min", "max"};
+    VecTypeId groupTypes[] = {OMNI_VEC_TYPE_LONG};
+    VecTypeId aggTypes[]= {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+    VectorBatch** input = buildAggInput(VEC_BATCH_NUM, ROW_SIZE, CARDINALITY, 1, 5, groupTypes, aggTypes);
+    if (input == nullptr) {
+        std::cerr << "Building input data failed!" << std::endl;
+        return;
+    }
+    std::cout<<"input:"<<std::endl;
+    omniruntime::vec::VectorHelper::PrintVecBatch(input[0]);
+
+    input[0]->GetVector(2)->SetValueNull(0);
+    input[0]->GetVector(2)->SetValueNull(1);
+    input[0]->GetVector(2)->SetValueNull(2);
+    input[0]->GetVector(2)->SetValueNull(3);
+    input[0]->GetVector(2)->SetValueNull(4);
+
+    input[0]->GetVector(3)->SetValueNull(1);
+    input[0]->GetVector(4)->SetValueNull(1);
+    input[0]->GetVector(5)->SetValueNull(1);
+
+    std::cout<<"input:"<<std::endl;
+    omniruntime::vec::VectorHelper::PrintVecBatch(input[0]);
+
+    // First stage
+    ColumnIndex c0 = {0, LongVecType::Instance()};
+    ColumnIndex c1 = {1, LongVecType::Instance()};
+    ColumnIndex c2 = {2, LongVecType::Instance()};
+    ColumnIndex c3 = {3, LongVecType::Instance()};
+    ColumnIndex c4 = {4, LongVecType::Instance()};
+    ColumnIndex c5 = {5, LongVecType::Instance()};
+
+    std::vector<ColumnIndex> groupByColumns1 = {c0};
+    std::vector<ColumnIndex> aggregateColumns1 = {c1,c2, c3, c4, c5};
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<SumAggregator>(2, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<AverageAggregator>(2, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<CountAggregator>(2, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinAggregator>(2, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxAggregator>(2, INPUT_MODE, OUTPUT_MODE));
+    HashAggregationOperator* groupByNULL = new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, false);
+
+    for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    std::vector<VectorBatch*> result1;
+    int32_t vecBatchCount = groupByNULL->GetOutput(result1);
+
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+    for(auto &i:aggs1){
+        delete i.release();
+    }
+    delete groupByNULL;
+
+    int64_t expectData1[1] = {0};
+    int64_t expectData2[1] = {6};
+    double expectData3[1] = {1};
+    int64_t expectData4[1] = {5};
+    int64_t expectData5[1] = {1};
+    int64_t expectData6[1] = {1};
+    VecTypes expectedTypes(std::vector<VecType>({LongVecType(), LongVecType(),DoubleVecType(),LongVecType(),LongVecType(),LongVecType()}));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 1,
+                                                    expectData1,expectData2,expectData3,
+                                                    expectData4,expectData5,expectData6);
+    EXPECT_TRUE(VecBatchMatch(result1[0], expectVecBatch));
+}
 
 TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
 {
@@ -588,6 +735,7 @@ TEST(HashAggregationOperatorTest, original_multiple_threads)
     if (input == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
+
     uint32_t* groupCols = new uint32_t[2];
     groupCols[0] = 0;
     groupCols[1] = 1;
