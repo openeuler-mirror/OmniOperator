@@ -13,9 +13,23 @@ namespace omniruntime {
 namespace vec {
 class VecTypes {
 public:
-    VecTypes(const std::vector<VecType> &vecTypes) : vecTypes(vecTypes), vecTypesSize(vecTypes.size())
+    VecTypes(const VecTypes &types) : VecTypes(types.vecTypes) {}
+
+    explicit VecTypes(const std::vector<VecType> &vecTypes)
+        : vecTypes(vecTypes), vecTypesSize(vecTypes.size()), vecTypeIds(nullptr)
     {
         InitVecTypeIds();
+    }
+
+    VecTypes &operator = (const VecTypes &types)
+    {
+        vecTypes = types.vecTypes;
+        vecTypesSize = types.vecTypesSize;
+        if (vecTypeIds != nullptr) {
+            delete[] vecTypeIds;
+        }
+        InitVecTypeIds();
+        return *this;
     }
 
     ~VecTypes()
@@ -23,20 +37,17 @@ public:
         delete[] vecTypeIds;
     }
 
-    const std::vector<VecType> &Get()
+    const std::vector<VecType> &Get() const
     {
         return vecTypes;
     }
 
-    const int32_t *GetIds()
+    const int32_t *GetIds() const
     {
-        // need remove here when jni operator factor finish refactor.
-        int32_t *newVecTypeIds = new int32_t[vecTypesSize];
-        memcpy_s(newVecTypeIds, vecTypesSize * sizeof(int32_t), vecTypeIds, vecTypesSize * sizeof(int32_t));
-        return newVecTypeIds;
+        return vecTypeIds;
     }
 
-    int32_t GetSize()
+    int32_t GetSize() const
     {
         return vecTypesSize;
     }
@@ -52,10 +63,9 @@ private:
     }
 
     int32_t vecTypesSize;
-    const std::vector<VecType> vecTypes;
+    std::vector<VecType> vecTypes;
     int32_t *vecTypeIds;
 };
-using VecTypesPtr = std::shared_ptr<VecTypes>;
 }
 }
 

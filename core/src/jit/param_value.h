@@ -21,20 +21,20 @@ namespace omniruntime {
         // Use this struct to encapsulate information to be hardened
         class ParamValue {
         public:
-            void *value;
+            const void *value;
             int size; // the length if it's an array
             ParamType type;
             bool vector = false;
 
-            ParamValue(int *v, int size) : value(v), size(size), type(ParamType::INT32) {}
+            ParamValue(const int *v, int size) : value(v), size(size), type(ParamType::INT32) {}
 
             explicit ParamValue(int *v) : value(v), size(-1), type(ParamType::INT32) {}
 
-            ParamValue(long *v, int size) : value(v), size(size), type(ParamType::INT64) {}
+            ParamValue(const long *v, int size) : value(v), size(size), type(ParamType::INT64) {}
 
             explicit ParamValue(long *v) : value(v), size(-1), type(ParamType::INT64) {}
 
-            ParamValue(double *v, int size) : value(v), size(size), type(ParamType::FP64) {}
+            ParamValue(const double *v, int size) : value(v), size(size), type(ParamType::FP64) {}
 
             explicit ParamValue(double *v) : value(v), size(-1), type(ParamType::FP64) {}
 

@@ -10,19 +10,20 @@
 #include <vector>
 #include "../operator.h"
 #include "../operator_factory.h"
+#include "../../vector/vector_type_serializer.h"
 
 namespace omniruntime {
 namespace op {
 class RowComparator {
 public:
-    RowComparator(int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t sortColCount,
+    RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t sortColCount,
                   omniruntime::vec::VectorBatch* vectorBatch);
 
     RowComparator() {};
 
     ~RowComparator();
 
-    int32_t *GetSourceTypes() const;
+    const int32_t *GetSourceTypes() const;
 
     int32_t *GetSortAscendings() const;
 
@@ -33,7 +34,7 @@ public:
     omniruntime::vec::VectorBatch* GetVecBatch() const;
 
 private:
-    int32_t *sourceTypes = nullptr;
+    const int32_t *sourceTypes;
     int32_t *sortCols = nullptr;
     int32_t *sortAscendings = nullptr;
     int32_t sortColCount = 0;
@@ -44,17 +45,15 @@ bool operator < (const RowComparator &left, const RowComparator &right);
 
 class TopNOperatorFactory : public OperatorFactory {
 public:
-    TopNOperatorFactory(int32_t *sourceTypes, int32_t typesCount, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
+    TopNOperatorFactory(const vec::VecTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperatorFactory() override;
 
-
     Operator *CreateOperator() override;
 
 private:
-    int32_t *sourceTypes = nullptr;
-    int32_t sourceTypesCount = 0;
+    const vec::VecTypes sourceTypes;
     int32_t *sortCols = nullptr;
     int32_t n = 0;
     int32_t *sortAscendings = nullptr;
@@ -64,7 +63,7 @@ private:
 
 class TopNOperator : public Operator {
 public:
-    TopNOperator(int32_t *sourceTypes, int32_t typesCount, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
+    TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
         int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperator() override;
@@ -74,11 +73,11 @@ public:
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
     int32_t Compare(int32_t position, omniruntime::vec::VectorBatch *table,
-        omniruntime::vec::VectorBatch *currentMaxVectorBatch, int32_t sortColCount, const int32_t *sortCols,
-        const int32_t *sourceTypes, const int32_t *sortAscendings) const;
+                    omniruntime::vec::VectorBatch *currentMaxVectorBatch, int32_t sortColCount, const int32_t *sortCols,
+                    const int32_t *sourceTypeIds, const int32_t *sortAscendings) const;
 
 private:
-    int32_t *sourceTypes = nullptr;
+    const vec::VecTypes &sourceTypes;
     int32_t sourceTypesCount = 0;
     int32_t *sortCols = nullptr;
     int32_t n = 0;

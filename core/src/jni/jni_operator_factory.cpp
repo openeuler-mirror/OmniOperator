@@ -83,8 +83,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     auto aggVecTypes = Deserialize(aggTypesCharPtr);
     auto outVecTypes = Deserialize(outTypesCharPtr);
 
-    auto groupByTypeIds = groupByVecTypes->GetIds();
-    auto aggTypeIds = aggVecTypes->GetIds();
+    auto groupByTypeIds = groupByVecTypes.GetIds();
+    auto aggTypeIds = aggVecTypes.GetIds();
 
     PrepareContext groupByColContext = { (uint32_t *)groupByCols, groupByNum };
     PrepareContext groupByTypeContext = { (uint32_t *)groupByTypeIds, groupByNum };
@@ -179,8 +179,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggVecTypes = Deserialize(aggTypesCharPtr);
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
 
-    auto aggTypeIds = aggVecTypes->GetIds();
-    auto aggNum = static_cast<size_t>(aggVecTypes->GetSize());
+    auto aggTypeIds = aggVecTypes.GetIds();
+    auto aggNum = static_cast<size_t>(aggVecTypes.GetSize());
 
     PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggNum };
     PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
@@ -242,8 +242,8 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOpera
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
     auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
-    auto sourceTypesArr = const_cast<int32_t *>(sourceVecTypes->GetIds());
-    auto sourceTypesCount = sourceVecTypes->GetSize();
+    auto sourceTypesArr = const_cast<int32_t *>(sourceVecTypes.GetIds());
+    auto sourceTypesCount = sourceVecTypes.GetSize();
     auto outputColsCount = env->GetArrayLength(jOutputCols);
     auto sortColsCount = env->GetArrayLength(jSortCols);
 
@@ -347,17 +347,17 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     auto inputVecTypes = Deserialize(sourceTypesCharPtr);
     auto outputVecTypes = Deserialize(windowFunctionReturnTypeCharPtr);
 
-    jint inputTypesCount = inputVecTypes->GetSize();
+    jint inputTypesCount = inputVecTypes.GetSize();
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
     jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
     jint partitionCount = env->GetArrayLength(jPartitionChannels);
     jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
-    jint outputTypesCount = outputVecTypes->GetSize();
+    jint outputTypesCount = outputVecTypes.GetSize();
 
-    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes->GetIds());
-    auto outputTypeIds = const_cast<int32_t *>(outputVecTypes->GetIds());
+    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
+    auto outputTypeIds = const_cast<int32_t *>(outputVecTypes.GetIds());
 
     auto allTypesCount = inputTypesCount + outputTypesCount;
     int32_t allTypes[allTypesCount];
@@ -399,14 +399,14 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOpera
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     int32_t n = (int32_t)jN;
 
-    auto sourceTypes = Deserialize(sourceTypesCharPtr);
-
-    auto sourceTypesCount = sourceTypes->GetSize();
-    auto sourceTypeIds = const_cast<int32_t *>(sourceTypes->GetIds());
     jint sortColCount = env->GetArrayLength(jSortCols);
 
-    omniruntime::op::TopNOperatorFactory *topNOperatorFactory = new omniruntime::op::TopNOperatorFactory(sourceTypeIds,
-        sourceTypesCount, n, sortCols, sortAsc, sortNullFirsts, sortColCount);
+    auto sourceTypes = Deserialize(sourceTypesCharPtr);
+    omniruntime::op::TopNOperatorFactory *topNOperatorFactory = new omniruntime::op::TopNOperatorFactory(sourceTypes,
+        n, sortCols, sortAsc, sortNullFirsts, sortColCount);
+
+    auto sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
+    auto sourceTypesCount = sourceTypes.GetSize();
 
     ParamValue p_sourceTypes = ParamValue(sourceTypeIds, sourceTypesCount);
     ParamValue p_sortColCount = ParamValue(&sortColCount);
@@ -522,7 +522,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     std::string filterExpression = std::string(expressionCharPtr);
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputVecTypes = Deserialize(inputTypesCharPtr);
-    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes->GetIds());
+    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
     int32_t inputLength = (int32_t)jInputLength;
     jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
     int32_t projectLength = (int32_t)jProjectLength;
@@ -546,7 +546,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     int32_t exprLength = (int32_t)jExprsLength;
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputVecTypes = Deserialize(inputTypesCharPtr);
-    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes->GetIds());
+    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
     int32_t inputLength = (int32_t)jInputLength;
     omniruntime::op::ProjectionOperatorFactory *factory =
         new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputTypeIds, inputLength);
@@ -572,8 +572,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
     jint buildHashColsCount = env->GetArrayLength(jBuildHashCols);
 
     auto buildVecTypes = Deserialize(buildTypesCharPtr);
-    auto buildTypesCount = buildVecTypes->GetSize();
-    auto buildTypesArr = const_cast<int32_t *>(buildVecTypes->GetIds());
+    auto buildTypesCount = buildVecTypes.GetSize();
+    auto buildTypesArr = const_cast<int32_t *>(buildVecTypes.GetIds());
 
     JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory =
@@ -661,12 +661,12 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
 
     auto probeVecTypes = Deserialize(probeTypesCharPtr);
-    auto probeTypesCount = probeVecTypes->GetSize();
-    auto probeTypesArr = const_cast<int32_t *>(probeVecTypes->GetIds());
+    auto probeTypesCount = probeVecTypes.GetSize();
+    auto probeTypesArr = const_cast<int32_t *>(probeVecTypes.GetIds());
 
     auto buildOutputVecTypes = Deserialize(buildOutputTypesCharPtr);
-    auto buildOutputTypesCount = buildOutputVecTypes->GetSize();
-    auto buildOutputTypesArr = const_cast<int32_t *>(buildOutputVecTypes->GetIds());
+    auto buildOutputTypesCount = buildOutputVecTypes.GetSize();
+    auto buildOutputTypesArr = const_cast<int32_t *>(buildOutputVecTypes.GetIds());
 
     JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::LookupJoinOperatorFactory *lookupJoinOperatorFactory =
@@ -695,11 +695,11 @@ Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFac
     jint *bucketToPartitionArr = env->GetIntArrayElements(jBucketToPartition, JNI_FALSE);
 
     auto sourceVecTypes = Deserialize(sourceTypesArrCharPtr);
-    jint sourceTypesCount = sourceVecTypes->GetSize();
+    jint sourceTypesCount = sourceVecTypes.GetSize();
     jint partitionChannelsCount = env->GetArrayLength(jPartitionChannels);
     jint bucketToPartitionCount = env->GetArrayLength(jBucketToPartition);
 
-    auto sourceTypesArr = const_cast<int32_t *>(sourceVecTypes->GetIds());
+    auto sourceTypesArr = const_cast<int32_t *>(sourceVecTypes.GetIds());
     JNI_DEBUG_LOG("before create partitionedoutput operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
         omniruntime::op::PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypesArr,
