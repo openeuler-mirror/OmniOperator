@@ -14,7 +14,7 @@ std::string Serialize(const std::vector<VecType> &types);
 
 std::string SerializeSingle(const VecType &type);
 
-const VecTypesPtr Deserialize(const std::string &vecTypes);
+VecTypes Deserialize(const std::string &vecTypes);
 
 VecType DeserializeSingle(const std::string &vecTypeExt);
 }

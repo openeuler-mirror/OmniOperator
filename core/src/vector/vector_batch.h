@@ -47,12 +47,15 @@ public:
 
     void GetVectorTypeIds(int32_t *typeIds);
 
-    void NewVectors(int *types);
+    void NewVectors(const int *types);
+
+    void NewVectors(const std::vector<VecType> &types);
 
     void ReleaseAllVectors();
 
 private:
     void Init();
+    Vector *NewContainerVec();
 
     int vectorCount;
     int rowCount;

@@ -183,7 +183,7 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
         int32_t sortCol = sortCols[i];
         Vector *leftColumn = columns[sortCol][leftColumnIndex];
         void *leftNulls = leftColumn->GetValueNulls();
-        int32_t colType = sortColTypes[i];
+        int32_t colTypeId = sortColTypes[i];
         Vector *rightColumn = nullptr;
         void *rightNulls = nullptr;
 
@@ -200,8 +200,8 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
         //     break;
         // }
 
-        compare = OperatorUtil::CompareVectorAtPosition(static_cast<VecType>(colType), leftColumn, leftColumnPosition,
-            rightColumn, rightColumnPosition);
+        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftColumn, leftColumnPosition, rightColumn,
+            rightColumnPosition);
 
         if (sortAscendings[i] == 0) {
             compare = -compare;

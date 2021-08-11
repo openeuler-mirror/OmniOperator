@@ -36,7 +36,21 @@ VectorBatch::~VectorBatch()
     delete[] vectorTypes;
 }
 
-void VectorBatch::NewVectors(int *types)
+Vector *VectorBatch::NewContainerVec()
+{
+    DoubleVector *doubleVector = new DoubleVector(nullptr, rowCount);
+    LongVector *longVector = new LongVector(nullptr, rowCount);
+    Vector **vectorAddresses = new Vector *[2];
+    vectorAddresses[0] = doubleVector;
+    vectorAddresses[1] = longVector;
+    VecType *vecTypes = new VecType[2];
+    vecTypes[0] = DoubleVecType::Instance();
+    vecTypes[1] = LongVecType::Instance();
+    return new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
+}
+
+// deprecation, will remove when all operator complete refactor.
+void VectorBatch::NewVectors(const int *types)
 {
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType)types[colIndex];
@@ -54,15 +68,7 @@ void VectorBatch::NewVectors(int *types)
                 break;
             }
             case OMNI_VEC_TYPE_CONTAINER: {
-                DoubleVector *doubleVector = new DoubleVector(nullptr, rowCount);
-                LongVector *longVector = new LongVector(nullptr, rowCount);
-                Vector **vectorAddresses = new Vector *[2];
-                vectorAddresses[0] = doubleVector;
-                vectorAddresses[1] = longVector;
-                VecType *vecTypes = new VecType[2];
-                vecTypes[0] = DoubleVecType::Instance();
-                vecTypes[1] = LongVecType::Instance();
-                ContainerVector *containerVector = new ContainerVector(nullptr, rowCount, vectorAddresses, 2, vecTypes);
+                Vector *containerVector = NewContainerVec();
                 SetVector(colIndex, containerVector);
                 break;
             }
@@ -81,6 +87,51 @@ void VectorBatch::NewVectors(int *types)
             case OMNI_VEC_TYPE_DECIMAL128: {
                 SetVector(colIndex,
                     new Decimal128Vector(nullptr, rowCount, Decimal128Vector::DECIMAL128_TYPE_WIDTH, 0));
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+}
+
+void VectorBatch::NewVectors(const std::vector<VecType> &types)
+{
+    for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
+        vectorTypes[colIndex] = (VecType)types[colIndex];
+        switch (types[colIndex].GetId()) {
+            case OMNI_VEC_TYPE_INT: {
+                SetVector(colIndex, new IntVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG: {
+                SetVector(colIndex, new LongVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                SetVector(colIndex, new DoubleVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_CONTAINER: {
+                Vector *containerVector = NewContainerVec();
+                SetVector(colIndex, containerVector);
+                break;
+            }
+            case OMNI_VEC_TYPE_SHORT: {
+                SetVector(colIndex, new IntVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                VectorAllocator *va = nullptr;
+                int32_t width = (static_cast<const VarcharVecType *>(&types[colIndex]))->GetWidth();
+                SetVector(colIndex, new VarcharVector(va, rowCount * width, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                int32_t precision = (static_cast<const Decimal128VecType *>(&types[colIndex]))->GetPrecision();
+                int32_t scale = (static_cast<const Decimal128VecType *>(&types[colIndex]))->GetScale();
+                SetVector(colIndex, new Decimal128Vector(nullptr, rowCount, precision, scale));
                 break;
             }
             default: {
