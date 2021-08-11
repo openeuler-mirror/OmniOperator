@@ -17,14 +17,14 @@ namespace omniruntime {
     namespace jit {
         class HardenOptimizer {
         public:
-            HardenOptimizer(unsigned optLevel, const std::set<std::string> &specializedModules)
+            HardenOptimizer(unsigned optLevel, std::set<std::string> &specializedModules)
             {
                 pmb.OptLevel = optLevel;
                 conf = *Config::GetConf();
                 this->specializedModules = specializedModules;
             }
 
-            HardenOptimizer(unsigned optLevel, const Config &optConfig, const std::set<std::string> &specializedModules)
+            HardenOptimizer(unsigned optLevel, const Config &optConfig, std::set<std::string> &specializedModules)
             {
                 pmb.OptLevel = optLevel;
                 conf = optConfig;

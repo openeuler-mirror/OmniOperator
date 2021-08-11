@@ -10,6 +10,7 @@
 #include "../util/bitmap_util.h"
 #include "vector_reference.h"
 #include "vector_allocator.h"
+#include "vector_type.h"
 
 namespace omniruntime {
 namespace vec {
@@ -96,9 +97,9 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
-    void SetValueNulls(int startIndex, bool *nulls, int length) const;
+    void SetValueNulls(int startIndex, bool *nulls, int length);
 
-    void SetValueNullBitMap(int startIndex) const;
+    void SetValueNullBitMap(int startIndex);
 
     int GetValueOffset(int index)
     {
