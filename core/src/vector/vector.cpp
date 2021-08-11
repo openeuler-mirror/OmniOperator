@@ -2,20 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
+#include <cstring>
 #include <stdint.h>
 #include "vector.h"
 #include "../util/debug.h"
 #include "vector_allocator_manager.h"
-
-extern "C" int32_t GetMajorVersion()
-{
-    return 1;
-}
-
-extern "C" int32_t GetMinorVersion()
-{
-    return 0;
-}
 
 omniruntime::vec::VectorAllocatorManager g_vectorAllocatorManager =
     omniruntime::vec::VectorAllocatorManager::GetInstance();
@@ -61,7 +52,7 @@ Vector::~Vector()
     }
 }
 
-void Vector::SetValueNulls(int startIndex, bool *nulls, int length) const
+void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
 {
     errno_t ret = memcpy_s(((bool *)valueNullsAddress) + startIndex, capacityInBytes, nulls, length);
     if (ret != EOK) {
@@ -69,7 +60,7 @@ void Vector::SetValueNulls(int startIndex, bool *nulls, int length) const
     }
 }
 
-void Vector::SetValueNullBitMap(int index) const
+void Vector::SetValueNullBitMap(int index)
 {
     if (valueNullsAddress != nullptr) {
         // std::cout << "set value null BitMap" << std::endl;

@@ -5,19 +5,15 @@
 #define __OMNI_JIT_LLVM_COMPILER_H__
 
 #include "./compiler.h"
-#include "./library_loader.h"
 #include "../config.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 
-#include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <vector>
 #include <set>
-#include <cstdlib>
 
 namespace omniruntime {
     namespace jit {
@@ -26,6 +22,8 @@ namespace omniruntime {
             LLVMCompiler();
 
             ~LLVMCompiler();
+
+            void InitCompile();
 
             bool LoadOperatorTemplate(std::string operatorName, bool isDependency) override;
 
@@ -36,7 +34,7 @@ namespace omniruntime {
         private:
             const std::string templateFileSuffix = ".ll";
 
-            std::unique_ptr<Config> config;
+            Config *config;
             std::unique_ptr<llvm::StringRef> layout;
             std::unique_ptr<llvm::IRBuilder<>> builder;
             std::unique_ptr<llvm::LLVMContext> context;
@@ -45,42 +43,41 @@ namespace omniruntime {
 
             llvm::orc::LLJIT *jitter;
 
-            static LibraryLoader ll;
             static void LoadExtraLibraries();
 
-            std::unique_ptr<llvm::orc::LLJIT> CompileModules(const std::set<std::string> &specializedModules);
+            std::unique_ptr<llvm::orc::LLJIT> compileModules(std::set<std::string> &specializedModules);
 
-            bool SpecializeModule(const std::unique_ptr<llvm::Module> &module);
+            bool specializeModule(const std::unique_ptr<llvm::Module> &module);
 
-            bool HardenFunction(const std::string &specializationId, llvm::Function *function,
+            bool harden_function(const std::string &specializationId, llvm::Function *function,
                                  const std::unique_ptr<llvm::Module> &module);
 
             llvm::Constant *
-            ToLlvmValue(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
+            to_llvm_value(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
 
-            llvm::Constant *ToScalarLlvmValue(ParamValue value);
+            llvm::Constant *to_scalar_llvm_value(ParamValue value);
 
             llvm::Constant *
-            ToArrayLlvmValue(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
+            to_array_llvm_value(const std::string &name, ParamValue value, const std::unique_ptr<llvm::Module> &module);
 
-            llvm::Constant *ToInt32VectorLlvmValue(ParamValue value, std::vector<llvm::Constant *> &vecValues);
+            llvm::Constant *to_int32_vector_llvm_value(ParamValue value, std::vector<llvm::Constant *> &vecValues);
 
             llvm::Constant *ToInt32ArrayLlvmValue(
                 const std::string &name, ParamValue value,
                 const std::unique_ptr<llvm::Module> &module, std::vector<llvm::Constant *> &vecValues);
 
-            llvm::Constant *ToVectorLlvmValue(const std::string &name, ParamValue value,
+            llvm::Constant *to_vector_llvm_value(const std::string &name, ParamValue value,
                                                  const std::unique_ptr<llvm::Module> &module);
 
-            llvm::Constant *To2darrayLlvmValue(const std::string &name, ParamValue value,
+            llvm::Constant *to_2darray_llvm_value(const std::string &name, ParamValue value,
                                                   const std::unique_ptr<llvm::Module> &module);
         };
 
-        bool OptimizeAttributes(llvm::Function *function);
+        bool optimizeAttributes(llvm::Function *function);
 
-        std::map<std::string, llvm::Function *> GetAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
+        std::map<std::string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<llvm::Module> &module);
 
-        std::string BuildParamKey(llvm::Function &func, int argPos);
+        std::string build_param_key(llvm::Function &func, int argPos);
     }
 }
 

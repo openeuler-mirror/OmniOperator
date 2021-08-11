@@ -20,6 +20,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 
+#include <set>
+
 using llvm::Module;
 using llvm::outs;
 using std::map;
@@ -32,16 +34,21 @@ namespace omniruntime {
     namespace jit {
         LLVMCompiler::LLVMCompiler() : createOperatorSymbol()
         {
-            this->jitter = nullptr;
+            this->config = nullptr;
+            InitCompile();
             llvm::InitializeNativeTarget();
             llvm::InitializeNativeTargetAsmPrinter();
-            this->config = std::make_unique<Config>();
             this->context = std::make_unique<llvm::LLVMContext>();
             this->layout = std::make_unique<llvm::StringRef>();
             this->builder = std::make_unique<llvm::IRBuilder<>>(*context);
 
             // TODO: load needed libraries for each module
             LoadExtraLibraries();
+        }
+
+        void LLVMCompiler::InitCompile()
+        {
+            this->config = new Config();
         }
 
         LLVMCompiler::~LLVMCompiler(){}
@@ -78,34 +85,23 @@ namespace omniruntime {
             return true;
         }
 
-        LibraryLoader LLVMCompiler::ll;
-
         void LLVMCompiler::LoadExtraLibraries()
         {
-            if (ll.FinishedLoading()) {
-                return;
-            }
             using namespace llvm::sys;
-            StringOrNull ev = std::getenv("LD_LIBRARY_PATH");
-            auto vec = ll.LoadLibraries(ev.msg(), true);
-            ev = std::getenv("OMNI_LIBRARY_PATH");
-            auto vec2 = ll.LoadLibraries(ev.msg(), false);
-            string err;
-            for (auto& s : vec) {
-                if (DynamicLibrary::LoadLibraryPermanently(s.c_str(), &err)) {
-                    llvm::errs() << "Failed to load core library at path " << s << "\n";
-                    llvm::errs() << err << "\n";
-                } else {
-                    std::cout << "Successfully loaded core library at path " << s << std::endl;
-                }
+
+            bool loaded = false;
+            // TODO: find a better way to load this lib, it differs on different platform
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
+            if (!loaded) {
+                llvm::errs() << "Failed to load c++ lib\n";
             }
-            for (auto& s : vec2) {
-                if (DynamicLibrary::LoadLibraryPermanently(s.c_str(), &err)) {
-                    llvm::errs() << "Failed to load extra library at path " << s << "\n";
-                    llvm::errs() << err << "\n";
-                } else {
-                    std::cout << "Successfully loaded extra library at path " << s << std::endl;
-                }
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
+            if (!loaded) {
+                llvm::errs() << "Failed to load jemalloc lib\n";
+            }
+            loaded = !DynamicLibrary::LoadLibraryPermanently("/opt/lib/libvector.so");
+            if (!loaded) {
+                llvm::errs() << "Failed to load vector lib\n";
             }
         }
 
@@ -113,12 +109,12 @@ namespace omniruntime {
         {
             std::set<string> specializedModules;
             for (auto const &module : this->modules) {
-                bool specialized = SpecializeModule(module);
+                bool specialized = specializeModule(module);
                 if (specialized) {
                     specializedModules.insert(module->getName().str());
                 }
             }
-            auto jit = CompileModules(specializedModules);
+            auto jit = compileModules(specializedModules);
             specializedModules.clear();
 
             if (jit) {
@@ -126,16 +122,8 @@ namespace omniruntime {
                     llvm::errs() << "Error: CreateOperator function not found yet\n";
                     return 0;
                 }
+
                 auto func = jit->lookup(this->createOperatorSymbol);
-                if (auto e = func.takeError()) {
-                    string msg = llvm::toString(std::move(e));
-                    std::cerr << "LLVM ERROR: " << msg << std::endl;
-                    if (msg.find("Failed to materialize symbols") != string::npos) {
-                        std::cerr <<
-                            "\nDid you forget to include a dependency in the extra dependencies file?"
-                            << std::endl;
-                    }
-                }
                 if (func) {
                     jitter = jit.release();
                     llvm::outs() << "Found CreateOperator symbol: " << this->createOperatorSymbol << "\n";
@@ -151,11 +139,11 @@ namespace omniruntime {
             return 0;
         }
 
-        bool LLVMCompiler::SpecializeModule(const std::unique_ptr<llvm::Module> &module)
+        bool LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &module)
         {
             using namespace llvm;
 
-            map<string, Function *> annotatedFuncs = GetAnnotatedFuncs(module);
+            map<string, Function *> annotatedFuncs = getAnnotatedFuncs(module);
             if (annotatedFuncs.empty()) {
                 return false;
             }
@@ -163,8 +151,8 @@ namespace omniruntime {
             for (auto &funcPair : annotatedFuncs) {
                 string id = funcPair.first;
                 Function *func = funcPair.second;
-                OptimizeAttributes(func);
-                HardenFunction(id, func, module);
+                optimizeAttributes(func);
+                harden_function(id, func, module);
             }
 
             llvm::verifyModule(*module);
@@ -181,8 +169,8 @@ namespace omniruntime {
         // this is done without modifying the signature
         // replacing the value directly inside of the function also make it
         // easier for optimizers to perform constant folding and propagation
-        bool LLVMCompiler::HardenFunction(const string &specializationId, llvm::Function *function,
-                                          const unique_ptr<Module> &module)
+        bool LLVMCompiler::harden_function(const string &specializationId, llvm::Function *function,
+                                           const unique_ptr<Module> &module)
         {
             if (this->specializations.count(specializationId) == 0) {
                 return false;
@@ -196,7 +184,7 @@ namespace omniruntime {
                 // use function_name and arg name as the key
                 if (specialization.HasSpecializedParam(count)) {
                     ParamValue *newValue = specialization.GetSpecializedParam(count);
-                    auto newArg = this->ToLlvmValue(BuildParamKey(*function, count), *newValue, module);
+                    auto newArg = this->to_llvm_value(build_param_key(*function, count), *newValue, module);
                     arg.replaceAllUsesWith(newArg);
                 }
                 count++;
@@ -208,17 +196,17 @@ namespace omniruntime {
         // values for the parameters that is not harden
         // conflicting params, e.g. param value provided during hardening cannot be provided here again
         // this should be used for testing purpose only, we should expose a new function with new function type
-        std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::CompileModules(const set<string> &specializedModules)
+        std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(set<string> &specializedModules)
         {
             using namespace llvm;
             using namespace llvm::orc;
             // ELF format on linux to be supported later with llvm-12.0.1 fix
-            ExitOnError exitOnErr;
+            ExitOnError ExitOnErr;
 
-            auto JTMB = exitOnErr(JITTargetMachineBuilder::detectHost());
+            auto JTMB = ExitOnErr(JITTargetMachineBuilder::detectHost());
             JTMB.setCodeGenOptLevel(CodeGenOpt::Default);
 
-            auto JITTER = exitOnErr(
+            auto JITTER = ExitOnErr(
                 LLJITBuilder().setJITTargetMachineBuilder(std::move(JTMB))
                 //                    .setObjectLinkingLayerCreator(
                 //                            [&](ExecutionSession &ES, const Triple &TT) {
@@ -230,7 +218,7 @@ namespace omniruntime {
 
             // enable loading common libraries available in the current process
             JITTER->getMainJITDylib().addGenerator(
-                exitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+                ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(
                     JITTER->getDataLayout().getGlobalPrefix())));
             for (auto &module : this->modules) {
                 std::string moduleName = module->getName().str();
@@ -245,23 +233,23 @@ namespace omniruntime {
             return JITTER;
         }
 
-        llvm::Constant *LLVMCompiler::ToLlvmValue(
+        llvm::Constant *LLVMCompiler::to_llvm_value(
             const std::string &name, ParamValue value, const std::unique_ptr<Module> &module)
         {
             if (value.type == ParamType::ARRAY2D) {
-                return To2darrayLlvmValue(name, value, module);
+                return to_2darray_llvm_value(name, value, module);
             } else if (value.IsScalar()) {
-                return ToScalarLlvmValue(value);
+                return to_scalar_llvm_value(value);
             } else { // array type
                 if (value.vector) {
-                    return ToVectorLlvmValue(name, value, module);
+                    return to_vector_llvm_value(name, value, module);
                 } else {
-                    return ToArrayLlvmValue(name, value, module);
+                    return to_array_llvm_value(name, value, module);
                 }
             }
         }
 
-        llvm::Constant *LLVMCompiler::ToScalarLlvmValue(ParamValue value)
+        llvm::Constant *LLVMCompiler::to_scalar_llvm_value(ParamValue value)
         {
             using namespace llvm;
             Constant *llvmValue = nullptr;
@@ -281,8 +269,8 @@ namespace omniruntime {
             return llvmValue;
         }
 
-        llvm::Constant *LLVMCompiler::To2darrayLlvmValue(const std::string &name, ParamValue value,
-            const std::unique_ptr<Module> &module)
+        llvm::Constant *LLVMCompiler::to_2darray_llvm_value(const std::string &name, ParamValue value,
+                                                            const std::unique_ptr<Module> &module)
         {
             using namespace llvm;
             auto params = value.ToParamList();
@@ -292,7 +280,7 @@ namespace omniruntime {
 
             int count = 0;
             for (ParamValue param : *params) {
-                Constant *element = ToArrayLlvmValue(name + "_" + to_string(count), param, module);
+                Constant *element = to_array_llvm_value(name + "_" + to_string(count), param, module);
                 element->print(errs());
                 vec2dValues.push_back(element);
                 count++;
@@ -305,12 +293,12 @@ namespace omniruntime {
             array->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
 
             auto i32 = IntegerType::get(*context, 32); // 32
-            auto zero = ConstantInt::get(i32, 0);
-            Constant *gepIndices[] = {zero, zero};
-            return ConstantExpr::getGetElementPtr(arrayType, array, gepIndices);
+            auto Zero = ConstantInt::get(i32, 0);
+            Constant *GEPIndices[] = {Zero, Zero};
+            return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
 
-        llvm::Constant *LLVMCompiler::ToInt32VectorLlvmValue(
+        llvm::Constant *LLVMCompiler::to_int32_vector_llvm_value(
             ParamValue value, std::vector<llvm::Constant *> &vecValues)
         {
             using namespace llvm;
@@ -324,14 +312,14 @@ namespace omniruntime {
             return vec;
         }
 
-        llvm::Constant *LLVMCompiler::ToVectorLlvmValue(const std::string &name, ParamValue value,
-            const std::unique_ptr<Module> &module)
+        llvm::Constant *LLVMCompiler::to_vector_llvm_value(const std::string &name, ParamValue value,
+                                                           const std::unique_ptr<Module> &module)
         {
             using namespace llvm;
             std::vector<Constant *> vecValues;
             switch (value.type) {
                 case ParamType::INT32: {
-                    return ToInt32VectorLlvmValue(value, vecValues);
+                    return to_int32_vector_llvm_value(value, vecValues);
                 }
                 case ParamType::INT64: {
                     auto values = value.ToInt32Array();
@@ -348,9 +336,9 @@ namespace omniruntime {
                     array->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
 
                     auto i32 = IntegerType::get(*context, 32); // 32
-                    auto zero = ConstantInt::get(i32, 0);
-                    Constant *gepIndices[] = {zero, zero};
-                    return ConstantExpr::getGetElementPtr(arrayType, array, gepIndices);
+                    auto Zero = ConstantInt::get(i32, 0);
+                    Constant *GEPIndices[] = {Zero, Zero};
+                    return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
                 case ParamType::FP64: {
                     auto values = value.ToInt32Array();
@@ -368,9 +356,9 @@ namespace omniruntime {
                     array->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
 
                     auto i32 = IntegerType::get(*context, 32); // 32
-                    auto zero = ConstantInt::get(i32, 0);
-                    Constant *gepIndices[] = {zero, zero};
-                    return ConstantExpr::getGetElementPtr(arrayType, array, gepIndices);
+                    auto Zero = ConstantInt::get(i32, 0);
+                    Constant *GEPIndices[] = {Zero, Zero};
+                    return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
                 default:
                     return nullptr;
@@ -396,13 +384,13 @@ namespace omniruntime {
             array->setConstant(true);
             array->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
 
-            auto zero = ConstantInt::get(i32, 0);
-            Constant *gepIndices[] = {zero, zero};
-            return ConstantExpr::getGetElementPtr(arrayType, array, gepIndices);
+            auto Zero = ConstantInt::get(i32, 0);
+            Constant *GEPIndices[] = {Zero, Zero};
+            return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
         }
 
-        llvm::Constant *LLVMCompiler::ToArrayLlvmValue(const std::string &name, ParamValue value,
-                                                       const std::unique_ptr<Module> &module)
+        llvm::Constant *LLVMCompiler::to_array_llvm_value(const std::string &name, ParamValue value,
+                                                          const std::unique_ptr<Module> &module)
         {
             using namespace llvm;
             std::vector<Constant *> vecValues;
@@ -424,9 +412,9 @@ namespace omniruntime {
                     array->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
 
                     auto i32 = IntegerType::get(*context, 32); // 32
-                    auto zero = ConstantInt::get(i32, 0);
-                    Constant *gepIndices[] = {zero, zero};
-                    return ConstantExpr::getGetElementPtr(arrayType, array, gepIndices);
+                    auto Zero = ConstantInt::get(i32, 0);
+                    Constant *GEPIndices[] = {Zero, Zero};
+                    return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
                 case ParamType::FP64: {
                     auto values = value.ToInt32Array();
@@ -442,16 +430,16 @@ namespace omniruntime {
                     array->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
 
                     auto i32 = IntegerType::get(*context, 32); // 32
-                    auto zero = ConstantInt::get(i32, 0);
-                    Constant *gepIndices[] = {zero, zero};
-                    return ConstantExpr::getGetElementPtr(arrayType, array, gepIndices);
+                    auto Zero = ConstantInt::get(i32, 0);
+                    Constant *GEPIndices[] = {Zero, Zero};
+                    return ConstantExpr::getGetElementPtr(arrayType, array, GEPIndices);
                 }
                 default:
                     return nullptr;
             }
         }
 
-        bool OptimizeAttributes(llvm::Function *function)
+        bool optimizeAttributes(llvm::Function *function)
         {
             using llvm::Attribute;
             function->removeFnAttr(Attribute::AttrKind::NoInline);
@@ -462,44 +450,44 @@ namespace omniruntime {
             return true;
         }
 
-        void AnnotatedFuncs(Module::global_iterator i, map<string, llvm::Function *> &annotFuncs)
+        void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &annotFuncs)
         {
             using namespace llvm;
-            if (i->getName() == "llvm.global.annotations") {
-                auto *ca = dyn_cast<ConstantArray>(i->getOperand(0));
-                for (auto oi = ca->op_begin(); oi != ca->op_end(); ++oi) {
-                    auto *cs = dyn_cast<ConstantStruct>(oi->get());
-                    auto *func = dyn_cast<Function>(cs->getOperand(0)->getOperand(0));
-                    auto *annotationGL = dyn_cast<GlobalVariable>(cs->getOperand(1)->getOperand(0));
+            if (I->getName() == "llvm.global.annotations") {
+                auto *CA = dyn_cast<ConstantArray>(I->getOperand(0));
+                for (auto OI = CA->op_begin(); OI != CA->op_end(); ++OI) {
+                    auto *CS = dyn_cast<ConstantStruct>(OI->get());
+                    auto *FUNC = dyn_cast<Function>(CS->getOperand(0)->getOperand(0));
+                    auto *AnnotationGL = dyn_cast<GlobalVariable>(CS->getOperand(1)->getOperand(0));
                     StringRef annotation = dyn_cast<ConstantDataArray>(
-                            annotationGL->getInitializer())->getAsCString();
+                            AnnotationGL->getInitializer())->getAsCString();
                     size_t index = annotation.find(SUFFIX);
                     if (index != llvm::StringRef::npos) {
                         StringRef specializationId = annotation.substr(0, index);
-                        annotFuncs.insert(std::make_pair(specializationId.str(), func));
-                        outs() << "Found annotated function " << specializationId << ", " << func->getName()
+                        annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
+                        outs() << "Found annotated function " << specializationId << ", " << FUNC->getName()
                                << "\n";
                     }
                 }
             }
         }
-        map<string, llvm::Function *> GetAnnotatedFuncs(const std::unique_ptr<Module> &module)
+        map<string, llvm::Function *> getAnnotatedFuncs(const std::unique_ptr<Module> &module)
         {
             using namespace llvm;
             map<string, Function *> annotFuncs;
-            for (Module::global_iterator i = module->global_begin(),
-                         e = module->global_end();
-                 i != e;
-                 ++i) {
-                AnnotatedFuncs(i, annotFuncs);
+            for (Module::global_iterator I = module->global_begin(),
+                         E = module->global_end();
+                 I != E;
+                 ++I) {
+                annotatedFuncs(I, annotFuncs);
             }
 
             return annotFuncs;
         }
 
-        string BuildParamKey(llvm::Function &func, int argPos)
+        string build_param_key(llvm::Function &func, int arg_pos)
         {
-            return func.getName().str() + "@" + std::to_string(argPos);
+            return func.getName().str() + "@" + std::to_string(arg_pos);
         }
     }
 }
