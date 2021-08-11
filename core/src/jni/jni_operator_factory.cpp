@@ -17,6 +17,7 @@
 #include "../operator/join/lookup_join.h"
 #include "../operator/topn/topn.h"
 #include "../operator/partitionedoutput/partitionedoutput.h"
+#include "../operator/union/union.h"
 #include "../operator/optimization.h"
 #include "../vector/vector_type_serializer.h"
 #include "config.h"
@@ -770,4 +771,21 @@ JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
 
     JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_union_OmniUnionOperatorFactory_createUnionOperatorFactory(
+        JNIEnv *env, jobject jObj, jstring jSourceTypes, jboolean jDistinct)
+{
+    JNI_DEBUG_LOG("create union operator factory starting.");
+    auto start = START();
+    const char *sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto sourcesTypes = Deserialize(sourceTypesCharPtr);
+    int32_t sourceTypesCount = sourcesTypes.GetSize();
+    JNI_DEBUG_LOG("before create union operator factory elapsed time: %ld ms.", END(start));
+    auto *unionOperatorFactory = new omniruntime::op::UnionOperatorFactory(sourcesTypes, sourceTypesCount, jDistinct);
+    JNI_DEBUG_LOG("create union operator factory finished, elapsed time: %ld ms.", END(start));
+    unionOperatorFactory->SetJitContext(nullptr);
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    return (int64_t)unionOperatorFactory;
 }
