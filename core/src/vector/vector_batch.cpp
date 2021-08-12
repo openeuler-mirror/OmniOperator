@@ -59,7 +59,8 @@ void VectorBatch::NewVectors(const int *types)
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
                 SetVector(colIndex, new LongVector(nullptr, rowCount));
                 break;
             }
@@ -85,8 +86,7 @@ void VectorBatch::NewVectors(const int *types)
                 break;
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                SetVector(colIndex,
-                    new Decimal128Vector(nullptr, rowCount, Decimal128Vector::DECIMAL128_TYPE_WIDTH, 0));
+                SetVector(colIndex, new Decimal128Vector(nullptr, rowCount));
                 break;
             }
             default: {
@@ -105,7 +105,8 @@ void VectorBatch::NewVectors(const std::vector<VecType> &types)
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
                 SetVector(colIndex, new LongVector(nullptr, rowCount));
                 break;
             }
@@ -129,9 +130,7 @@ void VectorBatch::NewVectors(const std::vector<VecType> &types)
                 break;
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                int32_t precision = (static_cast<const Decimal128VecType *>(&types[colIndex]))->GetPrecision();
-                int32_t scale = (static_cast<const Decimal128VecType *>(&types[colIndex]))->GetScale();
-                SetVector(colIndex, new Decimal128Vector(nullptr, rowCount, precision, scale));
+                SetVector(colIndex, new Decimal128Vector(nullptr, rowCount));
                 break;
             }
             default: {

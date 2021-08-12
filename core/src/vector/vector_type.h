@@ -19,8 +19,8 @@ enum VecTypeId {
     OMNI_VEC_TYPE_DOUBLE = 3,
     OMNI_VEC_TYPE_BOOLEAN = 4,
     OMNI_VEC_TYPE_SHORT = 5,
-    OMNI_VEC_TYPE_DECIMAL128 = 6,
-    OMNI_VEC_TYPE_DECIMAL256 = 7,
+    OMNI_VEC_TYPE_DECIMAL64 = 6,
+    OMNI_VEC_TYPE_DECIMAL128 = 7,
     OMNI_VEC_TYPE_DATE32 = 8,
     OMNI_VEC_TYPE_DATE64 = 9,
     OMNI_VEC_TYPE_TIME32 = 10,
@@ -40,8 +40,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VecTypeId, { { OMNI_VEC_TYPE_NONE, nullptr },
     { OMNI_VEC_TYPE_DOUBLE, "OMNI_VEC_TYPE_DOUBLE" },
     { OMNI_VEC_TYPE_BOOLEAN, "OMNI_VEC_TYPE_BOOLEAN" },
     { OMNI_VEC_TYPE_SHORT, "OMNI_VEC_TYPE_SHORT" },
+    { OMNI_VEC_TYPE_DECIMAL64, "OMNI_VEC_TYPE_DECIMAL64" },
     { OMNI_VEC_TYPE_DECIMAL128, "OMNI_VEC_TYPE_DECIMAL128" },
-    { OMNI_VEC_TYPE_DECIMAL256, "OMNI_VEC_TYPE_DECIMAL256" },
     { OMNI_VEC_TYPE_DATE32, "OMNI_VEC_TYPE_DATE32" },
     { OMNI_VEC_TYPE_DATE64, "OMNI_VEC_TYPE_DATE64" },
     { OMNI_VEC_TYPE_TIME32, "OMNI_VEC_TYPE_TIME32" },
@@ -188,6 +188,33 @@ public:
     }
 };
 
+class Decimal64VecType : public VecType {
+public:
+    Decimal64VecType(int32_t precision, int32_t scale) : VecType(VecTypeId::OMNI_VEC_TYPE_DECIMAL64)
+    {
+        this->precision = precision;
+        this->scale = scale;
+    }
+
+    ~Decimal64VecType() {}
+
+    int32_t GetPrecision() const
+    {
+        return precision;
+    }
+
+    int32_t GetScale() const
+    {
+        return scale;
+    }
+
+    const static Decimal64VecType &Instance()
+    {
+        static Decimal64VecType type(19, 0);
+        return type;
+    }
+};
+
 class Decimal128VecType : public VecType {
 public:
     Decimal128VecType(int32_t precision, int32_t scale) : VecType(VecTypeId::OMNI_VEC_TYPE_DECIMAL128)
@@ -210,34 +237,7 @@ public:
 
     const static Decimal128VecType &Instance()
     {
-        static Decimal128VecType type(76, 0);
-        return type;
-    }
-};
-
-class Decimal256VecType : public VecType {
-public:
-    Decimal256VecType(int32_t precision, int32_t scale) : VecType(VecTypeId::OMNI_VEC_TYPE_DECIMAL256)
-    {
-        this->precision = precision;
-        this->scale = scale;
-    }
-
-    ~Decimal256VecType() {}
-
-    int32_t GetPrecision() const
-    {
-        return precision;
-    }
-
-    int32_t GetScale() const
-    {
-        return scale;
-    }
-
-    const static Decimal256VecType &Instance()
-    {
-        static Decimal256VecType type(76, 0);
+        static Decimal128VecType type(38, 0);
         return type;
     }
 };
@@ -356,18 +356,6 @@ public:
         return type;
     }
 };
-const IntVecType INTEGER;
-const LongVecType LONG;
-const DoubleVecType DOUBLE;
-const ShortVecType SHORT;
-const BooleanVecType BOOLEAN;
-const DictionaryVecType DICTIONARY;
-const ContainerVecType CONTAINER;
-const Date32VecType DATE32(DAY);
-const Date64VecType DATE64(DAY);
-const Decimal128VecType DECIMAL128(38, 0);
-const Decimal256VecType DECIMAL256(76, 0);
-const VarcharVecType VARCHAR(INT_MAX);
 } // namespace vec
 } // namespace omniruntime
 #endif // OMNI_RUNTIME_VECTOR_TYPE_H

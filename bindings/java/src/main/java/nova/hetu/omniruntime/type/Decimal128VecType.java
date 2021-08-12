@@ -8,13 +8,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * date32 vec type
+ * Decimal128 vec type
  *
  * @since 2021-08-05
  */
 public class Decimal128VecType extends VecType {
+    /**
+     * Default precision value of decimal.
+     */
     public static final int DEFAULT_PRECISION = 38;
 
+    /**
+     * Default scale value of decimal.
+     */
     public static final int DEFAULT_SCALE = 0;
 
     /**

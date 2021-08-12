@@ -7,8 +7,8 @@
 
 namespace omniruntime {
 namespace vec {
-Decimal128Vector::Decimal128Vector(VectorAllocator *allocator, int32_t size, int32_t precision, int32_t scale)
-    : Vector(allocator, size * BYTES, size, Decimal128VecType(precision, scale))
+Decimal128Vector::Decimal128Vector(VectorAllocator *allocator, int32_t size)
+    : Vector(allocator, size * BYTES, size, Decimal128VecType::Instance())
 {}
 
 void Decimal128Vector::SetValues(int32_t startIndex, const int64_t *values, int32_t length)
@@ -33,7 +33,7 @@ Decimal128Vector *Decimal128Vector::CopyPositions(const int32_t *positions, int3
     if (length > size) {
         return nullptr;
     }
-    auto vector = new Decimal128Vector(GetAllocator(), length, GetPrecision(), GetScale());
+    auto vector = new Decimal128Vector(GetAllocator(), length);
     for (int32_t i = 0; i < length; ++i) {
         int32_t position = positions[offset + i];
         vector->SetValue(i, GetValue(position));
@@ -47,7 +47,7 @@ Decimal128Vector *Decimal128Vector::CopyRegion(int32_t positionOffset, int32_t l
     if (positionOffset + length > size) {
         return nullptr;
     }
-    auto vector = new Decimal128Vector(GetAllocator(), length, GetPrecision(), GetScale());
+    auto vector = new Decimal128Vector(GetAllocator(), length);
     vector->SetValues(0, (int64_t *)valuesAddress + (positionOffset + this->positionOffset) * DECIMAL128_TYPE_WIDTH,
         length);
     vector->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
@@ -65,18 +65,6 @@ void Decimal128Vector::Append(Vector *other, int32_t positionOffset, int32_t len
     if (ret != EOK) {
         std::cerr << "append failed in double vector." << std::endl;
     }
-}
-
-int32_t Decimal128Vector::GetPrecision()
-{
-    VecType type = GetType();
-    return static_cast<Decimal128VecType *>(&type)->GetPrecision();
-}
-
-int32_t Decimal128Vector::GetScale()
-{
-    VecType type = GetType();
-    return static_cast<Decimal128VecType *>(&type)->GetScale();
 }
 }
 }

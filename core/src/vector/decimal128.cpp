@@ -7,6 +7,7 @@
 #include <limits>
 #include <array>
 #include "op_util_internal.h"
+#include "../util/compiler_util.h"
 
 namespace omniruntime {
 namespace vec {
@@ -225,8 +226,8 @@ static inline void ShiftArrayRight(uint32_t *array, int64_t length, int64_t bits
     }
 }
 
-// / \brief Fix the signs of the result and remainder at the end of the division based on
-// / the signs of the dividend and divisor.
+// Fix the signs of the result and remainder at the end of the division based on
+// the signs of the dividend and divisor.
 template <class DecimalClass>
 static inline void FixDivisionSigns(DecimalClass &result, DecimalClass &remainder, bool dividendWasNegative,
     bool divisorWasNegative)
@@ -240,7 +241,7 @@ static inline void FixDivisionSigns(DecimalClass &result, DecimalClass &remainde
     }
 }
 
-// / \brief Build a little endian array of uint64_t from a big endian array of uint32_t.
+// Build a little endian array of uint64_t from a big endian array of uint32_t.
 template <size_t N>
 static OpStatus BuildFromArray(std::array<uint64_t, N> &resultArray, const uint32_t *array, int64_t length)
 {
@@ -266,7 +267,7 @@ static OpStatus BuildFromArray(std::array<uint64_t, N> &resultArray, const uint3
     return OpStatus::SUCCESS;
 }
 
-// / \brief Build a Decimal128 from a big endian array of uint32_t.
+// Build a Decimal128 from a big endian array of uint32_t.
 static OpStatus BuildFromArray(Decimal128 &value, const uint32_t *array, int64_t length)
 {
     std::array<uint64_t, 2> resultArray;
@@ -278,21 +279,22 @@ static OpStatus BuildFromArray(Decimal128 &value, const uint32_t *array, int64_t
     return OpStatus::SUCCESS;
 }
 
-// / \brief Do a division where the divisor fits into a single 32 bit value.
+// Do a division where the divisor fits into a single 32 bit value.
 template <class DecimalClass>
 static OpStatus SingleDivide(const uint32_t *dividend, int64_t dividendLength, uint32_t divisor,
-    DecimalClass &remainder, bool dividendWasNegative, bool divisorWasNegative, DecimalClass &result)
+    DecimalClass &remainder, DecimalClass &result)
 {
     if (divisor == 0) {
         return OpStatus::DIVIDE_BY_ZERO;
     }
     uint64_t r = 0;
-    constexpr int64_t kDecimalArrayLength = DecimalClass::BIT_WIDTH / sizeof(uint32_t) + 1;
-    uint32_t resultArray[kDecimalArrayLength];
-    for (int64_t j = 0; j < dividendLength; j++) {
+    // The length of result will be not greater than dividendLength,
+    // so here we just need a dividendLength length of result array.
+    uint32_t resultArray[dividendLength];
+    for (int64_t i = 0; i < dividendLength; i++) {
         r <<= INT_BIT_WIDTH;
-        r += dividend[j];
-        resultArray[j] = static_cast<uint32_t>(r / divisor);
+        r += dividend[i];
+        resultArray[i] = static_cast<uint32_t>(r / divisor);
         r %= divisor;
     }
     auto status = BuildFromArray(result, resultArray, dividendLength);
@@ -301,44 +303,64 @@ static OpStatus SingleDivide(const uint32_t *dividend, int64_t dividendLength, u
     }
 
     remainder = static_cast<int64_t>(r);
-    FixDivisionSigns(result, remainder, dividendWasNegative, divisorWasNegative);
     return OpStatus::SUCCESS;
 }
 
-// / \brief Do a decimal division with remainder.
-template <class DecimalClass>
-static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &divisor, DecimalClass &result,
-    DecimalClass &remainder)
+static uint32_t GuessResult(uint32_t *dividendArray, uint32_t *divisorArray, uint32_t divisorLength, int64_t pos)
 {
-    constexpr int64_t kDecimalArrayLength = DecimalClass::BIT_WIDTH / sizeof(uint32_t);
-    // Split the dividend and divisor into integer pieces so that we can
-    // work on them.
-    uint32_t dividendArray[kDecimalArrayLength + 1];
-    uint32_t divisorArray[kDecimalArrayLength];
-    bool dividendWasNegative = 0;
-    bool divisorWasNegative = 0;
-    // leave an extra zero before the dividend
-    dividendArray[0] = 0;
-    int64_t dividendLength = FillInArray(dividend, dividendArray + 1, kDecimalArrayLength, dividendWasNegative) + 1;
-    int64_t divisorLength = FillInArray(divisor, divisorArray, kDecimalArrayLength, divisorWasNegative);
-    // Handle some of the easy cases.
-    if (dividendLength <= divisorLength) {
-        remainder = dividend;
-        result = 0;
-        return OpStatus::SUCCESS;
+    // Guess the next digit. At worst it is two too large
+    uint32_t guess = std::numeric_limits<uint32_t>::max();
+    const auto highDividend = ((static_cast<uint64_t>(dividendArray[pos])) << INT_BIT_WIDTH) | dividendArray[pos + 1];
+    if (dividendArray[pos] != divisorArray[0]) {
+        guess = static_cast<uint32_t>(highDividend / divisorArray[0]);
     }
 
-    if (divisorLength == 0) {
-        return OpStatus::DIVIDE_BY_ZERO;
+    // catch all of the cases where guess is two too large and most of the
+    // cases where it is one too large
+    auto rhat = static_cast<uint32_t>(highDividend - guess * static_cast<uint64_t>(divisorArray[0]));
+    while (static_cast<uint64_t>(divisorArray[1]) * guess >
+        (static_cast<uint64_t>(rhat) << INT_BIT_WIDTH) + dividendArray[pos + 2]) {
+        --guess;
+        rhat += divisorArray[0];
+        if (static_cast<uint64_t>(rhat) < divisorArray[0]) {
+            break;
+        }
     }
 
-    if (divisorLength == 1) {
-        return SingleDivide(dividendArray, dividendLength, divisorArray[0], remainder, dividendWasNegative,
-            divisorWasNegative, result);
+    // subtract off the guess * divisor from the dividend
+    uint64_t mult = 0;
+    for (int64_t i = divisorLength - 1; i >= 0; --i) {
+        mult += static_cast<uint64_t>(guess) * divisorArray[i];
+        uint32_t prev = dividendArray[pos + i + 1];
+        dividendArray[pos + i + 1] -= static_cast<uint32_t>(mult);
+        mult >>= INT_BIT_WIDTH;
+        if (dividendArray[pos + i + 1] > prev) {
+            ++mult;
+        }
     }
+    uint32_t prev = dividendArray[pos];
+    dividendArray[pos] -= static_cast<uint32_t>(mult);
 
+    // if guess was too big, we add back divisor
+    if (dividendArray[pos] > prev) {
+        --guess;
+        uint32_t carry = 0;
+        for (int64_t i = divisorLength - 1; i >= 0; --i) {
+            const auto sum = static_cast<uint64_t>(divisorArray[i]) + dividendArray[pos + i + 1] + carry;
+            dividendArray[pos + i + 1] = static_cast<uint32_t>(sum);
+            carry = static_cast<uint32_t>(sum >> INT_BIT_WIDTH);
+        }
+        dividendArray[pos] += carry;
+    }
+    return guess;
+}
+
+template <class DecimalClass>
+static OpStatus ComplexDivide(uint32_t *dividendArray, int64_t dividendLength, uint32_t *divisorArray,
+    uint32_t divisorLength, DecimalClass &remainder, DecimalClass &result)
+{
     int64_t resultLength = dividendLength - divisorLength;
-    uint32_t resultArray[kDecimalArrayLength];
+    uint32_t resultArray[resultLength];
 
     // Normalize by shifting both by a multiple of 2 so that
     // the digit guessing is better. The requirement is that
@@ -351,53 +373,8 @@ static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &
     ShiftArrayLeft(dividendArray, dividendLength, normalizeBits);
 
     // compute each digit in the result
-    for (int64_t j = 0; j < resultLength; ++j) {
-        // Guess the next digit. At worst it is two too large
-        uint32_t guess = std::numeric_limits<uint32_t>::max();
-        const auto highDividend = ((static_cast<uint64_t>(dividendArray[j])) << INT_BIT_WIDTH) | dividendArray[j + 1];
-        if (dividendArray[j] != divisorArray[0]) {
-            guess = static_cast<uint32_t>(highDividend / divisorArray[0]);
-        }
-
-        // catch all of the cases where guess is two too large and most of the
-        // cases where it is one too large
-        auto rhat = static_cast<uint32_t>(highDividend - guess * static_cast<uint64_t>(divisorArray[0]));
-        while (static_cast<uint64_t>(divisorArray[1]) * guess >
-            (static_cast<uint64_t>(rhat) << INT_BIT_WIDTH) + dividendArray[j + 2]) {
-            --guess;
-            rhat += divisorArray[0];
-            if (static_cast<uint64_t>(rhat) < divisorArray[0]) {
-                break;
-            }
-        }
-
-        // subtract off the guess * divisor from the dividend
-        uint64_t mult = 0;
-        for (int64_t i = divisorLength - 1; i >= 0; --i) {
-            mult += static_cast<uint64_t>(guess) * divisorArray[i];
-            uint32_t prev = dividendArray[j + i + 1];
-            dividendArray[j + i + 1] -= static_cast<uint32_t>(mult);
-            mult >>= INT_BIT_WIDTH;
-            if (dividendArray[j + i + 1] > prev) {
-                ++mult;
-            }
-        }
-        uint32_t prev = dividendArray[j];
-        dividendArray[j] -= static_cast<uint32_t>(mult);
-
-        // if guess was too big, we add back divisor
-        if (dividendArray[j] > prev) {
-            --guess;
-            uint32_t carry = 0;
-            for (int64_t i = divisorLength - 1; i >= 0; --i) {
-                const auto sum = static_cast<uint64_t>(divisorArray[i]) + dividendArray[j + i + 1] + carry;
-                dividendArray[j + i + 1] = static_cast<uint32_t>(sum);
-                carry = static_cast<uint32_t>(sum >> INT_BIT_WIDTH);
-            }
-            dividendArray[j] += carry;
-        }
-
-        resultArray[j] = guess;
+    for (int64_t i = 0; i < resultLength; ++i) {
+        resultArray[i] = GuessResult(dividendArray, divisorArray, divisorLength, i);
     }
 
     // denormalize the remainder
@@ -413,8 +390,52 @@ static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &
         return status;
     }
 
-    FixDivisionSigns(result, remainder, dividendWasNegative, divisorWasNegative);
     return OpStatus::SUCCESS;
+}
+// / \brief Do a decimal division with remainder.
+template <class DecimalClass>
+static OpStatus DecimalDivide(const DecimalClass &dividend, const DecimalClass &divisor, DecimalClass &result,
+    DecimalClass &remainder)
+{
+    // Leave an extra zero before the dividend
+    if (UNLIKELY(divisor == 0)) {
+        return OpStatus::DIVIDE_BY_ZERO;
+    }
+
+    // Split the dividend and divisor into integer pieces so that we can work on them.
+    constexpr int64_t decimalArrayLength = DecimalClass::BYTE_WIDTH / sizeof(uint32_t);
+    uint32_t dividendArray[decimalArrayLength + 1];
+    uint32_t divisorArray[decimalArrayLength];
+    bool dividendWasNegative = 0;
+    bool divisorWasNegative = 0;
+
+    // Fill divisor array.
+    int64_t divisorLength = FillInArray(divisor, divisorArray, decimalArrayLength, divisorWasNegative);
+    // Leave an extra zero before the dividend
+    if (UNLIKELY(divisorLength == 0)) {
+        return OpStatus::DIVIDE_BY_ZERO;
+    }
+
+    // Fill dividend array.
+    dividendArray[0] = 0;
+    int64_t dividendLength = FillInArray(dividend, dividendArray + 1, decimalArrayLength, dividendWasNegative) + 1;
+    // Case1: if divisor is greater than dividend, then result is ZERO and remainder is the dividend.
+    if (dividendLength <= divisorLength) {
+        remainder = dividend;
+        result = 0;
+        return OpStatus::SUCCESS;
+    }
+
+    OpStatus status;
+    if (divisorLength == 1) {
+        // Case2: if divisor is only 1 length, then call SingleDivide to handle.
+        status = SingleDivide(dividendArray, dividendLength, divisorArray[0], remainder, result);
+    } else {
+        // Case3: handle complex cases.
+        status = ComplexDivide(dividendArray, dividendLength, divisorArray, divisorLength, remainder, result);
+    }
+    FixDivisionSigns(result, remainder, dividendWasNegative, divisorWasNegative);
+    return status;
 }
 
 OpStatus Decimal128::Divide(const Decimal128 &divisor, Decimal128 &result, Decimal128 &remainder) const

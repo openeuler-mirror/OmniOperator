@@ -7,19 +7,25 @@ package nova.hetu.omniruntime.type;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * date32 vec type
+ * Decimal64 vec type
  *
  * @since 2021-08-05
  */
-public class Decimal256VecType extends VecType {
-    public static final int DEFAULT_PRECISION = 76;
+public class Decimal64VecType extends VecType {
+    /**
+     * Default precision value of decimal.
+     */
+    public static final int DEFAULT_PRECISION = 19;
 
+    /**
+     * Default scale value of decimal.
+     */
     public static final int DEFAULT_SCALE = 0;
 
     /**
-     * Decimal256 singleton
+     * Decimal64 singleton
      */
-    public static final Decimal256VecType DECIMAL256 = new Decimal256VecType(DEFAULT_PRECISION, DEFAULT_SCALE);
+    public static final Decimal64VecType DECIMAL64 = new Decimal64VecType(DEFAULT_PRECISION, DEFAULT_SCALE);
 
     @JsonProperty
     private final int precision;
@@ -28,13 +34,13 @@ public class Decimal256VecType extends VecType {
     private final int scale;
 
     /**
-     * Construct of decimal256 vector type
+     * Construct of decimal64 vector type
      *
      * @param precision the precision of decimal
      * @param scale     the scale of decimal
      */
-    public Decimal256VecType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
-        super(VecTypeId.OMNI_VEC_TYPE_DECIMAL256);
+    public Decimal64VecType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
+        super(VecTypeId.OMNI_VEC_TYPE_DECIMAL64);
         this.precision = precision;
         this.scale = scale;
     }

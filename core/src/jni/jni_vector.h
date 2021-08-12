@@ -16,7 +16,7 @@ extern "C" {
  * Signature: (IIIJ)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *, jclass, jlong, jint, jint,
-    jstring);
+    jint);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec

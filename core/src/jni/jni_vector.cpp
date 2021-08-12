@@ -3,19 +3,11 @@
  * Description: JNI Vector Operations Source File
  */
 #include <stdint.h>
-#include <src/vector/vector_common.h>
-#include <src/vector/dictionary_vector.h>
-#include <src/vector/vector_type_serializer.h>
-#include "../util/debug.h"
 #include "jni_vector.h"
+#include "../util/debug.h"
 #include "../memory/memory_pool.h"
-#include "../vector/vector_type.h"
-#include "../vector/vector_allocator.h"
-#include "../vector/long_vector.h"
-#include "../vector/varchar_vector.h"
-#include "../vector/boolean_vector.h"
-#include "../vector/container_vector.h"
-#include "../vector/vector_allocator_manager.h"
+#include "../vector/vector_common.h"
+#include "../vector/vector_type_serializer.h"
 
 using namespace omniruntime::vec;
 
@@ -26,16 +18,15 @@ VectorAllocator *TransformAllocator(long allocatorAddr);
 jobject transformBaseVectorToByteBuffer(JNIEnv *env, void *addr, int sizeInBytes);
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
-    jlong jAllocator, jint jCapacityInBytes, jint jValueCount, jstring jVectorType)
+    jlong jAllocator, jint jCapacityInBytes, jint jValueCount, jint jVectorTypeId)
 {
-    const char *vecTypeCharPtr = env->GetStringUTFChars(jVectorType, JNI_FALSE);
-    VecType vecType = DeserializeSingle(vecTypeCharPtr);
     int64_t nativeVector = 0;
-    switch (vecType.GetId()) {
+    switch (jVectorTypeId) {
         case OMNI_VEC_TYPE_INT:
             nativeVector = reinterpret_cast<int64_t>(new IntVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
             nativeVector = reinterpret_cast<int64_t>(new LongVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_DOUBLE:
@@ -47,11 +38,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
         case OMNI_VEC_TYPE_SHORT:
             break;
         case OMNI_VEC_TYPE_DECIMAL128:
-            nativeVector = reinterpret_cast<int64_t>(new Decimal128Vector(TransformAllocator(jAllocator), jValueCount,
-                static_cast<Decimal128VecType *>(&vecType)->GetPrecision(),
-                static_cast<Decimal128VecType *>(&vecType)->GetScale()));
-            break;
-        case OMNI_VEC_TYPE_DECIMAL256:
+            nativeVector = reinterpret_cast<int64_t>(new Decimal128Vector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_VARCHAR:
             nativeVector = reinterpret_cast<int64_t>(

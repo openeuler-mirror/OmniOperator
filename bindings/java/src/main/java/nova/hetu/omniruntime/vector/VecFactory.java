@@ -26,6 +26,7 @@ public class VecFactory {
                 vector = new IntVec(nativeVector);
                 break;
             case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
                 vector = new LongVec(nativeVector);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
@@ -42,9 +43,6 @@ public class VecFactory {
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
                 vector = new Decimal128Vec(nativeVector, vecType);
-                break;
-            case OMNI_VEC_TYPE_DECIMAL256:
-                vector = new Decimal256Vec(nativeVector, vecType);
                 break;
             case OMNI_VEC_TYPE_DICTIONARY:
                 vector = new DictionaryVec(nativeVector);
