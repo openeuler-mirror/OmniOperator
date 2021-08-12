@@ -105,8 +105,8 @@ TEST(Decimal128, multiple_negate)
     auto left = new Decimal128(0, 2);
     auto right = new Decimal128(0, -1);
     auto result = *left * *right;
-    EXPECT_EQ(result.HighBits(), 1); // 1
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE);  // -2
+    EXPECT_EQ(result.HighBits(), 1);                 // 1
+    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE); // -2
 }
 
 TEST(Decimal128, divide_positive1)
@@ -142,13 +142,27 @@ TEST(Decimal128, divide_positive3)
     delete right;
 }
 
-TEST(Decimal128, divide_negate)
+TEST(Decimal128, divide_positive4)
 {
-    auto left = new Decimal128(-12, 2);
-    auto right = new Decimal128(0, 2);
+    auto left = new Decimal128(24, 5);
+    auto right = new Decimal128(12, 2);
     auto result = *left / *right;
-    EXPECT_EQ(result.HighBits(), 0x8000000000000005);
-    EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFF); // -1
+    EXPECT_EQ(result.HighBits(), 0);
+    EXPECT_EQ(result.LowBits(), 2);
+    result = *left % *right;
+    EXPECT_EQ(result.HighBits(), 0);
+    EXPECT_EQ(result.LowBits(), 1);
+    delete left;
+    delete right;
+}
+
+TEST(Decimal128, divide_positive5)
+{
+    auto left = new Decimal128(240, 5);
+    auto right = new Decimal128(12, 2);
+    auto result = *left / *right;
+    EXPECT_EQ(result.HighBits(), 0);
+    EXPECT_EQ(result.LowBits(), 19);
     delete left;
     delete right;
 }
@@ -229,7 +243,7 @@ TEST(Decimal128, compare_lt)
 {
     auto left = new Decimal128(12, 1);
     auto right = new Decimal128(12, 2);
-    auto result = *left <= *right;
+    auto result = *left < *right;
     EXPECT_EQ(result, true);
     delete left;
     delete right;

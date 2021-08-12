@@ -17,12 +17,12 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 public class Decimal128Vec extends DecimalVec {
     private static final int BYTES = Long.BYTES * 2;
 
-    public Decimal128Vec(int size, int precision, int scale) {
-        super(size, BYTES, new Decimal128VecType(precision, scale));
+    public Decimal128Vec(int size) {
+        super(size, BYTES, Decimal128VecType.DECIMAL128);
     }
 
-    public Decimal128Vec(VecAllocator allocator, int size, int precision, int scale) {
-        super(allocator, size, BYTES, new Decimal128VecType(precision, scale));
+    public Decimal128Vec(VecAllocator allocator, int size) {
+        super(allocator, size, BYTES, Decimal128VecType.DECIMAL128);
     }
 
     public Decimal128Vec(long nativeVector, VecType type) {

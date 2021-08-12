@@ -110,16 +110,16 @@ public class VecTypeSerializer {
                     return typeExt.setWidth(((VarcharVecType) type).getWidth());
                 }
                 break;
+            case OMNI_VEC_TYPE_DECIMAL64:
+                if (type instanceof Decimal64VecType) {
+                    return typeExt.setPrecision(((Decimal64VecType) type).getPrecision())
+                            .setScale(((Decimal64VecType) type).getScale());
+                }
+                break;
             case OMNI_VEC_TYPE_DECIMAL128:
                 if (type instanceof Decimal128VecType) {
                     return typeExt.setPrecision(((Decimal128VecType) type).getPrecision())
                             .setScale(((Decimal128VecType) type).getScale());
-                }
-                break;
-            case OMNI_VEC_TYPE_DECIMAL256:
-                if (type instanceof Decimal256VecType) {
-                    return typeExt.setPrecision(((Decimal256VecType) type).getPrecision())
-                            .setScale(((Decimal256VecType) type).getScale());
                 }
                 break;
             case OMNI_VEC_TYPE_DATE32:
@@ -160,10 +160,10 @@ public class VecTypeSerializer {
                 return VecType.INVALID;
             case OMNI_VEC_TYPE_VARCHAR:
                 return new VarcharVecType(typeExt.getWidth());
+            case OMNI_VEC_TYPE_DECIMAL64:
+                return new Decimal64VecType(typeExt.getPrecision(), typeExt.getScale());
             case OMNI_VEC_TYPE_DECIMAL128:
                 return new Decimal128VecType(typeExt.getPrecision(), typeExt.getScale());
-            case OMNI_VEC_TYPE_DECIMAL256:
-                return new Decimal256VecType(typeExt.getPrecision(), typeExt.getScale());
             case OMNI_VEC_TYPE_DATE32:
                 return new Date32VecType(typeExt.getDateUnit());
             case OMNI_VEC_TYPE_DATE64:

@@ -12,7 +12,7 @@ namespace omniruntime {
 namespace vec {
 class Decimal128Vector : public Vector {
 public:
-    Decimal128Vector(VectorAllocator *allocator, int32_t size, int32_t precision, int32_t scale);
+    Decimal128Vector(VectorAllocator *allocator, int32_t size);
 
     // inline for high performance.
     Decimal128 GetValue(int32_t index)
@@ -52,10 +52,6 @@ public:
 private:
     Decimal128Vector(Decimal128Vector *Decimal128Vector, int32_t size, int32_t positionOffset)
         : Vector(Decimal128Vector, size, positionOffset) {};
-
-    int32_t GetPrecision();
-
-    int32_t GetScale();
 
     static constexpr int32_t BYTES = sizeof(int64_t) + sizeof(int64_t);
 };

@@ -14,7 +14,7 @@ TEST(Decimal128Vector, SliceVector)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *originalVector = new Decimal128Vector(allocator, 10, 10, 2);
+    Decimal128Vector *originalVector = new Decimal128Vector(allocator, 10);
     for (int i = 0; i < originalVector->GetSize(); i++) {
         originalVector->SetValue(i, i * 2);
     }
@@ -50,7 +50,7 @@ TEST(Decimal128Vector, SetAndGetValue)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256, 10, 2);
+    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
     for (int i = 0; i < 256; i++) {
         vector->SetValue(i, i * 2);
     }
@@ -72,13 +72,13 @@ TEST(Decimal128Vector, SetValues)
     const int size = 5;
     int64_t values[size * 2] = {0, 1, 0, 3, 0, 4, 0, 6, 0, 7};
     int64_t *p = values;
-    Decimal128Vector *Decimal128Vector1 = new Decimal128Vector(allocator, size, 10, 2);
+    Decimal128Vector *Decimal128Vector1 = new Decimal128Vector(allocator, size);
     Decimal128Vector1->SetValues(0, p, size);
     for (int i = 0; i < size; i++) {
         EXPECT_TRUE(Decimal128Vector1->GetValue(i) == values[i * 2 + 1]);
     }
 
-    Decimal128Vector *Decimal128Vector2 = new Decimal128Vector(allocator, size, 10, 2);
+    Decimal128Vector *Decimal128Vector2 = new Decimal128Vector(allocator, size);
     Decimal128Vector2->SetValues(1, p + 2 * 2, 3);
     for (int i = 0; i < 3; i++) {
         EXPECT_TRUE(Decimal128Vector2->GetValue(i + 1) == values[(i + 2) * 2 + 1]);
@@ -128,7 +128,7 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256, 10, 2);
+    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
     long *value = new long[256];
     for (int i = 0; i < 256; i++) {
         value[i * 2] = 0;
@@ -151,7 +151,7 @@ TEST(Decimal128Vector, SetValuesWithOffset)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256, 10, 2);
+    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
     long *value = new long[256 * 2];
     for (int i = 0; i < 256; i++) {
         value[i * 2] = 0;
@@ -196,7 +196,7 @@ TEST(Decimal128Vector, SetValueNull)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256, 10, 2);
+    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
     for (int i = 0; i < 256; i++) {
         if (i % 5 == 0) {
             vector->SetValueNull(i);
@@ -222,7 +222,7 @@ TEST(Decimal128Vector, CopyPositions)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("Decimal128Vector");
     EXPECT_TRUE(allocator != nullptr);
 
-    Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4, 10, 2);
+    Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
     for (int i = 0; i < originalVector->GetSize(); i++) {
         originalVector->SetValue(i, i);
     }
@@ -248,7 +248,7 @@ TEST(Decimal128Vector, CopyRegion)
     VectorAllocator *allocator = manager.GetOrCreateAllocator("Decimal128Vector");
     EXPECT_TRUE(allocator != NULL);
 
-    Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4, 10, 2);
+    Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
     for (int i = 0; i < 4; i++) {
         originalVector->SetValue(i, i * 2);
     }
@@ -325,10 +325,10 @@ TEST(Decimal128Vector, PerformanceCompare)
     timer.end();
 
     // vector set value
-    Decimal128Vector Decimal128Vector(allocator, ROW_COUNT, 10, 2);
+    Decimal128Vector decimal128Vector(allocator, ROW_COUNT);
     timer.start("vector set value");
     for (int i = 0; i < ROW_COUNT; ++i) {
-        Decimal128Vector.SetValue(i, i);
+        decimal128Vector.SetValue(i, i);
     }
     timer.end();
 
@@ -343,7 +343,7 @@ TEST(Decimal128Vector, PerformanceCompare)
     // vector get value
     timer.start("vector get value");
     for (int i = 0; i < ROW_COUNT; ++i) {
-        Decimal128 value = Decimal128Vector.GetValue(i);
+        Decimal128 value = decimal128Vector.GetValue(i);
     }
     timer.end();
 

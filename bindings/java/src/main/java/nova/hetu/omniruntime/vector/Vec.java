@@ -99,7 +99,7 @@ public abstract class Vec implements Closeable {
      */
     public Vec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
         this(allocator, newVectorNative(allocator.getNativeAllocator(), capacityInBytes, size,
-                VecTypeSerializer.serializeSingle(type)), capacityInBytes, size, 0, type, true);
+                type.getId().ordinal()), capacityInBytes, size, 0, type, true);
     }
 
     /**
@@ -157,7 +157,7 @@ public abstract class Vec implements Closeable {
         this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
     }
 
-    private static native long newVectorNative(long allocator, int capacityInBytes, int size, String type);
+    private static native long newVectorNative(long allocator, int capacityInBytes, int size, int typeId);
 
     private static native void freeVectorNative(long allocator, long nativeVector);
 

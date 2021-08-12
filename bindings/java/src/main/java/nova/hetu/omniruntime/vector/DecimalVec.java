@@ -7,8 +7,6 @@ package nova.hetu.omniruntime.vector;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
-import java.nio.LongBuffer;
-
 import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
 
 /**
