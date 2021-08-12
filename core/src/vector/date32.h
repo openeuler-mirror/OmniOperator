@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ */
+
+#ifndef OMNI_RUNTIME_DATE32_H
+#define OMNI_RUNTIME_DATE32_H
+
+#include "date_base.h"
+
+namespace omniruntime {
+namespace vec {
+class Date32 : public BasicDate {
+public:
+    Date32(const Date32 &date) : Date32(date.value) {}
+
+    explicit Date32(int32_t value) : BasicDate(), value(value) {}
+
+    // Convert any integer value into a Date32.
+    template <typename T,
+        typename = typename std::enable_if<std::is_integral<T>::value && (sizeof(T) <= sizeof(int32_t)), T>::type>
+    constexpr Date32(T value) noexcept : Date32(static_cast<int32_t>(value))
+    { // NOLINT
+    }
+
+    ~Date32() {}
+
+    Date32 &operator = (const Date32 &right);
+
+    Date32 &operator += (const Date32 &right);
+
+    Date32 &operator -= (const Date32 &right);
+
+    bool operator == (const Date32 &right) const;
+
+    bool operator != (const Date32 &right) const;
+
+    bool operator < (const Date32 &right) const;
+
+    bool operator > (const Date32 &right) const;
+
+    bool operator <= (const Date32 &right) const;
+
+    bool operator >= (const Date32 &right) const;
+
+    int32_t Value() const
+    {
+        return value;
+    }
+
+private:
+    int32_t value;
+};
+Date32 operator + (const Date32 &left, const Date32 &right);
+
+Date32 operator - (const Date32 &left, const Date32 &right);
+}
+}
+#endif // OMNI_RUNTIME_DATE32_H

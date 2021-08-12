@@ -55,7 +55,8 @@ void VectorBatch::NewVectors(const int *types)
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType)types[colIndex];
         switch (types[colIndex]) {
-            case OMNI_VEC_TYPE_INT: {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }
@@ -101,7 +102,8 @@ void VectorBatch::NewVectors(const std::vector<VecType> &types)
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
         vectorTypes[colIndex] = (VecType)types[colIndex];
         switch (types[colIndex].GetId()) {
-            case OMNI_VEC_TYPE_INT: {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
                 SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }

@@ -33,6 +33,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
     int64_t nativeVector = 0;
     switch (vecType.GetId()) {
         case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
             nativeVector = reinterpret_cast<int64_t>(new IntVector(TransformAllocator(jAllocator), jValueCount));
             break;
         case OMNI_VEC_TYPE_LONG:
