@@ -106,7 +106,7 @@ public class VarcharVec extends VariableWidthVec {
         int dataLength = offsets[offsetsIndex + length] - offsets[offsetsIndex];
         // set offsets
         offsetsBuf.setIntArray((index + 1) * Integer.BYTES, newOffsets, Integer.BYTES,
-                newOffsets.length * Integer.BYTES);
+                (newOffsets.length - 1) * Integer.BYTES);
         // set data
         setData(startOffset, values, offsetInArray + offsets[offsetsIndex], dataLength);
         lastOffsetPosition = index + length - 1;
