@@ -4,8 +4,10 @@
  */
 #include <cmath>
 #include <cfloat>
+#include <gtest/gtest.h>
 #include "test_util.h"
 #include "../../src/vector/dictionary_vector.h"
+#include "../../src/vector/vector_types.h"
 
 using namespace omniruntime::vec;
 
@@ -82,25 +84,38 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
     for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
         switch (actualColumn->GetType().GetId()) {
             case OMNI_VEC_TYPE_INT: {
-                int32_t actual = ((IntVector *)actualColumn)->GetValue(i);
-                int32_t expect = ((IntVector *)expectColumn)->GetValue(i);
-                result = (actual == expect) & result;
+                int32_t actual = static_cast<IntVector *>(actualColumn)->GetValue(i);
+                int32_t expect = static_cast<IntVector *>(expectColumn)->GetValue(i);
+                result = (actual == expect);
                 break;
             }
             case OMNI_VEC_TYPE_LONG: {
-                int64_t actual = ((LongVector *)actualColumn)->GetValue(i);
-                int64_t expect = ((LongVector *)expectColumn)->GetValue(i);
-                result = (actual == expect) & result;
+                int64_t actual = static_cast<LongVector *>(actualColumn)->GetValue(i);
+                int64_t expect = static_cast<LongVector *>(expectColumn)->GetValue(i);
+                result = (actual == expect);
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                double actual = ((DoubleVector *)expectColumn)->GetValue(i);
-                double expect = ((DoubleVector *)expectColumn)->GetValue(i);
-                result = (std::fabs(actual - expect) <= DBL_EPSILON) & result;
+                double actual = static_cast<DoubleVector *>(actualColumn)->GetValue(i);
+                double expect = static_cast<DoubleVector *>(expectColumn)->GetValue(i);
+                result = (std::fabs(actual - expect) <= DBL_EPSILON);
                 break;
             }
             case OMNI_VEC_TYPE_DICTIONARY: {
-                result = ValueMatch((DictionaryVector *) actualColumn, (DictionaryVector *) expectColumn, i);
+                result = ValueMatch(static_cast<DictionaryVector *>(actualColumn),
+                    static_cast<DictionaryVector *>(expectColumn), i);
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                uint8_t *actual = nullptr;
+                int32_t actualLength = static_cast<VarcharVector *>(actualColumn)->GetValue(i, &actual);
+                uint8_t *expected = nullptr;
+                int32_t expectedLength = static_cast<VarcharVector *>(expectColumn)->GetValue(i, &expected);
+                if (actualLength != expectedLength || memcmp(actual, expected, actualLength) != 0) {
+                    result = false;
+                } else {
+                    result = true;
+                }
                 break;
             }
             default:
@@ -111,7 +126,170 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
         }
     }
 
-    return result;
+    return true;
+}
+
+
+VectorBatch *CreateVectorBatch(VecTypes &types, int32_t rowCount, ...)
+{
+    int32_t typesCount = types.GetSize();
+    VectorBatch *vectorBatch = std::make_unique<VectorBatch>(typesCount).release();
+    va_list args;
+    va_start(args, rowCount);
+    for (int32_t i = 0; i < typesCount; i++) {
+        VecType type = types.Get()[i];
+        switch (type.GetId()) {
+            case OMNI_VEC_TYPE_INT: {
+                IntVector *vector = std::make_unique<IntVector>(nullptr, rowCount).release();
+                int32_t *values = va_arg(args, int32_t *);
+                vector->SetValues(0, values, rowCount);
+                vectorBatch->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG: {
+                LongVector *vector = std::make_unique<LongVector>(nullptr, rowCount).release();
+                int64_t *values = va_arg(args, int64_t *);
+                vector->SetValues(0, values, rowCount);
+                vectorBatch->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                DoubleVector *vector = std::make_unique<DoubleVector>(nullptr, rowCount).release();
+                double *values = va_arg(args, double *);
+                vector->SetValues(0, values, rowCount);
+                vectorBatch->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                uint32_t width = static_cast<VarcharVecType &>(type).GetWidth();
+                VarcharVector *vector =
+                    std::make_unique<VarcharVector>(static_cast<VectorAllocator *>(nullptr), rowCount * width, rowCount)
+                        .release();
+                std::string *values = va_arg(args, std::string *);
+                for (int32_t j = 0; j < rowCount; j++) {
+                    vector->SetValue(j, reinterpret_cast<const uint8_t *>(values[j].c_str()), values[j].length());
+                }
+                vectorBatch->SetVector(i, vector);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    va_end(args);
+    return vectorBatch;
+}
+
+void AssertIntVectorEquals(IntVector *vector, int32_t *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        EXPECT_EQ(vector->GetValue(i), expectedValues[i]);
+    }
+}
+
+void AssertLongVectorEquals(LongVector *vector, int64_t *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        EXPECT_EQ(vector->GetValue(i), expectedValues[i]);
+    }
+}
+
+void AssertDoubleVectorEquals(DoubleVector *vector, double *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        EXPECT_TRUE(std::fabs(vector->GetValue(i) - expectedValues[i]) <= DBL_EPSILON);
+    }
+}
+
+void AssertVarcharVectorEquals(VarcharVector *vector, std::string *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        uint8_t *value = nullptr;
+        int32_t len = vector->GetValue(i, &value);
+        EXPECT_EQ(len, expectedValues[i].length());
+        EXPECT_TRUE(memcmp(value, expectedValues[i].c_str(), len) == 0);
+    }
+}
+
+void AssertDictionaryVectorIntEquals(DictionaryVector *vector, int32_t *values)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        ASSERT_EQ(vector->GetInt(i), values[i]);
+    }
+}
+
+void AssertDictionaryVectorLongEquals(DictionaryVector *vector, int64_t *values)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        ASSERT_EQ(vector->GetLong(i), values[i]);
+    }
+}
+
+void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
+{
+    Vector *dictionary = vector->GetDictionary();
+    switch (dictionary->GetType().GetId()) {
+        case omniruntime::vec::OMNI_VEC_TYPE_INT:
+            AssertDictionaryVectorIntEquals(vector, va_arg(args, int32_t *));
+            break;
+        case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+            AssertDictionaryVectorLongEquals(vector, va_arg(args, int64_t *));
+            break;
+        default:
+            break;
+    }
+}
+
+void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...)
+{
+    int32_t vectorCount = vectorBatch->GetVectorCount();
+    int32_t rowCount = vectorBatch->GetRowCount();
+    EXPECT_EQ(vectorCount, expectedVecCount);
+    EXPECT_EQ(rowCount, expectedRowCount);
+
+    va_list args;
+    va_start(args, expectedRowCount);
+    for (int32_t i = 0; i < vectorCount; i++) {
+        Vector *vector = vectorBatch->GetVectors()[i];
+        EXPECT_EQ(vector->GetSize(), expectedRowCount);
+        switch (vector->GetType().GetId()) {
+            case omniruntime::vec::OMNI_VEC_TYPE_INT:
+                AssertIntVectorEquals(dynamic_cast<IntVector *>(vector), va_arg(args, int32_t *));
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+                AssertLongVectorEquals(dynamic_cast<LongVector *>(vector), va_arg(args, int64_t *));
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+                AssertDoubleVectorEquals(dynamic_cast<DoubleVector *>(vector), va_arg(args, double *));
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+                AssertVarcharVectorEquals(dynamic_cast<VarcharVector *>(vector), va_arg(args, std::string *));
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY:
+                AssertDictionaryVectorEquals(dynamic_cast<DictionaryVector *>(vector), args);
+            default:
+                break;
+        }
+    }
+    va_end(args);
 }
 
 omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory)
@@ -125,7 +303,7 @@ omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory)
     if (jitContext == nullptr) {
         nativeOperator = operatorFactory->CreateOperator();
     } else {
-        opt_module operatorModule = (opt_module) (jitContext->func);
+        opt_module operatorModule = (opt_module)(jitContext->func);
         nativeOperator = operatorModule(operatorFactory);
     }
 #endif
@@ -138,44 +316,4 @@ void DeleteOperatorFactory(OperatorFactory *operatorFactory)
         delete operatorFactory->GetJitContext();
     }
     delete operatorFactory;
-}
-
-void PrintVecBatch(VectorBatch* vecBatch)
-{
-    int32_t vectorCount = vecBatch->GetVectorCount();
-    for (int32_t rowIdx = 0; rowIdx < vecBatch->GetVector(0)->GetSize(); ++rowIdx) {
-        for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
-            auto vecType = vecBatch->GetVector(colIdx)->GetType();
-            auto vector = vecBatch->GetVector(colIdx);
-            switch (vecType.GetId()) {
-                case OMNI_VEC_TYPE_INT: {
-                    IntVector* vec = (IntVector*)vector;
-                    std::cout << vec->GetValue(rowIdx) << "   ";
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    LongVector* vec = (LongVector*)vector;
-                    std::cout << vec->GetValue(rowIdx) << "   ";
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    DoubleVector* vec = (DoubleVector*)vector;
-                    std::cout << vec->GetValue(rowIdx) << "   ";
-                    break;
-                }
-                case OMNI_VEC_TYPE_CONTAINER: {
-                    ContainerVector* vec = reinterpret_cast<ContainerVector*>(vector);
-                    DoubleVector* doubleVec = reinterpret_cast<DoubleVector*>(vec->getValue(0));
-                    double avgVal = doubleVec->GetValue(rowIdx);
-                    LongVector* longVec = reinterpret_cast<LongVector*>(vec->getValue(1));
-                    int64_t avgCnt = longVec->GetValue(rowIdx);
-                    std::cout << avgVal << "/" << avgCnt << std::endl;
-                    break;
-                }
-                default:
-                    DebugError("Error vector type %d", vecType.GetId());
-            }
-        }
-        std::cout << std::endl;
-    }
 }

@@ -74,6 +74,11 @@ public class DictionaryVec extends Vec {
     }
 
     @Override
+    public boolean isNull(int index) {
+        return dictionary.isNull(ids[index]);
+    }
+
+    @Override
     public Vec slice(int start, int length) {
         return null;
     }

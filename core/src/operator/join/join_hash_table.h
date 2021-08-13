@@ -1,5 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: hash table implementations
  */
 #ifndef __JOIN_HASH_TABLE_H__
 #define __JOIN_HASH_TABLE_H__
@@ -36,7 +37,7 @@ public:
         int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns, int32_t allColumnsCount) const;
     int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
         omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
-    void GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const;
+    int32_t GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const;
     void Clear(int32_t partitionIndex);
 
 private:
@@ -73,7 +74,7 @@ public:
     int32_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
         int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns,
         int32_t allColumnsCount, int64_t rawHash) const;
-    void GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
+    int32_t GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
     void PrintHashTable(int32_t partitionIndex) const;
 
 private:
@@ -101,7 +102,7 @@ public:
         int64_t *totalHashCollisions) const;
     int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns,
         int32_t joinColumnsCount, int64_t rawHash) const;
-    void GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
+    int32_t GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
     int8_t *GetPositionToHashes() const
     {
         return positionToHashes;

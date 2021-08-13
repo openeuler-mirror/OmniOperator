@@ -80,7 +80,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscOneColumn)
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
 
-    PrintVecBatch(outputVecorBatchs[0]);
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
@@ -129,7 +129,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescOneColumn)
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
 
-    PrintVecBatch(outputVecorBatchs[0]);
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
@@ -192,7 +192,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNAscMultiColumn)
     expectVecorBatch->SetVector(1, expectCol2);
     expectVecorBatch->SetVector(2, expectCol3);
 
-    PrintVecBatch(outputVecorBatchs[0]);
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
 
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
@@ -256,7 +256,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumn)
     expectVecorBatch->SetVector(1, expectCol2);
     expectVecorBatch->SetVector(2, expectCol3);
 
-    PrintVecBatch(outputVecorBatchs[0]);
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
@@ -319,7 +319,7 @@ TEST(NativeOmniTopNOperatorTest, testTopNDescMultiColumnSortColumn1)
     expectVecorBatch->SetVector(1, expectCol2);
     expectVecorBatch->SetVector(2, expectCol3);
 
-    PrintVecBatch(outputVecorBatchs[0]);
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;

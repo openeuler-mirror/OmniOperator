@@ -82,14 +82,14 @@ void VarcharVector::GetData(int startOffset, uint8_t *dst, int start, int length
 
 void VarcharVector::SetData(int index, const uint8_t *value, int start, int length)
 {
-    if (value == nullptr) {
-        return;
-    }
     int startOffset = GetValueOffset(index);
     if (startOffset + length > capacityInBytes) {
         return;
     }
     SetValueOffset(index + 1, startOffset + length);
+    if (value == nullptr) {
+        return;
+    }
     char *data = reinterpret_cast<char *>(valuesAddress);
     errno_t ret = memcpy_s(data + startOffset, capacityInBytes, value + start, length);
     if (ret != EOK) {

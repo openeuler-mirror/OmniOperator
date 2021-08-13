@@ -115,10 +115,31 @@ WindowOperator::WindowOperator(vector<int32_t> &sourceTypes, int32_t typesCount,
     partition = nullptr;
 }
 
+VecTypes &GetVecTypes(std::vector<int32_t> &types)
+{
+    std::vector<VecType> vecTypes;
+    for (int32_t i = 0; i < types.size(); i++) {
+        switch (types[i]) {
+            case OMNI_VEC_TYPE_INT:
+                vecTypes.push_back(IntVecType());
+                break;
+            case OMNI_VEC_TYPE_LONG:
+                vecTypes.push_back(LongVecType());
+                break;
+            case OMNI_VEC_TYPE_DOUBLE:
+                vecTypes.push_back(DoubleVecType());
+                break;
+            default:
+                break;
+        }
+    }
+    return *(std::make_unique<VecTypes>(vecTypes).release());
+}
+
 OmniStatus WindowOperator::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    pagesIndex = std::move(make_unique<PagesIndex>(sourceTypes.data(), typesCount));
+    pagesIndex = std::move(make_unique<PagesIndex>(GetVecTypes(sourceTypes)));
     for (int32_t i = 0; i < windowFunctionCount; i++) {
         switch (windowFunctionTypes[i]) {
             case WIN_ROW_NUMBER:
@@ -176,7 +197,7 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     }
 
     // next, get output
-    int32_t maxRowCount = GetMaxRowCount(allTypes.data(), finalOutputCols, finalOutputColsCount);
+    int32_t maxRowCount = GetMaxRowCount(GetVecTypes(allTypes).Get(), finalOutputCols, finalOutputColsCount);
     int32_t outputPageCount = GetPageCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 

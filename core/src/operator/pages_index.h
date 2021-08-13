@@ -1,27 +1,29 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: pages index implementations
  */
 #ifndef __PAGES_INDEX_H__
 #define __PAGES_INDEX_H__
 
-#include "../vector/vector_batch.h"
-
 #include <stdint.h>
 #include <vector>
+#include "../vector/vector_type.h"
+#include "../vector/vector_batch.h"
+#include "../vector/vector_types.h"
 
 class PagesIndex {
 public:
-    PagesIndex(int32_t *types, int32_t typesCount);
+    explicit PagesIndex(const omniruntime::vec::VecTypes &types);
     ~PagesIndex();
     int32_t AddVecBatches(std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
     void Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
         const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to) const;
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
-        int32_t *sourceTypes, int32_t offset, int32_t length) const;
+        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
-    int32_t *GetTypes() const
+    const int32_t *GetTypes() const
     {
-        return types;
+        return vecTypeIds;
     }
     int32_t GetTypesCount() const
     {
@@ -42,7 +44,8 @@ public:
     }
 
 private:
-    int32_t *types;
+    const omniruntime::vec::VecType *vecTypes;
+    const int32_t *vecTypeIds;
     int32_t typesCount;
     omniruntime::vec::Vector ***columns; // Vector* [columnIndex][tableIndex]
     int64_t *valueAddresses;

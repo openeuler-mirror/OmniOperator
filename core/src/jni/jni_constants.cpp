@@ -5,6 +5,7 @@
 #include "jni_constants.h"
 #include "../operator/status.h"
 #include "src/operator/aggregation/aggregator.h"
+#include "src/operator/join/lookup_join.h"
 
 using namespace omniruntime::vec;
 
@@ -36,4 +37,11 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_MAX);
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_MIN);
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_DNV);
+
+    cls = env->FindClass("nova/hetu/omniruntime/constants/JoinType");
+    fieldName = "Lnova/hetu/omniruntime/constants/JoinType;";
+    DEFINE_CONSTANT(OMNI_JOIN_TYPE_INNER);
+    DEFINE_CONSTANT(OMNI_JOIN_TYPE_LEFT);
+    DEFINE_CONSTANT(OMNI_JOIN_TYPE_RIGHT);
+    DEFINE_CONSTANT(OMNI_JOIN_TYPE_FULL);
 }

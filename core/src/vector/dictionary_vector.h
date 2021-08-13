@@ -14,8 +14,6 @@ public:
 
     ~DictionaryVector()
     {
-        delete[] ids;
-        delete dictionary;
     }
 
     Vector *GetDictionary() const
@@ -43,9 +41,9 @@ public:
         return DictionaryVecType::Instance();
     }
 
-    int32_t GetInt(int32_t position);
+    int32_t GetInt(int32_t position) const;
 
-    int64_t GetLong(int32_t position);
+    int64_t GetLong(int32_t position) const;
 
     DictionaryVector *Slice(int positionOffset, int length) override;
 
@@ -56,7 +54,7 @@ public:
     void Append(Vector *other, int positionOffset, int length) override;
 
 private:
-    void InitIds(int32_t *ids, uint32_t idsCount, uint32_t maxIdsCount);
+    void InitIds(int32_t *ids, uint32_t idsCount);
     Vector *dictionary;
     int32_t *ids;
     uint32_t idsCount;

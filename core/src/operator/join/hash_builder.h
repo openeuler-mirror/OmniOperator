@@ -1,5 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: hash builder implementations
  */
 #ifndef __HASH_BUILDER_H__
 #define __HASH_BUILDER_H__
@@ -14,13 +15,13 @@ namespace omniruntime {
 namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
-    HashBuilderOperatorFactory(const int32_t *buildTypes, int32_t buildTypesCount, const int32_t *buildOutputCols,
+    HashBuilderOperatorFactory(const vec::VecTypes &buildTypes, const int32_t *buildOutputCols,
         int32_t buildOutputColsCount, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     int32_t Init();
     ~HashBuilderOperatorFactory() override;
-    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const int32_t *buildTypes,
-        int32_t buildTypesCount, const int32_t *buildOutputCols, int32_t buildOutputColsCount,
-        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const vec::VecTypes &vecTypes,
+        const int32_t *buildOutputCols, int32_t buildOutputColsCount, const int32_t *buildHashCols,
+        int32_t buildHashColsCount, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
     JoinHashTables *GetHashTables() const
     {
@@ -28,7 +29,7 @@ public:
     }
 
 private:
-    std::vector<int32_t> buildTypes;
+    std::unique_ptr<vec::VecTypes> buildTypes;
     std::vector<int32_t> buildOutputCols;
     std::vector<int32_t> buildHashCols;
     JoinHashTables *hashTables;
@@ -38,17 +39,16 @@ private:
 
 class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(std::vector<int32_t> &buildTypes, const std::vector<int32_t> &buildOutputCols,
+    HashBuilderOperator(const vec::VecTypes &buildTypes, const std::vector<int32_t> &buildOutputCols,
         std::vector<int32_t> &buildHashCols, JoinHashTables *hashTables, int32_t partitionIndex,
         std::unique_ptr<PagesIndex> &pagesIndex);
     ~HashBuilderOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
-    int32_t *GetSourceTypes() override;
-    OmniStatus Close() override;
+    const int32_t *GetSourceTypes() override;
 
 private:
-    std::vector<int32_t> buildTypes;
+    const vec::VecTypes &buildTypes;
     std::vector<int32_t> buildHashCols;
     std::unique_ptr<PagesIndex> pagesIndex;
     int32_t partitionIndex;

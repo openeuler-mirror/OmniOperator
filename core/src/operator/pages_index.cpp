@@ -1,5 +1,6 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: pages index implementations
  */
 #include "pages_index.h"
 #include "optimization.h"
@@ -22,20 +23,22 @@ void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32
 IntVector *ConstructInt32Vector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
 LongVector *ConstructInt64Vector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
 DoubleVector *ConstructDoubleVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
+VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+    uint32_t width);
 
 int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to, int32_t len);
 
 // function implements for class PagesIndex
-PagesIndex::PagesIndex(int32_t *types, int32_t typesCount)
-{
-    this->types = types;
-    this->typesCount = typesCount;
-    this->columns = nullptr;
-    this->valueAddresses = nullptr;
-    this->positionCount = 0;
-}
+PagesIndex::PagesIndex(const omniruntime::vec::VecTypes &types)
+    : vecTypes(types.Get().data()),
+      vecTypeIds(types.GetIds()),
+      typesCount(types.GetSize()),
+      columns(nullptr),
+      valueAddresses(nullptr),
+      positionCount(0)
+{}
 
 // return error number
 int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
@@ -78,19 +81,19 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, cons
 
 SPECIALIZE(OMNIJIT_PAGE_INDEX_GET_OUTPUT)
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
-    int32_t *sourceTypes, int32_t offset, int32_t length) const
+    const int32_t *sourceTypes, int32_t offset, int32_t length) const
 {
     Vector ***inputVecBatches = this->columns;
     int64_t *valueAddresses = this->valueAddresses;
 
     int32_t outputCol = 0;
-    int colType = 0;
+    int colTypeId = 0;
     for (int32_t j = 0; j < outputColsCount; j++) {
         outputCol = outputCols[j];
-        colType = sourceTypes[outputCol];
+        colTypeId = sourceTypes[outputCol];
         Vector **inputVecBatch = inputVecBatches[outputCol];
 
-        switch (colType) {
+        switch (colTypeId) {
             case OMNI_VEC_TYPE_INT: {
                 IntVector *intVector = ConstructInt32Vector(valueAddresses, offset, length, inputVecBatch);
                 outputVecBatch->SetVector(j, intVector);
@@ -104,6 +107,13 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             case OMNI_VEC_TYPE_DOUBLE: {
                 DoubleVector *doubleVector = ConstructDoubleVector(valueAddresses, offset, length, inputVecBatch);
                 outputVecBatch->SetVector(j, doubleVector);
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                auto vecType = (VarcharVecType &)vecTypes[outputCol];
+                VarcharVector *varcharVector =
+                    ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch, vecType.GetWidth());
+                outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
             default:
@@ -440,4 +450,34 @@ DoubleVector *ConstructDoubleVector(int64_t *valueAddresses, int32_t offset, int
         outputValues[outputIndex++] = inputValues[position];
     }
     return doubleVector;
+}
+
+VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+    uint32_t width)
+{
+    int32_t preTableIndex = -1;
+    int64_t valueAddress = 0;
+    VarcharVector *inputColumn = nullptr;
+    int32_t pageIndex = 0;
+    int32_t position = 0;
+
+    VarcharVector *varcharVector =
+        std::make_unique<VarcharVector>(static_cast<VectorAllocator *>(nullptr), length * width, length).release();
+
+    int32_t start = offset;
+    int32_t end = offset + length;
+    int32_t outputIndex = 0;
+    for (int32_t i = start; i < end; i++) {
+        valueAddress = valueAddresses[i];
+        pageIndex = DecodeSliceIndex(valueAddress);
+        position = DecodePosition(valueAddress);
+        if (preTableIndex != pageIndex) {
+            inputColumn = static_cast<VarcharVector *>(inputVecBatch[pageIndex]);
+            preTableIndex = pageIndex;
+        }
+        uint8_t *value = nullptr;
+        int32_t valueLength = inputColumn->GetValue(position, &value);
+        varcharVector->SetValue(outputIndex++, value, valueLength);
+    }
+    return varcharVector;
 }

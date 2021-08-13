@@ -1,38 +1,40 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: sort implementations
  */
 #ifndef __SORT_H__
 #define __SORT_H__
 
-#include "../operator_factory.h"
-#include "../pages_index.h"
-
 #include <vector>
 #include <memory>
+#include "../operator_factory.h"
+#include "../pages_index.h"
+#include "../../vector/vector_types.h"
+#include "../../vector/vector_type.h"
 
 namespace omniruntime {
 namespace op {
 class SortOperatorFactory : public OperatorFactory {
 public:
-    SortOperatorFactory(int32_t *sourceTypes, int32_t sourceTypeCount, int32_t *outputCols, int32_t outputColCount,
-        int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
+    SortOperatorFactory(const vec::VecTypes &vecTypes, int32_t *outputCols, int32_t outputColCount, int32_t *sortCols,
+        int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~SortOperatorFactory() override;
 
-    static SortOperatorFactory *CreateSortOperatorFactory(int32_t *sourceTypes, int32_t sourceTypeCount,
-        int32_t *outputCols, int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings,
-        int32_t *sortNullFirsts, int32_t sortColCount);
+    static SortOperatorFactory *CreateSortOperatorFactory(const vec::VecTypes &vecTypes, int32_t *outputCols,
+        int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortColCount);
 
     Operator *CreateOperator() override;
 
     int32_t *GetSourceTypes()
     {
-        return sourceTypes.data();
+        return const_cast<int32_t *>(sourceTypes->GetIds());
     }
 
     int32_t GetSourceTypeCount()
     {
-        return sourceTypes.size();
+        return sourceTypes->GetSize();
     }
 
     int32_t *GetOutputCols()
@@ -66,7 +68,7 @@ public:
     }
 
 private:
-    std::vector<int32_t> sourceTypes;
+    std::unique_ptr<vec::VecTypes> sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
@@ -75,7 +77,7 @@ private:
 
 class SortOperator : public Operator {
 public:
-    SortOperator(std::vector<int32_t> &sourceTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
+    SortOperator(const vec::VecTypes &vecTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
         std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts);
 
     ~SortOperator() override;
@@ -86,7 +88,7 @@ public:
 
     int32_t GetTypescount()
     {
-        return sourceTypes.size();
+        return sourceTypes.GetSize();
     }
 
     int32_t *GetOutputCols()
@@ -125,7 +127,7 @@ public:
     }
 
 private:
-    std::vector<int32_t> sourceTypes;
+    const vec::VecTypes &sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
@@ -134,7 +136,7 @@ private:
     std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
 };
 
-int32_t GetMaxRowCount(const int32_t *sourceTypes, const int32_t *outputCols, int32_t outputColsCount);
+int32_t GetMaxRowCount(const std::vector<vec::VecType> &vecTypes, const int32_t *outputCols, int32_t outputColsCount);
 int32_t GetPageCount(int32_t positionCount, int32_t maxRowCount);
 } // end of namespace op
 } // end of namespace omniruntime

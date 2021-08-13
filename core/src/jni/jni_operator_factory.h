@@ -92,11 +92,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory
  * Method:    createLookupJoinOperatorFactory
- * Signature: ([I[I[I[I[IJ)J
+ * Signature: ([I[I[I[I[IIJ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *,
-    jobject, jstring, jintArray, jintArray, jintArray, jstring, jlong);
+    jobject, jstring, jintArray, jintArray, jintArray, jstring, jint, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_partitionedoutput_PartitionedOutputOperatorFactory

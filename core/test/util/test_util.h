@@ -5,10 +5,11 @@
 #ifndef __TEST_UTIL_H__
 #define __TEST_UTIL_H__
 
+#include <time.h>
 #include "../../src/vector/vector_common.h"
 #include "../../src/operator/operator.h"
 #include "../../src/operator/operator_factory.h"
-#include <time.h>
+#include "../../src/vector/vector_types.h"
 
 const int32_t PARAM_OFFSET_0 = 0;
 const int32_t PARAM_OFFSET_1 = 1;
@@ -19,8 +20,13 @@ const int32_t PARAM_OFFSET_5 = 5;
 const int32_t PARAM_OFFSET_6 = 6;
 
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
+omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::vec::VecTypes &types, int32_t rowCount, ...);
+void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...);
+void AssertIntVectorEquals(omniruntime::vec::IntVector *vector, int32_t *expectedValues);
+void AssertLongVectorEquals(omniruntime::vec::LongVector *vector, int64_t *expectedValues);
+void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *expectedValues);
+void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::string *expectedValues);
 
-void PrintVecBatch(omniruntime::vec::VectorBatch* vecBatch);
 
 omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory);
 void DeleteOperatorFactory(OperatorFactory *operatorFactory);

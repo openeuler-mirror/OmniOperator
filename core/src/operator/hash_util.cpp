@@ -1,16 +1,20 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: hash util implementations
  */
 #include "hash_util.h"
 #include <stdint.h>
 #include <math.h>
 
+namespace {
 const int64_t PRIME64_1 = 0x9E3779B185EBCA87L;
 const int64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
 const int64_t PRIME64_3 = 0x165667B19E3779F9L;
 const int64_t PRIME64_4 = 0x85EBCA77C2b2AE63L;
 const int64_t PRIME64_5 = 0x27D4EB2F165667C5L;
 const int32_t MAX_ARRAY_SIZE = 1073741824;
+const int32_t UPDATE_BODY_LENGTH = 32;
+}
 
 int64_t NextPowerOfTwo(int64_t x);
 int32_t HashUtil::HashArraySize(int32_t expected, float f)
@@ -52,21 +56,21 @@ int64_t RotateLeft(int64_t i, int32_t distance)
 // for hashing a real data value
 // from AbstractLongType#hash()
 // for type double, how to convert double value to long value?
-int64_t HashUtil::HashValue(uint64_t value)
+int64_t HashUtil::HashValue(int64_t value)
 {
     return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
 }
 
 int64_t Reverse(int64_t rawHash);
-int64_t UpdateTail(int64_t hash, int64_t value);
-int64_t FinalShuffle(int64_t hash);
+int64_t XxHash64UpdateTail(int64_t hash, int64_t value);
+int64_t XxHash64FinalShuffle(int64_t hash);
 
-int32_t HashUtil::GetRawHashPartition(uint64_t rawHash, uint32_t mask)
+int32_t HashUtil::GetRawHashPartition(int64_t rawHash, int32_t mask)
 {
     int64_t value = Reverse(rawHash);
     int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
-    hash = UpdateTail(hash, value);
-    hash = FinalShuffle(hash);
+    hash = XxHash64UpdateTail(hash, value);
+    hash = XxHash64FinalShuffle(hash);
 
     return static_cast<int32_t>(hash) & mask;
 }
@@ -101,18 +105,38 @@ int64_t Reverse(int64_t rawHash)
     return rawHash;
 }
 
-int64_t Mix(int64_t current, int64_t value)
+int64_t XxHash64Mix(int64_t current, int64_t value)
 {
     return RotateLeft(current + value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
 }
 
-int64_t UpdateTail(int64_t hash, int64_t value)
+int64_t XxHash64UpdateTail(int64_t hash, int64_t value)
 {
-    int64_t temp = hash ^ Mix(0, value);
+    int64_t temp = hash ^ XxHash64Mix(0, value);
     return RotateLeft(temp, ROTATE_DISTANCE_27) * PRIME64_1 + PRIME64_4;
 }
 
-int64_t FinalShuffle(int64_t hash)
+int64_t XxHash64UpdateTail(int64_t hash, int32_t value)
+{
+    int64_t unsignedValue = value & 0xFFFFFFFFL;
+    int64_t temp = hash ^ (unsignedValue * PRIME64_1);
+    return RotateLeft(temp, ROTATE_DISTANCE_23) * PRIME64_2 + PRIME64_3;
+}
+
+int64_t XxHash64UpdateTail(int64_t hash, int8_t value)
+{
+    int32_t unsignedValue = value & 0xFF;
+    int64_t temp = hash ^ (unsignedValue * PRIME64_5);
+    return RotateLeft(temp, ROTATE_DISTANCE_11) * PRIME64_1;
+}
+
+int64_t XxHash64Update(int64_t hash, int64_t value)
+{
+    int64_t temp = hash ^ XxHash64Mix(0, value);
+    return temp * PRIME64_1 + PRIME64_4;
+}
+
+int64_t XxHash64FinalShuffle(int64_t hash)
 {
     uint64_t hashValue = static_cast<uint64_t>(hash) >> ROTATE_DISTANCE_33;
     hash ^= static_cast<int64_t>(hashValue);
@@ -126,4 +150,52 @@ int64_t FinalShuffle(int64_t hash)
     hash ^= static_cast<int64_t>(hashValue);
 
     return hash;
+}
+
+int64_t XxHash64UpdateTail(int64_t hash, int8_t *address, int index, int length)
+{
+    while (index < length) {
+        hash = XxHash64UpdateTail(hash, address[index]);
+        index++;
+    }
+    hash = XxHash64FinalShuffle(hash);
+    return hash;
+}
+
+int64_t XxHash64UpdateBody(int64_t seed, int8_t *address, int32_t length)
+{
+    int64_t v1 = seed + PRIME64_1 + PRIME64_2;
+    int64_t v2 = seed + PRIME64_2;
+    int64_t v3 = seed;
+    int64_t v4 = seed - PRIME64_1;
+
+    int64_t hash = RotateLeft(v1, ROTATE_DISTANCE_1) + RotateLeft(v2, ROTATE_DISTANCE_7) +
+        RotateLeft(v3, ROTATE_DISTANCE_12) + RotateLeft(v4, ROTATE_DISTANCE_18);
+
+    hash = XxHash64Update(hash, v1);
+    hash = XxHash64Update(hash, v2);
+    hash = XxHash64Update(hash, v3);
+    hash = XxHash64Update(hash, v4);
+
+    return hash;
+}
+
+int64_t XxHash64Hash(int64_t seed, int8_t *data, int32_t offset, int32_t length)
+{
+    int8_t *address = data + offset;
+    int64_t hash = 0;
+    if (length >= UPDATE_BODY_LENGTH) {
+        hash = XxHash64UpdateBody(seed, address, length);
+    } else {
+        hash = seed + PRIME64_5;
+    }
+    hash += length;
+
+    int index = length & 0xFFFFFFE0;
+    return XxHash64UpdateTail(hash, address, index, length);
+}
+
+int64_t HashUtil::HashValue(int8_t *value, int32_t length)
+{
+    return XxHash64Hash(DEFAULT_SEED, value, 0, length);
 }
