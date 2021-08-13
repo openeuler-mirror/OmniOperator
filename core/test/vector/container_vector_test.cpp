@@ -62,11 +62,11 @@ TEST(ContainerVector, setAndGetValue)
     vectorAddresses[1] = longVector;
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
         const_cast<VecType *>(VECTOR_TYPES));
-    for (int i = 0; i < POSITION_COUNT; i++) {
+    for (int i = 0; i < VECTOR_COUNT; i++) {
         vector->setValue(i, i * 2);
     }
 
-    for (int i = 0; i < POSITION_COUNT; i++) {
+    for (int i = 0; i < VECTOR_COUNT; i++) {
         EXPECT_EQ(vector->getValue(i), i * 2);
     }
     delete vector;
