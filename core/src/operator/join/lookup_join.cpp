@@ -431,7 +431,7 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
         // probeIndices are discrete
         ConstructProbeColumnsFromPositions(vectorBatch, probeAllColumns, probeTypes, probeOutputCols,
             probeOutputColsCount, probeIndex, position, rowCount);
-    } else if (probeLength == probeAllColumns[probeOutputCols[0]]->GetSize()) {
+    } else if ((probeLength == probeAllColumns[probeOutputCols[0]]->GetSize()) && (probeLength == rowCount)) {
         // probeIndices are a simple covering of the vector
         ConstructProbeColumnsFromReuse(vectorBatch, probeAllColumns, probeOutputCols, probeOutputColsCount);
     } else {
