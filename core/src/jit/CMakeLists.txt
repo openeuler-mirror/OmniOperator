@@ -2,6 +2,7 @@ set(JIT_LIST
         jit.cpp
         config.cpp
         specialization.cpp
+        compiler/library_loader.cpp
         compiler/llvm_compiler.cpp
         compiler/harden_optimizer.cpp)
 set(JIT_TARGET jit)

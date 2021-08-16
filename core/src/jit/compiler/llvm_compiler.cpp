@@ -85,23 +85,21 @@ namespace omniruntime {
             return true;
         }
 
+        LibraryLoader LLVMCompiler::ll;
+
         void LLVMCompiler::LoadExtraLibraries()
         {
             using namespace llvm::sys;
-
-            bool loaded = false;
-            // TODO: find a better way to load this lib, it differs on different platform
-            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so");
-            if (!loaded) {
-                llvm::errs() << "Failed to load c++ lib\n";
-            }
-            loaded = !DynamicLibrary::LoadLibraryPermanently("/usr/local/lib/libjemalloc.so.2");
-            if (!loaded) {
-                llvm::errs() << "Failed to load jemalloc lib\n";
-            }
-            loaded = !DynamicLibrary::LoadLibraryPermanently("/opt/lib/libvector.so");
-            if (!loaded) {
-                llvm::errs() << "Failed to load vector lib\n";
+            StringOrNull ev = std::getenv("LD_LIBRARY_PATH");
+            auto vec = ll.LoadLibraries(ev.msg());
+            string err;
+            for (auto& s : vec) {
+                if (DynamicLibrary::LoadLibraryPermanently(s.c_str(), &err)) {
+                    llvm::errs() << "Failed to load core library at path " << s << "\n";
+                    llvm::errs() << err << "\n";
+                } else {
+                    std::cout << "Successfully loaded core library at path " << s << std::endl;
+                }
             }
         }
 

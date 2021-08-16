@@ -4,6 +4,7 @@
 #ifndef __OMNI_JIT_LLVM_COMPILER_H__
 #define __OMNI_JIT_LLVM_COMPILER_H__
 
+#include "library_loader.h"
 #include "./compiler.h"
 #include "../config.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
@@ -42,6 +43,8 @@ namespace omniruntime {
             std::string createOperatorSymbol;
 
             llvm::orc::LLJIT *jitter;
+
+            static LibraryLoader ll;
 
             static void LoadExtraLibraries();
 
