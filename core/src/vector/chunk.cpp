@@ -6,17 +6,12 @@
 //
 
 #include "chunk.h"
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
 #include "../memory/memory_pool.h"
 
 namespace omniruntime {
 namespace vec {
 Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes))
-{
-    if (memset_s(address, sizeInBytes, 0, sizeInBytes) != EOK) {
-        return;
-    }
-}
+{}
 
 Chunk::~Chunk()
 {
