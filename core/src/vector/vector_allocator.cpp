@@ -3,6 +3,7 @@
  */
 
 #include "vector_allocator.h"
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 namespace omniruntime {
 namespace vec {
@@ -16,10 +17,24 @@ VectorReference *VectorAllocator::NewVector(int capacityInBytes, int size, VecTy
 {
     Chunk *values = new Chunk(capacityInBytes);
     Chunk *valueNulls = new Chunk(size);
+    if (memset_s(valueNulls->GetAddress(), size, 0, size) != EOK) {
+        std::cerr << "init value nulls failed." << std::endl;
+        delete values;
+        delete valueNulls;
+        return nullptr;
+    }
     Chunk *valueOffsets = nullptr;
     if (IsVariableWidthType(type.GetId())) {
         // 4-byte length storage variable length type offset
-        valueOffsets = new Chunk((size + 1) * sizeof(int32_t));
+        int offsetSizeInBytes = (size + 1) * sizeof(int32_t);
+        valueOffsets = new Chunk(offsetSizeInBytes);
+        if (memset_s(valueOffsets->GetAddress(), offsetSizeInBytes, 0, offsetSizeInBytes) != EOK) {
+            std::cerr << "init value offsets failed." << std::endl;
+            delete values;
+            delete valueNulls;
+            delete valueOffsets;
+            return nullptr;
+        }
     }
     return new VectorReference(values, valueNulls, valueOffsets, type);
 }
