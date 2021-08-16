@@ -24,17 +24,16 @@ public:
 
     int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
 
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch*>& data) override;
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
-    explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators) : AggregationCommonOperator(std::move(aggregators), true, false)
+    explicit HashAggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggregators)
+        : AggregationCommonOperator(std::move(aggregators), true, false)
     {}
 
     OmniStatus Close() override;
 
-    ~HashAggregationOperator() override
-    {
-        Close();
-    }
+    ~HashAggregationOperator() override {}
+
     void PreLoop(omniruntime::vec::VectorBatch *vecBatch);
 
     void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum,
@@ -44,13 +43,13 @@ public:
     void PostLoop(omniruntime::vec::VectorBatch *vecBatch) const;
 
 private:
-    int32_t GetRowSize(std::vector<int32_t>& types, int32_t columnCount);
+    int32_t GetRowSize(std::vector<int32_t> &types, int32_t columnCount);
 
     void FillGroupByVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
         RowIterator &rowIterator, int32_t rowCount);
 
-    void FillAggVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
-        RowIterator &rowIterator, int32_t rowCount);
+    void FillAggVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex, RowIterator &rowIterator,
+        int32_t rowCount);
 
 private:
     friend class HashAggregationOperatorFactory;
@@ -70,11 +69,13 @@ public:
           aggColContext(aggCol),
           aggTypeContext(aggType),
           aggFuncTypeContext(aggFuncType),
-          AggregationCommonOperatorFactory(inputRaw, outputPartial) {}
+          AggregationCommonOperatorFactory(inputRaw, outputPartial)
+    {}
 
     ~HashAggregationOperatorFactory() override {}
     OmniStatus Init() override;
     OmniStatus Close() override;
+
 private:
     PrepareContext groupByColContext;
     std::vector<uint32_t> groupByColIdx;
