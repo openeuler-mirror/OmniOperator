@@ -107,6 +107,15 @@ JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFactory_createPartitionedOperatorFactory(
     JNIEnv *env, jobject, jstring, jboolean, jint, jintArray, jint, jintArray);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_union_UnionOperatorFactory
+ * Method:    CreateUnionOperatorFactory
+ * Signature: ([IZI[II[I)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_union_OmniUnionOperatorFactory_createUnionOperatorFactory(
+        JNIEnv *env, jobject, jstring, jboolean);
+
 #ifdef __cplusplus
 }
 #endif

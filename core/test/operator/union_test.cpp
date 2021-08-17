@@ -1,0 +1,56 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+#include "gtest/gtest.h"
+#include "../../src/operator/union/union.h"
+#include <vector>
+#include "../../src/vector/vector_helper.h"
+#include "../util/test_util.h"
+
+using namespace omniruntime::op;
+using namespace omniruntime::vec;
+using namespace std;
+
+TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
+{
+    //construct data;
+    const int32_t DATA_SIZE = 6;
+    //table1
+    int32_t data1[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    //table2
+    int32_t data3[DATA_SIZE] = {10, 11, 12, 10, 11, 12};
+    double data4[DATA_SIZE] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1};
+
+    std::vector<VecType> types = { IntVecType::Instance(),  DoubleVecType::Instance() };
+    VecTypes sourceTypes(types);
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE, data1, data2);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, DATA_SIZE, data3, data4);
+
+    UnionOperatorFactory *operatorFactory = UnionOperatorFactory::CreateUnionOperatorFactory(
+        sourceTypes, sourceTypes.GetSize(),false);
+    operatorFactory->SetJitContext(nullptr);
+    UnionOperator *unionOperator = dynamic_cast<UnionOperator *>(CreateTestOperator(operatorFactory));
+    unionOperator->AddInput(vecBatch1);
+    unionOperator->AddInput(vecBatch2);
+    std::vector<VectorBatch *> outputVecBatches;
+    unionOperator->GetOutput(outputVecBatches);
+
+    int32_t expData1[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
+    double expData2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int32_t expData3[DATA_SIZE] = {10, 11, 12, 10, 11, 12};
+    double expData4[DATA_SIZE] = {16.6, 15.5, 14.4, 13.3, 12.2, 11.1};
+    VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, DATA_SIZE, expData1, expData2);
+    VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, DATA_SIZE, expData3, expData4);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
+
+    VectorHelper::FreeVecBatch(expVecBatch1);
+    VectorHelper::FreeVecBatch(expVecBatch2);
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    delete unionOperator;
+    DeleteOperatorFactory(operatorFactory);
+}
