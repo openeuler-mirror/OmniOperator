@@ -107,6 +107,10 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 outputVecBatch->SetVector(j,
                     ConstructVector<DoubleVector, double>(valueAddresses, offset, length, inputVecBatch));
                 break;
+            case OMNI_VEC_TYPE_BOOLEAN:
+                outputVecBatch->SetVector(j,
+                    ConstructVector<BooleanVector, bool>(valueAddresses, offset, length, inputVecBatch));
+                break;
             case OMNI_VEC_TYPE_VARCHAR: {
                 auto vecType = (VarcharVecType &)vecTypes[outputCol];
                 VarcharVector *varcharVector =

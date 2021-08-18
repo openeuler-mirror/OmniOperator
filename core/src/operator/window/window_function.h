@@ -51,8 +51,8 @@ private:
 
 class WindowFunction {
 public:
-    WindowFunction() {};
-    ~WindowFunction() {};
+    WindowFunction() = default;
+    ~WindowFunction() = default;
     virtual void Reset(WindowIndex *windowIndex) {};
     virtual void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart,
         int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
@@ -60,12 +60,12 @@ public:
 
 class RankingWindowFunction : public WindowFunction {
 public:
-    void Reset(WindowIndex *windowIndex) override;
-    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart,
-        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
+    void Reset(WindowIndex *pWindowIndex) override;
+    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+        int32_t frameStart, int32_t frameEnd) override;
     virtual void Reset() {};
-    virtual void ProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
-        int32_t currentPosition) {};
+    virtual void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup,
+        int32_t peerGroupCount, int32_t currentPositionIndex) {};
     RankingWindowFunction();
     ~RankingWindowFunction();
 
@@ -82,8 +82,8 @@ public:
     RankFunction();
     ~RankFunction();
     void Reset() override;
-    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
-        int32_t currentPosition) override;
+    void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
 
 private:
     long rank;
@@ -92,19 +92,20 @@ private:
 
 class RowNumberFunction : public RankingWindowFunction {
 public:
-    RowNumberFunction() {};
-    ~RowNumberFunction() {};
-    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
-        int32_t currentPosition) override;
+    RowNumberFunction() = default;
+    ~RowNumberFunction() = default;
+    void RankingProcessRow(omniruntime::vec::Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) override;
 };
 
 class AggregateWindowFunction : public WindowFunction {
 public:
-    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, int32_t dataType);
+    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
+        const omniruntime::vec::VecType &dataType);
     ~AggregateWindowFunction();
-    void Reset(WindowIndex *windowIndex) override;
-    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart,
-        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
+    void Reset(WindowIndex *pWindowIndex) override;
+    void ProcessRow(omniruntime::vec::Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+        int32_t frameStart, int32_t frameEnd) override;
     void ResetAccumulator();
 
 private:
@@ -113,13 +114,14 @@ private:
     int32_t aggregationType;
     int32_t currentStart;
     int32_t currentEnd;
-    int32_t dataType;
-    omniruntime::op::Aggregator *aggregator;
+    const omniruntime::vec::VecType &dataType;
+    std::unique_ptr<omniruntime::op::Aggregator> aggregator;
 
-    void EvaluateFinal(omniruntime::op::Aggregator *pAggregator, omniruntime::vec::Vector *pColumn,
+    void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, omniruntime::vec::Vector *pColumn,
         int32_t index) const;
     void Accumulate(int32_t start, int32_t end);
 
-    omniruntime::vec::Vector *InitVector(int rowCount);
+    void AccumulateData(int32_t start, omniruntime::vec::Vector *resultVector, int32_t position,
+        int32_t vectorPosition, omniruntime::vec::Vector *originalVector);
 };
 #endif

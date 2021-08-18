@@ -18,7 +18,7 @@ public:
         this->end = end;
     }
 
-    ~Range() {}
+    ~Range() = default;
 
     int32_t GetStart() const
     {
@@ -53,16 +53,15 @@ public:
         return currentPosition < partitionEnd;
     }
 
-    void ProcessNextRow(omniruntime::vec::VectorBatch *vecBatch, int32_t index,
-        int32_t *sourceTypes, int32_t typesCount);
+    void ProcessNextRow(omniruntime::vec::VectorBatch *vecBatch, int32_t index);
 
     void UpdatePeerGroup();
 
-    Range *GetFrameRange()
+    std::unique_ptr<Range> GetFrameRange()
     {
         int32_t rowPosition = currentPosition - partitionStart;
         int32_t endPosition = partitionEnd - partitionStart - 1;
-        return std::make_unique<Range>(0, peerGroupEnd - partitionStart - 1).release();
+        return std::make_unique<Range>(0, peerGroupEnd - partitionStart - 1);
     }
 
 private:
@@ -76,7 +75,7 @@ private:
     int32_t peerGroupStart;
     int32_t peerGroupEnd;
     std::vector<WindowFunction *> windowFunctions;
-    WindowIndex *windowIndex;
+    std::unique_ptr<WindowIndex> windowIndex;
 };
 
 bool PositionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partitionHashStrategy, int32_t leftPosition,

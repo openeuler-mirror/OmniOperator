@@ -85,47 +85,52 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
         if (actualColumn->IsValueNull(i) != expectColumn->IsValueNull(i)) {
             return false;
         }
-        switch (actualColumn->GetType().GetId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
-                result = (static_cast<IntVector *>(actualColumn)->GetValue(i) ==
-                    static_cast<IntVector *>(expectColumn)->GetValue(i));
-                break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
-                result = (static_cast<LongVector *>(actualColumn)->GetValue(i) ==
-                    static_cast<LongVector *>(expectColumn)->GetValue(i));
-                break;
-            case OMNI_VEC_TYPE_DOUBLE:
-                result = (std::fabs(static_cast<DoubleVector *>(actualColumn)->GetValue(i) -
-                    static_cast<DoubleVector *>(expectColumn)->GetValue(i)) <= DBL_EPSILON);
-                break;
-            case OMNI_VEC_TYPE_BOOLEAN:
-                result = (static_cast<BooleanVector *>(actualColumn)->GetValue(i) ==
-                    static_cast<BooleanVector *>(expectColumn)->GetValue(i));
-                break;
-            case OMNI_VEC_TYPE_DECIMAL128:
-                result = (static_cast<Decimal128Vector *>(actualColumn)->GetValue(i) ==
-                    static_cast<Decimal128Vector *>(expectColumn)->GetValue(i));
-                break;
-            case OMNI_VEC_TYPE_DICTIONARY:
-                result = ValueMatch(static_cast<DictionaryVector *>(actualColumn),
-                    static_cast<DictionaryVector *>(expectColumn), i);
-                break;
-            case OMNI_VEC_TYPE_VARCHAR: {
-                uint8_t *actual = nullptr;
-                int32_t actualLength = static_cast<VarcharVector *>(actualColumn)->GetValue(i, &actual);
-                uint8_t *expected = nullptr;
-                int32_t expectedLength = static_cast<VarcharVector *>(expectColumn)->GetValue(i, &expected);
-                if (actualLength != expectedLength || memcmp(actual, expected, actualLength) != 0) {
-                    result = false;
-                } else {
-                    result = true;
+        else if ((actualColumn->IsValueNull(i) == expectColumn->IsValueNull(i)) && actualColumn->IsValueNull(i)){
+            continue;
+        }
+        else {
+            switch (actualColumn->GetType().GetId()) {
+                case OMNI_VEC_TYPE_INT:
+                case OMNI_VEC_TYPE_DATE32:
+                    result = (static_cast<IntVector *>(actualColumn)->GetValue(i) ==
+                              static_cast<IntVector *>(expectColumn)->GetValue(i));
+                    break;
+                case OMNI_VEC_TYPE_LONG:
+                case OMNI_VEC_TYPE_DECIMAL64:
+                    result = (static_cast<LongVector *>(actualColumn)->GetValue(i) ==
+                              static_cast<LongVector *>(expectColumn)->GetValue(i));
+                    break;
+                case OMNI_VEC_TYPE_DOUBLE:
+                    result = (std::fabs(static_cast<DoubleVector *>(actualColumn)->GetValue(i) -
+                                        static_cast<DoubleVector *>(expectColumn)->GetValue(i)) <= DBL_EPSILON);
+                    break;
+                case OMNI_VEC_TYPE_BOOLEAN:
+                    result = (static_cast<BooleanVector *>(actualColumn)->GetValue(i) ==
+                              static_cast<BooleanVector *>(expectColumn)->GetValue(i));
+                    break;
+                case OMNI_VEC_TYPE_DECIMAL128:
+                    result = (static_cast<Decimal128Vector *>(actualColumn)->GetValue(i) ==
+                              static_cast<Decimal128Vector *>(expectColumn)->GetValue(i));
+                    break;
+                case OMNI_VEC_TYPE_DICTIONARY:
+                    result = ValueMatch(static_cast<DictionaryVector *>(actualColumn),
+                                        static_cast<DictionaryVector *>(expectColumn), i);
+                    break;
+                case OMNI_VEC_TYPE_VARCHAR: {
+                    uint8_t *actual = nullptr;
+                    int32_t actualLength = static_cast<VarcharVector *>(actualColumn)->GetValue(i, &actual);
+                    uint8_t *expected = nullptr;
+                    int32_t expectedLength = static_cast<VarcharVector *>(expectColumn)->GetValue(i, &expected);
+                    if (actualLength != expectedLength || memcmp(actual, expected, actualLength) != 0) {
+                        result = false;
+                    } else {
+                        result = true;
+                    }
+                    break;
                 }
-                break;
+                default:
+                    result = false;
             }
-            default:
-                result = false;
         }
         if (!result) {
             return false;
