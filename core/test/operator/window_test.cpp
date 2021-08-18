@@ -112,30 +112,31 @@ void InitParams(omniruntime::jit::ParamValue &pSortCols, omniruntime::jit::Param
 JitContext *GetContext(const omniruntime::jit::Specialization *compareToSp,
     const omniruntime::jit::Specialization *getOutputSp)
 {
+    using omniruntime::jit::Optimization;
     map<string, omniruntime::jit::Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
     auto *windowContext = new omniruntime::jit::Context("window", map<string, omniruntime::jit::Specialization>(),
-        vector<string>(), vector<string>(), true);
+        vector<string>(), true);
     auto *sortContext = new omniruntime::jit::Context("sort", map<string, omniruntime::jit::Specialization>(),
-        vector<string>(), vector<string>());
+        vector<string>());
     auto *aggContext = new omniruntime::jit::Context("aggregator", map<string, omniruntime::jit::Specialization>(),
-        vector<string>(), vector<string>());
+        vector<string>());
     auto *windowFunctionContext = new omniruntime::jit::Context("window_function",
-        map<string, omniruntime::jit::Specialization>(), vector<string>(), vector<string>());
+        map<string, omniruntime::jit::Specialization>(), vector<string>());
     auto *windowPartitionContext = new omniruntime::jit::Context("window_partition",
-        map<string, omniruntime::jit::Specialization>(), vector<string>(), vector<string>());
+        map<string, omniruntime::jit::Specialization>(), vector<string>());
     auto *hashUtilContext = new omniruntime::jit::Context("hash_util", map<string, omniruntime::jit::Specialization>(),
-        vector<string>(), vector<string>());
+        vector<string>());
     auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy",
-        map<string, omniruntime::jit::Specialization>(), vector<string>(), vector<string>());
+        map<string, omniruntime::jit::Specialization>(), vector<string>());
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool",
-        map<string, omniruntime::jit::Specialization>(), vector<string>(), vector<string>());
+        map<string, omniruntime::jit::Specialization>(), vector<string>());
     auto *pagesIndexContext =
-        new omniruntime::jit::Context("pages_index", pagesIndexSps, vector<string>(), vector<string>());
+        new omniruntime::jit::Context("pages_index", pagesIndexSps, vector<string>());
     omniruntime::jit::Jit *jit = new omniruntime::jit::Jit(vector<omniruntime::jit::Context> { *windowContext,
         *sortContext, *aggContext, *windowFunctionContext, *windowPartitionContext, *hashUtilContext,
         *pagesHashStrategyContext, *memoryPoolContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(vector<Optimization>());
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     return jitContext;

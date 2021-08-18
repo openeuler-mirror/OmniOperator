@@ -29,11 +29,10 @@ JitContext *CreateTestTopNJitContext(VecTypes &sourceTypes, int32_t *sortCols, i
 
     std::map<std::string, Specialization> topNCompareSps = { { OMNIJIT_TOPN_COMPARE, *topNCompareSp } };
 
-    auto *topNContext = new omniruntime::jit::Context("topn", topNCompareSps, std::vector<std::string>(),
-        std::vector<std::string>(), true);
+    auto *topNContext = new omniruntime::jit::Context("topn", topNCompareSps, std::vector<std::string>(), true);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *topNContext });
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(std::vector<Optimization>());
 
     JitContext *jitContext = new JitContext;
     jitContext->func = createOperatorFunc;

@@ -27,7 +27,7 @@ namespace omniruntime {
 
         void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
         {
-            conf.populate(FPM, MPM);
+            conf.populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
         }
 
         Expected<ThreadSafeModule> HardenOptimizer::operator()(ThreadSafeModule TSM,
@@ -38,7 +38,9 @@ namespace omniruntime {
             if (this->specializedModules.count(M.getName().str()) == 0) {
                 return std::move(TSM);
             }
-            int originalCount = M.getInstructionCount();
+
+            using llvm::Function;
+            std::set<std::string> specializedFuncNames = this->specializedModules.at(M.getName().str());
 
             legacy::FunctionPassManager FPM(&M);
             legacy::PassManager MPM;
@@ -50,12 +52,19 @@ namespace omniruntime {
 
             FPM.doInitialization();
             for (Function &F : M) {
-                FPM.run(F);
+                if (specializedFuncNames.count(F.getName().str()) > 0) {
+                    bool optimized = FPM.run(F);
+                    if (optimized) {
+                        outs() << "Specialized function optimized: " + F.getName().str() << "\n";
+                    }
+                }
             }
             FPM.doFinalization();
-            MPM.run(M);
 
-            int newCount = M.getInstructionCount();
+            bool optimized = MPM.run(M);
+            if (optimized) {
+                outs() << "Module optimized: " + M.getName().str() << "\n";
+            }
 
             return std::move(TSM);
         }

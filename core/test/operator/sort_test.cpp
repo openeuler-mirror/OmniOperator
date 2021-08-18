@@ -59,15 +59,14 @@ JitContext *CreateTestSortJitContext(const int32_t *sourceTypes, int32_t typesCo
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
 
-    omniruntime::jit::Context *sortContext = new omniruntime::jit::Context("sort",
-        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>(), true);
-    omniruntime::jit::Context *memoryPoolContext = new omniruntime::jit::Context("memory_pool",
-        std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    omniruntime::jit::Context *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps,
-        std::vector<std::string>(), std::vector<std::string>());
+    auto *sortContext = new omniruntime::jit::Context("sort",
+        std::map<std::string, Specialization>(), std::vector<std::string>(), true);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps);
 
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *memoryPoolContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->Specialize();
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *pagesIndexContext });
+    auto createOperatorFunc = jit->Specialize(
+            std::vector<Optimization> {Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE, Optimization::SROA, Optimization::AGGRESIVE_DCE },
+            std::vector<ModuleOptimization> {ModuleOptimization::FUNCTION_INLINING, ModuleOptimization::PRUNE_EH, ModuleOptimization::CONSTANT_MERGE });
 
     JitContext *jitContext = new JitContext;
     jitContext->func = static_cast<uintptr_t>(createOperatorFunc);

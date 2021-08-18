@@ -128,11 +128,11 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
     };
 
-    omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
-    omniruntime::jit::Context *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    omniruntime::jit::Context *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), true);
+    omniruntime::jit::Context *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>());
+    omniruntime::jit::Context *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(std::vector<Optimization>());
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -176,11 +176,11 @@ uintptr_t CreateAggFactoryWithJit()
             {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation", nonGroupSps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation", nonGroupSps, std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(std::vector<Optimization>());
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -865,11 +865,13 @@ TEST(HashAggregationOperatorTest, compare_perf)
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
-    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>(), std::vector<std::string>(), std::vector<std::string>());
+    auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation", hashGroupbySps, std::vector<std::string>(), true);
+    auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>());
+    auto *aggregatorContext = new omniruntime::jit::Context("aggregator", std::map<std::string, Specialization>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext, *memoryPoolContext, *aggregatorContext});
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(
+            std::vector<Optimization>{Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE, Optimization::SROA, Optimization::AGGRESIVE_DCE},
+            std::vector<ModuleOptimization>{ModuleOptimization::PRUNE_EH});
 
      // ------------------------------------------Create operator--------------------------------------------
     JitContext* jitContext = new JitContext;
