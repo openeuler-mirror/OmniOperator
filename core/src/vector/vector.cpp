@@ -46,6 +46,7 @@ Vector::~Vector()
 {
     if (reference == nullptr) {
         std::cerr << "reference is null" << std::endl;
+        return;
     }
     if (0 == reference->DecRef()) {
         delete reference;
