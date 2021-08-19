@@ -6,10 +6,13 @@ package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.utils.OmniErrorType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static nova.hetu.omniruntime.vector.Vec.getTypeNative;
 
@@ -24,6 +27,8 @@ public class VecBatch implements Closeable {
     private final int rowCount;
 
     private final long nativeVectorBatch;
+
+    private AtomicBoolean isClosed = new AtomicBoolean(false);
 
     public VecBatch(Vec[] vectors, int rowCount) {
         this.vectors = vectors;
@@ -115,6 +120,11 @@ public class VecBatch implements Closeable {
 
     @Override
     public void close() {
-        freeVectorBatchNative(nativeVectorBatch);
+        if (isClosed.compareAndSet(false, true)) {
+            freeVectorBatchNative(nativeVectorBatch);
+        } else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE, "vec batch has been closed:" + this
+                    + ",threadName:" + Thread.currentThread().getName() + ",native:" + nativeVectorBatch);
+        }
     }
 }

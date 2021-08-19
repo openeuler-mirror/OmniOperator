@@ -6,12 +6,14 @@ package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.utils.OmniErrorType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
 
@@ -74,6 +76,8 @@ public abstract class Vec implements Closeable {
     private boolean isWritable = true;
 
     private boolean isCloseable = true;
+
+    private AtomicBoolean isClosed = new AtomicBoolean(false);
 
     private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, VecType type,
             boolean isWritable) {
@@ -450,9 +454,24 @@ public abstract class Vec implements Closeable {
 
     @Override
     public void close() {
-        if (isCloseable) {
-            freeVectorNative(this.allocator.getNativeAllocator(), this.nativeVector);
+        if (!isCloseable) {
+            return;
         }
+        if (isClosed.compareAndSet(false, true)) {
+            freeVectorNative(this.allocator.getNativeAllocator(), this.nativeVector);
+        } else {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE, "vec has been closed:" + this +
+                    ",threadName:" + Thread.currentThread().getName() + ",native:" + nativeVector);
+        }
+    }
+
+    /**
+     * vec is closed
+     *
+     * @return true is closed, otherwise it it not closed.
+     */
+    public boolean isClosed() {
+        return isClosed.get();
     }
 
     /**
