@@ -45,6 +45,11 @@ public:
 
     int64_t GetLong(int32_t position) const;
 
+    bool IsValueNull(int32_t position) override
+    {
+        return dictionary->IsValueNull(ids[position]);
+    }
+
     DictionaryVector *Slice(int positionOffset, int length) override;
 
     DictionaryVector *CopyPositions(const int *positions, int offset, int length) override;

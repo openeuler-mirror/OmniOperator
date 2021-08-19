@@ -10,7 +10,21 @@ VectorReference::VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueO
     : values(values), valueNulls(valueNulls), valueOffsets(valueOffsets), reference(1), type(type), writable(true)
 {}
 
-VectorReference::~VectorReference() {}
+VectorReference::~VectorReference()
+{
+    if (values != nullptr) {
+        delete values;
+        values = nullptr;
+    }
+    if (valueNulls != nullptr) {
+        delete valueNulls;
+        valueNulls = nullptr;
+    }
+    if (valueOffsets != nullptr) {
+        delete valueOffsets;
+        valueOffsets = nullptr;
+    }
+}
 
 void VectorReference::IncRef()
 {
@@ -20,20 +34,7 @@ void VectorReference::IncRef()
 
 int64_t VectorReference::DecRef()
 {
-    if (--reference == 0) {
-        if (values != nullptr) {
-            delete values;
-            values = nullptr;
-        }
-        if (valueNulls != nullptr) {
-            delete valueNulls;
-            valueNulls = nullptr;
-        }
-        if (valueOffsets != nullptr) {
-            delete valueOffsets;
-            valueOffsets = nullptr;
-        }
-    }
+    --reference;
     return reference;
 }
 

@@ -82,6 +82,9 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
     bool result = true;
     for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
+        if (actualColumn->IsValueNull(i) != expectColumn->IsValueNull(i)) {
+            return false;
+        }
         switch (actualColumn->GetType().GetId()) {
             case OMNI_VEC_TYPE_INT: {
                 int32_t actual = static_cast<IntVector *>(actualColumn)->GetValue(i);
