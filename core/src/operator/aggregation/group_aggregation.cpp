@@ -52,6 +52,7 @@ OmniStatus HashAggregationOperatorFactory::Init()
                 break;
             }
             default: {
+                DebugError("No such agg func type %d", aggFuncTypeContext.context[i]);
                 ret = OMNI_STATUS_ERROR;
             }
         }
@@ -298,6 +299,68 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
     }
 }
 
+void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
+    int32_t aggIndex, int32_t colIndex, int32_t rowCount, RowIterator &rowIterator)
+{
+    switch (aggCols[aggIndex].type.GetId()) {
+        case OMNI_VEC_TYPE_INT: {
+            IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
+            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+                 ++rIdx, rowIterator++) {
+                vector->SetValue(rIdx, *reinterpret_cast<int32_t *>(rowIterator->second[colIndex].val));
+            }
+            break;
+        }
+        case OMNI_VEC_TYPE_LONG: {
+            LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
+            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+                 ++rIdx, rowIterator++) {
+                vector->SetValue(rIdx, *reinterpret_cast<int64_t *>(rowIterator->second[colIndex].val));
+            }
+            break;
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
+            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+                 ++rIdx, rowIterator++) {
+                vector->SetValue(rIdx, *reinterpret_cast<double *>(rowIterator->second[colIndex].val));
+            }
+            break;
+        }
+        default: {
+            DebugError("No such data type %d", aggCols[aggIndex].type.GetId());
+            break;
+        }
+    }
+}
+
+void HashAggregationOperator::FillAvgAgg(VectorBatch* vecBatch,
+    int32_t aggIndex, int32_t colIndex, int32_t rowCount, RowIterator &rowIterator)
+{
+    if (outputPartial) {
+        ContainerVector *vector = static_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
+        for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+             ++rIdx, rowIterator++) {
+            if (rowIterator->second[colIndex].avgCnt == 0) {
+                DebugError("Divisor is zero! key = %ld", rowIterator->first);
+            }
+            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
+            doubleVector->SetValue(rIdx, *(reinterpret_cast<double *>(rowIterator->second[colIndex].avgVal)));
+            LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
+            longVector->SetValue(rIdx, rowIterator->second[colIndex].avgCnt);
+        }
+    } else {
+        DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
+        for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+             ++rIdx, rowIterator++) {
+            if (rowIterator->second[colIndex].avgCnt == 0) {
+                DebugError("Divisor is zero! key = %ld", rowIterator->first);
+            }
+            vector->SetValue(rIdx, *(reinterpret_cast<double *>(rowIterator->second[colIndex].avgVal)));
+        }
+    }
+}
+
 // TODO currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
@@ -307,75 +370,26 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
     auto resultIterator = rowIterator;
     for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex) {
         resultIterator = rowIterator;
-        auto finalState = resultIterator->second[colIndex];
         AggregateType aggType = this->aggregators[aggIndex]->GetType();
         switch (aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                switch (aggCols[aggIndex].type.GetId()) {
-                    case OMNI_VEC_TYPE_INT: {
-                        IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
-                        for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != groupedRows.end();
-                            ++rIdx, resultIterator++) {
-                            vector->SetValue(rIdx, *reinterpret_cast<int32_t *>(finalState.val));
-                        }
-                        break;
-                    }
-                    case OMNI_VEC_TYPE_LONG: {
-                        LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
-                        for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != groupedRows.end();
-                            ++rIdx, resultIterator++) {
-                            vector->SetValue(rIdx, *reinterpret_cast<int64_t *>(finalState.val));
-                        }
-                        break;
-                    }
-                    case OMNI_VEC_TYPE_DOUBLE: {
-                        DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
-                        for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != groupedRows.end();
-                            ++rIdx, resultIterator++) {
-                            vector->SetValue(rIdx, *reinterpret_cast<double *>(finalState.val));
-                        }
-                        break;
-                    }
-                    default:
-                        break;
-                }
+                FillNormalAgg(vecBatch, aggIndex, colIndex, rowCount, resultIterator);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {
                 LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
                 for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != groupedRows.end();
                     ++rIdx, resultIterator++) {
-                    vector->SetValue(rIdx, reinterpret_cast<int64_t>(finalState.count));
+                    vector->SetValue(rIdx, reinterpret_cast<int64_t>(resultIterator->second[colIndex].count));
                 }
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: { // TODO process intermediate vectors
                 // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise
                 // double vector.
-                if (outputPartial) {
-                    ContainerVector *vector = static_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
-                    for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != groupedRows.end();
-                        ++rIdx, resultIterator++) {
-                        if (resultIterator->second[colIndex].avgCnt == 0) {
-                            DebugError("Divisor is zero! key = %ld", resultIterator->first);
-                        }
-                        DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
-                        doubleVector->SetValue(rIdx, *(reinterpret_cast<double *>(finalState.avgVal)));
-                        LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
-                        longVector->SetValue(rIdx, finalState.avgCnt);
-                    }
-                } else {
-                    DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
-                    for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != groupedRows.end();
-                        ++rIdx, resultIterator++) {
-                        if (finalState.avgCnt == 0) {
-                            DebugError("Divisor is zero! key = %ld", resultIterator->first);
-                        }
-                        vector->SetValue(rIdx, *(reinterpret_cast<double *>(finalState.avgVal)));
-                    }
-                }
+                FillAvgAgg(vecBatch, aggIndex, colIndex, rowCount, resultIterator);
                 break;
             }
             default: {
@@ -422,6 +436,7 @@ void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t> &types, int
             }
                 // TODO: support other types!!!
             default: {
+                DebugError("No such data type %d", types[colIndex]);
                 break;
             }
         }

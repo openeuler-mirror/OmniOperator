@@ -1,5 +1,6 @@
 #!/bin/bash
 
+rm -rf libomruntime.so /opt/lib/libvector.so /opt/lib/libsecurec.so /opt/lib/ir
 echo "enter" $(dirname $(readlink -f $0))
 cd $(dirname $(readlink -f $0))
 rm -rf `ls | grep -v "build.sh"`

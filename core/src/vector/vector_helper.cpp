@@ -68,6 +68,9 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             std::cout << valueString << "   ";
             break;
         }
+        case OMNI_VEC_TYPE_CONTAINER: {
+            std::cout << "to parse container vec" << std::endl;
+        }
         default:
             DebugError("Error vector type %d", vecType.GetId());
     }

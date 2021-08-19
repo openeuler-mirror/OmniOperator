@@ -51,6 +51,12 @@ private:
     void FillAggVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex, RowIterator &rowIterator,
         int32_t rowCount);
 
+    void FillNormalAgg(omniruntime::vec::VectorBatch * vecBatch, int32_t aggIndex, int32_t colIndex, int32_t rowCount,
+         RowIterator &rowIterator);
+
+    void FillAvgAgg(omniruntime::vec::VectorBatch* vecBatch,
+        int32_t aggIndex, int32_t colIndex, int32_t rowCount, RowIterator &rowIterator);
+
 private:
     friend class HashAggregationOperatorFactory;
     std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashUtil> groupedRows;
