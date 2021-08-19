@@ -56,6 +56,19 @@ DictionaryVector *DictionaryVector::CopyRegion(int positionOffset, int length)
     return nullptr;
 }
 
-void DictionaryVector::Append(Vector *other, int positionOffset, int length) {}
+void DictionaryVector::Append(Vector *other, int positionOffset, int length)
+{
+    DictionaryVector *otherVector = reinterpret_cast<DictionaryVector *>(other);
+    if (positionOffset + length > idsCount || this->dictionary != otherVector->dictionary) {
+        return;
+    }
+    int32_t *destination = this->ids + (positionOffset * sizeof(int32_t));
+    int32_t *src = (otherVector->GetPositionOffset() * sizeof(int32_t)) + otherVector->GetIds();
+    errno_t ret = memcpy_s(destination, idsCount * sizeof(int32_t), src, length * sizeof(int32_t));
+
+    if (ret != EOK) {
+        std::cerr << "append failed in Dictionary vector." << std::endl;
+    }
+}
 } // namespace vec
 } // namespace omniruntime

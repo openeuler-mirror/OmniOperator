@@ -56,6 +56,7 @@ public:
 
     DictionaryVector *CopyRegion(int positionOffset, int length) override;
 
+    /// Append Ids. Vectors must use the same dictionary
     void Append(Vector *other, int positionOffset, int length) override;
 
 private:

@@ -73,6 +73,26 @@ public class DictionaryVec extends Vec {
         return ((LongVec) dictionary).get(ids[index]);
     }
 
+    /**
+     * get the specified double at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return double value
+     */
+    public double getDouble(int index) {
+        return ((DoubleVec) dictionary).get(ids[index]);
+    }
+
+    /**
+     * get the specified boolean at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return boolean value
+     */
+    public boolean getBoolean(int index) {
+        return ((BooleanVec) dictionary).get(ids[index]);
+    }
+
     @Override
     public boolean isNull(int index) {
         return dictionary.isNull(ids[index]);
