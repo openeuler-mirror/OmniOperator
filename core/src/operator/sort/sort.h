@@ -135,9 +135,6 @@ private:
     std::unique_ptr<PagesIndex> pagesIndex;
     std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
 };
-
-int32_t GetMaxRowCount(const std::vector<vec::VecType> &vecTypes, const int32_t *outputCols, int32_t outputColsCount);
-int32_t GetPageCount(int32_t positionCount, int32_t maxRowCount);
 } // end of namespace op
 } // end of namespace omniruntime
 #endif

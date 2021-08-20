@@ -7,6 +7,8 @@
 #include "../../vector/vector_helper.h"
 #include "../optimization.h"
 #include "../../jit/annotation.h"
+#include "../../vector/boolean_vector.h"
+#include "../../vector/decimal128_vector.h"
 
 #include <algorithm>
 #include <memory>
@@ -114,25 +116,28 @@ int64_t JoinHashTables::GetNextJoinPosition(int64_t currentJoinPosition, int32_t
     }
 }
 
-__attribute__((always_inline)) int64_t ReadHash(int32_t vecType, omniruntime::vec::Vector *vector, int32_t rowIndex)
+ALWAYS_INLINE int64_t ReadHash(int32_t vecType, omniruntime::vec::Vector *vector, int32_t rowIndex)
 {
     switch (vecType) {
-        case omniruntime::vec::OMNI_VEC_TYPE_INT: {
-            int32_t intValue = static_cast<omniruntime::vec::IntVector *>(vector)->GetValue(rowIndex);
-            return HashUtil::HashValue(static_cast<int64_t>(intValue));
-        }
-        case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
-            int64_t int64Value = static_cast<omniruntime::vec::LongVector *>(vector)->GetValue(rowIndex);
-            return HashUtil::HashValue(int64Value);
-        }
-        case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE: {
-            double doubleValue = static_cast<omniruntime::vec::DoubleVector *>(vector)->GetValue(rowIndex);
-            return HashUtil::HashValue(static_cast<int64_t>(doubleValue));
+        case omniruntime::vec::OMNI_VEC_TYPE_INT:
+        case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+            return HashUtil::HashValue(static_cast<omniruntime::vec::IntVector *>(vector)->GetValue(rowIndex));
+        case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+            return HashUtil::HashValue(static_cast<omniruntime::vec::LongVector *>(vector)->GetValue(rowIndex));
+        case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            return HashUtil::HashValue(static_cast<omniruntime::vec::DoubleVector *>(vector)->GetValue(rowIndex));
+        case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            return HashUtil::HashValue(static_cast<omniruntime::vec::BooleanVector *>(vector)->GetValue(rowIndex));
+        case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+            return HashUtil::HashDecimal64Value(static_cast<LongVector *>(vector)->GetValue(rowIndex));
+        case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vector)->GetValue(rowIndex);
+            return HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
         }
         case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
             uint8_t *varcharValue = nullptr;
             int32_t valueLength =
-                    static_cast<omniruntime::vec::VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
+                static_cast<omniruntime::vec::VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
             return HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
         }
         default: {
@@ -143,7 +148,7 @@ __attribute__((always_inline)) int64_t ReadHash(int32_t vecType, omniruntime::ve
 
 SPECIALIZE(OMNIJIT_HASH_STRATEGY_HASH_POSITION)
 int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes,
-                     int32_t hashColCount)
+    int32_t hashColCount)
 {
     int64_t result = 0;
     Vector *column = nullptr;

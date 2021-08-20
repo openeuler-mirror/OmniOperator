@@ -505,5 +505,11 @@ Decimal128 operator % (const Decimal128 &left, const Decimal128 &right)
     left.Divide(right, result, remainder);
     return remainder;
 }
+
+std::ostream& operator << (std::ostream &os, const Decimal128 &decimal128)
+{
+    os << std::hex << decimal128.HighBits() << decimal128.LowBits();
+    return os;
+}
 }
 }

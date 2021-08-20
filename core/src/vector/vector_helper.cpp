@@ -5,7 +5,8 @@
 #include "vector_helper.h"
 #include "dictionary_vector.h"
 #include "varchar_vector.h"
-#include "container_vector.h"
+#include "boolean_vector.h"
+#include "decimal128_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -72,8 +73,7 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex);
-            std::cout << "highBits:" << result.HighBits() << ",lowBits:" << result.LowBits() << "   ";
+            std::cout << static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex) << "   ";
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {

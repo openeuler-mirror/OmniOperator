@@ -5,8 +5,6 @@
 #include "lookup_join.h"
 #include "hash_builder.h"
 #include "../../vector/vector_common.h"
-#include "../../vector/dictionary_vector.h"
-#include "../../vector/vector_helper.h"
 #include "../optimization.h"
 #include "../../jit/annotation.h"
 #include "../util/operator_util.h"
@@ -16,40 +14,6 @@
 #include <memory>
 
 using namespace omniruntime::vec;
-int32_t GetTypeSize(const VecType &vecType)
-{
-    switch (vecType.GetId()) {
-        case OMNI_VEC_TYPE_INT:
-            return sizeof(int32_t);
-        case OMNI_VEC_TYPE_LONG:
-            return sizeof(int64_t);
-        case OMNI_VEC_TYPE_DOUBLE:
-            return sizeof(double);
-        case OMNI_VEC_TYPE_VARCHAR:
-            return ((VarcharVecType &)vecType).GetWidth();
-        default:
-            return 0;
-    }
-}
-
-int32_t GetRowSizeFromAllTypes(const std::vector<VecType> &vecTypes, const int32_t *outputCols, int32_t outputColsCount)
-{
-    int32_t rowSize = 0;
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        rowSize += GetTypeSize(vecTypes[outputCols[i]]);
-    }
-    return rowSize;
-}
-
-int32_t GetRowSizeFromTypes(const std::vector<VecType> &vecTypes)
-{
-    int32_t rowSize = 0;
-    for (int32_t i = 0; i < vecTypes.size(); i++) {
-        rowSize += GetTypeSize(vecTypes[i]);
-    }
-    return rowSize;
-}
-
 namespace omniruntime {
 namespace op {
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const vec::VecTypes &probeTypes, int32_t *probeOutputCols,
@@ -71,8 +35,8 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const vec::VecTypes &probeT
     this->buildOutputTypes = std::make_unique<VecTypes>(buildOutputTypes);
     this->joinType = joinType;
     this->hashTables = hashTables;
-    this->rowSize = GetRowSizeFromAllTypes(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
-    this->rowSize += GetRowSizeFromTypes(buildOutputTypes.Get());
+    this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
+    this->rowSize += OperatorUtil::GetRowSize(buildOutputTypes.Get());
 }
 
 LookupJoinOperatorFactory::~LookupJoinOperatorFactory() {}
@@ -290,13 +254,14 @@ void LookupJoinOutputBuilder::AppendRow(int32_t probePosition, int64_t partition
     buildIndex.push_back(partitionedJoinPosition);
 }
 
-Vector *BuildBuildInt32Column(const JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t offset,
+template <typename T, typename V>
+T *ConstructBuildColumn(const JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t offset,
     int32_t length)
 {
-    int64_t partitionedJoinPosition;
-    int32_t value;
+    int64_t partitionedJoinPosition = -1;
+    V value = 0;
 
-    IntVector *column = std::make_unique<IntVector>(nullptr, length).release();
+    auto vector = std::make_unique<T>(nullptr, length).release();
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t index = 0;
@@ -304,65 +269,19 @@ Vector *BuildBuildInt32Column(const JoinHashTables *hashTables, int32_t outputCo
         partitionedJoinPosition = buildIndex[rowIdx];
         if (partitionedJoinPosition != -1) {
             hashTables->GetBuildValue(&value, partitionedJoinPosition, outputCol);
-            column->SetValue(index++, value);
+            vector->SetValue(index++, value);
         } else {
-            column->SetValueNull(index++);
+            vector->SetValueNull(index++);
         }
     }
 
-    return column;
+    return vector;
 }
 
-Vector *BuildBuildInt64Column(const JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t offset,
-    int32_t length)
-{
-    int64_t partitionedJoinPosition;
-    int64_t value;
-
-    LongVector *column = std::make_unique<LongVector>(nullptr, length).release();
-    int32_t start = offset;
-    int32_t end = offset + length;
-    int32_t index = 0;
-    for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
-        partitionedJoinPosition = buildIndex[rowIdx];
-        if (partitionedJoinPosition != -1) {
-            hashTables->GetBuildValue(&value, partitionedJoinPosition, outputCol);
-            column->SetValue(index++, value);
-        } else {
-            column->SetValueNull(index++);
-        }
-    }
-
-    return column;
-}
-
-Vector *BuildBuildDoubleColumn(const JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex, int32_t offset,
-    int32_t length)
-{
-    int64_t partitionedJoinPosition;
-    double value;
-
-    DoubleVector *column = std::make_unique<DoubleVector>(nullptr, length).release();
-    int32_t start = offset;
-    int32_t end = offset + length;
-    int32_t index = 0;
-    for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
-        partitionedJoinPosition = buildIndex[rowIdx];
-        if (partitionedJoinPosition != -1) {
-            hashTables->GetBuildValue(&value, partitionedJoinPosition, outputCol);
-            column->SetValue(index++, value);
-        } else {
-            column->SetValueNull(index++);
-        }
-    }
-
-    return column;
-}
-
-Vector *BuildBuildVarcharColumn(const JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex,
+VarcharVector *ConstructBuildVarcharColumn(const JoinHashTables *hashTables, int32_t outputCol, int64_t *buildIndex,
     int32_t offset, int32_t length, uint32_t width)
 {
-    int64_t partitionedJoinPosition;
+    int64_t partitionedJoinPosition = -1;
     uint8_t *value = nullptr;
     int32_t valueLen = 0;
     auto *column =
@@ -455,20 +374,33 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
         const VecType &vecType = buildOutputTypes[columnIdx];
         switch (buildOutputIds[columnIdx]) {
             case OMNI_VEC_TYPE_INT:
-                buildColumn = BuildBuildInt32Column(hashTables, buildOutputCol, buildIndex.data(), position, rowCount);
+            case OMNI_VEC_TYPE_DATE32:
+                buildColumn = ConstructBuildColumn<IntVector, int32_t>(hashTables, buildOutputCol, buildIndex.data(),
+                    position, rowCount);
                 break;
             case OMNI_VEC_TYPE_LONG:
-                buildColumn = BuildBuildInt64Column(hashTables, buildOutputCol, buildIndex.data(), position, rowCount);
+            case OMNI_VEC_TYPE_DECIMAL64:
+                buildColumn = ConstructBuildColumn<LongVector, int64_t>(hashTables, buildOutputCol, buildIndex.data(),
+                    position, rowCount);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                buildColumn = BuildBuildDoubleColumn(hashTables, buildOutputCol, buildIndex.data(), position, rowCount);
+                buildColumn = ConstructBuildColumn<DoubleVector, double>(hashTables, buildOutputCol, buildIndex.data(),
+                    position, rowCount);
+                break;
+            case OMNI_VEC_TYPE_BOOLEAN:
+                buildColumn = ConstructBuildColumn<BooleanVector, bool>(hashTables, buildOutputCol, buildIndex.data(),
+                    position, rowCount);
                 break;
             case OMNI_VEC_TYPE_VARCHAR: {
                 uint32_t width = ((VarcharVecType &)vecType).GetWidth();
-                buildColumn =
-                    BuildBuildVarcharColumn(hashTables, buildOutputCol, buildIndex.data(), position, rowCount, width);
+                buildColumn = ConstructBuildVarcharColumn(hashTables, buildOutputCol, buildIndex.data(), position,
+                    rowCount, width);
                 break;
             }
+            case OMNI_VEC_TYPE_DECIMAL128:
+                buildColumn = ConstructBuildColumn<Decimal128Vector, Decimal128>(hashTables, buildOutputCol,
+                    buildIndex.data(), position, rowCount);
+                break;
             default:
                 break;
         }
@@ -479,9 +411,9 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
 void LookupJoinOutputBuilder::BuildOutput(const JoinProbe *joinProbe, const JoinHashTables *hashTables,
     std::vector<VectorBatch *> &outputTables)
 {
-    int32_t maxRowCount = (MAX_VEC_BATCH_SIZE_IN_BYTES + outputRowSize - 1) / outputRowSize;
     int32_t positionCount = probeIndex.size();
-    int32_t tableCount = ((positionCount + maxRowCount - 1) / maxRowCount);
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize);
+    int32_t tableCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputTables.reserve(tableCount);
 
     Vector **probeAllColumns = joinProbe->GetProbeAllColumns();

@@ -25,14 +25,35 @@ const int32_t ROTATE_DISTANCE_33 = 33;
 const int32_t ROTATE_DISTANCE_48 = 48;
 const int64_t DEFAULT_SEED = 0;
 const int32_t SIZE_OF_LONG = 8;
+const int64_t SIGN_LONG_MASK = 1L << 63;
+const int64_t HASH_OF_TRUE = 1231;
+const int64_t HASH_OF_FALSE = 1237;
 
 class HashUtil {
 public:
     static int32_t HashArraySize(int32_t expected, float f);
 
+    static int64_t HashValue(int32_t value);
+
     static int64_t HashValue(int64_t value);
 
+    static int64_t HashValue(double value);
+
+    static int64_t HashValue(bool value)
+    {
+        return value ? HASH_OF_TRUE : HASH_OF_FALSE;
+    }
+
+    static int64_t HashDecimal64Value(int64_t value)
+    {
+        return value;
+    }
+
+    static int64_t HashValue(int64_t low, int64_t high);
+
     static int64_t HashValue(int8_t *value, int32_t length);
+
+    static int64_t XxHash64HashValue(int64_t value);
 
     uint64_t operator()(uint64_t combinedHash) const
     {

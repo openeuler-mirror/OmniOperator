@@ -42,21 +42,14 @@ PagesHashStrategy::~PagesHashStrategy()
     }
 }
 
-inline bool IntValueEqualsValueIgnoreNulls(const int32_t *leftData, int32_t leftIndex, const int32_t *rightData,
+template <typename T>
+ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(const T *leftData, int32_t leftIndex, const T *rightData,
     int32_t rightIndex)
 {
-    bool result = (leftData[leftIndex] == rightData[rightIndex]);
-    return result;
+    return (leftData[leftIndex] == rightData[rightIndex]);
 }
 
-inline bool Int64ValueEqualsValueIgnoreNulls(const int64_t *leftData, int32_t leftIndex, const int64_t *rightData,
-    int32_t rightIndex)
-{
-    bool result = (leftData[leftIndex] == rightData[rightIndex]);
-    return result;
-}
-
-inline bool DoubleValueEqualsValueIgnoreNulls(const double *leftData, int32_t leftIndex, const double *rightData,
+ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(const double *leftData, int32_t leftIndex, const double *rightData,
     int32_t rightIndex)
 {
     if (std::abs(leftData[leftIndex] - rightData[rightIndex]) < __DBL_EPSILON__) {
@@ -86,22 +79,30 @@ bool VarcharValueEqualsValueIgnoreNulls(VarcharVector *leftVector, int32_t leftI
     }
 }
 
-inline bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex, Vector *rightVector,
-    int32_t rightRowIndex)
+ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex,
+    Vector *rightVector, int32_t rightRowIndex)
 {
     switch (vecType) {
         case OMNI_VEC_TYPE_INT:
-            return IntValueEqualsValueIgnoreNulls((int32_t *)leftVector->GetValues(), leftRowIndex,
+        case OMNI_VEC_TYPE_DATE32:
+            return ValueEqualsValueIgnoreNulls((int32_t *)leftVector->GetValues(), leftRowIndex,
                 (int32_t *)rightVector->GetValues(), rightRowIndex);
         case OMNI_VEC_TYPE_LONG:
-            return Int64ValueEqualsValueIgnoreNulls((int64_t *)leftVector->GetValues(), leftRowIndex,
+        case OMNI_VEC_TYPE_DECIMAL64:
+            return ValueEqualsValueIgnoreNulls((int64_t *)leftVector->GetValues(), leftRowIndex,
                 (int64_t *)rightVector->GetValues(), rightRowIndex);
         case OMNI_VEC_TYPE_DOUBLE:
             return DoubleValueEqualsValueIgnoreNulls((double *)leftVector->GetValues(), leftRowIndex,
                 (double *)rightVector->GetValues(), rightRowIndex);
+        case OMNI_VEC_TYPE_BOOLEAN:
+            return ValueEqualsValueIgnoreNulls((bool *)leftVector->GetValues(), leftRowIndex,
+                (bool *)rightVector->GetValues(), rightRowIndex);
         case OMNI_VEC_TYPE_VARCHAR:
             return VarcharValueEqualsValueIgnoreNulls(static_cast<VarcharVector *>(leftVector), leftRowIndex,
                 static_cast<VarcharVector *>(rightVector), rightRowIndex);
+        case OMNI_VEC_TYPE_DECIMAL128:
+            return ValueEqualsValueIgnoreNulls((Decimal128 *)leftVector->GetValues(), leftRowIndex,
+                (Decimal128 *)rightVector->GetValues(), rightRowIndex);
         default:
             return false;
     }

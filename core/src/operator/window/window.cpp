@@ -5,12 +5,13 @@
 #include "window.h"
 #include "../sort/sort.h"
 #include "../status.h"
+#include "../util/operator_util.h"
 
 using namespace std;
 namespace omniruntime {
 namespace op {
-    using namespace omniruntime::vec;
-    WindowOperatorFactory::WindowOperatorFactory(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
+using namespace omniruntime::vec;
+WindowOperatorFactory::WindowOperatorFactory(int32_t *sourceTypes, int32_t typesCount, int32_t *outputCols,
     int32_t outputColsCount, int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols,
     int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
@@ -197,8 +198,9 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     }
 
     // next, get output
-    int32_t maxRowCount = GetMaxRowCount(GetVecTypes(allTypes).Get(), finalOutputCols, finalOutputColsCount);
-    int32_t outputPageCount = GetPageCount(positionCount, maxRowCount);
+    int32_t maxRowCount =
+        OperatorUtil::GetMaxRowCount(GetVecTypes(allTypes).Get(), finalOutputCols, finalOutputColsCount);
+    int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(outputPageCount);
 
     int outputTypes[finalOutputColsCount];
