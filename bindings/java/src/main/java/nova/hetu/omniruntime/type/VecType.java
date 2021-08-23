@@ -6,12 +6,14 @@ package nova.hetu.omniruntime.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.Serializable;
+
 /**
  * date32 vec type
  *
  * @since 2021-08-05
  */
-public class VecType {
+public class VecType implements Serializable {
     /**
      * It is a none vector type
      */
@@ -21,6 +23,8 @@ public class VecType {
      * It is a invalid vector type
      */
     public static final VecType INVALID = new VecType(VecTypeId.OMNI_VEC_TYPE_INVALID);
+
+    private static final long serialVersionUID = 2589766491688675794L;
 
     @JsonProperty
     private final VecTypeId id;

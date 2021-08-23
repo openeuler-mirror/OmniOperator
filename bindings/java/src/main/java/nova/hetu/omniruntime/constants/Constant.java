@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.constants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.Serializable;
 import java.util.Objects;
 import nova.hetu.omniruntime.OmniLibs;
 
@@ -16,11 +17,13 @@ import nova.hetu.omniruntime.OmniLibs;
  * @since 20210630
  */
 @SuppressWarnings("StaticVariableName")
-public abstract class Constant {
+public abstract class Constant implements Serializable {
     static {
         OmniLibs.load();
         loadConstants();
     }
+
+    private static final long serialVersionUID = -2589766491699675794L;
 
     private final int value;
 
