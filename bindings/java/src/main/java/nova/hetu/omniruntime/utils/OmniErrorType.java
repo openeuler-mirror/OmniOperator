@@ -31,7 +31,12 @@ public enum OmniErrorType {
     /**
      * Omni inner error.
      */
-    OMNI_INNER_ERROR(5);
+    OMNI_INNER_ERROR(5),
+
+    /**
+     * Omni vec or vectbatch double free
+     */
+    OMNI_DOUBLE_FREE(6);
 
     private final int value;
 
