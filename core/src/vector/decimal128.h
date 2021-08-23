@@ -91,6 +91,8 @@ Decimal128 operator*(const Decimal128 &left, const Decimal128 &right);
 Decimal128 operator / (const Decimal128 &left, const Decimal128 &right);
 
 Decimal128 operator % (const Decimal128 &left, const Decimal128 &right);
+
+std::ostream& operator << (std::ostream &os, const Decimal128 &decimal128);
 }
 }
 

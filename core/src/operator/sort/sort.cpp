@@ -3,51 +3,16 @@
  * @Description: sort implementations
  */
 #include "sort.h"
-#include <iostream>
-#include <algorithm>
 #include "../../util/type_util.h"
 #include "../../util/debug.h"
 #include "../../vector/vector_common.h"
-#include "../status.h"
 #include "../../vector/vector_helper.h"
-#include "../../vector/vector_types.h"
+#include "../util/operator_util.h"
 
 using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
-int32_t GetMaxRowCount(const std::vector<VecType> &vecTypes, const int32_t *outputCols, int32_t outputColsCount)
-{
-    int32_t rowSize = 0;
-    VecType type;
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        type = vecTypes[outputCols[i]];
-        switch (type.GetId()) {
-            case OMNI_VEC_TYPE_INT:
-                rowSize = rowSize + sizeof(int32_t);
-                break;
-            case OMNI_VEC_TYPE_LONG:
-                rowSize = rowSize + sizeof(int64_t);
-                break;
-            case OMNI_VEC_TYPE_DOUBLE:
-                rowSize = rowSize + sizeof(double);
-                break;
-            case OMNI_VEC_TYPE_VARCHAR:
-                rowSize = rowSize + static_cast<VarcharVecType *>(&type)->GetWidth();
-                break;
-            default:
-                break;
-        }
-    }
-
-    int32_t maxRowCount = (MAX_VEC_BATCH_SIZE_IN_BYTES + rowSize - 1) / rowSize;
-    return maxRowCount;
-}
-
-int32_t GetPageCount(int32_t positionCount, int32_t maxRowCount)
-{
-    return ((positionCount + maxRowCount - 1) / maxRowCount);
-}
 
 SortOperatorFactory::SortOperatorFactory(const VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
@@ -122,8 +87,8 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
     OP_DEBUG_LOG("quick sort elapsed time : %ld ms.", END(quickSortStart));
 
     // next, get output
-    int32_t maxRowCount = GetMaxRowCount(sourceTypes.Get(), outputCols.data(), outputColsCount);
-    int32_t vecBatchCount = GetPageCount(positionCount, maxRowCount);
+    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(sourceTypes.Get(), outputCols.data(), outputColsCount);
+    int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
     outputPages.reserve(vecBatchCount);
 
     VectorBatch *vecBatch = nullptr;

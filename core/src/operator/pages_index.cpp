@@ -17,19 +17,11 @@ const int32_t QUICK_SORT_BIG_LEN = 40;
 const int32_t QUICK_SORT_STEP_SIZE = 8;
 const int32_t QUICK_SORT_MIDDLE = 2;
 
-using CompareNullStatus = enum CompareNullStatus {
-    COMPARE_NULL_LESS_THAN = -1,
-    COMPARE_NULL_EQUAL,
-    COMPARE_NULL_GREATER_THAN,
-    COMPARE_NULL_OTHER,
-};
-
 void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to);
-IntVector *ConstructInt32Vector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
-LongVector *ConstructInt64Vector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
-DoubleVector *ConstructDoubleVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
+template <typename T, typename V>
+T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
 VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     uint32_t width);
 
@@ -101,21 +93,20 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         Vector **inputVecBatch = inputVecBatches[outputCol];
 
         switch (colTypeId) {
-            case OMNI_VEC_TYPE_INT: {
-                IntVector *intVector = ConstructInt32Vector(valueAddresses, offset, length, inputVecBatch);
-                outputVecBatch->SetVector(j, intVector);
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+                outputVecBatch->SetVector(j,
+                    ConstructVector<IntVector, int32_t>(valueAddresses, offset, length, inputVecBatch));
                 break;
-            }
-            case OMNI_VEC_TYPE_LONG: {
-                LongVector *longVector = ConstructInt64Vector(valueAddresses, offset, length, inputVecBatch);
-                outputVecBatch->SetVector(j, longVector);
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
+                outputVecBatch->SetVector(j,
+                    ConstructVector<LongVector, int64_t>(valueAddresses, offset, length, inputVecBatch));
                 break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                DoubleVector *doubleVector = ConstructDoubleVector(valueAddresses, offset, length, inputVecBatch);
-                outputVecBatch->SetVector(j, doubleVector);
+            case OMNI_VEC_TYPE_DOUBLE:
+                outputVecBatch->SetVector(j,
+                    ConstructVector<DoubleVector, double>(valueAddresses, offset, length, inputVecBatch));
                 break;
-            }
             case OMNI_VEC_TYPE_VARCHAR: {
                 auto vecType = (VarcharVecType &)vecTypes[outputCol];
                 VarcharVector *varcharVector =
@@ -123,6 +114,10 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
+            case OMNI_VEC_TYPE_DECIMAL128:
+                outputVecBatch->SetVector(j,
+                    ConstructVector<Decimal128Vector, Decimal128>(valueAddresses, offset, length, inputVecBatch));
+                break;
             default:
                 break;
         }
@@ -157,26 +152,6 @@ inline void VectorSwap(int64_t *valueAddresses, int32_t from, int32_t l, int32_t
     }
 }
 
-// return 0 when left and right both are nulls
-// return 2 when left and right both are not nulls
-CompareNullStatus CompareNull(Vector *leftColumn, int32_t leftPosition, Vector *rightColumn, int32_t rightPosition,
-    int32_t nullsFirst)
-{
-    bool leftIsNull = leftColumn->IsValueNull(leftPosition);
-    bool rightIsNull = rightColumn->IsValueNull(rightPosition);
-
-    if (leftIsNull && rightIsNull) {
-        return COMPARE_NULL_EQUAL;
-    }
-    if (leftIsNull) {
-        return nullsFirst ? COMPARE_NULL_LESS_THAN : COMPARE_NULL_GREATER_THAN;
-    }
-    if (rightIsNull) {
-        return nullsFirst ? COMPARE_NULL_GREATER_THAN : COMPARE_NULL_LESS_THAN;
-    }
-    return COMPARE_NULL_OTHER;
-}
-
 SPECIALIZE(OMNIJIT_PAGE_INDEX_COMPARE_TO)
 int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, const int64_t *valueAddresses, Vector ***columns,
@@ -207,8 +182,9 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
             rightColumn = columns[sortCol][rightColumnIndex];
         }
 
-        compare = CompareNull(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition, sortNullFirsts[i]);
-        if (compare != COMPARE_NULL_OTHER) {
+        compare = OperatorUtil::CompareNull(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition,
+            sortNullFirsts[i]);
+        if (compare != OperatorUtil::COMPARE_STATUS_OTHER) {
             break;
         }
         // neither the left nor the right is NULL
@@ -367,16 +343,17 @@ void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32
     }
 }
 
-IntVector *ConstructInt32Vector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch)
+template <typename T, typename V>
+T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    Vector *inputColumn = nullptr;
-    int32_t *inputValues = nullptr;
+    Vector *inputVector = nullptr;
+    V *inputValues = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
 
-    IntVector *intVector = std::make_unique<IntVector>(nullptr, length).release();
+    auto outputVector = std::make_unique<T>(nullptr, length).release();
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;
@@ -385,79 +362,17 @@ IntVector *ConstructInt32Vector(int64_t *valueAddresses, int32_t offset, int32_t
         pageIndex = DecodeSliceIndex(valueAddress);
         position = DecodePosition(valueAddress);
         if (preTableIndex != pageIndex) {
-            inputColumn = inputVecBatch[pageIndex];
-            inputValues = static_cast<int32_t *>(inputColumn->GetValues());
+            inputVector = inputVecBatch[pageIndex];
+            inputValues = static_cast<V *>(inputVector->GetValues());
             preTableIndex = pageIndex;
         }
-        if (inputColumn->IsValueNull(position)) {
-            intVector->SetValueNull(outputIndex++);
+        if (inputVector->IsValueNull(position)) {
+            outputVector->SetValueNull(outputIndex++);
         } else {
-            intVector->SetValue(outputIndex++, inputValues[position]);
+            outputVector->SetValue(outputIndex++, inputValues[position]);
         }
     }
-    return intVector;
-}
-
-LongVector *ConstructInt64Vector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch)
-{
-    int32_t preTableIndex = -1;
-    int64_t valueAddress = 0;
-    Vector *inputColumn = nullptr;
-    int64_t *inputValues = nullptr;
-    int32_t pageIndex = 0;
-    int32_t position = 0;
-
-    LongVector *longVector = std::make_unique<LongVector>(nullptr, length).release();
-    int32_t start = offset;
-    int32_t end = offset + length;
-    int32_t outputIndex = 0;
-    for (int32_t i = start; i < end; i++) {
-        valueAddress = valueAddresses[i];
-        pageIndex = DecodeSliceIndex(valueAddress);
-        position = DecodePosition(valueAddress);
-        if (preTableIndex != pageIndex) {
-            inputColumn = inputVecBatch[pageIndex];
-            inputValues = static_cast<int64_t *>(inputColumn->GetValues());
-            preTableIndex = pageIndex;
-        }
-        if (inputColumn->IsValueNull(position)) {
-            longVector->SetValueNull(outputIndex++);
-        } else {
-            longVector->SetValue(outputIndex++, inputValues[position]);
-        }
-    }
-    return longVector;
-}
-
-DoubleVector *ConstructDoubleVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch)
-{
-    int32_t preTableIndex = -1;
-    int64_t valueAddress = 0;
-    Vector *inputColumn = nullptr;
-    double *inputValues = nullptr;
-    int32_t pageIndex = 0;
-    int32_t position = 0;
-
-    DoubleVector *doubleVector = std::make_unique<DoubleVector>(nullptr, length).release();
-    int32_t start = offset;
-    int32_t end = offset + length;
-    int32_t outputIndex = 0;
-    for (int32_t i = start; i < end; i++) {
-        valueAddress = valueAddresses[i];
-        pageIndex = DecodeSliceIndex(valueAddress);
-        position = DecodePosition(valueAddress);
-        if (preTableIndex != pageIndex) {
-            inputColumn = inputVecBatch[pageIndex];
-            inputValues = static_cast<double *>(inputColumn->GetValues());
-            preTableIndex = pageIndex;
-        }
-        if (inputColumn->IsValueNull(position)) {
-            doubleVector->SetValueNull(outputIndex++);
-        } else {
-            doubleVector->SetValue(outputIndex++, inputValues[position]);
-        }
-    }
-    return doubleVector;
+    return outputVector;
 }
 
 VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,

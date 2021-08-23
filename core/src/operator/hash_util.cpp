@@ -53,12 +53,27 @@ int64_t RotateLeft(int64_t i, int32_t distance)
 }
 #pragma clang optimize on
 
+int64_t HashUtil::HashValue(int32_t value)
+{
+    return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
+}
+
 // for hashing a real data value
 // from AbstractLongType#hash()
 // for type double, how to convert double value to long value?
 int64_t HashUtil::HashValue(int64_t value)
 {
     return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
+}
+
+int64_t DoubleToLongBits(double value)
+{
+    return static_cast<int64_t>(value);
+}
+
+int64_t HashUtil::HashValue(double value)
+{
+    return HashValue(DoubleToLongBits(value));
 }
 
 int64_t Reverse(int64_t rawHash);
@@ -195,7 +210,25 @@ int64_t XxHash64Hash(int64_t seed, int8_t *data, int32_t offset, int32_t length)
     return XxHash64UpdateTail(hash, address, index, length);
 }
 
+int64_t HashUtil::XxHash64HashValue(int64_t value)
+{
+    int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
+    hash = XxHash64UpdateTail(hash, value);
+    hash = XxHash64FinalShuffle(hash);
+    return hash;
+}
+
 int64_t HashUtil::HashValue(int8_t *value, int32_t length)
 {
     return XxHash64Hash(DEFAULT_SEED, value, 0, length);
+}
+
+long UnpackUnsignedLong(int64_t value)
+{
+    return value & ~SIGN_LONG_MASK;
+}
+
+int64_t HashUtil::HashValue(int64_t low, int64_t high)
+{
+    return XxHash64HashValue(low) ^ XxHash64HashValue(UnpackUnsignedLong(high));
 }
