@@ -40,11 +40,13 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         return;
     }
     switch (vecType.GetId()) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             std::cout << static_cast<IntVector *>(vector)->GetValue(rowIndex) << "   ";
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
             std::cout << static_cast<LongVector *>(vector)->GetValue(rowIndex) << "   ";
             break;
         }
@@ -52,13 +54,14 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             std::cout << static_cast<DoubleVector *>(vector)->GetValue(rowIndex) << "   ";
             break;
         }
+        case OMNI_VEC_TYPE_BOOLEAN: {
+            std::cout << static_cast<BooleanVector *>(vector)->GetValue(rowIndex) << "   ";
+            break;
+        }
         case OMNI_VEC_TYPE_DICTIONARY: {
             auto *vec = static_cast<DictionaryVector *>(vector);
-            if (vec->GetType().GetId() == OMNI_VEC_TYPE_INT) {
-                std::cout << vec->GetInt(rowIndex) << "   ";
-            } else if (vec->GetType().GetId() == OMNI_VEC_TYPE_LONG) {
-                std::cout << vec->GetLong(rowIndex) << "   ";
-            }
+            int32_t id = vec->GetIds()[rowIndex];
+            PrintVectorValue(vec->GetDictionary(), id);
             break;
         }
         case OMNI_VEC_TYPE_VARCHAR: {
@@ -68,8 +71,14 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             std::cout << valueString << "   ";
             break;
         }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex);
+            std::cout << "highBits:" << result.HighBits() << ",lowBits:" << result.LowBits() << "   ";
+            break;
+        }
         case OMNI_VEC_TYPE_CONTAINER: {
             std::cout << "to parse container vec" << std::endl;
+            break;
         }
         default:
             DebugError("Error vector type %d", vecType.GetId());

@@ -2,12 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: JNI Vector Operations Source File
  */
-#include <stdint.h>
 #include "jni_vector.h"
+#include <stdint.h>
 #include "../util/debug.h"
 #include "../memory/memory_pool.h"
 #include "../vector/vector_common.h"
 #include "../vector/vector_type_serializer.h"
+#include "../vector/vector_helper.h"
 
 using namespace omniruntime::vec;
 
@@ -20,39 +21,8 @@ jobject transformBaseVectorToByteBuffer(JNIEnv *env, void *addr, int sizeInBytes
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
     jlong jAllocator, jint jCapacityInBytes, jint jValueCount, jint jVectorTypeId)
 {
-    int64_t nativeVector = 0;
-    switch (jVectorTypeId) {
-        case OMNI_VEC_TYPE_INT:
-        case OMNI_VEC_TYPE_DATE32:
-            nativeVector = reinterpret_cast<int64_t>(new IntVector(TransformAllocator(jAllocator), jValueCount));
-            break;
-        case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
-            nativeVector = reinterpret_cast<int64_t>(new LongVector(TransformAllocator(jAllocator), jValueCount));
-            break;
-        case OMNI_VEC_TYPE_DOUBLE:
-            nativeVector = reinterpret_cast<int64_t>(new DoubleVector(TransformAllocator(jAllocator), jValueCount));
-            break;
-        case OMNI_VEC_TYPE_BOOLEAN:
-            nativeVector = reinterpret_cast<int64_t>(new BooleanVector(TransformAllocator(jAllocator), jValueCount));
-            break;
-        case OMNI_VEC_TYPE_SHORT:
-            break;
-        case OMNI_VEC_TYPE_DECIMAL128:
-            nativeVector = reinterpret_cast<int64_t>(new Decimal128Vector(TransformAllocator(jAllocator), jValueCount));
-            break;
-        case OMNI_VEC_TYPE_VARCHAR:
-            nativeVector = reinterpret_cast<int64_t>(
-                new VarcharVector(TransformAllocator(jAllocator), jCapacityInBytes, jValueCount));
-            break;
-        case OMNI_VEC_TYPE_CONTAINER:
-            nativeVector =
-                reinterpret_cast<uintptr_t>(new ContainerVector(TransformAllocator(jAllocator), jValueCount));
-        default:
-            break;
-    }
-
-    return nativeVector;
+    return reinterpret_cast<int64_t>(
+        VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorTypeId, jCapacityInBytes, jValueCount));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(JNIEnv *env, jclass jcls,
