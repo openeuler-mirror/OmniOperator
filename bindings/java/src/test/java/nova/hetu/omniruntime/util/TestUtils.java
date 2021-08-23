@@ -1,6 +1,7 @@
 package nova.hetu.omniruntime.util;
 
 import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY;
+
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -55,7 +56,7 @@ public class TestUtils {
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
         }
     }
-    
+
     private static IntVec createIntVec(Object[] data) {
         IntVec result = new IntVec(data.length);
         for (int j = 0; j < data.length; j++) {
@@ -183,7 +184,9 @@ public class TestUtils {
             }
             switch (vec.getType().getId()) {
                 case OMNI_VEC_TYPE_DECIMAL128:
-                    assertEquals(((Decimal128Vec) vec).get(i), new long[] {(long) expectedData[i][0], (long) expectedData[i][1]});
+                    assertEquals(
+                            ((Decimal128Vec) vec).get(i),
+                            new long[] {(long) expectedData[i][0], (long) expectedData[i][1]});
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported type : " + vec.getType().getId());
@@ -203,5 +206,10 @@ public class TestUtils {
                     break;
             }
         }
+    }
+
+    public static void freeVecBatch(VecBatch vecBatch) {
+        vecBatch.releaseAllVectors();
+        vecBatch.close();
     }
 }

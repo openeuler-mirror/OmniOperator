@@ -184,6 +184,9 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
 
         compare = OperatorUtil::CompareNull(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition,
             sortNullFirsts[i]);
+        if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
+            continue;
+        }
         if (compare != OperatorUtil::COMPARE_STATUS_OTHER) {
             break;
         }
