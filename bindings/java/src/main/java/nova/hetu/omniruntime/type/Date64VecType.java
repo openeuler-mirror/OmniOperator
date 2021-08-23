@@ -26,7 +26,7 @@ public class Date64VecType extends VecType {
      * @param dateUnit the unit of date
      */
     public Date64VecType(@JsonProperty("dateUnit") VecType.DateUnit dateUnit) {
-        super(VecType.VecTypeId.OMNI_VEC_TYPE_DATE32);
+        super(VecTypeId.OMNI_VEC_TYPE_DATE64);
         this.dateUnit = dateUnit;
     }
 
