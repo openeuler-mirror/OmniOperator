@@ -144,10 +144,14 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     auto *groupAggregationContext = new omniruntime::jit::Context("group_aggregation",
                                                                 hashGroupbySps,
                                                                 std::vector<std::string>(),
-                                                                std::vector<std::string>(),
                                                                 true);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*groupAggregationContext});
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(
+            std::vector<Optimization> {
+                Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+                Optimization::SROA, Optimization::AGGRESIVE_DCE
+            },
+            std::vector<ModuleOptimization> {ModuleOptimization::PRUNE_EH});
 
     JitContext* jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -202,7 +206,6 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
     auto *groupAggregationContext = new omniruntime::jit::Context("non_group_aggregation",
                                                                 nonGroupSps,
-                                                                std::vector<std::string>(),
                                                                 std::vector<std::string>(),
                                                                 true);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*groupAggregationContext});
@@ -303,17 +306,18 @@ JitContext *createSortJitContext(const int32_t *sourceTypes, int32_t typesCount,
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
 
-    auto *sortContext = new omniruntime::jit::Context("sort",
-                                                    std::map<std::string, Specialization>(),
-                                                    std::vector<std::string>(),
-                                                    std::vector<std::string>(),
-                                                    true);
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index",
-                                                            pagesIndexSps,
-                                                            std::vector<std::string>(),
-                                                            std::vector<std::string>());
+    auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
+                                                    std::vector<std::string>(), true);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*sortContext, *pagesIndexContext});
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(
+        std::vector<Optimization> {
+            Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+            Optimization::SROA, Optimization::AGGRESIVE_DCE
+        },
+        std::vector<ModuleOptimization> {
+            ModuleOptimization::FUNCTION_INLINING, ModuleOptimization::PRUNE_EH, ModuleOptimization::CONSTANT_MERGE
+        });
 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
@@ -419,8 +423,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOpera
 
     std::map<std::string, Specialization> topNCompareSps = { { OMNIJIT_TOPN_COMPARE, *topNCompareSp } };
 
-    auto *topNContext = new omniruntime::jit::Context("topn", topNCompareSps, std::vector<std::string>(),
-        std::vector<std::string>(), true);
+    auto *topNContext = new omniruntime::jit::Context("topn", topNCompareSps, std::vector<std::string>(), true);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *topNContext });
 
@@ -487,9 +490,8 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
     auto *windowContext = new omniruntime::jit::Context("window", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps, std::vector<std::string>(),
-        std::vector<std::string>());
+        std::vector<std::string>(), true);
+    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowContext, *pagesIndexContext });
     auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
@@ -603,11 +605,9 @@ JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t build
     };
 
     auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>(), true);
-    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps,
-        std::vector<std::string>(), std::vector<std::string>());
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps,
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>(), true);
+    auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps);
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext,
         *joinHashTableContext, *pagesHashStrategyContext });
@@ -733,12 +733,8 @@ JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
     auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join",
                                                             std::map<std::string, Specialization>(),
                                                             std::vector<std::string>(),
-                                                            std::vector<std::string>(),
                                                             true);
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy",
-                                                                    hashStrategySps,
-                                                                    std::vector<std::string>(),
-                                                                    std::vector<std::string>());
+    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*lookupJoinContext, *pagesHashStrategyContext});
     auto createOperatorFunc = jit->Specialize();

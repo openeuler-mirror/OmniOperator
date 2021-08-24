@@ -2,108 +2,123 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
 #include "config.h"
+#include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Scalar.h>
 
 namespace omniruntime {
-    namespace jit {
-        void Config::ToConf(int n, bool *conf)
-        {
-            int k;
-            for (k = 0; k < sizeof(int) * 8; k++) { // 8
-                int mask = 1 << k;
-                int maskedN = n & mask;
-                int thebit = maskedN >> k;
-                conf[k] = thebit;
-            }
+namespace jit {
+
+void Config::InitFuncPass()
+{
+    using namespace llvm;
+    func_pass[static_cast<int>(Optimization::EARLY_CSE)] = (Pass* (*)()) &llvm::createEarlyCSEPass;
+    func_pass[static_cast<int>(Optimization::SROA)] = (Pass* (*)()) &llvm::createSROAPass;
+    func_pass[static_cast<int>(Optimization::REASSOCIATE)] = (Pass* (*)()) &llvm::createReassociatePass;
+    func_pass[static_cast<int>(Optimization::AGGRESIVE_DCE)] = (Pass* (*)()) &llvm::createAggressiveDCEPass;
+    func_pass[static_cast<int>(Optimization::CFG_SIMPLIFICATION)] = (Pass* (*)()) &llvm::createCFGSimplificationPass;
+    func_pass[static_cast<int>(Optimization::MERGED_LOAD_STORE_MOTION)] =
+        (Pass* (*)()) &llvm::createMergedLoadStoreMotionPass;
+    func_pass[static_cast<int>(Optimization::IPSCCP)] = (Pass* (*)()) &llvm::createIPSCCPPass;
+    func_pass[static_cast<int>(Optimization::SCCP)] = (Pass* (*)()) &llvm::createSCCPPass;
+    func_pass[static_cast<int>(Optimization::LOWER_ATOMIC)] = (Pass* (*)()) &llvm::createLowerAtomicPass;
+    func_pass[static_cast<int>(Optimization::CONSTANT_HOISTING)] = (Pass* (*)()) &llvm::createConstantHoistingPass;
+    func_pass[static_cast<int>(Optimization::NEW_GVN)] = (Pass* (*)()) &llvm::createNewGVNPass;
+    func_pass[static_cast<int>(Optimization::CALLED_VALUE_PROPAGATION)] =
+        (Pass* (*)()) &llvm::createCalledValuePropagationPass;
+    func_pass[static_cast<int>(Optimization::LOOP_LOAD_ELIMINATION)] =
+        (Pass* (*)()) &llvm::createLoopLoadEliminationPass;
+    func_pass[static_cast<int>(Optimization::LOOP_UNROLL)] = (Pass* (*)()) &llvm::createLoopUnrollPass;
+    func_pass[static_cast<int>(Optimization::PARTIALLY_INLINE_LIB_CALLS)] =
+        (Pass* (*)()) &llvm::createPartiallyInlineLibCallsPass;
+    func_pass[static_cast<int>(Optimization::SEPARATE_CONST_OFFSET_FROM_GEP)] =
+        (Pass* (*)()) &llvm::createSeparateConstOffsetFromGEPPass;
+    func_pass[static_cast<int>(Optimization::LOOP_STRENGTH_REDUCE)] =
+        (Pass* (*)()) &llvm::createLoopStrengthReducePass;
+    func_pass[static_cast<int>(Optimization::INDUCTIVE_RANGE_CHECK_ELIMINATION)] =
+        (Pass* (*)()) &llvm::createInductiveRangeCheckEliminationPass;
+    func_pass[static_cast<int>(Optimization::LOOP_DISTRIBUTE)] = (Pass* (*)()) &llvm::createLoopDistributePass;
+    func_pass[static_cast<int>(Optimization::LOOP_SIMPLIFY_CFG)] = (Pass* (*)()) &llvm::createLoopSimplifyCFGPass;
+    func_pass[static_cast<int>(Optimization::LOOP_INST_SIMPLIFY)] = (Pass* (*)()) &llvm::createLoopInstSimplifyPass;
+    func_pass[static_cast<int>(Optimization::LOOP_EXTRACTOR)] = (Pass* (*)()) &llvm::createLoopExtractorPass;
+    func_pass[static_cast<int>(Optimization::LOOP_VERSIONING_LICM)] =
+        (Pass* (*)()) &llvm::createLoopVersioningLICMPass;
+    func_pass[static_cast<int>(Optimization::LOOP_DELETION)] = (Pass* (*)()) &llvm::createLoopDeletionPass;
+    func_pass[static_cast<int>(Optimization::LOOP_DATA_PREFETCH)] = (Pass* (*)()) &llvm::createLoopDataPrefetchPass;
+    func_pass[static_cast<int>(Optimization::LICM)] = (Pass* (*)()) &llvm::createLICMPass;
+    func_pass[static_cast<int>(Optimization::FUNCTION_INLINING)] = (Pass* (*)()) &llvm::createFunctionInliningPass;
+    func_pass[static_cast<int>(Optimization::LOWER_CONSTANT_INTRINSICS)] =
+        (Pass* (*)()) &llvm::createLowerConstantIntrinsicsPass;
+    func_pass[static_cast<int>(Optimization::IND_VAR_SIMPLIFY)] = (Pass* (*)()) &llvm::createIndVarSimplifyPass;
+    func_pass[static_cast<int>(Optimization::LOOP_UNSWITCH)] = (Pass* (*)()) &llvm::createLoopUnswitchPass;
+    func_pass[static_cast<int>(Optimization::MERGE_ICMPS_LEGACY)] = (Pass* (*)()) &llvm::createMergeICmpsLegacyPass;
+    func_pass[static_cast<int>(Optimization::DEAD_STORE_ELIMINATION)] =
+        (Pass* (*)()) &llvm::createDeadStoreEliminationPass;
+    func_pass[static_cast<int>(Optimization::STRUCTURIZE_CFG)] = (Pass* (*)()) &llvm::createStructurizeCFGPass;
+    // find a way to add createInstructionCombiningPass
+}
+
+void Config::InitModulePass()
+{
+    using namespace llvm;
+    module_pass[static_cast<int>(ModuleOptimization::CALLED_VALUE_PROPAGATION)] =
+        (Pass* (*)()) &llvm::createCalledValuePropagationPass;
+    module_pass[static_cast<int>(ModuleOptimization::CONSTANT_MERGE)] = (Pass* (*)()) &llvm::createConstantMergePass;
+    module_pass[static_cast<int>(ModuleOptimization::NEW_GVN)] = (Pass* (*)()) &llvm::createNewGVNPass;
+    module_pass[static_cast<int>(ModuleOptimization::TAIL_CALL_ELIMINATION)] =
+        (Pass* (*)()) &llvm::createTailCallEliminationPass;
+    module_pass[static_cast<int>(ModuleOptimization::SEPARATE_CONST_OFFSET_FROM_GEP)] =
+        (Pass* (*)()) &llvm::createSeparateConstOffsetFromGEPPass;
+    module_pass[static_cast<int>(ModuleOptimization::SIMPLE_LOOP_UNROLL)] =
+        (Pass* (*)()) &llvm::createSimpleLoopUnrollPass;
+    module_pass[static_cast<int>(ModuleOptimization::FUNCTION_INLINING)] =
+        (Pass* (*)()) &llvm::createFunctionInliningPass;
+    module_pass[static_cast<int>(ModuleOptimization::IND_VAR_SIMPLIFY)] =
+        (Pass* (*)()) &llvm::createIndVarSimplifyPass;
+    module_pass[static_cast<int>(ModuleOptimization::DEAD_ARG_ELIMINATION)] =
+        (Pass* (*)()) &llvm::createDeadArgEliminationPass;
+    module_pass[static_cast<int>(ModuleOptimization::GLOBAL_OPTIMIZER)] =
+        (Pass* (*)()) &llvm::createGlobalOptimizerPass;
+    module_pass[static_cast<int>(ModuleOptimization::IPSCCP)] = (Pass* (*)()) &llvm::createIPSCCPPass;
+    module_pass[static_cast<int>(ModuleOptimization::PARTIALLY_INLINE_LIB_CALLS)] =
+        (Pass* (*)()) &llvm::createPartiallyInlineLibCallsPass;
+    module_pass[static_cast<int>(ModuleOptimization::MERGE_ICMPS_LEGACY)] =
+        (Pass* (*)()) &llvm::createMergeICmpsLegacyPass;
+    module_pass[static_cast<int>(ModuleOptimization::PARTIAL_INLINING)] =
+        (Pass* (*)()) &llvm::createPartialInliningPass;
+    module_pass[static_cast<int>(ModuleOptimization::CFG_SIMPLIFICATION)] =
+        (Pass* (*)()) &llvm::createCFGSimplificationPass;
+    module_pass[static_cast<int>(ModuleOptimization::LOWER_CONSTANT_INTRINSICS)] =
+        (Pass* (*)()) &llvm::createLowerConstantIntrinsicsPass;
+    module_pass[static_cast<int>(ModuleOptimization::PRUNE_EH)] = (Pass* (*)()) &llvm::createPruneEHPass;
+    module_pass[static_cast<int>(ModuleOptimization::STRUCTURIZE_CFG)] =
+        (Pass* (*)()) &llvm::createStructurizeCFGPass;
+    module_pass[static_cast<int>(ModuleOptimization::MEM_CPY_OPT)] = (Pass* (*)()) &llvm::createMemCpyOptPass;
+    module_pass[static_cast<int>(ModuleOptimization::AGGRESIVE_DCE)] = (Pass* (*)()) &llvm::createAggressiveDCEPass;
+}
+
+void Config::populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM,
+    const std::vector<Optimization> &optimizations, const std::vector<ModuleOptimization> &moduleOptimizations)
+{
+    using namespace llvm;
+
+    for (auto &optimization : optimizations) {
+        int optimizationIndex = static_cast<int>(optimization);
+        if (optimization == Optimization::LOOP_UNROLL) {
+            // find a better way to handle params
+            FPM.add(createLoopUnrollPass(DEFAULT_OPT_LEVEL, false, false, DEFAULT_LOOP_UNROLL_THRESHOLD,
+                DEFAULT_LOOP_UNROLL_COUNT, true));
+        } else {
+            FPM.add(func_pass[optimizationIndex]());
         }
-
-        void Config::InitFuncPass()
-        {
-            using namespace llvm;
-            func_pass[0] = (Pass *(*)()) &llvm::createEarlyCSEPass; // 0
-            func_pass[1] = (Pass *(*)()) &llvm::createSROAPass; // 1
-            func_pass[2] = (Pass *(*)()) &llvm::createReassociatePass; // 2
-            func_pass[3] = (Pass *(*)()) &llvm::createAggressiveDCEPass; // 3
-            func_pass[4] = (Pass *(*)()) &llvm::createCFGSimplificationPass; // 4
-            func_pass[5] = (Pass *(*)()) &llvm::createMergedLoadStoreMotionPass; // 5
-            func_pass[6] = (Pass *(*)()) &llvm::createIPSCCPPass; // 6
-            func_pass[7] = (Pass *(*)()) &llvm::createSCCPPass; // 7
-            func_pass[8] = (Pass *(*)()) &llvm::createLowerAtomicPass; // 8
-            func_pass[9] = (Pass *(*)()) &llvm::createConstantHoistingPass; // 9
-            func_pass[10] = (Pass *(*)()) &llvm::createNewGVNPass; // 10
-            func_pass[11] = (Pass *(*)()) &llvm::createCalledValuePropagationPass; // 11
-            func_pass[12] = (Pass *(*)()) &llvm::createLoopLoadEliminationPass; // 12
-            func_pass[13] = (Pass *(*)()) &llvm::createLoopUnrollPass; // 13
-            func_pass[14] = (Pass *(*)()) &llvm::createPartiallyInlineLibCallsPass; // 14
-            func_pass[15] = (Pass *(*)()) &llvm::createSeparateConstOffsetFromGEPPass; // 15
-            func_pass[16] = (Pass *(*)()) &llvm::createLoopStrengthReducePass; // 16
-            func_pass[17] = (Pass *(*)()) &llvm::createInductiveRangeCheckEliminationPass; // 17
-            func_pass[18] = (Pass *(*)()) &llvm::createInductiveRangeCheckEliminationPass; // 18
-            func_pass[19] = (Pass *(*)()) &llvm::createLoopDistributePass; // 19
-            func_pass[20] = (Pass *(*)()) &llvm::createLoopSimplifyCFGPass; // 20
-            func_pass[21] = (Pass *(*)()) &llvm::createLoopInstSimplifyPass; // 21
-            func_pass[22] = (Pass *(*)()) &llvm::createLoopExtractorPass; // 22
-            func_pass[23] = (Pass *(*)()) &llvm::createLoopVersioningLICMPass; // 23
-            func_pass[24] = (Pass *(*)()) &llvm::createLoopDeletionPass; // 24
-            func_pass[25] = (Pass *(*)()) &llvm::createLoopDataPrefetchPass; // 25
-            func_pass[26] = (Pass *(*)()) &llvm::createLICMPass; // 26
-            func_pass[27] = (Pass *(*)()) &llvm::createFunctionInliningPass; // 27
-            func_pass[28] = (Pass *(*)()) &llvm::createLowerConstantIntrinsicsPass; // 28
-        }
-
-        void Config::InitModulePass()
-        {
-            using namespace llvm;
-            module_pass[0] = (Pass *(*)()) &llvm::createCalledValuePropagationPass; // 0
-            module_pass[1] = (Pass *(*)()) &llvm::createConstantMergePass; // 1
-            module_pass[2] = (Pass *(*)()) &llvm::createNewGVNPass; // 2
-            module_pass[3] = (Pass *(*)()) &llvm::createTailCallEliminationPass; // 3
-            module_pass[4] = (Pass *(*)()) &llvm::createSeparateConstOffsetFromGEPPass; // 4
-            module_pass[5] = (Pass *(*)()) &llvm::createSimpleLoopUnrollPass; // 5
-            module_pass[6] = (Pass *(*)()) &llvm::createFunctionInliningPass; // 6
-            module_pass[7] = (Pass *(*)()) &llvm::createIndVarSimplifyPass; // 7
-            module_pass[8] = (Pass *(*)()) &llvm::createDeadArgEliminationPass; // 8
-            module_pass[9] = (Pass *(*)()) &llvm::createGlobalOptimizerPass; // 9
-            module_pass[10] = (Pass *(*)()) &llvm::createIPSCCPPass; // 10
-            module_pass[11] = (Pass *(*)()) &llvm::createPartiallyInlineLibCallsPass; // 11
-            module_pass[12] = (Pass *(*)()) &llvm::createMergeICmpsLegacyPass; // 12
-            module_pass[13] = (Pass *(*)()) &llvm::createPartialInliningPass; // 13
-            module_pass[14] = (Pass *(*)()) &llvm::createCFGSimplificationPass; // 14
-            module_pass[15] = (Pass *(*)()) &llvm::createCalledValuePropagationPass; // 15
-            module_pass[16] = (Pass *(*)()) &llvm::createLowerConstantIntrinsicsPass; // 16
-            module_pass[17] = (Pass *(*)()) &llvm::createPruneEHPass; // 17
-            module_pass[18] = (Pass *(*)()) &llvm::createStructurizeCFGPass; // 18
-            module_pass[19] = (Pass *(*)()) &llvm::createMemCpyOptPass; // 19
-            module_pass[20] = (Pass *(*)()) &llvm::createAggressiveDCEPass; // 20
-        }
-
-        void Config::populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::PassManager &MPM)
-        {
-            using namespace llvm;
-
-            // propage constants
-            FPM.add(createSCCPPass());
-            FPM.add(createNewGVNPass());
-            FPM.add(createInductiveRangeCheckEliminationPass());
-            FPM.add(createIndVarSimplifyPass());
-
-            FPM.add(createLICMPass());
-            FPM.add(createLoopUnrollPass());
-            FPM.add(createLoopUnswitchPass());
-
-            FPM.add(createLoopLoadEliminationPass());
-            FPM.add(createInductiveRangeCheckEliminationPass());
-            FPM.add(createIndVarSimplifyPass());
-            FPM.add(createLoopInstSimplifyPass());
-            FPM.add(createLoopSimplifyCFGPass());
-            FPM.add(createMergedLoadStoreMotionPass());
-            FPM.add(createMergeICmpsLegacyPass());
-            FPM.add(createAggressiveDCEPass());
-            FPM.add(createDeadStoreEliminationPass());
-
-            MPM.add(createFunctionInliningPass());
-            MPM.add(createPruneEHPass());
-        }
+        outs() << "Function pass added: " << optimizationIndex << "\n";
     }
+
+    for (auto &optimization : moduleOptimizations) {
+        int optimizationIndex = static_cast<int>(optimization);
+        MPM.add(module_pass[optimizationIndex]());
+        outs() << "Module pass added: " << optimizationIndex << "\n";
+    }
+}
+}
 }

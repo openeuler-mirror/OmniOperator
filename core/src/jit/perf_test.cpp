@@ -42,11 +42,9 @@ void createOperatorFactory(
         };
 
         auto *sortContext = new omniruntime::jit::Context("sort", std::map<std::string, Specialization>(),
-                                                          std::vector<std::string>(), std::vector<std::string>(), true);
-        auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
-                                                                std::vector<std::string>(), std::vector<std::string>());
-        auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps,
-                                                                std::vector<std::string>(), std::vector<std::string>());
+                                                          std::vector<std::string>(), true);
+        auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>());
+        auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps);
 
         auto start = Time::now();
 

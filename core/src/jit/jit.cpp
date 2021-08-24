@@ -29,7 +29,9 @@ namespace omniruntime {
             }
         }
 
-        uint64_t Jit::Specialize()
+        uint64_t Jit::Specialize(
+                const std::vector<Optimization> &optimizations,
+                const std::vector<ModuleOptimization> &moduleOptimizations)
         {
             for (auto &context : this->contexts) {
                 bool loaded = this->compiler->LoadOperatorTemplate(context.getJitTemplate(), context.IsDependency());
@@ -44,7 +46,7 @@ namespace omniruntime {
                 }
                 std::cout << "Added specializations" << std::endl;
             }
-            return this->compiler->SpecializeAndCompile();
+            return this->compiler->SpecializeAndCompile(optimizations, moduleOptimizations);
         }
 
         std::vector<std::string> Jit::getAppliedOptimizations()

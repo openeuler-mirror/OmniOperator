@@ -74,19 +74,18 @@ JitContext *CreateTestHashBuilderJitContext(const int32_t *buildTypes, int32_t b
     };
 
     auto *hashBuilderContext = new omniruntime::jit::Context("hash_builder", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>(), true);
+        std::vector<std::string>(), true);
     auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>());
     auto *joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps,
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>());
     auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps,
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>());
     auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>());
-
+        std::vector<std::string>());
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *pagesIndexContext,
         *joinHashTableContext, *pagesHashStrategyContext, *hashUtilContext });
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(vector<Optimization>());
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
     return jitContext;
@@ -120,15 +119,15 @@ JitContext *CreateTestLookupJoinJitContext(const int32_t *probeTypes, int32_t pr
     auto *joinHashTableContext = CreateTestHashTableContext(pHashColTypes, pHashColCount);
     auto *pagesHashStrategyContext = CreateTestHashStrategyContext(pHashColTypes, pHashColCount);
     auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>());
     auto *hashUtilContext = new omniruntime::jit::Context("hash_util", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>());
     auto *memoryPoolContext = new omniruntime::jit::Context("memory_pool", std::map<std::string, Specialization>(),
-        std::vector<std::string>(), std::vector<std::string>());
+        std::vector<std::string>());
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
         *pagesIndexContext, *pagesHashStrategyContext, *hashUtilContext, *memoryPoolContext });
-    auto createOperatorFunc = jit->Specialize();
+    auto createOperatorFunc = jit->Specialize(vector<Optimization>());
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
@@ -146,7 +145,7 @@ Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOu
     buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_6, &probeOutputColsCount);
 
     map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp } };
-    auto *lookupJoinContext = new Context("lookup_join", lookupJoinSps, vector<string>(), vector<string>(), true);
+    auto *lookupJoinContext = new Context("lookup_join", lookupJoinSps, vector<string>(), true);
     return lookupJoinContext;
 }
 
@@ -156,7 +155,7 @@ Context *CreateTestHashTableContext(ParamValue &hashColTypes, ParamValue &hashCo
     hashRowSp->AddSpecializedParam(PARAM_OFFSET_2, &hashColTypes);
     hashRowSp->AddSpecializedParam(PARAM_OFFSET_3, &hashColCount);
     map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
-    auto *joinHashTableContext = new Context("join_hash_table", joinHashTableSps, vector<string>(), vector<string>());
+    auto *joinHashTableContext = new Context("join_hash_table", joinHashTableSps, vector<string>());
     return joinHashTableContext;
 }
 
@@ -169,7 +168,7 @@ Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &has
     map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
         *positionEqualsRowIgnoreNullsSp } };
     auto *pagesHashStrategyContext =
-        new Context("pages_hash_strategy", hashStrategySps, vector<string>(), vector<string>());
+        new Context("pages_hash_strategy", hashStrategySps, vector<string>());
     return pagesHashStrategyContext;
 }
 

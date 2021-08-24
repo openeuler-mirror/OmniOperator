@@ -124,7 +124,7 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
     // contents of bitmap are modified in GetData method
     std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap);
 
-    int32_t nReturned = this->projector(data.data(), vecBatch->GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
+    this->projector(data.data(), vecBatch->GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
         selectedRows, numSelectedRows, bitmap);
 
     for (auto v : vcdataVec) {

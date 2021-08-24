@@ -27,7 +27,9 @@ namespace omniruntime {
             /// Specialize operator templates with values/stats in Context
             /// return pointer to CreateOperator method in the optimized code
             /// or 0 if specialization failed
-            uint64_t Specialize();
+            uint64_t Specialize(
+                    const std::vector<Optimization> &optimizations = std::vector<Optimization>(),
+                    const std::vector<ModuleOptimization> &moduleOptimizations = std::vector<ModuleOptimization>());
 
             std::vector<std::string> getAppliedOptimizations();
 
