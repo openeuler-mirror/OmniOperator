@@ -3,6 +3,9 @@
  */
 
 #include "vector_helper.h"
+
+#include <iomanip>
+
 #include "dictionary_vector.h"
 #include "varchar_vector.h"
 #include "boolean_vector.h"
@@ -37,26 +40,26 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
 {
     auto vecType = vector->GetType();
     if (vector->IsValueNull(rowIndex)) {
-        std::cout << "NULL" << "   ";
+        std::cout << "NULL" << "\t";
         return;
     }
     switch (vecType.GetId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
-            std::cout << static_cast<IntVector *>(vector)->GetValue(rowIndex) << "   ";
+            std::cout << std::dec << static_cast<IntVector *>(vector)->GetValue(rowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64: {
-            std::cout << static_cast<LongVector *>(vector)->GetValue(rowIndex) << "   ";
+            std::cout << std::dec << static_cast<LongVector *>(vector)->GetValue(rowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            std::cout << static_cast<DoubleVector *>(vector)->GetValue(rowIndex) << "   ";
+            std::cout << static_cast<DoubleVector *>(vector)->GetValue(rowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_BOOLEAN: {
-            std::cout << static_cast<BooleanVector *>(vector)->GetValue(rowIndex) << "   ";
+            std::cout << static_cast<BooleanVector *>(vector)->GetValue(rowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_DICTIONARY: {
@@ -69,15 +72,17 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             uint8_t *value = nullptr;
             int32_t len = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &value);
             std::string valueString(value, value + len);
-            std::cout << valueString << "   ";
+            std::cout << valueString << "\t";
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            std::cout << static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex) << "   ";
+            Decimal128 result = static_cast<Decimal128Vector*>(vector)->GetValue(rowIndex);
+            std::cout << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << result.HighBits()
+            << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << result.LowBits() << "\t";
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {
-            std::cout << "to parse container vec" << std::endl;
+            std::cout << "to parse container vec" << "\t";
             break;
         }
         default:

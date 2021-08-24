@@ -35,6 +35,11 @@ namespace op {
             this->status = status;
         };
 
+        virtual OmniStatus Init()
+        {
+            return OMNI_STATUS_NORMAL;
+        }
+
         virtual OmniStatus Close()
         {
             return OMNI_STATUS_NORMAL;

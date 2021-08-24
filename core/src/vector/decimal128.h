@@ -9,6 +9,7 @@
 #include <iostream>
 #include "decimal_base.h"
 #include "op_result.h"
+#include "../operator/hash_util.h"
 
 namespace omniruntime {
 namespace vec {
@@ -17,6 +18,10 @@ public:
     Decimal128(int64_t high_bits, uint64_t low_bits);
 
     Decimal128() : Decimal128(0, 0) {}
+
+    Decimal128(const Decimal128& rhs) = default;
+
+    Decimal128& operator=(const Decimal128& rhs) = default;
 
     // / \brief Convert any integer value into a Decimal128.
     template <typename T,

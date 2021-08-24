@@ -40,6 +40,11 @@ public:
         return rowCount;
     }
 
+    int GetVectorSize()
+    {
+        return vectorIndex;
+    }
+
     const VecType *GetVectorTypes() const
     {
         return vectorTypes;
@@ -58,6 +63,7 @@ private:
     Vector *NewContainerVec();
 
     int vectorCount;
+    int vectorIndex;
     int rowCount;
     Vector **vectors;
     VecType *vectorTypes;

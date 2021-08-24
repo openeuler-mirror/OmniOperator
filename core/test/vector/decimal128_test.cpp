@@ -109,6 +109,16 @@ TEST(Decimal128, multiple_negate)
     EXPECT_EQ(result.LowBits(), 0xFFFFFFFFFFFFFFFE); // -2
 }
 
+TEST(Decimal128, multiple_integer)
+{
+    auto left = new Decimal128(6, 2);
+    int32_t right = 2;
+    auto result = *left * right;
+    EXPECT_EQ(result.HighBits(), 12);
+    EXPECT_EQ(result.LowBits(), 4);
+    delete left;
+}
+
 TEST(Decimal128, divide_positive1)
 {
     auto left = new Decimal128(12, 2);
