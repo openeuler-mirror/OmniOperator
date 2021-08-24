@@ -25,6 +25,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
         VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorTypeId, jCapacityInBytes, jValueCount));
 }
 
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *env, jclass jcls,
+    jlong jDictionary, jintArray jIds, jint jVectorTypeId)
+{
+    Vector *dictionary = TransformVector(jDictionary);
+    jint *ids = env->GetIntArrayElements(jIds, JNI_FALSE);
+    DictionaryVector *dictionaryVector = std::make_unique<DictionaryVector>(dictionary, ids, jVectorTypeId).release();
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(dictionaryVector));
+}
+
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector, jint jStartIndex, jint jLength)
 {

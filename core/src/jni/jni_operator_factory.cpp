@@ -19,7 +19,6 @@
 #include "../operator/partitionedoutput/partitionedoutput.h"
 #include "../operator/union/union.h"
 #include "../operator/optimization.h"
-#include "../vector/vector_type_serializer.h"
 #include "config.h"
 
 using omniruntime::jit::ParamValue;
@@ -59,26 +58,37 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     return reinterpret_cast<int64_t>(nativeOperator);
 }
 
+void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t *columns, int32_t length)
+{
+    for (int32_t i = 0; i < length; i++) {
+        jstring jSortCol = static_cast<jstring>(env->GetObjectArrayElement(jExpressions, i));
+        const char *columnString = env->GetStringUTFChars(jSortCol, JNI_FALSE);
+        columns[i] = std::stoi(columnString + 1);
+        env->ReleaseStringUTFChars(jSortCol, columnString);
+    }
+}
+
 /* *
  * Return an HashAggregationFactory object address.
  *             */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
-    JNIEnv *env, jobject jObj, jintArray jGroupByChannel, jstring jGroupByType, jintArray jAggChannel,
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
     jstring jAggType, jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial)
 {
     JNI_DEBUG_LOG("create hashagg operator factory starting.");
     auto start = START();
     // groupby channel and id
-    jint *groupByCols = env->GetIntArrayElements(jGroupByChannel, JNI_FALSE);
+    size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
+    int32_t groupByCols[groupByNum];
+    GetColumnsFromExpressions(env, jGroupByChannel, groupByCols, groupByNum);
     auto groupByTypesCharPtr = env->GetStringUTFChars(jGroupByType, JNI_FALSE);
-    jint *aggCols = env->GetIntArrayElements(jAggChannel, JNI_FALSE);
+    size_t aggNum = static_cast<size_t>(env->GetArrayLength(jAggChannel));
+    int32_t aggCols[aggNum];
+    GetColumnsFromExpressions(env, jAggChannel, aggCols, aggNum);
     auto aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
     jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
     auto outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
-
-    size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
-    size_t aggNum = (size_t)env->GetArrayLength(jAggChannel);
 
     auto groupByVecTypes = Deserialize(groupByTypesCharPtr);
     auto aggVecTypes = Deserialize(aggTypesCharPtr);
@@ -229,23 +239,24 @@ JitContext *createSortJitContext(const int32_t *sourceTypes, int32_t typesCount,
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory
  * Method:    createSortOperatorFactory
- * Signature: ([I[I[I[I[I)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[I)J
  */
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(JNIEnv *env, jobject jObj,
-    jstring jSourceTypes, jintArray jOutputCols, jintArray jSortCols, jintArray jAscendings, jintArray jNullFirsts)
+Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(JNIEnv *env, jclass jObj,
+    jstring jSourceTypes, jintArray jOutputCols, jobjectArray jSortCols, jintArray jAscendings, jintArray jNullFirsts)
 {
     JNI_DEBUG_LOG("create sort operator factory starting.");
     auto start = START();
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint *outputColsArr = env->GetIntArrayElements(jOutputCols, JNI_FALSE);
-    jint *sortColsArr = env->GetIntArrayElements(jSortCols, JNI_FALSE);
+    auto sortColsCount = env->GetArrayLength(jSortCols);
+    int32_t sortColsArr[sortColsCount];
+    GetColumnsFromExpressions(env, jSortCols, sortColsArr, sortColsCount);
     jint *ascendingsArr = env->GetIntArrayElements(jAscendings, JNI_FALSE);
     jint *nullFirstsArr = env->GetIntArrayElements(jNullFirsts, JNI_FALSE);
 
     auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
     auto outputColsCount = env->GetArrayLength(jOutputCols);
-    auto sortColsCount = env->GetArrayLength(jSortCols);
 
     JNI_DEBUG_LOG("before create sort operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::SortOperatorFactory *sortOperatorFactory =
@@ -393,17 +404,17 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
 }
 
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jobject jObj,
-    jstring jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jclass jObj,
+    jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
 {
     using namespace omniruntime::jit;
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
-    jint *sortCols = env->GetIntArrayElements(jSortCols, JNI_FALSE);
+    jint sortColCount = env->GetArrayLength(jSortCols);
+    int32_t *sortCols = std::make_unique<int32_t[]>(sortColCount).release();
+    GetColumnsFromExpressions(env, jSortCols, sortCols, sortColCount);
     jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     int32_t n = (int32_t)jN;
-
-    jint sortColCount = env->GetArrayLength(jSortCols);
 
     auto sourceTypes = Deserialize(sourceTypesCharPtr);
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
@@ -541,38 +552,37 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
 
     // TODO: ReleaseStringUTFChars
 }
-JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildOutputCols,
-    int32_t buildOutputColsCount, int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+
+JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildHashCols,
+    int32_t buildHashColsCount, int32_t operatorCount);
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory(JNIEnv *env,
-    jobject jObj, jstring jBuildTypes, jintArray jBuildOutputCols, jintArray jBuildHashCols, jint jOperatorCount)
+    jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashCols, jint jOperatorCount)
 {
     JNI_DEBUG_LOG("create hash builder operator factory starting.");
     auto start = START();
     auto buildTypesCharPtr = (env)->GetStringUTFChars(jBuildTypes, JNI_FALSE);
-    jint *buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
-    jint *buildHashColsArr = env->GetIntArrayElements(jBuildHashCols, JNI_FALSE);
-
-    jint buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
-    jint buildHashColsCount = env->GetArrayLength(jBuildHashCols);
+    auto buildHashColsCount = env->GetArrayLength(jBuildHashCols);
+    int32_t buildHashColsArr[buildHashColsCount];
+    GetColumnsFromExpressions(env, jBuildHashCols, buildHashColsArr, buildHashColsCount);
 
     auto buildVecTypes = Deserialize(buildTypesCharPtr);
 
     JNI_DEBUG_LOG("before create hash builder operator factory elapsed time: %ld ms.", END(start));
     omniruntime::op::HashBuilderOperatorFactory *hashBuilderOperatorFactory =
-        omniruntime::op::HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildVecTypes, buildOutputColsArr,
-        buildOutputColsCount, buildHashColsArr, buildHashColsCount, jOperatorCount);
+        omniruntime::op::HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildVecTypes, buildHashColsArr,
+        buildHashColsCount, jOperatorCount);
     JitContext *jitContext = createHashBuilderJitContext(buildVecTypes.GetIds(), buildVecTypes.GetSize(),
-        buildOutputColsArr, buildOutputColsCount, buildHashColsArr, buildHashColsCount, jOperatorCount);
+        buildHashColsArr, buildHashColsCount, jOperatorCount);
     hashBuilderOperatorFactory->SetJitContext(jitContext);
     JNI_DEBUG_LOG("create hash builder operator factory finished, elapsed time: %ld ms.", END(start));
     env->ReleaseStringUTFChars(jBuildTypes, buildTypesCharPtr);
     return (int64_t)hashBuilderOperatorFactory;
 }
 
-JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildOutputCols,
-    int32_t buildOutputColsCount, int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
+JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildHashCols,
+    int32_t buildHashColsCount, int32_t operatorCount)
 {
     JNI_DEBUG_LOG("create hash builder JIT context starting.");
     auto start = START();
@@ -625,20 +635,19 @@ JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
-    jobject jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
-    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory)
+    jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashCols, jintArray
+    jBuildOutputCols, jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory)
 {
     JNI_DEBUG_LOG("create lookup join operator factory starting.");
     auto start = START();
     auto probeTypesCharPtr = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     jint *probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
-    jint *probeHashColsArr = env->GetIntArrayElements(jProbeHashCols, JNI_FALSE);
+    auto probeHashColsCount = env->GetArrayLength(jProbeHashCols);
+    int32_t probeHashColsArr[probeHashColsCount];
+    GetColumnsFromExpressions(env, jProbeHashCols, probeHashColsArr, probeHashColsCount);
     jint *buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
-
     auto buildOutputTypesCharPtr = env->GetStringUTFChars(jBuildOutputTypes, JNI_FALSE);
-
     jint probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
-    jint probeHashColsCount = env->GetArrayLength(jProbeHashCols);
 
     auto probeVecTypes = Deserialize(probeTypesCharPtr);
     auto buildOutputVecTypes = Deserialize(buildOutputTypesCharPtr);

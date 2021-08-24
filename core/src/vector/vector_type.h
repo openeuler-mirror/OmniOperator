@@ -83,7 +83,7 @@ public:
     { // NOLINT
     }
 
-    ~VecType() {}
+    virtual ~VecType() {}
 
     VecTypeId GetId() const
     {
@@ -127,7 +127,7 @@ class IntVecType : public VecType {
 public:
     IntVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_INT) {}
 
-    ~IntVecType() {}
+    ~IntVecType() override {}
 
     const static IntVecType &Instance()
     {
@@ -140,7 +140,7 @@ class LongVecType : public VecType {
 public:
     LongVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_LONG) {}
 
-    ~LongVecType() {}
+    ~LongVecType() override {}
 
     const static LongVecType &Instance()
     {
@@ -153,7 +153,7 @@ class DoubleVecType : public VecType {
 public:
     DoubleVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_DOUBLE) {}
 
-    ~DoubleVecType() {}
+    ~DoubleVecType() override {}
 
     const static DoubleVecType &Instance()
     {
@@ -166,7 +166,7 @@ class BooleanVecType : public VecType {
 public:
     BooleanVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_BOOLEAN) {}
 
-    ~BooleanVecType() {}
+    ~BooleanVecType() override {}
 
     const static BooleanVecType &Instance()
     {
@@ -179,7 +179,7 @@ class ShortVecType : public VecType {
 public:
     ShortVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_SHORT) {}
 
-    ~ShortVecType() {}
+    ~ShortVecType() override {}
 
     const static ShortVecType &Instance()
     {
@@ -196,7 +196,7 @@ public:
         this->scale = scale;
     }
 
-    ~Decimal64VecType() {}
+    ~Decimal64VecType() override {}
 
     int32_t GetPrecision() const
     {
@@ -223,7 +223,7 @@ public:
         this->scale = scale;
     }
 
-    ~Decimal128VecType() {}
+    ~Decimal128VecType() override {}
 
     int32_t GetPrecision() const
     {
@@ -249,7 +249,7 @@ public:
         this->dateUnit = dateUnit;
     }
 
-    ~Date32VecType() {}
+    ~Date32VecType() override {}
 
     DateUnit GetDateUnit() const
     {
@@ -270,7 +270,7 @@ public:
         this->dateUnit = dateUnit;
     }
 
-    ~Date64VecType() {}
+    ~Date64VecType() override {}
 
     DateUnit GetDateUnit() const
     {
@@ -288,7 +288,7 @@ class Time32VecType : public VecType {
 public:
     explicit Time32VecType() : VecType(VecTypeId::OMNI_VEC_TYPE_TIME32) {}
 
-    ~Time32VecType() {}
+    ~Time32VecType() override {}
 
     const static Time32VecType &Instance()
     {
@@ -301,7 +301,7 @@ class Time64VecType : public VecType {
 public:
     explicit Time64VecType() : VecType(VecTypeId::OMNI_VEC_TYPE_TIME64) {}
 
-    ~Time64VecType() {}
+    ~Time64VecType() override {}
 
     const static Time64VecType &Instance()
     {
@@ -314,7 +314,7 @@ class ContainerVecType : public VecType {
 public:
     explicit ContainerVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_CONTAINER) {}
 
-    ~ContainerVecType() {}
+    ~ContainerVecType() override {}
 
     const static ContainerVecType &Instance()
     {
@@ -330,7 +330,7 @@ public:
         this->width = width;
     }
 
-    ~VarcharVecType() {}
+    ~VarcharVecType() override {}
 
     uint32_t GetWidth() const
     {
@@ -348,7 +348,7 @@ class DictionaryVecType : public VecType {
 public:
     explicit DictionaryVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_DICTIONARY) {}
 
-    ~DictionaryVecType() {}
+    ~DictionaryVecType() override {}
 
     const static DictionaryVecType &Instance()
     {

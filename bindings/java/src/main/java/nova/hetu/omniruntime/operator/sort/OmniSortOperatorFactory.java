@@ -27,18 +27,26 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
      */
-    public OmniSortOperatorFactory(VecType[] sourceTypes, int[] outputColumns, int[] sortColumns, int[] sortAscendings,
+    public OmniSortOperatorFactory(
+            VecType[] sourceTypes,
+            int[] outputColumns,
+            String[] sortColumns,
+            int[] sortAscendings,
             int[] sortNullFirsts) {
         super(new Context(sourceTypes, outputColumns, sortColumns, sortAscendings, sortNullFirsts));
     }
 
-    private static native long createSortOperatorFactory(String sourceTypes, int[] outputCols, int[] sortCols,
-            int[] ascendings, int[] nullFirsts);
+    private static native long createSortOperatorFactory(
+            String sourceTypes, int[] outputCols, String[] sortCols, int[] ascendings, int[] nullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createSortOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
-                context.sortColumns, context.sortAscendings, context.sortNullFirsts);
+        return createSortOperatorFactory(
+                VecTypeSerializer.serialize(context.sourceTypes),
+                context.outputColumns,
+                context.sortColumns,
+                context.sortAscendings,
+                context.sortNullFirsts);
     }
 
     /**
@@ -51,7 +59,7 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
 
         private final int[] outputColumns;
 
-        private final int[] sortColumns;
+        private final String[] sortColumns;
 
         private final int[] sortAscendings;
 
@@ -66,7 +74,11 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
          * @param sortAscendings the sort ascendings
          * @param sortNullFirsts the sort null firsts
          */
-        public Context(VecType[] sourceTypes, int[] outputColumns, int[] sortColumns, int[] sortAscendings,
+        public Context(
+                VecType[] sourceTypes,
+                int[] outputColumns,
+                String[] sortColumns,
+                int[] sortAscendings,
                 int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
@@ -77,8 +89,12 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns),
-                    Arrays.hashCode(sortColumns), Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
+            return Objects.hash(
+                    Arrays.hashCode(sourceTypes),
+                    Arrays.hashCode(outputColumns),
+                    Arrays.hashCode(sortColumns),
+                    Arrays.hashCode(sortAscendings),
+                    Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -90,9 +106,11 @@ public class OmniSortOperatorFactory extends OmniOperatorFactory<OmniSortOperato
                 return false;
             }
             Context that = (Context) obj;
-            return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
-                    && Arrays.equals(sortColumns, that.sortColumns) && Arrays.equals(sortAscendings,
-                    that.sortAscendings) && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
+            return Arrays.equals(sourceTypes, that.sourceTypes)
+                    && Arrays.equals(outputColumns, that.outputColumns)
+                    && Arrays.equals(sortColumns, that.sortColumns)
+                    && Arrays.equals(sortAscendings, that.sortAscendings)
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
 }

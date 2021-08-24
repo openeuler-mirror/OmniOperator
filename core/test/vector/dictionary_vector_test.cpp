@@ -33,6 +33,12 @@ TEST(DictionaryVector, appendVector)
         EXPECT_EQ(dest->GetIds()[i], i);
     }
     delete dictionary;
+    delete src1;
+    delete src2;
+    delete dest;
+    delete[] ids1;
+    delete[] ids2;
+    delete[] ids;
     manager.DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }

@@ -27,7 +27,7 @@ public class DictionaryVec extends Vec {
     }
 
     public DictionaryVec(Vec dictionary, int[] ids) {
-        super(dictionary.getNativeVector(), DictionaryVecType.DICTIONARY);
+        super(dictionary, ids, DictionaryVecType.DICTIONARY);
         this.dictionary = dictionary;
         this.ids = ids;
     }

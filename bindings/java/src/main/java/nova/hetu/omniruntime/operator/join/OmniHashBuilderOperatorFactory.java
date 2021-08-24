@@ -24,23 +24,21 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      * Instantiates a new Omni hash builder operator factory.
      *
      * @param buildTypes      the build types
-     * @param buildOutputCols the build output cols
      * @param buildHashCols   the build hash cols
      * @param operatorCount   the operator count
      */
     public OmniHashBuilderOperatorFactory(
-            VecType[] buildTypes, int[] buildOutputCols, int[] buildHashCols, int operatorCount) {
-        super(new Context(buildTypes, buildOutputCols, buildHashCols, operatorCount));
+            VecType[] buildTypes, String[] buildHashCols, int operatorCount) {
+        super(new Context(buildTypes, buildHashCols, operatorCount));
     }
 
     private static native long createHashBuilderOperatorFactory(
-            String buildTypes, int[] buildOutputCols, int[] buildHashCols, int operatorCount);
+            String buildTypes, String[] buildHashCols, int operatorCount);
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
         return createHashBuilderOperatorFactory(
                 VecTypeSerializer.serialize(context.buildTypes),
-                context.buildOutputCols,
                 context.buildHashCols,
                 context.operatorCount);
     }
@@ -53,9 +51,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
     public static class Context extends OmniOperatorFactoryContext {
         private final VecType[] buildTypes;
 
-        private final int[] buildOutputCols;
-
-        private final int[] buildHashCols;
+        private final String[] buildHashCols;
 
         private final int operatorCount;
 
@@ -63,13 +59,11 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
          * Instantiates a new Context.
          *
          * @param buildTypes      the build types
-         * @param buildOutputCols the build output cols
          * @param buildHashCols   the build hash cols
          * @param operatorCount   the operator count
          */
-        public Context(VecType[] buildTypes, int[] buildOutputCols, int[] buildHashCols, int operatorCount) {
+        public Context(VecType[] buildTypes, String[] buildHashCols, int operatorCount) {
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
-            this.buildOutputCols = requireNonNull(buildOutputCols, "buildOutputCols");
             this.buildHashCols = requireNonNull(buildHashCols, "buildHashCols");
             this.operatorCount = operatorCount;
         }
@@ -78,7 +72,6 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
         public int hashCode() {
             return Objects.hash(
                     Arrays.hashCode(buildTypes),
-                    Arrays.hashCode(buildOutputCols),
                     Arrays.hashCode(buildHashCols),
                     operatorCount);
         }
@@ -93,7 +86,6 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
             }
             Context that = (Context) obj;
             return Arrays.equals(buildTypes, that.buildTypes)
-                    && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildHashCols, that.buildHashCols)
                     && operatorCount == that.operatorCount;
         }

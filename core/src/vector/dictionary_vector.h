@@ -14,6 +14,7 @@ public:
 
     ~DictionaryVector()
     {
+        delete dictionary;
     }
 
     Vector *GetDictionary() const
@@ -39,6 +40,21 @@ public:
     const VecType &GetType() override
     {
         return DictionaryVecType::Instance();
+    }
+
+    VectorAllocator *GetAllocator() const override
+    {
+        return dictionary->GetAllocator();
+    }
+
+    int GetCapacityInBytes() const override
+    {
+        return dictionary->GetCapacityInBytes();
+    }
+
+    int GetValueNullsSizeInBytes() const override
+    {
+        return dictionary->GetValueNullsSizeInBytes();
     }
 
     int32_t GetInt(int32_t position) const;

@@ -27,18 +27,22 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
      * @param sortAssendings the sort assendings
      * @param sortNullFirsts the sort null firsts
      */
-    public OmniTopNOperatorFactory(VecType[] sourceTypes, int limitN, int[] sortCols, int[] sortAssendings,
-            int[] sortNullFirsts) {
+    public OmniTopNOperatorFactory(
+            VecType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings, int[] sortNullFirsts) {
         super(new Context(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts));
     }
 
-    private static native long createTopNOperatorFactory(String sourceTypes, int limitN, int[] sortCols,
-            int[] sortAssendings, int[] sortNullFirsts);
+    private static native long createTopNOperatorFactory(
+            String sourceTypes, int limitN, String[] sortCols, int[] sortAssendings, int[] sortNullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
-        return createTopNOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.limitN,
-                context.sortCols, context.sortAssendings, context.sortNullFirsts);
+        return createTopNOperatorFactory(
+                VecTypeSerializer.serialize(context.sourceTypes),
+                context.limitN,
+                context.sortCols,
+                context.sortAssendings,
+                context.sortNullFirsts);
     }
 
     /**
@@ -51,7 +55,7 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
 
         private final int limitN;
 
-        private final int[] sortCols;
+        private final String[] sortCols;
 
         private final int[] sortAssendings;
 
@@ -66,7 +70,8 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
          * @param sortAssendings the sort assendings
          * @param sortNullFirsts the sort null firsts
          */
-        public Context(VecType[] sourceTypes, int limitN, int[] sortCols, int[] sortAssendings, int[] sortNullFirsts) {
+        public Context(
+                VecType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings, int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
             this.sortCols = sortCols;
@@ -87,12 +92,11 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            if (!super.equals(obj)) {
-                return false;
-            }
             Context context = (Context) obj;
-            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(
-                    sortCols, context.sortCols) && Arrays.equals(sortAssendings, context.sortAssendings)
+            return limitN == context.limitN
+                    && Arrays.equals(sourceTypes, context.sourceTypes)
+                    && Arrays.equals(sortCols, context.sortCols)
+                    && Arrays.equals(sortAssendings, context.sortAssendings)
                     && Arrays.equals(sortNullFirsts, context.sortNullFirsts);
         }
     }

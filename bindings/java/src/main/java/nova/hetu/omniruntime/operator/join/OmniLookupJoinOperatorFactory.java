@@ -35,7 +35,7 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
     public OmniLookupJoinOperatorFactory(
             VecType[] probeTypes,
             int[] probeOutputCols,
-            int[] probeHashCols,
+            String[] probeHashCols,
             int[] buildOutputCols,
             VecType[] buildOutputTypes,
             JoinType joinType,
@@ -54,7 +54,7 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
     private static native long createLookupJoinOperatorFactory(
             String probeTypes,
             int[] probeOutputCols,
-            int[] probeHashCols,
+            String[] probeHashCols,
             int[] buildOutputCols,
             String buildOutputTypes,
             int joinType,
@@ -82,7 +82,7 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
 
         private final int[] probeOutputCols;
 
-        private final int[] probeHashCols;
+        private final String[] probeHashCols;
 
         private final int[] buildOutputCols;
 
@@ -106,7 +106,7 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
         public Context(
                 VecType[] probeTypes,
                 int[] probeOutputCols,
-                int[] probeHashCols,
+                String[] probeHashCols,
                 int[] buildOutputCols,
                 VecType[] buildOutputTypes,
                 JoinType joinType,
