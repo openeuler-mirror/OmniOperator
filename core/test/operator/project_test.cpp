@@ -11,6 +11,7 @@
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 using namespace std;
 namespace project_test {
 
@@ -24,19 +25,34 @@ VectorBatch* CreateInput(const int32_t numRows,
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypes[i]) {
             case OMNI_VEC_TYPE_INT:
-                ((IntVector *) vecBatch->GetVector(i))->SetValues(0, (int32_t *) allData[i], numRows);
+                ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
                 break;
             case OMNI_VEC_TYPE_LONG:
-                ((LongVector *) vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
+                ((LongVector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *)allData[i], numRows);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                ((DoubleVector *) vecBatch->GetVector(i))->SetValues(0, (double *) allData[i], numRows);
+                ((DoubleVector *)vecBatch->GetVector(i))->SetValues(0, (double *)allData[i], numRows);
                 break;
+            case OMNI_VEC_TYPE_SHORT:
+                ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR: {
+                for (int j = 0; j < numRows; ++j) {
+                    // std::cout << "row: " << j << std::endl;
+                    int64_t addr = ((int64_t *)(allData[i]))[j];
+                    std::string s ((char *)(addr));
+                    // std::cout << "s: " << s << std::endl;
+                    ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()),
+                                                                        s.length() + 1);
+                }
+                break;
+            }
             default: {
                 DebugError("No such data type %d", inputTypes[i]);
                 break;
             }
         }
+
     }
     return vecBatch;
 }
@@ -81,7 +97,7 @@ TEST (ProjectTest, Simple) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
-        op->AddInput(t);
+    op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -245,4 +261,65 @@ TEST (ProjectTest, DependOtherColumn) {
    delete factory;
 }
 
+TEST(ProjectTest, ProjectString1) {
+    vector<string*> strings;
+
+    const int32_t numCols = 1;
+    int32_t* inputTypes = new int32_t[numCols];
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+
+    const int32_t numRows = 100;
+    int64_t* col1 = new int64_t[numRows];
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 40 == 0) {
+            std::string *s = new std::string("hello");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+        else {
+            std::string *s = new std::string("abcdefghijklmnopqrstuvwxyz");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+    }
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+
+
+    const int32_t numProject = 2;
+    std::string exprs[numProject] = {"substr(#0, 1, 3)", "#0"};
+
+    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    for (int32_t i = 0; i < numReturned; i += 20) {
+        VarcharVector *vcVec = ((VarcharVector*) ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+
+        // Truncate the resulting string
+        void *charArr = &actualChar;
+        auto charArrCasted = static_cast<char **>(charArr);
+        string actualStr (*charArrCasted, 0, len);
+        std::cout << "string " << i << ": '" << actualStr << "' has length " << len << std::endl;
+    }
+
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
+}
 }

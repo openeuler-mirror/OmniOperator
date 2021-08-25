@@ -40,8 +40,8 @@ vector<char *> stringsToFree;
 
 extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int64_t bp)
 {
-    char *a = reinterpret_cast<char *>((uintptr_t)ap);
-    char *b = reinterpret_cast<char *>((uintptr_t)bp);
+    char *a = reinterpret_cast<char *>(ap);
+    char *b = reinterpret_cast<char *>(bp);
     string As = string(a);
     string Bs = string(b);
     // return sign(Bs - As), more or less
@@ -53,10 +53,8 @@ extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int64_t bp)
 
 extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t regexToMatch)
 {
-    char *sp = reinterpret_cast<char *>((uintptr_t)str);
-    char *rp = reinterpret_cast<char *>((uintptr_t)regexToMatch);
-    string S = string(sp);
-    string R = string(rp);
+    string S = string(reinterpret_cast<char *>(str));
+    string R = string(reinterpret_cast<char *>(regexToMatch));
     // Using re2 library
     // return RE2::FullMatch(S, R);
 
@@ -136,7 +134,8 @@ extern "C" DLLEXPORT int32_t CastString(int64_t str)
 void FreeStrings()
 {
     for (int i = g_currStrNum; i < stringsToFree.size(); i++) {
-        free(stringsToFree[i]);
+        delete[] stringsToFree[i];
+        stringsToFree[i] = nullptr;
         g_currStrNum++;
     }
 }

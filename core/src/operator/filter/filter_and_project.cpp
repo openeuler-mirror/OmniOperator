@@ -8,10 +8,13 @@
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 using namespace std;
 
+using uint8vec = std::vector<uint8_t>;
+
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes,
-    int32_t vecCount, int32_t *projectIndex, int32_t projectVecCount)
+    int32_t vecCount, int32_t projectIndex[], int32_t projectVecCount)
 {
     this->inputTypes = inputTypes;
     this->vecCount = vecCount;
@@ -19,24 +22,23 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     this->projectVecCount = projectVecCount;
     this->SetJitContext(nullptr);
 
+    Expr *parsedExpr = nullptr;
+
     Parser parserObject;
-    // std::cout << "parsing: " << expression << std::endl;
+    parsedExpr = parserObject.ParseRowExpression(expression, inputTypes, vecCount);
 
-    Expr *parsedExpr = parserObject.ParseRowExpression(expression, inputTypes, vecCount);
-    // std::cout << c_expr->columnIdx << " " << c_expr->columnData << std::endl;
-    // might want to check if parsed suceed?
-    // TODO: replace the placeholder context
+    unique_ptr<Compiler> compiler = make_unique<Compiler>(*parsedExpr, inputTypes, vecCount);
+    this->filter = compiler->Compile();
 
-    unique_ptr<Compiler> compiler = make_unique<Compiler>(parsedExpr, inputTypes, vecCount);
-    this->filter = std::move(compiler->Compile());
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         auto exp = make_unique<DataExpr>();
         exp->isColumn = true;
         exp->colVal = this->projectIndex[i];
         exp->dataType = ColTypeTrans(inputTypes[projectIndex[i]]);
-        projections.push_back(make_unique<Projection>(inputTypes, vecCount, exp.release(), true));
+        projections.push_back(make_unique<Projection>(inputTypes, vecCount, *(exp.release()), true));
     }
 }
+
 
 FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 {
@@ -62,7 +64,6 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     if (numSelectedRows <= 0) {
         return 0;
     }
-
     auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         Vector *col = this->projections[i]->Project(vecBatch, selectedRows, numSelectedRows);
@@ -81,22 +82,36 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     int rowCount = this->projectedVecs->GetRowCount();
     data.push_back(this->projectedVecs.release());
 
-    // TODO: cleanup memory in old vecBatches
+    // need to cleanup memory in old vecBatches
+    FreeStrings();
     return rowCount;
 }
 
-Filter::Filter(unique_ptr<FilterCodeGen> codeGen, Expr *expr)
+Filter::Filter(unique_ptr<FilterCodeGen> codeGen, Expr &expr)
 {
     this->codeGen = std::move(codeGen);
-    this->expr = expr;
-    this->func = reinterpret_cast<int32_t (*)(int64_t *, int32_t, int32_t *, bool *)>(this->codeGen->GetFunction());
+    this->expr = &expr;
+
+    auto f = this->codeGen->GetFunction();
+    void *function = &f;
+    auto cfunction = static_cast<FilterFunc *>(function);
+    this->func = *cfunction;
 }
 
+unique_ptr<vector<uint8_t>> GetDataHelper(uint8_t actualChar[], int32_t len)
+{
+    auto accStr = make_unique<uint8vec>(len + 1);
+    for (int32_t k = 0; k < len; k++) {
+        (*accStr)[k] = actualChar[k];
+    }
+    (*accStr)[len] = '\0';
+    return move(accStr);
+}
 
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
-std::vector<int64_t> Filter::GetData(VectorBatch *&vecBatch, vector<vector<int64_t>> &vcdataVec, vector<uint8_t *> &stringvalVec,
-    bool *bitmap) const
+std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
+                             vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[])
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     uint32_t nRows = vecBatch->GetRowCount();
@@ -105,55 +120,64 @@ std::vector<int64_t> Filter::GetData(VectorBatch *&vecBatch, vector<vector<int64
     for (int32_t i = 0; i < nCols; i++) {
         // varchar vec GetValues is different from the rest
         if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
-            VarcharVector *vcVec = reinterpret_cast<VarcharVector *>(vecBatch->GetVector(i));
+            auto vcVec = static_cast<VarcharVector *>(vecBatch->GetVector(i));
             // Create array to hold addresses
-            std::vector<int64_t> vcData;
+            unique_ptr<vec64> vcData = make_unique<vec64>();
 
             for (int32_t j = 0; j < nRows; j++) {
                 // get data
                 uint8_t *actualChar = nullptr;
-                int len = vcVec->GetValue(j, &actualChar);
+                int32_t len = vcVec->GetValue(j, &actualChar);
+
+                // Truncate the resulting string
+                unique_ptr<uint8vec> accStr = GetDataHelper(actualChar, len);
+                
+                actualChar = accStr->data();
+
                 // add to vector so it can be freed later
-                stringvalVec.push_back(actualChar);
+                stringvalVec.push_back(move(accStr));
 
-                vcData.push_back(reinterpret_cast<int64_t>(actualChar));
-
-                // deal with bitmap
-                // bitmap[j * nCols + i] represents nullity of jth value of vector i
-                bitmap[j * nCols + i] = vcVec->IsValueNull(j);
+                auto ac = actualChar;
+                void *accChar = &ac;
+                auto caccChar = static_cast<int64_t *>(accChar);
+                vcData->push_back(*caccChar);
             }
-            vcdataVec.push_back(vcData);
-
-            data.push_back(reinterpret_cast<int64_t>(vcData.data()));
+            // data handling
+            auto dc = vcData->data();
+            void *dataCol = &dc;
+            auto cdataCol = static_cast<int64_t *>(dataCol);
+            data.push_back(*cdataCol);
+            vcdataVec.push_back(move(vcData));
         } else {
-            data.push_back(reinterpret_cast<int64_t>(vecBatch->GetVector(i)->GetValues()));
-            for (int32_t j = 0; j < nRows; j++) {
-                // whether the jth value of vector i is null is captured in bitmap[j * nCols + i]
-                bitmap[j * nCols + i] = vecBatch->GetVector(i)->IsValueNull(j);
-            }
+            // data handling
+            auto dc = vecBatch->GetVector(i)->GetValues();
+            void *dataCol = &dc;
+            auto cdataCol = static_cast<int64_t *>(dataCol);
+            data.push_back(*cdataCol);
         }
+        // bitmap handling
+        auto bc = vecBatch->GetVector(i)->GetValueNulls();
+        void *bitmapCol = &bc;
+        auto cbitmapCol = static_cast<int64_t *>(bitmapCol);
+        bitmap[i] = *cbitmapCol;
     }
 
     return data;
 }
 
-int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t *selectedRows, int rowCount) const
+int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t selectedRows[], int rowCount) const
 {
     // Contains arrays with addresses for varchar vecs
-    vector<vector<int64_t>> vcdataVec;
+    vector<unique_ptr<vector<int64_t>>> vcdataVec;
     // Contains all strings created in VarcharVector::GetValue method which need to be freed
-    vector<uint8_t *> stringvalVec;
+    vector<unique_ptr<vector<uint8_t>>> stringvalVec;
 
-    const int totalRowCount = rowCount * vecBatch->GetVectorCount();
-    bool bitmap[totalRowCount];
+    vector<int64_t> bitmap(vecBatch->GetVectorCount());
 
     // contents of bitmap are appropriately modified in GetData
-    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap);
-    int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap);
+    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data());
+    int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap.data());
 
-    for (auto v : vcdataVec) {
-        v.clear();
-    }
     data.clear();
 
     return ret;

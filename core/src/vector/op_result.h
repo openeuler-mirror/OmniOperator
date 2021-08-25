@@ -8,10 +8,10 @@
 namespace omniruntime {
 namespace vec {
 enum class OpStatus {
-    SUCCESS,
-    OVERFLOW,
-    DIVIDE_BY_ZERO,
-    FAIL
+    SUCCESS = 0,
+    OP_OVERFLOW = 1,
+    DIVIDE_BY_ZERO = 2,
+    FAIL = 3
 };
 
 template <typename T> class OpResult {

@@ -7,13 +7,7 @@
 namespace omniruntime {
 namespace op {
 using namespace std;
-
-Compiler::Compiler(Expr *expression, int32_t *inputTypes, int32_t vecCount)
-{
-    this->expression = expression;
-    this->inputTypes = inputTypes;
-    this->vecCount = vecCount;
-}
+using namespace omniruntime::expressions;
 
 unique_ptr<Filter> Compiler::Compile() const
 {
@@ -21,8 +15,8 @@ unique_ptr<Filter> Compiler::Compile() const
     for (int32_t i = 0; i < vecCount; i++) {
         dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
     }
-    auto codeGenObj = make_unique<FilterCodeGen>("comparisonFunc", expression, dataTypes);
-    return make_unique<Filter>(std::move(codeGenObj), expression);
+    auto codeGenObj = make_unique<FilterCodeGen>("comparisonFunc", *expression, dataTypes);
+    return make_unique<Filter>(std::move(codeGenObj), *expression);
 }
 } // end of op
 } // end of omniruntime

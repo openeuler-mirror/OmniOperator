@@ -5,39 +5,26 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
-#ifndef __EXPRESSION_H__
-#include "../expressions.h"
-#endif
-#include "../../codegen/func_signature.h"
-#include "../../codegen/functions/externalfunctions.h"
-#include "../../codegen/functions/external_func_registry.h"
-#include <string>
-#include <cstring>
-#include <set>
-
-enum OperatorReturnType {
-    COMPARISON,
-    LOGICAL,
-    ARITHMETIC,
-    INVALIDRETURNTYPE
-};
-
+#include "../parserhelper.h"
 
 class Parser {
 public:
     Parser();
     ~Parser();
 
-    DataType FuncRetTypeMap(std::string fnName, std::vector<Expr*> args);
-    bool FuncDeclMatch(std::string fnName, std::vector<Expr*> args, bool checkTypes);
+    omniruntime::expressions::Expr *ParseRowExpression(const std::string input, int32_t inputTypes[], int32_t vecCount);
+    omniruntime::expressions::Expr *ParseRowExpressionHelper(const std::string opStr,
+                                                             std::vector<omniruntime::expressions::Expr *> args);
 
-    Expr *ParseRowExpression(std::string input, int32_t *inputTypes, int32_t veccount);
-    DataExpr* GenerateData(std::string dataStr, int32_t *inputTypes, int32_t vecCount);
+    omniruntime::expressions::DataExpr* GenerateData(std::string dataStr, int32_t *inputTypes, int32_t vecCount) const;
+    omniruntime::expressions::DataExpr *GenerateDataHelper(std::string dataStr,
+                                                           omniruntime::expressions::DataType currDataType) const;
 
 private:
-    std::set<std::string> externalFuncNames;
-    std::map<std::string, DataType> externalFuncRetTypeMap;
-    std::map<std::string, FunctionSignature*> funcNameToSignature;
+    ParserHelper ph;
+
+    // Helper function to strip a string but keep spaces intact inside string literals
+    std::string StripString(std::string input) const;
 };
 
 

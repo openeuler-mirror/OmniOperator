@@ -13,10 +13,8 @@
 
 #include <iostream>
 #include <string>
-#include <cstring>
 #include <memory>
 #include <vector>
-#include <cassert>
 #include <algorithm>
 
 #include "llvm/ADT/APInt.h"
@@ -39,65 +37,88 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
 // Given an expression generates the function for it.
 class LLVMCodeGen {
 
 public:
-    LLVMCodeGen(std::string name, Expr *expr, std::vector<DataType> &datatypes);
+    LLVMCodeGen(std::string name, omniruntime::expressions::Expr &expr,
+                std::vector<omniruntime::expressions::DataType> &datatypes);
     ~LLVMCodeGen();
 
-    std::string dumpCode();
+    std::string DumpCode();
     virtual int64_t GetFunction() = 0;
 
 // TODO: Figure out which of these can be private
 protected:
     // Parse a generic expression by calling the helper functions below
-    Value* parseExpr(Expr* root, std::map<std::string, Value*>& args);
+    llvm::Value* ParseExpr(omniruntime::expressions::Expr &root, std::map<std::string, llvm::Value*>& args);
 
-    Value* createConstantBool(bool n);
-    Value* createConstantInt(int32_t n);
-    Value* createConstantLong(int64_t n);
-    Value* createConstantDouble(double n);
-    Type* toLLVMType(DataType t);
+    llvm::Value* CreateConstantBool(bool n);
+    llvm::Value* CreateConstantInt(int32_t n);
+    llvm::Value* CreateConstantLong(int64_t n);
+    llvm::Value* CreateConstantDouble(double n);
+    llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
 
-    Function* createFunction();
+    llvm::Function* CreateFunction();
 
     // Parsing different kinds of expressions
-    Value* parseDataExpr(DataExpr* dExpr, std::map<std::string, Value*>& args);
-    Value* parseBinaryExpr(BinaryExpr* bExpr, std::map<std::string, Value*>& args);
-    Value* parseUnaryExpr(UnaryExpr* uExpr, std::map<std::string, Value*>& args);
-    Value* parseIfExpr(IfExpr* ifExpr, std::map<std::string, Value*>& args);
-    Value* parseInExpr(InExpr* inExpr, std::map<std::string, Value*>& args);
-    Value* parseBetweenExpr(BetweenExpr* btExpr, std::map<std::string, Value*>& args);
-    Value* parseCoalesceExpr(CoalesceExpr* cExpr, std::map<std::string, Value*>& args);
-    Value* parseFuncExpr(FuncExpr* fExpr, std::map<std::string, Value*>& args);
+    llvm::Value* ParseDataExpr(omniruntime::expressions::DataExpr &dExpr, std::map<std::string, llvm::Value*>& args);
+
+    // Helper functions and main function for parsing binary expressions
+    llvm::Value* ParseBinaryExpr(omniruntime::expressions::BinaryExpr &bExpr, std::map<std::string,
+        llvm::Value*>& args);
+    llvm::Value *ParseBinaryExprInt(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    llvm::Value *ParseBinaryExprDouble(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    llvm::Value *ParseBinaryExprString(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+
+    llvm::Value* ParseUnaryExpr(omniruntime::expressions::UnaryExpr &uExpr, std::map<std::string, llvm::Value*>& args);
+    llvm::Value* ParseIfExpr(omniruntime::expressions::IfExpr &ifExpr, std::map<std::string, llvm::Value*>& args);
+    llvm::Value* ParseInExpr(omniruntime::expressions::InExpr &inExpr, std::map<std::string, llvm::Value*>& args);
+    llvm::Value* ParseBetweenExpr(omniruntime::expressions::BetweenExpr &btExpr, std::map<std::string,
+        llvm::Value*>& args);
+    llvm::Value* ParseCoalesceExpr(omniruntime::expressions::CoalesceExpr &cExpr, std::map<std::string,
+        llvm::Value*>& args);
+
+    // Helper functions and main function for parsing function expressions
+    llvm::Value* ParseFuncExpr(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
+    llvm::Value* ParseFuncExprAbs(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
+    llvm::Value* ParseFuncExprSubstr(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
+                                     llvm::Value*>& args);
+    llvm::Value* ParseFuncExprCast(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
+                                   llvm::Value*>& args);
+    llvm::Value* ParseFuncExprExt(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
 
     // Helper functions for generating IR for operators and special forms
-    Value* stringCmp(Value *LHS, Value *RHS);
-    Function* createConditional(DataType retType, Expr* cond, Expr* ifTrue, Expr* ifFalse);
-    Function* createCoalesceFunc(DataType retType, DataExpr* dExpr1, Expr* value2Expr);
+    llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *rhs);
+    llvm::Function* CreateConditional(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,
+        omniruntime::expressions::Expr &ifTrue, omniruntime::expressions::Expr &ifFalse);
+    llvm::Function* CreateCoalesceFunc(omniruntime::expressions::DataType retType,
+        omniruntime::expressions::DataExpr &dExpr1, omniruntime::expressions::Expr &value2Expr);
+    llvm::Function *CreateCoalesceFuncHelper(omniruntime::expressions::DataExpr &dExpr1,
+                                          omniruntime::expressions::Expr &value2Expr, std::map<std::string,
+                                          llvm::Value *> fArgs, llvm::Function &func);
 
     std::string funcName;
-    Expr* expr = nullptr;
-    std::vector<DataType> &datatypes;
+    omniruntime::expressions::Expr *expr = nullptr;
+    std::vector<omniruntime::expressions::DataType> &datatypes;
 
 
     // Returns a set of all the required functions for a given row expression
     // Currently a separate function
     // Can be integrated with ParseRowExpression, but then the method declaration would need refactoring
-    std::set<std::string> requiredFunctions(Expr* cpExpr);
-    void requiredFunctionsHelper(Expr* cpExpr, std::set<std::string>& s);
-    std::map<std::string, FunctionSignature*> funcNameToSignature;
+    std::set<std::string> RequiredFunctions(omniruntime::expressions::Expr &cpExpr);
+    void RequiredFunctionsHelper2(omniruntime::expressions::Expr &funcExpr, std::set<std::string> &s);
+    void RequiredFunctionsHelper(omniruntime::expressions::Expr &cpExpr, std::set<std::string> &s);
+    std::map<std::string, FunctionSignature> funcNameToSignature;
 
-    std::unique_ptr<LLVMContext> context;
-    std::unique_ptr<IRBuilder<>> builder;
-    std::unique_ptr<Module> module;
-    ExitOnError EOE;
-    std::unique_ptr<llvm::orc::LLJIT> JIT;
-    orc::ResourceTrackerSP rt;
+    std::unique_ptr<llvm::LLVMContext> context;
+    std::unique_ptr<llvm::IRBuilder<>> builder;
+    std::unique_ptr<llvm::Module> module;
+    llvm::ExitOnError eoe;
+    std::unique_ptr<llvm::orc::LLJIT> jit;
+    llvm::orc::ResourceTrackerSP rt;
     FunctionRegistry *fr;
 };
 

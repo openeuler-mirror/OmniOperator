@@ -6,7 +6,6 @@
 #define __EXPRESSIONS_H__
 
 #include <vector>
-#include <stdint.h>
 #include <string>
 #include <map>
 
@@ -41,6 +40,13 @@ enum Operator {
 };
 
 
+enum OperatorReturnType {
+    COMPARISON, 
+    LOGICAL, 
+    ARITHMETIC, 
+    INVALIDRETURNTYPE
+};
+
 
 enum DataType {
     BOOLD = 4,
@@ -65,14 +71,18 @@ enum ExprType {
 };
 
 
+// Helper function to get DataType from a string representing the type
+DataType StringToDataType(std::string dt);
+
+
 class Expr {
 public:
-    DataType dataType; // dataType of returned value
-    DataType GetExprDataType();
+        DataType dataType; // dataType of returned value
+        DataType GetExprDataType();
 
-    virtual ExprType GetType();
-    virtual ~Expr() = default;
-    virtual void PrintExprTree();
+        virtual ExprType GetType();
+        virtual ~Expr() = default;
+        virtual void PrintExprTree();
 };
 
 
@@ -87,7 +97,7 @@ public:
     int32_t colVal = 0;
 
     DataExpr();
-    ~DataExpr();
+    ~DataExpr() override;
     explicit DataExpr(bool val);
     explicit DataExpr(int32_t val);
     explicit DataExpr(int64_t val);
@@ -99,12 +109,11 @@ public:
     ExprType GetType() override;
 };
 
+// Helper function for debugging DataType
+std::string dataTypeString(DataType dt);
 
 // Helper function to translate from jni type number to DataType
 DataType ColTypeTrans(int32_t colType);
-
-// Helper function for printing out datatypes
-std::string dataTypeString(DataType dt);
 
 
 class UnaryExpr : public Expr {
@@ -113,7 +122,7 @@ public:
     Expr *exp = nullptr;
 
     UnaryExpr();
-    ~UnaryExpr();
+    ~UnaryExpr() override;
     UnaryExpr(Operator logOp, Expr *bodyexp);
     UnaryExpr(Operator uop, Expr *expr, DataType dt);
 
@@ -129,7 +138,7 @@ public:
     Expr *right = nullptr;
 
     BinaryExpr();
-    ~BinaryExpr();
+    ~BinaryExpr() override;
     BinaryExpr(Operator op, Expr *leftExpr, Expr *rightExpr);
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt);
 
@@ -144,8 +153,8 @@ public:
     std::vector<Expr*> arguments;
 
     InExpr();
-    ~InExpr();
-    InExpr(std::vector<Expr*> args);
+    ~InExpr() override;
+    explicit InExpr(std::vector<Expr*> args);
 
     void PrintExprTree() override;
     ExprType GetType() override;
@@ -159,7 +168,7 @@ public:
     Expr* upperBound = nullptr;
 
     BetweenExpr();
-    ~BetweenExpr();
+    ~BetweenExpr() override;
     BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound);
 
     void PrintExprTree() override;
@@ -174,7 +183,7 @@ public:
     Expr* falseExpr = nullptr;
 
     IfExpr();
-    ~IfExpr();
+    ~IfExpr() override;
     IfExpr(Expr* cond, Expr* texp, Expr* fexp);
 
     void PrintExprTree() override;
@@ -188,7 +197,7 @@ public:
     Expr* value2 = nullptr;
 
     CoalesceExpr();
-    ~CoalesceExpr();
+    ~CoalesceExpr() override;
     CoalesceExpr(Expr* val1, Expr* val2);
 
     void PrintExprTree() override;
@@ -202,7 +211,7 @@ public:
     std::vector<Expr*> arguments;
 
     FuncExpr();
-    ~FuncExpr();
+    ~FuncExpr() override;
     FuncExpr(std::string fnName, std::vector<Expr*> args);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
 

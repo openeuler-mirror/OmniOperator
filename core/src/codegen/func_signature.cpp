@@ -4,6 +4,12 @@
  */
 #include "./func_signature.h"
 
+using namespace omniruntime::expressions;
+
+FunctionSignature::FunctionSignature()
+{
+}
+
 FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType, void* address)
 {
     this->funcName = name;
@@ -12,24 +18,31 @@ FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> par
     this->funcAddress = address;
 }
 
-FunctionSignature::~FunctionSignature(){}
+// Copy constructor
+FunctionSignature::FunctionSignature(const FunctionSignature &fs) : funcName(fs.funcName), paramTypes(fs.paramTypes),
+    retType(fs.retType), funcAddress(fs.funcAddress)
+{
+}
 
-std::string FunctionSignature::GetName()
+FunctionSignature::~FunctionSignature() {
+}
+
+std::string FunctionSignature::GetName() const
 {
     return this->funcName;
 }
 
-std::vector<DataType> FunctionSignature::GetParams()
+std::vector<DataType> FunctionSignature::GetParams() const
 {
     return this->paramTypes;
 }
 
-DataType FunctionSignature::GetReturnType()
+DataType FunctionSignature::GetReturnType() const
 {
     return this-> retType;
 }
 
-void* FunctionSignature::GetFunctionAddress()
+void* FunctionSignature::GetFunctionAddress() const
 {
     return this->funcAddress;
 }

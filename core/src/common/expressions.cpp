@@ -53,6 +53,30 @@ std::string dataTypeString(DataType dt)
     }
 }
 
+// Helper function to get DataType from a string representing the type
+DataType StringToDataType(std::string dt)
+{
+    // Strip spaces
+    dt.erase(remove(dt.begin(), dt.end(), ' '), dt.end());
+
+    if (dt == "INT32") {
+        return DataType::INT32D;
+    }
+    if (dt == "INT64") {
+        return DataType::INT64D;
+    }
+    if (dt == "DOUBLE") {
+        return DataType::DOUBLED;
+    }
+    if (dt == "BOOL") {
+        return DataType::BOOLD;
+    }
+    if (dt == "STRING") {
+        return DataType::STRINGD;
+    }
+    return DataType::INVALIDDATAD;
+}
+
 
 ExprType Expr::GetType()
 {
@@ -230,7 +254,7 @@ ExprType BetweenExpr::GetType()
 }
 
 
-IfExpr::IfExpr() {
+IfExpr::IfExpr() : condition(), trueExpr(), falseExpr() {
 }
 
 IfExpr::~IfExpr()
@@ -254,7 +278,7 @@ ExprType IfExpr::GetType()
 }
 
 
-CoalesceExpr::CoalesceExpr() {
+CoalesceExpr::CoalesceExpr() : value1(), value2() {
 }
 
 CoalesceExpr::~CoalesceExpr()
@@ -391,25 +415,38 @@ void DataExpr::PrintExprTree()
     } else {
         switch (dataType) {
             case BOOLD: {
-                if (printWithTypes) printf("bool_");
-                if (boolVal) printf("true");
-                else printf("false");
+                if (printWithTypes) {
+                    printf("bool_");
+}
+                if (boolVal) {
+                    printf("true");
+                } else {
+                    printf("false");
+}
                 break;
             }
             case INT32D:
-                if (printWithTypes) printf("i32_");
+                if (printWithTypes) {
+                    printf("i32_");
+}
                 printf("%d", intVal);
                 break;
             case INT64D:
-                if (printWithTypes) printf("i64_");
+                if (printWithTypes) {
+                    printf("i64_");
+}
                 printf("%ld", longVal);
                 break;
             case DOUBLED:
-                if (printWithTypes) printf("d64_");
+                if (printWithTypes) {
+                    printf("d64_");
+}
                 printf("%f", doubleVal);
                 break;
             case STRINGD:
-                if (printWithTypes) printf("s_");
+                if (printWithTypes) {
+                    printf("s_");
+}
                 printf("'%s'", stringVal->c_str());
                 break;
             default:

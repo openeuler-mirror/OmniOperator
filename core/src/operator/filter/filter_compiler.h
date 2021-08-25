@@ -14,14 +14,17 @@ namespace op {
 class Compiler {
 public:
     // // todo getter functions
-    Compiler(expressions::Expr *expression, int32_t *inputTypes, int32_t vecCount);
+    Compiler(expressions::Expr &expression, int32_t inputTypes[], int32_t vecCount) : expression(&expression),
+        inputTypes(inputTypes), vecCount(vecCount)
+    {
+    }
     ~Compiler() = default;
     std::unique_ptr<Filter> Compile() const;
 
 private:
-    expressions::Expr *expression;
-    int32_t *inputTypes;
-    int32_t vecCount;
+    expressions::Expr *expression = nullptr;
+    int32_t *inputTypes = nullptr;
+    int32_t vecCount = 0;
 };
 } // end of op
 } // end of omniruntime

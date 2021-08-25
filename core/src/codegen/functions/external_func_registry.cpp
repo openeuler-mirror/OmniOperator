@@ -6,7 +6,9 @@
 #include <map>
 #include <set>
 #include <string>
-#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <dlfcn.h>
 
 #include "./external_func_registry.h"
 
@@ -14,58 +16,148 @@ using namespace std;
 using namespace omniruntime::expressions;
 
 
-// Returns a set containing strings of all the external function names
-// Add the names of your own functions here
-set<string> GetAllExternalFunctionNames()
+ExternalFuncRegistry::ExternalFuncRegistry()
 {
-    set<string> allExtFnNames;
-    // Insert all the names into the set here
-    allExtFnNames.insert(id_int32_str);
-    allExtFnNames.insert(add1_int32_str);
+    if (!g_hasInitialized) {
+        UpdateFuncSigMap();
+        g_hasInitialized = true;
+    }
+}
+
+ExternalFuncRegistry::~ExternalFuncRegistry()
+{
+}
 
 
-
-    return allExtFnNames;
+// Returns a set containing strings of all the external function names
+set<string> ExternalFuncRegistry::GetAllExternalFunctionNames() const
+{
+    return g_allExtFnNames;
 }
 
 
 // Returns a map from function name to return type
-// Add the return types of your own functions here
-map<string, DataType> GetFuncReturnTypeMap()
+map<string, DataType> ExternalFuncRegistry::GetFuncReturnTypeMap() const
 {
-    map<string, DataType> nameToRetType;
-    // Insert all the name and return type pairs here
-    nameToRetType[id_int32_str] = DataType::INT32D;
-    nameToRetType[add1_int32_str] = DataType::INT32D;
-
-
-    return nameToRetType;
+    return g_nameToRetType;
 }
 
 
 // Add the signatures for your own functions here
 // Create a new conditional branch for it
 // Possible DataTypes are: BOOLD, INT32D, INT64D, DOUBLED, STRINGD
-FunctionSignature* GetExternalSignature(string funcName)
+FunctionSignature ExternalFuncRegistry::GetExternalSignature(string funcName) const
 {
-    if (funcName == add1_int32_str) {
-        // Vector containing parameter types
-        vector <DataType> add1_int32_types{DataType::INT32D};
-        // Return type
-        DataType retType = DataType::INT32D;
-        // Void pointer to function address
-        void* fnAddr = reinterpret_cast<void *>(Add1Int32);
-        auto add1Int32Sig = std::make_unique<FunctionSignature>(add1_int32_str, add1_int32_types, retType, fnAddr)
-                .release();
-        return add1Int32Sig;
-    } else {
-        // Vector containing parameter types
-        vector <DataType> id_int32_types{DataType::INT32D};
-        // Return type
-        DataType retType = DataType::INT32D;
-        // Void pointer to function address
-        void* fnAddr = reinterpret_cast<void *>(IdInt32);
-        auto idInt32Sig = std::make_unique<FunctionSignature>(id_int32_str, id_int32_types, retType, fnAddr).release();
-        return idInt32Sig;
+    return g_funcSignatureMap[funcName];
+}
+
+int64_t ExternalFuncRegistry::FetchHandle() const
+{
+    // Get symbols from .so file
+    auto handle = dlopen(EXTERNAL_FUNCTIONS_LIB_PATH.c_str(), RTLD_LAZY);
+    if (!handle) {
+        std::cerr << "Could not open externalfunctions library file; " << dlerror() << std::endl;
+        std::cout << "Error occurred with external functions. No external functions will be registered" << std::endl;
+        return 0;
     }
+
+    void *h = &handle;
+    auto ch = static_cast<int64_t *>(h);
+    return *ch;
+}
+
+ifstream ExternalFuncRegistry::FetchExternalFunctionInfo(int64_t handlePtr) const
+{
+    void *h = &handlePtr;
+    auto ch = static_cast<void **>(h);
+    void *handle = *ch;
+
+    ifstream readRegistration;
+    readRegistration.open(EXTERNAL_FUNCTIONS_FILE_PATH);
+    // Check if the file was found
+    if (!readRegistration.is_open()) {
+        std::cerr << "Could not find externalregistration.txt file" << std::endl;
+        std::cout << "Error occurred with external functions. No external functions will be registered" << std::endl;
+    }
+
+    return readRegistration;
+}
+
+// Goes through externalregistration.txt file and adds function signatures to funcSignatureMap
+// Updates allExtNames to contain names of all external functions
+// Updates nameToRetType with names and return types of all external functions
+void ExternalFuncRegistry::UpdateFuncSigMap() const
+{
+    auto handlePtr = this->FetchHandle();
+    void *h = &handlePtr;
+    auto ch = static_cast<void **>(h);
+    void *handle = *ch;
+
+    if (handle == nullptr) {
+        return;
+    }
+    ifstream readRegistration = this->FetchExternalFunctionInfo(handlePtr);
+    string currLine;
+
+    while (!readRegistration.eof()) {
+        getline(readRegistration, currLine);
+
+        currLine.erase(remove(currLine.begin(), currLine.end(), ' '), currLine.end()); // strip spaces
+
+        // Parse the line
+
+        int commentIdx = currLine.find("/");
+        // Ignore empty line or lines that are only comments
+        if (currLine.size() <= 1 || commentIdx == 0) {
+            continue;
+        }
+
+        // First remove the comments
+        currLine = currLine.substr(0, commentIdx);
+
+        // Get the name
+        int colonIdx = currLine.find(":");
+        if (colonIdx == string::npos) {
+            std::cout << "Error in " << EXTERNAL_FUNCTIONS_FILE_PATH << "; name not found" << std::endl;
+            continue;
+        }
+        string fnName = currLine.substr(0, colonIdx);
+        currLine = currLine.substr(colonIdx + 1);
+
+        // Get the return type
+        int arrowIdx = currLine.find("->");
+        if (arrowIdx == string::npos) {
+            std::cout << "Error in " << EXTERNAL_FUNCTIONS_FILE_PATH << "; return type not found" << std::endl;
+            continue;
+        }
+        DataType retType = StringToDataType(currLine.substr(arrowIdx + PAREN_LENGTH + 1));
+        currLine = currLine.substr(0, arrowIdx).substr(1, arrowIdx - PAREN_LENGTH - 1); // remove parentheses
+
+        // Get the argument types
+        vector<DataType> argTypes;
+        int leftIdx = 0;
+
+        for (int i = 0; i < currLine.size(); i++) {
+            if (currLine[i] == ',') {
+                string typeStr = currLine.substr(leftIdx, i - leftIdx);
+                leftIdx = i + 1;
+                argTypes.push_back(StringToDataType(typeStr));
+            }
+        }
+        // last argument
+        argTypes.push_back(StringToDataType(currLine.substr(leftIdx, currLine.size() - leftIdx)));
+
+        // Add to allExtFnNames
+        g_allExtFnNames.insert(fnName);
+        // Add mapping to nameToRetType map
+        g_nameToRetType[fnName] = retType;
+
+        // Create FunctionSignature and add to funcSignatureMap with function address retrieved via dlsym
+        FunctionSignature funcSig (fnName, argTypes, retType, dlsym(handle, fnName.c_str()));
+        g_funcSignatureMap[fnName] = funcSig;
+
+        std::cout << "Registered external function " << fnName << std::endl;
+    }
+
+    readRegistration.close();
 }

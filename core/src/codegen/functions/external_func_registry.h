@@ -2,36 +2,59 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry external function
  */
-#ifndef __EXTERNAL_FUNC_REGISTERY_H__
-#define __EXTERNAL_FUNC_REGISTERY_H__
-#include <vector>
+#ifndef __EXTERNAL_FUNC_REGISTRY_H__
+#define __EXTERNAL_FUNC_REGISTRY_H__
+
 #include <map>
 #include <set>
 #include <string>
-#include <cstring>
+#include <fstream>
 
 
 #include "../../common/expressions.h"
 #include "../func_signature.h"
-#include "./mathfunctions.h"
-#include "./stringfunctions.h"
-#include "./externalfunctions.h"
+#include "../../../libconfig.h"
 
+#include <memory>
 
-// Returns a set containing strings of all the external function names
-// Modify in external_func_registry.cpp
-std::set<std::string> GetAllExternalFunctionNames();
+namespace {
+    // Only updated once
+    // Initialized in external_func_registry.cpp
+    static std::set<std::string> g_allExtFnNames;
+    static std::map<std::string, omniruntime::expressions::DataType> g_nameToRetType;
+    static std::map<std::string, FunctionSignature> g_funcSignatureMap;
 
+    // Tells whether UpdateFuncSigMap has been called so that it only needs to be called once
+    // Initialized in external_func_registry.cpp
+    static bool g_hasInitialized;
 
-// Returns a map from function name to return type
-// Modify in external_func_registry.cpp
-std::map<std::string, DataType> GetFuncReturnTypeMap();
+    const std::string EXTERNAL_FUNCTIONS_FILE_PATH = "/etc/externalfunctions/externalregistration.conf";
+    const std::string EXTERNAL_FUNCTIONS_LIB_PATH = G_LIB_PATH + "externalfunctions.so";
+    const int32_t PAREN_LENGTH = 1;
+}
 
+class ExternalFuncRegistry {
+public:
+    ExternalFuncRegistry();
+    ~ExternalFuncRegistry();
+    
+    // Returns a set containing strings of all the external function names
+    std::set<std::string> GetAllExternalFunctionNames() const;
 
-// Add the signatures for your own functions here
-// Modify in external_func_registry.cpp
-FunctionSignature* GetExternalSignature(std::string funcName);
+    // Returns a map from function name to return type
+    std::map<std::string, omniruntime::expressions::DataType> GetFuncReturnTypeMap() const;
 
+    // Add the signatures for your own functions here
+    FunctionSignature GetExternalSignature(std::string funcName) const;
+
+    // Helper functions for UpdateFuncSigMap
+    int64_t FetchHandle() const;
+    std::ifstream FetchExternalFunctionInfo(int64_t handle) const;
+
+    // Uses externalregistration.txt to update funcSignatureMap
+    // Also updates allExtFnNames and FuncRetTypeMap
+    void UpdateFuncSigMap() const;
+};
 
 
 #endif

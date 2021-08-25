@@ -247,7 +247,7 @@ static OpStatus BuildFromArray(std::array<uint64_t, N> &resultArray, const uint3
 {
     for (int64_t i = length - 2 * N - 1; i >= 0; i--) {
         if (array[i] != 0) {
-            return OpStatus::OVERFLOW;
+            return OpStatus::OP_OVERFLOW;
         }
     }
     int64_t nextIndex = length - 1;
