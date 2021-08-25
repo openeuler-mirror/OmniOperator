@@ -37,6 +37,8 @@ DataType ColTypeTrans(int32_t colType)
         case TYPE_INT64D:
         case TYPE_DECIMAL64D:
             return DataType::INT64D;
+        case TYPE_DECIMAL128D:
+            return DataType::DECIMAL128D;
         case TYPE_DOUBLED:
             return DataType::DOUBLED;
         case TYPE_BOOLD :
@@ -51,7 +53,7 @@ DataType ColTypeTrans(int32_t colType)
     }
 }
 
-std::string dataTypeString(DataType dt)
+std::string DataTypeString(DataType dt)
 {
     switch (dt) {
         case DataType::BOOLD: return "bool";
@@ -59,6 +61,8 @@ std::string dataTypeString(DataType dt)
         case DataType::INT32D: return "int32";
         case DataType::INT64D: return "int64";
         case DataType::STRINGD: return "string";
+        case DataType::DECIMAL64D: return "decimal64";
+        case DataType::DECIMAL128D: return "decimal128";
         case DataType::INVALIDDATAD: return "invalid";
     }
 }
@@ -84,6 +88,9 @@ DataType StringToDataType(std::string dt)
     if (dt == "STRING") {
         return DataType::STRINGD;
     }
+    if (dt == "DECIMAL128") {
+        return DataType::DECIMAL128D;
+    }
     return DataType::INVALIDDATAD;
 }
 
@@ -103,7 +110,9 @@ DataExpr::DataExpr(){}
 
 DataExpr::~DataExpr()
 {
-    if (dataType == STRINGD && !isColumn) delete stringVal;
+    if (dataType == STRINGD && !isColumn) {
+        delete stringVal;
+    }
 }
 
 ExprType DataExpr::GetType()
@@ -141,6 +150,12 @@ DataExpr::DataExpr(std::string* val)
     isColumn = false;
     dataType = STRINGD;
     stringVal = val;
+}
+DataExpr::DataExpr(int64_t &val)
+{
+    isColumn = false;
+    dataType = DECIMAL128D;
+    dec128Val = &val;
 }
 DataExpr::DataExpr(int32_t colIdx, DataType dt)
 {
@@ -348,47 +363,47 @@ void BinaryExpr::PrintExprTree()
     switch (op) {
         // Comparison
         case EQ:
-            printf("Cmp:%s(EQ, ", dataTypeString(this->dataType).c_str());
+            printf("Cmp:%s(EQ, ", DataTypeString(this->dataType).c_str());
             break;
         case NEQ:
-            printf("Cmp:%s(NEQ, ", dataTypeString(this->dataType).c_str());
+            printf("Cmp:%s(NEQ, ", DataTypeString(this->dataType).c_str());
             break;
         case LT:
-            printf("Cmp:%s(LT, ", dataTypeString(this->dataType).c_str());
+            printf("Cmp:%s(LT, ", DataTypeString(this->dataType).c_str());
             break;
         case LTE:
-            printf("Cmp:%s(LTE, ", dataTypeString(this->dataType).c_str());
+            printf("Cmp:%s(LTE, ", DataTypeString(this->dataType).c_str());
             break;
         case GT:
-            printf("Cmp:%s(GT, ", dataTypeString(this->dataType).c_str());
+            printf("Cmp:%s(GT, ", DataTypeString(this->dataType).c_str());
             break;
         case GTE:
-            printf("Cmp:%s(GTE, ", dataTypeString(this->dataType).c_str());
+            printf("Cmp:%s(GTE, ", DataTypeString(this->dataType).c_str());
             break;
 
             // Logical
         case AND:
-            printf("Bin:%s(AND, ", dataTypeString(this->dataType).c_str());
+            printf("Bin:%s(AND, ", DataTypeString(this->dataType).c_str());
             break;
         case OR:
-            printf("Bin:%s(OR, ", dataTypeString(this->dataType).c_str());
+            printf("Bin:%s(OR, ", DataTypeString(this->dataType).c_str());
             break;
 
             // Arithmetic
         case ADD:
-            printf("Arith:%s(ADD, ", dataTypeString(this->dataType).c_str());
+            printf("Arith:%s(ADD, ", DataTypeString(this->dataType).c_str());
             break;
         case SUB:
-            printf("Arith:%s(SUB, ", dataTypeString(this->dataType).c_str());
+            printf("Arith:%s(SUB, ", DataTypeString(this->dataType).c_str());
             break;
         case MUL:
-            printf("Arith:%s(MUL, ", dataTypeString(this->dataType).c_str());
+            printf("Arith:%s(MUL, ", DataTypeString(this->dataType).c_str());
             break;
         case DIV:
-            printf("Arith:%s(DIV, ", dataTypeString(this->dataType).c_str());
+            printf("Arith:%s(DIV, ", DataTypeString(this->dataType).c_str());
             break;
         case MOD:
-            printf("Arith:%s(MOD, ", dataTypeString(this->dataType).c_str());
+            printf("Arith:%s(MOD, ", DataTypeString(this->dataType).c_str());
             break;
         default:
             printf("invalid BinaryOperator %d(", op);
@@ -404,7 +419,7 @@ void UnaryExpr::PrintExprTree()
 {
     switch (op) {
         case NOT:
-            printf("Unary:%s(NOT, ", dataTypeString(this->dataType).c_str());
+            printf("Unary:%s(NOT, ", DataTypeString(this->dataType).c_str());
             break;
         default:
             printf("invalid UnaryOperator %d(", op);
@@ -470,17 +485,20 @@ void DataExpr::PrintExprTree()
 
 void InExpr::PrintExprTree()
 {
-    printf("In:%s(", dataTypeString(this->dataType).c_str());
+    printf("In:%s(", DataTypeString(this->dataType).c_str());
     for (int i = 0; i < arguments.size(); i++) {
         arguments[i]->PrintExprTree();
-        if (i == arguments.size() - 1) printf(")");
-        else printf(", ");
+        if (i == arguments.size() - 1) {
+            printf(")");
+        } else {
+            printf(", ");
+        }
     }
 }
 
 void BetweenExpr::PrintExprTree()
 {
-    printf("Between:%s(", dataTypeString(this->dataType).c_str());
+    printf("Between:%s(", DataTypeString(this->dataType).c_str());
     value->PrintExprTree();
     printf(", ");
     lowerBound->PrintExprTree();
@@ -491,7 +509,7 @@ void BetweenExpr::PrintExprTree()
 
 void IfExpr::PrintExprTree()
 {
-    printf("If:%s(", dataTypeString(this->dataType).c_str());
+    printf("If:%s(", DataTypeString(this->dataType).c_str());
     condition->PrintExprTree();
     printf(", ");
     trueExpr->PrintExprTree();
@@ -502,7 +520,7 @@ void IfExpr::PrintExprTree()
 
 void CoalesceExpr::PrintExprTree()
 {
-    printf("Coalesce:%s(", dataTypeString(this->dataType).c_str());
+    printf("Coalesce:%s(", DataTypeString(this->dataType).c_str());
     value1->PrintExprTree();
     printf(", ");
     value2->PrintExprTree();
@@ -511,12 +529,15 @@ void CoalesceExpr::PrintExprTree()
 
 void FuncExpr::PrintExprTree()
 {
-    printf("%s:%s(", funcName.c_str(), dataTypeString(this->dataType).c_str());
+    printf("%s:%s(", funcName.c_str(), DataTypeString(this->dataType).c_str());
 
     for (int i = 0; i < arguments.size(); i++) {
         arguments[i]->PrintExprTree();
-        if (i == arguments.size() - 1) printf(")");
-        else printf(", ");
+        if (i == arguments.size() - 1) {
+            printf(")");
+        } else {
+            printf(", ");
+        }
     }
 }
 }

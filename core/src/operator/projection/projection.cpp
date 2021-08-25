@@ -10,7 +10,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
-using uint8vec = std::vector<uint8_t>;
+using Uint8vec = std::vector<uint8_t>;
 namespace omniruntime {
 namespace op {
 RowProjection::RowProjection(std::string &expression, std::vector<DataType> &inputTypes)
@@ -92,12 +92,65 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool fil
 
 unique_ptr<vector<uint8_t>> GetProjDataHelper(const uint8_t actualChar[], int32_t len)
 {
-    auto accStr = make_unique<uint8vec>(len + 1);
+    auto accStr = make_unique<Uint8vec>(len + 1);
     for (int32_t k = 0; k < len; k++) {
         (*accStr)[k] = actualChar[k];
     }
     (*accStr)[len] = '\0';
     return move(accStr);
+}
+
+void GetProjVarcharData(VectorBatch &vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
+                        vector<unique_ptr<vector<uint8_t>>> &stringvalVec, std::vector<int64_t> &data, uint32_t col)
+{
+    uint32_t nRows = vecBatch.GetRowCount();
+    auto *vcVec = static_cast<omniruntime::vec::VarcharVector *>(vecBatch.GetVector(col));
+    // Create array to hold addresses
+    unique_ptr<vec64> vcData = make_unique<vec64>();
+
+    for (int32_t j = 0; j < nRows; j++) {
+        // get data
+        uint8_t *actualChar = nullptr;
+        int32_t len = vcVec->GetValue(j, &actualChar);
+
+        /// Truncate the resulting string
+        unique_ptr<Uint8vec> accStr = GetProjDataHelper(actualChar, len);
+
+        actualChar = accStr->data();
+
+        // add to vector so it can be freed later
+        stringvalVec.push_back(move(accStr));
+
+        // add to subarray of data
+        auto ac = actualChar;
+        void *accChar = &ac;
+        auto caccChar = static_cast<int64_t *>(accChar);
+        vcData->push_back(*caccChar);
+    }
+    // data handling
+    auto dc = vcData->data();
+    void *dataCol = &dc;
+    auto cdataCol = static_cast<int64_t *>(dataCol);
+    data.push_back(*cdataCol);
+
+    vcdataVec.push_back(move(vcData));
+}
+
+void GetProjDecimal128Data(VectorBatch &vecBatch, std::vector<int64_t> &data, uint32_t col)
+{
+    int32_t longs = 2;
+    uint32_t nRows = vecBatch.GetRowCount();
+    auto *values = static_cast<int64_t *>(vecBatch.GetVector(col)->GetValues());
+    // create new vector to store addresses of rows
+    unique_ptr<vec64> vcData = make_unique<vec64>();
+    int32_t positionOffset = vecBatch.GetVector(col)->GetPositionOffset();
+
+    for (int32_t row = 0; row < nRows; row++) {
+        int64_t *index = &((values)[(positionOffset + row) * longs]);
+        vcData->push_back(reinterpret_cast<int64_t>(index));
+    }
+    // data handling
+    data.push_back(reinterpret_cast<int64_t>(vcData.release()->data()));
 }
 
 // Helper function to return an array of data
@@ -108,7 +161,6 @@ std::vector<int64_t> GetProjData(omniruntime::vec::VectorBatch &vecBatch,
                                  std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch.GetVectorCount();
-    uint32_t nRows = vecBatch.GetRowCount();
     std::vector<int64_t> data;
 
     for (int32_t i = 0; i < nCols; i++) {
@@ -119,37 +171,10 @@ std::vector<int64_t> GetProjData(omniruntime::vec::VectorBatch &vecBatch,
             dictionaryVecs.push_back(colVec);
         }
         // varchar vec GetValues is different from the rest
-        if (colVec->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
-            auto *vcVec = static_cast<omniruntime::vec::VarcharVector *>(colVec);
-            // Create array to hold addresses
-            unique_ptr<vec64> vcData = make_unique<vec64>();
-
-            for (int32_t j = 0; j < nRows; j++) {
-                // get data
-                uint8_t *actualChar = nullptr;
-                int32_t len = vcVec->GetValue(j, &actualChar);
-
-                /// Truncate the resulting string
-                unique_ptr<uint8vec> accStr = GetProjDataHelper(actualChar, len);
-
-                actualChar = accStr->data();
-
-                // add to vector so it can be freed later
-                stringvalVec.push_back(move(accStr));
-
-                // add to subarray of data
-                auto ac = actualChar;
-                void *accChar = &ac;
-                auto caccChar = static_cast<int64_t *>(accChar);
-                vcData->push_back(*caccChar);
-            }
-            // data handling
-            auto dc = vcData->data();
-            void *dataCol = &dc;
-            auto cdataCol = static_cast<int64_t *>(dataCol);
-            data.push_back(*cdataCol);
-
-            vcdataVec.push_back(move(vcData));
+        if (vecBatch.GetVector(i)->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
+            GetProjVarcharData(vecBatch, vcdataVec, stringvalVec, data, i);
+        } else if (vecBatch.GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+            GetProjDecimal128Data(vecBatch, data, i);
         } else {
             // data handling
             auto dc = colVec->GetValues();
@@ -194,6 +219,9 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
             outVec = std::make_unique<omniruntime::vec::VarcharVector>(va, numSelectedRows * 50, numSelectedRows);
+            break;
+        case DECIMAL128D:
+            outVec = std::make_unique<omniruntime::vec::Decimal128Vector>(va, numSelectedRows);
             break;
         default: {
             DebugError("No such data type %d", outType);
@@ -272,12 +300,27 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     // contents of bitmap are modified in getProjData method
     std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
 
-    // using projector
-    auto ov = outVec->GetValues();
-    void *vecVals = &ov;
-    auto cvecVals = static_cast<int64_t *>(vecVals);
-    int32_t nReturned = this->projector(data.data(), vecBatch.GetRowCount(), *cvecVals,
-        selectedRows, numSelectedRows, bitmap.data());
+    if (outVec->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+        // using projector
+        vector<int64_t> oVec(numSelectedRows);
+        auto ov = oVec.data();
+        void *vecVals = &ov;
+        auto cvecVals = static_cast<int64_t *>(vecVals);
+        this->projector(data.data(), vecBatch.GetRowCount(), *cvecVals,
+                        selectedRows, numSelectedRows, bitmap.data());
+        auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
+        for (int i = 0; i < numSelectedRows; i++) {
+            int64_t *value = reinterpret_cast<int64_t *>(ov[i]);
+            outDecimal128Vec->SetValue(i, Decimal128(*(value + 1), *value));
+        }
+    } else {
+        // using projec
+        auto ov = outVec->GetValues();
+        void *vecVals = &ov;
+        auto cvecVals = static_cast<int64_t *>(vecVals);
+        int32_t nReturned = this->projector(data.data(), vecBatch.GetRowCount(), *cvecVals,
+                                            selectedRows, numSelectedRows, bitmap.data());
+    }
 
     data.clear();
     for (auto &dictionaryVec : dictionaryVecs) {
@@ -311,6 +354,7 @@ int32_t ProjectionOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch 
     int rowCount = this->mutated->GetRowCount();
     data.push_back(this->mutated);
     FreeStrings();
+    FreeDecimalArrays();
     this->mutated = nullptr;
     return rowCount;
 }

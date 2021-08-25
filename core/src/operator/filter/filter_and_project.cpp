@@ -12,7 +12,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
 
-using uint8vec = std::vector<uint8_t>;
+using Uint8vec = std::vector<uint8_t>;
 RowFilter::RowFilter() : codegen(nullptr) {}
 
 RowFilter::~RowFilter() {}
@@ -100,6 +100,7 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
 
     // need to cleanup memory in old vecBatches
     FreeStrings();
+    FreeDecimalArrays();
     return rowCount;
 }
 
@@ -116,12 +117,62 @@ Filter::Filter(unique_ptr<FilterCodeGen> codeGen, Expr &expr)
 
 unique_ptr<vector<uint8_t>> GetDataHelper(uint8_t actualChar[], int32_t len)
 {
-    auto accStr = make_unique<uint8vec>(len + 1);
+    auto accStr = make_unique<Uint8vec>(len + 1);
     for (int32_t k = 0; k < len; k++) {
         (*accStr)[k] = actualChar[k];
     }
     (*accStr)[len] = '\0';
     return move(accStr);
+}
+
+void GetVarcharData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
+                    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, std::vector<int64_t> &data, uint32_t col)
+{
+    uint32_t nRows = vecBatch->GetRowCount();
+    auto vcVec = static_cast<VarcharVector *>(vecBatch->GetVector(col));
+    // Create array to hold addresses
+    unique_ptr<vec64> vcData = make_unique<vec64>();
+
+    for (int32_t j = 0; j < nRows; j++) {
+        // get data
+        uint8_t *actualChar = nullptr;
+        int32_t len = vcVec->GetValue(j, &actualChar);
+
+        // Truncate the resulting string
+        unique_ptr<Uint8vec> accStr = GetDataHelper(actualChar, len);
+        actualChar = accStr->data();
+
+        // add to vector so it can be freed later
+        stringvalVec.push_back(move(accStr));
+
+        auto ac = actualChar;
+        void *accChar = &ac;
+        auto caccChar = static_cast<int64_t *>(accChar);
+        vcData->push_back(*caccChar);
+    }
+    // data handling
+    auto dc = vcData->data();
+    void *dataCol = &dc;
+    auto cdataCol = static_cast<int64_t *>(dataCol);
+    data.push_back(*cdataCol);
+    vcdataVec.push_back(move(vcData));
+}
+
+void GetDecimal128Data(VectorBatch *&vecBatch, std::vector<int64_t> &data, uint32_t col)
+{
+    int32_t longs = 2;
+    uint32_t nRows = vecBatch->GetRowCount();
+    int64_t *values = reinterpret_cast<int64_t *>(vecBatch->GetVector(col)->GetValues());
+    // create new vector to store addresses of rows
+    unique_ptr<vec64> vcData = make_unique<vec64>();
+    int32_t positionOffset = vecBatch->GetVector(col)->GetPositionOffset();
+
+    for (int32_t row = 0; row < nRows; row++) {
+        int64_t *index = &((values)[(positionOffset + row) * longs]);
+        vcData->push_back(reinterpret_cast<int64_t>(index));
+    }
+    // data handling
+    data.push_back(reinterpret_cast<int64_t>(vcData.release()->data()));
 }
 
 // Helper function to return an array of data
@@ -131,7 +182,6 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
                              std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch->GetVectorCount();
-    uint32_t nRows = vecBatch->GetRowCount();
     std::vector<int64_t> data;
 
     for (int32_t i = 0; i < nCols; i++) {
@@ -142,35 +192,10 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
             dictionaryVecs.push_back(colVec);
         }
         // varchar vec GetValues is different from the rest
-        if (colVec->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
-            auto vcVec = static_cast<VarcharVector *>(colVec);
-            // Create array to hold addresses
-            unique_ptr<vec64> vcData = make_unique<vec64>();
-
-            for (int32_t j = 0; j < nRows; j++) {
-                // get data
-                uint8_t *actualChar = nullptr;
-                int32_t len = vcVec->GetValue(j, &actualChar);
-
-                // Truncate the resulting string
-                unique_ptr<uint8vec> accStr = GetDataHelper(actualChar, len);
-
-                actualChar = accStr->data();
-
-                // add to vector so it can be freed later
-                stringvalVec.push_back(move(accStr));
-
-                auto ac = actualChar;
-                void *accChar = &ac;
-                auto caccChar = static_cast<int64_t *>(accChar);
-                vcData->push_back(*caccChar);
-            }
-            // data handling
-            auto dc = vcData->data();
-            void *dataCol = &dc;
-            auto cdataCol = static_cast<int64_t *>(dataCol);
-            data.push_back(*cdataCol);
-            vcdataVec.push_back(move(vcData));
+        if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
+            GetVarcharData(vecBatch, vcdataVec, stringvalVec, data, i);
+        } else if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+            GetDecimal128Data(vecBatch, data, i);
         } else {
             // data handling
             auto dc = colVec->GetValues();

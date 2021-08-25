@@ -11,7 +11,6 @@
 #else
 #define DLLEXPORT
 #endif
-
 namespace {
     const int COMBINE_HASH_VALUE = 31;
 }
@@ -46,7 +45,6 @@ extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
 {
     return static_cast<double>(x);
 }
-
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)
 {

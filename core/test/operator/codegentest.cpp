@@ -601,7 +601,6 @@ TEST(CodeGenTest, MathFunctions4) {
 TEST(CodeGenTest, CastNumbers1) {
     string unparsed = "$operator$EQUAL:boolean(abs:double(CAST:double(#0)), abs:double(CAST:double(#1)))";
 
-
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser{};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
@@ -1169,4 +1168,196 @@ TEST(CodeGenTest, Coalesce) {
     delete lc;
 }
 
+TEST(CodeGenTest, DecimalOperators1) {
+
+    string unparsed = "$operator$EQUAL:boolean(ADD:decimal(#0, 5), 15)";
+
+    DataType types[1] = {DataType::DECIMAL128D};
+    Parser parser{};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
+    expr->PrintExprTree();
+
+    // creating decimal
+    int64_t c1[4] = {10, 0, 9, 0};
+
+    int64_t c[2] = {(int64_t) c1, (int64_t) (c1 + 2)};
+
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t) c;
+
+    int32_t *selected = new int32_t[2];
+
+    bool** bitmap = new bool*[1];
+    bitmap[0] = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = false;
+    }
+
+    string testname = "DecimalTest1";
+    vector<DataType> typeVec = vector<DataType>(types, types + 1);
+    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+
+    int32_t result = func(vals, 2, selected, (int64_t*)(bitmap));
+    EXPECT_EQ(result, 1);
+
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
+}
+
+TEST(CodeGenTest, DecimalOperators2) {
+
+    string unparsed = "BETWEEN:boolean(#0, #1, #2)";
+
+    DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
+    Parser parser{};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
+
+    // creating decimal
+    int64_t c1[2] = {4000, 0};
+    int64_t c[1] = {(int64_t) c1};
+
+    int64_t d1[2] = {5000, 0};
+    int64_t d[1] = {(int64_t) d1};
+
+    int64_t e1[2] = {15000, 0};
+    int64_t e[1] = {(int64_t) e1};
+
+    int64_t *vals = new int64_t[3];
+    vals[0] = (int64_t) c;
+    vals[1] = (int64_t) d;
+    vals[2] = (int64_t) e;
+
+    int32_t *selected = new int32_t[1];
+
+    bool** bitmap = new bool*[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    string testname = "DecimalBetweenTest";
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    EXPECT_EQ(result, 0);
+
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
+}
+
+TEST(CodeGenTest, DecimalOperators3) {
+
+    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), $operator$LESS_THAN:boolean(#0, 0))";
+
+    DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
+    Parser parser{};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
+
+    // creating decimal
+    int64_t c1[2] = {-12222, -1};
+    int64_t c[1] = {(int64_t) c1};
+
+    int64_t d1[2] = {-12312, -1};
+    int64_t d[1] = {(int64_t) d1};
+
+    int64_t e1[2] = {42, 0};
+    int64_t e[1] = {(int64_t) e1};
+
+    int64_t *vals = new int64_t[3];
+    vals[0] = (int64_t) c;
+    vals[1] = (int64_t) d;
+    vals[2] = (int64_t) e;
+
+    int32_t *selected = new int32_t[1];
+
+    bool** bitmap = new bool*[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    string testname = "DecimalBetweenTest";
+    vector<DataType> typeVec = vector<DataType>(types, types + 3);
+    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    EXPECT_EQ(result, 1);
+
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
+}
+
+TEST(CodeGenTest, ProjectionCodeGen) {
+
+    string unparsed = "$operator$ADD:decimal(#0, 100)";
+
+    DataType types[1] = {DataType::DECIMAL128D};
+    Parser parser{};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    expr->PrintExprTree();
+
+    // creating decimal
+    int64_t c1[6] = {10, 0, 20, 0, 30, 0};
+    int64_t c[3] = {(int64_t) c1, (int64_t) (c1 + 2), (int64_t) (c1 + 4)};
+
+
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t) c;
+
+    bool** bitmap = new bool*[1];
+    bitmap[0] = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = false;
+    }
+
+    string testname = "DecimalProjectTest";
+    vector<DataType> typeVec = vector<DataType>(types, types + 1);
+    ProjectionCodeGen *lc = new ProjectionCodeGen(testname, *expr, typeVec, false);
+
+    vector<int64_t> oVec(3);
+    auto ov = oVec.data();
+    void *vecVals = &ov;
+    auto cvecVals = static_cast<int64_t *>(vecVals);
+    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *);
+    func = (int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *)) (intptr_t) lc->GetFunction();
+
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3,  (int64_t*)(bitmap));
+    int64_t *result = reinterpret_cast<int64_t*>(oVec[0]);
+    EXPECT_EQ(*result, 110);
+    EXPECT_EQ(*(result + 1), 0);
+
+    result = reinterpret_cast<int64_t*>(oVec[1]);
+    EXPECT_EQ(*(result), 120);
+    EXPECT_EQ(*(result + 1), 0);
+
+    result = reinterpret_cast<int64_t*>(oVec[2]);
+    EXPECT_EQ(*(result), 130);
+    EXPECT_EQ(*(result + 1), 0);
+
+    delete[] bitmap;
+    delete[] vals;
+    delete expr;
+    delete lc;
+}
 

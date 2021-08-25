@@ -8,6 +8,7 @@
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
 #include "./functions/murmur3_hash.h"
+#include "./functions/decimalfunctions.h"
 #include "func_registry.h"
 
 using namespace std;
@@ -28,6 +29,8 @@ Type* ToLlvmType(DataType t, LLVMContext* context)
         case DataType::BOOLD:
             return Type::getInt1Ty(*context);
         case DataType::STRINGD:
+            return Type::getInt64Ty(*context);
+        case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
         default:
             std::cout << "Error: Unknown argument datatype " << t << endl;
@@ -107,6 +110,13 @@ void FunctionRegistry::RegisterAbsFunctions(const std::string& fn)
         this->RegisterFunctionFromSignature(absDoubleSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(absDoubleStr, absDoubleSig));
     }
+    if (fn == "abs_decimal128") {
+        vector<DataType> absDecimal128Types {DataType::INT64D};
+        FunctionSignature absDecimal128Sig (absDecimal128Str, absDecimal128Types, DataType::INT64D,
+                                       reinterpret_cast<void *>(AbsDecimal128));
+        this->RegisterFunctionFromSignature(absDecimal128Sig);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(absDecimal128Str, absDecimal128Sig));
+    }
 }
 
 void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
@@ -177,6 +187,40 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
     }
 }
 
+void FunctionRegistry::RegisterDecimalFuncs()
+{
+    // Decimal comparison operators
+    vector<DataType> decimalExtTypes {DataType::INT64D, DataType::INT64D};
+    FunctionSignature decimalCompareExtSig(decimal128CompareExtStr, decimalExtTypes, DataType::INT32D,
+                                           reinterpret_cast<void *>(Decimal128CompareExt));
+    this->RegisterFunctionFromSignature(decimalCompareExtSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(decimal128CompareExtStr, decimalCompareExtSig));
+
+    // Decimal Add
+    FunctionSignature decimalAddExtSig(addDec128Str, decimalExtTypes, DataType::INT64D,
+                                       reinterpret_cast<void *>(AddDec128));
+    this->RegisterFunctionFromSignature(decimalAddExtSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(addDec128Str, decimalAddExtSig));
+
+    // Decimal Subtract
+    FunctionSignature decimalSubExtSig(subDec128Str, decimalExtTypes, DataType::INT64D,
+                                       reinterpret_cast<void *>(SubDec128));
+    this->RegisterFunctionFromSignature(decimalSubExtSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(subDec128Str, decimalSubExtSig));
+
+    // Decimal Multiplication
+    FunctionSignature decimalMulExtSig(mulDec128Str, decimalExtTypes, DataType::INT64D,
+                                       reinterpret_cast<void *>(MulDec128));
+    this->RegisterFunctionFromSignature(decimalMulExtSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mulDec128Str, decimalMulExtSig));
+
+    // Decimal Division
+    FunctionSignature decimalDivExtSig(divDec128Str, decimalExtTypes, DataType::INT64D,
+                                       reinterpret_cast<void *>(DivDec128));
+    this->RegisterFunctionFromSignature(decimalDivExtSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(divDec128Str, decimalDivExtSig));
+}
+
 void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
 {
     // Mm3Hash functions
@@ -212,7 +256,7 @@ void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
 
 bool isMathFunction(const string& fn)
 {
-    return fn == "abs_int32" || fn == "abs_int64" || fn == "abs_double";
+    return fn == "abs_int32" || fn == "abs_int64" || fn == "abs_double" || fn == "abs_decimal128";
 }
 
 bool isStringFunction(const string& fn)
@@ -246,6 +290,9 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
                                        reinterpret_cast<void*>(StrCompareExt));
     this->RegisterFunctionFromSignature(strCompareExtSig);
     funcNameToSignatureMap.insert(pair<string, FunctionSignature>(strCompareExtStr, strCompareExtSig));
+
+    // Always register Decimal Binary and Arithmetic Functions
+    this->RegisterDecimalFuncs();
 
     set<string> externalFuncNames = efr.GetAllExternalFunctionNames();
     for (const auto& fn : requiredFuncs) {

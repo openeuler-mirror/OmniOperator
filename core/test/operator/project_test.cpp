@@ -47,6 +47,9 @@ VectorBatch* CreateInput(const int32_t numRows,
                 }
                 break;
             }
+            case OMNI_VEC_TYPE_DECIMAL128:
+                ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
+                break;
             default: {
                 DebugError("No such data type %d", inputTypes[i]);
                 break;
@@ -63,6 +66,23 @@ int32_t* MakeInts(const int32_t size, const int32_t start = 0)
     int32_t idx = 0;
     for (int32_t i = start; i < start + size; i++) {
         arr[idx++] = i;
+    }
+    return arr;
+}
+
+int64_t* MakeDecimals(const int32_t size, const int32_t start = 0)
+{
+    int64_t* arr = new int64_t[size * 2];
+    int32_t idx = 0;
+    for (int64_t i = start; i < start + size; i++) {
+        if (i >= 0) {
+            arr[2 * idx] = i;
+            arr[2 * idx + 1] = 0;
+        } else {
+            arr[2 * idx] = i * -1;
+            arr[2 * idx + 1] = -1;
+        }
+        idx++;
     }
     return arr;
 }
@@ -346,26 +366,25 @@ TEST (ProjectTest, DictionaryVecTest) {
     batch->SetVector(2, dictionaryVector);
 
     const int32_t numProject = 3;
-    string exprs[numProject] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)", "$operator$ADD:int(#2, 10)"};
-    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
-    omniruntime::op::Operator* op = factory->CreateOperator();
+    string exprs[numProject] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)",
+                                "$operator$ADD:int(#2, 10)"};
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
-    vector<VectorBatch*> ret;
+    vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i) + 1);
-        int32_t val1 = ((IntVector*) ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *) ret[0]->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, col2->GetValue(i) + 2);
-        int32_t val2 = ((IntVector*) ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *) ret[0]->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, dictionaryVector->GetInt(i) + 10);
     }
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
 
     delete col3;
-    delete op;
-    delete factory;
 }
 
 TEST (ProjectTest, DictionaryVecNestedTest) {
@@ -376,7 +395,7 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     IntVector *col3 = new IntVector(nullptr, 3);
     int32_t data[] = {4, 5, 6};
     col3->SetValues(0, data, 3);
-    int32_t ids[]= {1, 2};
+    int32_t ids[] = {1, 2};
     auto *dictionaryVector = new DictionaryVector(col3, ids, 2);
     int32_t nestedIds[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
     auto *dictionaryNested = new DictionaryVector(dictionaryVector, nestedIds, numRows);
@@ -393,19 +412,20 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     batch->SetVector(2, dictionaryNested);
 
     const int32_t numProjs = 3;
-    string exprs[numProjs] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)", "$operator$ADD:int(#2, 10)"};
-    auto* factory = new ProjectionOperatorFactory(exprs, numProjs, inputTypes, numCols);
-    omniruntime::op::Operator* op = factory->CreateOperator();
+    string exprs[numProjs] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)",
+                              "$operator$ADD:int(#2, 10)"};
+    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
-    vector<VectorBatch*> ret;
+    vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     VectorHelper::PrintVecBatch(ret[0]);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i) + 1);
-        int32_t val1 = ((IntVector*) ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *) ret[0]->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, col2->GetValue(i) + 2);
-        int32_t val2 = ((IntVector*) ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *) ret[0]->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, dictionaryNested->GetInt(i) + 10);
     }
 
@@ -414,6 +434,71 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
 
     delete col3;
     delete dictionaryVector;
+}
+
+TEST (ProjectTest, Decimal128Arithmetic) {
+    const int32_t numRows = 10;
+    int64_t* col1 = MakeDecimals(numRows);
+    const int32_t numProject = 1;
+    string exprs[numProject] = {"$operator$ADD:decimal(#0, 20)"};
+    const int32_t numCols = 1;
+    int32_t inputTypes[numCols] = {7};
+    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int64_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector*) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i + 20);
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
+TEST (ProjectTest, MultipleDecimal128Columns) {
+    const int32_t numRows = 100;
+    int64_t* col1 = MakeDecimals(numRows);
+    int64_t* col2 = MakeDecimals(numRows, 100);
+    const int32_t numProject = 2;
+    string exprs[numProject] = {"$operator$ADD:decimal(#0, 50)", "$operator$MULTIPLY:decimal(#1, 20)"};
+    const int32_t numCols = 2;
+    int32_t inputTypes[numCols] = {7, 7};
+    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector *) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i + 50);
+    }
+    int idx = 0;
+    for (int32_t i = 100; i < 100 + 100; i++) {
+        Decimal128 val0 = ((Decimal128Vector *) ret[0]->GetVector(1))->GetValue(idx);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i * 20);
+        idx++;
+    }
+
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
+    delete[] col2;
+
     delete op;
     delete factory;
 }

@@ -135,6 +135,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         case DataType::STRINGD:
             outPtrType = Type::getInt64PtrTy(*context);
             break;
+        case DataType::DECIMAL128D:
+            outPtrType = Type::getInt64PtrTy(*context);
+            break;
         default:
             LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetExprDataType());
             break;
@@ -184,9 +187,13 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
             case DataType::STRINGD:
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
                 break;
+            case DataType::DECIMAL128D:
+                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+                break;
             default:
                 LLVM_DEBUG_LOG("Unsupported column data type %d", type);
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+                break;
         }
         // Find the address of the row to be processed.
         gep = builder->CreateGEP(elementPtr, rowIndexVal);
@@ -235,6 +242,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // Return results
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
+
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
