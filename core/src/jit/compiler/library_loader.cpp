@@ -2,6 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
 #include "library_loader.h"
+#include "../../../libconfig.h"
 
 using namespace std;
 
@@ -56,7 +57,7 @@ vector<string> SplitLine(const string &input)
 
 void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector<CoreLibrary> &neededLibs)
 {
-    ifstream depConfig("/opt/lib/dependencies.txt");
+    ifstream depConfig(G_LIB_PATH + "dependencies.txt");
     string line;
     
     while (getline(depConfig, line)) {

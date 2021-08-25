@@ -3,17 +3,20 @@
  * Description: llvm code generation methods
  */
 #include "llvm_codegen.h"
+
+#include <chrono>
+#include <cstring>
+
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
-#include <chrono>
-
 
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
 
-namespace{
+namespace {
     const int INT32_VALUE = 32;
     const int INT64_VALUE = 64;
     const int IS_EVEN = 2;
@@ -23,28 +26,28 @@ namespace{
     const int LENGTH_LOC = 2;
 }
 
-Value *LLVMCodeGen::createConstantBool(bool v)
+Value *LLVMCodeGen::CreateConstantBool(bool v)
 {
     return ConstantInt::get(*context, APInt(1, v));
 }
 
-Value *LLVMCodeGen::createConstantInt(int32_t v)
+Value *LLVMCodeGen::CreateConstantInt(int32_t v)
 {
     return ConstantInt::get(*context, APInt(INT32_VALUE, v, true));
 }
 
-Value *LLVMCodeGen::createConstantLong(int64_t v)
+Value *LLVMCodeGen::CreateConstantLong(int64_t v)
 {
     return ConstantInt::get(*context, APInt(INT64_VALUE, v, true));
 }
 
-Value *LLVMCodeGen::createConstantDouble(double v)
+Value *LLVMCodeGen::CreateConstantDouble(double v)
 {
     return ConstantFP::get(*context, APFloat(v));
 }
 
 
-Type *LLVMCodeGen::toLLVMType(DataType t)
+Type *LLVMCodeGen::ToLlvmType(DataType t)
 {
     switch (t) {
         case DataType::INT32D:
@@ -64,36 +67,36 @@ Type *LLVMCodeGen::toLLVMType(DataType t)
 }
 
 // Tells whether or not a function is a valid name
-bool isFunctionName(std::string fnName)
+bool IsFunctionName(std::string fnName)
 {
-    // TODO: either use a global string set to contain function names, or get function names from _module
+    // Either use a global string set to contain function names, or get function names from module
     return true;
 }
 
 
-LLVMCodeGen::LLVMCodeGen(std::string name,  Expr *cpExpr, std::vector<DataType> &datatypes) : datatypes(datatypes)
+LLVMCodeGen::LLVMCodeGen(std::string name, Expr &cpExpr, std::vector<DataType> &datatypes) : datatypes(datatypes)
 {
     funcName = name;
-    expr = cpExpr;
+    expr = &cpExpr;
     this->datatypes = datatypes;
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
     // llvm::InitializeNativeTargetDisassembler();
-    JIT = EOE(LLJITBuilder().create());
+    jit = eoe(LLJITBuilder().create());
     context = std::make_unique<LLVMContext>();
     // Create module called the_module
     module = std::make_unique<Module>("the_module", *context);
-    module->setDataLayout(JIT->getDataLayout());
-    // Create IR builder to create IR instructinos
+    module->setDataLayout(jit->getDataLayout());
+    // Create IR builder to create IR instructions
     builder = std::make_unique<IRBuilder<>>(*context);
 
     // Time function registering process
     auto start = std::chrono::steady_clock::now();
-    fr = std::make_unique<FunctionRegistry>(JIT, context, module).release();
+    fr = std::make_unique<FunctionRegistry>(jit, context, module).release();
     // Only register the necessary functions for the expression
-    // Necessary functions are found using requiredFunctions method
-    fr->InitNecessary(requiredFunctions(expr));
+    // Necessary functions are found using RequiredFunctions method
+    fr->RegisterNecessaryFuncs(RequiredFunctions(cpExpr));
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> frTime = end - start;
 #ifdef DEBUG
@@ -104,7 +107,7 @@ LLVMCodeGen::LLVMCodeGen(std::string name,  Expr *cpExpr, std::vector<DataType> 
 
 LLVMCodeGen::~LLVMCodeGen()
 {
-    EOE(rt->remove());
+    eoe(rt->remove());
     delete fr;
 }
 
@@ -114,9 +117,34 @@ LLVMCodeGen::~LLVMCodeGen()
 const int STARTEXT_VALUE = 2;
 const int SUBSTREXT_VALUE = 3;
 
-void LLVMCodeGen::requiredFunctionsHelper(Expr *cpExpr, std::set<std::string> &s)
+void LLVMCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::string> &s)
+{
+    FuncExpr *fExpr = dynamic_cast<FuncExpr *>(&funcExpr);
+    std::string fn = fExpr->funcName;
+
+    if (fn == "CAST" || fn == "abs") {
+        s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()));
+    } else if (fn == "substr") {
+        if (fExpr->arguments.size() == STARTEXT_VALUE) {
+            s.insert("substrWithStartExt");
+        }
+        if (fExpr->arguments.size() == SUBSTREXT_VALUE) {
+            s.insert("substrExt");
+        }
+
+    } else {
+        s.insert(fExpr->funcName);
+    }
+    // Recurse on the arguments
+    for (auto arg : fExpr->arguments) {
+        RequiredFunctionsHelper(*arg, s);
+    }
+}
+
+void LLVMCodeGen::RequiredFunctionsHelper(Expr &cpExpression, std::set<std::string> &s)
 {
     // For all types of Expr except for FuncExpr, recurse on the children
+    Expr *cpExpr = &cpExpression;
     switch (cpExpr->GetType()) {
         case ExprType::DATA_E: {
             return;
@@ -124,71 +152,49 @@ void LLVMCodeGen::requiredFunctionsHelper(Expr *cpExpr, std::set<std::string> &s
 
         case ExprType::BINARY_E: {
             BinaryExpr *bExpr = dynamic_cast<BinaryExpr *>(cpExpr);
-            requiredFunctionsHelper(bExpr->left, s);
-            requiredFunctionsHelper(bExpr->right, s);
+            RequiredFunctionsHelper(*(bExpr->left), s);
+            RequiredFunctionsHelper(*(bExpr->right), s);
             return;
         }
 
         case ExprType::UNARY_E: {
-            UnaryExpr *uExpr = dynamic_cast<UnaryExpr *>(cpExpr);
-            requiredFunctionsHelper(uExpr->exp, s);
+            RequiredFunctionsHelper(*(dynamic_cast<UnaryExpr *>(cpExpr)->exp), s);
             return;
         }
 
         case ExprType::IF_E: {
             IfExpr *ifExpr = dynamic_cast<IfExpr *>(cpExpr);
-            requiredFunctionsHelper(ifExpr->condition, s);
-            requiredFunctionsHelper(ifExpr->trueExpr, s);
-            requiredFunctionsHelper(ifExpr->falseExpr, s);
+            RequiredFunctionsHelper(*(ifExpr->condition), s);
+            RequiredFunctionsHelper(*(ifExpr->trueExpr), s);
+            RequiredFunctionsHelper(*(ifExpr->falseExpr), s);
             return;
         }
 
         case ExprType::IN_E: {
-            InExpr *inExpr = dynamic_cast<InExpr *>(cpExpr);
-            for (auto arg : inExpr->arguments) {
-                requiredFunctionsHelper(arg, s);
+            for (auto arg : dynamic_cast<InExpr *>(cpExpr)->arguments) {
+                RequiredFunctionsHelper(*arg, s);
             }
             return;
         }
 
         case ExprType::BETWEEN_E: {
             BetweenExpr *bExpr = dynamic_cast<BetweenExpr *>(cpExpr);
-            requiredFunctionsHelper(bExpr->value, s);
-            requiredFunctionsHelper(bExpr->lowerBound, s);
-            requiredFunctionsHelper(bExpr->upperBound, s);
+            RequiredFunctionsHelper(*(bExpr->value), s);
+            RequiredFunctionsHelper(*(bExpr->lowerBound), s);
+            RequiredFunctionsHelper(*(bExpr->upperBound), s);
             return;
         }
 
         case ExprType::COALESCE_E: {
             CoalesceExpr *cExpr = dynamic_cast<CoalesceExpr *>(cpExpr);
-            requiredFunctionsHelper(cExpr->value1, s);
-            requiredFunctionsHelper(cExpr->value2, s);
+            RequiredFunctionsHelper(*(cExpr->value1), s);
+            RequiredFunctionsHelper(*(cExpr->value2), s);
             return;
         }
 
-            // Add the name of the required extern function
+        // Add the name of the required extern function
         case ExprType::FUNC_E: {
-            FuncExpr *fExpr = dynamic_cast<FuncExpr *>(cpExpr);
-            std::string fn = fExpr->funcName;
-
-            if (fn == "CAST" || fn == "abs") {
-                s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()));
-            } else if (fn == "substr") {
-                if (fExpr->arguments.size() == STARTEXT_VALUE) {
-                    s.insert("substrWithStartExt");
-                }
-                if (fExpr->arguments.size() == SUBSTREXT_VALUE) {
-                    s.insert("substrExt");
-                }
-
-            } else {
-                s.insert(fExpr->funcName);
-            }
-            // Recurse on the arguments
-            for (auto arg : fExpr->arguments) {
-                requiredFunctionsHelper(arg, s);
-            }
-            return;
+            RequiredFunctionsHelper2(*cpExpr, s);
         }
 
         default:
@@ -197,63 +203,157 @@ void LLVMCodeGen::requiredFunctionsHelper(Expr *cpExpr, std::set<std::string> &s
 }
 
 // Returns a set of the names of required functions
-std::set<std::string> LLVMCodeGen::requiredFunctions(Expr *cpExpr)
+std::set<std::string> LLVMCodeGen::RequiredFunctions(Expr &cpExpr)
 {
     std::set <std::string> ret;
-    requiredFunctionsHelper(cpExpr, ret);
+    RequiredFunctionsHelper(cpExpr, ret);
     return ret;
 }
 
 // Other operations which require externed functions
-Value *LLVMCodeGen::stringCmp(Value *LHS, Value *RHS)
+Value *LLVMCodeGen::StringCmp(Value *lhs, Value *rhs)
 {
     // call function
-    std::vector <Value*> argVals{LHS, RHS};
-    auto f = module->getFunction("strCompareExt");
+    std::vector <Value *> argVals{lhs, rhs};
+    auto f = module->getFunction(fr->strCompareExtStr);
     Value *ret = builder->CreateCall(f, argVals, "call_str_cmp");
     return ret;
 }
 
-Value *LLVMCodeGen::parseDataExpr(DataExpr *dEx, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseDataExpr(DataExpr &dExpr, std::map<std::string, Value *> &args)
 {
+    DataExpr *dEx = &dExpr;
+
     if (dEx->isColumn) {
         return args[std::to_string(dEx->colVal)];
     }
     switch (dEx->GetExprDataType()) {
         case DataType::INT32D: {
-            return this->createConstantInt(dEx->intVal);
+            return this->CreateConstantInt(dEx->intVal);
         }
         case DataType::INT64D: {
-            return this->createConstantLong(dEx->longVal);
+            return this->CreateConstantLong(dEx->longVal);
         }
         case DataType::DOUBLED: {
-            return this->createConstantDouble(dEx->doubleVal);
+            return this->CreateConstantDouble(dEx->doubleVal);
         }
         case DataType::STRINGD: {
-            const char *s = dEx->stringVal->c_str();
-
-            Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE, (int64_t)(s)));
+            Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE,
+                                                              reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
             return addr;
         }
         case DataType::BOOLD: {
-            return this->createConstantBool(dEx->boolVal);
+            return this->CreateConstantBool(dEx->boolVal);
         }
         default: {
             std::cout << "Unsupported data type in Data Expr" << std::endl;
-            return this->createConstantBool(false);
+            return this->CreateConstantBool(false);
         }
     }
 }
 
-Value *LLVMCodeGen::parseBinaryExpr(BinaryExpr *bExpr, std::map<std::string, Value *> &args)
+// Helper methods to parse binary expressions
+Value *LLVMCodeGen::ParseBinaryExprInt(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
 {
+    Value *left = &leftVal;
+    Value *right = &rightVal;
+
+    switch (op) {
+        case LT:
+            return builder->CreateICmpSLT(left, right, "relational_lt");
+        case GT:
+            return builder->CreateICmpSGT(left, right, "relational_gt");
+        case LTE:
+            return builder->CreateICmpSLE(left, right, "relational_le");
+        case GTE:
+            return builder->CreateICmpSGE(left, right, "relational_ge");
+        case EQ:
+            return builder->CreateICmpEQ(left, right, "relational_eq");
+        case NEQ:
+            return builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq");
+        case ADD:
+            return builder->CreateAdd(left, right, "arithmetic_add");
+        case SUB:
+            return builder->CreateSub(left, right, "arithmetic_sub");
+        case MUL:
+            return builder->CreateMul(left, right, "arithmetic_mul");
+        case DIV:
+            return builder->CreateSDiv(left, right, "arithmetic_div");
+        case MOD:
+            return builder->CreateSRem(left, right, "arithmetic_mod");
+        default:
+            std::cout << "Unsupported int/long binary operator " << op << std::endl;
+            return this->CreateConstantBool(false);
+    }
+}
+
+Value *LLVMCodeGen::ParseBinaryExprDouble(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+{
+    Value *left = &leftVal;
+    Value *right = &rightVal;
+
+    switch (op) {
+        case LT:
+            return builder->CreateFCmpULT(left, right, "frelational_lt");
+        case GT:
+            return builder->CreateFCmpUGT(left, right, "frelational_gt");
+        case LTE:
+            return builder->CreateFCmpULE(left, right, "frelational_le");
+        case GTE:
+            return builder->CreateFCmpUGE(left, right, "frelational_ge");
+        case EQ:
+            return builder->CreateFCmpUEQ(left, right, "farithmetic_eq");
+        case NEQ:
+            return builder->CreateNot(builder->CreateFCmpUEQ(left, right, "farithmetic_neq"));
+        case ADD:
+            return builder->CreateFAdd(left, right, "farithmetic_add");
+        case SUB:
+            return builder->CreateFSub(left, right, "farithmetic_sub");
+        case MUL:
+            return builder->CreateFMul(left, right, "farithmetic_mul");
+        case DIV:
+            return builder->CreateFDiv(left, right, "farithmetic_div");
+        default:
+            std::cout << "Unsupported double binary operator " << op << std::endl;
+            return this->CreateConstantBool(false);
+    }
+}
+
+Value *LLVMCodeGen::ParseBinaryExprString(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+{
+    Value *left = &leftVal;
+    Value *right = &rightVal;
+
+    switch (op) {
+        case LT:
+            return builder->CreateICmpSLT(this->StringCmp(left, right), CreateConstantInt(0));
+        case GT:
+            return builder->CreateICmpSGT(this->StringCmp(left, right), CreateConstantInt(0));
+        case LTE:
+            return builder->CreateICmpSLE(this->StringCmp(left, right), CreateConstantInt(0));
+        case GTE:
+            return builder->CreateICmpSGE(this->StringCmp(left, right), CreateConstantInt(0));
+        case EQ:
+            return builder->CreateICmpEQ(this->StringCmp(left, right), CreateConstantInt(0));
+        case NEQ:
+            return builder->CreateICmpNE(this->StringCmp(left, right), CreateConstantInt(0));
+        default:
+            std::cout << "Unsupported string binary operator " << op << std::endl;
+            return this->CreateConstantBool(false);
+    }
+}
+
+Value *LLVMCodeGen::ParseBinaryExpr(BinaryExpr &binExpr, std::map<std::string, Value *> &args)
+{
+    BinaryExpr *bExpr = &binExpr;
+
     if (bExpr->left->GetType() == ExprType::DATA_E || bExpr->right->GetType() == ExprType::DATA_E) {
         DataType biggerType = std::max(bExpr->left->GetExprDataType(), bExpr->right->GetExprDataType());
         bExpr->left->dataType = biggerType;
         bExpr->right->dataType = biggerType;
     }
-    Value *left = this->parseExpr(bExpr->left, args);
-    Value *right = this->parseExpr(bExpr->right, args);
+    Value *left = this->ParseExpr(*(bExpr->left), args);
+    Value *right = this->ParseExpr(*(bExpr->right), args);
 
 
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
@@ -264,84 +364,21 @@ Value *LLVMCodeGen::parseBinaryExpr(BinaryExpr *bExpr, std::map<std::string, Val
     }
 
     if (bExpr->left->GetExprDataType() == DataType::INT32D || bExpr->left->GetExprDataType() == DataType::INT64D) {
-        switch (bExpr->op) {
-            case LT:
-                return builder->CreateICmpSLT(left, right, "relational_lt");
-            case GT:
-                return builder->CreateICmpSGT(left, right, "relational_gt");
-            case LTE:
-                return builder->CreateICmpSLE(left, right, "relational_le");
-            case GTE:
-                return builder->CreateICmpSGE(left, right, "relational_ge");
-            case EQ:
-                return builder->CreateICmpEQ(left, right, "relational_eq");
-            case NEQ:
-                return builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq");
-            case ADD:
-                return builder->CreateAdd(left, right, "arithmetic_add");
-            case SUB:
-                return builder->CreateSub(left, right, "arithmetic_sub");
-            case MUL:
-                return builder->CreateMul(left, right, "arithmetic_mul");
-            case DIV:
-                return builder->CreateSDiv(left, right, "arithmetic_div");
-            case MOD:
-                return builder->CreateSRem(left, right, "arithmetic_mod");
-            default:
-                std::cout << "Error: Binary operator not supported " << bExpr->op << std::endl;
-        }
+        return this->ParseBinaryExprInt(bExpr->op, *left, *right);
     } else if (bExpr->left->GetExprDataType() == DOUBLED) {
-        switch (bExpr->op) {
-            case LT:
-                return builder->CreateFCmpULT(left, right, "frelational_lt");
-            case GT:
-                return builder->CreateFCmpUGT(left, right, "frelational_gt");
-            case LTE:
-                return builder->CreateFCmpULE(left, right, "frelational_le");
-            case GTE:
-                return builder->CreateFCmpUGE(left, right, "frelational_ge");
-            case EQ:
-                return builder->CreateFCmpUEQ(left, right, "farithmetic_eq");
-            case NEQ:
-                return builder->CreateNot(builder->CreateFCmpUEQ(left, right, "farithmetic_neq"));
-            case ADD:
-                return builder->CreateFAdd(left, right, "farithmetic_add");
-            case SUB:
-                return builder->CreateFSub(left, right, "farithmetic_sub");
-            case MUL:
-                return builder->CreateFMul(left, right, "farithmetic_mul");
-            case DIV:
-                return builder->CreateFDiv(left, right, "farithmetic_div");
-            default:
-                std::cout << "Unsupported double binary operator" << std::endl;
-                break;
-        }
+        return this->ParseBinaryExprDouble(bExpr->op, *left, *right);
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
-        switch (bExpr->op) {
-            case LT:
-                return builder->CreateICmpSLT(this->stringCmp(left, right), createConstantInt(0));
-            case GT:
-                return builder->CreateICmpSGT(this->stringCmp(left, right), createConstantInt(0));
-            case LTE:
-                return builder->CreateICmpSLE(this->stringCmp(left, right), createConstantInt(0));
-            case GTE:
-                return builder->CreateICmpSGE(this->stringCmp(left, right), createConstantInt(0));
-            case EQ:
-                return builder->CreateICmpEQ(this->stringCmp(left, right), createConstantInt(0));
-            case NEQ:
-                return builder->CreateICmpNE(this->stringCmp(left, right), createConstantInt(0));
-            default:
-                std::cout << "Unsupported string binary operator" << std::endl;
-        }
+        return this->ParseBinaryExprString(bExpr->op, *left, *right);
     }
     std::cout << "Error: Unsupported double binary expr op " << bExpr->op << std::endl;
-    return this->createConstantBool(false);
+    return this->CreateConstantBool(false);
 }
 
 
-Value *LLVMCodeGen::parseUnaryExpr(UnaryExpr *uExpr, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseUnaryExpr(UnaryExpr &unaryExpr, std::map<std::string, Value *> &args)
 {
-    Value *val = this->parseExpr(uExpr, args);
+    UnaryExpr *uExpr = &unaryExpr;
+    Value *val = this->ParseExpr(*uExpr, args);
     switch (uExpr->op) {
         case NOT:
             return builder->CreateNot(val, "logical_not");
@@ -353,8 +390,12 @@ Value *LLVMCodeGen::parseUnaryExpr(UnaryExpr *uExpr, std::map<std::string, Value
 
 
 // Create a LLVM Function that returns the value of a conditional (IF/CASE)
-Function *LLVMCodeGen::createConditional(DataType retType, Expr *cond, Expr *ifTrue, Expr *ifFalse)
+Function *LLVMCodeGen::CreateConditional(DataType retType, Expr &condExpr, Expr &ifTrueExpr, Expr &ifFalseExpr)
 {
+    Expr *cond = &condExpr;
+    Expr *ifTrue = &ifTrueExpr;
+    Expr *ifFalse = &ifFalseExpr;
+
     std::vector<Type*> args;
     // args contains the types of the arguments
     // args[2 * i] contains the type of the ith argument (where 0 <= i < datatypes.size())
@@ -363,20 +404,22 @@ Function *LLVMCodeGen::createConditional(DataType retType, Expr *cond, Expr *ifT
     args.reserve(2 * datatypes.size() + 1);
     for (int32_t i = 0; i < datatypes.size(); i++) {
         DataType type = datatypes.at(i);
-        args.push_back(this->toLLVMType(type));
+        args.push_back(this->ToLlvmType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
     // Push back type for current row index
     args.push_back(Type::getInt32Ty(*context));
 
-    Type *retTypePtr = this->toLLVMType(retType);
+    Type *retTypePtr = this->ToLlvmType(retType);
     FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
-    Function *func = Function::Create(prototype, Function::ExternalLinkage, "IF_CONDITIONAL", module.get());
+    Function *func = Function::Create(prototype, Function::ExternalLinkage, "IF_CONDITIONAL",
+                                      module.get());
 
     int32_t idx = 0;
     for (auto &arg : func->args()) {
-        if (idx == datatypes.size() * MULTIPLES) arg.setName("rowIdx");
-        else {
+        if (idx == datatypes.size() * MULTIPLES) {
+            arg.setName("rowIdx");
+        } else {
             if (idx % IS_EVEN == 0) {
                 arg.setName(std::to_string(idx / MULTIPLES));
             } else {
@@ -397,10 +440,10 @@ Function *LLVMCodeGen::createConditional(DataType retType, Expr *cond, Expr *ifT
     }
 
     builder->SetInsertPoint(conditionalCheck);
-    Value *evCond = this->parseExpr(cond, fArgs);
-    Value *evTrue = this->parseExpr(ifTrue, fArgs);
-    Value *evFalse = this->parseExpr(ifFalse, fArgs);
-    // If cond evalutes to true, control flow goes to trueBlock, returning evTrue
+    Value *evCond = this->ParseExpr(*cond, fArgs);
+    Value *evTrue = this->ParseExpr(*ifTrue, fArgs);
+    Value *evFalse = this->ParseExpr(*ifFalse, fArgs);
+    // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
     builder->CreateCondBr(evCond, trueBlock, falseBlock);
     builder->SetInsertPoint(trueBlock);
@@ -413,15 +456,16 @@ Function *LLVMCodeGen::createConditional(DataType retType, Expr *cond, Expr *ifT
 }
 
 
-Value *LLVMCodeGen::parseIfExpr(IfExpr *ie, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseIfExpr(IfExpr &ifExpr, std::map<std::string, Value *> &args)
 {
+    IfExpr *ie = &ifExpr;
     BasicBlock *currentBlock = builder->GetInsertBlock();
     DataType retType = ie->trueExpr->GetExprDataType();
     Expr *cond = ie->condition;
     Expr *ifTrue = ie->trueExpr;
     Expr *ifFalse = ie->falseExpr;
 
-    Function *conditionalFunc = createConditional(retType, cond, ifTrue, ifFalse);
+    Function *conditionalFunc = CreateConditional(retType, *cond, *ifTrue, *ifFalse);
     builder->SetInsertPoint(currentBlock);
     std::vector<Value*> passArgs;
     for (std::map<std::string, Value *>::iterator i = args.begin(); i != args.end(); i++) {
@@ -433,48 +477,49 @@ Value *LLVMCodeGen::parseIfExpr(IfExpr *ie, std::map<std::string, Value *> &args
 }
 
 
-Value *LLVMCodeGen::parseInExpr(InExpr *iExpr, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseInExpr(InExpr &inExpr, std::map<std::string, Value *> &args)
 {
+    InExpr *iExpr = &inExpr;
     Expr *toCompare = iExpr->arguments[0];
-    llvm::Value *val = this->parseExpr(toCompare, args);
+    llvm::Value *val = this->ParseExpr(*toCompare, args);
 
     llvm::Value *inArray = llvm::ConstantInt::get(*context, APInt(1, 0));
     // Handle types correctly
     for (int i = 1; i < iExpr->arguments.size(); i++) {
         // initialize tmpCmp
-        llvm::Value *tmpCmp = this->createConstantBool(false);
+        llvm::Value *tmpCmp = this->CreateConstantBool(false);
 
         if (toCompare->GetExprDataType() == DataType::INT64D &&
             iExpr->arguments[i]->GetExprDataType() == DataType::INT32D) {
-            Value *argInt64 = builder->CreateIntCast(parseExpr(iExpr->arguments[i], args), Type::getInt64Ty(*context),
-                                                     true);
+            Value *argInt64 = builder->CreateIntCast(ParseExpr(*(iExpr->arguments[i]), args),
+                                                     Type::getInt64Ty(*context), true);
             tmpCmp = builder->CreateICmpEQ(val, argInt64);
         } else if (toCompare->GetExprDataType() == DataType::INT32D &&
                    iExpr->arguments[i]->GetExprDataType() == DataType::INT64D) {
             Value *valInt64 = builder->CreateIntCast(val, Type::getInt64Ty(*context), true);
-            tmpCmp = builder->CreateICmpEQ(valInt64, parseExpr(iExpr->arguments[i], args));
+            tmpCmp = builder->CreateICmpEQ(valInt64, ParseExpr(*(iExpr->arguments[i]), args));
         } else {
             switch (iExpr->arguments[0]->dataType) {
                 case INT32D: {
-                    tmpCmp = builder->CreateICmpEQ(val, parseExpr(iExpr->arguments[i], args));
+                    tmpCmp = builder->CreateICmpEQ(val, ParseExpr(*(iExpr->arguments[i]), args));
                     break;
                 }
                 case INT64D: {
-                    tmpCmp = builder->CreateICmpEQ(val, parseExpr(iExpr->arguments[i], args));
+                    tmpCmp = builder->CreateICmpEQ(val, ParseExpr(*(iExpr->arguments[i]), args));
                     break;
                 }
                 case DOUBLED: {
-                    tmpCmp = builder->CreateFCmpOEQ(val, parseExpr(iExpr->arguments[i], args));
+                    tmpCmp = builder->CreateFCmpOEQ(val, ParseExpr(*(iExpr->arguments[i]), args));
                     break;
                 }
                 case STRINGD: {
-                    tmpCmp = builder->CreateICmpEQ(this->stringCmp(val, parseExpr(iExpr->arguments[i], args)),
-                                                   createConstantInt(0));
+                    tmpCmp = builder->CreateICmpEQ(this->StringCmp(val, ParseExpr(*(iExpr->arguments[i]), args)),
+                        CreateConstantInt(0));
                     break;
                 }
                 default: {
                     std::cout << "Unsupported data type in IN expr" << std::endl;
-                    tmpCmp = this->createConstantBool(false);
+                    tmpCmp = this->CreateConstantBool(false);
                 }
             }
         }
@@ -485,9 +530,9 @@ Value *LLVMCodeGen::parseInExpr(InExpr *iExpr, std::map<std::string, Value *> &a
 }
 
 
-Value *LLVMCodeGen::parseBetweenExpr(BetweenExpr *bExpr, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseBetweenExpr(BetweenExpr &betweenExpr, std::map<std::string, Value *> &args)
 {
-
+    BetweenExpr *bExpr = &betweenExpr;
     DataType biggerType = std::max(std::max(bExpr->lowerBound->GetExprDataType(),
                                             bExpr->upperBound->GetExprDataType()),
                                    bExpr->value->GetExprDataType());
@@ -495,9 +540,9 @@ Value *LLVMCodeGen::parseBetweenExpr(BetweenExpr *bExpr, std::map<std::string, V
     bExpr->upperBound->dataType = biggerType;
     bExpr->value->dataType = biggerType;
 
-    llvm::Value *val = parseExpr(bExpr->value, args);
-    llvm::Value *lowerVal = parseExpr(bExpr->lowerBound, args);
-    llvm::Value *upperVal = parseExpr(bExpr->upperBound, args);
+    llvm::Value *val = ParseExpr(*(bExpr->value), args);
+    llvm::Value *lowerVal = ParseExpr(*(bExpr->lowerBound), args);
+    llvm::Value *upperVal = ParseExpr(*(bExpr->upperBound), args);
 
     if (bExpr->value->GetExprDataType() == DataType::INT32D || bExpr->value->GetExprDataType() == DataType::INT64D) {
         llvm::Value *cmpleft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
@@ -510,21 +555,21 @@ Value *LLVMCodeGen::parseBetweenExpr(BetweenExpr *bExpr, std::map<std::string, V
         llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
         return result;
     } else if (bExpr->value->GetExprDataType() == STRINGD) {
-        llvm::Value *cmpleft = builder->CreateICmpSLE(this->stringCmp(lowerVal, val), createConstantInt(0));
-        llvm::Value *cmpright = builder->CreateICmpSLE(this->stringCmp(val, upperVal), createConstantInt(0));
+        llvm::Value *cmpleft = builder->CreateICmpSLE(this->StringCmp(lowerVal, val), CreateConstantInt(0));
+        llvm::Value *cmpright = builder->CreateICmpSLE(this->StringCmp(val, upperVal), CreateConstantInt(0));
         llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
         return result;
     }
 
     std::cout << "Error: unsupported data type for between" << std::endl;
-    return this->createConstantBool(false);
+    return this->CreateConstantBool(false);
 }
 
 
 // Create a LLVM Function which returns the result of a COALESCE
-Function *LLVMCodeGen::createCoalesceFunc(DataType retType, DataExpr *dExpr1, Expr *value2Expr)
+Function *LLVMCodeGen::CreateCoalesceFunc(DataType retType, DataExpr &dExpr1, Expr &value2Expr)
 {
-    std::vector < Type* > args;
+    std::vector<Type *> args;
     // args contains the types of the arguments
     // args[2 * i] contains the type of the ith argument (where 0 <= i < datatypes.size())
     // args[2 * i+1] contains the boolean type, as argument with index 2i+1 contains whether argument i is null
@@ -532,20 +577,22 @@ Function *LLVMCodeGen::createCoalesceFunc(DataType retType, DataExpr *dExpr1, Ex
     args.reserve(2 * datatypes.size() + 1);
     for (int32_t i = 0; i < datatypes.size(); i++) {
         DataType type = datatypes.at(i);
-        args.push_back(this->toLLVMType(type));
+        args.push_back(this->ToLlvmType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
     // Push back type for current row index
     args.push_back(Type::getInt32Ty(*context));
 
-    Type *retTypePtr = this->toLLVMType(retType);
+    Type *retTypePtr = this->ToLlvmType(retType);
     FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
-    Function *func = Function::Create(prototype, Function::ExternalLinkage, "COALESCE_CONDITIONAL", module.get());
+    Function *func = Function::Create(prototype, Function::ExternalLinkage, "COALESCE_CONDITIONAL",
+                                      module.get());
 
     int32_t idx = 0;
     for (auto &arg : func->args()) {
-        if (idx == datatypes.size() * MULTIPLES) arg.setName("rowIdx");
-        else {
+        if (idx == datatypes.size() * MULTIPLES) {
+            arg.setName("rowIdx");
+        } else {
             if (idx % IS_EVEN == 0) {
                 arg.setName(std::to_string(idx / MULTIPLES));
             } else {
@@ -555,19 +602,29 @@ Function *LLVMCodeGen::createCoalesceFunc(DataType retType, DataExpr *dExpr1, Ex
         idx++;
     }
 
-    BasicBlock *conditionalCheck = BasicBlock::Create(*context, "IS_NULL", func);
-    BasicBlock *trueBlock = BasicBlock::Create(*context, "NOTNULL_BLOCK", func);
-    BasicBlock *falseBlock = BasicBlock::Create(*context, "NULL_BLOCK", func);
-
-    std::map<std::string, Value*> fArgs;
+    std::map<std::string, Value *> fArgs;
     for (auto &arg : func->args()) {
         fArgs[arg.getName().str()] = &arg;
     }
 
+    return CreateCoalesceFuncHelper(dExpr1, value2Expr, fArgs, *func);
+}
+
+Function *LLVMCodeGen::CreateCoalesceFuncHelper(DataExpr &dataExpr1, Expr &valExpr2,
+                                                std::map<std::string, Value *> fArgs, Function &cfunc)
+{
+    DataExpr *dExpr1 = &dataExpr1;
+    Expr *value2Expr = &valExpr2;
+    Function *func = &cfunc;
+
+    BasicBlock *conditionalCheck = BasicBlock::Create(*context, "IS_NULL", func);
+    BasicBlock *trueBlock = BasicBlock::Create(*context, "NOTNULL_BLOCK", func);
+    BasicBlock *falseBlock = BasicBlock::Create(*context, "NULL_BLOCK", func);
+
     builder->SetInsertPoint(conditionalCheck);
 
-    Value *value1 = this->parseExpr(dExpr1, fArgs);
-    Value *value2 = this->parseExpr(value2Expr, fArgs);
+    Value *value1 = this->ParseExpr(*dExpr1, fArgs);
+    Value *value2 = this->ParseExpr(*value2Expr, fArgs);
     if (value2Expr->GetExprDataType() == INT32D && dExpr1->GetExprDataType() == INT64D) {
         value2 = builder->CreateIntCast(value2, Type::getInt64Ty(*context), true);
     }
@@ -590,10 +647,10 @@ Function *LLVMCodeGen::createCoalesceFunc(DataType retType, DataExpr *dExpr1, Ex
     return func;
 }
 
-Value *LLVMCodeGen::parseCoalesceExpr(CoalesceExpr *cExpr, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseCoalesceExpr(CoalesceExpr &coalesceExpr, std::map<std::string, Value *> &args)
 {
-    Expr *value1Expr = cExpr->value1;
-    Expr *value2Expr = cExpr->value2;
+    Expr *value1Expr = coalesceExpr.value1;
+    Expr *value2Expr = coalesceExpr.value2;
 
     // Only case that coalesce is used seems to be with a column as first argument
     if (value1Expr->GetType() == ExprType::DATA_E) {
@@ -603,7 +660,7 @@ Value *LLVMCodeGen::parseCoalesceExpr(CoalesceExpr *cExpr, std::map<std::string,
 
 
             DataType retType = value1Expr->GetExprDataType();
-            Function *coalesceFunc = createCoalesceFunc(retType, dExpr1, cExpr->value2);
+            Function *coalesceFunc = CreateCoalesceFunc(retType, *dExpr1, *value2Expr);
             builder->SetInsertPoint(currentBlock);
 
             std::vector < Value* > passArgs;
@@ -617,105 +674,163 @@ Value *LLVMCodeGen::parseCoalesceExpr(CoalesceExpr *cExpr, std::map<std::string,
         }
     }
     // If the first argument is not a column DataExpr, just return it
-    return this->parseExpr(value1Expr, args);
+    return this->ParseExpr(*value1Expr, args);
 }
+
+// Helper functions for parsing functions
+Value *LLVMCodeGen::ParseFuncExprAbs(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+{
+    FuncExpr *fExpr = &funcExpr;
+
+    switch (fExpr->dataType) {
+        case (DataType::INT32D): {
+            std::vector<Value*> argVals{this->ParseExpr(*(fExpr->arguments[0]), args)};
+            auto f = module->getFunction(fr->absInt32Str);
+            Value *ret = builder->CreateCall(f, argVals, fr->absInt32Str);
+            return ret;
+        }
+        case (DataType::INT64D): {
+            std::vector<Value*> argVals{this->ParseExpr(*(fExpr->arguments[0]), args)};
+            auto f = module->getFunction(fr->absInt64Str);
+            Value *ret = builder->CreateCall(f, argVals, fr->absInt64Str);
+            return ret;
+        }
+        case (DataType::DOUBLED): {
+            std::vector<Value*> argVals{ParseExpr(*(fExpr->arguments[0]), args)};
+            auto f = module->getFunction(fr->absDoubleStr);
+            Value *ret = builder->CreateCall(f, argVals, fr->absDoubleStr);
+            return ret;
+        }
+        default: {
+            std::cout << "Unsupported data type for function " << fExpr->funcName << std::endl;
+            return CreateConstantInt(0);
+        }
+    }
+}
+
+Value *LLVMCodeGen::ParseFuncExprCast(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+{
+    FuncExpr *fExpr = &funcExpr;
+
+    // Simply cast from int or long to double (how it appears in tpch)
+    llvm::Value *val = ParseExpr(*(fExpr->arguments[0]), args);
+    std::vector<Value*> argVals{val};
+    switch (fExpr->arguments[0]->dataType) {
+        case DataType::INT32D: {
+            auto f = module->getFunction(fr->castInt32Str);
+            Value *ret = builder->CreateCall(f, argVals, fr->castInt32Str);
+            return ret;
+        }
+        case DataType::INT64D: {
+            auto f = module->getFunction(fr->castInt64Str);
+            Value *ret = builder->CreateCall(f, argVals, fr->castInt64Str);
+            return ret;
+        }
+        case DataType::STRINGD: {
+            auto f = module->getFunction(fr->castStringStr);
+            Value *ret = builder->CreateCall(f, argVals, fr->castStringStr);
+            return ret;
+        }
+        default: {
+            std::cout << "Unsupported datatype in CAST: " << fExpr->arguments[0]->dataType << std::endl;
+            return CreateConstantInt(0);
+        }
+    }
+
+}
+
+Value *LLVMCodeGen::ParseFuncExprSubstr(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+{
+    FuncExpr *fExpr = &funcExpr;
+
+    if (fExpr->arguments.size() == FEXPR_VALUE3) {
+        Value *str = ParseExpr(*(fExpr->arguments[0]), args);
+        Value *startIdx = ParseExpr(*(fExpr->arguments[1]), args);
+        Value *length = ParseExpr(*(fExpr->arguments[LENGTH_LOC]), args);
+        std::vector<Value*> argVals{str, startIdx, length};
+
+        auto f = module->getFunction(fr->substrExtStr);
+        Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
+        return ret;
+    }
+    if (fExpr->arguments.size() == FEXPR_VALUE2) {
+        Value *str = ParseExpr(*(fExpr->arguments[0]), args);
+        Value *startIdx = ParseExpr(*(fExpr->arguments[1]), args);
+        std::vector<Value*> argVals{str, startIdx};
+
+        auto f = module->getFunction(fr->substrWithStartExtStr);
+        Value *ret = builder->CreateCall(f, argVals, fr->substrWithStartExtStr);
+        return ret;
+    }
+    std::cout << "Error: Incorrect number of arguments used for substr" << std::endl;
+    return CreateConstantLong(0);
+}
+
+Value *LLVMCodeGen::ParseFuncExprExt(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+{
+    FuncExpr *fExpr = &funcExpr;
+    FunctionSignature fs = funcNameToSignature[fExpr->funcName];
+
+    std::vector<Value*> argVals;
+    for (int i = 0; i < fExpr->arguments.size(); i++) {
+        // Cast arguments to the correct type
+        DataType desiredType = fs.GetParams()[i];
+        DataType currType = fExpr->arguments[i]->GetExprDataType();
+        if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
+            Value *argDouble = builder->CreateCast(Instruction::SIToFP, ParseExpr(*(fExpr->arguments[i]), args),
+                                                   Type::getDoubleTy(*context));
+            argVals.push_back(argDouble);
+        } else if (desiredType == INT64D && currType == INT32D) {
+            Value *argInt64 = builder->CreateIntCast(ParseExpr(*(fExpr->arguments[i]), args),
+                                                     Type::getInt64Ty(*context), true);
+            argVals.push_back(argInt64);
+        } else {
+            argVals.push_back(ParseExpr(*(fExpr->arguments[i]), args));
+        }
+    }
+    // Assume that the function name of the fExpr and in the module are matching
+    auto f = module->getFunction(fExpr->funcName);
+    Value *ret = builder->CreateCall(f, argVals, "call_" + fExpr->funcName);
+    return ret;
+}
+
 
 // Handles all functions
 // Only calls them; registration is done in function registry
-Value *LLVMCodeGen::parseFuncExpr(FuncExpr *fExpr, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseFuncExpr(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
 {
+    FuncExpr *fExpr = &funcExpr;
 
     if (fExpr->funcName == "abs") {
-
-        switch (fExpr->dataType) {
-            case (DataType::INT32D): {
-                std::vector<Value*> argVals{this->parseExpr(fExpr->arguments[0], args)};
-                auto f = module->getFunction(abs_int32_str);
-                Value *ret = builder->CreateCall(f, argVals, abs_int32_str);
-                return ret;
-            }
-            case (DataType::INT64D): {
-                std::vector<Value*> argVals{this->parseExpr(fExpr->arguments[0], args)};
-                auto f = module->getFunction(abs_int64_str);
-                Value *ret = builder->CreateCall(f, argVals, abs_int64_str);
-                return ret;
-            }
-            case (DataType::DOUBLED): {
-                std::vector<Value*> argVals{parseExpr(fExpr->arguments[0], args)};
-                auto f = module->getFunction(abs_double_str);
-                Value *ret = builder->CreateCall(f, argVals, abs_double_str);
-                return ret;
-            }
-            default: {
-                std::cout << "Unsupported data type for function " << fExpr->funcName << std::endl;
-            }
-        }
+        return this->ParseFuncExprAbs(*fExpr, args);
     }
-    if (fExpr->funcName == "substr" && fExpr->arguments.size() == FEXPR_VALUE3) {
-        Value *str = parseExpr(fExpr->arguments[0], args);
-        Value *startIdx = parseExpr(fExpr->arguments[1], args);
-        Value *length = parseExpr(fExpr->arguments[LENGTH_LOC], args);
-        std::vector<Value*> argVals{str, startIdx, length};
-
-        auto f = module->getFunction(substrExt_str);
-        Value *ret = builder->CreateCall(f, argVals, substrExt_str);
-        return ret;
-    }
-    if (fExpr->funcName == "substr" && fExpr->arguments.size() == FEXPR_VALUE2) {
-        Value *str = parseExpr(fExpr->arguments[0], args);
-        Value *startIdx = parseExpr(fExpr->arguments[1], args);
-        std::vector<Value*> argVals{str, startIdx};
-
-        auto f = module->getFunction(substrWithStartExt_str);
-        Value *ret = builder->CreateCall(f, argVals, substrWithStartExt_str);
-        return ret;
+    if (fExpr->funcName == "substr") {
+        return this->ParseFuncExprSubstr(*fExpr, args);
     }
     if (fExpr->funcName == "concat") {
-        Value *str1 = parseExpr(fExpr->arguments[0], args);
-        Value *str2 = parseExpr(fExpr->arguments[1], args);
+        Value *str1 = ParseExpr(*(fExpr->arguments[0]), args);
+        Value *str2 = ParseExpr(*(fExpr->arguments[1]), args);
         std::vector<Value*> argVals{str1, str2};
 
-        auto f = module->getFunction(concatStrExt_str);
-        Value *ret = builder->CreateCall(f, argVals, concatStrExt_str);
+        auto f = module->getFunction(fr->concatStrExtStr);
+        Value *ret = builder->CreateCall(f, argVals, fr->concatStrExtStr);
         return ret;
     }
     if (fExpr->funcName == "CAST") {
-        // Simply cast from int or long to double (how it appears in tpch)
-        llvm::Value *val = parseExpr(fExpr->arguments[0], args);
-        std::vector<Value*> argVals{val};
-        switch (fExpr->arguments[0]->dataType) {
-            case DataType::INT32D: {
-                auto f = module->getFunction(cast_int32_str);
-                Value *ret = builder->CreateCall(f, argVals, cast_int32_str);
-                return ret;
-            }
-            case DataType::INT64D: {
-                auto f = module->getFunction(cast_int64_str);
-                Value *ret = builder->CreateCall(f, argVals, cast_int64_str);
-                return ret;
-            }
-            case DataType::STRINGD: {
-                auto f = module->getFunction(cast_string_str);
-                Value *ret = builder->CreateCall(f, argVals, cast_string_str);
-                return ret;
-            }
-            default: {
-                std::cout << "Unsupported datatype in CAST: " << fExpr->arguments[0]->dataType << std::endl;
-            }
-        }
+        return this->ParseFuncExprCast(*fExpr, args);
     }
     if (fExpr->funcName == "LIKE") {
-        Value *str1 = parseExpr(fExpr->arguments[0], args);
-        Value *str2 = parseExpr(fExpr->arguments[1], args);
+        Value *str1 = ParseExpr(*(fExpr->arguments[0]), args);
+        Value *str2 = ParseExpr(*(fExpr->arguments[1]), args);
         std::vector<Value*> argVals{str1, str2};
 
-        auto f = module->getFunction(likeExt_str);
-        Value *ret = builder->CreateCall(f, argVals, likeExt_str);
+        auto f = module->getFunction(fr->likeExtStr);
+        Value *ret = builder->CreateCall(f, argVals, fr->likeExtStr);
         return ret;
     }
     if (fExpr->funcName == "combine_hash") {
-        Value *prevHashVal = parseExpr(fExpr->arguments[0], args);
-        Value *val = parseExpr(fExpr->arguments[1], args);
+        Value *prevHashVal = ParseExpr(*(fExpr->arguments[0]), args);
+        Value *val = ParseExpr(*(fExpr->arguments[1]), args);
 
         if (fExpr->arguments[0]->GetExprDataType() == INT32D) {
             prevHashVal = builder->CreateIntCast(prevHashVal, Type::getInt64Ty(*context), true);
@@ -727,95 +842,75 @@ Value *LLVMCodeGen::parseFuncExpr(FuncExpr *fExpr, std::map<std::string, Value *
 
         std::vector<Value*> argVals{prevHashVal, val};
 
-        auto f = module->getFunction(combine_hash_str);
-        Value *ret = builder->CreateCall(f, argVals, combine_hash_str);
-        dumpCode();
+        auto f = module->getFunction(fr->combineHashStr);
+        Value *ret = builder->CreateCall(f, argVals, fr->combineHashStr);
+        DumpCode();
         return ret;
     }
     // external functions
-    if (isFunctionName(fExpr->funcName)) {
-        FunctionSignature *fs = funcNameToSignature[fExpr->funcName];
-
-        std::vector<Value*> argVals;
-        for (int i = 0; i < fExpr->arguments.size(); i++) {
-            // Cast arguments to the correct type
-            DataType desiredType = fs->GetParams()[i];
-            DataType currType = fExpr->arguments[i]->GetExprDataType();
-            if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
-                Value *argDouble = builder->CreateCast(Instruction::SIToFP, parseExpr(fExpr->arguments[i], args),
-                                                       Type::getDoubleTy(*context));
-                argVals.push_back(argDouble);
-            } else if (desiredType == INT64D && currType == INT32D) {
-                Value *argInt64 = builder->CreateIntCast(parseExpr(fExpr->arguments[i], args),
-                                                         Type::getInt64Ty(*context), true);
-                argVals.push_back(argInt64);
-            } else {
-                argVals.push_back(parseExpr(fExpr->arguments[i], args));
-            }
-        }
-        // Assume that the function name of the fExpr and in the module are matching
-        auto f = module->getFunction(fExpr->funcName);
-        Value *ret = builder->CreateCall(f, argVals, "call_" + fExpr->funcName);
-        return ret;
+    if (IsFunctionName(fExpr->funcName)) {
+        return this->ParseFuncExprExt(*fExpr, args);
     }
 
     std::cout << "No function found with name " << fExpr->funcName << std::endl;
-    return createConstantInt(0);
+    return CreateConstantInt(0);
 }
 
 
 // Main codegen for any type of expression
-Value *LLVMCodeGen::parseExpr(Expr *root, std::map<std::string, Value *> &args)
+Value *LLVMCodeGen::ParseExpr(Expr &rootExpr, std::map<std::string, Value *> &args)
 {
+    Expr *root = &rootExpr;
+
     switch (root->GetType()) {
         case ExprType::DATA_E: {
             DataExpr *dEx = dynamic_cast<DataExpr *>(root);
-            return this->parseDataExpr(dEx, args);
+            return this->ParseDataExpr(*dEx, args);
         }
 
         case ExprType::BINARY_E: {
             BinaryExpr *bExpr = dynamic_cast<BinaryExpr *>(root);
-            return this->parseBinaryExpr(bExpr, args);
+            return this->ParseBinaryExpr(*bExpr, args);
         }
 
         case ExprType::UNARY_E: {
             UnaryExpr *uExpr = dynamic_cast<UnaryExpr *>(root);
-            return this->parseUnaryExpr(uExpr, args);
+            return this->ParseUnaryExpr(*uExpr, args);
         }
 
         case ExprType::IF_E: {
             IfExpr *ie = dynamic_cast<IfExpr *>(root);
-            return this->parseIfExpr(ie, args);
+            return this->ParseIfExpr(*ie, args);
         }
 
         case ExprType::IN_E: {
             InExpr *iExpr = dynamic_cast<InExpr *>(root);
-            return this->parseInExpr(iExpr, args);
+            return this->ParseInExpr(*iExpr, args);
         }
 
         case ExprType::BETWEEN_E: {
             BetweenExpr *bExpr = dynamic_cast<BetweenExpr *>(root);
-            return this->parseBetweenExpr(bExpr, args);
+            return this->ParseBetweenExpr(*bExpr, args);
         }
 
         case ExprType::COALESCE_E: {
             CoalesceExpr *cExpr = dynamic_cast<CoalesceExpr *>(root);
-            return this->parseCoalesceExpr(cExpr, args);
+            return this->ParseCoalesceExpr(*cExpr, args);
         }
 
         case ExprType::FUNC_E: {
             FuncExpr *fExpr = dynamic_cast<FuncExpr *>(root);
-            return this->parseFuncExpr(fExpr, args);
+            return this->ParseFuncExpr(*fExpr, args);
         }
 
         default: {
             std::cout << "Error: Unsupported expr type " << root->GetType() << std::endl;
-            return this->createConstantBool(false);
+            return this->CreateConstantBool(false);
         }
     }
 }
 
-std::string LLVMCodeGen::dumpCode()
+std::string LLVMCodeGen::DumpCode()
 {
     std::string ir;
     llvm::raw_string_ostream stream(ir);
@@ -824,32 +919,32 @@ std::string LLVMCodeGen::dumpCode()
     return ir;
 }
 
-void addOptimizationPasses(legacy::FunctionPassManager *FPM, llvm::legacy::PassManager &MPM)
+void AddOptimizationPasses(legacy::FunctionPassManager *fpm, llvm::legacy::PassManager &mpm)
 {
-    FPM->add(createSCCPPass());
-    FPM->add(createNewGVNPass());
-    FPM->add(createInductiveRangeCheckEliminationPass());
-    FPM->add(createIndVarSimplifyPass());
+    fpm->add(createSCCPPass());
+    fpm->add(createNewGVNPass());
+    fpm->add(createInductiveRangeCheckEliminationPass());
+    fpm->add(createIndVarSimplifyPass());
 
-    FPM->add(createLICMPass());
-    FPM->add(createLoopUnrollPass());
-    FPM->add(createLoopUnswitchPass());
+    fpm->add(createLICMPass());
+    fpm->add(createLoopUnrollPass());
+    fpm->add(createLoopUnswitchPass());
 
-    FPM->add(createLoopLoadEliminationPass());
-    FPM->add(createInductiveRangeCheckEliminationPass());
-    FPM->add(createIndVarSimplifyPass());
-    FPM->add(createLoopInstSimplifyPass());
-    FPM->add(createLoopSimplifyCFGPass());
-    FPM->add(createMergedLoadStoreMotionPass());
-    FPM->add(createMergeICmpsLegacyPass());
-    FPM->add(createAggressiveDCEPass());
-    FPM->add(createDeadStoreEliminationPass());
+    fpm->add(createLoopLoadEliminationPass());
+    fpm->add(createInductiveRangeCheckEliminationPass());
+    fpm->add(createIndVarSimplifyPass());
+    fpm->add(createLoopInstSimplifyPass());
+    fpm->add(createLoopSimplifyCFGPass());
+    fpm->add(createMergedLoadStoreMotionPass());
+    fpm->add(createMergeICmpsLegacyPass());
+    fpm->add(createAggressiveDCEPass());
+    fpm->add(createDeadStoreEliminationPass());
 
-    MPM.add(createFunctionInliningPass());
-    MPM.add(createPruneEHPass());
+    mpm.add(createFunctionInliningPass());
+    mpm.add(createPruneEHPass());
 }
 
-Function *LLVMCodeGen::createFunction()
+Function *LLVMCodeGen::CreateFunction()
 {
     std::vector<Type*> args;
     args.reserve(MULTIPLES * datatypes.size() + 1);
@@ -857,7 +952,7 @@ Function *LLVMCodeGen::createFunction()
     // #0, #0_isNull, #1, #1_isNull, ..., #4, #4_isNull, rowIdx
     for (int32_t i = 0; i < datatypes.size(); i++) {
         DataType type = datatypes.at(i);
-        args.push_back(this->toLLVMType(type));
+        args.push_back(this->ToLlvmType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
     // Push back type for current row index
@@ -866,13 +961,14 @@ Function *LLVMCodeGen::createFunction()
     std::cout << "exprtree: ";
     expr->PrintExprTree();
     std::cout << std::endl;
-    FunctionType *prototype = FunctionType::get(this->toLLVMType(expr->GetExprDataType()), args, false);
+    FunctionType *prototype = FunctionType::get(this->ToLlvmType(expr->GetExprDataType()), args, false);
     Function *func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
     int32_t idx = 0;
     for (auto &arg : func->args()) {
-        if (idx == datatypes.size() * MULTIPLES) arg.setName("rowIdx");
-        else {
+        if (idx == datatypes.size() * MULTIPLES) {
+            arg.setName("rowIdx");
+        } else {
             if (idx % IS_EVEN == 0) {
                 arg.setName(std::to_string(idx / MULTIPLES));
             } else {
@@ -889,14 +985,14 @@ Function *LLVMCodeGen::createFunction()
         fArgs[arg.getName().str()] = &arg;
     }
 
-    Value *ret = this->parseExpr(expr, fArgs);
+    Value *ret = this->ParseExpr(*expr, fArgs);
     builder->CreateRet(ret);
     verifyFunction(*func);
-    auto FPM = std::make_unique<legacy::FunctionPassManager>(module.get());
-    llvm::legacy::PassManager MPM;
-    addOptimizationPasses(FPM.get(), MPM);
-    FPM->doInitialization();
-    for (auto &F : *module) FPM->run(F);
-    MPM.run(*module);
+    auto fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
+    llvm::legacy::PassManager mpm;
+    AddOptimizationPasses(fpm.get(), mpm);
+    fpm->doInitialization();
+    for (auto &F : *module) fpm->run(F);
+    mpm.run(*module);
     return func;
 }

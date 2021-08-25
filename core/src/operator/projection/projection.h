@@ -6,29 +6,39 @@
 #define __PROJECTION_H__
 
 #include <vector>
-#include <memory>
-
 #include "../../codegen/projection_codegen.h"
 #include "../operator_factory.h"
 #include "../operator.h"
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_allocator_manager.h"
 
+using vec64 = std::vector<int64_t>;
+using ProjFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *);
+
 namespace omniruntime {
 namespace op {
 class Projection {
 public:
     Projection(int32_t *inputTypes, int32_t nCols, std::string expr, bool filter);
-    Projection(int32_t *inputTypes, int32_t nCols, Expr *expr, bool filter);
+    Projection(int32_t *inputTypes, int32_t nCols, expressions::Expr &expr, bool filter);
     ~Projection()
     {
         delete this->expr;
         this->codegen.reset();
     }
+    omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
+        omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
+        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va) const;
+    omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
+        omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
+        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va) const;
+
     omniruntime::vec::Vector *Project(omniruntime::vec::VectorBatch *vecBatch, int32_t *selectedRows,
         int32_t numSelectedRows) const;
+
     omniruntime::vec::Vector *Project(omniruntime::vec::VectorBatch *vecBatch) const;
-    DataType GetOutputType() const
+
+    omniruntime::expressions::DataType GetOutputType() const
     {
         return this->expr->GetExprDataType();
     }
@@ -36,24 +46,22 @@ public:
 private:
     int32_t *inputTypes;
     int32_t nCols;
-    Expr *expr;
-    std::unique_ptr<ProjectionCodeGen> codegen;
-    std::vector<int64_t> GetData(omniruntime::vec::VectorBatch *&vecBatch, std::vector<std::vector<int64_t>> &vcdataVec,
-        std::vector<uint8_t *> &stringvalVec, bool *bitmap) const;
+    omniruntime::expressions::Expr *expr;
+    std::unique_ptr<ProjectionCodeGen> codegen {nullptr};
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)
     // data: 2D array containing vector values
     // rowCount: number of rows in data
-    // selectedRows: array of row numbers which pass the Filter
-    // numSelectedRows: number of rows which pass the Filter
-    // bitmap: boolean array where bitmap[numCols * row + col] is true if data[row][col] is null
-    int32_t (*projector)(int64_t *, int32_t, int64_t, int32_t *, int32_t, bool *);
+    // selectedRows: array of row numbers which pass the filter
+    // numSelectedRows: number of rows which pass the filter
+    // bitmap: 2D boolean array where bitmap[col][row] is true if data[row][col] is null
+    ProjFunc projector;
 };
 
 class ProjectionOperator : public Operator {
 public:
-    ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t *inputTypes, int32_t nCols,
+    ProjectionOperator(std::vector<std::unique_ptr<Projection>> const &proj, int32_t inputTypes[], int32_t nCols,
         int32_t nProj)
         : proj(proj), nCols(nCols), nProj(nProj)
     {
@@ -67,17 +75,18 @@ public:
 
 private:
     const std::vector<std::unique_ptr<Projection>> &proj;
-    int32_t nCols;
-    int32_t nProj;
-    omniruntime::vec::VectorBatch *mutated;
+    int32_t nCols = 0;
+    int32_t nProj = 0;
+    omniruntime::vec::VectorBatch *mutated = nullptr;
 };
 
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
-    ProjectionOperatorFactory(std::string const *expression, int32_t nProj, int32_t *inputTypes, int32_t nCols);
-    ProjectionOperatorFactory(Expr **exprs, int32_t nProj, int32_t *inputTypes, int32_t nCols);
+    ProjectionOperatorFactory(std::string expression[], int32_t nProj, int32_t inputTypes[], int32_t nCols);
+    ProjectionOperatorFactory(omniruntime::expressions::Expr* exprs[], int32_t nProj,
+                              int32_t inputTypes[], int32_t nCols);
     ~ProjectionOperatorFactory() override;
-    omniruntime::op::Operator *CreateOperator() override;
+    omniruntime::op::Operator* CreateOperator() override;
 
 private:
     int32_t *inputTypes;

@@ -130,7 +130,7 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
             case OMNI_AGGREGATION_TYPE_MAX: {
                 switch (vector->GetType().GetId()) {
                     case OMNI_VEC_TYPE_INT: {
-                        dynamic_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
+                        static_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
                         break;
                     }
                     case OMNI_VEC_TYPE_LONG: {

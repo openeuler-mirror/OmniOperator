@@ -11,6 +11,7 @@
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 using namespace std;
 
 VectorBatch* CreateInput(const int32_t numRows,
@@ -165,10 +166,14 @@ TEST(FilterTest, LessThan) {
                                                                    inputTypes, numCols,
                                                                    projectIndices,
                                                                    projectCount);
+    std::cout << "factory created" << std::endl;
     omniruntime::op::Operator* op = factory->CreateOperator();
+    std::cout << "operator created" << std::endl;
 
     op->AddInput(in1);
+    std::cout << "addinput completed" << std::endl;
     int32_t numReturned = op->GetOutput(ret);
+    std::cout << "getoutput completed" << std::endl;
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
@@ -255,7 +260,9 @@ TEST(FilterTest, EqualTo) {
                                                                    projectCount);
     omniruntime::op::Operator* op = factory->CreateOperator();
 
+    std::cout << "before addinput" << std::endl;
     op->AddInput(in1);
+    std::cout << "after addinput" << std::endl;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 50);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -986,18 +993,6 @@ TEST(FilterTest, Conditional2) {
     delete factory;
 }
 
-TEST(FilterTest, DISABLED_ArithmeticDivide) {
-    const int32_t numCols = 1;
-    int32_t* inputTypes = new int32_t[numCols];
-    inputTypes[0] = 1;
-
-    const int32_t numRows = 10000;
-    int32_t* col1 = new int32_t[numRows];
-    for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i;
-    }
-    int64_t allData[numCols] = {(int64_t) col1};
-}
 
 TEST(FilterTest, In) {
     const int32_t numCols = 3;
@@ -1246,7 +1241,7 @@ TEST(FilterTest, FilterString1) {
     int32_t* inputTypes = new int32_t[numCols];
     inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
 
-    const int32_t numRows = 100000;
+    const int32_t numRows = 1000;
     int64_t* col1 = new int64_t[numRows];
 
     for (int32_t i = 0; i < numRows; i++) {
@@ -1278,7 +1273,20 @@ TEST(FilterTest, FilterString1) {
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
 
-    EXPECT_EQ(numReturned, 2500);
+    std::cout << "num returned rows: " << numReturned << std::endl;
+    EXPECT_EQ(numReturned, 25);
+
+    for (int32_t i = 0; i < numReturned; i += 1000) {
+        VarcharVector *vcVec = ((VarcharVector*) ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+
+        // Truncate the resulting string
+        void *charArr = &actualChar;
+        auto charArrCasted = static_cast<char **>(charArr);
+        string actualStr (*charArrCasted, 0, len);
+    }
 
 
     for (auto &s : strings) {
@@ -1302,7 +1310,7 @@ TEST(FilterTest, Coalesce1) {
     inputTypes[1] = 1;
     inputTypes[2] = 1;
 
-    const int32_t numRows = 100000;
+    const int32_t numRows = 1000;
     int32_t* col1 = new int32_t[numRows];
     int64_t* col2 = new int64_t[numRows];
     int32_t* col3 = new int32_t[numRows];
@@ -1337,7 +1345,7 @@ TEST(FilterTest, Coalesce1) {
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
 
-    EXPECT_EQ(numReturned, 50000);
+    EXPECT_EQ(numReturned, 500);
 
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
@@ -1392,6 +1400,7 @@ TEST(FilterTest, Coalesce2) {
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
 
+    std::cout << "num returned rows: " << numReturned << std::endl;
     EXPECT_EQ(numReturned, 500);
 
     for (auto &s : strings) {
@@ -1405,4 +1414,271 @@ TEST(FilterTest, Coalesce2) {
     delete[] col1;
     delete op;
     delete factory;
+}
+
+
+// To run this test, ensure that externalfunctions.so has been compiled and is placed in the correct folder
+// For full instructions, see the README in core/src/codegen/functions
+TEST (FilterTest, DISABLED_ExternalMathFunc) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 1;
+    inputTypes[2] = 1;
+
+    const int32_t NUM_ROWS = 1000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int32_t* col2 = new int32_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 2;
+        col2[i] = 2;
+        col3[i] = 10;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::string expr = "$operator$EQUAL(Add1Int32(Add1Int32(#0)), IdInt32(Add1Int32(IdInt32(#1))))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 500);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_TRUE(val0 + 1 == val1);
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete factory;
+}
+
+
+// To run this test, ensure that externalfunctions.so has been compiled and is placed in the correct folder
+// For full instructions, see the README in core/src/codegen/functions
+TEST (FilterTest, DISABLED_ExternalStringFunc) {
+    vector<string*> strings;
+
+    const int32_t NUM_COLS = 1;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+
+    const int32_t NUM_ROWS = 1000;
+    int64_t* col1 = new int64_t[NUM_ROWS];
+
+    // column looks like: 
+    // hello, bye, hello, bye, hello, bye, ...
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        if (i % 2 == 0) {
+            std::string *s = new std::string("hello");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+        else {
+            if (i % 4 == 1) {
+                std::string *s = new std::string("bye");
+                col1[i] = (int64_t)(s->c_str());
+                strings.push_back(s);
+            }
+            else {
+                std::string *s = new std::string("asdf");
+                col1[i] = (int64_t)(s->c_str());
+                strings.push_back(s);
+            }
+        }
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1};
+    const int32_t PROJECT_COUNT = 1;
+    int32_t projectIndices[PROJECT_COUNT] = {0};
+    VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+
+    std::string expr = "$operator$EQUAL(LengthStr(#0), 5)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    EXPECT_EQ(numReturned, 500);
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
+
+// To run this test, ensure that externalfunctions.so has been compiled and is placed in the correct folder
+// For full instructions, see the README in core/src/codegen/functions
+TEST (FilterTest, DISABLED_ExternalStringFunc2) {
+    vector<string*> strings;
+
+    const int32_t NUM_COLS = 1;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+
+    const int32_t NUM_ROWS = 1000;
+    int64_t* col1 = new int64_t[NUM_ROWS];
+
+    // column looks like: 
+    // hello, bye, hello, bye, hello, bye, ...
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        if (i % 2 == 0) {
+            std::string *s = new std::string("hello");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+        else {
+            if (i % 4 == 1) {
+                std::string *s = new std::string("bye");
+                col1[i] = (int64_t)(s->c_str());
+                strings.push_back(s);
+            }
+            else {
+                std::string *s = new std::string("asdf");
+                col1[i] = (int64_t)(s->c_str());
+                strings.push_back(s);
+            }
+        }
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1};
+    const int32_t PROJECT_COUNT = 1;
+    int32_t projectIndices[PROJECT_COUNT] = {0};
+    VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+
+    std::string expr = "$operator$EQUAL(FirstCharStr(#0), FirstCharStr('apple'))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    EXPECT_EQ(numReturned, 250);
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
+    delete op;
+    delete factory;
+
+}
+
+
+// Testing multithreading
+// Two operators running at once
+
+void process(omniruntime::op::Operator* op, VectorBatch* t, std::vector<VectorBatch*> ret, int32_t* numReturned)
+{
+    op->AddInput(t);
+    *numReturned = op->GetOutput(ret);
+    VectorHelper::FreeVecBatches(ret);
+    std::cout << "numSelectedRows: " << *numReturned << std::endl;
+}
+
+#include <thread>
+#include <chrono>
+#include <ratio>
+// For testing different types
+TEST (FilterTest, Multithreading) {
+    const int32_t NUM_COLS = 3;
+    int32_t* inputTypes = new int32_t[NUM_COLS];
+    inputTypes[0] = 1;
+    inputTypes[1] = 2;
+    inputTypes[2] = 1;
+
+    int32_t* inputTypes2 = new int32_t[NUM_COLS];
+    inputTypes2[0] = 1;
+    inputTypes2[1] = 2;
+    inputTypes2[2] = 1;
+
+    const int32_t NUM_ROWS = 100000;
+    int32_t* col1 = new int32_t[NUM_ROWS];
+    int64_t* col2 = new int64_t[NUM_ROWS];
+    int32_t* col3 = new int32_t[NUM_ROWS];
+
+    for (int32_t i = 0; i < NUM_ROWS; i++) {
+        col1[i] = i % 2;
+        col2[i] = i % 5;
+        col3[i] = -1;
+    }
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
+    const int32_t PROJECT_COUNT = 3;
+    int32_t projectIndices[PROJECT_COUNT] = {0, 1, 2};
+    int32_t projectIndices2[3] = {0, 1, 2};
+    VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+    VectorBatch* t2 = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
+
+    std::vector<VectorBatch*> ret;
+    std::vector<VectorBatch*> ret2;
+    int32_t* numReturned = new int32_t;
+    int32_t* numReturned2 = new int32_t;
+
+    // find wall clock time
+    auto start = std::chrono::high_resolution_clock::now();
+
+    std::string expr = "$operator$EQUAL(abs(CAST(#0)), abs(CAST(#1)))";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projectIndices, PROJECT_COUNT);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    std::thread thread1(process, op, t, ret, numReturned);
+
+
+    std::string expr2 = "$operator$EQUAL(#1, 4)";
+    OperatorFactory* factory2 = new FilterAndProjectOperatorFactory(expr2, inputTypes2, NUM_COLS, projectIndices2, 3);
+    omniruntime::op::Operator* op2 = factory2->CreateOperator();
+    std::thread thread2(process, op2, t2, ret2, numReturned2);
+
+
+    // process(op, t, ret, numReturned);
+    // process(op2, t2, ret2, numReturned2);
+    thread2.join();
+    thread1.join();
+    EXPECT_EQ(*numReturned, 20000);
+    EXPECT_EQ(*numReturned2, 20000);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Total time for multithreading test: ";
+    std::cout << std::chrono::duration<double, std::milli>(end - start).count() << std::endl;
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(t2);
+    VectorHelper::FreeVecBatches(ret2);
+
+    delete[] inputTypes;
+    delete[] inputTypes2;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete op;
+    delete op2;
+    delete factory;
+    delete factory2;
+    delete numReturned;
+    delete numReturned2;
 }

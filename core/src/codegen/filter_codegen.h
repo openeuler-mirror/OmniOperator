@@ -9,12 +9,13 @@
 
 class FilterCodeGen : public LLVMCodeGen {
 public:
-    FilterCodeGen(std::string name, Expr* expression, std::vector<DataType> &datatypes)
+    FilterCodeGen(std::string name, omniruntime::expressions::Expr &expression,
+                  std::vector<omniruntime::expressions::DataType> &datatypes)
         :LLVMCodeGen(name, expression, datatypes) {}
     ~FilterCodeGen() {}
     int64_t GetFunction() override;
 
 private:
-    int64_t CreateWrapper(Function* filter);
+    int64_t CreateWrapper(llvm::Function &filter);
 };
 #endif

@@ -5,7 +5,6 @@
 #ifndef __FILTER_H__
 #define __FILTER_H__
 
-#include <chrono>
 #include <memory>
 #include <vector>
 
@@ -16,35 +15,36 @@
 #include "../../codegen/filter_codegen.h"
 #include "../../common/expressions.h"
 
+using vec64 = std::vector<int64_t>;
+using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *);
+
 namespace omniruntime {
 namespace op {
 class Filter {
 public:
-    Filter(std::unique_ptr<FilterCodeGen> codegen, expressions::Expr *expr);
+    Filter(std::unique_ptr<FilterCodeGen> codegen, expressions::Expr &expr);
     ~Filter()
     {
         this->codeGen.reset();
         delete this->expr;
     }
-    int32_t DoFilter(omniruntime::vec::VectorBatch *&vecBatch, int32_t *selectedRows, int rowCount) const;
+    int32_t DoFilter(omniruntime::vec::VectorBatch *&vecBatch, int32_t selectedRows[], int rowCount) const;
 
 private:
     std::unique_ptr<FilterCodeGen> codeGen;
     expressions::Expr *expr;
-    std::vector<int64_t> GetData(omniruntime::vec::VectorBatch *&vecBatch, std::vector<std::vector<int64_t>> &vcdataVec,
-        std::vector<uint8_t *> &stringvalVec, bool *bitmap) const;
     // Filter function is retrieved from FilterCodeGen
-    // func(data, numSelectedRows, rowCount, bitmap)
+    // arguments to func are (data, numSelectedRows, rowCount, bitmap)
     // data: 2D array containing vector values
     // selectedRows: array of row numbers which pass the Filter; is modified in func
     // rowCount: number of rows in data
-    // bitmap: boolean array where bitmap[numCols * row + col] is true if data[row][col] is null
-    int32_t (*func)(int64_t *, int32_t, int32_t *, bool *);
+    // bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
+    FilterFunc func;
 };
 
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t *inputTypes, int32_t vecCount,
+    FilterAndProjectOperator(std::unique_ptr<Filter> const &filter, int32_t inputTypes[], int32_t vecCount,
         const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount)
         : filter(filter),
           inputTypes(inputTypes),
@@ -76,8 +76,8 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes, int32_t vecCount,
-        int32_t *projectIndex, int32_t projectVecCount);
+    FilterAndProjectOperatorFactory(std::string expression, int32_t inputTypes[], int32_t vecCount,
+        int32_t projectIndex[], int32_t projectVecCount);
 
     ~FilterAndProjectOperatorFactory() override;
 

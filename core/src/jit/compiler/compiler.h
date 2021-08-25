@@ -6,6 +6,7 @@
 
 #include "../specialization.h"
 #include "../config.h"
+#include "../../../libconfig.h"
 
 #include <string>
 #include <map>
@@ -21,7 +22,7 @@ namespace omniruntime {
             virtual void AddSpecialization(std::string id, Specialization specialization) = 0;
 
         protected:
-            const std::string operatorPath = "/opt/lib/ir/";
+            const std::string operatorPath = G_LIB_PATH + "ir/";
             const std::string entryFuncName = "CreateOperator";
             std::map<std::string, Specialization> specializations;
         };

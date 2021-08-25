@@ -3,19 +3,29 @@
  * Description: project  codegen
  */
 #include "projection_codegen.h"
+
+using namespace llvm;
+using namespace orc;
+using namespace omniruntime::expressions;
+
+
 namespace {
+    const int ARG2 = 2;
     const int SELECTED = 3;
     const int NUM_SELECTED = 4;
     const int BITMAP = 5;
 }
 int64_t ProjectionCodeGen::GetFunction()
 {
-    Function *func = this->createFunction();
-    return this->createWrapper(func);
+    Function *func = this->CreateFunction();
+    return this->CreateWrapper(*func);
 }
 
-int64_t ProjectionCodeGen::createWrapper(Function *proj)
+
+int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
 {
+    Function *proj = &projFunc;
+
     int32_t nArgs = this->datatypes.size();
     std::vector<Type*> args;
     /*
@@ -35,7 +45,8 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
     args.push_back(Type::getInt32PtrTy(*context));
     // Number of selected rows
     args.push_back(Type::getInt32Ty(*context));
-    Type *bitmapArg = Type::getInt1PtrTy(*context);
+    // bitmap is a 2d array of booleans
+    Type *bitmapArg = Type::getInt64PtrTy(*context);
     args.push_back(bitmapArg);
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
@@ -49,7 +60,7 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
     input->setName("INPUT_TABLE");
     Argument *numRows = funcDecl->getArg(1);
     numRows->setName("NUM_ROWS");
-    Argument *outputAddress = funcDecl->getArg(2);
+    Argument *outputAddress = funcDecl->getArg(ARG2);
     outputAddress->setName("OUTPUT_ADDRESS");
 
     // Only use these values if filter enabled
@@ -65,21 +76,21 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
     Argument *bitmap = funcDecl->getArg(BITMAP);
     bitmap->setName("BITMAP");
 
-    Value *minusOne = this->createConstantInt(-1);
-    Value *zero = this->createConstantInt(0);
-    Value *one = this->createConstantInt(1);
+    Value *minusOne = this->CreateConstantInt(-1);
+    Value *zero = this->CreateConstantInt(0);
+    Value *one = this->CreateConstantInt(1);
     std::vector<Value*> projFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
     // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < datatypes.size())
     // filterFuncArgs[2 * i+1] contains a boolean value stating whether argument i is null
     // filterFuncArgs[2 * datatypes.size()] contains the current row number
-    projFuncArgs.reserve(2 * nArgs + 1);
+    projFuncArgs.reserve(ARG2 * nArgs + 1);
     Value *gep;
     Value *elementAddr;
     Value *elementPtr;
     Value *elementValue;
     // for bitmap
-    Value *bitmapIdx;
+    Value *bitmapIdx = nullptr;
     Value *bitmapGEP;
     Value *bitmapValue;
 
@@ -144,13 +155,16 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
         // i32 rowIndexVal = counter
         rowIndexVal = curIndexVal;
     }
+
     for (int32_t i = 0; i < nArgs; i++) {
-        Value *colValue = this->createConstantInt(i);
+        Value *colValue = this->CreateConstantInt(i);
         // Find address of this column in the addresses array argument.
         gep = builder->CreateGEP(input, colValue);
+
         // Load the address value.
         elementAddr = builder->CreateLoad(gep);
         type = this->datatypes.at(i);
+
         // Convert the column address to array of proper datatype.
         switch (type) {
             case DataType::BOOLD:
@@ -178,10 +192,13 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
         elementValue = builder->CreateLoad(gep);
         // Pass to filter function's arguments.
         projFuncArgs.push_back(elementValue);
-        // Get bitmap value bitmap[nArgs * curIndexVal + i]
-        bitmapIdx = builder->CreateMul(createConstantInt(nArgs), curIndexVal);
-        bitmapIdx = builder->CreateAdd(bitmapIdx, colValue, "BITMAP_INDEX");
-        bitmapGEP = builder->CreateGEP(bitmap, bitmapIdx);
+
+        // Get bitmap value bitmap[i][j]
+
+        bitmapGEP = builder->CreateGEP(bitmap, colValue);
+        bitmapValue = builder->CreateLoad(bitmapGEP);
+        bitmapValue = builder->CreateIntToPtr(bitmapValue, Type::getInt1PtrTy(*context));
+        bitmapGEP = builder->CreateGEP(bitmapValue, curIndexVal);
         bitmapValue = builder->CreateLoad(bitmapGEP);
         // Pass whether the current value is null to projection function arguments
         projFuncArgs.push_back(bitmapValue);
@@ -208,17 +225,20 @@ int64_t ProjectionCodeGen::createWrapper(Function *proj)
     builder->CreateStore(nextIndexVal, indexStore);
     // If there are rows remaining, repeat, otherwise, exit.
     Value *sentinel;
-    if (filter) sentinel = numSelected;
-    else sentinel = numRows;
+    if (filter) {
+        sentinel = numSelected;
+    } else {
+        sentinel = numRows;
+    }
     Value *cond = builder->CreateICmpSLT(nextIndexVal, sentinel, "END_LOOP_COND");
     builder->CreateCondBr(cond, loopBody, endBlock);
     // Return results
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
-    auto resTracker = JIT->getMainJITDylib().createResourceTracker();
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
-    EOE(JIT->addIRModule(resTracker, std::move(threadSafeModule)));
+    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
     rt = resTracker;
-    auto sym = EOE(JIT->lookup("PROJECT_WRAPPER"));
+    auto sym = eoe(jit->lookup("PROJECT_WRAPPER"));
     return sym.getAddress();
 }

@@ -4,21 +4,34 @@
  */
 #include "filter_codegen.h"
 
-int64_t FilterCodeGen::GetFunction()
-{
-    Function *func = this->createFunction();
-    return this->CreateWrapper(func);
+using namespace llvm;
+using namespace orc;
+using namespace omniruntime::expressions;
+
+namespace {
+    const int32_t ARGUMENT2 = 2;
+    const int32_t ARGUMENT3 = 3;
 }
 
-int64_t FilterCodeGen::CreateWrapper(Function *filter)
+int64_t FilterCodeGen::GetFunction()
 {
+    Function *func = this->CreateFunction();
+    return this->CreateWrapper(*func);
+}
+
+
+int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
+{
+    Function *filterFunc = &filterFn;
     int32_t nArgs = this->datatypes.size();
-    std::vector<Type*> args;
+
+    std::vector<Type *> args;
     Type *ptrArg = Type::getInt64PtrTy(*context);
     args.push_back(ptrArg);
     args.push_back(Type::getInt32Ty(*context));
     args.push_back(Type::getInt32PtrTy(*context));
-    Type *bitmapArg = Type::getInt1PtrTy(*context);
+    // bitmap is a 2d array of booleans
+    Type *bitmapArg = Type::getInt64PtrTy(*context);
     args.push_back(bitmapArg);
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
@@ -32,13 +45,13 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
     start->setName("ARGS_ARRAY");
     Argument *numRows = funcDecl->getArg(1);
     numRows->setName("NUM_ROWS");
-    Argument *resultsArray = funcDecl->getArg(2);
+    Argument *resultsArray = funcDecl->getArg(ARGUMENT2);
     resultsArray->setName("RESULTS");
-    Argument *bitmap = funcDecl->getArg(3);
+    Argument *bitmap = funcDecl->getArg(ARGUMENT3);
     bitmap->setName("BITMAP");
-    Value *minusOne = this->createConstantInt(-1);
-    Value *zero = this->createConstantInt(0);
-    Value *one = this->createConstantInt(1);
+    Value *minusOne = this->CreateConstantInt(-1);
+    Value *zero = this->CreateConstantInt(0);
+    Value *one = this->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
     // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < nArgs)
@@ -50,7 +63,7 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
     Value *elementPtr;
     Value *elementValue;
     // for bitmap
-    Value *bitmapIdx;
+    Value *bitmapIdx = nullptr;
     Value *bitmapGEP;
     Value *bitmapValue;
 
@@ -82,7 +95,7 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
     for (int32_t i = 0; i < nArgs; i++) {
-        Value *colValue = this->createConstantInt(i);
+        Value *colValue = this->CreateConstantInt(i);
         // Find address of this column in the addresses array argument.
         gep = builder->CreateGEP(start, colValue);
         // Load the address value.
@@ -116,11 +129,14 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
         // Pass to filter function's arguments.
         filterFuncArgs.push_back(elementValue);
 
-        // Get bitmap value bitmap[nArgs * curIndexVal + i]
-        bitmapIdx = builder->CreateMul(createConstantInt(nArgs), curIndexVal);
-        bitmapIdx = builder->CreateAdd(bitmapIdx, colValue, "BITMAP_INDEX");
-        bitmapGEP = builder->CreateGEP(bitmap, bitmapIdx);
+        // Get bitmap value bitmap[i][j]
+
+        bitmapGEP = builder->CreateGEP(bitmap, colValue);
         bitmapValue = builder->CreateLoad(bitmapGEP);
+        bitmapValue = builder->CreateIntToPtr(bitmapValue, Type::getInt1PtrTy(*context));
+        bitmapGEP = builder->CreateGEP(bitmapValue, curIndexVal);
+        bitmapValue = builder->CreateLoad(bitmapGEP);
+
         // Pass whether the current value is null to filter function arguments
         filterFuncArgs.push_back(bitmapValue);
     }
@@ -128,7 +144,7 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
     filterFuncArgs.push_back(curIndexVal);
 
     // Get the boolean response for this row from the filter function.
-    ret = builder->CreateCall(filter, filterFuncArgs, "ROW_EVAL");
+    ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
     // If true, add row index to selected array, otherwise, process next row.
     builder->CreateCondBr(ret, filterPassed, incrementCounter);
     // Add row index to results array
@@ -158,11 +174,11 @@ int64_t FilterCodeGen::CreateWrapper(Function *filter)
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
 
-    auto resTracker = JIT->getMainJITDylib().createResourceTracker();
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
-    EOE(JIT->addIRModule(resTracker, std::move(threadSafeModule)));
+    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
     rt = resTracker;
 
-    auto sym = EOE(JIT->lookup("FILTER_WRAPPER"));
+    auto sym = eoe(jit->lookup("FILTER_WRAPPER"));
     return sym.getAddress();
 }
