@@ -17,15 +17,25 @@ const int TYPE_INT64D = 2;
 const int TYPE_DOUBLED = 3;
 const int TYPE_BOOLD = 4;
 const int TYPE_INT32D_2ND = 5;
+const int TYPE_DECIMAL64D = 6;
+const int TYPE_DECIMAL128D = 7;
+const int TYPE_DATE32D = 8;
+const int TYPE_DATE64D = 9;
+const int TYPE_TIME32D = 10;
+const int TYPE_TIME64D = 11;
+const int TYPE_TIMESTAMPD = 12;
 const int TYPE_STRINGD = 15;
+
 // Helper function to get DataType from jint type
 // Find types in core/src/types/vector_type.h
 DataType ColTypeTrans(int32_t colType)
 {
     switch (colType) {
         case TYPE_INT32D:
+        case TYPE_DATE32D:
             return DataType::INT32D;
         case TYPE_INT64D:
+        case TYPE_DECIMAL64D:
             return DataType::INT64D;
         case TYPE_DOUBLED:
             return DataType::DOUBLED;
