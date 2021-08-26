@@ -45,7 +45,6 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
 Vector::~Vector()
 {
     if (reference == nullptr) {
-        std::cerr << "reference is null" << std::endl;
         return;
     }
     if (0 == reference->DecRef()) {

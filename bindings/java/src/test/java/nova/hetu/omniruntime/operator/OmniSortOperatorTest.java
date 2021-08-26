@@ -60,7 +60,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        int[] sortCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -91,7 +91,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {1, 2};
-        int[] sortCols = {0, 2};
+        String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -119,7 +119,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {1, 2};
-        int[] sortCols = {0, 2};
+        String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -145,7 +145,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {1, 2};
-        int[] sortCols = {0, 2};
+        String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -178,7 +178,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {1, 2};
-        int[] sortCols = {0, 2};
+        String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -207,7 +207,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        int[] sortCols = {1};
+        String[] sortCols = {"#1"};
         int[] ascendings = {0};
         int[] nullFirsts = {1};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -233,7 +233,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        int[] sortCols = {1};
+        String[] sortCols = {"#1"};
         int[] ascendings = {0};
         int[] nullFirsts = {0};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -259,7 +259,7 @@ public class OmniSortOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        int[] sortCols = {1, 0};
+        String[] sortCols = {"#1", "#0"};
         int[] ascendings = {0, 0};
         int[] nullFirsts = {1, 1};
         OmniSortOperatorFactory sortOperatorFactory =
@@ -284,7 +284,7 @@ public class OmniSortOperatorTest {
 
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         int[] outputCols = {0, 1};
-        int[] sortCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
@@ -316,7 +316,7 @@ public class OmniSortOperatorTest {
 
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] outputCols = {0, 1};
-        int[] sortCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortOperatorFactory sortOperatorFactory =

@@ -20,19 +20,19 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory
  * Method:    createSortOperatorFactory
- * Signature: ([I[I[I[I[I)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[I[I)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortOperatorFactory(
-    JNIEnv *, jobject, jstring, jintArray, jintArray, jintArray, jintArray);
+    JNIEnv *, jclass, jstring, jintArray, jobjectArray, jintArray, jintArray);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory
  * Method:    createHashAggregationOperatorFactory
- * Signature: ([I[I[I[I[I[I)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
-    JNIEnv *, jobject, jintArray, jstring, jintArray, jstring, jintArray, jstring, jboolean, jboolean);
+    JNIEnv *, jclass, jobjectArray, jstring, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
@@ -72,31 +72,31 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jstring);
 
 /*
- * Class:     nova_hetu_omniruntime_operator_join_OmniTopNOperatorFactory
+ * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory
  * Method:    createTopNOperatorFactory
- * Signature: ([I[I[II)J
+ * Signature: (Ljava/lang/String;I[Ljava/lang/String;[I[I)J
  */
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jobject jObj,
-    jstring jSourceTypes, jint jN, jintArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts);
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jclass jObj,
+    jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory
  * Method:    createHashBuilderOperatorFactory
- * Signature: ([I[I[II)J
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;I)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory(JNIEnv *,
-    jobject, jstring, jintArray, jintArray, jint);
+    jclass, jstring, jobjectArray, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory
  * Method:    createLookupJoinOperatorFactory
- * Signature: ([I[I[I[I[IIJ)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[ILjava/lang/String;IJ)J
  */
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *,
-    jobject, jstring, jintArray, jintArray, jintArray, jstring, jint, jlong);
+Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *, jclass,
+    jstring, jintArray, jobjectArray, jintArray, jstring, jint, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_partitionedoutput_PartitionedOutputOperatorFactory
@@ -112,9 +112,8 @@ Java_nova_hetu_omniruntime_operator_partitioned_OmniPartitionedOutPutOperatorFac
  * Method:    CreateUnionOperatorFactory
  * Signature: ([IZI[II[I)J
  */
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_union_OmniUnionOperatorFactory_createUnionOperatorFactory(
-        JNIEnv *env, jobject, jstring, jboolean);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_union_OmniUnionOperatorFactory_createUnionOperatorFactory(
+    JNIEnv *env, jobject, jstring, jboolean);
 
 #ifdef __cplusplus
 }

@@ -8,11 +8,7 @@
 namespace omniruntime {
 namespace vec {
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, uint32_t idsCount)
-    : Vector(dictionary, dictionary->GetSize(), 0),
-      dictionary(dictionary),
-      ids(nullptr),
-      idsCount(idsCount),
-      idsOffset(0)
+    : dictionary(dictionary->Slice(0, dictionary->GetSize())), ids(nullptr), idsCount(idsCount), idsOffset(0)
 {
     InitIds(ids, idsCount);
 }
@@ -59,11 +55,11 @@ DictionaryVector *DictionaryVector::CopyRegion(int positionOffset, int length)
 void DictionaryVector::Append(Vector *other, int positionOffset, int length)
 {
     DictionaryVector *otherVector = reinterpret_cast<DictionaryVector *>(other);
-    if (positionOffset + length > idsCount || this->dictionary != otherVector->dictionary) {
+    if (positionOffset + length > idsCount) {
         return;
     }
-    int32_t *destination = this->ids + (positionOffset * sizeof(int32_t));
-    int32_t *src = (otherVector->GetPositionOffset() * sizeof(int32_t)) + otherVector->GetIds();
+    int32_t *destination = this->ids + positionOffset;
+    int32_t *src = otherVector->GetPositionOffset() + otherVector->GetIds();
     errno_t ret = memcpy_s(destination, idsCount * sizeof(int32_t), src, length * sizeof(int32_t));
 
     if (ret != EOK) {

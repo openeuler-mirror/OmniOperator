@@ -35,15 +35,15 @@ public class OmniHashAggregationOperatorFactory
      * @param inputRaw         the input raw
      * @param outputPartial    the output partial
      */
-    public OmniHashAggregationOperatorFactory(int[] groupByChanel, VecType[] groupByTypes, int[] aggChannels,
+    public OmniHashAggregationOperatorFactory(String[] groupByChanel, VecType[] groupByTypes, String[] aggChannels,
             VecType[] aggTypes, AggType[] aggFunctionTypes, VecType[] aggOutputTypes, boolean inputRaw,
             boolean outputPartial) {
         super(new Context(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes,
                 inputRaw, outputPartial));
     }
 
-    private static native long createHashAggregationOperatorFactory(int[] groupByChanel, String groupByTypes,
-            int[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw,
+    private static native long createHashAggregationOperatorFactory(String[] groupByChanel, String groupByTypes,
+            String[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw,
             boolean outputPartial);
 
     @Override
@@ -60,11 +60,11 @@ public class OmniHashAggregationOperatorFactory
      * @since 20210630
      */
     public static class Context extends OmniOperatorFactoryContext {
-        private final int[] groupByChanel;
+        private final String[] groupByChanel;
 
         private final VecType[] groupByTypes;
 
-        private final int[] aggChannels;
+        private final String[] aggChannels;
 
         private final VecType[] aggTypes;
 
@@ -88,7 +88,7 @@ public class OmniHashAggregationOperatorFactory
          * @param inputRaw         the input raw
          * @param outputPartial    the output partial
          */
-        public Context(int[] groupByChanel, VecType[] groupByTypes, int[] aggChannels, VecType[] aggTypes,
+        public Context(String[] groupByChanel, VecType[] groupByTypes, String[] aggChannels, VecType[] aggTypes,
                 AggType[] aggFunctionTypes, VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
             this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
             this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");

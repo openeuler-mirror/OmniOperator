@@ -20,6 +20,8 @@ public:
 
     Vector(Vector *vector, int size, int offset);
 
+    Vector() {}
+
     virtual ~Vector();
 
     virtual int GetSize()
@@ -42,7 +44,7 @@ public:
         return reference->GetRef();
     }
 
-    VectorAllocator *GetAllocator() const
+    virtual VectorAllocator *GetAllocator() const
     {
         return allocator;
     }
@@ -57,7 +59,7 @@ public:
         return reference->GetType();
     }
 
-    int GetCapacityInBytes() const
+    virtual int GetCapacityInBytes() const
     {
         return reference->GetValueChunk()->GetSizeInBytes();
     }
@@ -67,7 +69,7 @@ public:
         return valueNullsAddress;
     }
 
-    int GetValueNullsSizeInBytes() const
+    virtual int GetValueNullsSizeInBytes() const
     {
         return reference->GetValueNullChunk()->GetSizeInBytes();
     }
@@ -120,14 +122,14 @@ public:
     virtual void Append(Vector *other, int positionOffset, int length) = 0;
 
 protected:
-    void *valuesAddress;
-    void *valueNullsAddress;
-    void *valueOffsetsAddress;
+    void *valuesAddress = nullptr;
+    void *valueNullsAddress = nullptr;
+    void *valueOffsetsAddress = nullptr;
     int positionOffset = 0;
     int capacityInBytes = 0;
     int size = 0;
-    VectorReference *reference;
-    VectorAllocator *allocator;
+    VectorReference *reference = nullptr;
+    VectorAllocator *allocator = nullptr;
 };
 } // namespace vec
 } // namespace omniruntime

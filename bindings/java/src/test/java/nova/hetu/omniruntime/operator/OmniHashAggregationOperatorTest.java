@@ -30,9 +30,9 @@ public class OmniHashAggregationOperatorTest {
      */
     @Test
     public void testExecuteAggMultiplePage() {
-        int[] groupByChanel = {0, 1};
+        String[] groupByChanel = {"#0", "#1"};
         VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
-        int[] aggChannels = {2, 3};
+        String[] aggChannels = {"#2", "#3"};
         VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG};
         AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
@@ -98,9 +98,9 @@ public class OmniHashAggregationOperatorTest {
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    int[] groupByChanel = {0, 1};
+                    String[] groupByChanel = {"#0", "#1"};
                     VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
-                    int[] aggChannels = {2, 3};
+                    String[] aggChannels = {"#2", "#3"};
                     VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG};
                     AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
                     VecType[] aggOutputTypes = {

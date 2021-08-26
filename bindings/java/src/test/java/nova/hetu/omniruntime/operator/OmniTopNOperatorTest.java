@@ -33,7 +33,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(longVec);
 
         VecType[] sourceTypes = {LongVecType.LONG};
-        int[] sortCols = {0};
+        String[] sortCols = {"#0"};
         int[] sortAsc = {0};
         int[] nullFirst = {0};
         OmniTopNOperatorFactory omniTopNOperatorFactory = new OmniTopNOperatorFactory(sourceTypes, expectedRowSize,
@@ -71,7 +71,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(vec3);
 
         VecType[] sourceTypes = {IntVecType.INTEGER,LongVecType.LONG, DoubleVecType.DOUBLE};
-        int[] sortCols = {0,1};
+        String[] sortCols = {"#0", "#1"};
         int[] sortAsc = {1,1};
         int[] nullFirst = {0,0};
         OmniTopNOperatorFactory omniTopNOperatorFactory = new OmniTopNOperatorFactory(sourceTypes, expectedRowSize,
@@ -121,7 +121,7 @@ public class OmniTopNOperatorTest {
         longVecs.add(vec3);
 
         VecType[] sourceTypes = {IntVecType.INTEGER,LongVecType.LONG,DoubleVecType.DOUBLE};
-        int[] sortCols = {1};
+        String[] sortCols = {"#1"};
         int[] sortAsc = {0};
         int[] nullFirst = {0};
         OmniTopNOperatorFactory omniTopNOperatorFactory = new OmniTopNOperatorFactory(sourceTypes, expectedRowSize,
