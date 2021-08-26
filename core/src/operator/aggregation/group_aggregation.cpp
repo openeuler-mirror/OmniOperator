@@ -13,6 +13,7 @@
 #include "../../vector/container_vector.h"
 #include "../../util/type_util.h"
 #include "../hash_util.h"
+#include "../util/operator_util.h"
 
 #if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
 #include <sstream>
@@ -88,10 +89,11 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
 
     HashAggregationOperator *groupBy =
         new HashAggregationOperator(groupByIndex, aggIndex, std::move(aggs), inputRaw, outputPartial);
+    groupBy->Init();
     return groupBy;
 }
 
-void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
+OmniStatus HashAggregationOperator::Init()
 {
     int32_t colSize = groupByCols.size() + aggCols.size();
     sourceTypes = std::make_unique<int32_t[]>(colSize).release();
@@ -102,7 +104,11 @@ void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
     for (auto &c : aggCols) {
         sourceTypes[idx++] = static_cast<int32_t>(c.type.GetId());
     }
+    return OMNI_STATUS_NORMAL;
 }
+
+void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
+{}
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
 
@@ -115,12 +121,14 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
         uint64_t hash = 0;
         uint32_t idx = colIdx[i];
         switch (types[idx]) {
-            case OMNI_VEC_TYPE_INT: {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
                 std::hash<int32_t> hashInt32;
                 hash = hashInt32(static_cast<IntVector *>(vectors[idx])->GetValue(offset));
                 break;
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
                 std::hash<int64_t> hashInt64;
                 hash = hashInt64(static_cast<LongVector *>(vectors[idx])->GetValue(offset));
                 break;
@@ -128,6 +136,11 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
             case OMNI_VEC_TYPE_DOUBLE: {
                 std::hash<double> hashDouble;
                 hash = hashDouble(static_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                Decimal128 val = static_cast<Decimal128Vector *>(vectors[idx])->GetValue(offset);
+                hash = HashUtil::HashValue(val.LowBits(), val.HighBits());
                 break;
             }
             default: {
@@ -140,6 +153,40 @@ int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offs
     return combineHashVal;
 }
 
+void* ALWAYS_INLINE DuplicateGroupByTuple(int32_t type, Vector* vector, uint32_t offset)
+{
+    void *rowPtr = nullptr;
+    switch (type) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            rowPtr = std::make_unique<int32_t>(
+                    static_cast<IntVector *>(vector)->GetValue(offset)).release();
+            break;
+        }
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
+            rowPtr = std::make_unique<int64_t>(
+                    static_cast<LongVector *>(vector)->GetValue(offset)).release();
+            break;
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            rowPtr = std::make_unique<double>(
+                    static_cast<DoubleVector *>(vector)->GetValue(offset)).release();
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            rowPtr = std::make_unique<Decimal128>(
+                    static_cast<Decimal128Vector *>(vector)->GetValue(offset)).release();
+            break;
+        }
+        default: {
+            DebugError("No such data type %d", type);
+            break;
+        }
+    }
+    return rowPtr;
+}
+
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
 void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum,
     const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum,
@@ -149,41 +196,20 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const in
     if (groupedRows.find(combineHashVal) == groupedRows.end()) {
         std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
         for (int32_t i = 0; i < groupByColNum; ++i) {
-            // copy col value to map
-            void *rowPtr = nullptr;
             uint32_t idx = groupByColIdx[i];
-            switch (types[idx]) {
-                case OMNI_VEC_TYPE_INT: {
-                    auto copyVal = std::make_unique<int32_t>(static_cast<IntVector *>(vectors[idx])->GetValue(offset));
-                    rowPtr = reinterpret_cast<void *>(copyVal.release());
-                    break;
-                }
-                case OMNI_VEC_TYPE_LONG: {
-                    auto copyVal = std::make_unique<int64_t>(static_cast<LongVector *>(vectors[idx])->GetValue(offset));
-                    rowPtr = reinterpret_cast<void *>(copyVal.release());
-                    break;
-                }
-                case OMNI_VEC_TYPE_DOUBLE: {
-                    auto copyVal =
-                        std::make_unique<double>(static_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
-                    rowPtr = reinterpret_cast<void *>(copyVal.release());
-                    break;
-                }
-                default: {
-                    DebugError("No such data type %d", types[idx]);
-                    break;
-                }
-            }
-            groupByTuple[i].val = rowPtr;
+            groupByTuple[i].val = DuplicateGroupByTuple(types[idx], vectors[idx], offset);
         }
         groupedRows[combineHashVal] = groupByTuple;
-
         for (int32_t i = 0; i < aggColNum; ++i) {
             int32_t idx = aggColIdx[i];
             int32_t type = types[idx];
             Vector *colPtr = vectors[idx];
             GroupBySlot &state = groupedRows[combineHashVal][groupByColNum + i];
-            aggregators[i]->Insert(state, colPtr, type, offset);
+            try {
+                aggregators[i]->Insert(state, colPtr, type, offset);
+            } catch (std::exception& e) {
+                std::cerr << "Hash aggregation insert failed." << std::endl;
+            }
         }
     } else {
         for (int32_t i = 0; i < aggColNum; ++i) {
@@ -191,7 +217,11 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const in
             int32_t type = types[idx];
             Vector *colPtr = vectors[idx];
             GroupBySlot &state = groupedRows[combineHashVal][groupByColNum + i];
-            aggregators[i]->ProcessGroup(state, colPtr, type, offset);
+            try {
+                aggregators[i]->ProcessGroup(state, colPtr, type, offset);
+            } catch (std::exception& e) {
+                std::cerr << "Hash aggregation aggregate failed." << std::endl;
+            }
         }
     }
 }
@@ -235,7 +265,7 @@ int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t> &types, int32_t
     int32_t typeIndex = 0;
     for (auto &i : groupByCols) {
         types.push_back(i.type.GetId());
-        rowSize += TypeUtil::GetVarByteSize(i.type.GetId());
+        rowSize += OperatorUtil::GetTypeSize(i.type);
     }
     for (int32_t i = 0; i < aggCols.size(); ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
@@ -254,7 +284,7 @@ int32_t HashAggregationOperator::GetRowSize(std::vector<int32_t> &types, int32_t
             continue;
         }
         types.push_back(aggCols[i].type.GetId());
-        rowSize += TypeUtil::GetVarByteSize(aggCols[i].type.GetId());
+        rowSize += OperatorUtil::GetTypeSize(aggCols[i].type);
     }
     return rowSize;
 }
@@ -267,7 +297,8 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
     for (int colIndex = startIndex, groupByIndex = 0; colIndex < endIndex; ++colIndex, ++groupByIndex) {
         tempRowIterator = rowIterator;
         switch (groupByCols[groupByIndex].type.GetId()) {
-            case OMNI_VEC_TYPE_INT: {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
                 IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
                 for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
                     ++rowIndex, ++tempRowIterator) {
@@ -275,7 +306,8 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
                 }
                 break;
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
                 LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
                 for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
                     ++rowIndex, ++tempRowIterator) {
@@ -291,6 +323,14 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
                 }
                 break;
             }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                Decimal128Vector* vector = static_cast<Decimal128Vector*>(vecBatch->GetVector(colIndex));
+                for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != groupedRows.end();
+                     ++rowIndex, ++tempRowIterator) {
+                    vector->SetValue(rowIndex, *(Decimal128 *)tempRowIterator->second[colIndex].val);
+                }
+                break;
+            }
             default: {
                 DebugError("Type %d doesn't support", groupByCols[groupByIndex].type.GetId());
                 break;
@@ -303,7 +343,8 @@ void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
     int32_t aggIndex, int32_t colIndex, int32_t rowCount, RowIterator &rowIterator)
 {
     switch (aggCols[aggIndex].type.GetId()) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             IntVector *vector = static_cast<IntVector *>(vecBatch->GetVector(colIndex));
             for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
                  ++rIdx, rowIterator++) {
@@ -311,7 +352,8 @@ void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
             }
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
             LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
             for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
                  ++rIdx, rowIterator++) {
@@ -327,6 +369,14 @@ void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
             }
             break;
         }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128Vector *vector = static_cast<Decimal128Vector *>(vecBatch->GetVector(colIndex));
+            for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
+                 ++rIdx, rowIterator++) {
+                vector->SetValue(rIdx, *reinterpret_cast<Decimal128 *>(rowIterator->second[colIndex].val));
+            }
+            break;
+        }
         default: {
             DebugError("No such data type %d", aggCols[aggIndex].type.GetId());
             break;
@@ -337,6 +387,7 @@ void HashAggregationOperator::FillNormalAgg(VectorBatch* vecBatch,
 void HashAggregationOperator::FillAvgAgg(VectorBatch* vecBatch,
     int32_t aggIndex, int32_t colIndex, int32_t rowCount, RowIterator &rowIterator)
 {
+    // TODO support average value type which is decimal
     if (outputPartial) {
         ContainerVector *vector = static_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
         for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
@@ -408,16 +459,22 @@ void SetVectors(VectorBatch *vectorBatch, const std::vector<int32_t> &types, int
 {
     for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
         switch (types[colIndex]) {
-            case OMNI_VEC_TYPE_INT: {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
                 vectorBatch->SetVector(colIndex, new IntVector(nullptr, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_LONG: {
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
                 vectorBatch->SetVector(colIndex, new LongVector(nullptr, rowCount));
                 break;
             }
             case OMNI_VEC_TYPE_DOUBLE: {
                 vectorBatch->SetVector(colIndex, new DoubleVector(nullptr, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                vectorBatch->SetVector(colIndex, new Decimal128Vector(nullptr, rowCount));
                 break;
             }
             case OMNI_VEC_TYPE_CONTAINER: {
@@ -478,18 +535,19 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     return vecBatchCount;
 }
 
-OmniStatus HashAggregationOperator::Close()
+OmniStatus HashAggregationOperator::CloseGroupBy()
 {
     auto groupByColSize = groupByCols.size();
-    auto aggColSize = aggCols.size();
     for (auto &item : groupedRows) {
         for (int32_t idx = 0; idx < groupByColSize; ++idx) {
             switch (groupByCols[idx].type.GetId()) {
-                case omniruntime::vec::OMNI_VEC_TYPE_INT: {
+                case omniruntime::vec::OMNI_VEC_TYPE_INT:
+                case omniruntime::vec::OMNI_VEC_TYPE_DATE32: {
                     delete reinterpret_cast<int32_t *>(item.second[idx].val);
                     break;
                 }
-                case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
+                case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+                case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64: {
                     delete reinterpret_cast<int64_t *>(item.second[idx].val);
                     break;
                 }
@@ -497,10 +555,25 @@ OmniStatus HashAggregationOperator::Close()
                     delete reinterpret_cast<double *>(item.second[idx].val);
                     break;
                 }
-                default:
+                case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
+                    delete reinterpret_cast<Decimal128 *>(item.second[idx].val);
                     break;
+                }
+                default: {
+                    return OMNI_STATUS_ERROR;
+                    break;
+                }
             }
         }
+    }
+    return OMNI_STATUS_NORMAL;
+}
+
+OmniStatus HashAggregationOperator::CloseAgg()
+{
+    auto groupByColSize = groupByCols.size();
+    auto aggColSize = aggCols.size();
+    for (auto &item : groupedRows) {
         for (int32_t idx = 0; idx < aggColSize; ++idx) {
             if (aggregators[idx]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
                 continue;
@@ -510,11 +583,13 @@ OmniStatus HashAggregationOperator::Close()
                 continue;
             }
             switch (aggCols[idx].type.GetId()) {
-                case omniruntime::vec::OMNI_VEC_TYPE_INT: {
+                case omniruntime::vec::OMNI_VEC_TYPE_INT:
+                case omniruntime::vec::OMNI_VEC_TYPE_DATE32: {
                     delete reinterpret_cast<int32_t *>(item.second[groupByColSize + idx].val);
                     break;
                 }
-                case omniruntime::vec::OMNI_VEC_TYPE_LONG: {
+                case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+                case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64: {
                     delete reinterpret_cast<int64_t *>(item.second[groupByColSize + idx].val);
                     break;
                 }
@@ -522,12 +597,30 @@ OmniStatus HashAggregationOperator::Close()
                     delete reinterpret_cast<double *>(item.second[groupByColSize + idx].val);
                     break;
                 }
-                default:
+                case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
+                    delete reinterpret_cast<Decimal128 *>(item.second[groupByColSize + idx].val);
                     break;
+                }
+                default: {
+                    return OMNI_STATUS_ERROR;
+                    break;
+                }
             }
         }
     }
     return OMNI_STATUS_NORMAL;
+}
+
+OmniStatus HashAggregationOperator::Close()
+{
+    delete[] sourceTypes;
+    OmniStatus ret = CloseGroupBy();
+    ret = CloseAgg();
+    if (ret == OMNI_STATUS_NORMAL) {
+        return OMNI_STATUS_NORMAL;
+    } else {
+        return OMNI_STATUS_ERROR;
+    }
 }
 } // end of namespace op
 } // end of namespace omniruntime

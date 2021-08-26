@@ -12,17 +12,8 @@
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
-int32_t CompareInt(int32_t leftVal, int32_t rightVal)
-{
-    return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
-}
-
-int32_t CompareInt64(int64_t leftVal, int64_t rightVal)
-{
-    return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
-}
-
-int32_t CompareDouble(double leftVal, double rightVal)
+template<typename T>
+int32_t ALWAYS_INLINE Compare(const T& leftVal, const T& rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
 }
@@ -41,13 +32,16 @@ void ALWAYS_INLINE SumAggregator::Insert(GroupBySlot &groupSlot, omniruntime::ve
     uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             auto curVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int32_t>(curVal);
             groupSlot.val = val.release();
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int64_t>(curVal);
             groupSlot.val = val.release();
@@ -56,6 +50,12 @@ void ALWAYS_INLINE SumAggregator::Insert(GroupBySlot &groupSlot, omniruntime::ve
         case OMNI_VEC_TYPE_DOUBLE: {
             auto curVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<double>(curVal);
+            groupSlot.val = val.release();
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 curVal = (static_cast<Decimal128Vector *>(colPtr))->GetValue(offset);
+            auto val = std::make_unique<Decimal128>(curVal.HighBits(), curVal.LowBits());
             groupSlot.val = val.release();
             break;
         }
@@ -70,16 +70,23 @@ void ALWAYS_INLINE SumAggregator::ProcessGroup(GroupBySlot &groupSlot, omnirunti
     uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             *(static_cast<int32_t *>(groupSlot.val)) += (static_cast<IntVector *>(colPtr))->GetValue(offset);
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             *(static_cast<int64_t *>(groupSlot.val)) += (static_cast<LongVector *>(colPtr))->GetValue(offset);
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             *(static_cast<double *>(groupSlot.val)) += (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            *(static_cast<Decimal128*>(groupSlot.val)) += (static_cast<Decimal128Vector*>(colPtr)->GetValue(offset));
             break;
         }
         default: {
@@ -92,13 +99,16 @@ void ALWAYS_INLINE SumAggregator::ProcessGroup(GroupBySlot &groupSlot, omnirunti
 void SumAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             auto curVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int32_t>(curVal);
             nonGroupState = { val.release() };
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int64_t>(curVal);
             nonGroupState = { val.release() };
@@ -107,6 +117,12 @@ void SumAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
         case OMNI_VEC_TYPE_DOUBLE: {
             auto curVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<double>(curVal);
+            nonGroupState = { val.release() };
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto curVal = (static_cast<Decimal128Vector*>(colPtr))->GetValue(offset);
+            auto val = std::make_unique<Decimal128>(curVal.HighBits(), curVal.LowBits());
             nonGroupState = { val.release() };
             break;
         }
@@ -127,16 +143,24 @@ void SumAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset)
     }
 
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             *(static_cast<int32_t *>(nonGroupState.val)) += (static_cast<IntVector *>(colPtr))->GetValue(offset);
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             *(static_cast<int64_t *>(nonGroupState.val)) += (static_cast<LongVector *>(colPtr))->GetValue(offset);
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             *(static_cast<double *>(nonGroupState.val)) += (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            *(static_cast<Decimal128*>(nonGroupState.val)) += (static_cast<Decimal128Vector*>(colPtr))
+                ->GetValue(offset);
             break;
         }
         default: {
@@ -199,13 +223,16 @@ void AverageAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
 {
     auto val = std::make_unique<double>(0.0);
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
             *val = rowVal / 1.0;
             nonGroupState = { { val.release(), 1 } };
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             *val = rowVal / 1.0;
             nonGroupState = { { val.release(), 1 } };
@@ -215,6 +242,12 @@ void AverageAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
             *val = rowVal / 1.0;
             nonGroupState = { { val.release(), 1 } };
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 rowVal = (static_cast<Decimal128Vector*>(colPtr))->GetValue(offset);
+            auto newVal = std::make_unique<Decimal128>(rowVal.HighBits(), rowVal.LowBits());
+            nonGroupState = { { newVal.release(), 1 } };
             break;
         }
         default: {
@@ -232,20 +265,30 @@ void AverageAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t off
         Initiate(colPtr, type, offset);
         return;
     }
-    double *currentVal = static_cast<double *>(nonGroupState.avgVal);
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            auto currentVal = static_cast<double *>(nonGroupState.avgVal);
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
             *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
+            auto currentVal = static_cast<double *>(nonGroupState.avgVal);
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
+            auto currentVal = static_cast<double *>(nonGroupState.avgVal);
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
+            *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128* currentVal = static_cast<Decimal128*>(nonGroupState.avgVal);
+            Decimal128 rowVal = (static_cast<Decimal128Vector*>(colPtr))->GetValue(offset);
             *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
             break;
         }
@@ -256,41 +299,52 @@ void AverageAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t off
     }
 }
 
+void ALWAYS_INLINE InsertIntermediateAvg(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, uint32_t offset)
+{
+    auto containerVector = static_cast<ContainerVector *>(colPtr);
+    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
+    double avgVal = avgValVector->GetValue(offset);
+    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
+    int64_t avgCnt = avgCountVector->GetValue(offset);
+    if (avgCnt == 0) {
+        throw "Divisor should not be zero!";
+    }
+    groupSlot.avgVal = std::make_unique<double>(avgVal * avgCnt / avgCnt).release();
+    groupSlot.avgCnt = avgCnt;
+}
+
 void AverageAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
 {
-    auto val = std::make_unique<double>(0.0);
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
-            *val = rowVal / 1.0;
-            groupSlot.avgVal = val.release();
+            groupSlot.avgVal = std::make_unique<double>(rowVal / 1.0).release();
             groupSlot.avgCnt = 1;
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-            *val = rowVal / 1.0;
-            groupSlot.avgVal = val.release();
+            groupSlot.avgVal = std::make_unique<double>(rowVal / 1.0).release();
             groupSlot.avgCnt = 1;
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
-            *val = rowVal / 1.0;
-            groupSlot.avgVal = val.release();
+            groupSlot.avgVal = std::make_unique<double>(rowVal / 1.0).release();
             groupSlot.avgCnt = 1;
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {
-            // get intermediate state from container vector
-            ContainerVector *containerVector = reinterpret_cast<ContainerVector *>(colPtr);
-            DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
-            double avgVal = avgValVector->GetValue(offset);
-            LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
-            int64_t avgCnt = avgCountVector->GetValue(offset);
-            *val = avgVal * avgCnt / avgCnt;
-            groupSlot.avgVal = val.release();
-            groupSlot.avgCnt = avgCnt;
+            InsertIntermediateAvg(groupSlot, colPtr, offset);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 rowVal = (static_cast<Decimal128Vector *>(colPtr))->GetValue(offset);
+            groupSlot.avgVal = std::make_unique<Decimal128>(rowVal).release();
+            groupSlot.avgCnt = 1;
             break;
         }
         default: {
@@ -298,37 +352,94 @@ void AverageAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector 
             break;
         }
     }
+}
+
+void ALWAYS_INLINE ProcessIntermediateAvg(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, uint32_t offset)
+{
+    double *currentVal = static_cast<double *>(groupSlot.avgVal);
+    auto currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
+    auto containerVector = static_cast<ContainerVector *>(colPtr);
+    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
+    double avgVal = avgValVector->GetValue(offset);
+    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
+    int64_t avgCnt = avgCountVector->GetValue(offset);
+    if (avgCnt == 0) {
+        throw "Divisor should not be zero!";
+    }
+    groupSlot.avgCnt += avgCnt;
+    *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;
 }
 
 void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
     uint32_t offset)
 {
-    double *currentVal = static_cast<double *>(groupSlot.avgVal);
-    int64_t currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
-            int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
-            *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            auto currentVal = static_cast<double *>(groupSlot.avgVal);
+            auto sum = (static_cast<IntVector *>(colPtr))->GetValue(offset) + *currentVal * groupSlot.avgCnt;
+            *currentVal = sum / ++groupSlot.avgCnt;
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
-            int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-            *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
+            auto currentVal = static_cast<double *>(groupSlot.avgVal);
+            auto sum = (static_cast<LongVector *>(colPtr))->GetValue(offset) + *currentVal * groupSlot.avgCnt;
+            *currentVal = sum / ++groupSlot.avgCnt;
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
-            *currentVal = (rowVal + *currentVal * groupSlot.avgCnt) / ++groupSlot.avgCnt;
+            auto currentVal = static_cast<double *>(groupSlot.avgVal);
+            auto sum = (static_cast<DoubleVector *>(colPtr))->GetValue(offset) + *currentVal * groupSlot.avgCnt;
+            *currentVal = sum / ++groupSlot.avgCnt;
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {
-            ContainerVector *containerVector = reinterpret_cast<ContainerVector *>(colPtr);
-            DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
-            double avgVal = avgValVector->GetValue(offset);
-            LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
-            int64_t avgCnt = avgCountVector->GetValue(offset);
-            groupSlot.avgCnt += avgCnt;
-            *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;
+            ProcessIntermediateAvg(groupSlot, colPtr, offset);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto currentVal = static_cast<Decimal128 *>(groupSlot.avgVal);
+            auto sum = static_cast<Decimal128Vector*>(colPtr)->GetValue(offset) + *currentVal * groupSlot.avgCnt;
+            *currentVal = sum / ++groupSlot.avgCnt;
+            break;
+        }
+        default: {
+            DebugError("No such data type %d", type);
+            break;
+        }
+    }
+}
+
+void MinAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+{
+    switch (type) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            auto rowVal = static_cast<IntVector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<int32_t>(rowVal);
+            groupSlot.val = val.release();
+            break;
+        }
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
+            auto rowVal = static_cast<LongVector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<int64_t>(rowVal);
+            groupSlot.val = val.release();
+            break;
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            auto rowVal = static_cast<DoubleVector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<int64_t>(rowVal);
+            groupSlot.val = val.release();
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto rowVal = static_cast<Decimal128Vector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<Decimal128>(rowVal);
+            groupSlot.val = val.release();
             break;
         }
         default: {
@@ -342,22 +453,31 @@ void MinAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vecto
     uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
-            int32_t *leftVal = reinterpret_cast<int32_t *>(groupSlot.val);
-            *leftVal = CompareInt(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int32_t *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-            int64_t *leftVal = reinterpret_cast<int64_t *>(groupSlot.val);
-            *leftVal = CompareInt64(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int64_t *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
-            double *leftVal = reinterpret_cast<double *>(groupSlot.val);
-            *leftVal = CompareDouble(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<double *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 rowVal = (static_cast<Decimal128Vector*>(colPtr))->GetValue(offset);
+            auto leftVal = static_cast<Decimal128*>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
             break;
         }
         default: {
@@ -370,13 +490,16 @@ void MinAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vecto
 void MinAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             auto curVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int32_t>(curVal);
             nonGroupState = { val.release() };
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int64_t>(curVal);
             nonGroupState = { val.release() };
@@ -385,6 +508,12 @@ void MinAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
         case OMNI_VEC_TYPE_DOUBLE: {
             auto curVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<double>(curVal);
+            nonGroupState = { val.release() };
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto curVal = static_cast<Decimal128Vector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<Decimal128>(curVal);
             nonGroupState = { val.release() };
             break;
         }
@@ -405,22 +534,31 @@ void MinAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset)
     }
 
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
-            int32_t *leftVal = reinterpret_cast<int32_t *>(nonGroupState.val);
-            *leftVal = CompareInt(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int32_t *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-            int64_t *leftVal = reinterpret_cast<int64_t *>(nonGroupState.val);
-            *leftVal = CompareInt64(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int64_t *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
-            double *leftVal = reinterpret_cast<double *>(nonGroupState.val);
-            *leftVal = CompareDouble(*leftVal, rowVal) == -1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<double *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 rowVal = static_cast<Decimal128Vector*>(colPtr)->GetValue(offset);
+            auto leftVal = static_cast<Decimal128*>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
             break;
         }
         default: {
@@ -430,21 +568,33 @@ void MinAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset)
     }
 }
 
-void MinAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
+void MaxAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
-            auto val = std::make_unique<int32_t>(INT32_MAX);
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            auto rowVal = static_cast<IntVector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<int32_t>(rowVal);
             groupSlot.val = val.release();
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
-            auto val = std::make_unique<int64_t>(INT64_MAX);
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
+            auto rowVal = static_cast<LongVector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<int64_t>(rowVal);
             groupSlot.val = val.release();
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            auto val = std::make_unique<int64_t>(__DBL_MAX__);
+            auto rowVal = static_cast<DoubleVector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<double>(rowVal);
+            groupSlot.val = val.release();
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto rowVal = static_cast<Decimal128Vector*>(colPtr)->GetValue(offset);
+            auto val = std::make_unique<Decimal128>(rowVal);
             groupSlot.val = val.release();
             break;
         }
@@ -459,22 +609,31 @@ void MaxAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vecto
     uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
-            int32_t *leftVal = reinterpret_cast<int32_t *>(groupSlot.val);
-            *leftVal = CompareInt(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int32_t *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-            int64_t *leftVal = reinterpret_cast<int64_t *>(groupSlot.val);
-            *leftVal = CompareInt64(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int64_t *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
-            double *leftVal = reinterpret_cast<double *>(groupSlot.val);
-            *leftVal = CompareDouble(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<double *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 rowVal = (static_cast<Decimal128Vector *>(colPtr))->GetValue(offset);
+            auto leftVal = static_cast<Decimal128 *>(groupSlot.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
             break;
         }
         default: {
@@ -487,13 +646,15 @@ void MaxAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vecto
 void MaxAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
 {
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             auto curVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int32_t>(curVal);
             nonGroupState = { val.release() };
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
             auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int64_t>(curVal);
             nonGroupState = { val.release() };
@@ -502,6 +663,12 @@ void MaxAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
         case OMNI_VEC_TYPE_DOUBLE: {
             auto curVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<double>(curVal);
+            nonGroupState = { val.release() };
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto curVal = (static_cast<Decimal128Vector *>(colPtr))->GetValue(offset);
+            auto val = std::make_unique<Decimal128>(curVal);
             nonGroupState = { val.release() };
             break;
         }
@@ -522,47 +689,31 @@ void MaxAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset)
     }
 
     switch (type) {
-        case OMNI_VEC_TYPE_INT: {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
             int32_t rowVal = (static_cast<IntVector *>(colPtr))->GetValue(offset);
-            int32_t *leftVal = reinterpret_cast<int32_t *>(nonGroupState.val);
-            *leftVal = CompareInt(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
+            auto leftVal = static_cast<int32_t *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
             break;
         }
-        case OMNI_VEC_TYPE_LONG: {
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+         {
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-            int64_t *leftVal = reinterpret_cast<int64_t *>(nonGroupState.val);
-            *leftVal = CompareInt64(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
+            auto *leftVal = static_cast<int64_t *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             double rowVal = (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
-            double *leftVal = reinterpret_cast<double *>(nonGroupState.val);
-            *leftVal = CompareDouble(*leftVal, rowVal) == 1 ? *leftVal : rowVal;
+            auto *leftVal = static_cast<double *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
             break;
         }
-        default: {
-            DebugError("No such data type %d", type);
-            break;
-        }
-    }
-}
-
-void MaxAggregator::Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset)
-{
-    switch (type) {
-        case OMNI_VEC_TYPE_INT: {
-            auto val = std::make_unique<int32_t>(INT32_MIN);
-            groupSlot.val = val.release();
-            break;
-        }
-        case OMNI_VEC_TYPE_LONG: {
-            auto val = std::make_unique<int64_t>(INT64_MIN);
-            groupSlot.val = val.release();
-            break;
-        }
-        case OMNI_VEC_TYPE_DOUBLE: {
-            auto val = std::make_unique<double>(__DBL_MIN__);
-            groupSlot.val = val.release();
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            Decimal128 rowVal = (static_cast<Decimal128Vector *>(colPtr))->GetValue(offset);
+            auto leftVal = static_cast<Decimal128 *>(nonGroupState.val);
+            *leftVal = (Compare(*leftVal, rowVal)) == 1 ? *leftVal : rowVal;
             break;
         }
         default: {

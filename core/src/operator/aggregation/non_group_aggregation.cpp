@@ -116,6 +116,32 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
     }
 }
 
+void ALWAYS_INLINE FillNormalAggregate(Vector* vector, GroupBySlot& state)
+{
+    switch (vector->GetType().GetId()) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            static_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
+            break;
+        }
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64: {
+            static_cast<LongVector *>(vector)->SetValue(0, *static_cast<int64_t *>(state.val));
+            break;
+        }
+        case OMNI_VEC_TYPE_DOUBLE: {
+            static_cast<DoubleVector *>(vector)->SetValue(0, *static_cast<double *>(state.val));
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            static_cast<Decimal128Vector *>(vector)->SetValue(0, *static_cast<Decimal128 *>(state.val));
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
 {
     // set result value
@@ -128,22 +154,7 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
-                switch (vector->GetType().GetId()) {
-                    case OMNI_VEC_TYPE_INT: {
-                        static_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
-                        break;
-                    }
-                    case OMNI_VEC_TYPE_LONG: {
-                        dynamic_cast<LongVector *>(vector)->SetValue(0, *static_cast<int64_t *>(state.val));
-                        break;
-                    }
-                    case OMNI_VEC_TYPE_DOUBLE: {
-                        dynamic_cast<DoubleVector *>(vector)->SetValue(0, *static_cast<double *>(state.val));
-                        break;
-                    }
-                    default:
-                        break;
-                }
+                FillNormalAggregate(vector, state);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {

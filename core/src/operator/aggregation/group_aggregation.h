@@ -22,6 +22,8 @@ public:
         : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {}
 
+    ~HashAggregationOperator() override {}
+
     int32_t AddInput(omniruntime::vec::VectorBatch *data) override;
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
@@ -30,9 +32,11 @@ public:
         : AggregationCommonOperator(std::move(aggregators), true, false)
     {}
 
-    OmniStatus Close() override;
+    OmniStatus Init() override;
 
-    ~HashAggregationOperator() override {}
+    OmniStatus Close() override;
+    OmniStatus CloseGroupBy();
+    OmniStatus CloseAgg();
 
     void PreLoop(omniruntime::vec::VectorBatch *vecBatch);
 

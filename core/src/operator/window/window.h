@@ -179,7 +179,7 @@ public:
     void SortPagesIndexIfNecessary();
     void FinishPagesIndex();
 
-    OmniStatus Init();
+    OmniStatus Init() override;
 
 private:
     std::vector<int32_t> sourceTypes;

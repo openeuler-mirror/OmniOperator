@@ -12,7 +12,7 @@
 
 namespace omniruntime {
 namespace vec {
-VectorBatch::VectorBatch(int vectorCount, int rowCount) : vectorCount(vectorCount), rowCount(rowCount)
+VectorBatch::VectorBatch(int vectorCount, int rowCount) : vectorCount(vectorCount), vectorIndex(0), rowCount(rowCount)
 {
     vectors = nullptr;
     vectorTypes = nullptr;
@@ -149,6 +149,7 @@ void VectorBatch::SetVector(int index, Vector *vector)
     if (rowCount == 0) {
         rowCount = vector->GetSize();
     }
+    vectorIndex++;
 }
 
 void VectorBatch::GetVectorTypeIds(int32_t *typeIds)
