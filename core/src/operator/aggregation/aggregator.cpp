@@ -274,8 +274,7 @@ void AverageAggregator::ProcessNonGroup(void *colPtr, int32_t type, uint32_t off
             break;
         }
         case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
-         {
+        case OMNI_VEC_TYPE_DECIMAL64: {
             auto currentVal = static_cast<double *>(nonGroupState.avgVal);
             int64_t rowVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             *currentVal = (rowVal + *currentVal * nonGroupState.avgCnt) / (++nonGroupState.avgCnt);
@@ -307,7 +306,7 @@ void ALWAYS_INLINE InsertIntermediateAvg(GroupBySlot &groupSlot, omniruntime::ve
     double avgVal = avgValVector->GetValue(offset);
     LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
     int64_t avgCnt = avgCountVector->GetValue(offset);
-    if (!avgCnt) {
+    if (avgCnt == 0) {
         throw "Divisor should not be zero!";
     }
     groupSlot.avgVal = std::make_unique<double>(avgVal * avgCnt / avgCnt).release();
@@ -364,7 +363,7 @@ void ALWAYS_INLINE ProcessIntermediateAvg(GroupBySlot &groupSlot, omniruntime::v
     double avgVal = avgValVector->GetValue(offset);
     LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
     int64_t avgCnt = avgCountVector->GetValue(offset);
-    if (!avgCnt) {
+    if (avgCnt == 0) {
         throw "Divisor should not be zero!";
     }
     groupSlot.avgCnt += avgCnt;
@@ -655,8 +654,7 @@ void MaxAggregator::Initiate(void *colPtr, int32_t type, uint32_t offset)
             break;
         }
         case OMNI_VEC_TYPE_LONG:
-        case OMNI_VEC_TYPE_DECIMAL64:
-         {
+        case OMNI_VEC_TYPE_DECIMAL64: {
             auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
             auto val = std::make_unique<int64_t>(curVal);
             nonGroupState = { val.release() };

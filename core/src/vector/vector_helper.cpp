@@ -77,8 +77,7 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
             Decimal128 result = static_cast<Decimal128Vector*>(vector)->GetValue(rowIndex);
-            std::cout << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << result.HighBits()
-            << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << result.LowBits() << "\t";
+            std::cout << result << "\t";
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {

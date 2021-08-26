@@ -6,6 +6,7 @@
 
 #include <limits>
 #include <array>
+#include <iomanip>
 #include "op_util_internal.h"
 #include "../util/compiler_util.h"
 
@@ -13,6 +14,7 @@ namespace omniruntime {
 namespace vec {
 static constexpr int32_t INT_BIT_WIDTH = 32;
 static constexpr int32_t MAX_PRECISION = 38;
+static constexpr int32_t PRINT_OUT_HEX_WIDTH = 16;
 const Decimal128 Decimal128::SCALE_MULTIPLIERS[] = {
     Decimal128(1LL),
     Decimal128(10LL),
@@ -508,7 +510,8 @@ Decimal128 operator % (const Decimal128 &left, const Decimal128 &right)
 
 std::ostream& operator << (std::ostream &os, const Decimal128 &decimal128)
 {
-    os << std::hex << decimal128.HighBits() << decimal128.LowBits();
+    os << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.HighBits()
+       << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.LowBits();
     return os;
 }
 }

@@ -33,8 +33,6 @@ namespace vec {
 #define DOUBLE_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
 #define DOUBLE_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
 
-constexpr int32_t PRINT_OUT_HEX_WIDTH = 2 * sizeof(int64_t);
-
 class VectorHelper {
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
