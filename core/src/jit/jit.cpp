@@ -29,12 +29,12 @@ namespace omniruntime {
             }
         }
 
-        uint64_t Jit::Specialize(
+        bool Jit::Specialize(
                 const std::vector<Optimization> &optimizations,
                 const std::vector<ModuleOptimization> &moduleOptimizations)
         {
             for (auto &context : this->contexts) {
-                bool loaded = this->compiler->LoadOperatorTemplate(context.getJitTemplate(), context.IsDependency());
+                bool loaded = this->compiler->LoadModule(context.getJitTemplate());
                 if (!loaded) {
                     std::cout << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
                     return 0;
@@ -49,10 +49,15 @@ namespace omniruntime {
             return this->compiler->SpecializeAndCompile(optimizations, moduleOptimizations);
         }
 
-        std::vector<std::string> Jit::getAppliedOptimizations()
+        std::vector<std::string> Jit::GetAppliedOptimizations()
         {
             std::vector<std::string> temp;
             return temp;
+        }
+
+        uint64_t Jit::GetJitedFunction(std::string functionName)
+        {
+            return this->compiler->GetJitedFunction(functionName);
         }
     }
 }

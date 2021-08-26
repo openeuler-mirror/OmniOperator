@@ -32,10 +32,9 @@ using std::unique_ptr;
 
 namespace omniruntime {
 namespace jit {
-LLVMCompiler::LLVMCompiler() : createOperatorSymbol()
+LLVMCompiler::LLVMCompiler()
 {
-    this->config = nullptr;
-    InitCompile();
+    this->config = std::make_unique<Config>();
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     this->context = std::make_unique<llvm::LLVMContext>();
@@ -46,19 +45,11 @@ LLVMCompiler::LLVMCompiler() : createOperatorSymbol()
     LoadExtraLibraries();
 }
 
-void LLVMCompiler::InitCompile()
-{
-    this->config = new Config();
-}
-
 LLVMCompiler::~LLVMCompiler() {}
 
-bool LLVMCompiler::LoadOperatorTemplate(string operatorName, bool isDependency)
+bool LLVMCompiler::LoadModule(std::string templatePath)
 {
     // TODO: have a proper registry for all the operators instead of loading from /opt/lib/ir
-    // TODO: load operator templates by folder
-    string templatePath = this->operatorPath + operatorName + LLVMCompiler::templateFileSuffix;
-
     llvm::SMDiagnostic error;
     auto module = llvm::parseIRFile(templatePath, error, *context);
 
@@ -66,19 +57,6 @@ bool LLVMCompiler::LoadOperatorTemplate(string operatorName, bool isDependency)
         error.print("error loadding module", llvm::errs());
         // FIXME: proper error handling using exceptions?
         return false;
-    }
-
-    if (!isDependency) {
-        for (auto &func : module->getFunctionList()) {
-            if (func.getName().contains(Compiler::entryFuncName)) {
-                this->createOperatorSymbol = func.getName().str();
-                break;
-            }
-        }
-
-        if (this->createOperatorSymbol.empty()) {
-            outs() << "Error: Couldn't find CreateOperator function\n";
-        }
     }
 
     this->modules.push_back(std::move(module));
@@ -103,7 +81,7 @@ void LLVMCompiler::LoadExtraLibraries()
     }
 }
 
-uint64_t LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimizations,
+bool LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimizations,
     const std::vector<ModuleOptimization> &moduleOptimizations)
 {
     map<string, set<string>> specializedModules;
@@ -117,24 +95,13 @@ uint64_t LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &opt
     specializedModules.clear();
 
     if (jit) {
-        if (this->createOperatorSymbol.empty()) {
-            llvm::errs() << "Error: CreateOperator function not found yet\n";
-            return 0;
-        }
-
-        auto func = jit->lookup(this->createOperatorSymbol);
-        if (func) {
-            jitter = jit.release();
-            llvm::outs() << "Found CreateOperator symbol: " << this->createOperatorSymbol << "\n";
-            return func->getAddress();
-        } else {
-            llvm::errs() << "Error: Cannot lookup the jitted CreateOperator method " << this->createOperatorSymbol <<
-                ", error: " << toString(func.takeError()) << "\n";
-            return 0;
-        }
+        jitter = jit.release();
+        return true;
+    } else {
+        llvm::errs() << "Error: Unable to compile the modules\n";
     }
 
-    return 0;
+    return false;
 }
 
 set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &module)
@@ -165,6 +132,29 @@ set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &
 void LLVMCompiler::AddSpecialization(std::string id, Specialization specialization)
 {
     this->specializations.insert(std::make_pair(id, specialization));
+}
+
+uint64_t LLVMCompiler::GetJitedFunction(std::string functionName)
+{
+    auto expected = this->jitter->lookup(functionName);
+    if (expected) {
+        llvm::outs() << "Found symbol: " << functionName << "\n";
+        return expected->getAddress();
+    } else {
+        for (auto const &module : this->modules) {
+            for (auto const &function : module->getFunctionList()) {
+                if (function.getName().find(functionName) != string::npos) {
+                    expected = this->jitter->lookup(function.getName());
+                    if (expected) {
+                        return expected->getAddress();
+                    }
+                }
+            }
+        }
+
+        llvm::errs() << "Cannot find symbol: " << functionName << "\n";
+        return 0;
+    }
 }
 
 // replaces the value of parameters passed to a function
