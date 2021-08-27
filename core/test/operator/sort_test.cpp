@@ -9,6 +9,7 @@
 #include "../../src/operator/optimization.h"
 #include "../../src/vector/vector_helper.h"
 #include "../util/test_util.h"
+#include "../../libconfig.h"
 #include <thread>
 #include <time.h>
 #include <vector>
@@ -54,14 +55,15 @@ JitContext *CreateTestSortJitContext(const int32_t *sourceTypes, int32_t typesCo
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
 
-    auto *sortContext = new omniruntime::jit::Context("sort",
-        std::map<std::string, Specialization>(), std::vector<std::string>(), true);
-    auto *pagesIndexContext = new omniruntime::jit::Context("pages_index", pagesIndexSps);
+    auto *sortContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("sort"),
+        std::map<std::string, Specialization>());
+    auto *pagesIndexContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *sortContext, *pagesIndexContext });
-    auto createOperatorFunc = jit->Specialize(
+    jit->Specialize(
             std::vector<Optimization> {Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE, Optimization::SROA, Optimization::AGGRESIVE_DCE },
             std::vector<ModuleOptimization> {ModuleOptimization::FUNCTION_INLINING, ModuleOptimization::PRUNE_EH, ModuleOptimization::CONSTANT_MERGE });
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
     JitContext *jitContext = new JitContext;
     jitContext->func = static_cast<uintptr_t>(createOperatorFunc);
@@ -465,7 +467,7 @@ TEST(NativeOmniSortTest, TestOrderByOriginalMultiThreads)
 
     const auto processorCount = std::thread::hardware_concurrency();
     std::cout << "core number: " << processorCount << std::endl;
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
 
@@ -513,7 +515,7 @@ TEST(NativeOmniSortTest, TestOrderByJITMultiThreads)
 
     const auto processorCount = std::thread::hardware_concurrency();
     std::cout << "core number: " << processorCount << std::endl;
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
 

@@ -59,6 +59,10 @@ bool LLVMCompiler::LoadModule(std::string templatePath)
         return false;
     }
 
+    for (auto const &function : module->getFunctionList()) {
+        this->functionSymbols.push_back(function.getName().str());
+    }
+
     this->modules.push_back(std::move(module));
     return true;
 }
@@ -95,7 +99,7 @@ bool LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimiz
     specializedModules.clear();
 
     if (jit) {
-        jitter = jit.release();
+        jitter = std::move(jit);
         return true;
     } else {
         llvm::errs() << "Error: Unable to compile the modules\n";
@@ -124,7 +128,7 @@ set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &
         }
     }
 
-    llvm::verifyModule(*module);
+    verifyModule(*module);
 
     return specializedFuncs;
 }
@@ -134,25 +138,28 @@ void LLVMCompiler::AddSpecialization(std::string id, Specialization specializati
     this->specializations.insert(std::make_pair(id, specialization));
 }
 
-uint64_t LLVMCompiler::GetJitedFunction(std::string functionName)
+uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMangled)
 {
-    auto expected = this->jitter->lookup(functionName);
-    if (expected) {
-        llvm::outs() << "Found symbol: " << functionName << "\n";
-        return expected->getAddress();
+    using namespace llvm;
+
+    if (isNameMangled) {
+        auto expected = this->jitter->lookup(functionName);
+        if (expected) {
+            return expected->getAddress();
+        } else {
+            errs() << "Cannot find mangled function name: " << functionName << "\n";
+        }
     } else {
-        for (auto const &module : this->modules) {
-            for (auto const &function : module->getFunctionList()) {
-                if (function.getName().find(functionName) != string::npos) {
-                    expected = this->jitter->lookup(function.getName());
-                    if (expected) {
-                        return expected->getAddress();
-                    }
+        for (auto const &function : this->functionSymbols) {
+            if (function.find(functionName) != string::npos) {
+                auto expectedFunc = this->jitter->lookup(function);
+                if (expectedFunc) {
+                    return expectedFunc->getAddress();
                 }
             }
         }
 
-        llvm::errs() << "Cannot find symbol: " << functionName << "\n";
+        llvm::errs() << "Cannot find function name: " << functionName << "\n";
         return 0;
     }
 }
@@ -223,6 +230,9 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
             return nullptr;
         }
     }
+
+//    JITTER->getObjTransformLayer().setTransform(DumpObjects("/home/arven/omnijit/dump", "omnijit"));
+
     return JITTER;
 }
 

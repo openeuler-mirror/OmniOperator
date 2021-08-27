@@ -20,7 +20,7 @@ namespace omniruntime {
 
             virtual void AddSpecialization(std::string id, Specialization specialization) = 0;
 
-            virtual uint64_t GetJitedFunction(std::string functionName) = 0;
+            virtual uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false) = 0;
 
         protected:
             std::map<std::string, Specialization> specializations;

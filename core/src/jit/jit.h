@@ -33,7 +33,7 @@ namespace omniruntime {
 
             std::vector<std::string> GetAppliedOptimizations();
 
-            uint64_t GetJitedFunction(std::string functionName);
+            uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false);
 
         private:
             Compiler *compiler;

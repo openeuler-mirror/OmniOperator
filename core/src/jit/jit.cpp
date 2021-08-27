@@ -55,9 +55,9 @@ namespace omniruntime {
             return temp;
         }
 
-        uint64_t Jit::GetJitedFunction(std::string functionName)
+        uint64_t Jit::GetJitedFunction(std::string functionName, bool isNameMangled)
         {
-            return this->compiler->GetJitedFunction(functionName);
+            return this->compiler->GetJitedFunction(functionName, isNameMangled);
         }
     }
 }

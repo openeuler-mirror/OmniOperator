@@ -11,6 +11,7 @@
 #include "../../src/vector/vector_helper.h"
 #include <src/operator/optimization.h>
 #include "../../src/jit/jit.h"
+#include "../../libconfig.h"
 
 using namespace omniruntime::vec;
 
@@ -29,12 +30,13 @@ JitContext *CreateTestTopNJitContext(VecTypes &sourceTypes, int32_t *sortCols, i
 
     std::map<std::string, Specialization> topNCompareSps = { { OMNIJIT_TOPN_COMPARE, *topNCompareSp } };
 
-    auto *topNContext = new omniruntime::jit::Context("topn", topNCompareSps, std::vector<std::string>(), true);
+    auto *topNContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("topn"), topNCompareSps);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *topNContext });
-    auto createOperatorFunc = jit->Specialize(std::vector<Optimization>());
+    jit->Specialize(std::vector<Optimization>());
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
 
-    JitContext *jitContext = new JitContext;
+            JitContext *jitContext = new JitContext;
     jitContext->func = createOperatorFunc;
     return jitContext;
 }

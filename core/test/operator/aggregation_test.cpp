@@ -2,19 +2,18 @@
 #include "../../src/operator/aggregation/group_aggregation.h"
 #include "../../src/operator/aggregation/non_group_aggregation.h"
 #include "../util/test_util.h"
-#include <time.h>
-#include <vector>
-#include <iostream>
 #include "../../src/jit/jit.h"
 #include "../../src/jit/specialization.h"
 #include "../../src/operator/optimization.h"
 #include "../../src/vector/vector_helper.h"
 #include "../../src/util/perf_util.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/SourceMgr.h"
+#include "../../libconfig.h"
+
+#include <time.h>
+#include <vector>
+#include <iostream>
 #include <thread>
 #include <cstdlib>
-#include <time.h>
 #include <mutex>
 #include <stdarg.h>
 
@@ -270,12 +269,12 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
     };
 
-    omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context("/opt/lib/ir/group_aggregation.ll", hashGroupbySps);
+    omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext});
     jit->Specialize(std::vector<Optimization>());
 
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("createOperator"));
+    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("CreateOperator"));
     std::cout << "after jit" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
     std::cout << "after create factory" << std::endl;
@@ -316,12 +315,12 @@ uintptr_t CreateAggFactoryWithJit()
             {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context("/opt/lib/ir/group_aggregation.ll", nonGroupSps);
+    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), nonGroupSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext});
     jit->Specialize(std::vector<Optimization>());
 
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("createOperator"));
+    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("CreateOperator"));
     std::cout << "after jit" << std::endl;
     omniruntime::op::AggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, true, false);
     nativeOperatorFactory->Init();
@@ -1140,7 +1139,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context("/opt/lib/ir/group_aggregation.ll", hashGroupbySps);
+    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext});
     jit->Specialize(
             std::vector<Optimization>{Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE, Optimization::SROA, Optimization::AGGRESIVE_DCE},
@@ -1148,12 +1147,12 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
      // ------------------------------------------Create operator--------------------------------------------
     JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("createOperator"));
+    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("CreateOperator"));
     std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory = new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext, aggTypeContext, aggFuncTypeContext,true, false);
     nativeOperatorFactory->Init();
-    std::cout << "after create factory" << std::endl;
-    nativeOperatorFactory->SetJitContext(jitContext);
+     std::cout << "after create factory" << std::endl;
+     nativeOperatorFactory->SetJitContext(jitContext);
      // create operator
     auto jitGroupBy = reinterpret_cast<HashAggModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
 

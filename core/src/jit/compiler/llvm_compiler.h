@@ -31,7 +31,7 @@ public:
 
     void AddSpecialization(std::string id, Specialization specialization) override;
 
-    uint64_t GetJitedFunction(std::string functionName) override;
+    uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false) override;
 
 private:
     std::unique_ptr<Config> config;
@@ -39,8 +39,9 @@ private:
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::LLVMContext> context;
     std::vector<std::unique_ptr<llvm::Module>> modules;
+    std::vector<std::string> functionSymbols;
 
-    llvm::orc::LLJIT *jitter;
+    std::unique_ptr<llvm::orc::LLJIT> jitter;
 
     static LibraryLoader ll;
 
