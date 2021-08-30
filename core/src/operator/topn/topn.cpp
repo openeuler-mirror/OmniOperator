@@ -46,51 +46,77 @@ TopNOperator::TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, int32_t 
 
 TopNOperator::~TopNOperator()
 {
-    // since Java will cover the life cycle of sourceTypes and so on, so we don't do anything here
+    for (const auto &item : singleRowVectorBatchList) {
+        item->ReleaseAllVectors();
+        delete item;
+    }
 }
 
 int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
     auto typeIds = sourceTypes.GetIds();
     for (int32_t position = 0; position < vectorBatch->GetRowCount(); ++position) {
-        if ((pq.size() < n) || Compare(position, vectorBatch, pq.top().GetVecBatch(), sortColCount, sortCols, typeIds,
-            sortAscendings) < 0) {
-            VectorBatch *singleRowTable = new VectorBatch(sourceTypesCount, 1);
-            singleRowTable->NewVectors(typeIds);
-            SetValueForSingleRowTable(vectorBatch, position, singleRowTable);
+        if ((pq.size() < n) || CompareVectorBatch(position, vectorBatch, 0, pq.top().GetVecBatch(), sortColCount,
+            sortCols, typeIds, sortAscendings, sortNullFirsts) < 0) {
+            VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
             RowComparator *rowComparator =
-                new RowComparator(typeIds, sortCols, sortAscendings, sortColCount, singleRowTable);
+                new RowComparator(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, singleRowVecBatch);
             pq.push(*rowComparator);
             while (pq.size() > n) {
                 pq.pop();
             }
+            singleRowVectorBatchList.push_back(singleRowVecBatch);
         }
     }
     return 0;
 }
 
-void TopNOperator::SetValueForSingleRowTable(VectorBatch *vectorBatch, int32_t position,
-    VectorBatch *singleRowTable) const
+template<typename T>
+void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+    int32_t position)
+{
+    singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
+}
+
+VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
+    VectorBatch *singleRowVecBatch = new VectorBatch(sourceTypesCount);
     for (int i = 0; i < sourceTypesCount; ++i) {
+        Vector *vector = vectorBatch->GetVector(i);
         switch (typeIds[i]) {
+            case OMNI_VEC_TYPE_BOOLEAN:
+                SetVectorForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, position);
+                break;
             case OMNI_VEC_TYPE_INT:
-                (dynamic_cast<IntVector *>(singleRowTable->GetVector(i)))
-                    ->SetValue(0, (dynamic_cast<IntVector *>(vectorBatch->GetVector(i)))->GetValue(position));
+            case OMNI_VEC_TYPE_DATE32:
+                SetVectorForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_VEC_TYPE_LONG:
-                (dynamic_cast<LongVector *>(singleRowTable->GetVector(i)))
-                    ->SetValue(0, (dynamic_cast<LongVector *>(vectorBatch->GetVector(i)))->GetValue(position));
+            case OMNI_VEC_TYPE_DECIMAL64:
+                SetVectorForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                (dynamic_cast<DoubleVector *>(singleRowTable->GetVector(i)))
-                    ->SetValue(0, (dynamic_cast<DoubleVector *>(vectorBatch->GetVector(i)))->GetValue(position));
+                SetVectorForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, position);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR: {
+                SetVectorForSingleRowVecBatch<VarcharVector>(singleRowVecBatch, i, vector, position);
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128:
+                SetVectorForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, position);
                 break;
             default:
                 break;
         }
     }
+    return singleRowVecBatch;
+}
+
+template<typename T>
+void ALWAYS_INLINE SetValueForVector(Vector *pqVector, Vector *tmpVector, int64_t index)
+{
+    (static_cast<T *>(tmpVector))->SetValue(index, (static_cast<T *>(pqVector))->GetValue(0));
 }
 
 int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
@@ -101,54 +127,102 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
     }
     VectorBatch *tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
     tmpVecBatch->NewVectors(sourceTypes.Get());
-    int32_t outputCols[sourceTypesCount];
-    for (int32_t i = 0; i < sourceTypesCount; ++i) {
-        outputCols[i] = i;
-    }
     int64_t rowNum = 0;
-
     auto typeIds = sourceTypes.GetIds();
     while (!pq.empty()) {
         VectorBatch *pqVecBatch = pq.top().GetVecBatch();
+        int64_t index = positionCount - rowNum - 1;
         for (int i = 0; i < sourceTypesCount; ++i) {
-            switch (typeIds[i]) {
-                case OMNI_VEC_TYPE_INT:
-                    (dynamic_cast<IntVector *>(tmpVecBatch->GetVector(i)))
-                        ->SetValue(positionCount - rowNum - 1,
-                        (dynamic_cast<IntVector *>(pqVecBatch->GetVector(i)))->GetValue(0));
-                    break;
-                case OMNI_VEC_TYPE_LONG:
-                    (dynamic_cast<LongVector *>(tmpVecBatch->GetVector(i)))
-                        ->SetValue(positionCount - rowNum - 1,
-                        (dynamic_cast<LongVector *>(pqVecBatch->GetVector(i)))->GetValue(0));
-                    break;
-                case OMNI_VEC_TYPE_DOUBLE:
-                    (dynamic_cast<DoubleVector *>(tmpVecBatch->GetVector(i)))
-                        ->SetValue(positionCount - rowNum - 1,
-                        (dynamic_cast<DoubleVector *>(pqVecBatch->GetVector(i)))->GetValue(0));
-                    break;
-                default:
-                    break;
+            Vector *pqVector = pqVecBatch->GetVector(i);
+            Vector *tmpVector = tmpVecBatch->GetVector(i);
+            if (pqVector->IsValueNull(0)) {
+                tmpVector->SetValueNull(index);
             }
+            SetValueForVectorBatch(rowNum, typeIds, index, i, pqVector, tmpVector);
         }
         rowNum++;
         pq.pop();
     }
+    HandleVarchar(positionCount, tmpVecBatch);
     outputVecBatch.push_back(tmpVecBatch);
     return 0;
 }
 
+void TopNOperator::SetValueForVectorBatch(int64_t rowNum, const int32_t *typeIds, int64_t index, int i,
+    Vector *pqVector, Vector *tmpVector) const
+{
+    switch (typeIds[i]) {
+        case OMNI_VEC_TYPE_BOOLEAN:
+            SetValueForVector<BooleanVector>(pqVector, tmpVector, index);
+            break;
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
+            SetValueForVector<IntVector>(pqVector, tmpVector, index);
+            break;
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+            SetValueForVector<LongVector>(pqVector, tmpVector, index);
+            break;
+        case OMNI_VEC_TYPE_DOUBLE:
+            SetValueForVector<DoubleVector>(pqVector, tmpVector, index);
+            break;
+        case OMNI_VEC_TYPE_VARCHAR: {
+            uint8_t *value = nullptr;
+            int32_t valueLength = (static_cast<VarcharVector *>(pqVector))->GetValue(0, &value);
+            (static_cast<VarcharVector *>(tmpVector))
+                ->SetValue(rowNum, reinterpret_cast<const uint8_t *>(value), valueLength);
+            break;
+        }
+        case OMNI_VEC_TYPE_DECIMAL128:
+            SetValueForVector<Decimal128Vector>(pqVector, tmpVector, index);
+            break;
+        default:
+            break;
+    }
+}
+
+void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
+{
+    int vecIndex = 0;
+    for (const VecType &item : sourceTypes.Get()) {
+        if (item.GetId() == OMNI_VEC_TYPE_VARCHAR) {
+            auto vecType = (VarcharVecType &)item;
+            VarcharVector *varcharVector = new VarcharVector(static_cast<VectorAllocator *>(nullptr),
+                positionCount * vecType.GetWidth(), positionCount);
+            for (int i = 0; i < positionCount; ++i) {
+                uint8_t *value = nullptr;
+                int32_t valueLength = (static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex)))
+                                          ->GetValue(positionCount - i - 1, &value);
+                varcharVector->SetValue(i, value, valueLength);
+            }
+            delete tmpVecBatch->GetVector(vecIndex);
+            tmpVecBatch->SetVector(vecIndex, varcharVector);
+        }
+        vecIndex++;
+    }
+}
+
 SPECIALIZE(OMNIJIT_TOPN_COMPARE)
-int32_t TopNOperator::Compare(int32_t position, VectorBatch *vectorBatch, VectorBatch *currentMaxVectorBatch,
-    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings) const
+int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPosition, VectorBatch *right,
+    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
+    const int32_t *sortNullFirsts)
 {
     int compare = 0;
 
     for (int i = 0; i < sortColCount; ++i) {
         int32_t sortCol = sortCols[i];
         int32_t colTypeId = sourceTypeIds[sortCol];
-        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, vectorBatch->GetVector(sortCol), position,
-            currentMaxVectorBatch->GetVector(sortCol), 0);
+
+        compare = OperatorUtil::CompareNull(left->GetVector(sortCol), leftPosition, right->GetVector(sortCol),
+            rightPosition, sortNullFirsts[i]);
+        if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
+            break;
+        } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
+            continue;
+        }
+
+        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, left->GetVector(sortCol), leftPosition,
+            right->GetVector(sortCol), rightPosition);
         if (sortAscendings[i] == 0) {
             compare = -compare;
         }
@@ -161,11 +235,12 @@ int32_t TopNOperator::Compare(int32_t position, VectorBatch *vectorBatch, Vector
 }
 
 RowComparator::RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings,
-    int32_t sortColCount, VectorBatch *vectorBatch)
+    int32_t *sortNullFirsts, int32_t sortColCount, omniruntime::vec::VectorBatch *vectorBatch)
     : sourceTypes(sourceTypes)
 {
     this->sortCols = sortCols;
     this->sortAscendings = sortAscendings;
+    this->sortNullFirsts = sortNullFirsts;
     this->sortColCount = sortColCount;
     this->vectorBatch = vectorBatch;
 }
@@ -180,6 +255,11 @@ const int32_t *RowComparator::GetSourceTypes() const
 int32_t *RowComparator::GetSortAscendings() const
 {
     return sortAscendings;
+}
+
+int32_t *RowComparator::GetSortNullFirsts() const
+{
+    return sortNullFirsts;
 }
 
 int32_t RowComparator::GetSortColCount() const
@@ -199,23 +279,8 @@ int32_t *RowComparator::GetSortCols() const
 
 bool operator < (const RowComparator &left, const RowComparator &right)
 {
-    int compare = 0;
-
-    for (int i = 0; i < left.GetSortColCount(); ++i) {
-        int32_t sortCol = left.GetSortCols()[i];
-        int32_t colType = left.GetSourceTypes()[sortCol];
-
-        compare = OperatorUtil::CompareVectorAtPosition(colType, left.GetVecBatch()->GetVector(sortCol), 0,
-            right.GetVecBatch()->GetVector(sortCol), 0);
-
-        if (left.GetSortAscendings()[i] == 0 && right.GetSortAscendings()[i] == 0) {
-            compare = -compare;
-        }
-
-        if (compare != 0) {
-            break;
-        }
-    }
+    int compare = CompareVectorBatch(0, left.GetVecBatch(), 0, right.GetVecBatch(), left.GetSortColCount(),
+        left.GetSortCols(), left.GetSourceTypes(), left.GetSortAscendings(), left.GetSortNullFirsts());
     // priority_queue is desc, return 1 means left smaller than right,so
     // priority_queue will swap. suppose output is asc,compare>0 means left bigger
     // than right so pq shouldn't swap,so return 0

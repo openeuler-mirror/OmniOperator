@@ -11,6 +11,7 @@
 #include "../../vector/varchar_vector.h"
 #include "../../vector/decimal128.h"
 #include "../../vector/decimal128_vector.h"
+#include "../../vector/boolean_vector.h"
 
 class OperatorUtil {
 public:
@@ -98,6 +99,9 @@ public:
         int32_t leftColumnPosition, omniruntime::vec::Vector *rightColumn, int32_t rightColumnPosition)
     {
         switch (colTypeId) {
+            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+                return (static_cast<omniruntime::vec::BooleanVector *>(leftColumn)->GetValue(leftColumnPosition) -
+                    static_cast<omniruntime::vec::BooleanVector *>(rightColumn)->GetValue(rightColumnPosition));
             case omniruntime::vec::OMNI_VEC_TYPE_INT:
             case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
                 return (static_cast<omniruntime::vec::IntVector *>(leftColumn)->GetValue(leftColumnPosition) -

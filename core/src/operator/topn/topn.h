@@ -16,10 +16,8 @@ namespace omniruntime {
 namespace op {
 class RowComparator {
 public:
-    RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t sortColCount,
-                  omniruntime::vec::VectorBatch* vectorBatch);
-
-    RowComparator() {};
+    RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortColCount, omniruntime::vec::VectorBatch *vectorBatch);
 
     ~RowComparator();
 
@@ -27,21 +25,28 @@ public:
 
     int32_t *GetSortAscendings() const;
 
+    int32_t *GetSortNullFirsts() const;
+
     int32_t GetSortColCount() const;
 
     int32_t *GetSortCols() const;
 
-    omniruntime::vec::VectorBatch* GetVecBatch() const;
+    omniruntime::vec::VectorBatch *GetVecBatch() const;
 
 private:
     const int32_t *sourceTypes;
     int32_t *sortCols = nullptr;
     int32_t *sortAscendings = nullptr;
+    int32_t *sortNullFirsts = nullptr;
     int32_t sortColCount = 0;
-    omniruntime::vec::VectorBatch* vectorBatch = nullptr;
+    omniruntime::vec::VectorBatch *vectorBatch = nullptr;
 };
 
 bool operator < (const RowComparator &left, const RowComparator &right);
+
+int CompareVectorBatch(int32_t leftPosition, vec::VectorBatch *left, int32_t rightPosition, vec::VectorBatch *right,
+    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
+    const int32_t *sortNullFirsts);
 
 class TopNOperatorFactory : public OperatorFactory {
 public:
@@ -72,10 +77,6 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
 
-    int32_t Compare(int32_t position, omniruntime::vec::VectorBatch *table,
-                    omniruntime::vec::VectorBatch *currentMaxVectorBatch, int32_t sortColCount, const int32_t *sortCols,
-                    const int32_t *sourceTypeIds, const int32_t *sortAscendings) const;
-
 private:
     const vec::VecTypes &sourceTypes;
     int32_t sourceTypesCount = 0;
@@ -84,11 +85,16 @@ private:
     int32_t *sortAscendings = nullptr;
     int32_t *sortNullFirsts = nullptr;
     int32_t sortColCount = 0;
-    std::priority_queue<RowComparator, std::vector<RowComparator>,
-                            std::less<std::vector<RowComparator>::value_type>> pq;
+    std::priority_queue<RowComparator, std::vector<RowComparator>, std::less<std::vector<RowComparator>::value_type>>
+        pq;
+    std::vector<omniruntime::vec::VectorBatch *> singleRowVectorBatchList;
 
-    void SetValueForSingleRowTable(omniruntime::vec::VectorBatch *vectorBatch, int32_t position,
-        omniruntime::vec::VectorBatch *singleRowTable) const;
+    vec::VectorBatch *CreateSingleRowVecBatch(omniruntime::vec::VectorBatch *vectorBatch, int32_t position) const;
+
+    void HandleVarchar(int64_t positionCount, vec::VectorBatch *tmpVecBatch) const;
+
+    void SetValueForVectorBatch(int64_t rowNum, const int32_t *typeIds, int64_t index, int i, vec::Vector *pqVector,
+        vec::Vector *tmpVector) const;
 };
 }
 }
