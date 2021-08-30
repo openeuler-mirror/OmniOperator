@@ -17,7 +17,8 @@
 #include "../../src/codegen/filter_codegen.h"
 #include "../../src/codegen/projection_codegen.h"
 #include "../../src/codegen/func_registry.h"
-
+#include "../../src/operator/filter/filter_and_project.h"
+#include "../../src/operator/projection/projection.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
@@ -38,9 +39,211 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
-
+using omniruntime::op::RowProjection;
+using omniruntime::op::RowFilter;
+using omniruntime::op::RowProjFunc;
+using omniruntime::op::RowFilterFunc;
 using namespace std;
 using namespace omniruntime::expressions;
+
+// Filter is basically just a projection that must return a boolean.
+// The logic for filtering out rows from final output is handled in C++ when
+// processing each row individually, so to LLVM it is exactly the same as a projection.
+// Check CodeGenTest.RowFilter for a dedicated test using the RowFilter class instead.
+TEST(CodeGenTest, SimpleFilter) {
+    string unparsed = "$operator$LESS_THAN(#0, 50)";
+
+    const int32_t numCols = 1;
+    DataType types[numCols] = {DataType::INT32D};
+
+    const int numRows = 100;
+    int32_t* col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i; 
+    }
+
+    int64_t* table = new int64_t[numCols];
+    table[0] = (int64_t) col1;
+
+    const int32_t entries = numRows * numCols;
+    bool *bitmap = new bool[entries];
+    for (int i = 0; i < entries; i++) {
+        bitmap[i] = false;
+    }
+    std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
+
+    RowProjection lc;
+    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+    for (int32_t i = 0; i < 50; i++) {
+        bool* res = (bool*) func(table, bitmap, i);
+        EXPECT_TRUE(*res);
+    }
+    for (int32_t i = 50; i < 100; i++) {
+        bool* res = (bool*) func(table, bitmap, i);
+        EXPECT_FALSE(*res);
+    }
+
+    delete[] col1;
+    delete[] table;
+    delete[] bitmap;
+}
+// Simple project example using individual row processing.
+TEST(CodeGenTest, SimpleProject) {
+    string unparsed = "ADD(#0, 50)";
+
+    const int32_t numCols = 1;
+    DataType types[numCols] = {DataType::INT32D};
+
+    const int numRows = 100;
+    int32_t* col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i; 
+    }
+
+    int64_t* table = new int64_t[numCols];
+    table[0] = (int64_t) col1;
+
+    const int32_t entries = numRows * numCols;
+    bool *bitmap = new bool[entries];
+    for (int i = 0; i < entries; i++) {
+        bitmap[i] = false;
+    }
+    std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
+
+    RowProjection lc;
+
+    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+
+    for (int32_t i = 0; i < 100; i++) {
+        int32_t* res = (int32_t*) func(table, bitmap, i);
+        EXPECT_EQ(*res, i + 50);
+    }
+
+    delete[] col1;
+    delete[] table;
+    delete[] bitmap;
+}
+// A more complicated test for individual row projection
+TEST (CodeGenTest, SingleProject) {
+    string unparsed = "IF($operator$GREATER_THAN(#1, 3000000000), ADD(#0, 10), MULTIPLY(#0, -1))";
+
+    const int32_t numCols = 2;
+    DataType types[numCols] = {DataType::INT32D, DataType::INT64D};
+
+    const int numRows = 1000;
+    int32_t* col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i; 
+    }
+    int64_t* col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i % 2 ? 4000000000 : 12;
+    }
+
+    int64_t* table = new int64_t[numCols];
+    table[0] = (int64_t) col1;
+    table[1] = (int64_t) col2;
+
+    const int32_t entries = numRows * numCols;
+    bool *bitmap = new bool[entries];
+    for (int i = 0; i < entries; i++) {
+        bitmap[i] = false;
+    }
+    std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
+
+    RowProjection lc;
+
+    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        int32_t* res = (int32_t*) func(table, bitmap, i);
+        EXPECT_EQ(*res, i % 2 ? i + 10 : -i);
+    }
+
+    delete[] col1;
+    delete[] col2;
+    delete[] table;
+    delete[] bitmap;
+}
+
+// Test the short circuit functionality in the case that the projection is a column index.
+TEST (CodeGenTest, ShortCircuitProject) {
+    string unparsed = "#1";
+
+    const int32_t numCols = 2;
+    DataType types[numCols] = {DataType::INT32D, DataType::INT64D};
+
+    const int numRows = 1000;
+    int32_t* col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i; 
+    }
+    int64_t* col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i % 10;
+    }
+
+    int64_t* table = new int64_t[numCols];
+    table[0] = (int64_t) col1;
+    table[1] = (int64_t) col2;
+
+    const int32_t entries = numRows * numCols;
+    bool *bitmap = new bool[entries];
+    for (int i = 0; i < entries; i++) {
+        bitmap[i] = false;
+    }
+    std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
+
+    RowProjection lc;
+
+    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        int32_t* res = (int32_t*) func(table, bitmap, i);
+        EXPECT_EQ(*res, i % 10);
+    }
+
+    delete[] col1;
+    delete[] col2;
+    delete[] table;
+    delete[] bitmap;
+}
+
+// Test the row filter
+TEST (CodeGenTest, RowFilter) {
+    string unparsed = "$operator$EQUAL(#0, 0)";
+
+    const int32_t numCols = 1;
+    DataType types[numCols] = {DataType::INT32D};
+
+    const int numRows = 1000;
+    int32_t* col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i % 2; 
+    }
+    int64_t* table = new int64_t[numCols];
+    table[0] = (int64_t) col1;
+
+    const int32_t entries = numRows * numCols;
+    bool *bitmap = new bool[entries];
+    for (int i = 0; i < entries; i++) {
+        bitmap[i] = false;
+    }
+    std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
+
+    RowFilter lc;
+
+    RowFilterFunc func = lc.CreateFilter(unparsed, vecTypes);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        bool res = func(table, bitmap, i);
+        EXPECT_EQ(res, i % 2 == 0);
+    }
+
+    delete[] col1;
+    delete[] table;
+    delete[] bitmap;
+}
 
 TEST(CodeGenTest, Operators1) {
     string unparsed = "AND($operator$GREATER_THAN_OR_EQUAL(ADD(#0, 2), 4), AND($operator$LESS_THAN(#1, 4), $operator$EQUAL(#2, 2)))";

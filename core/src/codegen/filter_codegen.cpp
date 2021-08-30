@@ -9,8 +9,10 @@ using namespace orc;
 using namespace omniruntime::expressions;
 
 namespace {
-    const int32_t ARGUMENT2 = 2;
-    const int32_t ARGUMENT3 = 3;
+    const int ARGUMENT_ZERO = 0;
+    const int ARGUMENT_ONE = 1;
+    const int ARGUMENT_TWO = 2;
+    const int ARGUMENT_THREE = 3;
 }
 
 int64_t FilterCodeGen::GetFunction()
@@ -41,13 +43,13 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     BasicBlock *incrementCounter = BasicBlock::Create(*context, "INCREMENT_COUNTER", funcDecl);
     BasicBlock *endBlock = BasicBlock::Create(*context, "END_BLOCK", funcDecl);
     // preprocessing
-    Argument *start = funcDecl->getArg(0);
+    Argument *start = funcDecl->getArg(ARGUMENT_ZERO);
     start->setName("ARGS_ARRAY");
-    Argument *numRows = funcDecl->getArg(1);
+    Argument *numRows = funcDecl->getArg(ARGUMENT_ONE);
     numRows->setName("NUM_ROWS");
-    Argument *resultsArray = funcDecl->getArg(ARGUMENT2);
+    Argument *resultsArray = funcDecl->getArg(ARGUMENT_TWO);
     resultsArray->setName("RESULTS");
-    Argument *bitmap = funcDecl->getArg(ARGUMENT3);
+    Argument *bitmap = funcDecl->getArg(ARGUMENT_THREE);
     bitmap->setName("BITMAP");
     Value *minusOne = this->CreateConstantInt(-1);
     Value *zero = this->CreateConstantInt(0);
@@ -57,7 +59,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < nArgs)
     // filterFuncArgs[2 * i+1] contains a boolean value stating whether argument i is null
     // filterFuncArgs[2 * nArgs] contains the current row number
-    filterFuncArgs.reserve(2 * nArgs + 1);
+    filterFuncArgs.reserve(2 * nArgs);
     Value *gep;
     Value *elementAddr;
     Value *elementPtr;
@@ -119,7 +121,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
                 break;
             default:
-                std::cout << "Unsupported column data type" << std::endl;
+                LLVM_DEBUG_LOG("Unsupported column data type %d", type);
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
         }
         // Find the address of the row to be processed.
@@ -140,8 +142,6 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
         // Pass whether the current value is null to filter function arguments
         filterFuncArgs.push_back(bitmapValue);
     }
-    // Add the row number to the end of filterFuncArgs
-    filterFuncArgs.push_back(curIndexVal);
 
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
@@ -181,4 +181,76 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
 
     auto sym = eoe(jit->lookup("FILTER_WRAPPER"));
     return sym.getAddress();
+}
+
+std::vector<Type*> GetSingleFilterArguments(LLVMContext &context)
+{
+    std::vector<Type*> args = {
+        Type::getInt64PtrTy(context),
+        Type::getInt1PtrTy(context),
+        Type::getInt32Ty(context)
+    };
+    return args;
+}
+
+int64_t FilterCodeGen::GetExpressionEvaluator()
+{
+    int32_t nCols = this->datatypes.size();
+    // Array of addresses, bitmap, row index
+    std::vector<Type*> args = GetSingleFilterArguments(*context);
+    Function* baseFunc = this->CreateFunction();
+    FunctionType* funcSignature = FunctionType::get(Type::getInt1Ty(*context), args, false);
+    Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
+    BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
+    builder->SetInsertPoint(wrapperBody);
+    // Name the arguments
+    Argument *inputData = funcDecl->getArg(ARGUMENT_ZERO);
+    inputData->setName("INPUT_DATA");
+    Argument *nulls = funcDecl->getArg(ARGUMENT_ONE);
+    nulls->setName("NULLS");
+    Argument *rowIndex = funcDecl->getArg(ARGUMENT_TWO);
+    rowIndex->setName("ROW_INDEX");
+
+    Value* gep;
+    Value* colValue;
+    Value* colPtr;
+    Value* colIndex;
+    DataType type;
+
+    Value* bitmapIdx;
+    Value* bitmapGEP;
+    Value* bitmapValue;
+    std::vector<Value*> funcArgs;
+    for (int32_t i = 0; i < nCols; i++) {
+        // Get the address for column i
+        // gep is of type int64_t* pointing to the value of the address
+        colIndex = CreateConstantInt(i);
+        gep = builder->CreateGEP(inputData, colIndex);
+        // Derefence the gep, colPtr is now type int64_t
+        colPtr = builder->CreateLoad(gep);
+        type = this->datatypes.at(i);
+        // Convert colPtr to proper ponter type instead of int64_t
+        colPtr = builder->CreateIntToPtr(colPtr, ToPointerType(type));
+        // Get pointer to value at rowIndex for this column
+        gep = builder->CreateGEP(colPtr, rowIndex);
+        colValue = builder->CreateLoad(gep);
+        funcArgs.push_back(colValue);
+
+        // Get bitmap value bitmap[nArgs * curIndexVal + i]
+        bitmapIdx = builder->CreateMul(CreateConstantInt(nCols), rowIndex, "FIRST_COL_IDX");
+        bitmapIdx = builder->CreateAdd(bitmapIdx, colIndex, "BITMAP_INDEX");
+        bitmapGEP = builder->CreateGEP(nulls, bitmapIdx);
+        bitmapValue = builder->CreateLoad(bitmapGEP);
+        funcArgs.push_back(bitmapValue);
+    }
+
+    builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
+#ifdef DEBUG
+    module->print(errs(), nullptr);
+#endif
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
+    auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
+    eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
+    rt = resTracker;
+    return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
 }

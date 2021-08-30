@@ -61,8 +61,27 @@ Type *LLVMCodeGen::ToLlvmType(DataType t)
         case DataType::STRINGD:
             return Type::getInt64Ty(*context);
         default:
-            std::cout << "Error: Unknown argument datatype " << t << std::endl;
+            LLVM_DEBUG_LOG("Error: Unknown argument datatype %d", t);
             return nullptr;
+    }
+}
+
+Type* LLVMCodeGen::ToPointerType(DataType type)
+{
+    switch (type) {
+        case DataType::BOOLD:
+            return Type::getInt1PtrTy(*context);
+        case DataType::INT32D:
+            return Type::getInt32PtrTy(*context);
+        case DataType::INT64D:
+            return Type::getInt64PtrTy(*context);
+        case DataType::DOUBLED:
+            return Type::getDoublePtrTy(*context);
+        case DataType::STRINGD:
+            return Type::getInt64PtrTy(*context);
+        default:
+            LLVM_DEBUG_LOG("Unsupported column data type %d", type);
+            return Type::getInt64PtrTy(*context);
     }
 }
 
@@ -246,7 +265,7 @@ Value *LLVMCodeGen::ParseDataExpr(DataExpr &dExpr, std::map<std::string, Value *
             return this->CreateConstantBool(dEx->boolVal);
         }
         default: {
-            std::cout << "Unsupported data type in Data Expr" << std::endl;
+            LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", dEx->GetExprDataType());
             return this->CreateConstantBool(false);
         }
     }
@@ -370,7 +389,7 @@ Value *LLVMCodeGen::ParseBinaryExpr(BinaryExpr &binExpr, std::map<std::string, V
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
         return this->ParseBinaryExprString(bExpr->op, *left, *right);
     }
-    std::cout << "Error: Unsupported double binary expr op " << bExpr->op << std::endl;
+    LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
     return this->CreateConstantBool(false);
 }
 
@@ -407,8 +426,6 @@ Function *LLVMCodeGen::CreateConditional(DataType retType, Expr &condExpr, Expr 
         args.push_back(this->ToLlvmType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
-    // Push back type for current row index
-    args.push_back(Type::getInt32Ty(*context));
 
     Type *retTypePtr = this->ToLlvmType(retType);
     FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
@@ -518,7 +535,7 @@ Value *LLVMCodeGen::ParseInExpr(InExpr &inExpr, std::map<std::string, Value *> &
                     break;
                 }
                 default: {
-                    std::cout << "Unsupported data type in IN expr" << std::endl;
+                    LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->dataType);
                     tmpCmp = this->CreateConstantBool(false);
                 }
             }
@@ -561,7 +578,7 @@ Value *LLVMCodeGen::ParseBetweenExpr(BetweenExpr &betweenExpr, std::map<std::str
         return result;
     }
 
-    std::cout << "Error: unsupported data type for between" << std::endl;
+    LLVM_DEBUG_LOG("Error: unsupported data type for between %d", bExpr->value->GetExprDataType());
     return this->CreateConstantBool(false);
 }
 
@@ -580,8 +597,6 @@ Function *LLVMCodeGen::CreateCoalesceFunc(DataType retType, DataExpr &dExpr1, Ex
         args.push_back(this->ToLlvmType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
-    // Push back type for current row index
-    args.push_back(Type::getInt32Ty(*context));
 
     Type *retTypePtr = this->ToLlvmType(retType);
     FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
@@ -732,7 +747,7 @@ Value *LLVMCodeGen::ParseFuncExprCast(FuncExpr &funcExpr, std::map<std::string, 
             return ret;
         }
         default: {
-            std::cout << "Unsupported datatype in CAST: " << fExpr->arguments[0]->dataType << std::endl;
+            LLVM_DEBUG_LOG("Unsupported data type for function cast %d", fExpr->arguments[0]->dataType);
             return CreateConstantInt(0);
         }
     }
@@ -852,7 +867,7 @@ Value *LLVMCodeGen::ParseFuncExpr(FuncExpr &funcExpr, std::map<std::string, Valu
         return this->ParseFuncExprExt(*fExpr, args);
     }
 
-    std::cout << "No function found with name " << fExpr->funcName << std::endl;
+    LLVM_DEBUG_LOG("No function found with name %s", fExpr->funcName.c_str());
     return CreateConstantInt(0);
 }
 
@@ -904,7 +919,7 @@ Value *LLVMCodeGen::ParseExpr(Expr &rootExpr, std::map<std::string, Value *> &ar
         }
 
         default: {
-            std::cout << "Error: Unsupported expr type " << root->GetType() << std::endl;
+            LLVM_DEBUG_LOG("Error: Unsupported expr type %d", root->GetType());
             return this->CreateConstantBool(false);
         }
     }
@@ -955,8 +970,6 @@ Function *LLVMCodeGen::CreateFunction()
         args.push_back(this->ToLlvmType(type));
         args.push_back(Type::getInt1Ty(*context));
     }
-    // Push back type for current row index
-    args.push_back(Type::getInt32Ty(*context));
 
     std::cout << "exprtree: ";
     expr->PrintExprTree();

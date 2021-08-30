@@ -10,7 +10,7 @@ typedef std::chrono::milliseconds ms;
 typedef std::chrono::duration<float> fsec;
 
 // define time 
-#if defined(JNI_DEBUG) || defined(OP_DEBUG)
+#if defined(JNI_DEBUG) || defined(OP_DEBUG) || defined(LLVM_DEBUG)
 #define START() Time::now()
 #define END(t0) \
     ({ \
@@ -35,6 +35,13 @@ typedef std::chrono::duration<float> fsec;
 #define OP_DEBUG_LOG(format, ...) printf("[%s][%s][%d]: " format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
 #define OP_DEBUG_LOG(format, ...)
+#endif
+
+#ifdef LLVM_DEBUG
+#define LLVM_DEBUG_LOG(format, ...) \
+printf("[%s][%s][%d]: " format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#else
+#define LLVM_DEBUG_LOG(format, ...)
 #endif
 
 #define DebugPrintval(x) \

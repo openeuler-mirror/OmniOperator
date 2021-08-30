@@ -17,6 +17,17 @@ using ProjFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, in
 
 namespace omniruntime {
 namespace op {
+using RowProjFunc = void* (*)(int64_t*, bool*, int32_t);
+
+class RowProjection {
+public:
+    RowProjection();
+    ~RowProjection();
+    RowProjFunc CreateProjection(std::string expression, std::vector<expressions::DataType> inputTypes);
+private:
+    std::unique_ptr<ProjectionCodeGen> codegen = nullptr;
+};
+
 class Projection {
 public:
     Projection(int32_t *inputTypes, int32_t nCols, std::string expr, bool filter);

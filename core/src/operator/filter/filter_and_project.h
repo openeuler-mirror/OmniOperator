@@ -20,6 +20,17 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *);
 
 namespace omniruntime {
 namespace op {
+using RowFilterFunc = bool (*)(int64_t*, bool*, int32_t);
+
+class RowFilter {
+public:
+    RowFilter();
+    ~RowFilter();
+    RowFilterFunc CreateFilter(std::string expression, std::vector<expressions::DataType> inputTypes);
+private:
+    std::unique_ptr<FilterCodeGen> codegen = nullptr;
+};
+
 class Filter {
 public:
     Filter(std::unique_ptr<FilterCodeGen> codegen, expressions::Expr &expr);

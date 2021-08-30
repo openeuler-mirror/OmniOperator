@@ -18,6 +18,7 @@ public:
     {
         return filter;
     }
+    int64_t GetExpressionEvaluator();
 
 private:
     int64_t CreateWrapper(llvm::Function &proj);
