@@ -37,6 +37,7 @@ LLVMCompiler::LLVMCompiler() : createOperatorSymbol()
     this->config = nullptr;
     InitCompile();
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
     this->context = std::make_unique<llvm::LLVMContext>();
     this->layout = std::make_unique<llvm::StringRef>();
@@ -487,3 +488,4 @@ string build_param_key(llvm::Function &func, int arg_pos)
 }
 }
 }
+
