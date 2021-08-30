@@ -12,6 +12,23 @@ using namespace omniruntime::expressions;
 using namespace std;
 
 using uint8vec = std::vector<uint8_t>;
+RowFilter::RowFilter() : codegen(nullptr)
+{}
+
+RowFilter::~RowFilter()
+{}
+
+RowFilterFunc RowFilter::CreateFilter(std::string expression, std::vector<DataType> inputTypes)
+{
+    Parser parser;
+    Expr* expr = parser.ParseRowExpression(expression,
+        reinterpret_cast<int32_t*>(inputTypes.data()), inputTypes.size());
+    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *expr, inputTypes);
+    int64_t fAddr = this->codegen->GetExpressionEvaluator();
+    void *refFunc = &fAddr;
+    auto castedRef = static_cast<RowFilterFunc*>(refFunc);
+    return *castedRef;
+}
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes,
     int32_t vecCount, int32_t projectIndex[], int32_t projectVecCount)

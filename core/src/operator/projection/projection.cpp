@@ -10,6 +10,27 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
 using uint8vec = std::vector<uint8_t>;
+namespace omniruntime {
+namespace op {
+RowProjection::RowProjection() : codegen(nullptr)
+{}
+
+RowProjection::~RowProjection()
+{}
+
+RowProjFunc RowProjection::CreateProjection(std::string expression, std::vector<DataType> inputTypes)
+{
+    Parser parser;
+    Expr* expr = parser.ParseRowExpression(expression,
+        reinterpret_cast<int32_t*>(inputTypes.data()), inputTypes.size());
+    this->codegen = std::make_unique<ProjectionCodeGen>("single_row_project", *expr, inputTypes, false);
+    int64_t fPtr = this->codegen->GetExpressionEvaluator();
+    void *refFunc = &fPtr;
+    auto castedRef = static_cast<RowProjFunc*>(refFunc);
+    return *castedRef;
+}
+}
+}
 
 Projection::Projection(int32_t inputTypes[], int32_t nCols, std::string expr, bool filter)
     : inputTypes(inputTypes), nCols(nCols)

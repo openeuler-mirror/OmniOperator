@@ -10,6 +10,7 @@
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
 #include "./func_registry.h"
+#include "../util/debug.h"
 
 #include <iostream>
 #include <string>
@@ -60,6 +61,7 @@ protected:
     llvm::Value* CreateConstantLong(int64_t n);
     llvm::Value* CreateConstantDouble(double n);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
+    llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
 
     llvm::Function* CreateFunction();
 
