@@ -7,6 +7,11 @@
 
 #include "aggregation.h"
 #include "../hash_util.h"
+#include "../../vector/int_vector.h"
+#include "../../vector/long_vector.h"
+#include "../../vector/double_vector.h"
+#include "../../vector/decimal128_vector.h"
+#include "../../vector/varchar_vector.h"
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
@@ -47,7 +52,7 @@ public:
     void PostLoop(omniruntime::vec::VectorBatch *vecBatch) const;
 
 private:
-    int32_t GetRowSize(std::vector<int32_t> &types, int32_t columnCount);
+    int32_t GetRowSize(std::vector<omniruntime::vec::VecType> &types, int32_t columnCount);
 
     void FillGroupByVectors(omniruntime::vec::VectorBatch *vecBatch, int startIndex, int endIndex,
         RowIterator &rowIterator, int32_t rowCount);
@@ -66,6 +71,37 @@ private:
     std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
+    void FillVectorVal(vec::VectorBatch *vecBatch, int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                       int groupByIndex);
+    void FillAggDateValue(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                          omniruntime::vec::IntVector *vector);
+
+    void FillAggDecimal64Value(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                               omniruntime::vec::LongVector *vector);
+
+    void FillAggDoubleValue(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                            omniruntime::vec::DoubleVector *vector);
+
+    void FillAggDecimal128Value(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                                omniruntime::vec::Decimal128Vector *vector);
+
+    void FillAggVarCharValue(int32_t colIndex, int32_t rowCount, RowIterator &rowIterator,
+                             omniruntime::vec::VarcharVector *vector);
+
+    void FillGroupByDate32(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                           vec::IntVector *vector);
+
+    void FillGroupByDecimal64(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                              vec::LongVector *vector);
+
+    void FillGroupByDouble(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                           vec::DoubleVector *vector);
+
+    void FillGroupByVarChar(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                            vec::VarcharVector *vector);
+
+    void FillGroupByDecimal128(int32_t rowCount, RowIterator &tempRowIterator, int colIndex,
+                               vec::Decimal128Vector *vector);
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

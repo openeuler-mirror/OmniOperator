@@ -137,6 +137,13 @@ void ALWAYS_INLINE FillNormalAggregate(Vector* vector, GroupBySlot& state)
             static_cast<Decimal128Vector *>(vector)->SetValue(0, *static_cast<Decimal128 *>(state.val));
             break;
         }
+        case OMNI_VEC_TYPE_VARCHAR: {
+            static_cast<VarcharVector *>(vector)->SetValue(0,
+                                                            reinterpret_cast<const uint8_t *>(
+                                                                    (*(std::string *)(state.val)).c_str()),
+                                                            (*(std::string *)(state.val)).size());
+            break;
+        }
         default:
             break;
     }
