@@ -37,7 +37,7 @@ typedef std::chrono::duration<float> fsec;
 #define OP_DEBUG_LOG(format, ...)
 #endif
 
-#ifdef LLVM_DEBUG
+#ifdef DEBUG_LLVM
 #define LLVM_DEBUG_LOG(format, ...) \
 printf("[%s][%s][%d]: " format "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else

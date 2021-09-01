@@ -3,6 +3,7 @@
  */
 #include "jit.h"
 #include "compiler/llvm_compiler.h"
+#include "../util/debug.h"
 
 #include <iostream>
 #include <utility>
@@ -24,7 +25,7 @@ namespace omniruntime {
                     InitCompile();
                     break;
                 default:
-                    std::cout << "Error: Compiler type not supported: " << compilerType << std::endl;
+                    std::cerr << "Error: Compiler type not supported: " << compilerType << std::endl;
                     break;
             }
         }
@@ -36,15 +37,15 @@ namespace omniruntime {
             for (auto &context : this->contexts) {
                 bool loaded = this->compiler->LoadModule(context.getJitTemplate());
                 if (!loaded) {
-                    std::cout << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
+                    std::cerr << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
                     return 0;
                 }
-                std::cout << "Loaded template: " << context.getJitTemplate() << std::endl;
+                LLVM_DEBUG_LOG("Loaded template: %s", context.getJitTemplate());
 
                 for (auto &specializationPair : context.getSpecializations()) {
                     this->compiler->AddSpecialization(specializationPair.first, specializationPair.second);
                 }
-                std::cout << "Added specializations" << std::endl;
+                LLVM_DEBUG_LOG("Added specializations");
             }
             return this->compiler->SpecializeAndCompile(optimizations, moduleOptimizations);
         }

@@ -3,6 +3,7 @@
  */
 #include "harden_optimizer.h"
 #include "../annotation.h"
+#include "../../util/debug.h"
 #include "llvm_compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -80,7 +81,7 @@ void LLVMCompiler::LoadExtraLibraries()
             llvm::errs() << "Failed to load core library at path " << s << "\n";
             llvm::errs() << err << "\n";
         } else {
-            std::cout << "Successfully loaded core library at path " << s << std::endl;
+            LLVM_DEBUG_LOG("Successfully loaded core library at path %s", s);
         }
     }
 }
@@ -174,7 +175,9 @@ bool LLVMCompiler::harden_function(const string &specializationId, llvm::Functio
     if (this->specializations.count(specializationId) == 0) {
         return false;
     }
+    #ifdef DEBUG_LLVM
     llvm::outs() << "hardening: " << function->getName().str() << "\n";
+    #endif
     Specialization specialization = this->specializations.at(specializationId);
 
     int count = 0;
@@ -222,7 +225,9 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
         ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(JITTER->getDataLayout().getGlobalPrefix())));
     for (auto &module : this->modules) {
         std::string moduleName = module->getName().str();
+        #ifdef DEBUG_LLVM
         outs() << "addIRModule: " << moduleName << "\n";
+        #endif
         auto err =
             JITTER->addIRModule(ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
         if (err) {
@@ -465,7 +470,9 @@ void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &an
             if (index != llvm::StringRef::npos) {
                 StringRef specializationId = annotation.substr(0, index);
                 annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
+                #ifdef DEBUG_LLVM
                 outs() << "Found annotated function " << specializationId << ", " << FUNC->getName() << "\n";
+                #endif
             }
         }
     }

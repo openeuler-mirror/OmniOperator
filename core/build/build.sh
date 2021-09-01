@@ -14,6 +14,9 @@ if [ $# != 0 ] ; then
   elif [ $1 = 'debug' ] && [ $2 = 'op' ];then
     echo "-- Enable native operator debug"
     cmake ../ -DDEBUG_OPERATOR=ON  -DCMAKE_BUILD_TYPE=Debug
+  elif [ $1 = 'debug' ] && [ $2 = 'llvm' ];then
+    echo "-- Enable jit and codegen debug"
+    cmake ../ -DDEBUG_LLVM=ON  -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'release' ];then
     cmake ../  -DCMAKE_BUILD_TYPE=Release
   fi

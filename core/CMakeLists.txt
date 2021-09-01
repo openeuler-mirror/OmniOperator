@@ -41,6 +41,8 @@ configure_file(
 
 # options
 option(DEBUG_OPERATOR "Using for debug into native operator code" OFF)
+message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")
+option(DEBUG_LLVM "Using for debug into JIT and codegen code" OFF)
 message(STATUS "Option DEBUG_OPERATOR: ${DEBUG_OPERATOR}")
 option(DEBUG_LEVEL_LOW "Low debug level" OFF)
 message(STATUS "Option DEBUG_LEVEL_LOW: ${DEBUG_LEVEL_LOW}")

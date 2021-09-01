@@ -3,6 +3,7 @@
  */
 #include "library_loader.h"
 #include "../../../libconfig.h"
+#include "../../util/debug.h"
 
 using namespace std;
 
@@ -155,16 +156,15 @@ void ChooseCandidates(unordered_map<string, vector<string>>& candidates,
     for (auto it = neededLibs.begin(); it != neededLibs.end();) {
         auto lib = *it;
         vector<string> &options = candidates.at(lib.File());
-        if (options.size() == 0) {
+        if (options.empty()) {
             std::cerr << "Could not find any candidates for library " << lib.Name() << std::endl;
             it++;
             continue;
         }
-        std::cout << "Found " << options.size() << " candidates for library " << lib.Name() << std::endl;
-        if (lib.PreferredPath() == "") {
-            std::cout << "No preferred path, using first option: ";
+        LLVM_DEBUG_LOG("Found %zu candidates for library %s", options.size(), lib.Name().c_str());
+        if (lib.PreferredPath().empty()) {
             string option = options[0];
-            std::cout << option << std::endl;
+            LLVM_DEBUG_LOG("No preferred path, using first option: %s", option.c_str());
             paths.push_back(option);
             it = neededLibs.erase(it);
             continue;
@@ -172,16 +172,15 @@ void ChooseCandidates(unordered_map<string, vector<string>>& candidates,
         bool found = false;
         for (auto& option : options) {
             if (EndsWith(option, lib.PreferredPath())) {
-                std::cout << "Found option matching preferred path: " << option << std::endl;
+                LLVM_DEBUG_LOG("Found option matching preferred path: %s", option.c_str());
                 paths.push_back(option);
                 found = true;
                 break;
             }
         }
         if (!found) {
-            std::cout << "Could not find option matching preferred path, falling back to first option: ";
             string option = options[0];
-            std::cout << option << std::endl;
+            LLVM_DEBUG_LOG("Could not find option matching preferred path, falling back to first option: %s", option.c_str());
             paths.push_back(option);
         }
         it = neededLibs.erase(it);
@@ -282,7 +281,7 @@ void LibraryLoader::SearchPath(string path, unordered_map<string, vector<string>
         if ((fileName = ValidateLibrary(file.path(), realPath, candidates)) == "") {
             continue;
         }
-        std::cout << "Found candidate library at " << realPath << std::endl;
+        LLVM_DEBUG_LOG("Found candidate library at %s", realPath.c_str());
         candidates.at(fileName).push_back(realPath);
     }
 }
