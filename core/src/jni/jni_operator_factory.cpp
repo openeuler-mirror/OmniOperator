@@ -371,23 +371,17 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
     jint argumentChannelsCount = env->GetArrayLength(jArgumentChannels);
     jint outputTypesCount = outputVecTypes.GetSize();
 
-    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
-    auto outputTypeIds = const_cast<int32_t *>(outputVecTypes.GetIds());
+    std::vector<VecType> allTypesVec;
+    allTypesVec.insert(allTypesVec.end(), inputVecTypes.Get().begin(), inputVecTypes.Get().end());
+    allTypesVec.insert(allTypesVec.end(), outputVecTypes.Get().begin(), outputVecTypes.Get().end());
 
-    auto allTypesCount = inputTypesCount + outputTypesCount;
-    int32_t allTypes[allTypesCount];
-    for (int i = 0; i < inputTypesCount; ++i) {
-        allTypes[i] = inputTypeIds[i];
-    }
-    for (int i = inputTypesCount; i < allTypesCount; ++i) {
-        allTypes[i] = outputTypeIds[i - inputTypesCount];
-    }
+    VecTypes allTypes(allTypesVec);
 
     omniruntime::op::WindowOperatorFactory *windowOperatorFactory =
-        new omniruntime::op::WindowOperatorFactory(inputTypeIds, inputTypesCount, outputChannels, outputColsCount,
-        windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels, preGroupedCount,
-        sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes,
-        allTypesCount, argumentChannels, argumentChannelsCount);
+        omniruntime::op::WindowOperatorFactory::CreateWindowOperatorFactory(inputVecTypes, outputChannels,
+        outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels,
+        preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix,
+        expectedPositions, allTypes, argumentChannels, argumentChannelsCount);
     JitContext *jitContext =
         createWindowJitContext(windowOperatorFactory->GetSourceTypes(), windowOperatorFactory->GetTypesCount(),
         windowOperatorFactory->GetOutputCols(), windowOperatorFactory->GetOutputColsCount(),

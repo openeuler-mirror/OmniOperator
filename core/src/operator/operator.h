@@ -20,7 +20,7 @@ namespace op {
 
         virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) = 0;
 
-        const virtual int32_t *GetSourceTypes()
+        virtual const int32_t *GetSourceTypes()
         {
             return sourceTypes;
         }

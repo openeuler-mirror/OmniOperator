@@ -22,22 +22,19 @@ WindowPartition::WindowPartition(PagesIndex *pagesIndex, int32_t partitionStart,
     this->currentPosition = partitionStart;
     this->peerGroupStart = 0;
     this->peerGroupEnd = 0;
-    for (auto i = 0; i < windowFunctions.size(); ++i) {
-        this->windowFunctions.push_back(windowFunctions[i].get());
+    for (auto &windowFunction : windowFunctions) {
+        this->windowFunctions.push_back(windowFunction.get());
     }
-    this->windowIndex = make_unique<WindowIndex>(pagesIndex, partitionStart, partitionEnd).release();
-    for (auto i = 0; i < windowFunctions.size(); ++i) {
-        windowFunctions[i]->Reset(windowIndex);
+    this->windowIndex = make_unique<WindowIndex>(pagesIndex, partitionStart, partitionEnd);
+    for (auto &windowFunction : windowFunctions) {
+        windowFunction->Reset(windowIndex.get());
     }
     UpdatePeerGroup();
 }
 
-WindowPartition::~WindowPartition()
-{
-    delete windowIndex;
-}
+WindowPartition::~WindowPartition() = default;
 
-void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index, int32_t *sourceTypes, int32_t typesCount)
+void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index)
 {
     int32_t channel = outputChannelsCount;
 
@@ -46,12 +43,11 @@ void WindowPartition::ProcessNextRow(VectorBatch *vecBatch, int32_t index, int32
         UpdatePeerGroup();
     }
 
-    for (int32_t i = 0; i < windowFunctions.size(); i++) {
-        Range *range = GetFrameRange();
-        windowFunctions[i]->ProcessRow(vecBatch->GetVector(channel), index, peerGroupStart - partitionStart,
+    for (auto &windowFunction : windowFunctions) {
+        unique_ptr<Range> range = GetFrameRange();
+        windowFunction->ProcessRow(vecBatch->GetVector(channel), index, peerGroupStart - partitionStart,
             peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
         channel++;
-        delete range;
     }
 
     currentPosition++;
@@ -67,7 +63,6 @@ bool PositionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partition
     int64_t rightValueAddress = pagesIndex->GetValueAddresses()[rightPosition];
     int32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
     int32_t rightColumnPosition = DecodePosition(rightValueAddress);
-
 
     return partitionHashStrategy->PositionEqualsPosition(leftColumnIndex, leftColumnPosition, rightColumnIndex,
         rightColumnPosition);
