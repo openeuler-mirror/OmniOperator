@@ -57,7 +57,7 @@ public class TestUtils {
         }
     }
 
-    private static IntVec createIntVec(Object[] data) {
+    public static IntVec createIntVec(Object[] data) {
         IntVec result = new IntVec(data.length);
         for (int j = 0; j < data.length; j++) {
             if (data[j] == null) {
@@ -69,7 +69,7 @@ public class TestUtils {
         return result;
     }
 
-    private static LongVec createLongVec(Object[] data) {
+    public static LongVec createLongVec(Object[] data) {
         LongVec result = new LongVec(data.length);
         for (int j = 0; j < data.length; j++) {
             if (data[j] == null) {
@@ -81,7 +81,7 @@ public class TestUtils {
         return result;
     }
 
-    private static DoubleVec createDoubleVec(Object[] data) {
+    public static DoubleVec createDoubleVec(Object[] data) {
         DoubleVec result = new DoubleVec(data.length);
         for (int j = 0; j < data.length; j++) {
             if (data[j] == null) {
@@ -93,7 +93,7 @@ public class TestUtils {
         return result;
     }
 
-    private static BooleanVec createBooleanVec(Object[] data) {
+    public static BooleanVec createBooleanVec(Object[] data) {
         BooleanVec result = new BooleanVec(data.length);
         for (int i = 0; i < data.length; i++) {
             if (data[i] == null) {
@@ -105,7 +105,7 @@ public class TestUtils {
         return result;
     }
 
-    private static VarcharVec createVarcharVec(VarcharVecType varcharVecType, Object[] data) {
+    public static VarcharVec createVarcharVec(VarcharVecType varcharVecType, Object[] data) {
         VarcharVec result = new VarcharVec(varcharVecType.getWidth() * data.length, data.length);
         for (int j = 0; j < data.length; j++) {
             if (data[j] == null) {
@@ -117,7 +117,7 @@ public class TestUtils {
         return result;
     }
 
-    private static Decimal128Vec createDecimal128Vec(Object[][] data) {
+    public static Decimal128Vec createDecimal128Vec(Object[][] data) {
         Decimal128Vec result = new Decimal128Vec(data.length);
         for (int i = 0; i < data.length; i++) {
             if (data[i] == null) {
@@ -127,6 +127,12 @@ public class TestUtils {
             }
         }
         return result;
+    }
+
+    public static DictionaryVec createDictionaryVec(VecType vecType, Object[] data, int[] ids)
+    {
+        Vec dictionary = createVec(vecType, data);
+        return new DictionaryVec(dictionary, ids);
     }
 
     public static void assertVecBatchEquals(VecBatch vecBatch, Object[][] expectedDatas) {
@@ -195,7 +201,12 @@ public class TestUtils {
     }
 
     private static void assertDictionaryVecEquals(DictionaryVec vec, Object[] expectedData) {
-        VecType.VecTypeId typeId = vec.getDictionary().getType().getId();
+        VecType.VecTypeId typeId;
+        Vec dictionary = vec.getDictionary();
+        while ((typeId = dictionary.getType().getId()) == OMNI_VEC_TYPE_DICTIONARY) {
+            dictionary = ((DictionaryVec) dictionary).getDictionary();
+        }
+
         for (int i = 0; i < vec.getSize(); i++) {
             switch (typeId) {
                 case OMNI_VEC_TYPE_INT:

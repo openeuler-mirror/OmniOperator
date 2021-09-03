@@ -20,7 +20,7 @@ const int32_t QUICK_SORT_MIDDLE = 2;
 void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to);
-template <typename T, typename V>
+template <typename T>
 T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
 VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
     uint32_t width);
@@ -95,21 +95,20 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         switch (colTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
-                outputVecBatch->SetVector(j,
-                    ConstructVector<IntVector, int32_t>(valueAddresses, offset, length, inputVecBatch));
+                outputVecBatch->SetVector(j, ConstructVector<IntVector>(valueAddresses, offset, length, inputVecBatch));
                 break;
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<LongVector, int64_t>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<LongVector>(valueAddresses, offset, length, inputVecBatch));
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<DoubleVector, double>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<DoubleVector>(valueAddresses, offset, length, inputVecBatch));
                 break;
             case OMNI_VEC_TYPE_BOOLEAN:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<BooleanVector, bool>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<BooleanVector>(valueAddresses, offset, length, inputVecBatch));
                 break;
             case OMNI_VEC_TYPE_VARCHAR: {
                 auto vecType = (VarcharVecType &)vecTypes[outputCol];
@@ -120,7 +119,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             }
             case OMNI_VEC_TYPE_DECIMAL128:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<Decimal128Vector, Decimal128>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<Decimal128Vector>(valueAddresses, offset, length, inputVecBatch));
                 break;
             default:
                 break;
@@ -194,6 +193,9 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
         if (compare != OperatorUtil::COMPARE_STATUS_OTHER) {
             break;
         }
+        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftColumnPosition);
+        rightColumn = OperatorUtil::GetDictionary(rightColumn, rightColumnPosition);
+
         // neither the left nor the right is NULL
         compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftColumn, leftColumnPosition, rightColumn,
             rightColumnPosition);
@@ -350,13 +352,24 @@ void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32
     }
 }
 
-template <typename T, typename V>
+template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *outputVector, int32_t outputIndex)
+{
+    if (inputVector->IsValueNull(inputIndex)) {
+        outputVector->SetValueNull(outputIndex);
+    } else if (inputVector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
+        auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
+        SetValue(dictionaryVector->GetDictionary(), dictionaryVector->GetIds()[inputIndex], outputVector, outputIndex);
+    } else {
+        outputVector->SetValue(outputIndex, static_cast<T *>(inputVector)->GetValue(inputIndex));
+    }
+}
+
+template <typename T>
 T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch)
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
     Vector *inputVector = nullptr;
-    V *inputValues = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
 
@@ -370,16 +383,26 @@ T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vect
         position = DecodePosition(valueAddress);
         if (preTableIndex != pageIndex) {
             inputVector = inputVecBatch[pageIndex];
-            inputValues = static_cast<V *>(inputVector->GetValues());
             preTableIndex = pageIndex;
         }
-        if (inputVector->IsValueNull(position)) {
-            outputVector->SetValueNull(outputIndex++);
-        } else {
-            outputVector->SetValue(outputIndex++, inputValues[position]);
-        }
+        SetValue(inputVector, position, outputVector, outputIndex++);
     }
     return outputVector;
+}
+
+void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *outputVector, int32_t outputIndex)
+{
+    if (inputVector->IsValueNull(inputIndex)) {
+        outputVector->SetValueNull(outputIndex);
+    } else if (inputVector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
+        auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
+        SetVarcharValue(dictionaryVector->GetDictionary(), dictionaryVector->GetIds()[inputIndex], outputVector,
+            outputIndex);
+    } else {
+        uint8_t *value = nullptr;
+        int32_t valueLength = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex, &value);
+        outputVector->SetValue(outputIndex, value, valueLength);
+    }
 }
 
 VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
@@ -387,11 +410,11 @@ VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, i
 {
     int32_t preTableIndex = -1;
     int64_t valueAddress = 0;
-    VarcharVector *inputColumn = nullptr;
+    Vector *inputVector = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
 
-    VarcharVector *varcharVector =
+    VarcharVector *outputVector =
         std::make_unique<VarcharVector>(static_cast<VectorAllocator *>(nullptr), length * width, length).release();
     int32_t start = offset;
     int32_t end = offset + length;
@@ -401,16 +424,10 @@ VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, i
         pageIndex = DecodeSliceIndex(valueAddress);
         position = DecodePosition(valueAddress);
         if (preTableIndex != pageIndex) {
-            inputColumn = static_cast<VarcharVector *>(inputVecBatch[pageIndex]);
+            inputVector = inputVecBatch[pageIndex];
             preTableIndex = pageIndex;
         }
-        if (inputColumn->IsValueNull(position)) {
-            varcharVector->SetValueNull(outputIndex++);
-        } else {
-            uint8_t *value = nullptr;
-            int32_t valueLength = inputColumn->GetValue(position, &value);
-            varcharVector->SetValue(outputIndex++, value, valueLength);
-        }
+        SetVarcharValue(inputVector, position, outputVector, outputIndex++);
     }
-    return varcharVector;
+    return outputVector;
 }

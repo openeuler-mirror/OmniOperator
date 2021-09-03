@@ -6,6 +6,7 @@
 #include "../vector/vector_common.h"
 #include "optimization.h"
 #include "../jit/annotation.h"
+#include "util/operator_util.h"
 
 #include <memory>
 
@@ -119,10 +120,12 @@ bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIn
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
+        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftRowIndex);
         if (isSame) {
             rightColumn = leftColumn;
         } else {
             rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+            rightColumn = OperatorUtil::GetDictionary(rightColumn, rightRowIndex);
         }
 
         result =
@@ -142,7 +145,8 @@ bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
-
+        buildColumn = OperatorUtil::GetDictionary(buildColumn, buildRowIndex);
+        probeColumn = OperatorUtil::GetDictionary(probeColumn, probePosition);
         result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, buildRowIndex, probeColumn,
             probePosition);
         if (!result) {
@@ -165,6 +169,8 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftRowIndex);
+        rightColumn = OperatorUtil::GetDictionary(rightColumn, rightRowIndex);
         leftIsNull = leftColumn->IsValueNull(leftRowIndex);
         rightIsNull = rightColumn->IsValueNull(rightRowIndex);
         if (leftIsNull || rightIsNull) {

@@ -8,6 +8,7 @@
 #include "../optimization.h"
 #include "../../jit/annotation.h"
 #include "../util/operator_util.h"
+#include "../../vector/vector_helper.h"
 
 #include <vector>
 #include <algorithm>

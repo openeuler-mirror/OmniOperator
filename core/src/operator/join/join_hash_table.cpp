@@ -7,8 +7,7 @@
 #include "../../vector/vector_helper.h"
 #include "../optimization.h"
 #include "../../jit/annotation.h"
-#include "../../vector/boolean_vector.h"
-#include "../../vector/decimal128_vector.h"
+#include "../util/operator_util.h"
 
 #include <algorithm>
 #include <memory>
@@ -159,7 +158,7 @@ int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
         if (column->IsValueNull(rowIndex)) {
             continue;
         }
-
+        column = OperatorUtil::GetDictionary(column, rowIndex);
         hash = ReadHash(hashColTypes[columnIdx], column, rowIndex);
         result = HashUtil::CombineHash(result, hash);
     }
@@ -178,7 +177,7 @@ int64_t HashRow(int32_t rowIndex, Vector **columns, const int32_t *columnTypes, 
         if (column->IsValueNull(rowIndex)) {
             continue;
         }
-
+        column = OperatorUtil::GetDictionary(column, rowIndex);
         hash = ReadHash(columnTypes[columnIdx], column, rowIndex);
         result = HashUtil::CombineHash(result, hash);
     }

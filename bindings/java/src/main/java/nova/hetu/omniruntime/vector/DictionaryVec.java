@@ -60,7 +60,11 @@ public class DictionaryVec extends Vec {
      * @return integer value
      */
     public int getInt(int index) {
-        return ((IntVec) dictionary).get(ids[index]);
+        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+            return ((IntVec) dictionary).get(ids[index]);
+        } else {
+            return ((DictionaryVec) dictionary).getInt(ids[index]);
+        }
     }
 
     /**
@@ -70,7 +74,11 @@ public class DictionaryVec extends Vec {
      * @return long value
      */
     public long getLong(int index) {
-        return ((LongVec) dictionary).get(ids[index]);
+        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+            return ((LongVec) dictionary).get(ids[index]);
+        } else {
+            return ((DictionaryVec) dictionary).getLong(ids[index]);
+        }
     }
 
     /**
