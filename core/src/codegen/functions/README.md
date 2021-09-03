@@ -14,8 +14,8 @@ ex:
 		return x + 1; 
 	}  
 	```
-​
-6. Write the function argument types and return type in `externalregistration.conf`, in the following format: 
+
+4. Write the function argument types and return type in `externalregistration.conf`, in the following format: 
 	```
 	add1_int32: (INT32)->INT32 // add 1 to an integer
 	// distance_double(x1, y1, x2, y2)

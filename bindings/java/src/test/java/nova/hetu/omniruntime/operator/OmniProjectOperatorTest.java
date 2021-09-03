@@ -1,8 +1,5 @@
 package nova.hetu.omniruntime.operator;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.type.IntVecType;
@@ -19,6 +16,9 @@ import org.testng.annotations.Test;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.util.Iterator;
+
+import static org.testng.Assert.*;
 
 /**
  * The type Omni project operator test.
@@ -46,8 +46,10 @@ public class OmniProjectOperatorTest {
             op.addInput(vecBatch);
         }
 
-        assertTrue(op.getOutput().hasNext());
+        Iterator<VecBatch> vecBatchIterator = op.getOutput();
+        assertTrue(vecBatchIterator.hasNext());
         VecBatch res = op.getOutput().next();
+        assertFalse(vecBatchIterator.hasNext());
         assertEquals(res.getRowCount(), numRows);
         IntBuffer res1 = res.getVectors()[0].getValues().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         for (int i = 0; i < numRows; i++) {
