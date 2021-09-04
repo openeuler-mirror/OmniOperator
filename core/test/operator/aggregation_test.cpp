@@ -34,18 +34,16 @@ long lrand()
 
 using namespace omniruntime::vec;
 
-void buildHashInput(VecTypeId* groupTypes, int32_t c, int32_t rowPerVecBatch, int32_t cardinality,
-    VectorBatch* vecBatch)
+Vector *buildHashInput(VecTypeId groupTypeId, int32_t rowPerVecBatch, int32_t cardinality)
 {
-    switch (groupTypes[c]) {
+    switch (groupTypeId) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             IntVector *col = new IntVector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, j % cardinality);
             }
-            vecBatch->SetVector(c, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64: {
@@ -53,32 +51,28 @@ void buildHashInput(VecTypeId* groupTypes, int32_t c, int32_t rowPerVecBatch, in
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, j % cardinality);
             }
-            vecBatch->SetVector(c, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             DoubleVector *col = new DoubleVector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, j % cardinality);
             }
-            vecBatch->SetVector(c, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_BOOLEAN: {
             BooleanVector *col = new BooleanVector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, j % cardinality);
             }
-            vecBatch->SetVector(c, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
             Decimal128Vector* col = new Decimal128Vector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, Decimal128(0, j % cardinality));
             }
-            vecBatch->SetVector(c, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_VARCHAR: {
             VectorAllocator* allocator = nullptr;
@@ -87,29 +81,25 @@ void buildHashInput(VecTypeId* groupTypes, int32_t c, int32_t rowPerVecBatch, in
                 std::string str = std::to_string(j % cardinality);
                 col->SetValue(j, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
             }
-            vecBatch->SetVector(c, col);
-            break;
+            return col;
         }
-        case OMNI_VEC_TYPE_INVALID: {
-            DebugError("No such %d type support", groupTypes[c]);
-            break;
+        default: {
+            DebugError("No such %d type support", groupTypeId);
+            return nullptr;
         }
     }
 }
 
-void buildAggregateInput(VecTypeId* types, int32_t c, int32_t rowPerVecBatch, int32_t cardinality,
-                       VectorBatch* vecBatch)
+Vector *buildAggregateInput(VecTypeId aggTypeId, int32_t rowPerVecBatch)
 {
-    auto vecSize = vecBatch->GetVectorSize();
-    switch (types[c]) {
+    switch (aggTypeId) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             IntVector *col = new IntVector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
-            vecBatch->SetVector(vecSize, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64: {
@@ -117,32 +107,28 @@ void buildAggregateInput(VecTypeId* types, int32_t c, int32_t rowPerVecBatch, in
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
-            vecBatch->SetVector(vecSize, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             DoubleVector *col = new DoubleVector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
-            vecBatch->SetVector(vecSize, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_BOOLEAN: {
             BooleanVector *col = new BooleanVector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, 1);
             }
-            vecBatch->SetVector(vecSize, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
             Decimal128Vector* col = new Decimal128Vector(nullptr, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j, Decimal128(0, 1));
             }
-            vecBatch->SetVector(vecSize, col);
-            break;
+            return col;
         }
         case OMNI_VEC_TYPE_VARCHAR: {
             VectorAllocator* allocator = nullptr;
@@ -151,12 +137,11 @@ void buildAggregateInput(VecTypeId* types, int32_t c, int32_t rowPerVecBatch, in
                 std::string str = std::to_string(j);
                 col->SetValue(j, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
             }
-            vecBatch->SetVector(vecSize, col);
-            break;
+            return col;
         }
-        case OMNI_VEC_TYPE_INVALID: {
-            DebugError("No such %d type support", types[c]);
-            break;
+        default: {
+            DebugError("No such %d type support", aggTypeId);
+            return nullptr;
         }
     }
 }
@@ -171,11 +156,13 @@ VectorBatch** buildAggInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t
     VectorBatch** input = new VectorBatch*[vecBatchNum];
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch* vecBatch = new VectorBatch(groupColNum + aggColNum);
-        for (int32_t c = 0; c < groupColNum; ++ c) {
-            buildHashInput(groupTypes, c, rowPerVecBatch, cardinality, vecBatch);
+        for (int32_t index = 0; index < groupColNum; ++ index) {
+            Vector *vec = buildHashInput(groupTypes[index], rowPerVecBatch, cardinality);
+            vecBatch->SetVector(index, vec);
         }
-        for (int32_t c = 0; c < aggColNum; ++ c) {
-            buildAggregateInput(aggTypes, c, rowPerVecBatch, cardinality, vecBatch);
+        for (int32_t index = 0; index < aggColNum; ++ index) {
+            Vector *vec = buildAggregateInput(aggTypes[index], rowPerVecBatch);
+            vecBatch->SetVector(groupColNum + index, vec);
         }
         input[i] = vecBatch;
     }
@@ -1176,7 +1163,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto jitGroupBy = reinterpret_cast<HashAggModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
 
     // ------------------------------------------Process Input--------------------------------------------
-    VectorBatch** input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, COLUMN_NUM, nullptr, aggTypes);
+    VectorBatch** input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
     if (input == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
