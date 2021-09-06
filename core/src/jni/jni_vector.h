@@ -21,10 +21,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    newDictionaryVectorNative
- * Signature: (J[II)J
+ * Signature: (J[I)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *, jclass, jlong,
-    jintArray, jint);
+    jintArray);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec

@@ -10,6 +10,7 @@
 #include "../../src/operator/operator.h"
 #include "../../src/operator/operator_factory.h"
 #include "../../src/vector/vector_types.h"
+#include "../../src/vector/vector_type.h"
 
 const int32_t PARAM_OFFSET_0 = 0;
 const int32_t PARAM_OFFSET_1 = 1;
@@ -21,9 +22,9 @@ const int32_t PARAM_OFFSET_6 = 6;
 
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::vec::VecTypes &types, int32_t rowCount, ...);
+omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::vec::VarcharVecType &type, std::string *values, int32_t length);
+omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::vec::VecType &vecType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...);
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...);
-void AssertIntVectorEquals(omniruntime::vec::IntVector *vector, int32_t *expectedValues);
-void AssertLongVectorEquals(omniruntime::vec::LongVector *vector, int64_t *expectedValues);
 void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::string *expectedValues);
 
@@ -97,5 +98,23 @@ private:
     struct timespec wall_end;
     const char *title;
 };
+
+template <typename T, typename V> T *CreateVector(V *values, int32_t length)
+{
+    auto vector = new T(nullptr, length);
+    vector->SetValues(0, values, length);
+    return vector;
+}
+
+template <typename T, typename E> void AssertVectorEquals(T *vector, E *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        // TODO: need to find a better way to compare NULLs
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        EXPECT_EQ(vector->GetValue(i), expectedValues[i]);
+    }
+}
 
 #endif

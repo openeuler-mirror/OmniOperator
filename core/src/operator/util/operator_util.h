@@ -12,6 +12,7 @@
 #include "../../vector/decimal128.h"
 #include "../../vector/decimal128_vector.h"
 #include "../../vector/boolean_vector.h"
+#include "../../vector/dictionary_vector.h"
 
 class OperatorUtil {
 public:
@@ -142,6 +143,22 @@ public:
             return nullsFirst ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
         }
         return COMPARE_STATUS_OTHER;
+    }
+
+    static omniruntime::vec::Vector *GetDictionary(omniruntime::vec::Vector *vector, int32_t &rowIndex)
+    {
+        if (vector->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            return vector;
+        }
+        omniruntime::vec::Vector *result = vector;
+        int32_t idIndex = rowIndex;
+        do {
+            auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+            idIndex = dictionaryVector->GetIds()[idIndex];
+            result = dictionaryVector->GetDictionary();
+        } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+        rowIndex = idIndex;
+        return result;
     }
 
 private:

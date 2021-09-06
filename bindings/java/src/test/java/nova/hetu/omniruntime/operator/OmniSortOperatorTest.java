@@ -20,6 +20,7 @@ import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.util.TestUtils;
+import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -58,6 +59,37 @@ public class OmniSortOperatorTest {
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
+        int[] outputCols = {0, 1};
+        String[] sortCols = {"#0", "#1"};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+        OmniSortOperatorFactory sortOperatorFactory =
+                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniOperator sortOperator = sortOperatorFactory.createOperator();
+        sortOperator.addInput(vecBatch);
+        Iterator<VecBatch> results = sortOperator.getOutput();
+
+        VecBatch resultVecBatch = results.next();
+        int len = resultVecBatch.getRowCount();
+        assertEquals(len, sourceDatas[0].length);
+
+        Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        freeVecBatch(vecBatch);
+        freeVecBatch(resultVecBatch);
+    }
+
+    @Test
+    public void testOrderByTwoColumnDictionary() {
+        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
+        Vec vecs[] = new Vec[2];
+        vecs[0] = TestUtils.createIntVec(sourceDatas[0]);
+        int[] ids = {0, 1, 2, 3, 4, 5, 6, 7};
+        vecs[1] = TestUtils.createDictionaryVec(sourceTypes[1], sourceDatas[1], ids);
+        vecs[1] = new DictionaryVec(vecs[1], ids);
+        VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};

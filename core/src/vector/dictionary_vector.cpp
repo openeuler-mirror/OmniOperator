@@ -2,6 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
 #include "dictionary_vector.h"
+#include <memory>
 #include "int_vector.h"
 #include "long_vector.h"
 
@@ -23,23 +24,32 @@ void DictionaryVector::InitIds(int32_t *ids, uint32_t idsCount)
 
 int32_t DictionaryVector::GetInt(int32_t position) const
 {
-    if (dictionary->GetType().GetId() != OMNI_VEC_TYPE_INT) {
+    VecTypeId dictionaryType = dictionary->GetType().GetId();
+    if (dictionaryType == OMNI_VEC_TYPE_INT) {
+        return static_cast<IntVector *>(dictionary)->GetValue(ids[position]);
+    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+        return static_cast<DictionaryVector *>(dictionary)->GetInt(ids[position]);
+    } else {
         return -1;
     }
-    return static_cast<IntVector *>(dictionary)->GetValue(ids[position]);
 }
 
 int64_t DictionaryVector::GetLong(int32_t position) const
 {
-    if (dictionary->GetType().GetId() != OMNI_VEC_TYPE_LONG) {
+    VecTypeId dictionaryType = dictionary->GetType().GetId();
+    if (dictionaryType == OMNI_VEC_TYPE_LONG) {
+        return static_cast<LongVector *>(dictionary)->GetValue(ids[position]);
+    } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+        return static_cast<DictionaryVector *>(dictionary)->GetLong(ids[position]);
+    } else {
         return -1;
     }
-    return static_cast<LongVector *>(dictionary)->GetValue(ids[position]);
 }
 
-DictionaryVector *DictionaryVector::Slice(int positionOffset, int length)
+DictionaryVector *DictionaryVector::Slice(int32_t positionOffset, int32_t length)
 {
-    return nullptr;
+    auto dictionaryVector = new DictionaryVector(dictionary, ids + positionOffset, length);
+    return dictionaryVector;
 }
 
 DictionaryVector *DictionaryVector::CopyPositions(const int *positions, int offset, int length)
