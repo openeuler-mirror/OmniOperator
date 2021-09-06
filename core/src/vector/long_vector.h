@@ -14,16 +14,13 @@ public:
     LongVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
-    int64_t GetValue(int index)
+    int64_t ALWAYS_INLINE GetValue(int index)
     {
-        if (index >= size) {
-            return -1;
-        }
         return reinterpret_cast<int64_t *>(valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.
-    void SetValue(int index, int64_t value)
+    void ALWAYS_INLINE SetValue(int index, int64_t value)
     {
         reinterpret_cast<int64_t *>(valuesAddress)[index] = value;
     }

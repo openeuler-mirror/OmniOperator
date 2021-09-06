@@ -13,13 +13,13 @@ public:
     IntVector(VectorAllocator *allocator, int size);
 
     // inline for high performance.
-    int32_t GetValue(int index)
+    int32_t ALWAYS_INLINE GetValue(int index)
     {
         return ((int32_t *)valuesAddress)[index + positionOffset];
     }
 
     // inline for high performance.
-    void SetValue(int index, int32_t value)
+    void ALWAYS_INLINE SetValue(int index, int32_t value)
     {
         ((int32_t *)valuesAddress)[index] = value;
     }
