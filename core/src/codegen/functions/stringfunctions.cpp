@@ -76,7 +76,6 @@ extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t startIdx)
         ret[i] = s[startIdx + i];
     }
     ret[length] = '\0';
-    stringsToFree.push_back(ret);
     return (int64_t)(ret);
 }
 
@@ -90,7 +89,6 @@ extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t startIdx, int32_t le
         ret[i] = s[startIdx + i];
     }
     ret[length] = '\0';
-    stringsToFree.push_back(ret);
     return (int64_t)(ret);
 }
 
@@ -109,7 +107,6 @@ extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int64_t bp)
         ret[j + As.size()] = Bs[j];
     }
     ret[As.size() + Bs.size()] = '\0';
-    stringsToFree.push_back(ret);
     return (int64_t)(ret);
 }
 

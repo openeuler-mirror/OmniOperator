@@ -259,12 +259,13 @@ int32_t ProjectionOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 int32_t ProjectionOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data)
 {
     if (this->mutated == nullptr) {
-        std::cerr << "Error: No projected table ready for output" << std::endl;
         return -1;
     }
+    int rowCount = this->mutated->GetRowCount();
     data.push_back(this->mutated);
     FreeStrings();
-    return this->mutated->GetRowCount();
+    this->mutated = nullptr;
+    return rowCount;
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(std::string expressions[], int32_t nProj,
