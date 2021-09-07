@@ -75,7 +75,7 @@ function(compile_ir SOURCE_FILE)
     string(REGEX REPLACE ".+/(.+)\\..*" "\\1" SOURCE_NAME ${SOURCE_FILE})
 
     # compile ir
-    set(COMPILE_OPTION -S -O3 -emit-llvm -fno-discard-value-names)
+    set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${COMPILE_OPTION} ${SOURCE_FILE})
 
     # install ir
