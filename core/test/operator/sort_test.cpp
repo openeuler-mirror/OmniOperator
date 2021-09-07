@@ -46,11 +46,6 @@ JitContext *CreateTestSortJitContext(const int32_t *sourceTypes, int32_t typesCo
     compareToSp->AddSpecializedParam(PARAM_OFFSET_3, &pSortNullFirsts);
     compareToSp->AddSpecializedParam(PARAM_OFFSET_4, &pSortColCount);
 
-    Specialization *allocColumnsSp = std::make_unique<Specialization>().release();
-    allocColumnsSp->AddSpecializedParam(PARAM_OFFSET_1, &pSourceTypes);
-    allocColumnsSp->AddSpecializedParam(PARAM_OFFSET_2, &pOutputCols);
-    allocColumnsSp->AddSpecializedParam(PARAM_OFFSET_3, &pOutputColCount);
-
     Specialization *getOutputSp = std::make_unique<Specialization>().release();
     getOutputSp->AddSpecializedParam(PARAM_OFFSET_1, &pOutputCols);
     getOutputSp->AddSpecializedParam(PARAM_OFFSET_2, &pOutputColCount);

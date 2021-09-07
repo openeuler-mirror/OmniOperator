@@ -304,11 +304,6 @@ JitContext *createSortJitContext(const int32_t *sourceTypes, int32_t typesCount,
     compareToSp->AddSpecializedParam(3, &p_sortNullFirsts);
     compareToSp->AddSpecializedParam(4, &p_sortColCount);
 
-    auto *allocColumnsSp = new Specialization();
-    allocColumnsSp->AddSpecializedParam(1, &p_sourceTypes);
-    allocColumnsSp->AddSpecializedParam(2, &p_outputCols);
-    allocColumnsSp->AddSpecializedParam(3, &p_outputColCount);
-
     auto *getOutputSp = new Specialization();
     getOutputSp->AddSpecializedParam(1, &p_outputCols);
     getOutputSp->AddSpecializedParam(2, &p_outputColCount);
@@ -733,13 +728,13 @@ JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
     std::map<std::string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
         *positionEqualsRowIgnoreNullsSp } };
 
-    auto *lookupJoinContext = new omniruntime::jit::Context("lookup_join",
-                                                            std::map<std::string, Specialization>(),
-                                                            std::vector<std::string>(),
-                                                            true);
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps);
+    auto lookupJoinContext =
+        new omniruntime::jit::Context("lookup_join", lookupJoinSps, std::vector<std::string>(), true);
+    auto joinHashTableContext = new omniruntime::jit::Context("join_hash_table", joinHashTableSps);
+    auto pagesHashStrategyContext = new omniruntime::jit::Context("pages_hash_strategy", hashStrategySps);
 
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*lookupJoinContext, *pagesHashStrategyContext});
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
+        *pagesHashStrategyContext });
     auto createOperatorFunc = jit->Specialize();
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
