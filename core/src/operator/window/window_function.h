@@ -121,7 +121,7 @@ private:
         int32_t index) const;
     void Accumulate(int32_t start, int32_t end);
 
-    void AccumulateData(int32_t start, omniruntime::vec::Vector *resultVector, int32_t position,
-        int32_t vectorPosition, omniruntime::vec::Vector *originalVector);
+    void AccumulateData(int32_t start, omniruntime::vec::Vector *resultVector, int32_t resultVectorPosition,
+        int32_t originalVectorPosition, omniruntime::vec::Vector *originalVector);
 };
 #endif
