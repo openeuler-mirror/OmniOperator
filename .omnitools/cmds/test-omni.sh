@@ -19,7 +19,7 @@ if [ "$FLAG_java" = "False" ] && [ "$FLAG_cpp" = "False" ]; then
 fi
 
 buildFolder="build"
-libFile="$buildFolder/src/libomruntime.so"
+libFile="$buildFolder/src/libomni_runtime.so"
 if [ ! -f "$libFile" ]; then
   _error "Can't find omni-runtime libraries, try compiling omni-runtime first with build-omni script"
   exit 1

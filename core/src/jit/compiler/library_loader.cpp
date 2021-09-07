@@ -95,7 +95,7 @@ void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector
 LibraryLoader::LibraryLoader() : neededLibs()
 {
     unordered_map<string, CoreLibrary> baseLibs = {
-        {"vector", CoreLibrary("libvector.so", "vector")},
+        {"omni_vector", CoreLibrary("libomni_vector.so", "omni_vector")},
         {"jemalloc", CoreLibrary("libjemalloc.so", "jemalloc")},
         {"stdc++", CoreLibrary("libstdc++.so", "stdc++")},
         {"aggregator", CoreLibrary("libaggregator.so", "aggregator")},

@@ -9,12 +9,12 @@ set(CMAKE_CXX_COMPILER "clang++-12")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC -finline-functions")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
-set(CMAKE_INSTALL_PREFIX /opt/lib)
+set(CMAKE_INSTALL_PREFIX $ENV{HOME}/lib)
 message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 
 # clean all target
-set(target_generated ${CMAKE_INSTALL_PREFIX}/libomruntime.so
-	             ${CMAKE_INSTALL_PREFIX}/libvector.so
+set(target_generated ${CMAKE_INSTALL_PREFIX}/libomni_runtime.so
+	             ${CMAKE_INSTALL_PREFIX}/libomni_vector.so
 	             ${CMAKE_INSTALL_PREFIX}/libsecurec.so
 	             ${CMAKE_INSTALL_PREFIX}/ir
 )

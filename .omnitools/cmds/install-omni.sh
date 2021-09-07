@@ -4,7 +4,7 @@
 
 set -e
 
-if [ ! -f "build/opt/lib/libomruntime.so" ]; then
+if [ ! -f "build/opt/lib/libomni_runtime.so" ]; then
   _error "Can't find files to install, try compiling omni-runtime first with build-omni script"
   exit 1
 fi
