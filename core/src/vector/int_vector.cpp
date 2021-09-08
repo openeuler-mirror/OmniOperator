@@ -31,9 +31,6 @@ IntVector *IntVector::Slice(int positionOffset, int length)
 
 IntVector *IntVector::CopyPositions(const int *positions, int offset, int length)
 {
-    if (length > size) {
-        return nullptr;
-    }
     IntVector *vector = new IntVector(GetAllocator(), length);
     for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];
