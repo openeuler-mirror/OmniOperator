@@ -46,13 +46,13 @@ public:
     void Append(Vector *other, int positionOffset, int length) override;
 
     // inline for high performance.
-    int64_t getValue(int32_t index)
+    int64_t ALWAYS_INLINE getValue(int32_t index)
     {
         return reinterpret_cast<uintptr_t *>(valuesAddress)[index];
     };
 
     // inline for high performance.
-    void setValue(int32_t index, int64_t value)
+    void ALWAYS_INLINE setValue(int32_t index, int64_t value)
     {
         reinterpret_cast<int64_t *>(valuesAddress)[index] = value;
     }

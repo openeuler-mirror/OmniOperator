@@ -8,6 +8,7 @@
 #include "../../thirdparty/huawei_secure_c/include/securec.h"
 #include "../util/debug.h"
 #include "../util/bitmap_util.h"
+#include "../util/compiler_util.h"
 #include "vector_reference.h"
 #include "vector_allocator.h"
 #include "vector_type.h"

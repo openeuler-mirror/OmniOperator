@@ -12,7 +12,7 @@ class VarcharVector : public VariableWidthVector<uint8_t *> {
 public:
     VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size);
 
-    int GetValue(int index, uint8_t **dst)
+    int ALWAYS_INLINE GetValue(int index, uint8_t **dst)
     {
         int actualIndex = index + positionOffset;
         int startOffset = GetValueOffset(actualIndex);
@@ -24,7 +24,7 @@ public:
         return dataLen;
     }
 
-    void SetValue(int index, const uint8_t *value, int length)
+    void ALWAYS_INLINE SetValue(int index, const uint8_t *value, int length)
     {
         FillSlots(index);
         SetData(index, value, 0, length);

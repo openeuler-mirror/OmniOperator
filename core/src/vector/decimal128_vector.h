@@ -15,14 +15,14 @@ public:
     Decimal128Vector(VectorAllocator *allocator, int32_t size);
 
     // inline for high performance.
-    Decimal128 GetValue(int32_t index)
+    Decimal128 ALWAYS_INLINE GetValue(int32_t index)
     {
         int64_t *value = &(reinterpret_cast<int64_t *>(valuesAddress)[(index + positionOffset) * 2]);
         return Decimal128(*value, *(value + 1));
     }
 
     // inline for high performance.
-    void SetValue(int32_t index, Decimal128 value)
+    void ALWAYS_INLINE SetValue(int32_t index, Decimal128 value)
     {
         reinterpret_cast<int64_t *>(valuesAddress)[index * 2] = value.HighBits();
         reinterpret_cast<int64_t *>(valuesAddress)[index * 2 + 1] = value.LowBits();
