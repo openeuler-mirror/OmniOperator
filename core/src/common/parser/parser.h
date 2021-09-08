@@ -12,19 +12,20 @@ public:
     Parser();
     ~Parser();
 
-    omniruntime::expressions::Expr *ParseRowExpression(const std::string input, int32_t inputTypes[], int32_t vecCount);
-    omniruntime::expressions::Expr *ParseRowExpressionHelper(const std::string opStr,
-                                                             std::vector<omniruntime::expressions::Expr *> args);
+    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, int32_t inputTypes[],
+        int32_t vecCount);
+    omniruntime::expressions::Expr *ParseRowExpressionHelper(std::string opStr,
+        std::vector<omniruntime::expressions::Expr *> args);
 
-    omniruntime::expressions::DataExpr* GenerateData(std::string dataStr, int32_t *inputTypes, int32_t vecCount) const;
-    omniruntime::expressions::DataExpr *GenerateDataHelper(std::string dataStr,
-                                                           omniruntime::expressions::DataType currDataType) const;
+    static omniruntime::expressions::DataExpr *GenerateData(std::string dataStr, int32_t *inputTypes, int32_t vecCount);
+    static omniruntime::expressions::DataExpr *GenerateDataHelper(const std::string &dataStr,
+        omniruntime::expressions::DataType currDataType);
 
 private:
     ParserHelper ph;
 
     // Helper function to strip a string but keep spaces intact inside string literals
-    std::string StripString(std::string input) const;
+    static std::string StripString(const std::string& input);
 };
 
 

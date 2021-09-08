@@ -14,37 +14,6 @@ namespace {
 ParserHelper::~ParserHelper() {
 }
 
-// Update with function return type every time a new function is added
-DataType ParserHelper::FuncRetTypeMap(string fnName, vector<Expr *> args)
-{
-    if (fnName == "CAST") {
-        if (args[0]->dataType == STRINGD) {
-            return INT32D;
-        } else {
-            return DOUBLED;
-        }
-    }
-    if (fnName == "substr") {
-        return STRINGD;
-    }
-    if (fnName == "concat") {
-        return STRINGD;
-    }
-    if (fnName == "abs") {
-        return args[0]->dataType;
-    }
-    if (fnName == "LIKE") {
-        return BOOLD;
-    }
-    if (fnName == "combine_hash") {
-        return INT64D;
-    }
-    if (externalFuncNames.find(fnName) != externalFuncNames.end()) {
-        return externalFuncRetTypeMap[fnName];
-    }
-    return INVALIDDATAD;
-}
-
 // Helper function to determine if a type is INT32D or INT64D
 bool ParserHelper::IsIntType(DataType dt) const
 {

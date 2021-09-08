@@ -141,8 +141,11 @@ void LLVMCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::string>
     FuncExpr *fExpr = dynamic_cast<FuncExpr *>(&funcExpr);
     std::string fn = fExpr->funcName;
 
-    if (fn == "CAST" || fn == "abs") {
-        s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()));
+    if (fn == "CAST") {
+        s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()) + "_" +
+                 dataTypeString(fExpr->GetExprDataType()));
+    } else if (fn == "abs") {
+        s.insert(fn + "_" + dataTypeString(fExpr->GetExprDataType()));
     } else if (fn == "substr") {
         if (fExpr->arguments.size() == STARTEXT_VALUE) {
             s.insert("substrWithStartExt");
@@ -696,30 +699,15 @@ Value *LLVMCodeGen::ParseCoalesceExpr(CoalesceExpr &coalesceExpr, std::map<std::
 Value *LLVMCodeGen::ParseFuncExprAbs(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
 {
     FuncExpr *fExpr = &funcExpr;
-
-    switch (fExpr->dataType) {
-        case (DataType::INT32D): {
-            std::vector<Value*> argVals{this->ParseExpr(*(fExpr->arguments[0]), args)};
-            auto f = module->getFunction(fr->absInt32Str);
-            Value *ret = builder->CreateCall(f, argVals, fr->absInt32Str);
-            return ret;
-        }
-        case (DataType::INT64D): {
-            std::vector<Value*> argVals{this->ParseExpr(*(fExpr->arguments[0]), args)};
-            auto f = module->getFunction(fr->absInt64Str);
-            Value *ret = builder->CreateCall(f, argVals, fr->absInt64Str);
-            return ret;
-        }
-        case (DataType::DOUBLED): {
-            std::vector<Value*> argVals{ParseExpr(*(fExpr->arguments[0]), args)};
-            auto f = module->getFunction(fr->absDoubleStr);
-            Value *ret = builder->CreateCall(f, argVals, fr->absDoubleStr);
-            return ret;
-        }
-        default: {
-            std::cout << "Unsupported data type for function " << fExpr->funcName << std::endl;
-            return CreateConstantInt(0);
-        }
+    std::string absFuncName = "Abs_" + dataTypeString(fExpr->dataType);
+    std::vector<Value*> argVals{this->ParseExpr(*(fExpr->arguments[0]), args)};
+    auto f = module->getFunction(absFuncName);
+    if (f) {
+        Value *ret = builder->CreateCall(f, argVals, absFuncName);
+        return ret;
+    } else {
+        std::cout << "Unable to parse function " << absFuncName << std::endl;
+        return CreateConstantInt(0);
     }
 }
 
@@ -727,31 +715,28 @@ Value *LLVMCodeGen::ParseFuncExprCast(FuncExpr &funcExpr, std::map<std::string, 
 {
     FuncExpr *fExpr = &funcExpr;
 
-    // Simply cast from int or long to double (how it appears in tpch)
     llvm::Value *val = ParseExpr(*(fExpr->arguments[0]), args);
     std::vector<Value*> argVals{val};
-    switch (fExpr->arguments[0]->dataType) {
-        case DataType::INT32D: {
-            auto f = module->getFunction(fr->castInt32Str);
-            Value *ret = builder->CreateCall(f, argVals, fr->castInt32Str);
-            return ret;
-        }
-        case DataType::INT64D: {
-            auto f = module->getFunction(fr->castInt64Str);
-            Value *ret = builder->CreateCall(f, argVals, fr->castInt64Str);
-            return ret;
-        }
-        case DataType::STRINGD: {
-            auto f = module->getFunction(fr->castStringStr);
-            Value *ret = builder->CreateCall(f, argVals, fr->castStringStr);
-            return ret;
-        }
-        default: {
-            LLVM_DEBUG_LOG("Unsupported data type for function cast %d", fExpr->arguments[0]->dataType);
-            return CreateConstantInt(0);
-        }
+    DataType from = fExpr->arguments[0]->dataType;
+    DataType to = fExpr->GetExprDataType();
+
+    std::string castFuncName = "Cast_" + dataTypeString(from) + "_" + dataTypeString(to);
+    std::cout << castFuncName << std::endl;
+
+    // if casting to same type, treat it as constant
+    if (from == to) {
+        auto *dataExpr = static_cast<DataExpr*>(fExpr->arguments[0]);
+        return ParseDataExpr(*dataExpr, args);
     }
 
+    auto f = module->getFunction(castFuncName);
+    if (f) {
+        Value *ret = builder->CreateCall(f, argVals, castFuncName);
+        return ret;
+    } else {
+        LLVM_DEBUG_LOG("Unable to parse function %s", castFuncName.c_str());
+        return CreateConstantInt(0);
+    }
 }
 
 Value *LLVMCodeGen::ParseFuncExprSubstr(FuncExpr &funcExpr, std::map<std::string, Value *> &args)

@@ -11,6 +11,7 @@
 #include "../operator.h"
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_allocator_manager.h"
+#include "../../common/expressions.h"
 
 using vec64 = std::vector<int64_t>;
 using ProjFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *);
@@ -21,16 +22,20 @@ using RowProjFunc = void* (*)(int64_t*, bool*, int32_t);
 
 class RowProjection {
 public:
-    RowProjection();
+    RowProjection(std::string &expression, std::vector<expressions::DataType> &inputType);
     ~RowProjection();
-    RowProjFunc CreateProjection(std::string expression, std::vector<expressions::DataType> inputTypes);
+    RowProjFunc Create(std::vector<expressions::DataType> &inputTypes);
+    expressions::DataType GetReturnType();
+    bool IsColumnProjection();
+    int GetIndexIfColumnProjection();
 private:
     std::unique_ptr<ProjectionCodeGen> codegen = nullptr;
+    expressions::Expr *expression;
 };
 
 class Projection {
 public:
-    Projection(int32_t *inputTypes, int32_t nCols, std::string expr, bool filter);
+    Projection(int32_t *inputTypes, int32_t nCols, const std::string& expr, bool filter);
     Projection(int32_t *inputTypes, int32_t nCols, expressions::Expr &expr, bool filter);
     ~Projection()
     {

@@ -33,7 +33,7 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void simpleTest() {
-        String[] exprs = {"$operator$ADD(#0, 5)"};
+        String[] exprs = {"$operator$ADD:int(#0, 5)"};
         VecType[] inputTypes = {IntVecType.INTEGER};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
@@ -62,7 +62,7 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void complexTest() {
-        String[] exprs = {"$operator$MULTIPLY(#0, #1)", "IF($operator$LESS_THAN(#0, 500), 4000000000, #2)"};
+        String[] exprs = {"$operator$MULTIPLY:int(#0, #1)", "IF:long($operator$LESS_THAN:boolean(#0, 500), 4000000000, #2)"};
         VecType[] inputTypes = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;

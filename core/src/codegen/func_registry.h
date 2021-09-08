@@ -47,15 +47,16 @@ public:
     // List of functions
     const std::string strCompareExtStr = "StrCompareExt";
     const std::string likeExtStr = "LikeExt";
-    const std::string absInt32Str = "AbsInt32";
-    const std::string absInt64Str = "AbsInt64";
-    const std::string absDoubleStr = "AbsDouble";
+    const std::string absInt32Str = "Abs_int32";
+    const std::string absInt64Str = "Abs_int64";
+    const std::string absDoubleStr = "Abs_double";
     const std::string substrExtStr = "SubstrExt";
     const std::string substrWithStartExtStr = "SubstrWithStartExt";
     const std::string concatStrExtStr = "ConcatStrExt";
-    const std::string castInt32Str = "CastInt32";
-    const std::string castInt64Str = "CastInt64";
-    const std::string castStringStr = "CastString";
+    const std::string castInt32ToDoubleStr = "Cast_int32_double";
+    const std::string castInt64ToDoubleStr = "Cast_int64_double";
+    const std::string castInt64ToInt32Str = "Cast_int32_int64";
+    const std::string castStringStr = "Cast_string_int32";
     const std::string combineHashStr = "CombineHash";
 };
 

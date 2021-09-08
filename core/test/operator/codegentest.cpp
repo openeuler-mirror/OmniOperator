@@ -51,7 +51,7 @@ using namespace omniruntime::expressions;
 // processing each row individually, so to LLVM it is exactly the same as a projection.
 // Check CodeGenTest.RowFilter for a dedicated test using the RowFilter class instead.
 TEST(CodeGenTest, SimpleFilter) {
-    string unparsed = "$operator$LESS_THAN(#0, 50)";
+    string unparsed = "$operator$LESS_THAN:boolean(#0, 50)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
@@ -72,8 +72,10 @@ TEST(CodeGenTest, SimpleFilter) {
     }
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
-    RowProjection lc;
-    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+    RowProjection lc(unparsed, vecTypes);
+    RowProjFunc func = lc.Create(vecTypes);
+    EXPECT_EQ(lc.GetReturnType(), BOOLD);
+
     for (int32_t i = 0; i < 50; i++) {
         bool* res = (bool*) func(table, bitmap, i);
         EXPECT_TRUE(*res);
@@ -89,7 +91,7 @@ TEST(CodeGenTest, SimpleFilter) {
 }
 // Simple project example using individual row processing.
 TEST(CodeGenTest, SimpleProject) {
-    string unparsed = "ADD(#0, 50)";
+    string unparsed = "ADD:int(#0, 50)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
@@ -110,9 +112,9 @@ TEST(CodeGenTest, SimpleProject) {
     }
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
-    RowProjection lc;
-
-    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+    RowProjection lc(unparsed, vecTypes);
+    RowProjFunc func = lc.Create(vecTypes);
+    EXPECT_EQ(lc.GetReturnType(), INT32D);
 
     for (int32_t i = 0; i < 100; i++) {
         int32_t* res = (int32_t*) func(table, bitmap, i);
@@ -125,7 +127,7 @@ TEST(CodeGenTest, SimpleProject) {
 }
 // A more complicated test for individual row projection
 TEST (CodeGenTest, SingleProject) {
-    string unparsed = "IF($operator$GREATER_THAN(#1, 3000000000), ADD(#0, 10), MULTIPLY(#0, -1))";
+    string unparsed = "IF:int($operator$GREATER_THAN:boolean(#1, 3000000000), ADD:int(#0, 10), MULTIPLY:int(#0, -1))";
 
     const int32_t numCols = 2;
     DataType types[numCols] = {DataType::INT32D, DataType::INT64D};
@@ -151,9 +153,9 @@ TEST (CodeGenTest, SingleProject) {
     }
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
-    RowProjection lc;
-
-    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+    RowProjection lc(unparsed, vecTypes);
+    RowProjFunc func = lc.Create(vecTypes);
+    EXPECT_EQ(lc.GetReturnType(), INT32D);
 
     for (int32_t i = 0; i < numRows; i++) {
         int32_t* res = (int32_t*) func(table, bitmap, i);
@@ -194,9 +196,11 @@ TEST (CodeGenTest, ShortCircuitProject) {
     }
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
-    RowProjection lc;
+    RowProjection lc(unparsed, vecTypes);
+    RowProjFunc func = lc.Create(vecTypes);
 
-    RowProjFunc func = lc.CreateProjection(unparsed, vecTypes);
+    EXPECT_TRUE(lc.IsColumnProjection());
+    EXPECT_EQ(lc.GetIndexIfColumnProjection(), 1);
 
     for (int32_t i = 0; i < numRows; i++) {
         int32_t* res = (int32_t*) func(table, bitmap, i);
@@ -211,7 +215,7 @@ TEST (CodeGenTest, ShortCircuitProject) {
 
 // Test the row filter
 TEST (CodeGenTest, RowFilter) {
-    string unparsed = "$operator$EQUAL(#0, 0)";
+    string unparsed = "$operator$EQUAL:boolean(#0, 0)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
@@ -246,7 +250,7 @@ TEST (CodeGenTest, RowFilter) {
 }
 
 TEST(CodeGenTest, Operators1) {
-    string unparsed = "AND($operator$GREATER_THAN_OR_EQUAL(ADD(#0, 2), 4), AND($operator$LESS_THAN(#1, 4), $operator$EQUAL(#2, 2)))";
+    string unparsed = "AND:boolean($operator$GREATER_THAN_OR_EQUAL:boolean(ADD:int(#0, 2), 4), AND:boolean($operator$LESS_THAN:boolean(#1, 4), $operator$EQUAL:boolean(#2, 2)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
@@ -303,7 +307,7 @@ TEST(CodeGenTest, Operators1) {
 }
 
 TEST(CodeGenTest, MathFunctions1) {
-    string unparsed = "AND($operator$EQUAL(abs(#0), abs(#2)), $operator$EQUAL(abs(#0), abs(#1)))";
+    string unparsed = "AND:boolean($operator$EQUAL:boolean(abs:int(#0), abs:int(#2)), $operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
@@ -361,7 +365,7 @@ TEST(CodeGenTest, MathFunctions1) {
 
 
 TEST(CodeGenTest, MathFunctions2) {
-    string unparsed = "BETWEEN(#1, #0, #2)";
+    string unparsed = "BETWEEN:boolean(#1, #0, #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
@@ -431,7 +435,7 @@ TEST(CodeGenTest, MathFunctions2) {
 
 
 TEST(CodeGenTest, MathFunctions3) {
-    string unparsed = "IF($operator$GREATER_THAN(#0, 100), $operator$GREATER_THAN(#0, 200), $operator$LESS_THAN(#0, 0))";
+    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), $operator$LESS_THAN:boolean(#0, 0))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
@@ -508,7 +512,7 @@ TEST(CodeGenTest, MathFunctions3) {
 
 
 TEST(CodeGenTest, MathFunctions4) {
-    string unparsed = "IN(#0, 1, 2, 3, 4, 5)";
+    string unparsed = "IN:boolean(#0, 1, 2, 3, 4, 5)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser{};
@@ -595,7 +599,7 @@ TEST(CodeGenTest, MathFunctions4) {
 
 // For testing different types
 TEST(CodeGenTest, CastNumbers1) {
-    string unparsed = "$operator$EQUAL(abs(CAST(#0)), abs(CAST(#1)))";
+    string unparsed = "$operator$EQUAL:boolean(abs:double(CAST:double(#0)), abs:double(CAST:double(#1)))";
 
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
@@ -663,7 +667,7 @@ TEST(CodeGenTest, CastNumbers1) {
 }
 
 TEST(CodeGenTest, CastNumbers2) {
-    string unparsed = "$operator$GREATER_THAN(CAST(#1), #2)";
+    string unparsed = "$operator$GREATER_THAN:boolean(CAST:double(#1), #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser{};
@@ -690,7 +694,7 @@ TEST(CodeGenTest, CastNumbers2) {
 
     string testname = "simpleTest3";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
@@ -731,7 +735,7 @@ TEST(CodeGenTest, CastNumbers2) {
 
 
 TEST(CodeGenTest, Like) {
-    string unparsed = "LIKE(#2, '%hello%world%')";
+    string unparsed = "LIKE:boolean(#2, '%hello%world%')";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -797,7 +801,7 @@ TEST(CodeGenTest, Like) {
 
 
 TEST(CodeGenTest, DateCast) {
-    string unparsed = "$operator$GREATER_THAN(CAST(#2), #0)";
+    string unparsed = "$operator$GREATER_THAN:boolean(CAST:int(#2), #0)";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -875,7 +879,7 @@ TEST(CodeGenTest, DateCast) {
 }
 
 TEST(CodeGenTest, SubstrIn) {
-    string unparsed = "IN(substr(#2, 0, 2), '12', '21', '13', '31', '34', '43')";
+    string unparsed = "IN:boolean(substr:varchar(#2, 0, 2), '12', '21', '13', '31', '34', '43')";
     // string unparsed = "IN(substr(#2, 5), '12', '21', '13', '31', '34', '43')";
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -956,7 +960,7 @@ TEST(CodeGenTest, SubstrIn) {
 }
 
 TEST(CodeGenTest, ConcatStr) {
-    string unparsed = "$operator$EQUAL(concat(#1, #2), 'helloworld')";
+    string unparsed = "$operator$EQUAL:boolean(concat:varchar(#1, #2), 'helloworld')";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -1037,7 +1041,7 @@ TEST(CodeGenTest, ConcatStr) {
 }
 
 TEST(CodeGenTest, StringWithOps) {
-    string unparsed = "OR($operator$EQUAL(#2, 'Sunday'), $operator$EQUAL(#2, 'Saturday'))";
+    string unparsed = "OR:boolean($operator$EQUAL:boolean(#2, 'Sunday'), $operator$EQUAL:boolean(#2, 'Saturday'))";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -1114,7 +1118,7 @@ TEST(CodeGenTest, StringWithOps) {
 }
 
 TEST(CodeGenTest, Coalesce) {
-    string unparsed = "$operator$EQUAL(COALESCE(#0, 0), 123)";
+    string unparsed = "$operator$EQUAL:boolean(COALESCE:long(#0, 0), 123)";
 
 
     DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};

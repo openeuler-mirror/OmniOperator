@@ -34,7 +34,7 @@ public class TestAggregateWindowFunction
                     .map(ClientCapabilities::toString)
                     .collect(toImmutableSet()))
             .setSystemProperty("extension_execution_planner_enabled", "true")
-            .setSystemProperty("extension_execution_planner_jar_path", "file:///hong/omni-runtime/omni-openLooKeng-adapter/target/omni-openLooKeng-adapter-1.2.0-SNAPSHOT.jar")
+            .setSystemProperty("extension_execution_planner_jar_path", "/home/arven/workspace/omni-runtime/adapter/openlookeng/target/omni-openLooKeng-adapter-1.2.0-SNAPSHOT.jar")
             .setSystemProperty("extension_execution_planner_class_path", "nova.hetu.olk.OmniLocalExecutionPlanner")
             .setSystemProperty("extension_merge_pages_class_path", "nova.hetu.olk.operator.filterandproject.OmniMergePages")
             .setSystemProperty("prefer_partial_aggregation", "false")
@@ -149,7 +149,7 @@ public class TestAggregateWindowFunction
                         .build());
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testSumOrdered()
     {
         MaterializedResult expected = resultBuilder(TEST_SESSION, INTEGER, INTEGER, BIGINT)
@@ -169,7 +169,7 @@ public class TestAggregateWindowFunction
         assertWindowQuery(sql, expected);
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testSumUnordered()
     {
         assertWindowQuery("sum(orderkey) OVER (PARTITION BY orderstatus)",
@@ -187,7 +187,7 @@ public class TestAggregateWindowFunction
                         .build());
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testAvgOrdered()
     {
         MaterializedResult expected = resultBuilder(TEST_SESSION, INTEGER, INTEGER, DOUBLE)
@@ -207,7 +207,7 @@ public class TestAggregateWindowFunction
         assertWindowQuery(sql, expected);
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testAvgAndSumOrdered()
     {
         MaterializedResult expected = resultBuilder(TEST_SESSION, INTEGER, INTEGER, DOUBLE, BIGINT)
@@ -227,7 +227,7 @@ public class TestAggregateWindowFunction
         assertWindowQuery(sql, expected);
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testSumInAvgOrdered()
     {
         MaterializedResult expected = resultBuilder(TEST_SESSION, INTEGER, INTEGER, BIGINT, DOUBLE)

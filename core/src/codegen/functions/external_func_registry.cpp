@@ -56,7 +56,7 @@ int64_t ExternalFuncRegistry::FetchHandle() const
     // Get symbols from .so file
     auto handle = dlopen(EXTERNAL_FUNCTIONS_LIB_PATH.c_str(), RTLD_LAZY);
     if (!handle) {
-        std::cerr << "Could not open externalfunctions library file; " << dlerror() << std::endl;
+        std::cout << "Could not open externalfunctions library file; " << dlerror() << std::endl;
         std::cout << "Error occurred with external functions. No external functions will be registered" << std::endl;
         return 0;
     }
