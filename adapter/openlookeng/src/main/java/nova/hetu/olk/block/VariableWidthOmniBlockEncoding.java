@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
+package nova.hetu.olk.block;
+
+import static io.airlift.slice.SizeOf.SIZE_OF_INT;
+import static io.prestosql.spi.block.EncoderUtil.decodeNullBits;
+
+import io.airlift.slice.Slice;
+import io.airlift.slice.SliceInput;
+import io.airlift.slice.Slices;
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.BlockEncodingSerde;
+import io.prestosql.spi.block.VariableWidthBlockEncoding;
+
+/**
+ * The type Variable width omni block encoding.
+ *
+ * @since 20210630
+ */
+public class VariableWidthOmniBlockEncoding extends VariableWidthBlockEncoding {
+    @Override
+    public Block readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
+        int positionCount = sliceInput.readInt();
+
+        int[] offsets = new int[positionCount + 1];
+        sliceInput.readBytes(Slices.wrappedIntArray(offsets), SIZE_OF_INT, positionCount * SIZE_OF_INT);
+
+        boolean[] valueIsNull = decodeNullBits(sliceInput, positionCount).orElse(null);
+
+        int blockSize = sliceInput.readInt();
+        Slice slice = sliceInput.readSlice(blockSize);
+
+        return new VariableWidthOmniBlock(0, positionCount, slice, offsets, valueIsNull);
+    }
+}

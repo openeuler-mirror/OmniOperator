@@ -387,6 +387,70 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
+TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec)
+{
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(),DoubleVecType() }));
+    VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+
+    int32_t sortCols[2] = {0, 1};
+    int32_t ascendings[2] = {true, true};
+    int32_t nullFirsts[2] = {true, true};
+    const int32_t expectedDataSize = 5;
+    inputVecBatch->GetVector(0)->SetValueNull(dataSize - 1);
+    inputVecBatch->GetVector(1)->SetValueNull(dataSize -1);
+
+    int32_t ids[] = {0, 1, 2, 3, 4, 5};
+    VecType vecType = sourceTypes.Get()[2];
+    inputVecBatch->SetVector(2, CreateDictionaryVector(vecType, dataSize, ids, dataSize, data2));
+
+    TopNOperatorFactory *topNOperatorFactory =
+            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVectorBatches;
+    topNOperator->GetOutput(outputVectorBatches);
+    int32_t expectData1[expectedDataSize] = {2,0, 0, 1, 1};
+    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    int64_t expectData2[expectedDataSize] = {5,0, 3, 1, 4};
+    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    expectCol2->SetValues(0, expectData2, expectedDataSize);
+    double expectData3[expectedDataSize] = {1.1,6.6, 3.3, 5.5, 2.2};
+    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
+    expectVecorBatch->GetVector(0)->SetValueNull(0);
+    expectVecorBatch->GetVector(1)->SetValueNull(0);
+
+    VectorHelper::PrintVecBatch(outputVectorBatches[0]);
+
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
+    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
+    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVectorBatches);
+}
+
 TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
 {
     using namespace omniruntime::op;

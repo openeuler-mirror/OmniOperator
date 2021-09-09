@@ -71,11 +71,17 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
     return 0;
 }
 
-template<typename T>
+template <typename T>
 void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
     int32_t position)
 {
-    singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
+    if (vector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
+        auto dictionaryVector = static_cast<DictionaryVector *>(vector);
+        SetVectorForSingleRowVecBatch<T>(singleRowVecBatch, colIndex, dictionaryVector->GetDictionary(),
+            dictionaryVector->GetIds()[position]);
+    } else {
+        singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
+    }
 }
 
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
@@ -113,8 +119,7 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
     return singleRowVecBatch;
 }
 
-template<typename T>
-void ALWAYS_INLINE SetValueForVector(Vector *pqVector, Vector *tmpVector, int64_t index)
+template <typename T> void ALWAYS_INLINE SetValueForVector(Vector *pqVector, Vector *tmpVector, int64_t index)
 {
     (static_cast<T *>(tmpVector))->SetValue(index, (static_cast<T *>(pqVector))->GetValue(0));
 }
@@ -221,8 +226,14 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
             continue;
         }
 
-        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, left->GetVector(sortCol), leftPosition,
-            right->GetVector(sortCol), rightPosition);
+        Vector *leftVector = left->GetVector(sortCol);
+        Vector *rightVector = right->GetVector(sortCol);
+
+        leftVector = OperatorUtil::GetDictionary(leftVector, leftPosition);
+        rightVector = OperatorUtil::GetDictionary(rightVector, rightPosition);
+
+        compare =
+            OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, leftPosition, rightVector, rightPosition);
         if (sortAscendings[i] == 0) {
             compare = -compare;
         }
