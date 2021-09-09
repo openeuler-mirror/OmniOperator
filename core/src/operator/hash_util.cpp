@@ -46,128 +46,58 @@ int64_t NextPowerOfTwo(int64_t x)
     }
 }
 
-#pragma clang optimize off
-int64_t RotateLeft(int64_t i, int32_t distance)
+ALWAYS_INLINE int64_t RotateLeft(uint64_t i, int32_t distance)
 {
-    return (i << distance) | (static_cast<uint64_t>(i) >> -distance);
-}
-#pragma clang optimize on
-
-int64_t HashUtil::HashValue(int32_t value)
-{
-    return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
+    return (i << distance) | (i >> (MAX_ROTATE_DISTANCE - distance));
 }
 
-// for hashing a real data value
-// from AbstractLongType#hash()
-// for type double, how to convert double value to long value?
-int64_t HashUtil::HashValue(int64_t value)
+ALWAYS_INLINE int64_t Reverse(uint64_t i)
 {
-    return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
+    i = (i & 0x5555555555555555L) << ROTATE_DISTANCE_1 | (i >> ROTATE_DISTANCE_1) & 0x5555555555555555L;
+    i = (i & 0x3333333333333333L) << ROTATE_DISTANCE_2 | (i >> ROTATE_DISTANCE_2) & 0x3333333333333333L;
+    i = (i & 0x0f0f0f0f0f0f0f0fL) << ROTATE_DISTANCE_4 | (i >> ROTATE_DISTANCE_4) & 0x0f0f0f0f0f0f0f0fL;
+    i = (i & 0x00ff00ff00ff00ffL) << ROTATE_DISTANCE_8 | (i >> ROTATE_DISTANCE_8) & 0x00ff00ff00ff00ffL;
+    i = (i << ROTATE_DISTANCE_48) | ((i & 0xffff0000L) << ROTATE_DISTANCE_16) |
+        ((i >> ROTATE_DISTANCE_16) & 0xffff0000L) | (i >> ROTATE_DISTANCE_48);
+    return i;
 }
 
-int64_t DoubleToLongBits(double value)
+ALWAYS_INLINE int64_t XxHash64FinalShuffle(uint64_t hash)
 {
-    return static_cast<int64_t>(value);
+    hash ^= hash >> ROTATE_DISTANCE_33;
+    hash *= PRIME64_2;
+    hash ^= hash >> ROTATE_DISTANCE_29;
+    hash *= PRIME64_3;
+    hash ^= hash >> ROTATE_DISTANCE_32;
+    return hash;
 }
 
-int64_t HashUtil::HashValue(double value)
-{
-    return HashValue(DoubleToLongBits(value));
-}
-
-int64_t Reverse(int64_t rawHash);
-int64_t XxHash64UpdateTail(int64_t hash, int64_t value);
-int64_t XxHash64FinalShuffle(int64_t hash);
-
-int32_t HashUtil::GetRawHashPartition(int64_t rawHash, int32_t mask)
-{
-    int64_t value = Reverse(rawHash);
-    int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
-    hash = XxHash64UpdateTail(hash, value);
-    hash = XxHash64FinalShuffle(hash);
-
-    return static_cast<int32_t>(hash) & mask;
-}
-
-int64_t Reverse(int64_t rawHash)
-{
-    uint64_t hash = static_cast<uint64_t>(rawHash);
-    hash = hash >> ROTATE_DISTANCE_1;
-    rawHash =
-        ((rawHash & 0x5555555555555555L) << ROTATE_DISTANCE_1) | (static_cast<int64_t>(hash) & 0x5555555555555555L);
-
-    hash = static_cast<uint64_t>(rawHash);
-    hash = hash >> ROTATE_DISTANCE_2;
-    rawHash =
-        ((rawHash & 0x3333333333333333L) << ROTATE_DISTANCE_2) | (static_cast<int64_t>(hash) & 0x3333333333333333L);
-
-    hash = static_cast<uint64_t>(rawHash);
-    hash = hash >> ROTATE_DISTANCE_4;
-    rawHash =
-        ((rawHash & 0x0f0f0f0f0f0f0f0fL) << ROTATE_DISTANCE_4) | (static_cast<int64_t>(hash) & 0x0f0f0f0f0f0f0f0fL);
-
-    hash = static_cast<uint64_t>(rawHash);
-    hash = hash >> ROTATE_DISTANCE_8;
-    rawHash =
-        ((rawHash & 0x00ff00ff00ff00ffL) << ROTATE_DISTANCE_8) | (static_cast<int64_t>(hash) & 0x00ff00ff00ff00ffL);
-
-    hash = static_cast<uint64_t>(rawHash);
-    int64_t temp1 = static_cast<int64_t>(hash >> ROTATE_DISTANCE_16);
-    int64_t temp2 = static_cast<int64_t>(hash >> ROTATE_DISTANCE_48);
-    rawHash = (rawHash << ROTATE_DISTANCE_48) | ((rawHash & 0xffff0000L) << ROTATE_DISTANCE_16) |
-        (temp1 & 0xffff0000L) | temp2;
-    return rawHash;
-}
-
-int64_t XxHash64Mix(int64_t current, int64_t value)
+ALWAYS_INLINE int64_t XxHash64Mix(int64_t current, int64_t value)
 {
     return RotateLeft(current + value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
 }
 
-int64_t XxHash64UpdateTail(int64_t hash, int64_t value)
+ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int64_t value)
 {
     int64_t temp = hash ^ XxHash64Mix(0, value);
     return RotateLeft(temp, ROTATE_DISTANCE_27) * PRIME64_1 + PRIME64_4;
 }
 
-int64_t XxHash64UpdateTail(int64_t hash, int32_t value)
+ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int32_t value)
 {
     int64_t unsignedValue = value & 0xFFFFFFFFL;
     int64_t temp = hash ^ (unsignedValue * PRIME64_1);
     return RotateLeft(temp, ROTATE_DISTANCE_23) * PRIME64_2 + PRIME64_3;
 }
 
-int64_t XxHash64UpdateTail(int64_t hash, int8_t value)
+ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int8_t value)
 {
     int32_t unsignedValue = value & 0xFF;
     int64_t temp = hash ^ (unsignedValue * PRIME64_5);
     return RotateLeft(temp, ROTATE_DISTANCE_11) * PRIME64_1;
 }
 
-int64_t XxHash64Update(int64_t hash, int64_t value)
-{
-    int64_t temp = hash ^ XxHash64Mix(0, value);
-    return temp * PRIME64_1 + PRIME64_4;
-}
-
-int64_t XxHash64FinalShuffle(int64_t hash)
-{
-    uint64_t hashValue = static_cast<uint64_t>(hash) >> ROTATE_DISTANCE_33;
-    hash ^= static_cast<int64_t>(hashValue);
-    hash *= PRIME64_2;
-
-    hashValue = static_cast<uint64_t>(hash) >> ROTATE_DISTANCE_29;
-    hash ^= static_cast<int64_t>(hashValue);
-    hash *= PRIME64_3;
-
-    hashValue = static_cast<uint64_t>(hash) >> ROTATE_DISTANCE_32;
-    hash ^= static_cast<int64_t>(hashValue);
-
-    return hash;
-}
-
-int64_t XxHash64UpdateTail(int64_t hash, int8_t *address, int index, int length)
+ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int8_t *address, int index, int length)
 {
     while (index < length) {
         hash = XxHash64UpdateTail(hash, address[index]);
@@ -175,6 +105,12 @@ int64_t XxHash64UpdateTail(int64_t hash, int8_t *address, int index, int length)
     }
     hash = XxHash64FinalShuffle(hash);
     return hash;
+}
+
+ALWAYS_INLINE int64_t XxHash64Update(int64_t hash, int64_t value)
+{
+    int64_t temp = hash ^ XxHash64Mix(0, value);
+    return temp * PRIME64_1 + PRIME64_4;
 }
 
 int64_t XxHash64UpdateBody(int64_t seed, int8_t *address, int32_t length)
@@ -195,7 +131,7 @@ int64_t XxHash64UpdateBody(int64_t seed, int8_t *address, int32_t length)
     return hash;
 }
 
-int64_t XxHash64Hash(int64_t seed, int8_t *data, int32_t offset, int32_t length)
+ALWAYS_INLINE int64_t XxHash64Hash(int64_t seed, int8_t *data, int32_t offset, int32_t length)
 {
     int8_t *address = data + offset;
     int64_t hash = 0;
@@ -210,7 +146,7 @@ int64_t XxHash64Hash(int64_t seed, int8_t *data, int32_t offset, int32_t length)
     return XxHash64UpdateTail(hash, address, index, length);
 }
 
-int64_t HashUtil::XxHash64HashValue(int64_t value)
+ALWAYS_INLINE int64_t HashUtil::XxHash64HashValue(int64_t value)
 {
     int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
     hash = XxHash64UpdateTail(hash, value);
@@ -218,17 +154,50 @@ int64_t HashUtil::XxHash64HashValue(int64_t value)
     return hash;
 }
 
-int64_t HashUtil::HashValue(int8_t *value, int32_t length)
+ALWAYS_INLINE int64_t HashUtil::HashValue(int32_t value)
+{
+    return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
+}
+
+// for hashing a real data value
+// from AbstractLongType#hash()
+// for type double, how to convert double value to long value?
+ALWAYS_INLINE int64_t HashUtil::HashValue(int64_t value)
+{
+    return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
+}
+
+ALWAYS_INLINE int64_t DoubleToLongBits(double value)
+{
+    return static_cast<int64_t>(value);
+}
+
+ALWAYS_INLINE int64_t HashUtil::HashValue(double value)
+{
+    return HashValue(DoubleToLongBits(value));
+}
+
+ALWAYS_INLINE int64_t HashUtil::HashValue(int8_t *value, int32_t length)
 {
     return XxHash64Hash(DEFAULT_SEED, value, 0, length);
 }
 
-long UnpackUnsignedLong(int64_t value)
+ALWAYS_INLINE long UnpackUnsignedLong(int64_t value)
 {
     return value & ~SIGN_LONG_MASK;
 }
 
-int64_t HashUtil::HashValue(int64_t low, int64_t high)
+ALWAYS_INLINE int64_t HashUtil::HashValue(int64_t low, int64_t high)
 {
     return XxHash64HashValue(low) ^ XxHash64HashValue(UnpackUnsignedLong(high));
+}
+
+ALWAYS_INLINE int32_t HashUtil::GetRawHashPartition(int64_t rawHash, int32_t mask)
+{
+    int64_t value = Reverse(rawHash);
+    int64_t hash = DEFAULT_SEED + PRIME64_5 + SIZE_OF_LONG;
+    hash = XxHash64UpdateTail(hash, value);
+    hash = XxHash64FinalShuffle(hash);
+
+    return static_cast<int32_t>(hash) & mask;
 }
