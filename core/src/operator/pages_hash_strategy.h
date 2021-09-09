@@ -15,6 +15,7 @@
 #include "../vector/varchar_vector.h"
 #include "pages_index.h"
 #include "hash_util.h"
+#include "util/operator_util.h"
 
 /*
  * select * from t1 join t2 on t1.a1=t2.a1 and t1.b1=t2.b1
@@ -29,7 +30,9 @@ public:
     bool IsPositionNull(int32_t pageIndex, int rowIndex) const
     {
         for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
-            if (buildHashColumns[columnIdx][pageIndex]->IsValueNull(rowIndex)) {
+            omniruntime::vec::Vector *vector = buildHashColumns[columnIdx][pageIndex];
+            vector = OperatorUtil::GetDictionary(vector, rowIndex);
+            if (vector->IsValueNull(rowIndex)) {
                 return true;
             }
         }
