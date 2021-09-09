@@ -112,55 +112,6 @@ void HashAggregationOperator::PreLoop(VectorBatch *vecBatch)
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
 
-int64_t ALWAYS_INLINE GenerateCombinedHash(Vector** vectors, const uint32_t offset, const int32_t* types, const int32_t colNum,
-    const int32_t* colIdx)
-{
-    int64_t combineHashVal = 0;
-    HashUtil hashFunc;
-    for (int32_t i = 0; i < colNum; ++i) {
-        uint64_t hash = 0;
-        uint32_t idx = colIdx[i];
-        switch (types[idx]) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
-                std::hash<int32_t> hashInt32;
-                hash = hashInt32(static_cast<IntVector *>(vectors[idx])->GetValue(offset));
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
-                std::hash<int64_t> hashInt64;
-                hash = hashInt64(static_cast<LongVector *>(vectors[idx])->GetValue(offset));
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                std::hash<double> hashDouble;
-                hash = hashDouble(static_cast<DoubleVector *>(vectors[idx])->GetValue(offset));
-                break;
-            }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                Decimal128 val = static_cast<Decimal128Vector *>(vectors[idx])->GetValue(offset);
-                hash = HashUtil::HashValue(val.LowBits(), val.HighBits());
-                break;
-            }
-            case OMNI_VEC_TYPE_VARCHAR: {
-                std::hash<std::string> hashVarChar;
-                uint8_t *data = nullptr;
-                int valLen = (static_cast<VarcharVector *>(vectors[idx]))->GetValue(offset, &data);
-                std::string val(reinterpret_cast<char *>(data), 0, valLen);
-                hash = hashVarChar(val);
-                break;
-            }
-            default: {
-                DebugError("No such data type %d", types[idx]);
-                break;
-            }
-        }
-        combineHashVal = hashFunc.CombineHash(combineHashVal, hash);
-    }
-    return combineHashVal;
-}
-
 void* ALWAYS_INLINE DuplicateGroupByTuple(int32_t type, Vector* vector, uint32_t offset)
 {
     void *rowPtr = nullptr;
@@ -201,40 +152,145 @@ void* ALWAYS_INLINE DuplicateGroupByTuple(int32_t type, Vector* vector, uint32_t
     return rowPtr;
 }
 
-SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
-void HashAggregationOperator::InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum,
-    const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum,
-    const int32_t *aggFuncTypes)
+void ALWAYS_INLINE IntVectorHash(const uint32_t start, const uint32_t rowCount,
+                                 IntVector *vec, int64_t *combinedHashVal)
 {
-    int64_t combineHashVal = GenerateCombinedHash(vectors, offset, types, groupByColNum, groupByColIdx);
-    if (groupedRows.find(combineHashVal) == groupedRows.end()) {
-        std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
-        for (int32_t i = 0; i < groupByColNum; ++i) {
-            uint32_t idx = groupByColIdx[i];
-            groupByTuple[i].val = DuplicateGroupByTuple(types[idx], vectors[idx], offset);
-        }
-        groupedRows[combineHashVal] = groupByTuple;
-        for (int32_t i = 0; i < aggColNum; ++i) {
-            int32_t idx = aggColIdx[i];
-            int32_t type = types[idx];
-            Vector *colPtr = vectors[idx];
-            GroupBySlot &state = groupedRows[combineHashVal][groupByColNum + i];
-            try {
-                aggregators[i]->Insert(state, colPtr, type, offset);
-            } catch (std::exception& e) {
-                std::cerr << "Hash aggregation insert failed." << std::endl;
+    uint64_t hash;
+    std::hash<int32_t> hashInt32;
+    for (int j = 0; j < rowCount; ++j) {
+        hash = hashInt32(vec->GetValue(j + start));
+        combinedHashVal[j] = HashUtil::CombineHash(combinedHashVal[j], hash);
+    }
+}
+
+void ALWAYS_INLINE LongVectorHash(const uint32_t start, const uint32_t rowCount,
+                                  LongVector *vec, int64_t *combinedHashVal)
+{
+    uint64_t hash;
+    std::hash<int64_t> hashInt64;
+    for (int j = 0; j < rowCount; ++j) {
+        hash = hashInt64(vec->GetValue(j + start));
+        combinedHashVal[j] = HashUtil::CombineHash(combinedHashVal[j], hash);
+    }
+}
+
+void ALWAYS_INLINE DoubleVectorHash(const uint32_t start, const uint32_t rowCount,
+                                    DoubleVector *vec, int64_t *combinedHashVal)
+{
+    uint64_t hash;
+    std::hash<double> hashDouble;
+    for (int j = 0; j < rowCount; ++j) {
+        hash = hashDouble(vec->GetValue(j + start));
+        combinedHashVal[j] = HashUtil::CombineHash(combinedHashVal[j], hash);
+    }
+}
+
+void ALWAYS_INLINE Decimal128VectorHash(const uint32_t start, const uint32_t rowCount,
+                                        Decimal128Vector *vec, int64_t *combinedHashVal)
+{
+    uint64_t hash;
+    for (int j = 0; j < rowCount; ++j) {
+        Decimal128 val = vec->GetValue(j + start);
+        hash = HashUtil::HashValue(val.LowBits(), val.HighBits());
+        combinedHashVal[j] = HashUtil::CombineHash(combinedHashVal[j], hash);
+    }
+}
+
+void ALWAYS_INLINE VarcharVectorHash(const uint32_t start, const uint32_t rowCount,
+                                     VarcharVector *vec, int64_t *combinedHashVal)
+{
+    uint64_t hash;
+    std::hash<std::string> hashVarChar;
+    uint8_t *data = nullptr;
+    for (int j = 0; j < rowCount; ++j) {
+        int valLen = vec->GetValue(j, &data);
+        std::string val(reinterpret_cast<char *>(data), 0, valLen);
+        hash = hashVarChar(val);
+        combinedHashVal[j] = HashUtil::CombineHash(combinedHashVal[j + start], hash);
+    }
+}
+
+void ALWAYS_INLINE GenerateCombinedHashes(Vector **vectors, const uint32_t start, const uint32_t rowCount,
+                                          const int32_t *types, const int32_t colNum,
+                                          const int32_t *colIdx, int64_t *combinedHashVal)
+{
+    for (int32_t i = 0; i < colNum; ++i) {
+        uint32_t idx = colIdx[i];
+        switch (types[idx]) {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
+                IntVectorHash(start, rowCount, static_cast<IntVector *>(vectors[idx]), combinedHashVal);
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
+                LongVectorHash(start, rowCount, static_cast<LongVector *>(vectors[idx]), combinedHashVal);
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                DoubleVectorHash(start, rowCount, static_cast<DoubleVector *>(vectors[idx]), combinedHashVal);
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                Decimal128VectorHash(start, rowCount, static_cast<Decimal128Vector *>(vectors[idx]),
+                                     combinedHashVal);
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                VarcharVectorHash(start, rowCount, static_cast<VarcharVector *>(vectors[idx]), combinedHashVal);
+                break;
+            }
+            default: {
+                DebugError("No such data type %d", types[idx]);
+                break;
             }
         }
-    } else {
-        for (int32_t i = 0; i < aggColNum; ++i) {
-            int32_t idx = aggColIdx[i];
-            int32_t type = types[idx];
-            Vector *colPtr = vectors[idx];
-            GroupBySlot &state = groupedRows[combineHashVal][groupByColNum + i];
-            try {
-                aggregators[i]->ProcessGroup(state, colPtr, type, offset);
-            } catch (std::exception& e) {
-                std::cerr << "Hash aggregation aggregate failed." << std::endl;
+    }
+}
+
+SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
+void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const int32_t *types, int32_t colNum,
+                                     const int32_t *groupByColIdx, int32_t groupByColNum,
+                                     const int32_t *aggColIdx, int32_t aggColNum,
+                                     const int32_t *aggFuncTypes)
+{
+    static const int blockSize = 1024;
+    int64_t combinedHashVal[blockSize];
+    uint32_t end;
+    uint32_t run = blockSize;
+    for (uint32_t start = 0; start < rowCount; start = start + blockSize) {
+        for (int i = 0; i < blockSize; ++i) {
+            combinedHashVal[i] = 0;
+        }
+        if ((start + blockSize) > rowCount) {
+            run = rowCount - start;
+        }
+
+        GenerateCombinedHashes(vectors, start, run, types, groupByColNum, groupByColIdx, combinedHashVal);
+        for (uint32_t offset = 0; offset < run; ++offset) {
+            int64_t hash = combinedHashVal[offset];
+            if (groupedRows.find(hash) == groupedRows.end()) {
+                std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
+                for (int32_t i = 0; i < groupByColNum; ++i) {
+                    uint32_t idx = groupByColIdx[i];
+                    groupByTuple[i].val = DuplicateGroupByTuple(types[idx], vectors[idx], start + offset);
+                }
+                groupedRows[hash] = groupByTuple;
+                for (int32_t i = 0; i < aggColNum; ++i) {
+                    int32_t idx = aggColIdx[i];
+                    int32_t type = types[idx];
+                    Vector *colPtr = vectors[idx];
+                    GroupBySlot &state = groupedRows[hash][groupByColNum + i];
+                    aggregators[i]->Insert(state, colPtr, type, start + offset);
+                }
+            } else {
+                for (int32_t i = 0; i < aggColNum; ++i) {
+                    int32_t idx = aggColIdx[i];
+                    int32_t type = types[idx];
+                    Vector *colPtr = vectors[idx];
+                    GroupBySlot &state = groupedRows[hash][groupByColNum + i];
+                    aggregators[i]->ProcessGroup(state, colPtr, type, start + offset);
+                }
             }
         }
     }
@@ -263,12 +319,12 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         aggColIdx[i] = this->aggCols[i].idx;
         aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
-    int32_t rowCount = vecBatch->GetRowCount();
+    uint32_t rowCount = vecBatch->GetRowCount();
     Vector **vectors = vecBatch->GetVectors();
-    for (int32_t i = 0; i < rowCount; ++i) {
-        this->InLoop(vectors, i, vectorTypes.get(), vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(),
-            aggColNum, aggFuncTypes.get());
-    }
+
+    this->InLoop(vectors, rowCount, vectorTypes.get(), vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(),
+        aggColNum, aggFuncTypes.get());
+
     this->PostLoop(vecBatch);
     return 0;
 }
