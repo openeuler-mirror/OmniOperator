@@ -30,9 +30,6 @@ LongVector *LongVector::Slice(int positionOffset, int length)
 
 LongVector *LongVector::CopyPositions(const int *positions, int offset, int length)
 {
-    if (length > size) {
-        return nullptr;
-    }
     LongVector *vector = new LongVector(GetAllocator(), length);
     for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];

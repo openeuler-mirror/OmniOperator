@@ -30,9 +30,6 @@ Decimal128Vector *Decimal128Vector::Slice(int32_t positionOffset, int32_t length
 
 Decimal128Vector *Decimal128Vector::CopyPositions(const int32_t *positions, int32_t offset, int32_t length)
 {
-    if (length > size) {
-        return nullptr;
-    }
     auto vector = new Decimal128Vector(GetAllocator(), length);
     for (int32_t i = 0; i < length; ++i) {
         int32_t position = positions[offset + i];

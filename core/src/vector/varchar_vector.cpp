@@ -18,9 +18,6 @@ VarcharVector *VarcharVector::Slice(int positionOffset, int length)
 
 VarcharVector *VarcharVector::CopyPositions(const int *positions, int offset, int length)
 {
-    if (length > size) {
-        return nullptr;
-    }
     int totalDataLen = 0;
     for (int i = 0; i < length; i++) {
         int position = positions[offset + i] + positionOffset;

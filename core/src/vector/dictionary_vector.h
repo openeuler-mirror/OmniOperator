@@ -5,6 +5,7 @@
 #define __DICTIONARY_VECTOR_H__
 
 #include "vector.h"
+#include "decimal128.h"
 
 namespace omniruntime {
 namespace vec {
@@ -15,6 +16,7 @@ public:
     ~DictionaryVector()
     {
         delete dictionary;
+        delete[] ids;
     }
 
     Vector *GetDictionary() const
@@ -60,6 +62,14 @@ public:
     int32_t GetInt(int32_t position) const;
 
     int64_t GetLong(int32_t position) const;
+
+    double GetDouble(int32_t position) const;
+
+    bool GetBoolean(int32_t position) const;
+
+    int32_t GetVarchar(int32_t position, uint8_t **dst) const;
+
+    Decimal128 GetDecimal128(int32_t position) const;
 
     bool IsValueNull(int32_t position) override
     {

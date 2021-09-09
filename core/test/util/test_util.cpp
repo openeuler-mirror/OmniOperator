@@ -249,6 +249,50 @@ void AssertDictionaryVectorLongEquals(DictionaryVector *vector, int64_t *values)
     }
 }
 
+void AssertDictionaryVectorBooleanEquals(DictionaryVector *vector, bool *values)
+{
+    // TODO::handle null
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        ASSERT_EQ(vector->GetBoolean(i), values[i]);
+    }
+}
+
+void AssertDictionaryVectorDoubleEquals(DictionaryVector *vector, double *values)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        EXPECT_TRUE(vector->GetDouble(i) - values[i] <= DBL_EPSILON);
+    }
+}
+
+void AssertDictionaryVectorVarcharEquals(DictionaryVector *vector, std::string *values)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        uint8_t *data = nullptr;
+        int32_t  len = vector->GetVarchar(i, &data);
+        std::string actual(data, data + len);
+        ASSERT_EQ(actual, values[i]);
+    }
+}
+
+void AssertDictionaryVectorDecimal128Equals(DictionaryVector *vector, Decimal128 *values)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsValueNull(i)) {
+            continue;
+        }
+        ASSERT_EQ(vector->GetDecimal128(i), values[i]);
+    }
+}
+
 void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
 {
     VecTypeId vecTypeId;
@@ -259,12 +303,27 @@ void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
 
     switch (vecTypeId) {
         case omniruntime::vec::OMNI_VEC_TYPE_INT:
+        case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
             AssertDictionaryVectorIntEquals(vector, va_arg(args, int32_t *));
             break;
         case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+        case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
             AssertDictionaryVectorLongEquals(vector, va_arg(args, int64_t *));
             break;
+        case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            AssertDictionaryVectorBooleanEquals(vector, va_arg(args, bool *));
+            break;
+        case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            AssertDictionaryVectorDoubleEquals(vector, va_arg(args, double *));
+            break;
+        case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+            AssertDictionaryVectorVarcharEquals(vector, va_arg(args, std::string *));
+            break;
+        case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+            AssertDictionaryVectorDecimal128Equals(vector, va_arg(args, Decimal128 *));
+            break;
         default:
+            std::cerr << "unsupported type:" << vecTypeId << std::endl;
             break;
     }
 }

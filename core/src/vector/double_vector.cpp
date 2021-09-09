@@ -31,9 +31,6 @@ DoubleVector *DoubleVector::Slice(int positionOffset, int length)
 
 DoubleVector *DoubleVector::CopyPositions(const int *positions, int offset, int length)
 {
-    if (length > size) {
-        return nullptr;
-    }
     DoubleVector *vector = new DoubleVector(GetAllocator(), length);
     for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];

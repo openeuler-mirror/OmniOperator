@@ -32,6 +32,20 @@ public class DictionaryVec extends Vec {
         this.ids = ids;
     }
 
+    private DictionaryVec(DictionaryVec vector, int offset, int length, boolean isSlice) {
+        super(vector, offset, length, isSlice);
+        long dictionaryNative = getDictionaryNative(getNativeVector());
+        this.dictionary = VecFactory.create(dictionaryNative, vector.dictionary.getType());
+        this.ids = getIdsNative(getNativeVector());
+    }
+
+    private DictionaryVec(DictionaryVec vector, int[] positions, int offset, int length) {
+        super(vector, positions, offset, length);
+        long dictionaryNative = getDictionaryNative(getNativeVector());
+        this.dictionary = VecFactory.create(dictionaryNative, vector.dictionary.getType());
+        this.ids = getIdsNative(getNativeVector());
+    }
+
     private static native long getDictionaryNative(long nativeVector);
 
     private static native int[] getIdsNative(long nativeVector);
@@ -88,7 +102,11 @@ public class DictionaryVec extends Vec {
      * @return double value
      */
     public double getDouble(int index) {
-        return ((DoubleVec) dictionary).get(ids[index]);
+        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+            return ((DoubleVec) dictionary).get(ids[index]);
+        } else {
+            return ((DictionaryVec) dictionary).getDouble(ids[index]);
+        }
     }
 
     /**
@@ -98,7 +116,39 @@ public class DictionaryVec extends Vec {
      * @return boolean value
      */
     public boolean getBoolean(int index) {
-        return ((BooleanVec) dictionary).get(ids[index]);
+        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+            return ((BooleanVec) dictionary).get(ids[index]);
+        } else {
+            return ((DictionaryVec) dictionary).getBoolean(ids[index]);
+        }
+    }
+
+    /**
+     * get the specified bytes at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return byte array
+     */
+    public byte[] getBytes(int index) {
+        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+            return ((VarcharVec) dictionary).get(ids[index]);
+        } else {
+            return ((DictionaryVec) dictionary).getBytes(ids[index]);
+        }
+    }
+
+    /**
+     * get the specified decimal at the specified absolute
+     *
+     * @param index the element offset in vec
+     * @return long array
+     */
+    public long[] getDecimal128(int index) {
+        if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
+            return ((Decimal128Vec) dictionary).get(ids[index]);
+        } else {
+            return ((DictionaryVec) dictionary).getDecimal128(ids[index]);
+        }
     }
 
     @Override
@@ -107,8 +157,8 @@ public class DictionaryVec extends Vec {
     }
 
     @Override
-    public Vec slice(int start, int length) {
-        return null;
+    public DictionaryVec slice(int start, int end) {
+        return new DictionaryVec(this, start, end - start, true);
     }
 
     @Override
@@ -117,12 +167,12 @@ public class DictionaryVec extends Vec {
     }
 
     @Override
-    public Vec copyPositions(int[] positions, int offset, int length) {
-        return null;
+    public DictionaryVec copyPositions(int[] positions, int offset, int length) {
+        return new DictionaryVec(this, positions, offset, length);
     }
 
     @Override
-    public Vec copyRegion(int positionOffset, int length) {
-        return null;
+    public DictionaryVec copyRegion(int positionOffset, int length) {
+        return new DictionaryVec(this, positionOffset, length, false);
     }
 }
