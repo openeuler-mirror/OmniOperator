@@ -167,24 +167,13 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
     int32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
     int32_t rightColumnPosition = DecodePosition(rightValueAddress);
 
-    bool isSameColumn = false;
-    if (leftColumnIndex == rightColumnIndex) {
-        isSameColumn = true;
-    }
-
     int compare = 0;
     for (int32_t i = 0; i < sortColCount; i++) {
         int32_t sortCol = sortCols[i];
         Vector *leftColumn = columns[sortCol][leftColumnIndex];
-        int32_t colTypeId = sortColTypes[i];
-        Vector *rightColumn = nullptr;
-
-        if (isSameColumn) {
-            rightColumn = leftColumn;
-        } else {
-            rightColumn = columns[sortCol][rightColumnIndex];
-        }
-
+        Vector *rightColumn = columns[sortCol][rightColumnIndex];
+        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftColumnPosition);
+        rightColumn = OperatorUtil::GetDictionary(rightColumn, rightColumnPosition);
         compare = OperatorUtil::CompareNull(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition,
             sortNullFirsts[i]);
         if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
@@ -193,10 +182,9 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
         if (compare != OperatorUtil::COMPARE_STATUS_OTHER) {
             break;
         }
-        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftColumnPosition);
-        rightColumn = OperatorUtil::GetDictionary(rightColumn, rightColumnPosition);
 
         // neither the left nor the right is NULL
+        int32_t colTypeId = sortColTypes[i];
         compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftColumn, leftColumnPosition, rightColumn,
             rightColumnPosition);
 
@@ -354,11 +342,11 @@ void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32
 
 template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *outputVector, int32_t outputIndex)
 {
-    if (inputVector->IsValueNull(inputIndex)) {
-        outputVector->SetValueNull(outputIndex);
-    } else if (inputVector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
+    if (inputVector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
         auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
         SetValue(dictionaryVector->GetDictionary(), dictionaryVector->GetIds()[inputIndex], outputVector, outputIndex);
+    } else if (inputVector->IsValueNull(inputIndex)) {
+        outputVector->SetValueNull(outputIndex);
     } else {
         outputVector->SetValue(outputIndex, static_cast<T *>(inputVector)->GetValue(inputIndex));
     }
@@ -392,12 +380,12 @@ T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vect
 
 void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *outputVector, int32_t outputIndex)
 {
-    if (inputVector->IsValueNull(inputIndex)) {
-        outputVector->SetValueNull(outputIndex);
-    } else if (inputVector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
+    if (inputVector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
         auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
         SetVarcharValue(dictionaryVector->GetDictionary(), dictionaryVector->GetIds()[inputIndex], outputVector,
             outputIndex);
+    } else if (inputVector->IsValueNull(inputIndex)) {
+        outputVector->SetValueNull(outputIndex);
     } else {
         uint8_t *value = nullptr;
         int32_t valueLength = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex, &value);

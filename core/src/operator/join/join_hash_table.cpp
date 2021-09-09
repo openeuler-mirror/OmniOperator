@@ -155,10 +155,10 @@ int64_t HashPosition(int32_t vecBatchIdx, int32_t rowIndex, Vector ***buildHashC
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         column = buildHashColumns[columnIdx][vecBatchIdx];
+        column = OperatorUtil::GetDictionary(column, rowIndex);
         if (column->IsValueNull(rowIndex)) {
             continue;
         }
-        column = OperatorUtil::GetDictionary(column, rowIndex);
         hash = ReadHash(hashColTypes[columnIdx], column, rowIndex);
         result = HashUtil::CombineHash(result, hash);
     }
@@ -174,10 +174,10 @@ int64_t HashRow(int32_t rowIndex, Vector **columns, const int32_t *columnTypes, 
 
     for (int32_t columnIdx = 0; columnIdx < columnCount; columnIdx++) {
         column = columns[columnIdx];
+        column = OperatorUtil::GetDictionary(column, rowIndex);
         if (column->IsValueNull(rowIndex)) {
             continue;
         }
-        column = OperatorUtil::GetDictionary(column, rowIndex);
         hash = ReadHash(columnTypes[columnIdx], column, rowIndex);
         result = HashUtil::CombineHash(result, hash);
     }
