@@ -5,6 +5,7 @@
 package nova.hetu.olk.operator.filterandproject;
 
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
 import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 
@@ -62,8 +63,8 @@ public class OmniPageFilter implements PageFilter {
 
         VecType[] vecTypes = toVecTypes(inputTypes);
         try {
-            this.operatorFactory = new OmniFilterAndProjectOperatorFactory(filterExpression.toString(), vecTypes,
-                projects);
+            this.operatorFactory = new OmniFilterAndProjectOperatorFactory(expressionStringify(filterExpression),
+                vecTypes, projects);
             this.isExpressionSupported = true;
         } catch (OmniRuntimeException e) {
             isExpressionSupported = false;

@@ -4,8 +4,6 @@
  */
 #include "parser.h"
 #include <iostream>
-#include <stack>
-#include <algorithm>
 
 using namespace std;
 
@@ -22,6 +20,14 @@ namespace {
     const string OPERATOR_PREFIX = "$operator$";
     const int32_t SUBSTR_LEN = 10;
     const int32_t ARG2 = 2;
+    const map<string, DataType> DATA_TYPE_STRING_MAP = {
+        {"boolean", DataType::BOOLD},
+        {"int", DataType::INT32D},
+        {"long", DataType::INT64D},
+        {"double", DataType::DOUBLED},
+        {"char", DataType::STRINGD},
+        {"varchar", DataType::STRINGD}
+    };
 }
 
 // Helper function to remove operator prefix if it is there
@@ -81,22 +87,22 @@ OperatorReturnType GetBinaryOperatorType(string opStr)
                               "NOT_EQUAL"};
     vector<string> allLogOps{"AND", "OR"};
     vector<string> allArithOps{"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS"};
-    for (string cmpOp : allCmpOps) {
+    for (const string& cmpOp : allCmpOps) {
         if (opStr == cmpOp) {return OperatorReturnType::COMPARISON; }
     }
-    for (string logOp : allLogOps) {
+    for (const string& logOp : allLogOps) {
         if (opStr == logOp) {return OperatorReturnType::LOGICAL; }
     }
-    for (string arithOp : allArithOps) {
+    for (const string& arithOp : allArithOps) {
         if (opStr == arithOp) {return OperatorReturnType::ARITHMETIC; }
     }
     return OperatorReturnType::INVALIDRETURNTYPE;
 }
 
-bool IsUnaryOperator(string opStr)
+bool IsUnaryOperator(const string& opStr)
 {
     vector<string> allUnaryOps{"NOT", "not"};
-    for (string unaryOp : allUnaryOps) {
+    for (const string& unaryOp : allUnaryOps) {
         if (opStr == unaryOp) {
             return true;
         }
@@ -104,33 +110,42 @@ bool IsUnaryOperator(string opStr)
     return false;
 }
 
-string Parser::StripString(string input) const
+string Parser::StripString(const string& input)
 {
     // remove spaces from input but not from inside strings
-    string newinput = "";
+    string newInput;
     bool isInString = false;
-    for (int i = 0; i < input.size(); i++) {
-        if (input[i] == '\'') {
+    for (char i : input) {
+        if (i == '\'') {
             isInString = !isInString;
-            newinput.push_back(input[i]);
-        } else if (input[i] == ' ') {
+            newInput.push_back(i);
+        } else if (i == ' ') {
             if (isInString) {
-                newinput.push_back(input[i]);
+                newInput.push_back(i);
             }
         } else {
-            newinput.push_back(input[i]);
+            newInput.push_back(i);
         }
     }
-    return newinput;
+    return newInput;
 }
 
-Expr *Parser::ParseRowExpression(const string inputStr, int32_t *inputTypes, int32_t veccount)
+DataType ParseReturnType(const string& typeString)
+{
+    if (DATA_TYPE_STRING_MAP.count(typeString) == 0) {
+        cout << "Unsupported return type: " + typeString << endl;
+        return INVALIDDATAD;
+    }
+    return DATA_TYPE_STRING_MAP.at(typeString);
+}
+
+Expr *Parser::ParseRowExpression(const string& inputStr, int32_t *inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
-    int firstParenInd = input.find("(");
+    int firstParenInd = input.find('(');
     // Check if it is just data (i.e. 123, #4, 34.4)
     if (firstParenInd == string::npos) {
-        return GenerateData(input, inputTypes, veccount);
+        return GenerateData(input, inputTypes, vecCount);
     }
 
     string opStr = input.substr(0, firstParenInd);
@@ -154,10 +169,10 @@ Expr *Parser::ParseRowExpression(const string inputStr, int32_t *inputTypes, int
 
     // Place all of the arguments into a vector first
     vector<Expr *> args;
-    args.push_back(ParseRowExpression(exprStr.substr(0, commaPositions[0]), inputTypes, veccount));
+    args.push_back(ParseRowExpression(exprStr.substr(0, commaPositions[0]), inputTypes, vecCount));
     for (int i = 1; i <= numCommas; i++) {
         string currVal = exprStr.substr(commaPositions[i - 1] + 1, commaPositions[i] - commaPositions[i - 1] - 1);
-        args.push_back(ParseRowExpression(currVal, inputTypes, veccount));
+        args.push_back(ParseRowExpression(currVal, inputTypes, vecCount));
     }
 
     return ParseRowExpressionHelper(opStr, args);
@@ -165,23 +180,23 @@ Expr *Parser::ParseRowExpression(const string inputStr, int32_t *inputTypes, int
 
 Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 {
+    int typeIdx = opStr.find(':');
+    DataType type;
+    if (typeIdx != string::npos) {
+        type = ParseReturnType(opStr.substr(typeIdx + 1));
+        opStr = opStr.substr(0, typeIdx);
+    }
+
     // BinaryExpr
     OperatorReturnType binRetType = GetBinaryOperatorType(opStr);
     if (binRetType != OperatorReturnType::INVALIDRETURNTYPE && args.size() == ARG2) {
-        if (binRetType == OperatorReturnType::COMPARISON || binRetType == OperatorReturnType::LOGICAL) {
-            return std::make_unique<BinaryExpr>
-                    (OpTrans(opStr), args[0], args[1], DataType::BOOLD).release();
-        }
-        // uses most lenient data type of left and right
-        if (binRetType == OperatorReturnType::ARITHMETIC) {
-            return std::make_unique<BinaryExpr>(OpTrans(opStr), args[0], args[1]).release();
-        }
+        return std::make_unique<BinaryExpr>(OpTrans(opStr), args[0], args[1], type).release();
     }
 
     // UnaryExpr
     // only handling NOT for now
     if (IsUnaryOperator(opStr) && args.size() == 1) {
-        return std::make_unique<UnaryExpr>(OpTrans(opStr), args[0], BOOLD).release();
+        return std::make_unique<UnaryExpr>(OpTrans(opStr), args[0], type).release();
     }
 
     // Special form
@@ -193,8 +208,9 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // Function
     // Check that the signature matches
+    opStr = DemangleOperator(opStr);
     if (ph.FuncDeclMatch(opStr, args, true)) {
-        return std::make_unique<FuncExpr>(opStr, args, ph.FuncRetTypeMap(opStr, args)).release();
+        return std::make_unique<FuncExpr>(opStr, args, type).release();
     }
     // default to false
     return std::make_unique<DataExpr>(false).release();
@@ -269,21 +285,21 @@ DataType GetDataType(string data, int32_t *inputTypes, int32_t vecCount)
 }
 
 // Helper function to turn all % to .* for regex wildcard matching
-string *FixString(string dataStr)
+string *FixString(const string& dataStr)
 {
     string *fixedStr = std::make_unique<string>("").release();
-    for (int i = 0; i < dataStr.size(); i++) {
-        if (dataStr[i] == '%') {
+    for (char i : dataStr) {
+        if (i == '%') {
             fixedStr->push_back('.');
             fixedStr->push_back('*');
         } else {
-            fixedStr->push_back(dataStr[i]);
+            fixedStr->push_back(i);
 }
     }
     return fixedStr;
 }
 
-DataExpr *Parser::GenerateDataHelper(string dataStr, DataType currDataType) const
+DataExpr *Parser::GenerateDataHelper(const string& dataStr, DataType currDataType)
 {
     switch (currDataType) {
         // handle boolean as int32
@@ -312,7 +328,7 @@ DataExpr *Parser::GenerateDataHelper(string dataStr, DataType currDataType) cons
     }
 }
 
-DataExpr *Parser::GenerateData(string dataStr, int32_t inputTypes[], int32_t vecCount) const
+DataExpr *Parser::GenerateData(string dataStr, int32_t inputTypes[], int32_t vecCount)
 {
 #ifdef DEBUG
     std::cout << "generating data:::" << dataStr << std::endl;

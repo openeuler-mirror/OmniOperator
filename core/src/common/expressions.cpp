@@ -348,47 +348,47 @@ void BinaryExpr::PrintExprTree()
     switch (op) {
         // Comparison
         case EQ:
-            printf("Cmp(EQ, ");
+            printf("Cmp:%s(EQ, ", dataTypeString(this->dataType).c_str());
             break;
         case NEQ:
-            printf("Cmp(NEQ, ");
+            printf("Cmp:%s(NEQ, ", dataTypeString(this->dataType).c_str());
             break;
         case LT:
-            printf("Cmp(LT, ");
+            printf("Cmp:%s(LT, ", dataTypeString(this->dataType).c_str());
             break;
         case LTE:
-            printf("Cmp(LTE, ");
+            printf("Cmp:%s(LTE, ", dataTypeString(this->dataType).c_str());
             break;
         case GT:
-            printf("Cmp(GT, ");
+            printf("Cmp:%s(GT, ", dataTypeString(this->dataType).c_str());
             break;
         case GTE:
-            printf("Cmp(GTE, ");
+            printf("Cmp:%s(GTE, ", dataTypeString(this->dataType).c_str());
             break;
 
-        // Logical
+            // Logical
         case AND:
-            printf("Bin(AND, ");
+            printf("Bin:%s(AND, ", dataTypeString(this->dataType).c_str());
             break;
         case OR:
-            printf("Bin(OR, ");
+            printf("Bin:%s(OR, ", dataTypeString(this->dataType).c_str());
             break;
 
-        // Arithmetic
+            // Arithmetic
         case ADD:
-            printf("Arith(ADD, ");
+            printf("Arith:%s(ADD, ", dataTypeString(this->dataType).c_str());
             break;
         case SUB:
-            printf("Arith(SUB, ");
+            printf("Arith:%s(SUB, ", dataTypeString(this->dataType).c_str());
             break;
         case MUL:
-            printf("Arith(MUL, ");
+            printf("Arith:%s(MUL, ", dataTypeString(this->dataType).c_str());
             break;
         case DIV:
-            printf("Arith(DIV, ");
+            printf("Arith:%s(DIV, ", dataTypeString(this->dataType).c_str());
             break;
         case MOD:
-            printf("Arith(MOD, ");
+            printf("Arith:%s(MOD, ", dataTypeString(this->dataType).c_str());
             break;
         default:
             printf("invalid BinaryOperator %d(", op);
@@ -404,7 +404,7 @@ void UnaryExpr::PrintExprTree()
 {
     switch (op) {
         case NOT:
-            printf("Unary(NOT, ");
+            printf("Unary:%s(NOT, ", dataTypeString(this->dataType).c_str());
             break;
         default:
             printf("invalid UnaryOperator %d(", op);
@@ -470,7 +470,7 @@ void DataExpr::PrintExprTree()
 
 void InExpr::PrintExprTree()
 {
-    printf("In(");
+    printf("In:%s(", dataTypeString(this->dataType).c_str());
     for (int i = 0; i < arguments.size(); i++) {
         arguments[i]->PrintExprTree();
         if (i == arguments.size() - 1) printf(")");
@@ -480,7 +480,7 @@ void InExpr::PrintExprTree()
 
 void BetweenExpr::PrintExprTree()
 {
-    printf("Between(");
+    printf("Between:%s(", dataTypeString(this->dataType).c_str());
     value->PrintExprTree();
     printf(", ");
     lowerBound->PrintExprTree();
@@ -491,7 +491,7 @@ void BetweenExpr::PrintExprTree()
 
 void IfExpr::PrintExprTree()
 {
-    printf("If(");
+    printf("If:%s(", dataTypeString(this->dataType).c_str());
     condition->PrintExprTree();
     printf(", ");
     trueExpr->PrintExprTree();
@@ -502,7 +502,7 @@ void IfExpr::PrintExprTree()
 
 void CoalesceExpr::PrintExprTree()
 {
-    printf("Coalesce(");
+    printf("Coalesce:%s(", dataTypeString(this->dataType).c_str());
     value1->PrintExprTree();
     printf(", ");
     value2->PrintExprTree();
@@ -511,7 +511,7 @@ void CoalesceExpr::PrintExprTree()
 
 void FuncExpr::PrintExprTree()
 {
-    printf("%s(", funcName.c_str());
+    printf("%s:%s(", funcName.c_str(), dataTypeString(this->dataType).c_str());
 
     for (int i = 0; i < arguments.size(); i++) {
         arguments[i]->PrintExprTree();

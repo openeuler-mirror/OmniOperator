@@ -91,9 +91,9 @@ TEST (ProjectTest, Simple) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$ADD(#0, 5)"};
+    string exprs[numCols] = {"$operator$ADD:int(#0, 5)"};
     int32_t inputTypes[numCols] = {1};
-    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
@@ -117,9 +117,9 @@ TEST (ProjectTest, Negatives) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows, -5);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$SUBTRACT(#0, 500)"};
+    string exprs[numCols] = {"$operator$SUBTRACT:int(#0, 500)"};
     int32_t inputTypes[numCols] = {1};
-    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
@@ -143,9 +143,9 @@ TEST (ProjectTest, Longs) {
     const int32_t numRows = 10000;
     int64_t* col = MakeLongs(numRows, -5000);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$MULTIPLY(#0, 5000000)"};
+    string exprs[numCols] = {"$operator$MULTIPLY:long(#0, 5000000)"};
     int32_t inputTypes[numCols] = {2};
-    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
@@ -169,9 +169,9 @@ TEST (ProjectTest, Doubles) {
     const int32_t numRows = 10000;
     double* col = MakeDoubles(numRows, -5000.5);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$DIVIDE(#0, 2)"};
+    string exprs[numCols] = {"$operator$DIVIDE:double(#0, 2)"};
     int32_t inputTypes[numCols] = {3};
-    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
@@ -199,10 +199,10 @@ TEST (ProjectTest, MultipleColumns) {
    int32_t* col2 = MakeInts(numRows, -100);
    int64_t* col3 = MakeLongs(numRows, -10);
    const int32_t numProject = 2;
-   string exprs[numProject] = {"$operator$SUBTRACT(#0, 10)", "$operator$ADD(#2, 1)"};
+   string exprs[numProject] = {"$operator$SUBTRACT:int(#0, 10)", "$operator$ADD:long(#2, 1)"};
    const int32_t numCols = 3;
    int32_t inputTypes[numCols] = {1, 1, 2};
-   ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+   auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
    omniruntime::op::Operator* op = factory->CreateOperator();
    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
@@ -233,10 +233,10 @@ TEST (ProjectTest, DependOtherColumn) {
    int32_t* col2 = MakeInts(numRows, -100);
    int64_t* col3 = MakeLongs(numRows);
    const int32_t numProject = 2;
-   string exprs[numProject] = {"$operator$MULTIPLY(#0, #1)", "IF($operator$LESS_THAN(#0, 500), 4000000000, #2)"};
+   string exprs[numProject] = {"$operator$MULTIPLY:int(#0, #1)", "IF:long($operator$LESS_THAN:boolean(#0, 500), 4000000000, #2)"};
    const int32_t numCols = 3;
    int32_t inputTypes[numCols] = {1, 1, 2};
-   ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+   auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
    omniruntime::op::Operator* op = factory->CreateOperator();
    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
@@ -288,9 +288,9 @@ TEST(ProjectTest, ProjectString1) {
 
 
     const int32_t numProject = 2;
-    std::string exprs[numProject] = {"substr(#0, 1, 3)", "#0"};
+    std::string exprs[numProject] = {"substr:varchar(#0, 1, 3)", "#0"};
 
-    ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch*> ret;

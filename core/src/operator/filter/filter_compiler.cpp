@@ -15,7 +15,7 @@ unique_ptr<Filter> Compiler::Compile() const
     for (int32_t i = 0; i < vecCount; i++) {
         dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
     }
-    auto codeGenObj = make_unique<FilterCodeGen>("comparisonFunc", *expression, dataTypes);
+    auto codeGenObj = make_unique<FilterCodeGen>("filterFunc", *expression, dataTypes);
     return make_unique<Filter>(std::move(codeGenObj), *expression);
 }
 } // end of op

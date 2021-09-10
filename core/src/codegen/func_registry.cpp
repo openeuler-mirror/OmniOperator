@@ -110,26 +110,33 @@ void FunctionRegistry::RegisterAbsFunctions(const std::string& fn)
 
 void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
 {
-    if (fn == "CAST_int32") {
+    if (fn == "CAST_int32_double") {
         vector<DataType> castInt32Types {DataType::INT32D};
-        FunctionSignature castInt32Sig (castInt32Str, castInt32Types, DataType::DOUBLED,
-                                        reinterpret_cast<void *>(CastInt32));
-        this->RegisterFunctionFromSignature(castInt32Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt32Str, castInt32Sig));
+        FunctionSignature signature (castInt32ToDoubleStr, castInt32Types, DataType::DOUBLED,
+                                     reinterpret_cast<void *>(CastInt32ToDouble));
+        this->RegisterFunctionFromSignature(signature);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt32ToDoubleStr, signature));
     }
-    if (fn == "CAST_int64") {
+    if (fn == "CAST_int64_double") {
         vector<DataType> castInt64Types {DataType::INT64D};
-        FunctionSignature castInt64Sig (castInt64Str, castInt64Types, DataType::DOUBLED,
-                                        reinterpret_cast<void *>(CastInt64));
-        this->RegisterFunctionFromSignature(castInt64Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64Str, castInt64Sig));
+        FunctionSignature signature (castInt64ToDoubleStr, castInt64Types, DataType::DOUBLED,
+                                     reinterpret_cast<void *>(CastInt64ToDouble));
+        this->RegisterFunctionFromSignature(signature);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64ToDoubleStr, signature));
     }
-    if (fn == "CAST_string") {
+    if (fn == "CAST_int32_int64") {
+        vector<DataType> castInt32Types {DataType::INT32D};
+        FunctionSignature signature (castInt64ToInt32Str, castInt32Types, DataType::INT64D,
+                                     reinterpret_cast<void *>(CastInt32ToInt64));
+        this->RegisterFunctionFromSignature(signature);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64ToDoubleStr, signature));
+    }
+    if (fn == "CAST_string_int32") {
         vector<DataType> castStringTypes {DataType::INT64D};
-        FunctionSignature castStringSig (castStringStr, castStringTypes, DataType::INT32D,
-                                         reinterpret_cast<void *>(CastString));
-        this->RegisterFunctionFromSignature(castStringSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castStringStr, castStringSig));
+        FunctionSignature signature (castStringStr, castStringTypes, DataType::INT32D,
+                                     reinterpret_cast<void *>(CastString));
+        this->RegisterFunctionFromSignature(signature);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castStringStr, signature));
     }
 }
 
@@ -181,7 +188,7 @@ bool isStringFunction(const string& fn)
 
 bool isCastFunction(const string& fn)
 {
-    return fn == "CAST_int32" || fn == "CAST_int64" || fn == "CAST_string";
+    return fn.size() > 5 && fn.substr(0, 5) == "CAST_";
 }
 
 bool isHashFunction(const string& fn)

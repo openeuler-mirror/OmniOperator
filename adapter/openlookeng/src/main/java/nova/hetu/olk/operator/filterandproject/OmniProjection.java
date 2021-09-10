@@ -4,6 +4,7 @@
 
 package nova.hetu.olk.operator.filterandproject;
 
+import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 
 import io.prestosql.spi.type.Type;
@@ -121,7 +122,7 @@ public class OmniProjection {
         }
         for (int i = 0; i < exprs.length; i++) {
             RowExpression fixed = rewriteColumn(expressions.get(i), newColMap);
-            exprs[i] = fixed.toString();
+            exprs[i] = expressionStringify(fixed);
             List<Integer> channels = new ArrayList<>();
             findColumns(expressions.get(i), channels);
             for (int j = 0; j < channels.size(); j++) {

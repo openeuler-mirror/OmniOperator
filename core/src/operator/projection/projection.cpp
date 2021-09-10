@@ -12,36 +12,60 @@ using namespace omniruntime::expressions;
 using uint8vec = std::vector<uint8_t>;
 namespace omniruntime {
 namespace op {
-RowProjection::RowProjection() : codegen(nullptr)
-{}
-
-RowProjection::~RowProjection()
-{}
-
-RowProjFunc RowProjection::CreateProjection(std::string expression, std::vector<DataType> inputTypes)
+RowProjection::RowProjection(std::string &expression, std::vector<DataType> &inputTypes)
+    : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
-    Expr* expr = parser.ParseRowExpression(expression,
+    this->expression = parser.ParseRowExpression(expression,
         reinterpret_cast<int32_t*>(inputTypes.data()), inputTypes.size());
-    this->codegen = std::make_unique<ProjectionCodeGen>("single_row_project", *expr, inputTypes, false);
+}
+
+RowProjection::~RowProjection()
+{
+    delete this->expression;
+    this->codegen.reset();
+}
+
+RowProjFunc RowProjection::Create(std::vector<DataType> &inputTypes)
+{
+    this->codegen = std::make_unique<ProjectionCodeGen>("single_row_project", *this->expression, inputTypes, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fPtr;
     auto castedRef = static_cast<RowProjFunc*>(refFunc);
     return *castedRef;
 }
+
+DataType RowProjection::GetReturnType()
+{
+    return this->expression->GetExprDataType();
+}
+
+bool RowProjection::IsColumnProjection()
+{
+    return this->expression->GetType() == ExprType::DATA_E && static_cast<DataExpr*>(this->expression)->isColumn;
+}
+
+int RowProjection::GetIndexIfColumnProjection()
+{
+    if (!IsColumnProjection()) {
+        return -1;
+    }
+    return static_cast<DataExpr*>(this->expression)->colVal;
+}
 }
 }
 
-Projection::Projection(int32_t inputTypes[], int32_t nCols, std::string expr, bool filter)
+Projection::Projection(int32_t inputTypes[], int32_t nCols, const std::string& expr, bool filter)
     : inputTypes(inputTypes), nCols(nCols)
 {
     Parser parser;
     this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
-    std::vector<DataType> datatypes;
+    std::vector<DataType> dataTypes;
+    dataTypes.reserve(nCols);
     for (int32_t i = 0; i < nCols; i++) {
-        datatypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+        dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
     }
-    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), datatypes, filter);
+    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), dataTypes, filter);
 
     auto f = this->codegen->GetFunction();
     void *function = &f;
@@ -52,11 +76,12 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, std::string expr, bo
 Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool filter)
     : inputTypes(inputTypes), nCols(nCols), expr(&expr)
 {
-    std::vector<DataType> datatypes;
+    std::vector<DataType> dataTypes;
+    dataTypes.reserve(nCols);
     for (int32_t i = 0; i < nCols; i++) {
-        datatypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+        dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
     }
-    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), datatypes, filter);
+    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), dataTypes, filter);
 
     auto f = this->codegen->GetFunction();
     void *function = &f;
@@ -64,7 +89,7 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool fil
     this->projector = *cfunction;
 }
 
-unique_ptr<vector<uint8_t>> GetProjDataHelper(uint8_t actualChar[], int32_t len)
+unique_ptr<vector<uint8_t>> GetProjDataHelper(const uint8_t actualChar[], int32_t len)
 {
     auto accStr = make_unique<uint8vec>(len + 1);
     for (int32_t k = 0; k < len; k++) {

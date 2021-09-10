@@ -32,14 +32,19 @@ extern "C" DLLEXPORT double AbsDouble(double x)
     return std::abs(x);
 }
 
-extern "C" DLLEXPORT double CastInt32(int32_t x)
+extern "C" DLLEXPORT long CastInt32ToInt64(int32_t x)
 {
-    return (double)(x);
+    return static_cast<long>(x);
 }
 
-extern "C" DLLEXPORT double CastInt64(int64_t x)
+extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
 {
-    return (double)(x);
+    return static_cast<double>(x);
+}
+
+extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
+{
+    return static_cast<double>(x);
 }
 
 
