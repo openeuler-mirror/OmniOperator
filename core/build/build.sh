@@ -1,6 +1,11 @@
 #!/bin/bash
 
-rm -rf libomni_runtime.so /opt/lib/libomni_vector.so /opt/lib/libsecurec.so /opt/lib/ir
+if [[ -z $OMNI_HOME ]]; then
+  lib_home=/opt/lib
+else
+  lib_home=/$OMNI_HOME/lib
+fi
+rm -rf libomni_runtime.so $lib_home/libomni_vector.so $lib_home/libsecurec.so $lib_home/ir
 echo "enter" $(dirname $(readlink -f $0))
 cd $(dirname $(readlink -f $0))
 rm -rf `ls | grep -v "build.sh"`

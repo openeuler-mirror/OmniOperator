@@ -55,7 +55,8 @@ void Config::InitFuncPass()
     func_pass[static_cast<int>(Optimization::DEAD_STORE_ELIMINATION)] =
         (Pass* (*)()) &llvm::createDeadStoreEliminationPass;
     func_pass[static_cast<int>(Optimization::STRUCTURIZE_CFG)] = (Pass* (*)()) &llvm::createStructurizeCFGPass;
-    func_pass[static_cast<int>(Optimization::DEAD_CODE_ELIMINATION)] =  (Pass* (*)()) &llvm::createDeadCodeEliminationPass;
+    func_pass[static_cast<int>(Optimization::DEAD_CODE_ELIMINATION)] =
+        (Pass* (*)()) &llvm::createDeadCodeEliminationPass;
     // find a way to add createInstructionCombiningPass
 }
 
@@ -112,17 +113,17 @@ void Config::populate(llvm::legacy::FunctionPassManager &FPM, llvm::legacy::Pass
         } else {
             FPM.add(func_pass[optimizationIndex]());
         }
-        #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
         outs() << "Function pass added: " << optimizationIndex << "\n";
-        #endif
+#endif
     }
 
     for (auto &optimization : moduleOptimizations) {
         int optimizationIndex = static_cast<int>(optimization);
         MPM.add(module_pass[optimizationIndex]());
-        #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
         outs() << "Module pass added: " << optimizationIndex << "\n";
-        #endif
+#endif
     }
 }
 }

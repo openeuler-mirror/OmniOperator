@@ -151,7 +151,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
         {OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp}
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
+    auto *groupAggregationContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*groupAggregationContext});
     jit->Specialize(
             std::vector<Optimization> {
@@ -212,7 +213,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
     std::map<std::string, Specialization> nonGroupSps = { { OMNIJIT_NON_GROUP_INLOOP, *inloopSp } };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("non_group_aggregation"), nonGroupSps);
+    auto *groupAggregationContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("non_group_aggregation"), nonGroupSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*groupAggregationContext});
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
@@ -308,7 +310,8 @@ JitContext *createSortJitContext(const int32_t *sourceTypes, int32_t typesCount,
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
 
-    auto *sortContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("sort"), std::map<std::string, Specialization>());
+    auto *sortContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("sort"), std::map<std::string, Specialization>());
     auto *pagesIndexContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> {*sortContext, *pagesIndexContext});
     jit->Specialize(
@@ -486,8 +489,10 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     getOutputSp->AddSpecializedParam(4, &p_sourceTypes);
     std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
         { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
-    auto *windowContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("window"), std::map<std::string, Specialization>());
-    auto *pagesIndexContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
+    auto *windowContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("window"), std::map<std::string, Specialization>());
+    auto *pagesIndexContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowContext, *pagesIndexContext });
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
@@ -601,11 +606,11 @@ JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t build
     };
 
     auto *hashBuilderContext = new omniruntime::jit::Context(
-            GenerateOperatorTemplatePath("hash_builder"),std::map<std::string, Specialization>());
+    GenerateOperatorTemplatePath("hash_builder"), std::map<std::string, Specialization>());
     auto *joinHashTableContext = new omniruntime::jit::Context(
-            GenerateOperatorTemplatePath("join_hash_table"),joinHashTableSps);
+    GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
     auto *pagesHashStrategyContext = new omniruntime::jit::Context(
-            GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
+    GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext,
         *joinHashTableContext, *pagesHashStrategyContext });
@@ -730,8 +735,10 @@ JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
 
     auto lookupJoinContext =
         new omniruntime::jit::Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
-    auto joinHashTableContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
-    auto pagesHashStrategyContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
+    auto joinHashTableContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
+    auto pagesHashStrategyContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
 
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
         *pagesHashStrategyContext });

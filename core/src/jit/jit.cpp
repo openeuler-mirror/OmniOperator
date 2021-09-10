@@ -38,7 +38,7 @@ namespace omniruntime {
                 bool loaded = this->compiler->LoadModule(context.getJitTemplate());
                 if (!loaded) {
                     std::cerr << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
-                    return 0;
+                    return false;
                 }
                 LLVM_DEBUG_LOG("Loaded template: %s", context.getJitTemplate());
 

@@ -315,7 +315,7 @@ uintptr_t CreateAggFactoryWithJit()
             {OMNIJIT_NON_GROUP_INLOOP, *inloopSp}
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), nonGroupSps);
+    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("non_group_aggregation"), nonGroupSps);
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext});
     jit->Specialize(std::vector<Optimization>());
 

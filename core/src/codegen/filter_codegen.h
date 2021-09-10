@@ -5,13 +5,13 @@
 #ifndef FILTER_CODEGEN_H
 #define FILTER_CODEGEN_H
 
-#include "llvm_codegen.h"
+#include "expression_codegen.h"
 
-class FilterCodeGen : public LLVMCodeGen {
+class FilterCodeGen : public ExpressionCodeGen {
 public:
     FilterCodeGen(std::string name, omniruntime::expressions::Expr &expression,
                   std::vector<omniruntime::expressions::DataType> &datatypes)
-        :LLVMCodeGen(name, expression, datatypes) {}
+        : ExpressionCodeGen(name, expression, datatypes) {}
     ~FilterCodeGen() {}
     int64_t GetFunction() override;
 

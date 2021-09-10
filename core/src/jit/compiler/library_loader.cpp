@@ -11,10 +11,12 @@ using namespace std;
 namespace fs = llvm::sys::fs;
 
 CoreLibrary::CoreLibrary(std::string fileName, std::string libName, std::string preferredPath, int32_t priority)
-    : fileName(fileName), libName(libName), preferredPath(preferredPath), priority(priority) {}
+    : fileName(fileName), libName(libName), preferredPath(preferredPath), priority(priority)
+{}
 
 CoreLibrary::CoreLibrary(std::string fileName, std::string libName, int32_t priority)
-    : CoreLibrary(fileName, libName, "", priority) {}
+    : CoreLibrary(fileName, libName, "", priority)
+{}
 
 CoreLibrary::~CoreLibrary() {}
 
@@ -50,17 +52,17 @@ string LibraryLoader::ExtractFileName(string path)
 }
 
 vector<string> SplitLine(const string &input)
-{ 
+{
     istringstream buffer(input);
-    vector<string> res {istream_iterator<std::string>(buffer), istream_iterator<std::string>()};
+    vector<string> res { istream_iterator<std::string>(buffer), istream_iterator<std::string>() };
     return res;
 }
 
 void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector<CoreLibrary> &neededLibs)
 {
-    ifstream depConfig(G_LIB_PATH + "dependencies.txt");
+    ifstream depConfig(GetLibPath() + "dependencies.txt");
     string line;
-    
+
     while (getline(depConfig, line)) {
         vector<string> args = SplitLine(line);
         // Skip empty lines
@@ -95,34 +97,33 @@ void ParseExtraDependencies(unordered_map<string, CoreLibrary> &baseLibs, vector
 LibraryLoader::LibraryLoader() : neededLibs()
 {
     unordered_map<string, CoreLibrary> baseLibs = {
-        {"omni_vector", CoreLibrary("libomni_vector.so", "omni_vector")},
-        {"jemalloc", CoreLibrary("libjemalloc.so", "jemalloc")},
-        {"stdc++", CoreLibrary("libstdc++.so", "stdc++")},
-        {"aggregator", CoreLibrary("libaggregator.so", "aggregator")},
-        {"group_aggregation", CoreLibrary("libgroup_aggregation.so", "group_aggregation", 1)},
-        {"hash_builder", CoreLibrary("libhash_builder.so", "hash_builder")},
-        {"hash_util", CoreLibrary("libhash_util.so", "hash_util")},
-        {"join_hash_table", CoreLibrary("libjoin_hash_table.so", "join_hash_table")},
-        {"lookup_join", CoreLibrary("liblookup_join.so", "lookup_join")},
-        {"memory_pool", CoreLibrary("libmemory_pool.so", "memory_pool")},
-        {"non_group_aggregation", CoreLibrary("libnon_group_aggregation.so", "non_group_aggregation", 1)},
-        {"pages_hash_strategy", CoreLibrary("libpages_hash_strategy.so", "pages_hash_strategy")},
-        {"pages_index", CoreLibrary("libpages_index.so", "pages_index")},
-        {"sort", CoreLibrary("libsort.so", "sort")},
-        {"topn", CoreLibrary("libtopn.so", "topn")},
-        {"window_function", CoreLibrary("libwindow_function.so", "window_function", 2)},
-        {"window_partition", CoreLibrary("libwindow_partition.so", "window_partition", 2)},
-        {"window", CoreLibrary("libwindow.so", "window", 2)}
+        { "omni_vector", CoreLibrary("libomni_vector.so", "omni_vector") },
+        { "jemalloc", CoreLibrary("libjemalloc.so", "jemalloc") },
+        { "stdc++", CoreLibrary("libstdc++.so", "stdc++") },
+        { "aggregator", CoreLibrary("libaggregator.so", "aggregator") },
+        { "group_aggregation", CoreLibrary("libgroup_aggregation.so", "group_aggregation", 1) },
+        { "hash_builder", CoreLibrary("libhash_builder.so", "hash_builder") },
+        { "hash_util", CoreLibrary("libhash_util.so", "hash_util") },
+        { "join_hash_table", CoreLibrary("libjoin_hash_table.so", "join_hash_table") },
+        { "lookup_join", CoreLibrary("liblookup_join.so", "lookup_join") },
+        { "memory_pool", CoreLibrary("libmemory_pool.so", "memory_pool") },
+        { "non_group_aggregation", CoreLibrary("libnon_group_aggregation.so", "non_group_aggregation", 1) },
+        { "pages_hash_strategy", CoreLibrary("libpages_hash_strategy.so", "pages_hash_strategy") },
+        { "pages_index", CoreLibrary("libpages_index.so", "pages_index") },
+        { "sort", CoreLibrary("libsort.so", "sort") },
+        { "topn", CoreLibrary("libtopn.so", "topn") },
+        { "window_function", CoreLibrary("libwindow_function.so", "window_function", 2) },
+        { "window_partition", CoreLibrary("libwindow_partition.so", "window_partition", 2) },
+        { "window", CoreLibrary("libwindow.so", "window", 2) }
     };
 
     ParseExtraDependencies(baseLibs, neededLibs);
 
-    for (auto& p : baseLibs) {
+    for (auto &p : baseLibs) {
         neededLibs.push_back(p.second);
     }
-    std::stable_sort(neededLibs.begin(), neededLibs.end(), [](const CoreLibrary &a, const CoreLibrary &b) {
-        return a.Priority() < b.Priority();
-    });
+    std::stable_sort(neededLibs.begin(), neededLibs.end(),
+        [](const CoreLibrary &a, const CoreLibrary &b) { return a.Priority() < b.Priority(); });
 }
 
 LibraryLoader::~LibraryLoader() {}
@@ -149,9 +150,8 @@ bool EndsWith(const string &source, const string &suffix)
     }
 }
 
-void ChooseCandidates(unordered_map<string, vector<string>>& candidates,
-                      vector<CoreLibrary>& neededLibs,
-                      vector<string>& paths)
+void ChooseCandidates(unordered_map<string, vector<string>> &candidates, vector<CoreLibrary> &neededLibs,
+    vector<string> &paths)
 {
     for (auto it = neededLibs.begin(); it != neededLibs.end();) {
         auto lib = *it;
@@ -170,7 +170,7 @@ void ChooseCandidates(unordered_map<string, vector<string>>& candidates,
             continue;
         }
         bool found = false;
-        for (auto& option : options) {
+        for (auto &option : options) {
             if (EndsWith(option, lib.PreferredPath())) {
                 LLVM_DEBUG_LOG("Found option matching preferred path: %s", option.c_str());
                 paths.push_back(option);
@@ -180,7 +180,9 @@ void ChooseCandidates(unordered_map<string, vector<string>>& candidates,
         }
         if (!found) {
             string option = options[0];
-            LLVM_DEBUG_LOG("Could not find option matching preferred path, falling back to first option: %s", option.c_str());
+            LLVM_DEBUG_LOG("Could not find option matching preferred path, "
+                "falling back to first option: %s",
+                option.c_str());
             paths.push_back(option);
         }
         it = neededLibs.erase(it);
@@ -200,7 +202,7 @@ static int LibCallback(struct dl_phdr_info *info, size_t size, void *data)
     if (endIdx == string::npos || LibraryLoader::ExtractFileName(name).find("libstdc++.so") == string::npos) {
         return 0;
     }
-    vector<string> *vec = static_cast<vector<string>*>(data);
+    vector<string> *vec = static_cast<vector<string> *>(data);
     name = name.substr(0, endIdx);
     vec->push_back(name);
     return 0;
@@ -209,13 +211,13 @@ static int LibCallback(struct dl_phdr_info *info, size_t size, void *data)
 vector<string> LibraryLoader::LoadLibraries(string allPaths)
 {
     unordered_map<string, vector<string>> candidates;
-    for (auto& lib : neededLibs) {
+    for (auto &lib : neededLibs) {
         candidates.insert({ lib.File(), vector<string>() });
     }
     vector<string> paths;
     vector<string> toSearch = SplitPaths(allPaths);
     dl_iterate_phdr(LibCallback, &toSearch);
-    for (auto& p : toSearch) {
+    for (auto &p : toSearch) {
         SearchPath(p, candidates);
     }
 
@@ -229,7 +231,7 @@ bool LibraryLoader::FinishedLoading()
     return neededLibs.size() == 0;
 }
 
-string LibraryLoader::ResolveSymlink(const string& path)
+string LibraryLoader::ResolveSymlink(const string &path)
 {
     llvm::SmallString<512> realPathRef;
     fs::real_path(path, realPathRef);
@@ -237,8 +239,8 @@ string LibraryLoader::ResolveSymlink(const string& path)
     return realPath;
 }
 
-string LibraryLoader::ValidateLibrary(const string& path, const string& realPath,
-                                      unordered_map<string, vector<string>>& candidates)
+string LibraryLoader::ValidateLibrary(const string &path, const string &realPath,
+    unordered_map<string, vector<string>> &candidates)
 {
     auto targets = neededLibs;
     string fileName = ExtractFileName(path);
@@ -250,7 +252,7 @@ string LibraryLoader::ValidateLibrary(const string& path, const string& realPath
     const int extLength = 3;
     string truncated = fileName.substr(0, ext + extLength);
     CoreLibrary lib("", "");
-    for (auto& target : targets) {
+    for (auto &target : targets) {
         if (fileName.find(target.File()) != string::npos) {
             lib = target;
             break;
@@ -266,12 +268,12 @@ string LibraryLoader::ValidateLibrary(const string& path, const string& realPath
     return lib.File();
 }
 
-void LibraryLoader::SearchPath(string path, unordered_map<string, vector<string>>& candidates)
+void LibraryLoader::SearchPath(string path, unordered_map<string, vector<string>> &candidates)
 {
     error_code err;
-    for (auto it = fs::recursive_directory_iterator(path, err);
-        it != fs::recursive_directory_iterator(); it.increment(err)) {
-        const fs::directory_entry& file = *it;
+    for (auto it = fs::recursive_directory_iterator(path, err); it != fs::recursive_directory_iterator();
+        it.increment(err)) {
+        const fs::directory_entry &file = *it;
         if (file.type() != fs::file_type::regular_file && file.type() != fs::file_type::symlink_file) {
             continue;
         }

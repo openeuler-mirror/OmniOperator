@@ -71,9 +71,10 @@ JitContext *CreateTestHashBuilderJitContext(const int32_t *buildTypes, int32_t b
         { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp }
     };
 
+    auto *hashBuilderContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("hash_builder"), std::map<std::string, Specialization>());
     auto *joinHashTableContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
     auto *pagesHashStrategyContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *joinHashTableContext, *pagesHashStrategyContext });
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *joinHashTableContext, *pagesHashStrategyContext });
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;

@@ -29,7 +29,7 @@ namespace {
     static bool g_hasInitialized;
 
     const std::string EXTERNAL_FUNCTIONS_FILE_PATH = "/etc/externalfunctions/externalregistration.conf";
-    const std::string EXTERNAL_FUNCTIONS_LIB_PATH = G_LIB_PATH + "externalfunctions.so";
+    const std::string EXTERNAL_FUNCTIONS_LIB_PATH = GetLibPath() + "externalfunctions.so";
     const int32_t PAREN_LENGTH = 1;
 }
 

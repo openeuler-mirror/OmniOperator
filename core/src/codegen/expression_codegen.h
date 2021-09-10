@@ -2,8 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: code generation methods
  */
-#ifndef __LLVM_CODEGEN_H__
-#define __LLVM_CODEGEN_H__
+#ifndef __EXPRESSION_CODEGEN_H__
+#define __EXPRESSION_CODEGEN_H__
 
 #include "../common/expressions.h"
 #include "../common/parser/parser.h"
@@ -41,12 +41,12 @@
 #include "llvm/Target/TargetMachine.h"
 
 // Given an expression generates the function for it.
-class LLVMCodeGen {
+class ExpressionCodeGen {
 
 public:
-    LLVMCodeGen(std::string name, omniruntime::expressions::Expr &expr,
-                std::vector<omniruntime::expressions::DataType> &datatypes);
-    ~LLVMCodeGen();
+    ExpressionCodeGen(std::string name, omniruntime::expressions::Expr &expr,
+                      std::vector<omniruntime::expressions::DataType> &datatypes);
+    ~ExpressionCodeGen();
 
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;

@@ -55,9 +55,9 @@ namespace omniruntime {
                 if (specializedFuncNames.count(F.getName().str()) > 0) {
                     bool optimized = FPM.run(F);
                     if (optimized) {
-                        #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
                         outs() << "Specialized function optimized: " + F.getName().str() << "\n";
-                        #endif
+#endif
                     }
                 }
             }
@@ -65,10 +65,10 @@ namespace omniruntime {
 
             bool optimized = MPM.run(M);
             if (optimized) {
-                #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
                 outs() << "Module optimized: " + M.getName().str() << "\n";
                 M.print(outs(), nullptr);
-                #endif
+#endif
             }
 
             return std::move(TSM);

@@ -13,7 +13,7 @@
 #include <ctime>
 #include <regex>
 
-#include "../../src/codegen/llvm_codegen.h"
+#include "../../src/codegen/expression_codegen.h"
 #include "../../src/codegen/filter_codegen.h"
 #include "../../src/codegen/projection_codegen.h"
 #include "../../src/codegen/func_registry.h"

@@ -152,11 +152,13 @@ uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMan
         }
     } else {
         for (auto const &function : this->functionSymbols) {
-            if (function.find(functionName) != string::npos) {
-                auto expectedFunc = this->jitter->lookup(function);
-                if (expectedFunc) {
-                    return expectedFunc->getAddress();
-                }
+            if (function.find(functionName) == string::npos) {
+                continue;
+            }
+
+            auto expectedFunc = this->jitter->lookup(function);
+            if (expectedFunc) {
+                return expectedFunc->getAddress();
             }
         }
 
@@ -175,9 +177,9 @@ bool LLVMCompiler::harden_function(const string &specializationId, llvm::Functio
     if (this->specializations.count(specializationId) == 0) {
         return false;
     }
-    #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
     llvm::outs() << "hardening: " << function->getName().str() << "\n";
-    #endif
+#endif
     Specialization specialization = this->specializations.at(specializationId);
 
     int count = 0;
@@ -225,9 +227,9 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
         ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(JITTER->getDataLayout().getGlobalPrefix())));
     for (auto &module : this->modules) {
         std::string moduleName = module->getName().str();
-        #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
         outs() << "addIRModule: " << moduleName << "\n";
-        #endif
+#endif
         auto err =
             JITTER->addIRModule(ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
         if (err) {
@@ -235,8 +237,6 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
             return nullptr;
         }
     }
-
-//    JITTER->getObjTransformLayer().setTransform(DumpObjects("/home/arven/omnijit/dump", "omnijit"));
 
     return JITTER;
 }
@@ -470,9 +470,9 @@ void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &an
             if (index != llvm::StringRef::npos) {
                 StringRef specializationId = annotation.substr(0, index);
                 annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
-                #ifdef DEBUG_LLVM
+#ifdef DEBUG_LLVM
                 outs() << "Found annotated function " << specializationId << ", " << FUNC->getName() << "\n";
-                #endif
+#endif
             }
         }
     }
