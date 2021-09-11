@@ -19,13 +19,9 @@ class Vector {
 public:
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type);
 
-    Vector(Vector *vector, int size, int offset);
-
-    Vector() {}
-
     virtual ~Vector();
 
-    virtual int GetSize()
+    int GetSize()
     {
         return size;
     }
@@ -45,7 +41,7 @@ public:
         return reference->GetRef();
     }
 
-    virtual VectorAllocator *GetAllocator() const
+    VectorAllocator *GetAllocator() const
     {
         return allocator;
     }
@@ -55,14 +51,14 @@ public:
         return valuesAddress;
     }
 
-    virtual const VecType &GetType()
+    const VecType &GetType()
     {
-        return reference->GetType();
+        return type;
     }
 
-    virtual int GetCapacityInBytes() const
+    int GetCapacityInBytes() const
     {
-        return reference->GetValueChunk()->GetSizeInBytes();
+        return capacityInBytes;
     }
 
     void *GetValueNulls() const
@@ -70,9 +66,14 @@ public:
         return valueNullsAddress;
     }
 
-    virtual int GetValueNullsSizeInBytes() const
+    int GetValueNullsSizeInBytes() const
     {
-        return reference->GetValueNullChunk()->GetSizeInBytes();
+        // for dictionary vector the value null chunk is null
+        if (reference != nullptr) {
+            return reference->GetValueNullChunk()->GetSizeInBytes();
+        } else {
+            return size;
+        }
     }
 
     void *GetValueOffsets() const
@@ -123,12 +124,21 @@ public:
     virtual void Append(Vector *other, int positionOffset, int length) = 0;
 
 protected:
+    // this method is mainly used for vector slice
+    Vector(Vector *vector, int size, int offset);
+
+    // this method does not apply for memory for chunk,it is mainly used for dictionary vector or other vector
+    Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset)
+        : allocator(allocator), capacityInBytes(capacityInBytes), size(size), type(type), positionOffset(positionOffset)
+    {}
+
     void *valuesAddress = nullptr;
     void *valueNullsAddress = nullptr;
     void *valueOffsetsAddress = nullptr;
     int positionOffset = 0;
     int capacityInBytes = 0;
     int size = 0;
+    VecType type;
     VectorReference *reference = nullptr;
     VectorAllocator *allocator = nullptr;
 };

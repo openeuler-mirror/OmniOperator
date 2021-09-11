@@ -36,7 +36,7 @@ VectorReference *VectorAllocator::NewVector(int capacityInBytes, int size, VecTy
             return nullptr;
         }
     }
-    return new VectorReference(values, valueNulls, valueOffsets, type);
+    return new VectorReference(values, valueNulls, valueOffsets);
 }
 
 void VectorAllocator::FreeAllVectors() {}

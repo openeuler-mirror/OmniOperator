@@ -14,7 +14,9 @@
 namespace omniruntime {
 namespace vec {
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, uint32_t idsCount)
-    : dictionary(dictionary->Slice(0, dictionary->GetSize())), ids(nullptr), idsCount(idsCount), idsOffset(0)
+    : Vector(dictionary->GetAllocator(), dictionary->GetCapacityInBytes(), idsCount, DictionaryVecType::Instance(), 0),
+      dictionary(dictionary->Slice(0, dictionary->GetSize())),
+      ids(nullptr)
 {
     InitIds(ids, idsCount);
 }
@@ -142,12 +144,12 @@ DictionaryVector *DictionaryVector::CopyRegion(int positionOffset, int length)
 void DictionaryVector::Append(Vector *other, int positionOffset, int length)
 {
     DictionaryVector *otherVector = reinterpret_cast<DictionaryVector *>(other);
-    if (positionOffset + length > idsCount) {
+    if (positionOffset + length > size) {
         return;
     }
     int32_t *destination = this->ids + positionOffset;
     int32_t *src = otherVector->GetPositionOffset() + otherVector->GetIds();
-    errno_t ret = memcpy_s(destination, idsCount * sizeof(int32_t), src, length * sizeof(int32_t));
+    errno_t ret = memcpy_s(destination, size * sizeof(int32_t), src, length * sizeof(int32_t));
 
     if (ret != EOK) {
         std::cerr << "append failed in Dictionary vector." << std::endl;

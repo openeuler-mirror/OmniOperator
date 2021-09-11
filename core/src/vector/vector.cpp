@@ -14,7 +14,7 @@ omniruntime::vec::VectorAllocator *g_vectorAllocator = g_vectorAllocatorManager.
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
-    : size(size), positionOffset(0), capacityInBytes(capacityInBytes)
+    : size(size), positionOffset(0), capacityInBytes(capacityInBytes), type(type)
 {
     if (allocator != nullptr) {
         reference = allocator->NewVector(capacityInBytes, size, type);
@@ -33,7 +33,8 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
       reference(vector->reference),
       size(size),
       positionOffset(vector->positionOffset + positionOffset),
-      capacityInBytes(vector->GetCapacityInBytes())
+      capacityInBytes(vector->GetCapacityInBytes()),
+      type(vector->type)
 
 {
     reference->IncRef();
