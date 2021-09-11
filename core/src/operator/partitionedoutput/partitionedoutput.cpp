@@ -120,8 +120,10 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
     int32_t vecCount = vecBatch->GetVectorCount() - partitionChannelsCount;
 
     for (int rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+        int32_t rowIndex = rowIdx;
+        Vector *originalVec = VectorHelper::GetDictionary(vecBatch->GetVector(vecCount + nullChannel), rowIndex);
         bool shouldReplicate = (replicatesAnyRow && !hasAnyRowBeenReplicated) ||
-            nullChannel >= -1 && vecBatch->GetVector(vecCount + nullChannel)->IsValueNull(rowIdx);
+            nullChannel >= -1 && originalVec->IsValueNull(rowIndex);
         if (shouldReplicate) {
             for (int partitionedIdx = 0; partitionedIdx < partitionCount; ++partitionedIdx) {
                 partitionedMap[partitionedIdx].push_back(rowIdx);

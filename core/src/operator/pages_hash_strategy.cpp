@@ -120,12 +120,12 @@ bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIn
 
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftRowIndex);
+        leftColumn = VectorHelper::GetDictionary(leftColumn, leftRowIndex);
         if (isSame) {
             rightColumn = leftColumn;
         } else {
             rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-            rightColumn = OperatorUtil::GetDictionary(rightColumn, rightRowIndex);
+            rightColumn = VectorHelper::GetDictionary(rightColumn, rightRowIndex);
         }
 
         result =
@@ -145,8 +145,8 @@ bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
-        buildColumn = OperatorUtil::GetDictionary(buildColumn, buildRowIndex);
-        probeColumn = OperatorUtil::GetDictionary(probeColumn, probePosition);
+        buildColumn = VectorHelper::GetDictionary(buildColumn, buildRowIndex);
+        probeColumn = VectorHelper::GetDictionary(probeColumn, probePosition);
         result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, buildRowIndex, probeColumn,
             probePosition);
         if (!result) {
@@ -169,8 +169,8 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftRowIndex);
-        rightColumn = OperatorUtil::GetDictionary(rightColumn, rightRowIndex);
+        leftColumn = VectorHelper::GetDictionary(leftColumn, leftRowIndex);
+        rightColumn = VectorHelper::GetDictionary(rightColumn, rightRowIndex);
         leftIsNull = leftColumn->IsValueNull(leftRowIndex);
         rightIsNull = rightColumn->IsValueNull(rightRowIndex);
         if (leftIsNull || rightIsNull) {

@@ -229,8 +229,8 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
         Vector *leftVector = left->GetVector(sortCol);
         Vector *rightVector = right->GetVector(sortCol);
 
-        leftVector = OperatorUtil::GetDictionary(leftVector, leftPosition);
-        rightVector = OperatorUtil::GetDictionary(rightVector, rightPosition);
+        leftVector = VectorHelper::GetDictionary(leftVector, leftPosition);
+        rightVector = VectorHelper::GetDictionary(rightVector, rightPosition);
 
         compare =
             OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, leftPosition, rightVector, rightPosition);

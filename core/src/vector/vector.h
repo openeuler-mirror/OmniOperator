@@ -85,7 +85,7 @@ public:
         return reference->GetValueOffsetChunk()->GetSizeInBytes();
     }
 
-    virtual bool IsValueNull(int index)
+    bool IsValueNull(int index)
     {
         return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
     }

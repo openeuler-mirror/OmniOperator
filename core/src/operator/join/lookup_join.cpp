@@ -226,8 +226,9 @@ bool JoinProbe::CurrentRowContainsNull() const
 {
     Vector *column = nullptr;
     for (int32_t columnIdx = 0; columnIdx < probeHashColsCount; columnIdx++) {
-        column = probeHashColumns[columnIdx];
-        if (column->IsValueNull(position)) {
+        int32_t rowIdx = position;
+        column = VectorHelper::GetDictionary(probeHashColumns[columnIdx], rowIdx);
+        if (column->IsValueNull(rowIdx)) {
             return true;
         }
     }

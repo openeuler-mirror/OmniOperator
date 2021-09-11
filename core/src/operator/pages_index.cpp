@@ -172,8 +172,8 @@ int32_t CompareTo(const int32_t *sortCols, const int32_t *sortColTypes, const in
         int32_t sortCol = sortCols[i];
         Vector *leftColumn = columns[sortCol][leftColumnIndex];
         Vector *rightColumn = columns[sortCol][rightColumnIndex];
-        leftColumn = OperatorUtil::GetDictionary(leftColumn, leftColumnPosition);
-        rightColumn = OperatorUtil::GetDictionary(rightColumn, rightColumnPosition);
+        leftColumn = VectorHelper::GetDictionary(leftColumn, leftColumnPosition);
+        rightColumn = VectorHelper::GetDictionary(rightColumn, rightColumnPosition);
         compare = OperatorUtil::CompareNull(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition,
             sortNullFirsts[i]);
         if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
