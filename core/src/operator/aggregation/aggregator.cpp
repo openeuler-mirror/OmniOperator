@@ -4,10 +4,12 @@
  */
 #include "aggregator.h"
 #include "../../util/compiler_util.h"
+#include "../util/operator_util.h"
 
 #include <memory>
 
 #include "../../vector/vector_common.h"
+#include "../../vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
@@ -69,27 +71,29 @@ void ALWAYS_INLINE SumAggregator::Insert(GroupBySlot &groupSlot, omniruntime::ve
 void ALWAYS_INLINE SumAggregator::ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type,
     uint32_t offset)
 {
-    if (colPtr->IsValueNull(offset)) {
+    int32_t rowIdx = offset;
+    colPtr = VectorHelper::GetDictionary(colPtr, rowIdx);
+    if (colPtr->IsValueNull(rowIdx)) {
         return;
     }
     switch (type) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
-            *(static_cast<int32_t *>(groupSlot.val)) += (static_cast<IntVector *>(colPtr))->GetValue(offset);
+            *(static_cast<int32_t *>(groupSlot.val)) += (static_cast<IntVector *>(colPtr))->GetValue(rowIdx);
             break;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64:
          {
-            *(static_cast<int64_t *>(groupSlot.val)) += (static_cast<LongVector *>(colPtr))->GetValue(offset);
+            *(static_cast<int64_t *>(groupSlot.val)) += (static_cast<LongVector *>(colPtr))->GetValue(rowIdx);
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            *(static_cast<double *>(groupSlot.val)) += (static_cast<DoubleVector *>(colPtr))->GetValue(offset);
+            *(static_cast<double *>(groupSlot.val)) += (static_cast<DoubleVector *>(colPtr))->GetValue(rowIdx);
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            *(static_cast<Decimal128*>(groupSlot.val)) += (static_cast<Decimal128Vector*>(colPtr)->GetValue(offset));
+            *(static_cast<Decimal128*>(groupSlot.val)) += (static_cast<Decimal128Vector*>(colPtr)->GetValue(rowIdx));
             break;
         }
         default: {

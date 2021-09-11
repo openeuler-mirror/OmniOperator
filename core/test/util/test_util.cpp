@@ -8,6 +8,7 @@
 #include "test_util.h"
 #include "../../src/vector/dictionary_vector.h"
 #include "../../src/vector/vector_types.h"
+#include "../../src/vector/vector_helper.h"
 
 using namespace omniruntime::vec;
 
@@ -82,10 +83,17 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
     bool result = true;
     for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
-        if (actualColumn->IsValueNull(i) != expectColumn->IsValueNull(i)) {
+        int32_t actualIndex = i;
+        int32_t expectIndex = i;
+
+        Vector *actualCol = VectorHelper::GetDictionary(actualColumn, actualIndex);
+        Vector *expectCol = VectorHelper::GetDictionary(expectColumn, expectIndex);
+
+        if (actualCol->IsValueNull(actualIndex) != expectCol->IsValueNull(expectIndex)) {
             return false;
         }
-        else if ((actualColumn->IsValueNull(i) == expectColumn->IsValueNull(i)) && actualColumn->IsValueNull(i)){
+        else if ((actualCol->IsValueNull(actualIndex) == expectCol->IsValueNull(expectIndex)) &&
+            actualCol->IsValueNull(actualIndex)){
             continue;
         }
         else {
@@ -232,7 +240,9 @@ void AssertVarcharVectorEquals(VarcharVector *vector, std::string *expectedValue
 void AssertDictionaryVectorIntEquals(DictionaryVector *vector, int32_t *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
+        int32_t rowIndex = i;
+        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
         ASSERT_EQ(vector->GetInt(i), values[i]);
@@ -242,7 +252,9 @@ void AssertDictionaryVectorIntEquals(DictionaryVector *vector, int32_t *values)
 void AssertDictionaryVectorLongEquals(DictionaryVector *vector, int64_t *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
+        int32_t rowIndex = i;
+        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
         ASSERT_EQ(vector->GetLong(i), values[i]);
@@ -253,7 +265,9 @@ void AssertDictionaryVectorBooleanEquals(DictionaryVector *vector, bool *values)
 {
     // TODO::handle null
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
+        int32_t rowIndex = i;
+        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
         ASSERT_EQ(vector->GetBoolean(i), values[i]);
@@ -263,7 +277,9 @@ void AssertDictionaryVectorBooleanEquals(DictionaryVector *vector, bool *values)
 void AssertDictionaryVectorDoubleEquals(DictionaryVector *vector, double *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
+        int32_t rowIndex = i;
+        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
         EXPECT_TRUE(vector->GetDouble(i) - values[i] <= DBL_EPSILON);
@@ -273,7 +289,9 @@ void AssertDictionaryVectorDoubleEquals(DictionaryVector *vector, double *values
 void AssertDictionaryVectorVarcharEquals(DictionaryVector *vector, std::string *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
+        int32_t rowIndex = i;
+        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
         uint8_t *data = nullptr;
@@ -286,7 +304,9 @@ void AssertDictionaryVectorVarcharEquals(DictionaryVector *vector, std::string *
 void AssertDictionaryVectorDecimal128Equals(DictionaryVector *vector, Decimal128 *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        if (vector->IsValueNull(i)) {
+        int32_t rowIndex = i;
+        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
         ASSERT_EQ(vector->GetDecimal128(i), values[i]);

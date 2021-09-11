@@ -164,6 +164,22 @@ public:
         return vector;
     }
 
+    static omniruntime::vec::Vector *GetDictionary(omniruntime::vec::Vector *vector, int32_t &rowIndex)
+    {
+        if (vector->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            return vector;
+        }
+        omniruntime::vec::Vector *result = vector;
+        int32_t idIndex = rowIndex;
+        do {
+            auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+            idIndex = dictionaryVector->GetIds()[idIndex];
+            result = dictionaryVector->GetDictionary();
+        } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+        rowIndex = idIndex;
+        return result;
+    }
+
     static void FreeVecBatch(VectorBatch *vecBatch);
 
     static void FreeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount);

@@ -38,6 +38,7 @@ void VectorHelper::FreeVecBatches(std::vector<VectorBatch *> &vecBatches)
 
 void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
 {
+    vector = GetDictionary(vector, rowIndex);
     auto vecType = vector->GetType();
     if (vector->IsValueNull(rowIndex)) {
         std::cout << "NULL" << "\t";
@@ -60,12 +61,6 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         }
         case OMNI_VEC_TYPE_BOOLEAN: {
             std::cout << static_cast<BooleanVector *>(vector)->GetValue(rowIndex) << "\t";
-            break;
-        }
-        case OMNI_VEC_TYPE_DICTIONARY: {
-            auto *vec = static_cast<DictionaryVector *>(vector);
-            int32_t id = vec->GetIds()[rowIndex];
-            PrintVectorValue(vec->GetDictionary(), id);
             break;
         }
         case OMNI_VEC_TYPE_VARCHAR: {

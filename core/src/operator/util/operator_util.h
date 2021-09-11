@@ -145,22 +145,6 @@ public:
         return COMPARE_STATUS_OTHER;
     }
 
-    static omniruntime::vec::Vector *GetDictionary(omniruntime::vec::Vector *vector, int32_t &rowIndex)
-    {
-        if (vector->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
-            return vector;
-        }
-        omniruntime::vec::Vector *result = vector;
-        int32_t idIndex = rowIndex;
-        do {
-            auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-            idIndex = dictionaryVector->GetIds()[idIndex];
-            result = dictionaryVector->GetDictionary();
-        } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
-        rowIndex = idIndex;
-        return result;
-    }
-
 private:
     static int32_t CompareDouble(omniruntime::vec::DoubleVector *leftColumn, int32_t leftColumnPosition,
         omniruntime::vec::DoubleVector *rightColumn, int32_t rightColumnPosition)
