@@ -19,7 +19,7 @@
 #include <stdarg.h>
 
 const int32_t VEC_BATCH_NUM = 10;
-const int32_t ROW_PER_VEC_BATCH = 200;
+const int32_t ROW_PER_VEC_BATCH = 2000000;
 const int32_t CARDINALITY = 4;
 const int32_t COLUMN_NUM = 4;
 const bool INPUT_MODE = true;

@@ -284,11 +284,12 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
                     aggregators[i]->Insert(state, colPtr, type, start + offset);
                 }
             } else {
+                auto &columnState = groupedRows[hash];
                 for (int32_t i = 0; i < aggColNum; ++i) {
                     int32_t idx = aggColIdx[i];
                     int32_t type = types[idx];
                     Vector *colPtr = vectors[idx];
-                    GroupBySlot &state = groupedRows[hash][groupByColNum + i];
+                    GroupBySlot &state = columnState[groupByColNum + i];
                     aggregators[i]->ProcessGroup(state, colPtr, type, start + offset);
                 }
             }
