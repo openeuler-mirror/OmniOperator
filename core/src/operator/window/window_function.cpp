@@ -193,7 +193,7 @@ void AggregateWindowFunction::Accumulate(int32_t start, int32_t end)
         // function since the implementation of SortPagesIndexIfNecessary will never return dictionary block here we add
         // the GetDictionary to ensure we send the right data to aggregation
         Vector *originalVector = originalVectorBatch[argumentChannels][originalVectorIndex];
-        originalVector = OperatorUtil::GetDictionary(originalVector, originalVectorPosition);
+        originalVector = VectorHelper::GetDictionary(originalVector, originalVectorPosition);
         AccumulateData(start, resultVector, resultVectorPosition, originalVectorPosition, originalVector);
     }
 }
