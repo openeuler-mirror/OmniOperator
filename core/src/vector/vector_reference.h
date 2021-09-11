@@ -13,7 +13,7 @@ namespace omniruntime {
 namespace vec {
 class VectorReference {
 public:
-    VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, VecType type);
+    VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets);
 
     ~VectorReference();
 
@@ -29,8 +29,6 @@ public:
 
     void *GetValueOffsetsAddress();
 
-    const VecType &GetType();
-
     bool IsWritable();
 
     Chunk *GetValueChunk() const;
@@ -40,7 +38,6 @@ public:
     Chunk *GetValueOffsetChunk() const;
 
 private:
-    VecType type;
     Chunk *values;
     Chunk *valueNulls;
     Chunk *valueOffsets;

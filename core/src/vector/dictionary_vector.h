@@ -31,32 +31,7 @@ public:
 
     int32_t GetIdsCount()
     {
-        return idsCount;
-    }
-
-    int32_t GetSize() override
-    {
-        return idsCount;
-    }
-
-    const VecType &GetType() override
-    {
-        return DictionaryVecType::Instance();
-    }
-
-    VectorAllocator *GetAllocator() const override
-    {
-        return dictionary->GetAllocator();
-    }
-
-    int GetCapacityInBytes() const override
-    {
-        return dictionary->GetCapacityInBytes();
-    }
-
-    int GetValueNullsSizeInBytes() const override
-    {
-        return dictionary->GetValueNullsSizeInBytes();
+        return size;
     }
 
     int32_t GetInt(int32_t position) const;
@@ -84,8 +59,6 @@ private:
     void InitIds(int32_t *ids, uint32_t idsCount);
     Vector *dictionary;
     int32_t *ids;
-    uint32_t idsCount;
-    int32_t idsOffset;
 };
 } // namespace vec
 } // namespace omniruntime

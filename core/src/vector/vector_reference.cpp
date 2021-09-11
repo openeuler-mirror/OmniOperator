@@ -6,8 +6,8 @@
 
 namespace omniruntime {
 namespace vec {
-VectorReference::VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets, VecType type)
-    : values(values), valueNulls(valueNulls), valueOffsets(valueOffsets), reference(1), type(type), writable(true)
+VectorReference::VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets)
+    : values(values), valueNulls(valueNulls), valueOffsets(valueOffsets), reference(1), writable(true)
 {}
 
 VectorReference::~VectorReference()
@@ -65,11 +65,6 @@ void *VectorReference::GetValueOffsetsAddress()
         return valueOffsets->GetAddress();
     }
     return nullptr;
-}
-
-const VecType &VectorReference::GetType()
-{
-    return type;
 }
 
 bool VectorReference::IsWritable()
