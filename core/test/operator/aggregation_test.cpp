@@ -9,6 +9,7 @@
 #include "../../src/jit/specialization.h"
 #include "../../src/operator/optimization.h"
 #include "../../src/vector/vector_helper.h"
+#include "../../src/util/perf_util.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/SourceMgr.h"
 #include <thread>
@@ -1175,9 +1176,23 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
     Timer timer;
     timer.setStart();
+
+    auto *perfUtil = new PerfUtil();
+    perfUtil->Init();
+
+    perfUtil->Reset();
+    perfUtil->Start();
+
     for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
         auto errNo = jitGroupBy->AddInput(input[pageIndex]);
     }
+
+    perfUtil->Stop();
+    long instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("HashAgg with OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+
     timer.calculateElapse();
     double wall_elapsed = timer.getWallElapse();
     double cpu_elapsed = timer.getCpuElapse();
@@ -1188,9 +1203,21 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto groupBy = nativeOperatorFactory2->CreateOperator();
 
     timer.reset();
+
+    perfUtil->Reset();
+    perfUtil->Start();
     for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
         groupBy->AddInput(input[pageIndex]);
     }
+
+    perfUtil->Stop();
+    instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("HashAgg without OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+
+    delete perfUtil;
+
     timer.calculateElapse();
     wall_elapsed = timer.getWallElapse();
     cpu_elapsed = timer.getCpuElapse();
