@@ -87,9 +87,15 @@ public abstract class Vec implements Closeable {
         this.type = type;
         this.offset = offset;
         this.nativeVector = nativeVector;
-        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
-        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
+        this.valuesBuf = OmniBufFactory.create(
+                JvmUtils.directBuffer(getValuesNative(nativeVector), capacityInBytes).order(ByteOrder.LITTLE_ENDIAN));
+        this.nullsBuf = OmniBufFactory.create(
+                JvmUtils.directBuffer(getValueNullsNative(nativeVector), size).order(ByteOrder.LITTLE_ENDIAN));
         this.isWritable = isWritable;
+    }
+
+    private Vec(VecAllocator allocator, long nativeVector, int size, int offset, VecType type, boolean isWritable) {
+        this(allocator, nativeVector, getCapacityInBytesNative(nativeVector), size, offset, type, isWritable);
     }
 
     /**
@@ -127,13 +133,13 @@ public abstract class Vec implements Closeable {
      * @param isSlice Whether the current vector is sliced
      */
     protected Vec(Vec vec, int offset, int length, boolean isSlice) {
-        this(vec.allocator, isSlice
-                        ? sliceVectorNative(vec.nativeVector, offset, length)
-                        : copyRegionNative(vec.nativeVector, offset, length), vec.getCapacityInBytes(), length,
-                isSlice ? offset + vec.getOffset() : 0, vec.getType(), !isSlice);
-        if (!isSlice) {
-            capacityInBytes = getValues().capacity();
-        }
+        this(vec.allocator,
+                isSlice ? sliceVectorNative(vec.nativeVector, offset, length) :
+                        copyRegionNative(vec.nativeVector, offset, length),
+                length,
+                isSlice ? offset + vec.offset : 0,
+                vec.type,
+                !isSlice);
     }
 
     /**
@@ -145,20 +151,18 @@ public abstract class Vec implements Closeable {
      * @param length    number of elements copied
      */
     protected Vec(Vec vec, int[] positions, int offset, int length) {
-        this(vec.allocator, copyPositionsNative(vec.nativeVector, positions, offset, length), 0, length, 0,
-                vec.getType(), true);
-        capacityInBytes = getValues().capacity();
+        this(vec.allocator, copyPositionsNative(vec.nativeVector, positions, offset, length), length, 0,
+                vec.type, true);
     }
 
     protected Vec(long nativeVector, VecType type) {
-        this.allocator = new VecAllocator(getAllocatorNative(nativeVector));
-        this.capacityInBytes = getCapacityInBytesNative(nativeVector);
-        this.size = getSizeNative(nativeVector);
-        this.type = type;
-        this.offset = getOffsetNative(nativeVector);
-        this.nativeVector = nativeVector;
-        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
-        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector).order(ByteOrder.LITTLE_ENDIAN));
+        this(new VecAllocator(getAllocatorNative(nativeVector)),
+                nativeVector,
+                getCapacityInBytesNative(nativeVector),
+                getSizeNative(nativeVector),
+                getOffsetNative(nativeVector),
+                type,
+                true);
     }
 
     protected Vec(Vec dictionary, int[] ids, VecType type) {
@@ -202,9 +206,9 @@ public abstract class Vec implements Closeable {
      */
     protected static native String getTypeNative(long nativeVector);
 
-    private static native ByteBuffer getValuesNative(long nativeVector);
+    private static native long getValuesNative(long nativeVector);
 
-    private static native ByteBuffer getValueNullsNative(long nativeVector);
+    private static native long getValueNullsNative(long nativeVector);
 
     /**
      * merge two vectors
