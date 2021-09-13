@@ -99,16 +99,16 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeNative(JN
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    getValuesNative
- * Signature: (J)Ljava/nio/ByteBuffer;
+ * Signature: (J)J;
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    getValueNullsNative
- * Signature: (J)Ljava/nio/ByteBuffer;
+ * Signature: (J)J;
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
@@ -135,9 +135,9 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecT
 /*
  * Class:     nova_hetu_omniruntime_vector_VariableWidthVec
  * Method:    getValueOffsetsNative
- * Signature: (J)Ljava/nio/ByteBuffer;
+ * Signature: (J)J;
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *, jclass,
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *, jclass,
     jlong);
 
 /*
