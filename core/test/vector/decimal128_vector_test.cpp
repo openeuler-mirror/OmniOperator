@@ -75,13 +75,17 @@ TEST(Decimal128Vector, SetValues)
     Decimal128Vector *Decimal128Vector1 = new Decimal128Vector(allocator, size);
     Decimal128Vector1->SetValues(0, p, size);
     for (int i = 0; i < size; i++) {
-        EXPECT_TRUE(Decimal128Vector1->GetValue(i) == values[i * 2 + 1]);
+        Decimal128 decimal128 = Decimal128Vector1->GetValue(i);
+        EXPECT_TRUE(decimal128.LowBits() == values[i * 2]);
+        EXPECT_TRUE(decimal128.HighBits() == values[i * 2 + 1]);
     }
 
     Decimal128Vector *Decimal128Vector2 = new Decimal128Vector(allocator, size);
     Decimal128Vector2->SetValues(1, p + 2 * 2, 3);
     for (int i = 0; i < 3; i++) {
-        EXPECT_TRUE(Decimal128Vector2->GetValue(i + 1) == values[(i + 2) * 2 + 1]);
+        Decimal128 decimal128 =  Decimal128Vector2->GetValue(i + 1);
+        EXPECT_TRUE(decimal128.LowBits() == values[(i + 2) * 2]);
+        EXPECT_TRUE(decimal128.HighBits() == values[(i + 2) * 2 + 1]);
     }
 
     delete Decimal128Vector1;
@@ -131,12 +135,14 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
     long *value = new long[256];
     for (int i = 0; i < 256; i++) {
-        value[i * 2] = 0;
+        value[i * 2] = 12;
         value[i * 2 + 1] = i * 2;
     }
     vector->SetValues(0, value, 256);
     for (int i = 0; i < 256; i++) {
-        EXPECT_TRUE(vector->GetValue(i) == i * 2);
+        Decimal128 decimal128 = vector->GetValue(i);
+        EXPECT_TRUE(decimal128.LowBits() == value[i * 2]);
+        EXPECT_TRUE(decimal128.HighBits() == value[i * 2 + 1]);
     }
 
     delete[] value;
@@ -154,12 +160,14 @@ TEST(Decimal128Vector, SetValuesWithOffset)
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
     long *value = new long[256 * 2];
     for (int i = 0; i < 256; i++) {
-        value[i * 2] = 0;
+        value[i * 2] = i + 1;
         value[i * 2 + 1] = i * 2;
     }
     vector->SetValues(128, &value[128 * 2], 128);
     for (int i = 128; i < 256; i++) {
-        EXPECT_TRUE(vector->GetValue(i) == i * 2);
+        Decimal128 decimal128 = vector->GetValue(i);
+        EXPECT_TRUE(decimal128.LowBits() == value[i * 2]);
+        EXPECT_TRUE(decimal128.HighBits() == value[i * 2 + 1]);
     }
 
     delete[] value;

@@ -18,21 +18,21 @@ public:
     Decimal128 ALWAYS_INLINE GetValue(int32_t index)
     {
         int64_t *value = &(reinterpret_cast<int64_t *>(valuesAddress)[(index + positionOffset) * 2]);
-        return Decimal128(*value, *(value + 1));
+        return Decimal128(*(value + 1), *value);
     }
 
     // inline for high performance.
     void ALWAYS_INLINE SetValue(int32_t index, Decimal128 value)
     {
-        reinterpret_cast<int64_t *>(valuesAddress)[index * 2] = value.HighBits();
-        reinterpret_cast<int64_t *>(valuesAddress)[index * 2 + 1] = value.LowBits();
+        reinterpret_cast<int64_t *>(valuesAddress)[index * 2] = value.LowBits();
+        reinterpret_cast<int64_t *>(valuesAddress)[index * 2 + 1] = value.HighBits();
     }
 
     // inline for high performance.
     void SetValue(int32_t index, int64_t highBits, uint64_t lowBits)
     {
-        reinterpret_cast<int64_t *>(valuesAddress)[index * 2] = highBits;
-        reinterpret_cast<int64_t *>(valuesAddress)[index * 2 + 1] = lowBits;
+        reinterpret_cast<int64_t *>(valuesAddress)[index * 2] = lowBits;
+        reinterpret_cast<int64_t *>(valuesAddress)[index * 2 + 1] = highBits;
     }
 
     void SetValues(int32_t startIndex, const int64_t *values, int32_t length);
