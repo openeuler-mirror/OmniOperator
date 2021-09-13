@@ -34,7 +34,7 @@ public class TestAggregateWindowFunction
                     .map(ClientCapabilities::toString)
                     .collect(toImmutableSet()))
             .setSystemProperty("extension_execution_planner_enabled", "true")
-            .setSystemProperty("extension_execution_planner_jar_path", "/home/arven/workspace/omni-runtime/adapter/openlookeng/target/omni-openLooKeng-adapter-1.2.0-SNAPSHOT.jar")
+            .setSystemProperty("extension_execution_planner_jar_path", "file:///opt/lib/omni-openLooKeng-adapter-1.2.0-SNAPSHOT.jar")
             .setSystemProperty("extension_execution_planner_class_path", "nova.hetu.olk.OmniLocalExecutionPlanner")
             .setSystemProperty("extension_merge_pages_class_path", "nova.hetu.olk.operator.filterandproject.OmniMergePages")
             .setSystemProperty("prefer_partial_aggregation", "false")
