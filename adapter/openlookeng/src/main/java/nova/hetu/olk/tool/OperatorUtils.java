@@ -248,6 +248,9 @@ public final class OperatorUtils {
                 return new DictionaryOmniBlock(((DictionaryBlock) block).getDictionary(),
                     ((DictionaryBlock) block).getIdsArray());
             }
+            case "LazyBlock": {
+                return ((LazyBlock) block).getBlock();
+            }
             default:
                 break;
         }
@@ -288,13 +291,14 @@ public final class OperatorUtils {
             Block block = page.getBlock(i);
             if (!block.isExtensionBlock()) {
                 vecList.add((Vec) OperatorUtils.getOffHeapBlock(block).getValues());
-                log.warn("transfer the onheap pages to offheap pages in %s", operatorName);
+                log.warn("transfer the onheap pages to offheap pages in %s with %s rows", operatorName,
+                    page.getPositionCount());
             } else {
-               if(block instanceof LazyBlock){
-                   vecList.add((Vec)((LazyBlock) block).getBlock().getValues());
-               }else {
-                   vecList.add((Vec) page.getBlock(i).getValues());
-               }
+                if (block instanceof LazyBlock) {
+                    vecList.add((Vec) ((LazyBlock) block).getBlock().getValues());
+                } else {
+                    vecList.add((Vec) page.getBlock(i).getValues());
+                }
             }
         }
 

@@ -4,17 +4,16 @@
 
 package nova.hetu.omniruntime.vector;
 
+import static nova.hetu.omniruntime.vector.Vec.getTypeNative;
+
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.type.VecTypeSerializer;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.io.Closeable;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static nova.hetu.omniruntime.vector.Vec.getTypeNative;
 
 /**
  * vec batch
@@ -33,7 +32,10 @@ public class VecBatch implements Closeable {
     public VecBatch(Vec[] vectors, int rowCount) {
         this.vectors = vectors;
         this.rowCount = rowCount;
-        long[] nativeVectors = Arrays.asList(vectors).stream().mapToLong(vec -> vec.getNativeVector()).toArray();
+        long[] nativeVectors = new long[vectors.length];
+        for (int i = 0; i < vectors.length; i++) {
+            nativeVectors[i] = vectors[i].getNativeVector();
+        }
         this.nativeVectorBatch = newVectorBatchNative(nativeVectors, rowCount);
     }
 
@@ -71,7 +73,7 @@ public class VecBatch implements Closeable {
      * create vector batch based on the number of vectors
      *
      * @param nativeVectors native vector array.
-     * @param rowCount      the row count of vector batch
+     * @param rowCount the row count of vector batch
      * @return vector batch address
      */
     public static native long newVectorBatchNative(long[] nativeVectors, int rowCount);
@@ -123,8 +125,9 @@ public class VecBatch implements Closeable {
         if (isClosed.compareAndSet(false, true)) {
             freeVectorBatchNative(nativeVectorBatch);
         } else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE, "vec batch has been closed:" + this
-                    + ",threadName:" + Thread.currentThread().getName() + ",native:" + nativeVectorBatch);
+            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE,
+                "vec batch has been closed:" + this + ",threadName:" + Thread.currentThread().getName() + ",native:"
+                    + nativeVectorBatch);
         }
     }
 }

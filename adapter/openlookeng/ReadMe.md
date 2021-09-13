@@ -29,7 +29,9 @@ Block which extends from OLK Block. To use these OmniBlock, we will extends Colu
 Now we support date/int/bigint/varchar/decimal types, and more types are under developing.
 
 add the properties below to the etc/catalog/hive.properties to :
-// enable the extension execution planner
+// enable the extension column reader
+extension_column_reader_enabled=true   
+// add the classpath jar
 extension_column_reader_jar_path=file:///xxPath/omni-openLooKeng-adapter-1.2.0-SNAPSHOT.jar
 // add the class path of different types
 extension_column_reader_type_long_classpath=nova.hetu.olk.reader.OmniLongColumnReader
@@ -42,4 +44,4 @@ extension_column_reader_type_decimal_classpath=nova.hetu.olk.reader.OmniDecimalC
 ### how to fall back to OLK
 use the session below to fall back to OLK:
 set session extension_execution_planner_enabled=false;
-set session hive.extension_execution_planner_enabled=false;
+set session hive.extension_column_reader_enabled=false;
