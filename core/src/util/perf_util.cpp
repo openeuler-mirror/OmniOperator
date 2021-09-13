@@ -7,8 +7,8 @@
 
 #include <cstdio>
 #include <unistd.h>
-#include <asm/unistd_64.h>
 #include <sys/ioctl.h>
+#include <sys/syscall.h>
 #include <linux/perf_event.h>
 
 void PerfUtil::Init()
@@ -24,7 +24,7 @@ void PerfUtil::Init()
     pe.exclude_kernel = 1;
     pe.exclude_hv = 1;
 
-    this->fd = syscall(__NR_perf_event_open, &pe, 0, -1, -1, 0);
+    this->fd = syscall(SYS_perf_event_open, &pe, 0, -1, -1, 0);
     if (fd == -1) {
         perror("Error initializing PerfUtil: ");
         return;
