@@ -14,11 +14,10 @@ using namespace omniruntime::vec;
 OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    if (aggTypeContext.len != aggFuncTypeContext.len) {
+    if (aggInputTypes.GetSize() != aggFuncTypeContext.len) {
         ret = OMNI_STATUS_ERROR;
     }
     for (int32_t i = 0; i < aggFuncTypeContext.len; ++i) {
-        aggTypes.push_back(aggTypeContext.context[i]);
         switch (aggFuncTypeContext.context[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
                 aggregatorFactories.push_back(std::make_unique<SumAggregatorFactory>());
@@ -58,10 +57,13 @@ Operator *AggregationOperatorFactory::CreateOperator()
     std::vector<ColumnIndex> aggIndex;
     std::vector<std::unique_ptr<Aggregator>> aggs;
 
-    for (int32_t i = 0; i < this->aggTypes.size(); ++i) {
-        ColumnIndex c = { static_cast<uint32_t>(i), static_cast<VecType>(this->aggTypes[i]) };
+    for (int32_t i = 0; i < this->aggInputTypes.GetSize(); ++i) {
+        auto inputType = aggInputTypes.Get()[i];
+        auto outputType = aggOutputTypes.Get()[i];
+        ColumnIndex c = { static_cast<uint32_t>(i), inputType, outputType };
         aggIndex.push_back(c);
-        auto aggregator = aggregatorFactories[i]->CreateAggregator(this->aggTypes[i], inputRaw, outputPartial);
+        auto aggregator = aggregatorFactories[i]
+                ->CreateAggregator(inputType.GetId(), outputType.GetId(), inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
@@ -111,8 +113,7 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
 {
     for (int32_t aggIdx = 0; aggIdx < colNum; ++aggIdx) {
         int32_t type = aggDataType[aggIdx];
-        void *colPtr = vectors[aggIdx];
-        aggregators[aggIdx]->ProcessNonGroup(colPtr, type, offset);
+        aggregators[aggIdx]->ProcessNonGroup(vectors[aggIdx], type, offset);
     }
 }
 
@@ -199,7 +200,7 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             types[i] = OMNI_VEC_TYPE_DOUBLE;
             continue;
         }
-        types[i] = aggCols[i].type.GetId();
+        types[i] = aggCols[i].output.GetId();
     }
 
     VectorBatch *vecBatch = new VectorBatch(colSize, 1);

@@ -167,8 +167,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypeContext, aggColContext,
-        aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
+        new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByVecTypes, aggColContext,
+        aggVecTypes, outVecTypes, aggFuncTypeContext, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(jitContext);
     nativeOperatorFactory->Init();
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
@@ -224,8 +224,13 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    // TODO get agg output types from java
     omniruntime::op::AggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::AggregationOperatorFactory(aggTypeContext, aggFuncTypeContext, inputRaw, outputPartial);
+            new omniruntime::op::AggregationOperatorFactory(aggVecTypes,
+                                                            aggVecTypes,
+                                                            aggFuncTypeContext,
+                                                            inputRaw,
+                                                            outputPartial);
     nativeOperatorFactory->SetJitContext(jitContext);
     nativeOperatorFactory->Init();
     env->ReleaseStringUTFChars(jAggType, aggTypesCharPtr);

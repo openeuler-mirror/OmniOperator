@@ -5,20 +5,21 @@
 #ifndef AGGREGATOR_H
 #define AGGREGATOR_H
 
-#include <unordered_map>
 #include <memory>
 
 #include "../../vector/vector_type.h"
 #include "../../vector/vector.h"
+#include "../../vector/vector_common.h"
 
 namespace omniruntime {
 namespace op {
-
+using namespace omniruntime::vec;
 const int32_t AVG_VECTOR_COUNT = 2;
 
 using ColumnIndex = struct ColumnIndex {
     uint32_t idx;
-    omniruntime::vec::VecType type;
+    VecType input;
+    VecType output;
 };
 
 using PrepareContext = struct PrepareContext {
@@ -50,19 +51,24 @@ class AggregatorFactory;
 class Aggregator {
 public:
     // Initiate this aggregator, such as setting default values for states.
-    Aggregator(AggregateType ty, int32_t dataTy, bool inputRaw = true, bool outputParitial = false)
-        : type(ty), dataType(dataTy), initiated(false), inputRaw(inputRaw), outputPartial(outputParitial), nonGroupState({ nullptr })
+    Aggregator(AggregateType ty, int32_t input, bool inputRaw = true, bool outputParitial = false)
+        : type(ty), inputType(input), outputType(input), initiated(false), inputRaw(inputRaw),
+        outputPartial(outputParitial), nonGroupState({ nullptr })
+    {}
+    Aggregator(AggregateType ty, int32_t input, int32_t output, bool inputRaw = true, bool outputParitial = false)
+        : type(ty), inputType(input), outputType(output), initiated(false), inputRaw(inputRaw),
+        outputPartial(outputParitial), nonGroupState({ nullptr })
     {}
     virtual ~Aggregator()
     {}
-    virtual void Process(void *valuePtr, omniruntime::vec::VecType type) = 0;
+    virtual void Process(void *valuePtr, VecType type) = 0;
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
-    virtual void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) = 0;
-    virtual void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) = 0;
-    virtual void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) = 0;
-    virtual void Initiate(void *colPtr, int32_t type, uint32_t offset) = 0;
+    virtual void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) = 0;
+    virtual void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) = 0;
+    virtual void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) = 0;
+    virtual void Initiate(Vector *colPtr, int32_t type, uint32_t offset) = 0;
     bool IsInputRaw() const;
     bool IsOutputPartial() const;
     AggregateType GetType() const
@@ -73,14 +79,20 @@ public:
     {
         return nonGroupState;
     }
-    int32_t GetDataType() const
+    int32_t GetInputType() const
     {
-        return dataType;
+        return inputType;
+    }
+
+    int32_t GetOutputType() const
+    {
+        return outputType;
     }
 
 protected:
     AggregateType type;
-    int32_t dataType;
+    int32_t inputType;
+    int32_t outputType;
     // state for non-grouping aggregate
     GroupBySlot nonGroupState;
     bool initiated;
@@ -88,120 +100,410 @@ protected:
     bool outputPartial;
 };
 
+using ProcessGroupFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using ProcessNonGroupFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using InsertFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using InitiateFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using AggFunctionByType = struct {
+    VecTypeId typeId;
+    InsertFunc insertFunc;
+    ProcessGroupFunc processGroupFunc;
+    InitiateFunc initiateFunc;
+    ProcessNonGroupFunc processNonGroupFunc;
+};
+
+template<typename V, typename D>
+void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+
+template<typename V, typename D>
+void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+
+template<typename V, typename D>
+void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+
+template<typename V, typename D>
+void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+
 class SumAggregator : public Aggregator {
 public:
-    explicit SumAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty) {}
-    SumAggregator(int32_t ty, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, ty, inputRaw, outputPartial)
+    SumAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out)
+    {}
+    // TODO deprecate
+    explicit SumAggregator(int32_t in) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in)
+    {}
+    SumAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, inputRaw, outputPartial)
     { }
     ~SumAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
+    void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Process(void *valuePtr, VecType type) override {}
+    static constexpr AggFunctionByType SUM_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
+        {   OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_INT, SumInsertImpl<IntVector, int32_t>, SumProcessGroupImpl<IntVector, int32_t>,
+            SumInitiateImpl<IntVector, int32_t>, SumProcessNonGroupImpl<IntVector, int32_t>
+        },
+        {
+            OMNI_VEC_TYPE_LONG, SumInsertImpl<LongVector, int64_t>, SumProcessGroupImpl<LongVector, int64_t>,
+            SumInitiateImpl<LongVector, int64_t>, SumProcessNonGroupImpl<LongVector, int64_t>
+        },
+        {
+            OMNI_VEC_TYPE_DOUBLE, SumInsertImpl<DoubleVector, double>, SumProcessGroupImpl<DoubleVector, double>,
+            SumInitiateImpl<DoubleVector, double>, SumProcessNonGroupImpl<DoubleVector, double>
+        },
+        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_DECIMAL64, SumInsertImpl<LongVector, int64_t>, SumProcessGroupImpl<LongVector, int64_t>,
+            SumInitiateImpl<LongVector, int64_t>, SumProcessNonGroupImpl<LongVector, int64_t>
+        },
+        {
+            OMNI_VEC_TYPE_DECIMAL128, SumInsertImpl<Decimal128Vector, Decimal128>,
+            SumProcessGroupImpl<Decimal128Vector, Decimal128>, SumInitiateImpl<Decimal128Vector, Decimal128>,
+            SumProcessNonGroupImpl<Decimal128Vector, Decimal128>
+        },
+        {
+            OMNI_VEC_TYPE_DATE32, SumInsertImpl<IntVector, int32_t>, SumProcessGroupImpl<IntVector, int32_t>,
+            SumInitiateImpl<IntVector, int32_t>, SumProcessNonGroupImpl<IntVector, int32_t>
+        },
+        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_VARCHAR, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_DICTIONARY, SumInsertDictImpl, SumProcessGroupDictImpl,
+            SumInitiateDictImpl, SumProcessNonGroupDictImpl
+        },
+        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
+    };
 };
 
 class AverageAggregator : public Aggregator {
 public:
-    explicit AverageAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty) {}
-    AverageAggregator(int32_t ty, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, ty, inputRaw, outputPartial)
+    explicit AverageAggregator(int32_t in) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in)
+    { }
+
+    AverageAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out)
+    { }
+
+    AverageAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, inputRaw, outputPartial)
     { }
     ~AverageAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
+    void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Process(void *valuePtr, VecType type) override {}
+    static constexpr AggFunctionByType AVG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
+        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_INT, AvgInsertImpl<IntVector, double>, AvgProcessGroupImpl<IntVector, double>,
+            AvgInitiateImpl<IntVector, double>, AvgProcessNonGroupImpl<IntVector, double>
+        },
+        {
+            OMNI_VEC_TYPE_LONG, AvgInsertImpl<LongVector, double>, AvgProcessGroupImpl<LongVector, double>,
+            AvgInitiateImpl<LongVector, double>, AvgProcessNonGroupImpl<LongVector, double>
+        },
+        {
+            OMNI_VEC_TYPE_DOUBLE, AvgInsertImpl<DoubleVector, double>, AvgProcessGroupImpl<DoubleVector, double>,
+            AvgInitiateImpl<DoubleVector, double>, AvgProcessNonGroupImpl<DoubleVector, double>
+        },
+        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_DECIMAL64, AvgInsertImpl<LongVector, double>, AvgProcessGroupImpl<LongVector, double>,
+            AvgInitiateImpl<LongVector, double>, AvgProcessNonGroupImpl<LongVector, double>
+        },
+        {
+            OMNI_VEC_TYPE_DECIMAL128, AvgInsertImpl<Decimal128Vector, Decimal128>,
+            AvgProcessGroupImpl<Decimal128Vector, Decimal128>, AvgInitiateImpl<Decimal128Vector, Decimal128>,
+            AvgProcessNonGroupImpl<Decimal128Vector, Decimal128>
+        },
+        {
+            OMNI_VEC_TYPE_DATE32, AvgInsertImpl<IntVector, double>, AvgProcessGroupImpl<IntVector, double>,
+            AvgInitiateImpl<IntVector, double>, AvgProcessNonGroupImpl<IntVector, double>
+        },
+        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_VARCHAR, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_DICTIONARY, AvgInsertDictImpl, AvgProcessGroupDictImpl, AvgInitiateDictImpl,
+            AvgProcessNonGroupDictImpl
+        },
+        {OMNI_VEC_TYPE_CONTAINER, AvgInsertContainerImpl, AvgProcessGroupContainerImpl, nullptr, nullptr},
+    };
 };
 
 class CountAggregator : public Aggregator {
 public:
-    explicit CountAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty) {}
-    CountAggregator(int32_t ty, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, ty, inputRaw, outputPartial)
+    explicit CountAggregator(int32_t in) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in) {}
+    CountAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in, out) {}
+    CountAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in, out, inputRaw, outputPartial)
     {
 
     }
     ~CountAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
+    void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Process(void *valuePtr, VecType type) override {}
 };
 
 class MinAggregator : public Aggregator {
 public:
-    explicit MinAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty) {}
-    MinAggregator(int32_t ty, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, ty, inputRaw, outputPartial)
+    explicit MinAggregator(int32_t in) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in)
+    { }
+    MinAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out)
+    { }
+    MinAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial)
     {}
     ~MinAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
+    void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Process(void *valuePtr, VecType type) override {}
+    static constexpr AggFunctionByType MIN_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
+        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_INT, MinInsertImpl<IntVector, int32_t>, MinProcessGroupImpl<IntVector, int32_t>,
+            MinInitiateImpl<IntVector, int32_t>, MinProcessNonGroupImpl<IntVector, int32_t>
+        },
+        {
+            OMNI_VEC_TYPE_LONG, MinInsertImpl<LongVector, int64_t>, MinProcessGroupImpl<LongVector, int64_t>,
+            MinInitiateImpl<LongVector, int64_t>, MinProcessNonGroupImpl<LongVector, int64_t>
+        },
+        {
+            OMNI_VEC_TYPE_DOUBLE, MinInsertImpl<DoubleVector, double>, MinProcessGroupImpl<DoubleVector, double>,
+            MinInitiateImpl<DoubleVector, double>, MinProcessNonGroupImpl<DoubleVector, double>
+        },
+        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_DECIMAL64, MinInsertImpl<LongVector, int64_t>, MinProcessGroupImpl<LongVector, int64_t>,
+            MinInitiateImpl<LongVector, int64_t>, MinProcessNonGroupImpl<LongVector, int64_t>
+        },
+        {
+            OMNI_VEC_TYPE_DECIMAL128, MinInsertImpl<Decimal128Vector, Decimal128>,
+            MinProcessGroupImpl<Decimal128Vector, Decimal128>, MinInitiateImpl<Decimal128Vector, Decimal128>,
+            MinProcessNonGroupImpl<Decimal128Vector, Decimal128>
+        },
+        {
+            OMNI_VEC_TYPE_DATE32, MinInsertImpl<IntVector, int32_t>, MinProcessGroupImpl<IntVector, int32_t>,
+            MinInitiateImpl<IntVector, int32_t>, MinProcessNonGroupImpl<IntVector, int32_t>
+        },
+        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_VARCHAR, MinInsertVarcharImpl, MinProcessGroupVarcharImpl, MinInitiateVarcharImpl,
+            MinProcessNonGroupVarcharImpl
+        },
+        {
+            OMNI_VEC_TYPE_DICTIONARY, MinInsertDictImpl, MinProcessGroupDictImpl, MinInitiateDictImpl,
+            MinProcessNonGroupDictImpl
+        },
+        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
+    };
 };
 
 class MaxAggregator : public Aggregator {
 public:
-    explicit MaxAggregator(int32_t ty) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty) {}
-    MaxAggregator(int32_t ty, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, ty, inputRaw, outputPartial)
+    explicit MaxAggregator(int32_t in) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in)
+    { }
+    MaxAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out)
+    { }
+    MaxAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, inputRaw, outputPartial)
     {}
     ~MaxAggregator() override {}
-    void ProcessGroup(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void ProcessNonGroup(void *colPtr, int32_t type, uint32_t offset) override;
-    void Insert(GroupBySlot &groupSlot, omniruntime::vec::Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Initiate(void *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, omniruntime::vec::VecType type) override {}
+    void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void Process(void *valuePtr, VecType type) override {}
+    static constexpr AggFunctionByType MAX_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
+        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_INT, MaxInsertImpl<IntVector, int32_t>, MaxProcessGroupImpl<IntVector, int32_t>,
+            MaxInitiateImpl<IntVector, int32_t>, MaxProcessNonGroupImpl<IntVector, int32_t>
+        },
+        {
+            OMNI_VEC_TYPE_LONG, MaxInsertImpl<LongVector, int64_t>, MaxProcessGroupImpl<LongVector, int64_t>,
+            MaxInitiateImpl<LongVector, int64_t>, MaxProcessNonGroupImpl<LongVector, int64_t>
+        },
+        {
+            OMNI_VEC_TYPE_DOUBLE, MaxInsertImpl<DoubleVector, double>, MaxProcessGroupImpl<DoubleVector, double>,
+            MaxInitiateImpl<DoubleVector, double>, MaxProcessNonGroupImpl<DoubleVector, double>
+        },
+        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_DECIMAL64, MaxInsertImpl<LongVector, int64_t>, MaxProcessGroupImpl<LongVector, int64_t>,
+            MaxInitiateImpl<LongVector, int64_t>, MaxProcessNonGroupImpl<LongVector, int64_t>
+        },
+        {
+            OMNI_VEC_TYPE_DECIMAL128, MaxInsertImpl<Decimal128Vector, Decimal128>,
+            MaxProcessGroupImpl<Decimal128Vector, Decimal128>, MaxInitiateImpl<Decimal128Vector, Decimal128>,
+            MaxProcessNonGroupImpl<Decimal128Vector, Decimal128>
+        },
+        {
+            OMNI_VEC_TYPE_DATE32, MaxInsertImpl<IntVector, int32_t>, MaxProcessGroupImpl<IntVector, int32_t>,
+            MaxInitiateImpl<IntVector, int32_t>, MaxProcessNonGroupImpl<IntVector, int32_t>
+        },
+        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
+        {
+            OMNI_VEC_TYPE_VARCHAR, MaxInsertVarcharImpl, MaxProcessGroupVarcharImpl, MaxInitiateVarcharImpl,
+            MaxProcessNonGroupVarcharImpl
+        },
+        {
+            OMNI_VEC_TYPE_DICTIONARY, MaxInsertDictImpl, MaxProcessGroupDictImpl, MaxInitiateDictImpl,
+            MaxProcessNonGroupDictImpl
+        },
+        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
+    };
 };
 
 class AggregatorFactory {
 public:
     AggregatorFactory() {}
     virtual ~AggregatorFactory() {}
-    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) = 0;
+    /**
+     * This interface is for creating aggregators. You have to specify the data type for both input and output data.
+     * Also the phase of the aggregator to be created is determined by 'inputRaw' and 'outputPartial'.
+     * @param inputType 
+     * @param outputType 
+     * @param inputRaw 
+     * @param outputPartial 
+     * @return 
+     */
+    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType,
+                                                         int32_t outputType,
+                                                         bool inputRaw,
+                                                         bool outputPartial) = 0;
 };
 
 class SumAggregatorFactory : public AggregatorFactory {
 public:
     SumAggregatorFactory() {}
     ~SumAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType,
+                                                 int32_t outputType,
+                                                 bool inputRaw,
+                                                 bool outputPartial) override;
 };
 
 class CountAggregatorFactory : public AggregatorFactory {
 public:
     CountAggregatorFactory() {}
     ~CountAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType,
+                                                 int32_t outputType,
+                                                 bool inputRaw,
+                                                 bool outputPartial) override;
 };
 
 class MinAggregatorFactory : public AggregatorFactory {
 public:
     MinAggregatorFactory() {}
     ~MinAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType,
+                                                 int32_t outputType,
+                                                 bool inputRaw,
+                                                 bool outputPartial) override;
 };
 
 class MaxAggregatorFactory : public AggregatorFactory {
 public:
     MaxAggregatorFactory() {}
     ~MaxAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType,
+                                                 int32_t outputType,
+                                                 bool inputRaw,
+                                                 bool outputPartial) override;
 };
 
 class AverageAggregatorFactory : public AggregatorFactory {
 public:
     AverageAggregatorFactory() {}
     ~AverageAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t dataType, bool inputRaw, bool outputPartial) override;
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType,
+                                                 int32_t outputType,
+                                                 bool inputRaw,
+                                                 bool outputPartial) override;
 };
-
 } // end of namespace op
 } // end of namespace omniruntime
 #endif

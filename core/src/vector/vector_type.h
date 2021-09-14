@@ -12,6 +12,8 @@
 
 namespace omniruntime {
 namespace vec {
+constexpr int32_t VEC_TYPE_MAX_COUNT = 18;
+
 enum VecTypeId {
     OMNI_VEC_TYPE_NONE = 0,
     OMNI_VEC_TYPE_INT = 1,
