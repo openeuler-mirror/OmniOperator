@@ -145,8 +145,7 @@ public:
         return COMPARE_STATUS_OTHER;
     }
 
-private:
-    static int32_t CompareDouble(omniruntime::vec::DoubleVector *leftColumn, int32_t leftColumnPosition,
+    static ALWAYS_INLINE int32_t CompareDouble(omniruntime::vec::DoubleVector *leftColumn, int32_t leftColumnPosition,
         omniruntime::vec::DoubleVector *rightColumn, int32_t rightColumnPosition)
     {
         if (leftColumn->GetValue(leftColumnPosition) > rightColumn->GetValue(rightColumnPosition)) {
@@ -158,7 +157,7 @@ private:
         }
     }
 
-    static int32_t CompareVarchar(omniruntime::vec::VarcharVector *leftColumn, int32_t leftColumnPosition,
+    static ALWAYS_INLINE int32_t CompareVarchar(omniruntime::vec::VarcharVector *leftColumn, int32_t leftColumnPosition,
         omniruntime::vec::VarcharVector *rightColumn, int32_t rightColumnPosition)
     {
         uint8_t *leftValue = nullptr;
@@ -175,8 +174,8 @@ private:
         }
     }
 
-    static int32_t CompareDecimal128(omniruntime::vec::Decimal128Vector *leftColumn, int32_t leftColumnPosition,
-        omniruntime::vec::Decimal128Vector *rightColumn, int32_t rightColumnPosition)
+    static ALWAYS_INLINE int32_t CompareDecimal128(omniruntime::vec::Decimal128Vector *leftColumn,
+        int32_t leftColumnPosition, omniruntime::vec::Decimal128Vector *rightColumn, int32_t rightColumnPosition)
     {
         omniruntime::vec::Decimal128 leftValue = leftColumn->GetValue(leftColumnPosition);
         omniruntime::vec::Decimal128 rightValue = rightColumn->GetValue(rightColumnPosition);
