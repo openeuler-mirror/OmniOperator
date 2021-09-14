@@ -34,6 +34,15 @@ public:
         return size;
     }
 
+    const VecType& GetDictionaryType()
+    {
+        VecTypeId dictionaryType = dictionary->GetType().GetId();
+        if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+            return static_cast<DictionaryVector *>(dictionary)->GetDictionaryType();
+        }
+        return dictionary->GetType();
+    }
+
     int32_t GetInt(int32_t position) const;
 
     int64_t GetLong(int32_t position) const;

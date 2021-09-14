@@ -38,7 +38,7 @@ message(STATUS "Install libomruntime.so into ${CMAKE_INSTALL_PREFIX}")
 
 add_library(aggregator SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp)
 add_library(group_aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp)
-add_library(non_group_aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp)
+add_library(non_group_aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp)
 add_library(sort SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp)
 add_library(pages_index SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/pages_index.cpp)
 add_library(hash_builder SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder.cpp)
