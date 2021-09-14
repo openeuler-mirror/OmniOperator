@@ -322,4 +322,99 @@ TEST(ProjectTest, ProjectString1) {
     delete op;
     delete factory;
 }
+
+TEST (ProjectTest, DictionaryVecTest) {
+    const int32_t numCols = 3;
+    const int32_t numRows = 10;
+    IntVector *col1 = new IntVector(nullptr, numRows);
+    IntVector *col2 = new IntVector(nullptr, numRows);
+    IntVector *col3 = new IntVector(nullptr, numRows);
+    int32_t ids[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+        col3->SetValue(i, (i % 21) - 3);
+    }
+
+    VectorBatch *batch = new VectorBatch(numCols, numRows);
+    int32_t inputTypes[numCols] = {1, 1, 1};
+    batch->NewVectors(inputTypes);
+    batch->SetVector(0, col1);
+    batch->SetVector(1, col2);
+    batch->SetVector(2, dictionaryVector);
+
+    const int32_t numProject = 3;
+    string exprs[numProject] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)", "$operator$ADD:int(#2, 10)"};
+    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(batch);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, col1->GetValue(i) + 1);
+        int32_t val1 = ((IntVector*) ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, col2->GetValue(i) + 2);
+        int32_t val2 = ((IntVector*) ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, dictionaryVector->GetInt(i) + 10);
+    }
+    VectorHelper::FreeVecBatch(batch);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete col3;
+    delete op;
+    delete factory;
+}
+
+TEST (ProjectTest, DictionaryVecNestedTest) {
+    const int32_t numCols = 3;
+    const int32_t numRows = 10;
+    IntVector *col1 = new IntVector(nullptr, numRows);
+    IntVector *col2 = new IntVector(nullptr, numRows);
+    IntVector *col3 = new IntVector(nullptr, 3);
+    int32_t data[] = {4, 5, 6};
+    col3->SetValues(0, data, 3);
+    int32_t ids[]= {1, 2};
+    auto *dictionaryVector = new DictionaryVector(col3, ids, 2);
+    int32_t nestedIds[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+    auto *dictionaryNested = new DictionaryVector(dictionaryVector, nestedIds, numRows);
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+    }
+
+    VectorBatch *batch = new VectorBatch(numCols, numRows);
+    int32_t inputTypes[numCols] = {1, 1, 1};
+    batch->NewVectors(inputTypes);
+    batch->SetVector(0, col1);
+    batch->SetVector(1, col2);
+    batch->SetVector(2, dictionaryNested);
+
+    const int32_t numProjs = 3;
+    string exprs[numProjs] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)", "$operator$ADD:int(#2, 10)"};
+    auto* factory = new ProjectionOperatorFactory(exprs, numProjs, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(batch);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    VectorHelper::PrintVecBatch(ret[0]);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, col1->GetValue(i) + 1);
+        int32_t val1 = ((IntVector*) ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, col2->GetValue(i) + 2);
+        int32_t val2 = ((IntVector*) ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, dictionaryNested->GetInt(i) + 10);
+    }
+
+    VectorHelper::FreeVecBatch(batch);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete col3;
+    delete dictionaryVector;
+    delete op;
+    delete factory;
+}
 }

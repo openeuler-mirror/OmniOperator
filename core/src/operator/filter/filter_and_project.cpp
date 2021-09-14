@@ -4,6 +4,7 @@
  */
 #include "filter_and_project.h"
 #include "filter_compiler.h"
+#include "../../vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
@@ -12,21 +13,19 @@ using namespace omniruntime::expressions;
 using namespace std;
 
 using uint8vec = std::vector<uint8_t>;
-RowFilter::RowFilter() : codegen(nullptr)
-{}
+RowFilter::RowFilter() : codegen(nullptr) {}
 
-RowFilter::~RowFilter()
-{}
+RowFilter::~RowFilter() {}
 
 RowFilterFunc RowFilter::CreateFilter(std::string expression, std::vector<DataType> inputTypes)
 {
     Parser parser;
-    Expr* expr = parser.ParseRowExpression(expression,
-        reinterpret_cast<int32_t*>(inputTypes.data()), inputTypes.size());
+    Expr *expr =
+        parser.ParseRowExpression(expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
     this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *expr, inputTypes);
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fAddr;
-    auto castedRef = static_cast<RowFilterFunc*>(refFunc);
+    auto castedRef = static_cast<RowFilterFunc *>(refFunc);
     return *castedRef;
 }
 
@@ -128,16 +127,23 @@ unique_ptr<vector<uint8_t>> GetDataHelper(uint8_t actualChar[], int32_t len)
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
-                             vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[])
+                             vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[],
+                             std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     uint32_t nRows = vecBatch->GetRowCount();
     std::vector<int64_t> data;
 
     for (int32_t i = 0; i < nCols; i++) {
+        omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
+        // handle dictionary vec
+        if (colVec->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            colVec = VectorHelper::ExtractDictionary(colVec);
+            dictionaryVecs.push_back(colVec);
+        }
         // varchar vec GetValues is different from the rest
-        if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
-            auto vcVec = static_cast<VarcharVector *>(vecBatch->GetVector(i));
+        if (colVec->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
+            auto vcVec = static_cast<VarcharVector *>(colVec);
             // Create array to hold addresses
             unique_ptr<vec64> vcData = make_unique<vec64>();
 
@@ -148,7 +154,7 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
 
                 // Truncate the resulting string
                 unique_ptr<uint8vec> accStr = GetDataHelper(actualChar, len);
-                
+
                 actualChar = accStr->data();
 
                 // add to vector so it can be freed later
@@ -167,13 +173,13 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
             vcdataVec.push_back(move(vcData));
         } else {
             // data handling
-            auto dc = vecBatch->GetVector(i)->GetValues();
+            auto dc = colVec->GetValues();
             void *dataCol = &dc;
             auto cdataCol = static_cast<int64_t *>(dataCol);
             data.push_back(*cdataCol);
         }
         // bitmap handling
-        auto bc = vecBatch->GetVector(i)->GetValueNulls();
+        auto bc = colVec->GetValueNulls();
         void *bitmapCol = &bc;
         auto cbitmapCol = static_cast<int64_t *>(bitmapCol);
         bitmap[i] = *cbitmapCol;
@@ -191,10 +197,17 @@ int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t selectedRows[], int row
 
     vector<int64_t> bitmap(vecBatch->GetVectorCount());
 
+    // when the dictionary vector is processed it will be restored to an original vector
+    // needs to be released
+    vector<Vector *> dictionaryVecs;
+
     // contents of bitmap are appropriately modified in GetData
-    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data());
+    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
     int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap.data());
 
+    for (auto &dictionaryVec : dictionaryVecs) {
+        delete dictionaryVec;
+    }
     data.clear();
 
     return ret;

@@ -1682,3 +1682,110 @@ TEST (FilterTest, Multithreading) {
     delete numReturned;
     delete numReturned2;
 }
+
+TEST(FilterTest, TestFilterDictionaryVec) {
+    const int32_t numCols = 3;
+    int32_t inputTypes[] = {1, 1, 1};
+
+    const int32_t numRows = 10;
+    IntVector *col1 = new IntVector(nullptr, numRows);
+    IntVector *col2 = new IntVector(nullptr, numRows);
+    IntVector *col3 = new IntVector(nullptr, numRows);
+    int32_t ids[]= {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+        col3->SetValue(i, (i % 21) - 3);
+    }
+    const int32_t projectCount = 3;
+    int32_t projectIndices[projectCount] = {0, 1, 2};
+    VectorBatch *batch = new VectorBatch(numCols, numRows);
+    batch->NewVectors(inputTypes);
+    batch->SetVector(0, col1);
+    batch->SetVector(1, col2);
+    batch->SetVector(2, dictionaryVector);
+
+    std::string expr = "BETWEEN(#1, #0, #2)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
+                                                                   inputTypes,
+                                                                   numCols,
+                                                                   projectIndices,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(batch);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 7);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, col1->GetValue(i));
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, col2->GetValue(i));
+        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, dictionaryVector->GetInt(i));
+    }
+
+    VectorHelper::FreeVecBatch(batch);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete col3;
+    delete op;
+    delete factory;
+}
+
+TEST(FilterTest, TestFilterDictionaryVecNested) {
+    const int32_t numCols = 3;
+    int32_t inputTypes[] = {1, 1, 1};
+
+    const int32_t numRows = 10;
+    IntVector *col1 = new IntVector(nullptr, numRows);
+    IntVector *col2 = new IntVector(nullptr, numRows);
+    IntVector *col3 = new IntVector(nullptr, 3);
+    int32_t data[] = {4, 5, 6};
+    col3->SetValues(0, data, 3);
+    int32_t ids[]= {1, 2};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, 2);
+    int32_t nestedIds[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+    DictionaryVector *dictionaryNested = new DictionaryVector(dictionaryVector, nestedIds, numRows);
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+    }
+    const int32_t projectCount = 3;
+    int32_t projectIndices[projectCount] = {0, 1, 2};
+    VectorBatch *batch = new VectorBatch(numCols, numRows);
+    batch->NewVectors(inputTypes);
+    batch->SetVector(0, col1);
+    batch->SetVector(1, col2);
+    batch->SetVector(2, dictionaryNested);
+
+    std::string expr = "BETWEEN(#1, #0, #2)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
+                                                                   inputTypes,
+                                                                   numCols,
+                                                                   projectIndices,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(batch);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 6);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, col1->GetValue(i));
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, col2->GetValue(i));
+        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, dictionaryNested->GetInt(i));
+    }
+
+    VectorHelper::FreeVecBatch(batch);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete col3;
+    delete dictionaryVector;
+    delete op;
+    delete factory;
+}

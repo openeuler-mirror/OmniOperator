@@ -3,6 +3,7 @@
  * Description: Projection operator source file
  */
 #include "projection.h"
+#include "../../vector/vector_helper.h"
 
 using namespace std;
 using namespace omniruntime::op;
@@ -103,16 +104,23 @@ unique_ptr<vector<uint8_t>> GetProjDataHelper(const uint8_t actualChar[], int32_
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 std::vector<int64_t> GetProjData(omniruntime::vec::VectorBatch &vecBatch,
                                  std::vector<unique_ptr<std::vector<int64_t>>> &vcdataVec,
-                                 vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[])
+                                 vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[],
+                                 std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch.GetVectorCount();
     uint32_t nRows = vecBatch.GetRowCount();
     std::vector<int64_t> data;
 
     for (int32_t i = 0; i < nCols; i++) {
+        omniruntime::vec::Vector *colVec = vecBatch.GetVector(i);
+        // handle dictionary vec
+        if (colVec->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            colVec = VectorHelper::ExtractDictionary(colVec);
+            dictionaryVecs.push_back(colVec);
+        }
         // varchar vec GetValues is different from the rest
-        if (vecBatch.GetVector(i)->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
-            auto *vcVec = static_cast<omniruntime::vec::VarcharVector *>(vecBatch.GetVector(i));
+        if (colVec->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
+            auto *vcVec = static_cast<omniruntime::vec::VarcharVector *>(colVec);
             // Create array to hold addresses
             unique_ptr<vec64> vcData = make_unique<vec64>();
 
@@ -144,13 +152,13 @@ std::vector<int64_t> GetProjData(omniruntime::vec::VectorBatch &vecBatch,
             vcdataVec.push_back(move(vcData));
         } else {
             // data handling
-            auto dc = vecBatch.GetVector(i)->GetValues();
+            auto dc = colVec->GetValues();
             void *dataCol = &dc;
             auto cdataCol = static_cast<int64_t *>(dataCol);
             data.push_back(*cdataCol);
         }
         // bitmap handling
-        auto bc = vecBatch.GetVector(i)->GetValueNulls();
+        auto bc = colVec->GetValueNulls();
         void *bitmapCol = &bc;
         auto cbitmapCol = static_cast<int64_t *>(bitmapCol);
         bitmap[i] = *cbitmapCol;
@@ -210,8 +218,12 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 
     vector<int64_t> bitmap(vecBatch.GetVectorCount());
 
+    // when the dictionary vector is processed it will be restored to an original vector
+    // needs to be released
+    vector<Vector *> dictionaryVecs;
+
     // contents of bitmap are modified in getProjData method
-    std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data());
+    std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
 
     // using projector
     vector<int64_t> oVec(numSelectedRows);
@@ -233,6 +245,9 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
         outVarcharVec->SetValue(i, charArr, j);
     }
 
+    for (auto &dictionaryVec : dictionaryVecs) {
+        delete dictionaryVec;
+    }
     data.clear();
     delete &va;
 
@@ -250,8 +265,12 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
 
     vector<int64_t> bitmap(vecBatch.GetVectorCount());
 
+    // when the dictionary vector is processed it will be restored to an original vector
+    // needs to be released
+    vector<Vector *> dictionaryVecs;
+
     // contents of bitmap are modified in getProjData method
-    std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data());
+    std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
 
     // using projector
     auto ov = outVec->GetValues();
@@ -261,6 +280,9 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         selectedRows, numSelectedRows, bitmap.data());
 
     data.clear();
+    for (auto &dictionaryVec : dictionaryVecs) {
+        delete dictionaryVec;
+    }
     delete &va;
     return outVec;
 }

@@ -34,6 +34,8 @@ namespace vec {
 #define DOUBLE_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
 
 class VectorHelper {
+    using uint8vec = std::vector<uint8_t>;
+    using vec64 = std::vector<int64_t>;
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
@@ -178,6 +180,28 @@ public:
         } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
         rowIndex = idIndex;
         return result;
+    }
+
+    static omniruntime::vec::Vector *ExtractDictionary(omniruntime::vec::Vector *vector)
+    {
+        if (vector->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            return vector;
+        }
+
+        omniruntime::vec::Vector *result = vector;
+        int32_t size = vector->GetSize();
+        int32_t positions[size];
+        int32_t *preIds = nullptr;
+        do {
+            auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+            int32_t *currentIds = dictionaryVector->GetIds();
+            result = dictionaryVector->GetDictionary();
+            for (int32_t i = 0; i < size; i++) {
+                positions[i] = (preIds == nullptr) ? currentIds[i] : currentIds[preIds[i]];
+            }
+            preIds = positions;
+        } while (result->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY);
+        return result->CopyPositions(positions, 0, size);
     }
 
     static void FreeVecBatch(VectorBatch *vecBatch);
