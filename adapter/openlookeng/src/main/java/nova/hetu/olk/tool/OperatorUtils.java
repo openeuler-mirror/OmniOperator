@@ -296,8 +296,11 @@ public final class OperatorUtils {
             } else {
                 if (block instanceof LazyBlock) {
                     vecList.add((Vec) ((LazyBlock) block).getBlock().getValues());
+                }
+                if (block instanceof DictionaryBlock) {
+                    vecList.add(getDictionaryVec((DictionaryBlock<?>) block));
                 } else {
-                    vecList.add((Vec) page.getBlock(i).getValues());
+                    vecList.add((Vec) block.getValues());
                 }
             }
         }
@@ -306,4 +309,10 @@ public final class OperatorUtils {
         return vecBatch;
     }
 
+    private static Vec getDictionaryVec(DictionaryBlock<?> block) {
+        if (block.getDictionary() instanceof DictionaryBlock) {
+            getDictionaryVec(block);
+        }
+        return new DictionaryVec((Vec) block.getDictionary().getValues(), block.getIdsArray());
+    }
 }
