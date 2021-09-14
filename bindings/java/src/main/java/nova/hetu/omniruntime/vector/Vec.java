@@ -286,6 +286,15 @@ public abstract class Vec implements Closeable {
     }
 
     /**
+     * set values buffer
+     *
+     * @param buf buf of data
+     */
+    public void setValuesBuf(byte[] buf) {
+        valuesBuf.setBytes(0, buf, 0, buf.length);
+    }
+
+    /**
      * get value nulls buffer
      *
      * @return nulls value buffer
@@ -324,6 +333,15 @@ public abstract class Vec implements Closeable {
     public void setNulls(int index, boolean[] isNulls, int start, int length) {
         byte[] values = transformBooleanToByte(isNulls, start, length);
         nullsBuf.setBytes(index, values, 0, length);
+    }
+
+    /**
+     * set nulls buffer
+     *
+     * @param buf buf of null
+     */
+    public void setNullsBuf(byte[] buf) {
+        nullsBuf.setBytes(0, buf, 0, buf.length);
     }
 
     /**
