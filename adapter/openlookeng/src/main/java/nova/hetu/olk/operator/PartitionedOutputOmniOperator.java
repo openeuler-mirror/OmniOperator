@@ -18,15 +18,8 @@
 
 package nova.hetu.olk.operator;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.prestosql.SystemSessionProperties.isShuffleServiceEnabled;
-import static io.prestosql.spi.block.PageBuilderStatus.DEFAULT_MAX_PAGE_SIZE_IN_BYTES;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.util.concurrent.ListenableFuture;
-
+import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.hetu.core.transport.execution.buffer.PagesSerde;
 import io.hetu.core.transport.execution.buffer.PagesSerdeFactory;
@@ -42,6 +35,7 @@ import io.prestosql.operator.PartitionedOutputOperator;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PageBuilder;
 import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.predicate.NullableValue;
 import io.prestosql.spi.type.Type;
@@ -49,7 +43,7 @@ import io.prestosql.sql.planner.plan.PlanNodeId;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
-import nova.hetu.omniruntime.operator.partitioned.OmniPartitionedOutPutOperatorFactory;
+import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -63,12 +57,20 @@ import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.prestosql.SystemSessionProperties.isShuffleServiceEnabled;
+import static io.prestosql.spi.block.PageBuilderStatus.DEFAULT_MAX_PAGE_SIZE_IN_BYTES;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
+
 /**
- * The type Partitioned output omni operator.
+ * The type Omni project operator.
  *
  * @since 20210630
  */
-public class PartitionedOutputOmniOperator implements Operator, Cloneable {
+public class PartitionedOutputOmniOperator
+        implements Operator, Cloneable {
     private static Iterator<VecBatch> vecBatchIterator;
 
     @Override
@@ -118,54 +120,43 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
     }
 
     /**
-     * Gets info.
+     * get PartitionedOutputInfo
      *
-     * @return the info
+     * @return PartitionedOutputInfo
      */
     public PartitionedOutputOperator.PartitionedOutputInfo getInfo() {
         return partitionFunction.getInfo();
     }
 
     /**
-     * The type Partitioned output omni factory.
-     *
-     * @since 20210630
+     * PartitionedOutputOmniFactory
      */
-    public static class PartitionedOutputOmniFactory implements OutputFactory {
+    public static class PartitionedOutputOmniFactory
+            implements OutputFactory {
         private final PartitionFunction partitionFunction;
-
         private final List<Integer> partitionChannels;
-
         private final List<Optional<NullableValue>> partitionConstants;
-
         private final OutputBuffer outputBuffer;
-
         private final List<PageProducer> pageProducers;
-
         private final boolean replicatesAnyRow;
-
         private final OptionalInt nullChannel;
-
         private final DataSize maxMemory;
-
         private final int[] bucketToPartition;
+        private final List<Type> hashChannelTypes;
+        private boolean isHashPrecomputed = true;
 
-        /**
-         * Instantiates a new Partitioned output omni factory.
-         *
-         * @param partitionFunction the partition function
-         * @param partitionChannels the partition channels
-         * @param partitionConstants the partition constants
-         * @param replicatesAnyRow the replicates any row
-         * @param nullChannel the null channel
-         * @param outputBuffer the output buffer
-         * @param pageProducers the page producers
-         * @param maxMemory the max memory
-         * @param bucketToPartition the bucket to partition
-         */
-        public PartitionedOutputOmniFactory(PartitionFunction partitionFunction, List<Integer> partitionChannels,
-            List<Optional<NullableValue>> partitionConstants, boolean replicatesAnyRow, OptionalInt nullChannel,
-            OutputBuffer outputBuffer, List<PageProducer> pageProducers, DataSize maxMemory, int[] bucketToPartition) {
+        public PartitionedOutputOmniFactory(
+                PartitionFunction partitionFunction,
+                List<Integer> partitionChannels,
+                List<Optional<NullableValue>> partitionConstants,
+                boolean replicatesAnyRow,
+                OptionalInt nullChannel,
+                OutputBuffer outputBuffer,
+                List<PageProducer> pageProducers,
+                DataSize maxMemory,
+                int[] bucketToPartition,
+                boolean isHashPrecomputed,
+                List<Type> hashChannelTypes) {
             this.partitionFunction = requireNonNull(partitionFunction, "partitionFunction is null");
             this.partitionChannels = requireNonNull(partitionChannels, "partitionChannels is null");
             this.partitionConstants = requireNonNull(partitionConstants, "partitionConstants is null");
@@ -175,77 +166,90 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
             this.pageProducers = requireNonNull(pageProducers, "outputStreams is null");
             this.maxMemory = requireNonNull(maxMemory, "maxMemory is null");
             this.bucketToPartition = requireNonNull(bucketToPartition, "bucketToPartition is null");
+            this.hashChannelTypes = requireNonNull(hashChannelTypes, "hashChannelTypes is null");
+            this.isHashPrecomputed = requireNonNull(isHashPrecomputed);
         }
 
         @Override
-        public OperatorFactory createOutputOperator(int operatorId, PlanNodeId planNodeId, List<Type> types,
-            Function<Page, Page> pageLayoutProcessor, PagesSerdeFactory serdeFactory) {
+        public OperatorFactory createOutputOperator(
+                int operatorId,
+                PlanNodeId planNodeId,
+                List<Type> types,
+                Function<Page, Page> pageLayoutProcessor,
+                PagesSerdeFactory serdeFactory) {
             VecType[] sourceTypes = OperatorUtils.toVecTypes(types);
             int[] partitionChannelsArr = new int[partitionChannels.size()];
             for (int i = 0; i < partitionChannelsArr.length; i++) {
                 partitionChannelsArr[i] = partitionChannels.get(i);
             }
-            OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory
-                = new OmniPartitionedOutPutOperatorFactory(sourceTypes, replicatesAnyRow, nullChannel,
-                partitionChannelsArr, partitionFunction.getPartitionCount(), bucketToPartition);
-            return new PartitionedOutputOmniOperatorFactory(operatorId, planNodeId, types, pageLayoutProcessor,
-                partitionFunction, partitionChannels, partitionConstants, replicatesAnyRow, nullChannel, outputBuffer,
-                pageProducers, serdeFactory, maxMemory, omniPartitionedOutPutOperatorFactory);
+
+            VecType[] hashChannelTpyesArr = OperatorUtils.toVecTypes(hashChannelTypes);
+            int[] hashChannels = new int[hashChannelTypes.size()];
+            for (int i = 0; i < hashChannelTypes.size(); i++) {
+                hashChannels[i] = i;
+            }
+
+            OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory =
+                    new OmniPartitionedOutPutOperatorFactory(
+                    sourceTypes,
+                    replicatesAnyRow,
+                    nullChannel,
+                    partitionChannelsArr,
+                    partitionFunction.getPartitionCount(),
+                    bucketToPartition,
+                    isHashPrecomputed,
+                    hashChannelTpyesArr,
+                    hashChannels);
+            return new PartitionedOutputOmniOperatorFactory(
+                    operatorId,
+                    planNodeId,
+                    types,
+                    pageLayoutProcessor,
+                    partitionFunction,
+                    partitionChannels,
+                    partitionConstants,
+                    replicatesAnyRow,
+                    nullChannel,
+                    outputBuffer,
+                    pageProducers,
+                    serdeFactory,
+                    maxMemory,
+                    omniPartitionedOutPutOperatorFactory);
         }
     }
 
-    private static class PartitionedOutputOmniOperatorFactory implements OperatorFactory {
+    private static class PartitionedOutputOmniOperatorFactory
+            implements OperatorFactory {
         private final int operatorId;
-
         private final PlanNodeId planNodeId;
-
         private final List<Type> sourceTypes;
-
         private final Function<Page, Page> pagePreprocessor;
-
         private final PartitionFunction partitionFunction;
-
         private final List<Integer> partitionChannels;
-
         private final List<Optional<NullableValue>> partitionConstants;
-
         private final boolean replicatesAnyRow;
-
         private final OptionalInt nullChannel;
-
         private final OutputBuffer outputBuffer;
-
         private final List<PageProducer> pageProducers;
-
         private final PagesSerdeFactory serdeFactory;
-
         private final DataSize maxMemory;
-
         private final OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory;
 
-        /**
-         * Instantiates a new Partitioned output omni operator factory.
-         *
-         * @param operatorId the operator id
-         * @param planNodeId the plan node id
-         * @param sourceTypes the source types
-         * @param pagePreprocessor the page preprocessor
-         * @param partitionFunction the partition function
-         * @param partitionChannels the partition channels
-         * @param partitionConstants the partition constants
-         * @param replicatesAnyRow the replicates any row
-         * @param nullChannel the null channel
-         * @param outputBuffer the output buffer
-         * @param pageProducers the page producers
-         * @param serdeFactory the serde factory
-         * @param maxMemory the max memory
-         * @param omniPartitionedOutPutOperatorFactory the omni partitioned out put operator factory
-         */
-        public PartitionedOutputOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> sourceTypes,
-            Function<Page, Page> pagePreprocessor, PartitionFunction partitionFunction, List<Integer> partitionChannels,
-            List<Optional<NullableValue>> partitionConstants, boolean replicatesAnyRow, OptionalInt nullChannel,
-            OutputBuffer outputBuffer, List<PageProducer> pageProducers, PagesSerdeFactory serdeFactory,
-            DataSize maxMemory, OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory) {
+        public PartitionedOutputOmniOperatorFactory(
+                int operatorId,
+                PlanNodeId planNodeId,
+                List<Type> sourceTypes,
+                Function<Page, Page> pagePreprocessor,
+                PartitionFunction partitionFunction,
+                List<Integer> partitionChannels,
+                List<Optional<NullableValue>> partitionConstants,
+                boolean replicatesAnyRow,
+                OptionalInt nullChannel,
+                OutputBuffer outputBuffer,
+                List<PageProducer> pageProducers,
+                PagesSerdeFactory serdeFactory,
+                DataSize maxMemory,
+                OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
@@ -264,12 +268,25 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
-            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                PartitionedOutputOperator.class.getSimpleName());
+            OperatorContext operatorContext = driverContext.addOperatorContext(
+                    operatorId,
+                    planNodeId,
+                    PartitionedOutputOperator.class.getSimpleName());
             OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
-            return new PartitionedOutputOmniOperator(operatorContext, sourceTypes, pagePreprocessor, partitionFunction,
-                partitionChannels, partitionConstants, replicatesAnyRow, nullChannel, outputBuffer, pageProducers,
-                serdeFactory, maxMemory, omniOperator);
+            return new PartitionedOutputOmniOperator(
+                    operatorContext,
+                    sourceTypes,
+                    pagePreprocessor,
+                    partitionFunction,
+                    partitionChannels,
+                    partitionConstants,
+                    replicatesAnyRow,
+                    nullChannel,
+                    outputBuffer,
+                    pageProducers,
+                    serdeFactory,
+                    maxMemory,
+                    omniOperator);
         }
 
         @Override
@@ -278,132 +295,100 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
 
         @Override
         public OperatorFactory duplicate() {
-            return new PartitionedOutputOmniOperatorFactory(operatorId, planNodeId, sourceTypes, pagePreprocessor,
-                partitionFunction, partitionChannels, partitionConstants, replicatesAnyRow, nullChannel, outputBuffer,
-                pageProducers, serdeFactory, maxMemory, omniPartitionedOutPutOperatorFactory);
-        }
-
-        @Override
-        public boolean isExtensionOperatorFactory() {
-            return true;
-        }
-
-        @Override
-        public List<Type> getSourceTypes() {
-            return sourceTypes;
+            return new PartitionedOutputOmniOperatorFactory(
+                    operatorId,
+                    planNodeId,
+                    sourceTypes,
+                    pagePreprocessor,
+                    partitionFunction,
+                    partitionChannels,
+                    partitionConstants,
+                    replicatesAnyRow,
+                    nullChannel,
+                    outputBuffer,
+                    pageProducers,
+                    serdeFactory,
+                    maxMemory,
+                    omniPartitionedOutPutOperatorFactory);
         }
     }
 
     private final OperatorContext operatorContext;
-
     private final Function<Page, Page> pagePreprocessor;
-
     private final PagePartitioner partitionFunction;
-
     private final LocalMemoryContext systemMemoryContext;
-
     private final long partitionsInitialRetainedSize;
-
     private boolean finished;
-
     private final OmniOperator omniOperator;
 
-    /**
-     * Instantiates a new Partitioned output omni operator.
-     *
-     * @param operatorContext the operator context
-     * @param sourceTypes the source types
-     * @param pagePreprocessor the page preprocessor
-     * @param partitionFunction the partition function
-     * @param partitionChannels the partition channels
-     * @param partitionConstants the partition constants
-     * @param replicatesAnyRow the replicates any row
-     * @param nullChannel the null channel
-     * @param outputBuffer the output buffer
-     * @param pageProducers the page producers
-     * @param serdeFactory the serde factory
-     * @param maxMemory the max memory
-     * @param omniOperator the omni operator
-     */
-    public PartitionedOutputOmniOperator(OperatorContext operatorContext, List<Type> sourceTypes,
-        Function<Page, Page> pagePreprocessor, PartitionFunction partitionFunction, List<Integer> partitionChannels,
-        List<Optional<NullableValue>> partitionConstants, boolean replicatesAnyRow, OptionalInt nullChannel,
-        OutputBuffer outputBuffer, List<PageProducer> pageProducers, PagesSerdeFactory serdeFactory, DataSize maxMemory,
-        OmniOperator omniOperator) {
+    public PartitionedOutputOmniOperator(
+            OperatorContext operatorContext,
+            List<Type> sourceTypes,
+            Function<Page, Page> pagePreprocessor,
+            PartitionFunction partitionFunction,
+            List<Integer> partitionChannels,
+            List<Optional<NullableValue>> partitionConstants,
+            boolean replicatesAnyRow,
+            OptionalInt nullChannel,
+            OutputBuffer outputBuffer,
+            List<PageProducer> pageProducers,
+            PagesSerdeFactory serdeFactory,
+            DataSize maxMemory,
+            OmniOperator omniOperator) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
         this.omniOperator = omniOperator;
 
         this.partitionFunction = new PagePartitioner(operatorContext, partitionFunction, partitionChannels,
-            partitionConstants, replicatesAnyRow, nullChannel, outputBuffer, pageProducers, serdeFactory, sourceTypes,
-            maxMemory, omniOperator);
+            partitionConstants, replicatesAnyRow, nullChannel, outputBuffer, pageProducers, serdeFactory,
+            sourceTypes, maxMemory, omniOperator);
 
         operatorContext.setInfoSupplier(this::getInfo);
         this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(
-            PartitionedOutputOperator.class.getSimpleName());
+                PartitionedOutputOperator.class.getSimpleName());
         this.partitionsInitialRetainedSize = this.partitionFunction.getRetainedSizeInBytes();
         this.systemMemoryContext.setBytes(partitionsInitialRetainedSize);
     }
 
     private static class PagePartitioner {
+        private static final Logger LOG = Logger.get(PartitionedOutputOmniOperator.class);
         private final OmniOperator omniOperator;
-
         private final OutputBuffer outputBuffer;
-
         private final List<PageProducer> pageProducers;
-
         private final List<Type> sourceTypes;
-
         private final PartitionFunction partitionFunction;
-
         private final List<Integer> partitionChannels;
-
         private final List<Optional<Block>> partitionConstants;
-
         private final PagesSerde serde;
-
         private final PageBuilder[] pageBuilders;
-
         private final boolean replicatesAnyRow;
-
         private final OptionalInt nullChannel;
-
-        // when present, send the position to every partition if this channel is null.
         private final AtomicLong rowsAdded = new AtomicLong();
-
         private final AtomicLong pagesAdded = new AtomicLong();
 
-        private final OperatorContext operatorContext;
+        private OperatorContext operatorContext;
+        private boolean isUcxEnabled;
 
-        private final boolean isUcxEnabled;
-
-        /**
-         * Instantiates a new Page partitioner.
-         *
-         * @param operatorContext the operator context
-         * @param partitionFunction the partition function
-         * @param partitionChannels the partition channels
-         * @param partitionConstants the partition constants
-         * @param replicatesAnyRow the replicates any row
-         * @param nullChannel the null channel
-         * @param outputBuffer the output buffer
-         * @param pageProducers the page producers
-         * @param serdeFactory the serde factory
-         * @param sourceTypes the source types
-         * @param maxMemory the max memory
-         * @param omniOperator the omni operator
-         */
-        public PagePartitioner(OperatorContext operatorContext, PartitionFunction partitionFunction,
-            List<Integer> partitionChannels, List<Optional<NullableValue>> partitionConstants, boolean replicatesAnyRow,
-            OptionalInt nullChannel, OutputBuffer outputBuffer, List<PageProducer> pageProducers,
-            PagesSerdeFactory serdeFactory, List<Type> sourceTypes, DataSize maxMemory, OmniOperator omniOperator) {
+        public PagePartitioner(
+                OperatorContext operatorContext,
+                PartitionFunction partitionFunction,
+                List<Integer> partitionChannels,
+                List<Optional<NullableValue>> partitionConstants,
+                boolean replicatesAnyRow,
+                OptionalInt nullChannel,
+                OutputBuffer outputBuffer,
+                List<PageProducer> pageProducers,
+                PagesSerdeFactory serdeFactory,
+                List<Type> sourceTypes,
+                DataSize maxMemory,
+                OmniOperator omniOperator) {
             this.omniOperator = omniOperator;
             this.operatorContext = operatorContext;
             this.partitionFunction = requireNonNull(partitionFunction, "partitionFunction is null");
             this.partitionChannels = requireNonNull(partitionChannels, "partitionChannels is null");
             this.partitionConstants = requireNonNull(partitionConstants, "partitionConstants is null").stream()
-                .map(constant -> constant.map(NullableValue::asBlock))
-                .collect(toImmutableList());
+                    .map(constant -> constant.map(NullableValue::asBlock))
+                    .collect(toImmutableList());
             this.replicatesAnyRow = replicatesAnyRow;
             this.nullChannel = requireNonNull(nullChannel, "nullChannel is null");
             this.outputBuffer = requireNonNull(outputBuffer, "outputBuffer is null");
@@ -422,18 +407,18 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
         }
 
         /**
-         * Is full listenable future.
+         * outputBuffer is full ?
          *
-         * @return the listenable future
+         * @return ListenableFuture
          */
         public ListenableFuture<?> isFull() {
             return outputBuffer.isFull();
         }
 
         /**
-         * Gets size in bytes.
+         * get pagebuilder size
          *
-         * @return the size in bytes
+         * @return pagebuilder bytes size
          */
         public long getSizeInBytes() {
             // We use a foreach loop instead of streams
@@ -448,7 +433,7 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
         /**
          * This method can be expensive for complex types.
          *
-         * @return the retained size in bytes
+         * @return bytes
          */
         public long getRetainedSizeInBytes() {
             long sizeInBytes = 0;
@@ -459,35 +444,54 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
         }
 
         /**
-         * Gets info.
+         * get PartitionedOutputInfo
          *
-         * @return the info
+         * @return PartitionedOutputInfo
          */
         public PartitionedOutputOperator.PartitionedOutputInfo getInfo() {
             return new PartitionedOutputOperator.PartitionedOutputInfo(rowsAdded.get(), pagesAdded.get(),
-                outputBuffer.getPeakMemoryUsage());
+                    outputBuffer.getPeakMemoryUsage());
         }
 
         /**
-         * Partition page.
+         * partition Page
          *
-         * @param page the page
+         * @param page page
          */
         public void partitionPage(Page page) {
             requireNonNull(page, "page is null");
 
             Page partitionFunctionArgs = getPartitionFunctionArguments(page);
 
-            int channelCount = page.getChannelCount();
             List<Vec> vectorList = new ArrayList<>();
-            for (int i = 0; i < channelCount; i++) {
-                Vec vec = (Vec) page.getBlock(i).getValues();
-                vectorList.add(vec);
+            for (int i = 0; i < page.getChannelCount(); i++) {
+                Block block = page.getBlock(i);
+                if (!block.isExtensionBlock()) {
+                    vectorList.add((Vec) OperatorUtils.getOffHeapBlock(block).getValues());
+                    LOG.warn("transfer the onheap pages to offheap pages in %s",
+                        PartitionedOutputOmniOperator.class.getSimpleName());
+                } else {
+                    if (block instanceof LazyBlock) {
+                        vectorList.add((Vec) ((LazyBlock) block).getBlock().getValues());
+                    } else {
+                        vectorList.add((Vec) page.getBlock(i).getValues());
+                    }
+                }
             }
-            channelCount = partitionFunctionArgs.getChannelCount();
-            for (int i = 0; i < channelCount; i++) {
-                Vec vec = (Vec) partitionFunctionArgs.getBlock(i).getValues();
-                vectorList.add(vec);
+
+            for (int i = 0; i < partitionFunctionArgs.getChannelCount(); i++) {
+                Block block = partitionFunctionArgs.getBlock(i);
+                if (!block.isExtensionBlock()) {
+                    vectorList.add((Vec) OperatorUtils.getOffHeapBlock(block).getValues());
+                    LOG.warn("transfer the onheap pages to offheap pages in %s",
+                        PartitionedOutputOmniOperator.class.getSimpleName());
+                } else {
+                    if (block instanceof LazyBlock) {
+                        vectorList.add((Vec) ((LazyBlock) block).getBlock().getValues());
+                    } else {
+                        vectorList.add((Vec) page.getBlock(i).getValues());
+                    }
+                }
             }
             VecBatch vecBatch = new VecBatch(vectorList);
             omniOperator.addInput(vecBatch);
@@ -510,16 +514,15 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
         }
 
         /**
-         * Flush.
+         * write data to pages
          *
-         * @param force the force
+         * @param force force write
          */
         public void flush(boolean force) {
             // add all full pages to output buffer
-            // VecBatchToPageIterator pageIterator = new VecBatchToPageIterator(vecBatchIterator);
             VecBatchToPageIterator pageIterator = new VecBatchToPageIterator(omniOperator.getOutput());
             int partition = 0;
-            if (force) {
+            if (force) { // if (!partitionPageBuilder.isEmpty() && (force || partitionPageBuilder.isFull()))
                 while (pageIterator.hasNext()) {
                     Page pagePartition = pageIterator.next();
                     try {

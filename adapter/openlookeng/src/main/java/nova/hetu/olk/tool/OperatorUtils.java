@@ -5,6 +5,7 @@
 
 package nova.hetu.olk.tool;
 
+import static io.prestosql.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.prestosql.spi.type.Decimals.MAX_SHORT_PRECISION;
 
 import com.google.common.primitives.Ints;
@@ -14,20 +15,19 @@ import io.airlift.slice.Slice;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.StandardErrorCode;
-import io.prestosql.spi.block.Block;
-import io.prestosql.spi.block.DictionaryBlock;
-import io.prestosql.spi.block.LazyBlock;
-import io.prestosql.spi.block.VariableWidthBlock;
+import io.prestosql.spi.block.*;
 import io.prestosql.spi.type.StandardTypes;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeSignature;
-import nova.hetu.olk.block.DictionaryOmniBlock;
-import nova.hetu.olk.block.DoubleArrayOmniBlock;
 import nova.hetu.olk.block.Int128ArrayOmniBlock;
 import nova.hetu.olk.block.IntArrayOmniBlock;
+import nova.hetu.olk.block.DictionaryOmniBlock;
+import nova.hetu.olk.block.DoubleArrayOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
+import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.omniruntime.type.BooleanVecType;
+import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
 import nova.hetu.omniruntime.type.Decimal64VecType;
@@ -109,6 +109,8 @@ public final class OperatorUtils {
                 return new Decimal128VecType(precision, scale);
             case StandardTypes.DATE:
                 return Date32VecType.DATE32;
+            case StandardTypes.ROW:
+                return ContainerVecType.CONTAINER;
             default:
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + base);
         }
@@ -250,6 +252,16 @@ public final class OperatorUtils {
             }
             case "LazyBlock": {
                 return ((LazyBlock) block).getBlock();
+            }
+            case "RowBlock": {
+                RowBlock rowBlock = (RowBlock)block;
+                for (int j = 0; j < positionCount; j++) {
+                    if (rowBlock.isNull(j)) {
+                        valueIsNull[j] = true;
+                    }
+                }
+                return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(),
+                    Optional.of(valueIsNull), rowBlock.getRawFieldBlocks());
             }
             default:
                 break;
