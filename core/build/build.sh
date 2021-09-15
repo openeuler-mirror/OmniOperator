@@ -1,6 +1,11 @@
 #!/bin/bash
 
-rm -rf libomruntime.so /opt/lib/libvector.so /opt/lib/libsecurec.so /opt/lib/ir
+if [[ -z $OMNI_HOME ]]; then
+  lib_home=/opt/lib
+else
+  lib_home=/$OMNI_HOME/lib
+fi
+rm -rf libomni_runtime.so $lib_home/libomni_vector.so $lib_home/libsecurec.so $lib_home/ir
 echo "enter" $(dirname $(readlink -f $0))
 cd $(dirname $(readlink -f $0))
 rm -rf `ls | grep -v "build.sh"`
@@ -14,6 +19,9 @@ if [ $# != 0 ] ; then
   elif [ $1 = 'debug' ] && [ $2 = 'op' ];then
     echo "-- Enable native operator debug"
     cmake ../ -DDEBUG_OPERATOR=ON  -DCMAKE_BUILD_TYPE=Debug
+  elif [ $1 = 'debug' ] && [ $2 = 'llvm' ];then
+    echo "-- Enable jit and codegen debug"
+    cmake ../ -DDEBUG_LLVM=ON  -DCMAKE_BUILD_TYPE=Debug
   elif [ $1 = 'release' ];then
     cmake ../  -DCMAKE_BUILD_TYPE=Release
   fi

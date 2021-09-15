@@ -20,7 +20,7 @@ Omni-runtime functionality.
 %install
 
 %files
-/opt/lib/libomruntime.so
+/opt/lib/libomni_runtime.so
 /opt/lib/ir/aggregator.ll
 /opt/lib/ir/hash_groupby.ll
 /opt/lib/ir/memory_pool.ll

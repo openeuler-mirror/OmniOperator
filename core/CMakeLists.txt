@@ -9,12 +9,18 @@ set(CMAKE_CXX_COMPILER "clang++-12")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC -finline-functions")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
-set(CMAKE_INSTALL_PREFIX /opt/lib)
-message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
+
+if (EXISTS $ENV{OMNI_HOME})
+	set(CMAKE_INSTALL_PREFIX $ENV{OMNI_HOME}/lib)
+else()
+	set(CMAKE_INSTALL_PREFIX /opt/lib)
+endif()
+
+	message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 
 # clean all target
-set(target_generated ${CMAKE_INSTALL_PREFIX}/libomruntime.so
-	             ${CMAKE_INSTALL_PREFIX}/libvector.so
+set(target_generated ${CMAKE_INSTALL_PREFIX}/libomni_runtime.so
+	             ${CMAKE_INSTALL_PREFIX}/libomni_vector.so
 	             ${CMAKE_INSTALL_PREFIX}/libsecurec.so
 	             ${CMAKE_INSTALL_PREFIX}/ir
 )
@@ -41,6 +47,8 @@ configure_file(
 
 # options
 option(DEBUG_OPERATOR "Using for debug into native operator code" OFF)
+message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")
+option(DEBUG_LLVM "Using for debug into JIT and codegen code" OFF)
 message(STATUS "Option DEBUG_OPERATOR: ${DEBUG_OPERATOR}")
 option(DEBUG_LEVEL_LOW "Low debug level" OFF)
 message(STATUS "Option DEBUG_LEVEL_LOW: ${DEBUG_LEVEL_LOW}")

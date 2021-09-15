@@ -14,11 +14,8 @@ namespace omniruntime {
         class Context {
         public:
             Context(std::string jitTemplate,
-                    std::map<std::string, Specialization> specializations,
-                    std::vector<std::string> libraryPaths = std::vector<std::string>(),
-                    bool hasOperatorFactory = false)
-                : jitTemplate(jitTemplate), specializations(specializations), libraryPaths(libraryPaths),
-                hasOperatorFactory(hasOperatorFactory) {
+                    std::map<std::string, Specialization> specializations)
+                : jitTemplate(jitTemplate), specializations(specializations) {
             }
 
             ~Context(){}
@@ -33,21 +30,9 @@ namespace omniruntime {
                 return this->specializations;
             }
 
-            std::vector<std::string> getLibraries()
-            {
-                return this->libraryPaths;
-            }
-
-            bool IsDependency()
-            {
-                return !this->hasOperatorFactory;
-            }
-
         private:
             std::string jitTemplate;
             std::map<std::string, Specialization> specializations;
-            std::vector<std::string> libraryPaths;
-            bool hasOperatorFactory;
         };
     }
 }

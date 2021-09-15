@@ -27,7 +27,7 @@ First write the name of the function, (this must be the same as the name of the 
 ​
 Blank lines and lines with only comments are also allowed, and will simply be ignored. 
 
-Finally, compile the `externalfunctions.h` and `externalfunctions.cpp` file to a shared library (ex. using the command below), and ensure that the `.so` file is placed in the same directory as `externalregistration.conf`, and is named `externalfunctions.so`. Place `externalregistration.conf` in the `/etc/externalfunctions/` folder, and place `externalfunctions.so` in the `/opt/lib/` folder. 
+Finally, compile the `externalfunctions.h` and `externalfunctions.cpp` file to a shared library (ex. using the command below), and ensure that the `.so` file is placed in the same directory as `externalregistration.conf`, and is named `externalfunctions.so`. Place `externalregistration.conf` in the `/etc/externalfunctions/` folder, and place `externalfunctions.so` in the omni lib folder. 
 ```bash
 clang+-12 -shared -fPIC -o externalfunctions.so externalfunctions.cpp
 ```
@@ -36,4 +36,4 @@ If there are more sets of `.h` and `.cpp` files which need to be added, simply a
 ```bash
 clang+-12 -shared -fPIC -o externalfunctions.so externalfunctions.cpp extmathfunctions.cpp extstringfunctions.cpp
 ```
-Make sure to move the resulting `externalfunctions.so` file to `/opt/lib/`. 
+Make sure to move the resulting `externalfunctions.so` file to omni lib folder. 

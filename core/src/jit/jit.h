@@ -24,14 +24,16 @@ namespace omniruntime {
 
             ~Jit(){}
 
-            /// Specialize operator templates with values/stats in Context
-            /// return pointer to CreateOperator method in the optimized code
-            /// or 0 if specialization failed
-            uint64_t Specialize(
+            /// Specialize templates with values/stats in Context
+            /// return true if specialization succeed
+            /// or false if specialization failed
+            bool Specialize(
                     const std::vector<Optimization> &optimizations = std::vector<Optimization>(),
                     const std::vector<ModuleOptimization> &moduleOptimizations = std::vector<ModuleOptimization>());
 
-            std::vector<std::string> getAppliedOptimizations();
+            std::vector<std::string> GetAppliedOptimizations();
+
+            uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false);
 
         private:
             Compiler *compiler;

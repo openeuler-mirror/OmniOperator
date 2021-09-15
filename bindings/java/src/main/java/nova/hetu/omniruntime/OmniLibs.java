@@ -5,12 +5,12 @@
 package nova.hetu.omniruntime;
 
 /**
- * load libomruntime.so
+ * load libomni_runtime.so
  *
  * @since 2021-07-17
  */
 public class OmniLibs {
-    private static final String OMNI_RUNTIME = "omruntime";
+    private static final String OMNI_RUNTIME = "omni_runtime";
 
     private OmniLibs() {
     }

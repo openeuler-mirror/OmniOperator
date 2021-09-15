@@ -1,5 +1,5 @@
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR} VECTOR_LIST)
-set(VEC_TARGET vector)
+set(VEC_TARGET omni_vector)
 
 find_package(nlohmann_json 3.9.1 REQUIRED)
 

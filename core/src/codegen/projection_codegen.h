@@ -5,13 +5,13 @@
 #ifndef PROJECTION_CODEGEN_H
 #define PROJECTION_CODEGEN_H
 
-#include "llvm_codegen.h"
+#include "expression_codegen.h"
 
-class ProjectionCodeGen : public LLVMCodeGen {
+class ProjectionCodeGen : public ExpressionCodeGen {
 public:
     ProjectionCodeGen(std::string name, omniruntime::expressions::Expr &expr,
                       std::vector <omniruntime::expressions::DataType> &datatypes, bool filter)
-        :LLVMCodeGen(name, expr, datatypes), filter(filter) {}
+        : ExpressionCodeGen(name, expr, datatypes), filter(filter) {}
     ~ProjectionCodeGen() {}
     int64_t GetFunction() override;
     bool IsFilterEnabled() const

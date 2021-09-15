@@ -7,7 +7,7 @@ add_subdirectory(vector)
 add_subdirectory(codegen)
 add_subdirectory(common)
 
-set(OM_TARGET omruntime)
+set(OM_TARGET omni_runtime)
 
 # link libraries
 set(MY_LINK
@@ -16,7 +16,7 @@ set(MY_LINK
         memory
         operator
         util
-        vector
+        omni_vector
         codegen
         common
         )
@@ -32,9 +32,9 @@ target_link_libraries(${OM_TARGET}
         stdc++
         dl)
 
-# install libomruntime.so
+# install libomni_runtime.so
 install(TARGETS ${OM_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
-message(STATUS "Install libomruntime.so into ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Install libomni_runtime.so into ${CMAKE_INSTALL_PREFIX}")
 
 add_library(aggregator SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp)
 add_library(group_aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp)

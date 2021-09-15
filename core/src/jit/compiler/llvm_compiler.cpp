@@ -3,6 +3,7 @@
  */
 #include "harden_optimizer.h"
 #include "../annotation.h"
+#include "../../util/debug.h"
 #include "llvm_compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -32,10 +33,9 @@ using std::unique_ptr;
 
 namespace omniruntime {
 namespace jit {
-LLVMCompiler::LLVMCompiler() : createOperatorSymbol()
+LLVMCompiler::LLVMCompiler()
 {
-    this->config = nullptr;
-    InitCompile();
+    this->config = std::make_unique<Config>();
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     this->context = std::make_unique<llvm::LLVMContext>();
@@ -46,19 +46,11 @@ LLVMCompiler::LLVMCompiler() : createOperatorSymbol()
     LoadExtraLibraries();
 }
 
-void LLVMCompiler::InitCompile()
-{
-    this->config = new Config();
-}
-
 LLVMCompiler::~LLVMCompiler() {}
 
-bool LLVMCompiler::LoadOperatorTemplate(string operatorName, bool isDependency)
+bool LLVMCompiler::LoadModule(std::string templatePath)
 {
     // TODO: have a proper registry for all the operators instead of loading from /opt/lib/ir
-    // TODO: load operator templates by folder
-    string templatePath = this->operatorPath + operatorName + LLVMCompiler::templateFileSuffix;
-
     llvm::SMDiagnostic error;
     auto module = llvm::parseIRFile(templatePath, error, *context);
 
@@ -68,17 +60,8 @@ bool LLVMCompiler::LoadOperatorTemplate(string operatorName, bool isDependency)
         return false;
     }
 
-    if (!isDependency) {
-        for (auto &func : module->getFunctionList()) {
-            if (func.getName().contains(Compiler::entryFuncName)) {
-                this->createOperatorSymbol = func.getName().str();
-                break;
-            }
-        }
-
-        if (this->createOperatorSymbol.empty()) {
-            outs() << "Error: Couldn't find CreateOperator function\n";
-        }
+    for (auto const &function : module->getFunctionList()) {
+        this->functionSymbols.push_back(function.getName().str());
     }
 
     this->modules.push_back(std::move(module));
@@ -98,12 +81,12 @@ void LLVMCompiler::LoadExtraLibraries()
             llvm::errs() << "Failed to load core library at path " << s << "\n";
             llvm::errs() << err << "\n";
         } else {
-            std::cout << "Successfully loaded core library at path " << s << std::endl;
+            LLVM_DEBUG_LOG("Successfully loaded core library at path %s", s);
         }
     }
 }
 
-uint64_t LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimizations,
+bool LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimizations,
     const std::vector<ModuleOptimization> &moduleOptimizations)
 {
     map<string, set<string>> specializedModules;
@@ -117,24 +100,13 @@ uint64_t LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &opt
     specializedModules.clear();
 
     if (jit) {
-        if (this->createOperatorSymbol.empty()) {
-            llvm::errs() << "Error: CreateOperator function not found yet\n";
-            return 0;
-        }
-
-        auto func = jit->lookup(this->createOperatorSymbol);
-        if (func) {
-            jitter = jit.release();
-            llvm::outs() << "Found CreateOperator symbol: " << this->createOperatorSymbol << "\n";
-            return func->getAddress();
-        } else {
-            llvm::errs() << "Error: Cannot lookup the jitted CreateOperator method " << this->createOperatorSymbol <<
-                ", error: " << toString(func.takeError()) << "\n";
-            return 0;
-        }
+        jitter = std::move(jit);
+        return true;
+    } else {
+        llvm::errs() << "Error: Unable to compile the modules\n";
     }
 
-    return 0;
+    return false;
 }
 
 set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &module)
@@ -157,7 +129,7 @@ set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &
         }
     }
 
-    llvm::verifyModule(*module);
+    verifyModule(*module);
 
     return specializedFuncs;
 }
@@ -165,6 +137,34 @@ set<string> LLVMCompiler::specializeModule(const std::unique_ptr<llvm::Module> &
 void LLVMCompiler::AddSpecialization(std::string id, Specialization specialization)
 {
     this->specializations.insert(std::make_pair(id, specialization));
+}
+
+uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMangled)
+{
+    using namespace llvm;
+
+    if (isNameMangled) {
+        auto expected = this->jitter->lookup(functionName);
+        if (expected) {
+            return expected->getAddress();
+        } else {
+            errs() << "Cannot find mangled function name: " << functionName << "\n";
+        }
+    } else {
+        for (auto const &function : this->functionSymbols) {
+            if (function.find(functionName) == string::npos) {
+                continue;
+            }
+
+            auto expectedFunc = this->jitter->lookup(function);
+            if (expectedFunc) {
+                return expectedFunc->getAddress();
+            }
+        }
+
+        llvm::errs() << "Cannot find function name: " << functionName << "\n";
+        return 0;
+    }
 }
 
 // replaces the value of parameters passed to a function
@@ -177,7 +177,9 @@ bool LLVMCompiler::harden_function(const string &specializationId, llvm::Functio
     if (this->specializations.count(specializationId) == 0) {
         return false;
     }
+#ifdef DEBUG_LLVM
     llvm::outs() << "hardening: " << function->getName().str() << "\n";
+#endif
     Specialization specialization = this->specializations.at(specializationId);
 
     int count = 0;
@@ -225,7 +227,9 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
         ExitOnErr(DynamicLibrarySearchGenerator::GetForCurrentProcess(JITTER->getDataLayout().getGlobalPrefix())));
     for (auto &module : this->modules) {
         std::string moduleName = module->getName().str();
+#ifdef DEBUG_LLVM
         outs() << "addIRModule: " << moduleName << "\n";
+#endif
         auto err =
             JITTER->addIRModule(ThreadSafeModule(std::move(module), std::move(std::make_unique<llvm::LLVMContext>())));
         if (err) {
@@ -233,6 +237,7 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
             return nullptr;
         }
     }
+
     return JITTER;
 }
 
@@ -465,7 +470,9 @@ void annotatedFuncs(Module::global_iterator I, map<string, llvm::Function *> &an
             if (index != llvm::StringRef::npos) {
                 StringRef specializationId = annotation.substr(0, index);
                 annotFuncs.insert(std::make_pair(specializationId.str(), FUNC));
+#ifdef DEBUG_LLVM
                 outs() << "Found annotated function " << specializationId << ", " << FUNC->getName() << "\n";
+#endif
             }
         }
     }

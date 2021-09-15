@@ -17,7 +17,7 @@ if [ "$FLAG_deb" = "False" ] && [ "$FLAG_rpm" = "False" ]; then
   FLAG_deb=True
 fi
 
-if [ ! -f "build/opt/lib/libomruntime.so" ]; then
+if [ ! -f "build/opt/lib/libomni_runtime.so" ]; then
   _error "Can't find omni-runtme libraries, try compiling first with build.sh"
   exit 1
 fi

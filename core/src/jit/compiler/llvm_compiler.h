@@ -24,26 +24,24 @@ public:
 
     ~LLVMCompiler();
 
-    void InitCompile();
+    bool LoadModule(std::string templatePath) override;
 
-    bool LoadOperatorTemplate(std::string operatorName, bool isDependency) override;
-
-    uint64_t SpecializeAndCompile(const std::vector<Optimization> &optimizations,
+    bool SpecializeAndCompile(const std::vector<Optimization> &optimizations,
         const std::vector<ModuleOptimization> &moduleOptimizations) override;
 
     void AddSpecialization(std::string id, Specialization specialization) override;
 
-private:
-    const std::string templateFileSuffix = ".ll";
+    uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false) override;
 
-    Config *config;
+private:
+    std::unique_ptr<Config> config;
     std::unique_ptr<llvm::StringRef> layout;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::LLVMContext> context;
     std::vector<std::unique_ptr<llvm::Module>> modules;
-    std::string createOperatorSymbol;
+    std::vector<std::string> functionSymbols;
 
-    llvm::orc::LLJIT *jitter;
+    std::unique_ptr<llvm::orc::LLJIT> jitter;
 
     static LibraryLoader ll;
 

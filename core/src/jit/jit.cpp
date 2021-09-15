@@ -3,6 +3,7 @@
  */
 #include "jit.h"
 #include "compiler/llvm_compiler.h"
+#include "../util/debug.h"
 
 #include <iostream>
 #include <utility>
@@ -24,35 +25,40 @@ namespace omniruntime {
                     InitCompile();
                     break;
                 default:
-                    std::cout << "Error: Compiler type not supported: " << compilerType << std::endl;
+                    std::cerr << "Error: Compiler type not supported: " << compilerType << std::endl;
                     break;
             }
         }
 
-        uint64_t Jit::Specialize(
+        bool Jit::Specialize(
                 const std::vector<Optimization> &optimizations,
                 const std::vector<ModuleOptimization> &moduleOptimizations)
         {
             for (auto &context : this->contexts) {
-                bool loaded = this->compiler->LoadOperatorTemplate(context.getJitTemplate(), context.IsDependency());
+                bool loaded = this->compiler->LoadModule(context.getJitTemplate());
                 if (!loaded) {
-                    std::cout << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
-                    return 0;
+                    std::cerr << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
+                    return false;
                 }
-                std::cout << "Loaded template: " << context.getJitTemplate() << std::endl;
+                LLVM_DEBUG_LOG("Loaded template: %s", context.getJitTemplate());
 
                 for (auto &specializationPair : context.getSpecializations()) {
                     this->compiler->AddSpecialization(specializationPair.first, specializationPair.second);
                 }
-                std::cout << "Added specializations" << std::endl;
+                LLVM_DEBUG_LOG("Added specializations");
             }
             return this->compiler->SpecializeAndCompile(optimizations, moduleOptimizations);
         }
 
-        std::vector<std::string> Jit::getAppliedOptimizations()
+        std::vector<std::string> Jit::GetAppliedOptimizations()
         {
             std::vector<std::string> temp;
             return temp;
+        }
+
+        uint64_t Jit::GetJitedFunction(std::string functionName, bool isNameMangled)
+        {
+            return this->compiler->GetJitedFunction(functionName, isNameMangled);
         }
     }
 }
