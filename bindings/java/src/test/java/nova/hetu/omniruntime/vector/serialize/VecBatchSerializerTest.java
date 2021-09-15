@@ -1,5 +1,6 @@
 package nova.hetu.omniruntime.vector.serialize;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static org.testng.AssertJUnit.assertEquals;
 
 import nova.hetu.omniruntime.type.ContainerVecType;
@@ -248,5 +249,30 @@ public class VecBatchSerializerTest {
 
         vecBatch.releaseAllVectors();
         vecBatch.close();
+    }
+
+    @Test
+    public void testSerializeSameVectorMultipleTimes() {
+        int size = 10;
+        LongVec col1 = new LongVec(size);
+        for (int i = 0; i < size; i++) {
+            col1.set(i, i);
+        }
+
+        Vec[] vecs = new Vec[1];
+        for (int count = 0; count < 2; count++) {
+            vecs[0] = col1;
+            VecBatch vecBatch = new VecBatch(vecs, size);
+            // serialize
+            VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+            byte[] str = serializer.serialize(vecBatch);
+            // deserialize
+            VecBatch resultVecBatch = serializer.deserialize(str);
+            Object[][] expectedDatas = {{0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L}};
+            assertVecBatchEquals(resultVecBatch, expectedDatas);
+            vecBatch.close();
+            resultVecBatch.close();
+        }
+        col1.close();
     }
 }
