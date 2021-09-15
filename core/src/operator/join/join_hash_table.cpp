@@ -16,6 +16,7 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 const int32_t CACHE_SIZE = 131072; // 128KB
+const int32_t BLOCK_SIZE = 1024;
 
 int32_t NumberOfTrailingZeros(int32_t value)
 {
@@ -324,6 +325,381 @@ void JoinHashTable::PrintHashTable(int32_t partitionIndex) const
     }
 }
 
+void ALWAYS_INLINE ReadColumnIntHashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                       Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    int64_t address;
+    int64_t hash;
+    int32_t vecBatchIndex, rowIndex;
+    int32_t currVecBatchIndex = -1;
+    bool dictionary = false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    int32_t idIndex;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::IntVector *>(column)->GetValue(rowIndex));
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::IntVector *>(result)->GetValue(idIndex));
+        }
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ReadColumnLongHashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                        Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    int64_t address;
+    int64_t hash;
+    int32_t vecBatchIndex, rowIndex;
+    int32_t currVecBatchIndex = -1;
+    bool dictionary = false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    int32_t idIndex;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::LongVector *>(column)->GetValue(rowIndex));
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::LongVector *>(result)->GetValue(idIndex));
+        }
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ReadColumnDoubleHashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                          Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    int64_t address;
+    int64_t hash;
+    int32_t vecBatchIndex, rowIndex;
+    int32_t currVecBatchIndex = -1;
+    bool dictionary =  false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    int32_t idIndex;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::DoubleVector *>(column)->GetValue(rowIndex));
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::DoubleVector *>(result)->GetValue(idIndex));
+        }
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                             Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    int64_t address;
+    int64_t hash;
+    int32_t vecBatchIndex, rowIndex;
+    int32_t currVecBatchIndex = -1;
+    bool dictionary = false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    int32_t idIndex;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashDecimal64Value(static_cast<LongVector *>(column)->GetValue(rowIndex));
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashDecimal64Value(static_cast<LongVector *>(result)->GetValue(idIndex));
+        }
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ReadColumnBooleanHashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                           Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    int64_t address;
+    int64_t hash;
+    int32_t vecBatchIndex, rowIndex;
+    int32_t currVecBatchIndex = -1;
+    bool dictionary = false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    int32_t idIndex;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::BooleanVector *>(column)->GetValue(rowIndex));
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<omniruntime::vec::BooleanVector *>(result)->GetValue(idIndex));
+        }
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                              Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    int64_t address;
+    int64_t hash;
+    Decimal128 decimal128Value;
+    int32_t vecBatchIndex, rowIndex;
+    int32_t currVecBatchIndex = -1;
+    bool dictionary = false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    int32_t idIndex;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(column)->GetValue(rowIndex);
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(result)->GetValue(idIndex);
+        }
+        hash = HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ReadColumnVarCharHashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+                                           Vector **columns, int64_t *hashes, bool *nullPositions)
+{
+    Vector *column = nullptr, *result = nullptr;
+    uint8_t *varcharValue = nullptr;
+    int64_t address, hash;
+    int32_t vecBatchIndex, rowIndex, idIndex, valueLength, currVecBatchIndex = -1;
+    bool dictionary = false;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+        address = addresses[offset + step];
+        vecBatchIndex = DecodeSliceIndex(address);
+        rowIndex = DecodePosition(address);
+        if (currVecBatchIndex != vecBatchIndex) {
+            column = columns[vecBatchIndex];
+            dictionary = false;
+            if (column->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+                dictionary = true;
+            }
+            currVecBatchIndex = vecBatchIndex;
+        }
+        if (!dictionary) {
+            if (column->IsValueNull(rowIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            varcharValue = nullptr;
+            valueLength =
+                    static_cast<omniruntime::vec::VarcharVector *>(column)->GetValue(rowIndex, &varcharValue);
+        } else {
+            result = column;
+            idIndex = rowIndex;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nullPositions[step] = true;
+                continue;
+            }
+            varcharValue = nullptr;
+            valueLength =
+                    static_cast<omniruntime::vec::VarcharVector *>(result)->GetValue(idIndex, &varcharValue);
+        }
+        hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+        hashes[step] = HashUtil::CombineHash(hashes[step], hash);
+    }
+}
+
+void ALWAYS_INLINE ProcessColumns(int32_t offset, int32_t addressesCount, int64_t *addresses,
+        Vector ***columns, int32_t *types, int32_t colCount,
+        int64_t *hashes, bool *nullPositions)
+{
+    for (int32_t columnIdx = 0; columnIdx < colCount; ++columnIdx) {
+        switch (types[columnIdx]) {
+            case omniruntime::vec::OMNI_VEC_TYPE_INT:
+            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+                ReadColumnIntHashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+                ReadColumnLongHashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+                ReadColumnDoubleHashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+                ReadColumnBooleanHashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+                ReadColumnDecimal64Hashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+                ReadColumnDecimal128Hashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+                ReadColumnVarCharHashes(offset, addressesCount, addresses, columns[columnIdx],
+                        hashes, nullPositions);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 PagesHash::PagesHash(int64_t *addresses, int32_t addressesCount, PagesHashStrategy *pagesHashStrategy,
     ArrayPositionLinks *positionLinks)
 {
@@ -337,30 +713,23 @@ PagesHash::PagesHash(int64_t *addresses, int32_t addressesCount, PagesHashStrate
     ArraysFill(key, keySize, -1);
     positionToHashes = std::make_unique<int8_t[]>(addressesCount).release();
 
-    int32_t positionsInStep = std::min(addressesCount + 1, CACHE_SIZE / static_cast<int32_t>(sizeof(int32_t)));
-    int64_t positionToFullHashes[positionsInStep];
     int64_t hashCollisionsLocal = 0;
-
-    for (int32_t step = 0; step * positionsInStep <= addressesCount; step++) {
-        int32_t stepBeginPosition = step * positionsInStep;
-        int32_t stepEndPosition = std::min((step + 1) * positionsInStep, addressesCount);
-        int32_t stepSize = stepEndPosition - stepBeginPosition;
-
-        for (int32_t position = 0; position < stepSize; position++) {
-            int32_t realPosition = position + stepBeginPosition;
-            int64_t hash = GetRawHash(realPosition);
-            positionToFullHashes[position] = hash;
-            positionToHashes[realPosition] = static_cast<int8_t>(hash);
+    auto columns = pagesHashStrategy->GetBuildHashColumns();
+    auto types = pagesHashStrategy->GetBuildHashColTypes();
+    auto colCount = pagesHashStrategy->GetBuildHashColsCount();
+    int64_t hashes[BLOCK_SIZE];
+    bool nullPositions[BLOCK_SIZE];
+    for (int offset = 0; offset < addressesCount; offset += BLOCK_SIZE) {
+        for (int32_t step = 0; step < BLOCK_SIZE; step++) {
+            hashes[step] = 0;
+            nullPositions[step] = false;
         }
-
-        for (int32_t position = 0; position < stepSize; position++) {
-            int32_t realPosition = position + stepBeginPosition;
-            if (IsPositionNull(realPosition)) {
-                continue;
+        ProcessColumns(offset, addressesCount, addresses, columns, types, colCount, hashes, nullPositions);
+        for (int32_t step = 0; offset + step < addressesCount && step < BLOCK_SIZE; step++) {
+            positionToHashes[offset + step] = static_cast<int8_t>(hashes[step]);
+            if (!nullPositions[step]) {
+                SetAddressIndex(positionLinks, offset + step, hashes[step], &hashCollisionsLocal);
             }
-
-            int64_t hash = positionToFullHashes[position];
-            SetAddressIndex(positionLinks, realPosition, hash, &hashCollisionsLocal);
         }
     }
     hashCollisions = hashCollisionsLocal;
@@ -420,25 +789,6 @@ int32_t PagesHash::GetBuildValue(void *value, int32_t joinPosition, int32_t outp
     int32_t rowIndex = DecodePosition(address);
 
     return VectorHelper::GetValue(pagesHashStrategy->GetBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
-}
-
-int64_t PagesHash::GetRawHash(int32_t position) const
-{
-    int64_t address = addresses[position];
-    int32_t vecBatchIndex = DecodeSliceIndex(address);
-    int32_t rowIndex = DecodePosition(address);
-
-    return HashPosition(vecBatchIndex, rowIndex, pagesHashStrategy->GetBuildHashColumns(),
-        pagesHashStrategy->GetBuildHashColTypes(), pagesHashStrategy->GetBuildHashColsCount());
-}
-
-bool PagesHash::IsPositionNull(int32_t position) const
-{
-    int64_t address = addresses[position];
-    int32_t vecBatchIndex = DecodeSliceIndex(address);
-    int32_t rowIndex = DecodePosition(address);
-
-    return pagesHashStrategy->IsPositionNull(vecBatchIndex, rowIndex);
 }
 
 bool PagesHash::PositionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition) const
