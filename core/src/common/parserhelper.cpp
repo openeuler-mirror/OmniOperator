@@ -38,6 +38,8 @@ bool ParserHelper::FuncDeclMatch(string fnName, vector<Expr *> args, bool checkT
         return (args[0]->dataType == STRINGD && args[0]->dataType == STRINGD);
     } else if (fnName == "combine_hash" && args.size() == ARGS_2) {
         return (IsIntType(args[0]->dataType) && IsIntType(args[1]->dataType));
+    } else if (fnName == "mm3hash" && args.size() == ARGS_2) {
+        return true;
     } else if (externalFuncNames.find(fnName) != externalFuncNames.end()) {
         // Don't do any other checks for now for external functions
         return true;

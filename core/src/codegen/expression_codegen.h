@@ -9,6 +9,7 @@
 #include "../common/parser/parser.h"
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
+#include "./functions/murmur3_hash.h"
 #include "./func_registry.h"
 #include "../util/debug.h"
 
@@ -90,6 +91,8 @@ protected:
                                      llvm::Value*>& args);
     llvm::Value* ParseFuncExprCast(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
                                    llvm::Value*>& args);
+    llvm::Value* ParseFuncExprMm3Hash(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
+                                      llvm::Value*>& args);
     llvm::Value* ParseFuncExprExt(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
 
     // Helper functions for generating IR for operators and special forms
