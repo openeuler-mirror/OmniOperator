@@ -151,6 +151,8 @@ void ExpressionCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::s
         if (fExpr->arguments.size() == SUBSTREXT_VALUE) {
             s.insert("substrExt");
         }
+    } else if (fn == "mm3hash") {
+        s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()));
     } else {
         s.insert(fExpr->funcName);
     }
@@ -785,6 +787,24 @@ Value *ExpressionCodeGen::ParseFuncExprExt(FuncExpr &funcExpr, std::map<std::str
     return ret;
 }
 
+Value *ExpressionCodeGen::ParseFuncExprMm3Hash(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+{
+    FuncExpr *fExpr = &funcExpr;
+    llvm::Value *val = ParseExpr(*(fExpr->arguments[0]), args);
+    llvm::Value *seed = ParseExpr(*(fExpr->arguments[1]), args);
+    std::string mm3FuncName = "Mm3_" + dataTypeString(fExpr->arguments[0]->dataType);
+    std::vector<Value*> argVals {val, seed};
+
+    auto f = module->getFunction(mm3FuncName);
+    if (f) {
+        Value *ret = builder->CreateCall(f, argVals, mm3FuncName);
+        return ret;
+    } else {
+        LLVM_DEBUG_LOG("Unable to parse function %s", mm3FuncName.c_str());
+        return CreateConstantInt(0);
+    }
+}
+
 
 // Handles all functions
 // Only calls them; registration is done in function registry
@@ -836,6 +856,9 @@ Value *ExpressionCodeGen::ParseFuncExpr(FuncExpr &funcExpr, std::map<std::string
         Value *ret = builder->CreateCall(f, argVals, fr->combineHashStr);
         DumpCode();
         return ret;
+    }
+    if (fExpr->funcName == "mm3hash") {
+        return this->ParseFuncExprMm3Hash(*fExpr, args);
     }
     // external functions
     if (IsFunctionName(fExpr->funcName)) {

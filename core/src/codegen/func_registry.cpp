@@ -7,6 +7,7 @@
 #include "../common/expressions.h"
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
+#include "./functions/murmur3_hash.h"
 #include "func_registry.h"
 
 using namespace std;
@@ -176,6 +177,39 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
     }
 }
 
+void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
+{
+    // Mm3Hash functions
+    if (fn == "mm3hash_int32") {
+        vector<DataType> mm3Int32Types {DataType::INT32D, DataType::INT32D};
+        FunctionSignature mm3Int32Sig (mm3Int32Str, mm3Int32Types, DataType::INT32D,
+                                       reinterpret_cast<void *>(Mm3Int32));
+        this->RegisterFunctionFromSignature(mm3Int32Sig);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3Int32Str, mm3Int32Sig));
+    }
+    if (fn == "mm3hash_int64") {
+        vector<DataType> mm3Int64Types {DataType::INT64D, DataType::INT32D};
+        FunctionSignature mm3Int64Sig (mm3Int64Str, mm3Int64Types, DataType::INT32D,
+                                       reinterpret_cast<void *>(Mm3Int64));
+        this->RegisterFunctionFromSignature(mm3Int64Sig);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3Int64Str, mm3Int64Sig));
+    }
+    if (fn == "mm3hash_double") {
+        vector<DataType> mm3DoubleTypes {DataType::DOUBLED, DataType::INT32D};
+        FunctionSignature mm3DoubleSig (mm3DoubleStr, mm3DoubleTypes, DataType::INT32D,
+                                        reinterpret_cast<void *>(Mm3Double));
+        this->RegisterFunctionFromSignature(mm3DoubleSig);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3DoubleStr, mm3DoubleSig));
+    }
+    if (fn == "mm3hash_string") {
+        vector<DataType> mm3StringTypes {DataType::INT64D, DataType::INT32D};
+        FunctionSignature mm3StringSig (mm3StringStr, mm3StringTypes, DataType::INT32D,
+                                        reinterpret_cast<void *>(Mm3String));
+        this->RegisterFunctionFromSignature(mm3StringSig);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3StringStr, mm3StringSig));
+    }
+}
+
 bool isMathFunction(const string& fn)
 {
     return fn == "abs_int32" || fn == "abs_int64" || fn == "abs_double";
@@ -194,6 +228,11 @@ bool isCastFunction(const string& fn)
 bool isHashFunction(const string& fn)
 {
     return fn == "combine_hash";
+}
+
+bool IsMm3HashFunction(const string& fn)
+{
+    return fn == "mm3hash_int32" || fn == "mm3hash_int64" || fn == "mm3hash_double" || fn == "mm3hash_string";
 }
 
 // Only registers necessary functions
@@ -228,6 +267,10 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
                                               DataType::INT64D, reinterpret_cast<void *>(CombineHash));
             this->RegisterFunctionFromSignature(combineHashSig);
             funcNameToSignatureMap.insert(pair<string, FunctionSignature>(combineHashStr, combineHashSig));
+        }
+
+        if (IsMm3HashFunction(fn)) {
+            this->RegisterMm3HashFunctions(fn);
         }
 
         // External functions

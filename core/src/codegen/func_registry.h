@@ -34,6 +34,7 @@ public:
     void RegisterAbsFunctions(const std::string& fnName);
     void RegisterCastFunctions(const std::string& fnName);
     void RegisterStringFunctions(const std::string& fnName);
+    void RegisterMm3HashFunctions(const std::string& fnName);
     void RegisterNecessaryFuncs(const std::set<std::string>& requiredFuncs);
 
     llvm::orc::LLJIT* jit;
@@ -58,6 +59,10 @@ public:
     const std::string castInt64ToInt32Str = "Cast_int32_int64";
     const std::string castStringStr = "Cast_string_int32";
     const std::string combineHashStr = "CombineHash";
+    const std::string mm3Int32Str = "Mm3_int32";
+    const std::string mm3Int64Str = "Mm3_int64";
+    const std::string mm3StringStr = "Mm3_string";
+    const std::string mm3DoubleStr = "Mm3_double";
 };
 
 
