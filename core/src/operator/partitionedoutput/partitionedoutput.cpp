@@ -236,8 +236,15 @@ void PartitionedOutputOperator::MergeVectorBatch(VectorBatch *vecBatch, int32_t 
         VectorBatch *vectorBatch = vectorBatches[i];
         for (int vecIdx = 0; vecIdx < vecCount; ++vecIdx) {
             for (int j = 0; j < currentVecBatchRowCount; ++j) {
-                int32_t rowIndex = rowList[j];
-                Insert(vecBatch->GetVector(vecIdx), rowIndex, vectorBatch->GetVector(vecIdx), j);
+                int32_t oldRowIndex = rowList[j];
+                int32_t newRowIndex = j;
+                Vector *oldVector = VectorHelper::GetDictionary(vecBatch->GetVector(vecIdx), oldRowIndex);
+                Vector *newVector = VectorHelper::GetDictionary(vectorBatch->GetVector(vecIdx), newRowIndex);
+                if (oldVector->IsValueNull(oldRowIndex)) {
+                    newVector->SetValueNull(newRowIndex);
+                    continue;
+                }
+                Insert(oldVector, oldRowIndex, newVector, newRowIndex);
             }
         }
     }
@@ -322,6 +329,7 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
             int type = hashChannelTypes[i];
             Vector *vector = vecBatch->GetVector(startVecIndex + hashChannels[i]);
             long hash = 0;
+            vector = VectorHelper::GetDictionary(vector, rowIndex);
             if (!vector->IsValueNull(rowIndex)) {
                 hash = GetHash(rowIndex, type, vector);
             }

@@ -5,7 +5,6 @@
 
 package nova.hetu.olk.tool;
 
-import static io.prestosql.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.prestosql.spi.type.Decimals.MAX_SHORT_PRECISION;
 
 import com.google.common.primitives.Ints;
@@ -15,14 +14,18 @@ import io.airlift.slice.Slice;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.StandardErrorCode;
-import io.prestosql.spi.block.*;
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.DictionaryBlock;
+import io.prestosql.spi.block.LazyBlock;
+import io.prestosql.spi.block.RowBlock;
+import io.prestosql.spi.block.VariableWidthBlock;
 import io.prestosql.spi.type.StandardTypes;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeSignature;
-import nova.hetu.olk.block.Int128ArrayOmniBlock;
-import nova.hetu.olk.block.IntArrayOmniBlock;
 import nova.hetu.olk.block.DictionaryOmniBlock;
 import nova.hetu.olk.block.DoubleArrayOmniBlock;
+import nova.hetu.olk.block.Int128ArrayOmniBlock;
+import nova.hetu.olk.block.IntArrayOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
@@ -36,6 +39,7 @@ import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -254,14 +258,14 @@ public final class OperatorUtils {
                 return ((LazyBlock) block).getBlock();
             }
             case "RowBlock": {
-                RowBlock rowBlock = (RowBlock)block;
+                RowBlock rowBlock = (RowBlock) block;
                 for (int j = 0; j < positionCount; j++) {
                     if (rowBlock.isNull(j)) {
                         valueIsNull[j] = true;
                     }
                 }
-                return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(),
-                    Optional.of(valueIsNull), rowBlock.getRawFieldBlocks());
+                return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(), Optional.of(valueIsNull),
+                    rowBlock.getRawFieldBlocks());
             }
             default:
                 break;
@@ -307,10 +311,11 @@ public final class OperatorUtils {
                     page.getPositionCount());
             } else {
                 if (block instanceof LazyBlock) {
-                    vecList.add((Vec) ((LazyBlock) block).getBlock().getValues());
-                }
-                if (block instanceof DictionaryBlock) {
+                    vecList.add(getVecInLazyBlock((LazyBlock) block));
+                } else if (block instanceof DictionaryBlock) {
                     vecList.add(getDictionaryVec((DictionaryBlock<?>) block));
+                } else if (block instanceof RowBlock) {
+                    vecList.add(getContainerVec((RowBlock) block));
                 } else {
                     vecList.add((Vec) block.getValues());
                 }
@@ -319,6 +324,26 @@ public final class OperatorUtils {
 
         VecBatch vecBatch = new VecBatch(vecList);
         return vecBatch;
+    }
+
+    private static Vec getVecInLazyBlock(LazyBlock block) {
+        if (block.getLoadedBlock() instanceof DictionaryBlock) {
+            return getDictionaryVec((DictionaryBlock<?>) block.getLoadedBlock());
+        }
+        return (Vec) block.getLoadedBlock().getValues();
+    }
+
+    private static Vec getContainerVec(RowBlock block) {
+        Block[] rawFieldBlocks = block.getRawFieldBlocks();
+        int numFields = rawFieldBlocks.length;
+        long[] vectorAddresses = new long[numFields];
+        VecType[] vecTypes = new VecType[numFields];
+        for (int i = 0; i < numFields; ++i) {
+            Vec vec = (Vec) rawFieldBlocks[i].getValues();
+            long nativeVectorAddress = vec.getNativeVector();
+            vectorAddresses[i] = nativeVectorAddress;
+        }
+        return new ContainerVec(numFields, block.getPositionCount(), vectorAddresses, vecTypes);
     }
 
     private static Vec getDictionaryVec(DictionaryBlock<?> block) {

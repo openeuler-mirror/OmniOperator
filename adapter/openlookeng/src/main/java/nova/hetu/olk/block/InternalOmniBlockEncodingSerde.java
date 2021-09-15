@@ -9,11 +9,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import io.airlift.slice.SliceInput;
+import io.airlift.slice.SliceOutput;
 import io.prestosql.metadata.InternalBlockEncodingSerde;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncoding;
 
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -62,6 +64,32 @@ public class InternalOmniBlockEncodingSerde extends InternalBlockEncodingSerde {
         BlockEncoding blockEncoding = getBlockEncoding(encodingName);
 
         return blockEncoding.readBlock(this, input);
+    }
+
+    @Override
+    public void writeBlock(SliceOutput output, Block block){
+        while (true) {
+            // get the encoding name
+            String encodingName = block.getEncodingName();
+
+            // look up the BlockEncoding
+            BlockEncoding blockEncoding = getBlockEncoding(encodingName);
+
+            // see if a replacement block should be written instead
+            Optional<Block> replacementBlock = blockEncoding.replacementBlockForWrite(block);
+            if (replacementBlock.isPresent()) {
+                block = replacementBlock.get();
+                continue;
+            }
+
+            // write the name to the output
+            writeLengthPrefixedString(output, encodingName);
+
+            // write the block to the output
+            blockEncoding.writeBlock(this, output, block);
+
+            break;
+        }
     }
 
     private static String readLengthPrefixedString(SliceInput input) {

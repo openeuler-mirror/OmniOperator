@@ -50,6 +50,7 @@ import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.shuffle.PageProducer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +64,7 @@ import static io.prestosql.spi.block.PageBuilderStatus.DEFAULT_MAX_PAGE_SIZE_IN_
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
 
 /**
  * The type Omni project operator.
@@ -463,38 +465,18 @@ public class PartitionedOutputOmniOperator
 
             Page partitionFunctionArgs = getPartitionFunctionArguments(page);
 
-            List<Vec> vectorList = new ArrayList<>();
-            for (int i = 0; i < page.getChannelCount(); i++) {
-                Block block = page.getBlock(i);
-                if (!block.isExtensionBlock()) {
-                    vectorList.add((Vec) OperatorUtils.getOffHeapBlock(block).getValues());
-                    LOG.warn("transfer the onheap pages to offheap pages in %s",
-                        PartitionedOutputOmniOperator.class.getSimpleName());
-                } else {
-                    if (block instanceof LazyBlock) {
-                        vectorList.add((Vec) ((LazyBlock) block).getBlock().getValues());
-                    } else {
-                        vectorList.add((Vec) page.getBlock(i).getValues());
-                    }
-                }
-            }
+            VecBatch vecBatch0 = getVecBatch(page, getClass().getSimpleName());
+            VecBatch vecBatch1 = getVecBatch(partitionFunctionArgs, getClass().getSimpleName());
+            ArrayList vecList = new ArrayList(Arrays.asList(vecBatch0.getVectors()));
+            vecList.addAll(Arrays.asList(vecBatch1.getVectors()));
+            VecBatch vecBatch = new VecBatch(vecList);
 
-            for (int i = 0; i < partitionFunctionArgs.getChannelCount(); i++) {
-                Block block = partitionFunctionArgs.getBlock(i);
-                if (!block.isExtensionBlock()) {
-                    vectorList.add((Vec) OperatorUtils.getOffHeapBlock(block).getValues());
-                    LOG.warn("transfer the onheap pages to offheap pages in %s",
-                        PartitionedOutputOmniOperator.class.getSimpleName());
-                } else {
-                    if (block instanceof LazyBlock) {
-                        vectorList.add((Vec) ((LazyBlock) block).getBlock().getValues());
-                    } else {
-                        vectorList.add((Vec) page.getBlock(i).getValues());
-                    }
-                }
-            }
-            VecBatch vecBatch = new VecBatch(vectorList);
             omniOperator.addInput(vecBatch);
+            vecBatch0.releaseAllVectors();
+            vecBatch0.close();
+            vecBatch1.close();
+            vecBatch.close();
+
             Iterator<VecBatch> partitionedVecBatch = omniOperator.getOutput();
             vecBatchIterator = partitionedVecBatch;
             flush(true);

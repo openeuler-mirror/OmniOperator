@@ -57,6 +57,7 @@ import io.prestosql.Session;
 import io.prestosql.dynamicfilter.DynamicFilterCacheManager;
 import io.prestosql.execution.ExplainAnalyzeContext;
 import io.prestosql.execution.TaskManagerConfig;
+import io.prestosql.execution.buffer.LazyOutputBuffer;
 import io.prestosql.execution.buffer.OutputBuffer;
 import io.prestosql.heuristicindex.HeuristicIndexerManager;
 import io.prestosql.index.IndexManager;
@@ -145,13 +146,13 @@ import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.statestore.StateStoreProvider;
 import io.prestosql.statestore.listener.StateStoreListenerManager;
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
-import nova.hetu.olk.operator.PartitionedOutputOmniOperator;
 import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
 import nova.hetu.olk.operator.HashBuilderOmniOperator;
 import nova.hetu.olk.operator.LocalMergeSourceOmniOperator;
 import nova.hetu.olk.operator.LookupJoinOmniOperator;
 import nova.hetu.olk.operator.MergeOmniOperator;
+import nova.hetu.olk.operator.PartitionedOutputOmniOperator;
 import nova.hetu.olk.operator.TopNOmniOperator;
 import nova.hetu.olk.operator.WindowOmniOperator;
 import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
@@ -248,6 +249,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         add(StandardTypes.VARCHAR);
         add(StandardTypes.CHAR);
         add(StandardTypes.DECIMAL);
+        add(StandardTypes.ROW);
+        add(StandardTypes.DOUBLE);
     }};
 
     /**
@@ -336,6 +339,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
         List<Symbol> outputLayout = partitioningScheme.getOutputLayout();
 
+        if (outputBuffer instanceof LazyOutputBuffer
+            && ((LazyOutputBuffer) outputBuffer).getDelegate().getSerde() != null) {
+            ((LazyOutputBuffer) outputBuffer).getDelegate()
+                .getSerde()
+                .setBlockEncodingSerde(new InternalOmniBlockEncodingSerde(metadata));
+        }
+
         if (partitioningScheme.getPartitioning().getHandle().equals(FIXED_BROADCAST_DISTRIBUTION)
             || partitioningScheme.getPartitioning().getHandle().equals(FIXED_ARBITRARY_DISTRIBUTION)
             || partitioningScheme.getPartitioning().getHandle().equals(SCALED_WRITER_DISTRIBUTION) || partitioningScheme
@@ -388,26 +398,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             nullChannel = OptionalInt.of(outputLayout.indexOf(getOnlyElement(partitioningColumns)));
         }
 
-        // // todo: need to solve the issue of PartitionedOutputOmniOperator, then use it
-        // OutputFactory partitionedOutput = new PartitionedOutputOmniOperator.PartitionedOutputOmniFactory(
-        //     partitionFunction, partitionChannels, partitionConstants, partitioningScheme.isReplicateNullsAndAny(),
-        //     nullChannel, outputBuffer, pageProducers, maxPagePartitioningBufferSize,
-        //     partitioningScheme.getBucketToPartition().get());
         boolean isHashPrecomputed = partitioningScheme.getHashColumn().isPresent();
-
         return plan(taskContext, stageExecutionDescriptor, plan, outputLayout, types, partitionedSourceOrder,
-            pageProducers, new PartitionedOutputOmniOperator.PartitionedOutputOmniFactory(
-                        partitionFunction,
-                        partitionChannels,
-                        partitionConstants,
-                        partitioningScheme.isReplicateNullsAndAny(),
-                        nullChannel,
-                        outputBuffer,
-                        pageProducers,
-                        maxPagePartitioningBufferSize,
-                        partitioningScheme.getBucketToPartition().get(),
-                        isHashPrecomputed,
-                        partitionChannelTypes));
+            pageProducers,
+            new PartitionedOutputOmniOperator.PartitionedOutputOmniFactory(partitionFunction, partitionChannels,
+                partitionConstants, partitioningScheme.isReplicateNullsAndAny(), nullChannel, outputBuffer,
+                pageProducers, maxPagePartitioningBufferSize, partitioningScheme.getBucketToPartition().get(),
+                isHashPrecomputed, partitionChannelTypes));
     }
 
     @Override
@@ -444,7 +441,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             // if there is a data type not support by OmniRuntime, then fall back
             if (notSupportTypes(operatorFactory.getSourceTypes())) {
-                log.warn("There is a data type not support by OmniRuntime: %s", operatorFactory.getSourceTypes().toString());
+                log.warn("There is a data type not support by OmniRuntime: %s",
+                    operatorFactory.getSourceTypes().toString());
                 return null;
             }
         }

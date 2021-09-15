@@ -5,9 +5,11 @@
 package nova.hetu.olk.block;
 
 import io.airlift.slice.SliceInput;
+import io.airlift.slice.SliceOutput;
 import io.airlift.slice.Slices;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
+import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
 
@@ -17,6 +19,36 @@ import io.prestosql.spi.block.DictionaryId;
  * @since 20210630
  */
 public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
+    @Override
+    public void writeBlock(BlockEncodingSerde blockEncodingSerde, SliceOutput sliceOutput, Block block) {
+        // The down casts here are safe because it is the block itself the provides this encoding implementation.
+        DictionaryOmniBlock dictionaryBlock;
+        if (block instanceof DictionaryBlock) {
+            dictionaryBlock = new DictionaryOmniBlock(((DictionaryBlock) block).getDictionary(),
+                ((DictionaryBlock) block).getIdsArray());
+        } else {
+            dictionaryBlock = (DictionaryOmniBlock) block;
+        }
+
+        dictionaryBlock = dictionaryBlock.compact();
+
+        // positionCount
+        int positionCount = dictionaryBlock.getPositionCount();
+        sliceOutput.appendInt(positionCount);
+
+        // dictionary
+        Block dictionary = dictionaryBlock.getDictionary();
+        blockEncodingSerde.writeBlock(sliceOutput, dictionary);
+
+        // ids
+        sliceOutput.writeBytes(dictionaryBlock.getIds());
+
+        // instance id
+        sliceOutput.appendLong(dictionaryBlock.getDictionarySourceId().getMostSignificantBits());
+        sliceOutput.appendLong(dictionaryBlock.getDictionarySourceId().getLeastSignificantBits());
+        sliceOutput.appendLong(dictionaryBlock.getDictionarySourceId().getSequenceId());
+    }
+
     @Override
     public Block readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
         // positionCount
