@@ -216,6 +216,12 @@ void ExpressionCodeGen::RequiredFunctionsHelper(Expr &cpExpression, std::set<std
             return;
         }
 
+        case ExprType::IS_NULL_E: {
+            auto *isNullExpr = static_cast<IsNullExpr *>(cpExpr);
+            RequiredFunctionsHelper(*(isNullExpr->value), s);
+            return;
+        }
+
         // Add the name of the required extern function
         case ExprType::FUNC_E: {
             RequiredFunctionsHelper2(*cpExpr, s);
@@ -256,7 +262,7 @@ Value *ExpressionCodeGen::Decimal128Cmp(const Value &lhs, const Value &rhs)
     return ret;
 }
 
-Value *ExpressionCodeGen::ParseDataExpr(DataExpr &dExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenDataExpr(DataExpr &dExpr, std::map<std::string, Value *> &args)
 {
     DataExpr *dEx = &dExpr;
 
@@ -301,7 +307,7 @@ Value *ExpressionCodeGen::ParseDataExpr(DataExpr &dExpr, std::map<std::string, V
 }
 
 // Helper methods to parse binary expressions
-Value *ExpressionCodeGen::ParseBinaryExprInt(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+Value *ExpressionCodeGen::CodegenBinaryExprInt(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
 {
     Value *left = &leftVal;
     Value *right = &rightVal;
@@ -335,7 +341,8 @@ Value *ExpressionCodeGen::ParseBinaryExprInt(omniruntime::expressions::Operator 
     }
 }
 
-Value *ExpressionCodeGen::ParseBinaryExprDouble(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+Value *ExpressionCodeGen::CodegenBinaryExprDouble(
+    omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
 {
     Value *left = &leftVal;
     Value *right = &rightVal;
@@ -367,7 +374,8 @@ Value *ExpressionCodeGen::ParseBinaryExprDouble(omniruntime::expressions::Operat
     }
 }
 
-Value *ExpressionCodeGen::ParseBinaryExprString(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+Value *ExpressionCodeGen::CodegenBinaryExprString(
+    omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
 {
     Value *left = &leftVal;
     Value *right = &rightVal;
@@ -391,7 +399,8 @@ Value *ExpressionCodeGen::ParseBinaryExprString(omniruntime::expressions::Operat
     }
 }
 
-Value *ExpressionCodeGen::ParseBinaryExprDecimal(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+Value *ExpressionCodeGen::CodegenBinaryExprDecimal(
+    omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
 {
     Value *left = &leftVal;
     Value *right = &rightVal;
@@ -424,9 +433,9 @@ Value *ExpressionCodeGen::ParseBinaryExprDecimal(omniruntime::expressions::Opera
     }
 }
 
-Value *ExpressionCodeGen::ParseBinaryExpr(BinaryExpr &binExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenBinaryExpr(BinaryExpr &binaryExpr, std::map<std::string, Value *> &args)
 {
-    BinaryExpr *bExpr = &binExpr;
+    BinaryExpr *bExpr = &binaryExpr;
 
     if (bExpr->left->GetType() == ExprType::DATA_E || bExpr->right->GetType() == ExprType::DATA_E) {
         DataType biggerType = std::max(bExpr->left->GetExprDataType(), bExpr->right->GetExprDataType());
@@ -444,24 +453,23 @@ Value *ExpressionCodeGen::ParseBinaryExpr(BinaryExpr &binExpr, std::map<std::str
     }
 
     if (bExpr->left->GetExprDataType() == DataType::INT32D || bExpr->left->GetExprDataType() == DataType::INT64D) {
-        return this->ParseBinaryExprInt(bExpr->op, *left, *right);
+        return this->CodegenBinaryExprInt(bExpr->op, *left, *right);
     } else if (bExpr->left->GetExprDataType() == DOUBLED) {
-        return this->ParseBinaryExprDouble(bExpr->op, *left, *right);
+        return this->CodegenBinaryExprDouble(bExpr->op, *left, *right);
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
-        return this->ParseBinaryExprString(bExpr->op, *left, *right);
+        return this->CodegenBinaryExprString(bExpr->op, *left, *right);
     } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
-        return this->ParseBinaryExprDecimal(bExpr->op, *left, *right);
+        return this->CodegenBinaryExprDecimal(bExpr->op, *left, *right);
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
     return this->CreateConstantBool(false);
 }
 
 
-Value *ExpressionCodeGen::ParseUnaryExpr(UnaryExpr &unaryExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenUnaryExpr(UnaryExpr &uExpr, std::map<std::string, Value *> &args)
 {
-    UnaryExpr *uExpr = &unaryExpr;
-    Value *val = this->ParseExpr(*uExpr, args);
-    switch (uExpr->op) {
+    Value *val = this->ParseExpr(uExpr, args);
+    switch (uExpr.op) {
         case NOT:
             return builder->CreateNot(val, "logical_not");
         default:
@@ -535,7 +543,7 @@ Function *ExpressionCodeGen::CreateConditional(DataType retType, Expr &condExpr,
 }
 
 
-Value *ExpressionCodeGen::ParseIfExpr(IfExpr &ifExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenIfExpr(IfExpr &ifExpr, std::map<std::string, Value *> &args)
 {
     IfExpr *ie = &ifExpr;
     BasicBlock *currentBlock = builder->GetInsertBlock();
@@ -556,7 +564,7 @@ Value *ExpressionCodeGen::ParseIfExpr(IfExpr &ifExpr, std::map<std::string, Valu
 }
 
 
-Value *ExpressionCodeGen::ParseInExpr(InExpr &inExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenInExpr(InExpr &inExpr, std::map<std::string, Value *> &args)
 {
     InExpr *iExpr = &inExpr;
     Expr *toCompare = iExpr->arguments[0];
@@ -609,9 +617,9 @@ Value *ExpressionCodeGen::ParseInExpr(InExpr &inExpr, std::map<std::string, Valu
 }
 
 
-Value *ExpressionCodeGen::ParseBetweenExpr(BetweenExpr &betweenExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenBetweenExpr(BetweenExpr &btExpr, std::map<std::string, Value *> &args)
 {
-    BetweenExpr *bExpr = &betweenExpr;
+    BetweenExpr *bExpr = &btExpr;
     DataType biggerType = std::max(std::max(bExpr->lowerBound->GetExprDataType(), bExpr->upperBound->GetExprDataType()),
         bExpr->value->GetExprDataType());
     bExpr->lowerBound->dataType = biggerType;
@@ -726,10 +734,10 @@ Function *ExpressionCodeGen::CreateCoalesceFuncHelper(DataExpr &dataExpr1, Expr 
     return func;
 }
 
-Value *ExpressionCodeGen::ParseCoalesceExpr(CoalesceExpr &coalesceExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenCoalesceExpr(CoalesceExpr &cExpr, std::map<std::string, Value *> &args)
 {
-    Expr *value1Expr = coalesceExpr.value1;
-    Expr *value2Expr = coalesceExpr.value2;
+    Expr *value1Expr = cExpr.value1;
+    Expr *value2Expr = cExpr.value2;
 
     // Only case that coalesce is used seems to be with a column as first argument
     if (value1Expr->GetType() == ExprType::DATA_E) {
@@ -755,12 +763,29 @@ Value *ExpressionCodeGen::ParseCoalesceExpr(CoalesceExpr &coalesceExpr, std::map
     return this->ParseExpr(*value1Expr, args);
 }
 
-// Helper functions for parsing functions
-Value *ExpressionCodeGen::ParseFuncExprAbs(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenIsNullExpr(IsNullExpr &isNullExpr, std::map<std::string, Value *> &args)
 {
-    FuncExpr *fExpr = &funcExpr;
-    std::string absFuncName = "Abs_" + DataTypeString(fExpr->dataType);
-    std::vector<Value *> argVals { this->ParseExpr(*(fExpr->arguments[0]), args) };
+    Expr *valueExpr = isNullExpr.value;
+    if (valueExpr->GetType() == ExprType::DATA_E) {
+        auto *dataExpr = static_cast<DataExpr *>(valueExpr);
+        if (dataExpr->isColumn) {
+            std::string colNullStr = std::to_string(dataExpr->colVal) + "_isNull";
+            Value *isNullValue = args[colNullStr];
+            if (!isNullValue)
+                return nullptr;
+
+            // Convert condition to a bool by comparing non-equal to 0.0.
+            return builder->CreateICmpEQ(isNullValue, CreateConstantBool(true), "isNullCompare");
+        }
+    }
+    return nullptr;
+}
+
+// Helper functions for parsing functions
+Value *ExpressionCodeGen::CodegenFuncExprAbs(FuncExpr &fExpr, std::map<std::string, Value *> &args)
+{
+    std::string absFuncName = "Abs_" + DataTypeString(fExpr.dataType);
+    std::vector<Value *> argVals { this->ParseExpr(*(fExpr.arguments[0]), args) };
     auto f = module->getFunction(absFuncName);
     if (f) {
         Value *ret = builder->CreateCall(f, argVals, absFuncName);
@@ -771,22 +796,20 @@ Value *ExpressionCodeGen::ParseFuncExprAbs(FuncExpr &funcExpr, std::map<std::str
     }
 }
 
-Value *ExpressionCodeGen::ParseFuncExprCast(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenFuncExprCast(FuncExpr &fExpr, std::map<std::string, Value *> &args)
 {
-    FuncExpr *fExpr = &funcExpr;
-
-    llvm::Value *val = ParseExpr(*(fExpr->arguments[0]), args);
+    llvm::Value *val = ParseExpr(*(fExpr.arguments[0]), args);
     std::vector<Value *> argVals { val };
-    DataType from = fExpr->arguments[0]->dataType;
-    DataType to = fExpr->GetExprDataType();
+    DataType from = fExpr.arguments[0]->dataType;
+    DataType to = fExpr.GetExprDataType();
 
     std::string castFuncName = "Cast_" + DataTypeString(from) + "_" + DataTypeString(to);
     std::cout << castFuncName << std::endl;
 
     // if casting to same type, treat it as constant
     if (from == to) {
-        auto *dataExpr = static_cast<DataExpr *>(fExpr->arguments[0]);
-        return ParseDataExpr(*dataExpr, args);
+        auto *dataExpr = static_cast<DataExpr *>(fExpr.arguments[0]);
+        return CodegenDataExpr(*dataExpr, args);
     }
 
     auto f = module->getFunction(castFuncName);
@@ -799,23 +822,21 @@ Value *ExpressionCodeGen::ParseFuncExprCast(FuncExpr &funcExpr, std::map<std::st
     }
 }
 
-Value *ExpressionCodeGen::ParseFuncExprSubstr(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenFuncExprSubstr(FuncExpr &fExpr, std::map<std::string, Value *> &args)
 {
-    FuncExpr *fExpr = &funcExpr;
-
-    if (fExpr->arguments.size() == FEXPR_VALUE3) {
-        Value *str = ParseExpr(*(fExpr->arguments[0]), args);
-        Value *startIdx = ParseExpr(*(fExpr->arguments[1]), args);
-        Value *length = ParseExpr(*(fExpr->arguments[LENGTH_LOC]), args);
+    if (fExpr.arguments.size() == FEXPR_VALUE3) {
+        Value *str = ParseExpr(*(fExpr.arguments[0]), args);
+        Value *startIdx = ParseExpr(*(fExpr.arguments[1]), args);
+        Value *length = ParseExpr(*(fExpr.arguments[LENGTH_LOC]), args);
         std::vector<Value *> argVals { str, startIdx, length };
 
         auto f = module->getFunction(fr->substrExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
         return ret;
     }
-    if (fExpr->arguments.size() == FEXPR_VALUE2) {
-        Value *str = ParseExpr(*(fExpr->arguments[0]), args);
-        Value *startIdx = ParseExpr(*(fExpr->arguments[1]), args);
+    if (fExpr.arguments.size() == FEXPR_VALUE2) {
+        Value *str = ParseExpr(*(fExpr.arguments[0]), args);
+        Value *startIdx = ParseExpr(*(fExpr.arguments[1]), args);
         std::vector<Value *> argVals { str, startIdx };
 
         auto f = module->getFunction(fr->substrWithStartExtStr);
@@ -826,40 +847,38 @@ Value *ExpressionCodeGen::ParseFuncExprSubstr(FuncExpr &funcExpr, std::map<std::
     return CreateConstantLong(0);
 }
 
-Value *ExpressionCodeGen::ParseFuncExprExt(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenFuncExprExt(FuncExpr &fExpr, std::map<std::string, Value *> &args)
 {
-    FuncExpr *fExpr = &funcExpr;
-    FunctionSignature fs = funcNameToSignature[fExpr->funcName];
+    FunctionSignature fs = funcNameToSignature[fExpr.funcName];
 
     std::vector<Value *> argVals;
-    for (int i = 0; i < fExpr->arguments.size(); i++) {
+    for (int i = 0; i < fExpr.arguments.size(); i++) {
         // Cast arguments to the correct type
         DataType desiredType = fs.GetParams()[i];
-        DataType currType = fExpr->arguments[i]->GetExprDataType();
+        DataType currType = fExpr.arguments[i]->GetExprDataType();
         if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
-            Value *argDouble = builder->CreateCast(Instruction::SIToFP, ParseExpr(*(fExpr->arguments[i]), args),
+            Value *argDouble = builder->CreateCast(Instruction::SIToFP, ParseExpr(*(fExpr.arguments[i]), args),
                 Type::getDoubleTy(*context));
             argVals.push_back(argDouble);
         } else if (desiredType == INT64D && currType == INT32D) {
             Value *argInt64 =
-                builder->CreateIntCast(ParseExpr(*(fExpr->arguments[i]), args), Type::getInt64Ty(*context), true);
+                builder->CreateIntCast(ParseExpr(*(fExpr.arguments[i]), args), Type::getInt64Ty(*context), true);
             argVals.push_back(argInt64);
         } else {
-            argVals.push_back(ParseExpr(*(fExpr->arguments[i]), args));
+            argVals.push_back(ParseExpr(*(fExpr.arguments[i]), args));
         }
     }
     // Assume that the function name of the fExpr and in the module are matching
-    auto f = module->getFunction(fExpr->funcName);
-    Value *ret = builder->CreateCall(f, argVals, "call_" + fExpr->funcName);
+    auto f = module->getFunction(fExpr.funcName);
+    Value *ret = builder->CreateCall(f, argVals, "call_" + fExpr.funcName);
     return ret;
 }
 
-Value *ExpressionCodeGen::ParseFuncExprMm3Hash(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenFuncExprMm3Hash(FuncExpr &fExpr, std::map<std::string, Value *> &args)
 {
-    FuncExpr *fExpr = &funcExpr;
-    llvm::Value *val = ParseExpr(*(fExpr->arguments[0]), args);
-    llvm::Value *seed = ParseExpr(*(fExpr->arguments[1]), args);
-    std::string mm3FuncName = "Mm3_" + DataTypeString(fExpr->arguments[0]->dataType);
+    llvm::Value *val = ParseExpr(*(fExpr.arguments[0]), args);
+    llvm::Value *seed = ParseExpr(*(fExpr.arguments[1]), args);
+    std::string mm3FuncName = "Mm3_" + DataTypeString(fExpr.arguments[0]->dataType);
     std::vector<Value*> argVals {val, seed};
 
     auto f = module->getFunction(mm3FuncName);
@@ -875,45 +894,43 @@ Value *ExpressionCodeGen::ParseFuncExprMm3Hash(FuncExpr &funcExpr, std::map<std:
 
 // Handles all functions
 // Only calls them; registration is done in function registry
-Value *ExpressionCodeGen::ParseFuncExpr(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
+Value *ExpressionCodeGen::CodegenFuncExpr(FuncExpr &fExpr, std::map<std::string, Value *> &args)
 {
-    FuncExpr *fExpr = &funcExpr;
-
-    if (fExpr->funcName == "abs") {
-        return this->ParseFuncExprAbs(*fExpr, args);
+    if (fExpr.funcName == "abs") {
+        return this->CodegenFuncExprAbs(fExpr, args);
     }
-    if (fExpr->funcName == "substr") {
-        return this->ParseFuncExprSubstr(*fExpr, args);
+    if (fExpr.funcName == "substr") {
+        return this->CodegenFuncExprSubstr(fExpr, args);
     }
-    if (fExpr->funcName == "concat") {
-        Value *str1 = ParseExpr(*(fExpr->arguments[0]), args);
-        Value *str2 = ParseExpr(*(fExpr->arguments[1]), args);
+    if (fExpr.funcName == "concat") {
+        Value *str1 = ParseExpr(*(fExpr.arguments[0]), args);
+        Value *str2 = ParseExpr(*(fExpr.arguments[1]), args);
         std::vector<Value *> argVals { str1, str2 };
 
         auto f = module->getFunction(fr->concatStrExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->concatStrExtStr);
         return ret;
     }
-    if (fExpr->funcName == "CAST") {
-        return this->ParseFuncExprCast(*fExpr, args);
+    if (fExpr.funcName == "CAST") {
+        return this->CodegenFuncExprCast(fExpr, args);
     }
-    if (fExpr->funcName == "LIKE") {
-        Value *str1 = ParseExpr(*(fExpr->arguments[0]), args);
-        Value *str2 = ParseExpr(*(fExpr->arguments[1]), args);
+    if (fExpr.funcName == "LIKE") {
+        Value *str1 = ParseExpr(*(fExpr.arguments[0]), args);
+        Value *str2 = ParseExpr(*(fExpr.arguments[1]), args);
         std::vector<Value *> argVals { str1, str2 };
 
         auto f = module->getFunction(fr->likeExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->likeExtStr);
         return ret;
     }
-    if (fExpr->funcName == "combine_hash") {
-        Value *prevHashVal = ParseExpr(*(fExpr->arguments[0]), args);
-        Value *val = ParseExpr(*(fExpr->arguments[1]), args);
+    if (fExpr.funcName == "combine_hash") {
+        Value *prevHashVal = ParseExpr(*(fExpr.arguments[0]), args);
+        Value *val = ParseExpr(*(fExpr.arguments[1]), args);
 
-        if (fExpr->arguments[0]->GetExprDataType() == INT32D) {
+        if (fExpr.arguments[0]->GetExprDataType() == INT32D) {
             prevHashVal = builder->CreateIntCast(prevHashVal, Type::getInt64Ty(*context), true);
         }
-        if (fExpr->arguments[1]->GetExprDataType() == INT32D) {
+        if (fExpr.arguments[1]->GetExprDataType() == INT32D) {
             val = builder->CreateIntCast(val, Type::getInt64Ty(*context), true);
         }
 
@@ -924,15 +941,15 @@ Value *ExpressionCodeGen::ParseFuncExpr(FuncExpr &funcExpr, std::map<std::string
         DumpCode();
         return ret;
     }
-    if (fExpr->funcName == "mm3hash") {
-        return this->ParseFuncExprMm3Hash(*fExpr, args);
+    if (fExpr.funcName == "mm3hash") {
+        return this->CodegenFuncExprMm3Hash(fExpr, args);
     }
     // external functions
-    if (IsFunctionName(fExpr->funcName)) {
-        return this->ParseFuncExprExt(*fExpr, args);
+    if (IsFunctionName(fExpr.funcName)) {
+        return this->CodegenFuncExprExt(fExpr, args);
     }
 
-    LLVM_DEBUG_LOG("No function found with name %s", fExpr->funcName.c_str());
+    LLVM_DEBUG_LOG("No function found with name %s", fExpr.funcName.c_str());
     return CreateConstantInt(0);
 }
 
@@ -945,42 +962,47 @@ Value *ExpressionCodeGen::ParseExpr(Expr &rootExpr, std::map<std::string, Value 
     switch (root->GetType()) {
         case ExprType::DATA_E: {
             auto *dEx = static_cast<DataExpr *>(root);
-            return this->ParseDataExpr(*dEx, args);
+            return this->CodegenDataExpr(*dEx, args);
         }
 
         case ExprType::BINARY_E: {
             auto *bExpr = static_cast<BinaryExpr *>(root);
-            return this->ParseBinaryExpr(*bExpr, args);
+            return this->CodegenBinaryExpr(*bExpr, args);
         }
 
         case ExprType::UNARY_E: {
             auto *uExpr = static_cast<UnaryExpr *>(root);
-            return this->ParseUnaryExpr(*uExpr, args);
+            return this->CodegenUnaryExpr(*uExpr, args);
         }
 
         case ExprType::IF_E: {
             auto *ie = static_cast<IfExpr *>(root);
-            return this->ParseIfExpr(*ie, args);
+            return this->CodegenIfExpr(*ie, args);
         }
 
         case ExprType::IN_E: {
             auto *iExpr = static_cast<InExpr *>(root);
-            return this->ParseInExpr(*iExpr, args);
+            return this->CodegenInExpr(*iExpr, args);
         }
 
         case ExprType::BETWEEN_E: {
             auto *bExpr = static_cast<BetweenExpr *>(root);
-            return this->ParseBetweenExpr(*bExpr, args);
+            return this->CodegenBetweenExpr(*bExpr, args);
         }
 
         case ExprType::COALESCE_E: {
             auto *cExpr = static_cast<CoalesceExpr *>(root);
-            return this->ParseCoalesceExpr(*cExpr, args);
+            return this->CodegenCoalesceExpr(*cExpr, args);
+        }
+
+        case ExprType::IS_NULL_E: {
+            auto *isNullExpr = static_cast<IsNullExpr *>(root);
+            return this->CodegenIsNullExpr(*isNullExpr, args);
         }
 
         case ExprType::FUNC_E: {
             auto *fExpr = static_cast<FuncExpr *>(root);
-            return this->ParseFuncExpr(*fExpr, args);
+            return this->CodegenFuncExpr(*fExpr, args);
         }
 
         default: {
@@ -1035,9 +1057,11 @@ Function *ExpressionCodeGen::CreateFunction()
         args.push_back(Type::getInt1Ty(*context));
     }
 
+#ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
     expr->PrintExprTree();
     std::cout << std::endl;
+#endif
     FunctionType *prototype = FunctionType::get(this->ToLlvmType(expr->GetExprDataType()), args, false);
     Function *func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 

@@ -1168,6 +1168,47 @@ TEST(CodeGenTest, Coalesce) {
     delete lc;
 }
 
+TEST(CodeGenTest, IsNull) {
+    string unparsed = "IS_NULL:boolean(#0)";
+
+    DataType types[1] = {DataType::INT64D};
+    Parser parser{};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
+    expr->PrintExprTree();
+    cout << endl;
+
+    int64_t v1[1] = {123};
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t) v1;
+    int32_t *selected = new int32_t[1];
+
+    bool** bitmap = new bool*[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+
+    string testName = "isNullTest";
+    vector<DataType> typeVec = vector<DataType>(types, types + 1);
+    auto *lc = new FilterCodeGen(testName, *expr, typeVec);
+
+    bool (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (bool (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+
+    bool result = func(vals, 1, selected, (int64_t*)(bitmap));
+    EXPECT_EQ(result, false);
+
+    bitmap[0][0] = true;
+
+    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    EXPECT_EQ(result, true);
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
+}
+
 TEST(CodeGenTest, DecimalOperators1) {
 
     string unparsed = "$operator$EQUAL:boolean(ADD:decimal(#0, 5), 15)";
