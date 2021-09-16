@@ -26,9 +26,12 @@
 class FunctionRegistry {
 public:
     FunctionRegistry
-    (std::unique_ptr<llvm::orc::LLJIT> &j, std::unique_ptr<llvm::LLVMContext> &c, std::unique_ptr<llvm::Module> &m);
+            (std::unique_ptr<llvm::orc::LLJIT> &j, std::unique_ptr<llvm::LLVMContext> &c,
+             std::unique_ptr<llvm::Module> &m);
+
     ~FunctionRegistry();
-    void RegisterFunctionFromSignature(const FunctionSignature& funcSignature) const;
+
+    void RegisterFunctionFromSignature(const FunctionSignature &funcSignature) const;
 
     // Function to initialize necessary internal functions and helpers
     void RegisterAbsFunctions(const std::string& fnName);
@@ -36,10 +39,11 @@ public:
     void RegisterStringFunctions(const std::string& fnName);
     void RegisterMm3HashFunctions(const std::string& fnName);
     void RegisterNecessaryFuncs(const std::set<std::string>& requiredFuncs);
+    void RegisterDecimalFuncs();
 
-    llvm::orc::LLJIT* jit;
-    llvm::LLVMContext* frContext;
-    llvm::Module* module;
+    llvm::orc::LLJIT *jit;
+    llvm::LLVMContext *frContext;
+    llvm::Module *module;
 
     ExternalFuncRegistry efr;
 
@@ -51,6 +55,7 @@ public:
     const std::string absInt32Str = "Abs_int32";
     const std::string absInt64Str = "Abs_int64";
     const std::string absDoubleStr = "Abs_double";
+    const std::string absDecimal128Str = "Abs_decimal128";
     const std::string substrExtStr = "SubstrExt";
     const std::string substrWithStartExtStr = "SubstrWithStartExt";
     const std::string concatStrExtStr = "ConcatStrExt";
@@ -63,7 +68,10 @@ public:
     const std::string mm3Int64Str = "Mm3_int64";
     const std::string mm3StringStr = "Mm3_string";
     const std::string mm3DoubleStr = "Mm3_double";
+    const std::string decimal128CompareExtStr = "Decimal128CompareExt";
+    const std::string addDec128Str = "Add_decimal128";
+    const std::string subDec128Str = "Sub_decimal128";
+    const std::string mulDec128Str = "Mul_decimal128";
+    const std::string divDec128Str = "Div_decimal128";
 };
-
-
 #endif

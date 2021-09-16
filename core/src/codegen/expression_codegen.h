@@ -10,6 +10,7 @@
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
 #include "./functions/murmur3_hash.h"
+#include "./functions/decimalfunctions.h"
 #include "./func_registry.h"
 #include "../util/debug.h"
 
@@ -75,7 +76,7 @@ protected:
     llvm::Value *ParseBinaryExprInt(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
     llvm::Value *ParseBinaryExprDouble(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
     llvm::Value *ParseBinaryExprString(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-
+    llvm::Value *ParseBinaryExprDecimal(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
     llvm::Value* ParseUnaryExpr(omniruntime::expressions::UnaryExpr &uExpr, std::map<std::string, llvm::Value*>& args);
     llvm::Value* ParseIfExpr(omniruntime::expressions::IfExpr &ifExpr, std::map<std::string, llvm::Value*>& args);
     llvm::Value* ParseInExpr(omniruntime::expressions::InExpr &inExpr, std::map<std::string, llvm::Value*>& args);
@@ -97,6 +98,7 @@ protected:
 
     // Helper functions for generating IR for operators and special forms
     llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *rhs);
+    llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
     llvm::Function* CreateConditional(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,
         omniruntime::expressions::Expr &ifTrue, omniruntime::expressions::Expr &ifFalse);
     llvm::Function* CreateCoalesceFunc(omniruntime::expressions::DataType retType,

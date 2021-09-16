@@ -46,6 +46,9 @@ VectorBatch* CreateInput(const int32_t numRows,
                 }
                 break;
             }
+            case OMNI_VEC_TYPE_DECIMAL128:
+                ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
+                break;
             default: {
                 DebugError("No such data type %d", inputTypes[i]);
                 break;
@@ -144,6 +147,14 @@ bool Filter6(VectorBatch* t, int32_t index)
     int32_t val2 = ((IntVector *)t->GetVector(n2))->GetValue(index);
     int32_t val3 = ((IntVector *)t->GetVector(n3))->GetValue(index);
     return (val0 >= v0 || val1 <= v1) && (val2 == v2 || val3 < v3);
+}
+
+// Expects 1 column of type Decimal128
+bool Filter7(VectorBatch* t, int32_t index)
+{
+    int32_t n = 500000;
+    Decimal128 val = ((Decimal128Vector *)t->GetVector(0))->GetValue(index);
+    return Decimal128(val.HighBits(), val.LowBits()) <= n;
 }
 
 TEST(FilterTest, LessThan) {
@@ -1786,6 +1797,104 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
 
     delete col3;
     delete dictionaryVector;
+    delete op;
+    delete factory;
+}
+
+TEST (FilterTest, DecimalFilterBinaryTest) {
+    const int32_t numCols = 1;
+    int32_t* inputTypes = new int32_t[numCols];
+    inputTypes[0] = 7;
+
+    const int32_t numRows = 1000;
+    int64_t* data1 = new int64_t[numRows * 2];
+    int64_t* data2 = new int64_t[numRows * 2];
+    for (int64_t i = 0; i < numRows; i++) {
+        data1[2 * i] = (i + 1) * 1000;
+        data1[2 * i + 1] = 0;
+        data2[2 * i] = (i + 1) * 1;
+        data2[2 * i + 1] = 0;
+    }
+    int64_t allData[numCols] = {(int64_t) data1};
+    const int32_t projectCount = 1;
+    int32_t projectIndices[projectCount] = {0};
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
+
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN_OR_EQUAL:boolean(#0, 500000)",
+                                                                   inputTypes,
+                                                                   numCols,
+                                                                   projectIndices,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter7));
+    EXPECT_EQ(numReturned, 500);
+
+    VectorHelper::FreeVecBatch(in1);
+
+    allData[0] = (int64_t) data2;
+    VectorBatch* in2 = CreateInput(numRows, numCols, inputTypes, allData);
+    op->AddInput(in2);
+    numReturned = op->GetOutput(ret);
+    EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter7));
+    EXPECT_EQ(numReturned, 1000);
+
+    VectorHelper::FreeVecBatch(in2);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] data1;
+    delete[] data2;
+    delete op;
+    delete factory;
+
+}
+
+TEST(FilterTest, DecimalFilterAbsTest) {
+    const int32_t numCols = 3;
+    int32_t* inputTypes = new int32_t[numCols];
+    inputTypes[0] = 7;
+    inputTypes[1] = 7;
+    inputTypes[2] = 7;
+
+    const int32_t numRows = 1000;
+    int64_t* data1 = new int64_t[numRows * 2];
+    int64_t* data2 = new int64_t[numRows * 2];
+    int64_t* data3 = new int64_t[numRows * 2];
+    for (int64_t i = 0; i < numRows; i++) {
+        data1[2 * i] = (i + 1) * 1;
+        data1[2 * i + 1] = -1000;
+        data2[2 * i] = (i + 1) * 1;
+        data2[2 * i + 1] = -1000;
+        data3[2 * i] = (i + 1) * 1;
+        data3[2 * i + 1] = -1000;
+    }
+    int64_t allData[numCols] = {(int64_t) data1, (int64_t) data2, (int64_t) data3};
+    const int32_t projectCount = 3;
+    int32_t projectIndices[projectCount] = {0, 1, 2};
+    std::vector<VectorBatch*> ret;
+    VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
+
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory("AND:boolean($operator$EQUAL:boolean(abs:decimal(#0), abs:decimal(#2)), $operator$EQUAL:boolean(abs:decimal(#1), abs:decimal(#2)))",
+                                                                   inputTypes,
+                                                                   numCols,
+                                                                   projectIndices,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 1000);
+
+    VectorHelper::FreeVecBatch(in1);
+
+    delete[] inputTypes;
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
     delete op;
     delete factory;
 }

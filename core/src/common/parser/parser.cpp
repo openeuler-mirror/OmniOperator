@@ -25,6 +25,7 @@ namespace {
         {"int", DataType::INT32D},
         {"long", DataType::INT64D},
         {"double", DataType::DOUBLED},
+        {"decimal", DataType::DECIMAL128D},
         {"char", DataType::STRINGD},
         {"varchar", DataType::STRINGD}
     };
@@ -230,12 +231,19 @@ DataType GetDataTypeInt(string data)
             break;
         }
     }
+    // Check If int32D or int64D or decimal128
+    int32_t maxLongDigits = 20;
     if (isIntOrLong) {
         int64_t longVal = stol(data);
-        if (INT32_MIN <= longVal && longVal <= INT32_MAX) {
-            return INT32D;
+        if ((data[0] == '-' && data.size() <= maxLongDigits) || data.size() <= maxLongDigits - 1) {
+            if (INT32_MIN <= longVal && longVal <= INT32_MAX) {
+                return INT32D;
+            }
+            return INT64D;
+        } else {
+            // decimal 128
+            return DECIMAL128D;
         }
-        return INT64D;
     }
     return INVALIDDATAD;
 }
@@ -254,7 +262,12 @@ DataType GetDataTypeHelper(string data)
             return STRINGD;
         }
     }
-    return DOUBLED;
+    int32_t maxDoubleDigits = 21;
+    if ((data[0] == '-' && data.size() <= maxDoubleDigits) || data.size() <= maxDoubleDigits - 1) {
+        return DOUBLED;
+    } else {
+        return DECIMAL128D;
+    }
 }
 
 DataType GetDataType(string data, int32_t *inputTypes, int32_t vecCount)
@@ -279,7 +292,7 @@ DataType GetDataType(string data, int32_t *inputTypes, int32_t vecCount)
         return intType;
     }
 
-    // Check if double
+    // Check if double or Decimal128
     // default to string
     return GetDataTypeHelper(data);
 }

@@ -10,11 +10,12 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
+#include "vector"
 
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
-
+using namespace omniruntime::vec;
 namespace {
 const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
@@ -60,6 +61,8 @@ Type *ExpressionCodeGen::ToLlvmType(DataType t)
         case DataType::BOOLD:
             return Type::getInt1Ty(*context);
         case DataType::STRINGD:
+            return Type::getInt64Ty(*context);
+        case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
         default:
             LLVM_DEBUG_LOG("Error: Unknown argument datatype %d", t);
@@ -140,10 +143,10 @@ void ExpressionCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::s
     std::string fn = fExpr->funcName;
 
     if (fn == "CAST") {
-        s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()) + "_" +
-            dataTypeString(fExpr->GetExprDataType()));
+        s.insert(fn + "_" + DataTypeString(fExpr->arguments[0]->GetExprDataType()) + "_" +
+            DataTypeString(fExpr->GetExprDataType()));
     } else if (fn == "abs") {
-        s.insert(fn + "_" + dataTypeString(fExpr->GetExprDataType()));
+        s.insert(fn + "_" + DataTypeString(fExpr->GetExprDataType()));
     } else if (fn == "substr") {
         if (fExpr->arguments.size() == STARTEXT_VALUE) {
             s.insert("substrWithStartExt");
@@ -152,7 +155,7 @@ void ExpressionCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::s
             s.insert("substrExt");
         }
     } else if (fn == "mm3hash") {
-        s.insert(fn + "_" + dataTypeString(fExpr->arguments[0]->GetExprDataType()));
+        s.insert(fn + "_" + DataTypeString(fExpr->arguments[0]->GetExprDataType()));
     } else {
         s.insert(fExpr->funcName);
     }
@@ -241,6 +244,18 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *rhs)
     return ret;
 }
 
+// Other operations which require externed functions
+Value *ExpressionCodeGen::Decimal128Cmp(const Value &lhs, const Value &rhs)
+{
+    // call function
+    std::vector<Value*> argVals;
+    argVals.push_back(const_cast<Value*>(&lhs));
+    argVals.push_back(const_cast<Value*>(&rhs));
+    auto f = module->getFunction(fr->decimal128CompareExtStr);
+    Value *ret = builder->CreateCall(f, argVals, "call_decimal_cmp");
+    return ret;
+}
+
 Value *ExpressionCodeGen::ParseDataExpr(DataExpr &dExpr, std::map<std::string, Value *> &args)
 {
     DataExpr *dEx = &dExpr;
@@ -265,6 +280,18 @@ Value *ExpressionCodeGen::ParseDataExpr(DataExpr &dExpr, std::map<std::string, V
         }
         case DataType::BOOLD: {
             return this->CreateConstantBool(dEx->boolVal);
+        }
+        case DataType::DECIMAL128D: {
+            int32_t length = 2;
+            Decimal128 decValue = dEx->longVal;
+            auto decimal = std::make_unique<int64_t[]>(length).release();
+
+            decimal[0] = decValue.LowBits();
+            decimal[1] = decValue.HighBits();
+
+            Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE,
+                                                              reinterpret_cast<int64_t>(decimal)));
+            return addr;
         }
         default: {
             LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", dEx->GetExprDataType());
@@ -364,6 +391,39 @@ Value *ExpressionCodeGen::ParseBinaryExprString(omniruntime::expressions::Operat
     }
 }
 
+Value *ExpressionCodeGen::ParseBinaryExprDecimal(omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+{
+    Value *left = &leftVal;
+    Value *right = &rightVal;
+    std::vector<Value*> argVals {left, right};
+
+    switch (op) {
+        case LT:
+            return builder->CreateICmpSLT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+        case GT:
+            return builder->CreateICmpSGT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+        case LTE:
+            return builder->CreateICmpSLE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+        case GTE:
+            return builder->CreateICmpSGE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+        case EQ:
+            return builder->CreateICmpEQ(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+        case NEQ:
+            return builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+        case ADD:
+            return builder->CreateCall(module->getFunction(fr->addDec128Str), argVals, fr->addDec128Str);
+        case SUB:
+            return builder->CreateCall(module->getFunction(fr->subDec128Str), argVals, fr->subDec128Str);
+        case MUL:
+            return builder->CreateCall(module->getFunction(fr->mulDec128Str), argVals, fr->mulDec128Str);
+        case DIV:
+            return builder->CreateCall(module->getFunction(fr->divDec128Str), argVals, fr->divDec128Str);
+        default:
+            std::cout << "Unsupported string binary operator " << op << std::endl;
+            return this->CreateConstantBool(false);
+    }
+}
+
 Value *ExpressionCodeGen::ParseBinaryExpr(BinaryExpr &binExpr, std::map<std::string, Value *> &args)
 {
     BinaryExpr *bExpr = &binExpr;
@@ -389,6 +449,8 @@ Value *ExpressionCodeGen::ParseBinaryExpr(BinaryExpr &binExpr, std::map<std::str
         return this->ParseBinaryExprDouble(bExpr->op, *left, *right);
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
         return this->ParseBinaryExprString(bExpr->op, *left, *right);
+    } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
+        return this->ParseBinaryExprDecimal(bExpr->op, *left, *right);
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
     return this->CreateConstantBool(false);
@@ -575,6 +637,11 @@ Value *ExpressionCodeGen::ParseBetweenExpr(BetweenExpr &betweenExpr, std::map<st
         llvm::Value *cmpright = builder->CreateICmpSLE(this->StringCmp(val, upperVal), CreateConstantInt(0));
         llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
         return result;
+    } else if (bExpr->value->GetExprDataType() == DECIMAL128D) {
+        llvm::Value *cmpleft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerVal, *val), CreateConstantInt(0));
+        llvm::Value *cmpright = builder->CreateICmpSLE(this->Decimal128Cmp(*val, *upperVal), CreateConstantInt(0));
+        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        return result;
     }
 
     LLVM_DEBUG_LOG("Error: unsupported data type for between %d", bExpr->value->GetExprDataType());
@@ -692,7 +759,7 @@ Value *ExpressionCodeGen::ParseCoalesceExpr(CoalesceExpr &coalesceExpr, std::map
 Value *ExpressionCodeGen::ParseFuncExprAbs(FuncExpr &funcExpr, std::map<std::string, Value *> &args)
 {
     FuncExpr *fExpr = &funcExpr;
-    std::string absFuncName = "Abs_" + dataTypeString(fExpr->dataType);
+    std::string absFuncName = "Abs_" + DataTypeString(fExpr->dataType);
     std::vector<Value *> argVals { this->ParseExpr(*(fExpr->arguments[0]), args) };
     auto f = module->getFunction(absFuncName);
     if (f) {
@@ -713,7 +780,7 @@ Value *ExpressionCodeGen::ParseFuncExprCast(FuncExpr &funcExpr, std::map<std::st
     DataType from = fExpr->arguments[0]->dataType;
     DataType to = fExpr->GetExprDataType();
 
-    std::string castFuncName = "Cast_" + dataTypeString(from) + "_" + dataTypeString(to);
+    std::string castFuncName = "Cast_" + DataTypeString(from) + "_" + DataTypeString(to);
     std::cout << castFuncName << std::endl;
 
     // if casting to same type, treat it as constant
@@ -792,7 +859,7 @@ Value *ExpressionCodeGen::ParseFuncExprMm3Hash(FuncExpr &funcExpr, std::map<std:
     FuncExpr *fExpr = &funcExpr;
     llvm::Value *val = ParseExpr(*(fExpr->arguments[0]), args);
     llvm::Value *seed = ParseExpr(*(fExpr->arguments[1]), args);
-    std::string mm3FuncName = "Mm3_" + dataTypeString(fExpr->arguments[0]->dataType);
+    std::string mm3FuncName = "Mm3_" + DataTypeString(fExpr->arguments[0]->dataType);
     std::vector<Value*> argVals {val, seed};
 
     auto f = module->getFunction(mm3FuncName);

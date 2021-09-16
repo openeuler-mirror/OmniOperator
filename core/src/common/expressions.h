@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include "../vector/decimal128.h"
 
 namespace omniruntime {
 namespace expressions {
@@ -53,6 +54,8 @@ enum DataType {
     INT32D = 1,
     INT64D = 2,
     DOUBLED = 3,
+    DECIMAL64D = 6,
+    DECIMAL128D = 7,
     STRINGD = 15,
     INVALIDDATAD
 };
@@ -95,6 +98,7 @@ public:
     double doubleVal = 0;
     std::string* stringVal;
     int32_t colVal = 0;
+    int64_t* dec128Val;
 
     DataExpr();
     ~DataExpr() override;
@@ -103,6 +107,7 @@ public:
     explicit DataExpr(int64_t val);
     explicit DataExpr(double val);
     explicit DataExpr(std::string* val);
+    explicit DataExpr(int64_t &val);
     DataExpr(int32_t val, DataType colType);
 
     void PrintExprTree() override;
@@ -110,7 +115,7 @@ public:
 };
 
 // Helper function for debugging DataType
-std::string dataTypeString(DataType dt);
+std::string DataTypeString(DataType dt);
 
 // Helper function to translate from jni type number to DataType
 DataType ColTypeTrans(int32_t colType);

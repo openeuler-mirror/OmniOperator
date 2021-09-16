@@ -31,7 +31,6 @@ foreach(file ${target_generated})
 		message(STATUS "Delete file or directory:${file}")
         endif()
 endforeach(file)
-	    
 # compile library
 add_subdirectory(src)
 add_subdirectory(thirdparty/huawei_secure_c)

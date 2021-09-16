@@ -32,7 +32,8 @@ bool ParserHelper::FuncDeclMatch(string fnName, vector<Expr *> args, bool checkT
     } else if (fnName == "concat" && args.size() == ARGS_2) {
         return (args[0]->dataType == STRINGD && args[1]->dataType == STRINGD);
     } else if (fnName == "abs" && args.size() == 1) {
-        return (args[0]->dataType == INT32D || args[0]->dataType == INT64D || args[0]->dataType == DOUBLED);
+        return (args[0]->dataType == INT32D || args[0]->dataType == INT64D
+                   || args[0]->dataType == DOUBLED || args[0]->dataType == DECIMAL128D);
     } else if (fnName == "LIKE" && args.size() == ARGS_2) {
         // Assuming that like patterns are represented with strings
         return (args[0]->dataType == STRINGD && args[0]->dataType == STRINGD);

@@ -28,12 +28,12 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     int32_t nArgs = this->datatypes.size();
 
     std::vector<Type *> args;
-    Type *ptrArg = Type::getInt64PtrTy(*context);
+    Type *ptrArg = Type::getInt64PtrTy(*context); // table
     args.push_back(ptrArg);
-    args.push_back(Type::getInt32Ty(*context));
-    args.push_back(Type::getInt32PtrTy(*context));
+    args.push_back(Type::getInt32Ty(*context)); // no of rows
+    args.push_back(Type::getInt32PtrTy(*context)); // output array
     // bitmap is a 2d array of booleans
-    Type *bitmapArg = Type::getInt64PtrTy(*context);
+    Type *bitmapArg = Type::getInt64PtrTy(*context); // record nullk values
     args.push_back(bitmapArg);
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
@@ -120,9 +120,13 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
             case DataType::STRINGD:
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
                 break;
+            case DataType::DECIMAL128D:
+                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+                break;
             default:
                 LLVM_DEBUG_LOG("Unsupported column data type %d", type);
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+                break;
         }
         // Find the address of the row to be processed.
         gep = builder->CreateGEP(elementPtr, curIndexVal);

@@ -7,7 +7,6 @@
 
 #include <iostream>
 
-
 // All extern functions go here temporarily
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
