@@ -1,3 +1,5 @@
+add_subdirectory(functions)
+
 file(GLOB_RECURSE CODE_GEN_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 set(CODEGEN_TARGET codegen)
 add_library(${CODEGEN_TARGET} ${CODE_GEN_LIST})
