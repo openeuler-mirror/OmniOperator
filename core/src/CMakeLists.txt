@@ -51,6 +51,19 @@ add_library(window_function SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/win
 add_library(window_partition SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_partition.cpp)
 add_library(topn SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp)
 add_library(memory_pool SHARED ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp)
+
+set(EXTERNAL_FUNCTIONS
+        ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/external_func_registry.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/externalfunctions.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/mathfunctions.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/stringfunctions.cpp
+        )
+
+add_library(externalfunctions SHARED ${EXTERNAL_FUNCTIONS})
+set_target_properties(externalfunctions PROPERTIES
+                            PREFIX external
+                            OUTPUT_NAME functions)
+
 install(TARGETS
         aggregator
         group_aggregation
@@ -68,6 +81,11 @@ install(TARGETS
         topn
         memory_pool
         DESTINATION ${CMAKE_INSTALL_PREFIX}/jit_libs)
+
+install(TARGETS
+        externalfunctions
+        DESTINATION ${CMAKE_INSTALL_PREFIX})
+message(STATUS "Install externalfunctions.so into ${CMAKE_INSTALL_PREFIX}")
 
 # compile lr file
 function(compile_ir SOURCE_FILE)

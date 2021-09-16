@@ -76,7 +76,7 @@ ifstream ExternalFuncRegistry::FetchExternalFunctionInfo(int64_t handlePtr) cons
     readRegistration.open(EXTERNAL_FUNCTIONS_FILE_PATH);
     // Check if the file was found
     if (!readRegistration.is_open()) {
-        std::cerr << "Could not find externalregistration.txt file" << std::endl;
+        std::cout << "Could not find externalregistration.txt file" << std::endl;
         std::cout << "Error occurred with external functions. No external functions will be registered" << std::endl;
     }
 
@@ -97,15 +97,15 @@ void ExternalFuncRegistry::UpdateFuncSigMap() const
         return;
     }
     ifstream readRegistration = this->FetchExternalFunctionInfo(handlePtr);
+    // Check if the file was found
+    if (!readRegistration.is_open()) {
+        return;
+    }
     string currLine;
-
-    while (!readRegistration.eof()) {
-        getline(readRegistration, currLine);
-
+    for (string line; getline(readRegistration, currLine);) {
         currLine.erase(remove(currLine.begin(), currLine.end(), ' '), currLine.end()); // strip spaces
 
         // Parse the line
-
         int commentIdx = currLine.find("/");
         // Ignore empty line or lines that are only comments
         if (currLine.size() <= 1 || commentIdx == 0) {
@@ -118,7 +118,6 @@ void ExternalFuncRegistry::UpdateFuncSigMap() const
         // Get the name
         int colonIdx = currLine.find(":");
         if (colonIdx == string::npos) {
-            std::cout << "Error in " << EXTERNAL_FUNCTIONS_FILE_PATH << "; name not found" << std::endl;
             continue;
         }
         string fnName = currLine.substr(0, colonIdx);
@@ -127,7 +126,6 @@ void ExternalFuncRegistry::UpdateFuncSigMap() const
         // Get the return type
         int arrowIdx = currLine.find("->");
         if (arrowIdx == string::npos) {
-            std::cout << "Error in " << EXTERNAL_FUNCTIONS_FILE_PATH << "; return type not found" << std::endl;
             continue;
         }
         DataType retType = StringToDataType(currLine.substr(arrowIdx + PAREN_LENGTH + 1));
@@ -156,7 +154,6 @@ void ExternalFuncRegistry::UpdateFuncSigMap() const
         FunctionSignature funcSig (fnName, argTypes, retType, dlsym(handle, fnName.c_str()));
         g_funcSignatureMap[fnName] = funcSig;
 
-        std::cout << "Registered external function " << fnName << std::endl;
     }
 
     readRegistration.close();
