@@ -716,6 +716,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_partitionedoutput_Om
     return (int64_t)partitionedOutputOperatorFactory;
 }
 
+void initialiseHashColTypes(const int32_t *probeTypes, int32_t *hashColTypes, int32_t *probeHashCols,
+    int32_t probeHashColsCount)
+{
+    for (int32_t i = 0; i < probeHashColsCount; i++) {
+        hashColTypes[i] = probeTypes[probeHashCols[i]];
+    }
+}
+
 JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     const int32_t *buildOutputTypes, int32_t buildOutputColsCount, int64_t hashBuilderFactoryAddr)
@@ -725,55 +733,48 @@ JitContext *createLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
         return nullptr;
     }
     int32_t hashColTypes[probeHashColsCount];
-    for (int32_t i = 0; i < probeHashColsCount; i++) {
-        hashColTypes[i] = probeTypes[probeHashCols[i]];
-    }
+    initialiseHashColTypes(probeTypes, hashColTypes, probeHashCols, probeHashColsCount);
 
     JNI_DEBUG_LOG("create lookup join JIT context starting.");
     auto start = START();
     using namespace omniruntime::jit;
-
     ParamValue p_probeOutputColsCount = ParamValue(&probeOutputColsCount);
     ParamValue p_buildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
     ParamValue p_buildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
     ParamValue p_buildOutputColsCount = ParamValue(&buildOutputColsCount);
-
+    ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
+    ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
     auto *buildBuildColumnsSp = new Specialization();
     buildBuildColumnsSp->AddSpecializedParam(3, &p_buildOutputTypes);
     buildBuildColumnsSp->AddSpecializedParam(4, &p_buildOutputCols);
     buildBuildColumnsSp->AddSpecializedParam(5, &p_buildOutputColsCount);
     buildBuildColumnsSp->AddSpecializedParam(6, &p_probeOutputColsCount);
-
-    std::map<std::string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp } };
-
-    ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashColsCount);
-    ParamValue p_hashColCount = ParamValue(&probeHashColsCount);
-
+    auto *populateHashesSp = new Specialization();
+    populateHashesSp->AddSpecializedParam(2, &p_hashColTypes);
+    populateHashesSp->AddSpecializedParam(3, &p_hashColCount);
+    std::map<std::string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
+        { OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
     auto *hashRowSp = new Specialization();
     hashRowSp->AddSpecializedParam(2, &p_hashColTypes);
     hashRowSp->AddSpecializedParam(3, &p_hashColCount);
     std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
-
     auto *positionEqualsRowIgnoreNullsSp = new Specialization();
     positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
     positionEqualsRowIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
     std::map<std::string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
         *positionEqualsRowIgnoreNullsSp } };
-
     auto lookupJoinContext =
         new omniruntime::jit::Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
     auto joinHashTableContext = new omniruntime::jit::Context(
         GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
     auto pagesHashStrategyContext = new omniruntime::jit::Context(
         GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-
     Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
         *pagesHashStrategyContext });
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
     JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
