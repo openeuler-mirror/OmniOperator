@@ -69,6 +69,7 @@ enum ExprType {
     BETWEEN_E,
     IF_E,
     COALESCE_E,
+    IS_NULL_E,
     FUNC_E,
     INVALID_E
 };
@@ -209,6 +210,16 @@ public:
     ExprType GetType() override;
 };
 
+class IsNullExpr : public Expr {
+public:
+    Expr* value = nullptr;
+    IsNullExpr();
+    ~IsNullExpr() override;
+    explicit IsNullExpr(Expr* value);
+
+    void PrintExprTree() override;
+    ExprType GetType() override;
+};
 
 class FuncExpr : public Expr {
 public:

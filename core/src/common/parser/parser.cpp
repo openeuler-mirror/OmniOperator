@@ -170,10 +170,18 @@ Expr *Parser::ParseRowExpression(const string& inputStr, int32_t *inputTypes, in
 
     // Place all of the arguments into a vector first
     vector<Expr *> args;
-    args.push_back(ParseRowExpression(exprStr.substr(0, commaPositions[0]), inputTypes, vecCount));
+    auto expr = ParseRowExpression(exprStr.substr(0, commaPositions[0]), inputTypes, vecCount);
+    if (expr == nullptr) {
+        return nullptr;
+    }
+    args.push_back(expr);
     for (int i = 1; i <= numCommas; i++) {
         string currVal = exprStr.substr(commaPositions[i - 1] + 1, commaPositions[i] - commaPositions[i - 1] - 1);
-        args.push_back(ParseRowExpression(currVal, inputTypes, vecCount));
+        expr = ParseRowExpression(currVal, inputTypes, vecCount);
+        if (expr == nullptr) {
+            return nullptr;
+        }
+        args.push_back(expr);
     }
 
     return ParseRowExpressionHelper(opStr, args);
@@ -206,6 +214,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     if (opStr == "IN") return std::make_unique<InExpr>(args).release();
     if (opStr == "COALESCE") return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
     if (opStr == "IF") return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
+    if (opStr == "IS_NULL") return std::make_unique<IsNullExpr>(args[0]).release();
 
     // Function
     // Check that the signature matches
@@ -214,7 +223,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         return std::make_unique<FuncExpr>(opStr, args, type).release();
     }
     // default to false
-    return std::make_unique<DataExpr>(false).release();
+    return nullptr;
 }
 
 // Helper functions for generateComparisionExpr to find the correct data type

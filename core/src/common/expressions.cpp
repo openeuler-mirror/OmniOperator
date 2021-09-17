@@ -324,6 +324,24 @@ ExprType CoalesceExpr::GetType()
     return ExprType::COALESCE_E;
 }
 
+IsNullExpr::IsNullExpr() : value() {
+}
+
+IsNullExpr::~IsNullExpr()
+{
+    delete value;
+}
+
+IsNullExpr::IsNullExpr(Expr* value)
+{
+    dataType = BOOLD;
+    this->value = value;
+}
+
+ExprType IsNullExpr::GetType()
+{
+    return ExprType::IS_NULL_E;
+}
 
 FuncExpr::FuncExpr() {}
 
@@ -524,6 +542,13 @@ void CoalesceExpr::PrintExprTree()
     value1->PrintExprTree();
     printf(", ");
     value2->PrintExprTree();
+    printf(")");
+}
+
+void IsNullExpr::PrintExprTree()
+{
+    printf("IsNull:%s(", DataTypeString(this->dataType).c_str());
+    value->PrintExprTree();
     printf(")");
 }
 
