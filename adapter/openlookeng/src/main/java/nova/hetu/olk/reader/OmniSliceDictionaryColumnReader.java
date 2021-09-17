@@ -52,6 +52,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         verify(dataStream != null);
         int[] values = new int[nextBatchSize];
         dataStream.next(values, nextBatchSize);
+
         return new DictionaryBlock(nextBatchSize, dictionaryBlock, values);
     }
 
@@ -81,7 +82,6 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         for (int i = 0; i < nonNullPosition; i++) {
             result[nonNullPositionList[i]] = nonNullValueTemp[i];
         }
-
         return new DictionaryBlock(nextBatchSize, dictionaryBlock, result);
     }
 

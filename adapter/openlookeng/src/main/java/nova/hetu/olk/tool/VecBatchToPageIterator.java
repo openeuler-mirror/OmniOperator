@@ -134,12 +134,25 @@ public class VecBatchToPageIterator implements Iterator<Page> {
 
         switch (vecType.getId()) {
             case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
                 dictionaryBlock = new IntArrayOmniBlock(dictionary.getSize(), (IntVec) dictionary);
                 break;
             case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
                 dictionaryBlock = new LongArrayOmniBlock(dictionary.getSize(), (LongVec) dictionary);
                 break;
-
+            case OMNI_VEC_TYPE_DOUBLE:
+                dictionaryBlock = new DoubleArrayOmniBlock(dictionary.getSize(), (DoubleVec) dictionary);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR:
+                dictionaryBlock = new VariableWidthOmniBlock(dictionary.getSize(), (VarcharVec) dictionary);
+                break;
+            case OMNI_VEC_TYPE_DECIMAL128:
+                dictionaryBlock = new Int128ArrayOmniBlock(dictionary.getSize(), (Decimal128Vec) dictionary);
+                break;
+            case OMNI_VEC_TYPE_DICTIONARY:
+                dictionaryBlock = getDictionaryBlock((DictionaryVec) dictionary);
+                break;
             default:
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + vecType.getId());
         }

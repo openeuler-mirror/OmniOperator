@@ -214,10 +214,11 @@ TEST (PartitionedOutputOperatorTest, TestNullPartitionedOutput) {
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
-    string expectData0[3] = {"abc", "de", "f"};
+    string expectData0[3] = {"abe", "de", "f"};
     int32_t expectData1[DATA_SIZE] = {1, 3, 5};
     VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(3) }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
+    expectVecBatch->GetVector(0)->SetValueNull(0);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
 
     delete partitionedOutputOperatorFactory;
@@ -233,7 +234,6 @@ TEST (PartitionedOutputOperatorTest, TestDecimalPartitionedOutput) {
     int64_t buildData1[DATA_SIZE] = {11, 22, 33};
     int64_t buildData2[DATA_SIZE] = {33, 22, 111};
     VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData2);
-    vecBatch->GetVector(0)->SetValueNull(0);
 
     bool isHashPrecomputed = false;
 
