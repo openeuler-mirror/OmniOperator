@@ -219,3 +219,27 @@ TEST(VarcharVector, jniFreeVector)
     Vector *vector = (Vector *)oritianlVector;
     delete vector;
 }
+
+TEST(VarcharVector, emptyString)
+{
+    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
+    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+
+    std::vector<std::string> data = {"e", "abc", "", "hg", ""};
+    int size = 5;
+    VarcharVector *original = new VarcharVector(allocator, 1024, size);
+    for (int i = 0; i < size; i++) {
+        original->SetValue(i, reinterpret_cast<const uint8_t *>(data[i].c_str()), data[i].length());
+    }
+
+    for (int i = 0; i < size; i++) {
+        uint8_t *actualChar = nullptr;
+        int len = original->GetValue(i, &actualChar);
+        std::string actualStr(actualChar, actualChar + len);
+        EXPECT_EQ(actualStr, data[i]);
+    }
+
+    delete original;
+    manager.DeleteAllocator(&allocator);
+}

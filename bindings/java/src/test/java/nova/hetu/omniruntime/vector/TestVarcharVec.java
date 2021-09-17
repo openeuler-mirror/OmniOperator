@@ -1,5 +1,6 @@
 package nova.hetu.omniruntime.vector;
 
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
@@ -256,6 +257,60 @@ public class TestVarcharVec {
             assertEquals(getString(getDataFromBuffer(buffer1, offsets[i], offsets[i + 1] - offsets[i])), getString(getVec.get(i + offset)));
         }
         getVec.close();
+    }
+
+    @Test
+    public void testEmptyString() {
+        String[] data = new String[] {"a", "ef", "", "ef", "", ""};
+        int[] offsets = new int[] {0, 1, 3, 3, 5, 5, 5};
+        String[] expected = new String[] {"a", "ef", "", "ef", "", ""};
+        int size = 6;
+        VarcharVec varcharVec = new VarcharVec(1024, size);
+        for (int i = 0; i < size; i++) {
+            varcharVec.set(i, data[i].getBytes(StandardCharsets.UTF_8));
+        }
+
+        String[] result = new String[size];
+        for (int i = 0; i < size; i++) {
+            result[i] = getString(varcharVec.get(i));
+        }
+
+        Assert.assertEquals(result, expected);
+
+        VarcharVec vec2 = new VarcharVec(1024, size);
+        StringBuilder sb = new StringBuilder();
+        for (String str : data) {
+            sb.append(str);
+        }
+        vec2.put(0, sb.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, 0, size);
+
+        String[] result1 = new String[size];
+        for (int i = 0; i < size; i++) {
+            result1[i] = getString(vec2.get(i));
+        }
+
+        Assert.assertEquals(result1, expected);
+
+        // slice
+        VarcharVec sliceEmpty = varcharVec.slice(2, 3);
+        String emptyString = "";
+        Assert.assertEquals(getString(sliceEmpty.get(0)), emptyString);
+
+        // getRegion
+        VarcharVec copyRegionEmpty = varcharVec.copyRegion(2, 1);
+        Assert.assertEquals(getString(copyRegionEmpty.get(0)), emptyString);
+
+        // copyPosition
+        int[] positions = new int[] {2, 4, 5};
+        VarcharVec copyPosition = varcharVec.copyPositions(positions, 0, 3);
+        for (int i = 0; i< copyPosition.size; i++) {
+            Assert.assertEquals(getString(copyPosition.get(i)), emptyString);
+        }
+
+        varcharVec.close();
+        sliceEmpty.close();
+        copyRegionEmpty.close();
+        copyPosition.close();
     }
 
     private String getString(byte[] strInBytes)
