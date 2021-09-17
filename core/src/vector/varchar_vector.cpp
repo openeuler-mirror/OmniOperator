@@ -20,17 +20,23 @@ VarcharVector *VarcharVector::CopyPositions(const int *positions, int offset, in
 {
     int totalDataLen = 0;
     for (int i = 0; i < length; i++) {
+        if (IsValueNull(positions[offset + i])) {
+            continue;
+        }
         int position = positions[offset + i] + positionOffset;
         totalDataLen += GetValueOffset(position + 1) - GetValueOffset(position);
     }
-    VarcharVector *vector = new VarcharVector(GetAllocator(), totalDataLen, length);
+    auto *vector = new VarcharVector(GetAllocator(), totalDataLen, length);
     for (int i = 0; i < length; i++) {
+        if (IsValueNull(positions[offset + i])) {
+            vector->SetValueNull(i);
+            continue;
+        }
         int position = positions[offset + i] + positionOffset;
         int startOffset = GetValueOffset(position);
         int dataLen = GetValueOffset(position + 1) - startOffset;
         uint8_t *data = reinterpret_cast<uint8_t *>(valuesAddress);
         vector->SetValue(i, data + startOffset, dataLen);
-        vector->SetValueNulls(i, ((bool *)valueNullsAddress) + position, 1);
         data = nullptr;
     }
     return vector;
@@ -46,51 +52,49 @@ VarcharVector *VarcharVector::CopyRegion(int positionOffset, int length)
     int startOffset = GetValueOffset(newPosition);
     int totalDataLen = GetValueOffset(newPosition + length) - GetValueOffset(newPosition);
 
-    VarcharVector *vector = new VarcharVector(GetAllocator(), totalDataLen, length);
-    errno_t ret = memcpy_s(reinterpret_cast<char *>(vector->GetValues()), totalDataLen,
-        (reinterpret_cast<char *>(valuesAddress)) + startOffset, totalDataLen);
-    if (ret != EOK) {
-        delete vector;
-        return nullptr;
-    }
-
-    vector->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
+    auto *vector = new VarcharVector(GetAllocator(), totalDataLen, length);
 
     // copy offset
-    int32_t *offsets = reinterpret_cast<int32_t *>(vector->GetValueOffsets());
+    auto *offsets = reinterpret_cast<int32_t *>(vector->GetValueOffsets());
     for (int32_t i = 1; i <= length; i++) {
         offsets[i] = GetValueOffset(newPosition + i) - GetValueOffset(newPosition);
+    }
+
+    // copy nulls
+    vector->SetValueNulls(0,
+                          static_cast<bool *>(valueNullsAddress) + positionOffset + this->positionOffset, length);
+
+    // copy data
+    errno_t ret = EOK;
+    if (totalDataLen > 0) {
+        ret = memcpy_s(reinterpret_cast<uint8_t *>(vector->GetValues()), totalDataLen,
+                       (reinterpret_cast<uint8_t *>(valuesAddress)) + startOffset, totalDataLen);
+    }
+
+    if (ret != EOK) {
+        std::cerr << "copy region failed in varchar vector:" << ret << std::endl;
+        delete vector;
+        return nullptr;
     }
     return vector;
 }
 
-void VarcharVector::GetData(int startOffset, uint8_t *dst, int start, int length)
-{
-    if (dst == nullptr || start + length > capacityInBytes) {
-        return;
-    }
-    char *data = reinterpret_cast<char *>(valuesAddress);
-    errno_t ret = memcpy_s(dst + start, capacityInBytes, data + startOffset, length);
-    if (ret != EOK) {
-        std::cerr << "get data failed in varchar vector." << std::endl;
-    }
-    data = nullptr;
-}
-
-void VarcharVector::SetData(int index, const uint8_t *value, int start, int length)
+void VarcharVector::SetData(int index, const uint8_t *value, int start, int dataLen)
 {
     int startOffset = GetValueOffset(index);
-    if (startOffset + length > capacityInBytes) {
+    if (startOffset + dataLen > capacityInBytes) {
         return;
     }
-    SetValueOffset(index + 1, startOffset + length);
-    if (value == nullptr) {
+    SetValueOffset(index + 1, startOffset + dataLen);
+
+    // empty vector or empty string no need to copy data
+    if (value == nullptr || dataLen == 0 || capacityInBytes == 0) {
         return;
     }
-    char *data = reinterpret_cast<char *>(valuesAddress);
-    errno_t ret = memcpy_s(data + startOffset, capacityInBytes, value + start, length);
+    uint8_t *data = reinterpret_cast<uint8_t *>(valuesAddress);
+    errno_t ret = memcpy_s(data + startOffset, capacityInBytes, value + start, dataLen);
     if (ret != EOK) {
-        std::cerr << "set data failed in varchar vector." << std::endl;
+        std::cerr << "set data failed in varchar vector." << ret << std::endl;
     }
     data = nullptr;
 }
@@ -118,18 +122,19 @@ void VarcharVector::Append(Vector *other, int positionOffset, int length)
         SetValueOffset(positionOffset + i, originalDataLen + startOffset);
     }
 
+    // set nulls
+    SetValueNulls(positionOffset, static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset, length);
+
     int originalStartOffset = other->GetValueOffset(otherPositionOffset);
     int dataLength = other->GetValueOffset(otherPositionOffset + length) - other->GetValueOffset(otherPositionOffset);
     errno_t ret = EOK;
     if (dataLength > 0) {
-        // set nulls
-        SetValueNulls(positionOffset, (bool *)other->GetValueNulls() + otherPositionOffset, length);
         // set data
-        ret = memcpy_s((reinterpret_cast<char *>(valuesAddress)) + startOffset, capacityInBytes,
-            reinterpret_cast<char *>(other->GetValues()) + originalStartOffset, dataLength);
+        ret = memcpy_s((reinterpret_cast<uint8_t *>(valuesAddress)) + startOffset, capacityInBytes,
+            reinterpret_cast<uint8_t *>(other->GetValues()) + originalStartOffset, dataLength);
     }
     if (ret != EOK) {
-        std::cerr << "append varchar failed." << std::endl;
+        std::cerr << "append varchar failed." << ret << std::endl;
     }
 }
 }
