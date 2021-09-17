@@ -35,7 +35,11 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      */
     public OmniOperatorFactory(OmniOperatorFactoryContext context) {
         try {
-            nativeOperatorFactory = FACTORY_CACHE.get(context, () -> createNativeOperatorFactory((T) context));
+            if (context.isNeedCache()) {
+                nativeOperatorFactory = FACTORY_CACHE.get(context, () -> createNativeOperatorFactory((T) context));
+            } else {
+                nativeOperatorFactory = createNativeOperatorFactory((T) context);
+            }
         } catch (ExecutionException e) {
             throw new RuntimeException("Get instance failed.");
         }

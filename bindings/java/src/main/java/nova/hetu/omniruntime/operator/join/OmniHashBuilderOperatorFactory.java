@@ -66,6 +66,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashCols = requireNonNull(buildHashCols, "buildHashCols");
             this.operatorCount = operatorCount;
+            setNeedCache(false);
         }
 
         @Override
