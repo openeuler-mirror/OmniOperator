@@ -114,64 +114,48 @@ using AggFunctionByType = struct {
 
 template<typename V, typename D>
 void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
 void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
 void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
 void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxInsertDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxProcessGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxInitiateDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxProcessNonGroupDictImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 class SumAggregator : public Aggregator {
@@ -226,10 +210,7 @@ public:
         {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_VARCHAR, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_DICTIONARY, SumInsertDictImpl, SumProcessGroupDictImpl,
-            SumInitiateDictImpl, SumProcessNonGroupDictImpl
-        },
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
     };
 };
@@ -287,10 +268,7 @@ public:
         {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_VARCHAR, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_DICTIONARY, AvgInsertDictImpl, AvgProcessGroupDictImpl, AvgInitiateDictImpl,
-            AvgProcessNonGroupDictImpl
-        },
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, AvgInsertContainerImpl, AvgProcessGroupContainerImpl, nullptr, nullptr},
     };
 };
@@ -366,10 +344,7 @@ public:
             OMNI_VEC_TYPE_VARCHAR, MinInsertVarcharImpl, MinProcessGroupVarcharImpl, MinInitiateVarcharImpl,
             MinProcessNonGroupVarcharImpl
         },
-        {
-            OMNI_VEC_TYPE_DICTIONARY, MinInsertDictImpl, MinProcessGroupDictImpl, MinInitiateDictImpl,
-            MinProcessNonGroupDictImpl
-        },
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
     };
 };
@@ -428,10 +403,7 @@ public:
             OMNI_VEC_TYPE_VARCHAR, MaxInsertVarcharImpl, MaxProcessGroupVarcharImpl, MaxInitiateVarcharImpl,
             MaxProcessNonGroupVarcharImpl
         },
-        {
-            OMNI_VEC_TYPE_DICTIONARY, MaxInsertDictImpl, MaxProcessGroupDictImpl, MaxInitiateDictImpl,
-            MaxProcessNonGroupDictImpl
-        },
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
     };
 };
