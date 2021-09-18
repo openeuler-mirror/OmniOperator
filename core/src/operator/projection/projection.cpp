@@ -200,6 +200,31 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
         if (dEx->isColumn) {
             return vecBatch->GetVector(dEx->colVal)->Slice(0, numSelectedRows);
         }
+    } else if (selectedRows != nullptr && numSelectedRows != 0 && expr->GetType() == ExprType::DATA_E) {
+        auto *dEx = static_cast<DataExpr *>(expr);
+
+        // TODO: optimize branches and extract common functions
+        if (dEx->isColumn) {
+            Vector *colVec = vecBatch->GetVector(dEx->colVal);
+            if (colVec->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
+                omniruntime::vec::Vector *result = colVec;
+                int32_t size = numSelectedRows;
+                int32_t positions[size];
+                int32_t *preIds = nullptr;
+                do {
+                    auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                    int32_t *currentIds = dictionaryVector->GetIds();
+                    result = dictionaryVector->GetDictionary();
+                    for (int32_t i = 0; i < size; i++) {
+                        positions[i] = (preIds == nullptr) ? currentIds[selectedRows[i]] : currentIds[preIds[i]];
+                    }
+                    preIds = positions;
+                } while (result->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY);
+                return result->CopyPositions(preIds, 0, numSelectedRows);
+            } else {
+                return colVec->CopyPositions(selectedRows, 0, numSelectedRows);
+            }
+        }
     }
     DataType outType = expr->GetExprDataType();
     omniruntime::vec::VectorAllocatorManager vam = omniruntime::vec::VectorAllocatorManager::GetInstance();
@@ -218,7 +243,7 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
         case STRINGD:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
-            outVec = std::make_unique<omniruntime::vec::VarcharVector>(va, numSelectedRows * 50, numSelectedRows);
+            outVec = std::make_unique<omniruntime::vec::VarcharVector>(va, numSelectedRows * 200, numSelectedRows);
             break;
         case DECIMAL128D:
             outVec = std::make_unique<omniruntime::vec::Decimal128Vector>(va, numSelectedRows);
