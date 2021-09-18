@@ -46,14 +46,11 @@ using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactor
 template<typename V, typename D>
 void HashFuncImpl(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
 void HashVarcharFuncImpl(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
-
 void HashDecimalFunc(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
-void HashDictionaryFunc(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
 
 template<typename V, typename D>
 void* DuplicateKeyValueImpl(Vector* vector, const uint32_t offset);
 void* DuplicateVarcharKeyValue(Vector* vector, const uint32_t offset);
-void* DuplicateDictionaryKeyValue(Vector* vector, const uint32_t offset);
 
 template<typename V>
 void SetVectorImpl(VectorBatch* vectorBatch,
@@ -154,7 +151,7 @@ public:
             OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue,
             ReleaseMemoryImpl<std::string>
         },
-        {OMNI_VEC_TYPE_DICTIONARY, HashDictionaryFunc, DuplicateDictionaryKeyValue, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
     };
 private:
