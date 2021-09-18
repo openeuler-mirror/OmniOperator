@@ -215,6 +215,10 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     if (opStr == "COALESCE") return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
     if (opStr == "IF") return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
     if (opStr == "IS_NULL") return std::make_unique<IsNullExpr>(args[0]).release();
+    if (opStr == "IS_NOT_NULL") {
+        auto isNullExpr =  std::make_unique<IsNullExpr>(args[0]).release();
+        return std::make_unique<UnaryExpr>(Operator::NOT, isNullExpr, type).release();
+    }
 
     // Function
     // Check that the signature matches
