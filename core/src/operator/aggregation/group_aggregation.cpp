@@ -206,10 +206,14 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         aggColIdx[i] = this->aggCols[i].idx;
         aggFuncTypes[i] = this->aggregators[i]->GetType();
     }
+    // verify whether input types match operator's types
+    VERIFY_INPUT_TYPES(vecBatch, groupByColIdx.get(), groupColNum,
+                       aggColIdx.get(), aggColNum, this->sourceTypes);
+
     uint32_t rowCount = vecBatch->GetRowCount();
     Vector **vectors = vecBatch->GetVectors();
 
-    this->InLoop(vectors, rowCount, vectorTypes.get(), vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(),
+    this->InLoop(vectors, rowCount, this->sourceTypes, vectorCount, groupByColIdx.get(), groupColNum, aggColIdx.get(),
         aggColNum, aggFuncTypes.get());
 
     this->PostLoop(vecBatch);
