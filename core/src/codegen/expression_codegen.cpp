@@ -468,7 +468,7 @@ Value *ExpressionCodeGen::CodegenBinaryExpr(BinaryExpr &binaryExpr, std::map<std
 
 Value *ExpressionCodeGen::CodegenUnaryExpr(UnaryExpr &uExpr, std::map<std::string, Value *> &args)
 {
-    Value *val = this->ParseExpr(uExpr, args);
+    Value *val = this->ParseExpr(*uExpr.exp, args);
     switch (uExpr.op) {
         case NOT:
             return builder->CreateNot(val, "logical_not");
