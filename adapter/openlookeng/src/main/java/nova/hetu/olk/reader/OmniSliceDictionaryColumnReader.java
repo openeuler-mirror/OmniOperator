@@ -18,6 +18,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
+import nova.hetu.omniruntime.vector.VarcharVec;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -53,7 +54,10 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         int[] values = new int[nextBatchSize];
         dataStream.next(values, nextBatchSize);
 
-        return new DictionaryBlock(nextBatchSize, dictionaryBlock, values);
+        VarcharVec varcharVec = (VarcharVec) dictionaryBlock.getValues();
+        VarcharVec slice = varcharVec.slice(0, varcharVec.getSize());
+        return new DictionaryBlock(nextBatchSize, new VariableWidthOmniBlock(dictionaryBlock.getPositionCount(), slice),
+            values);
     }
 
     @Override
@@ -82,7 +86,10 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         for (int i = 0; i < nonNullPosition; i++) {
             result[nonNullPositionList[i]] = nonNullValueTemp[i];
         }
-        return new DictionaryBlock(nextBatchSize, dictionaryBlock, result);
+        VarcharVec varcharVec = (VarcharVec) dictionaryBlock.getValues();
+        VarcharVec slice = varcharVec.slice(0, varcharVec.getSize());
+        return new DictionaryBlock(nextBatchSize, new VariableWidthOmniBlock(dictionaryBlock.getPositionCount(), slice),
+            result);
     }
 
     @Override
@@ -94,6 +101,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
             boolean[] isNullVector = new boolean[positionCount];
             isNullVector[positionCount - 1] = true;
             dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
+            dictionaryBlock.close();
             dictionaryBlock = new VariableWidthOmniBlock(positionCount, wrappedBuffer(dictionaryData),
                 dictionaryOffsets, Optional.of(isNullVector));
             currentDictionaryData = dictionaryData;
@@ -104,4 +112,11 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         return new RunLengthEncodedBlock(
             new VariableWidthOmniBlock(1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
     }
+
+    @Override
+    public void close() {
+        super.close();
+        dictionaryBlock.close();
+    }
+
 }
