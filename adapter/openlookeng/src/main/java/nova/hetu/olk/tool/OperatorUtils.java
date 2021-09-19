@@ -200,6 +200,9 @@ public final class OperatorUtils {
      * @return the off heap block
      */
     public static Block getOffHeapBlock(Block block) {
+        if (block.isExtensionBlock()) {
+            return block;
+        }
         int positionCount = block.getPositionCount();
         boolean[] valueIsNull = new boolean[positionCount];
         switch (block.getClass().getSimpleName()) {
@@ -251,7 +254,7 @@ public final class OperatorUtils {
                 return getVariableWidthOmniBlock(block, positionCount, valueIsNull);
             }
             case "DictionaryBlock": {
-                return new DictionaryOmniBlock(((DictionaryBlock) block).getDictionary(),
+                return new DictionaryOmniBlock(getOffHeapBlock(((DictionaryBlock) block).getDictionary()),
                     ((DictionaryBlock) block).getIdsArray());
             }
             case "LazyBlock": {

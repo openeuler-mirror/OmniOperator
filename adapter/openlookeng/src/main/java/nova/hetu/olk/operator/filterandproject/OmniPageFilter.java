@@ -145,9 +145,8 @@ public class OmniPageFilter implements PageFilter {
          * @return the page
          */
         public Page filterWithProject(ConnectorSession session, Page page) {
-            // todo: need close page when fix the dictionary issue
             if (page.getPositionCount() <= 0) {
-                // page.close();
+                page.close();
                 return null;
             }
             VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
@@ -155,11 +154,11 @@ public class OmniPageFilter implements PageFilter {
             Iterator<Page> result = new VecBatchToPageIterator(operator.getOutput());
 
             if (!result.hasNext()) {
-                // page.close();
+                page.close();
                 return null;
             }
             Page newPage = result.next();
-            // page.close();
+            page.close();
             return newPage;
         }
 
