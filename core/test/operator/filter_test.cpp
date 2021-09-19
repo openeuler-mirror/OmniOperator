@@ -1746,6 +1746,59 @@ TEST(FilterTest, TestFilterDictionaryVec) {
     delete factory;
 }
 
+TEST(FilterTest, TestFilterDictionaryVarchar) {
+    const int32_t numCols = 2;
+    int32_t inputTypes[] = {1, 15};
+
+    const int32_t numRows = 3;
+    IntVector *col1 = new IntVector(nullptr, numRows);
+    VectorAllocator *allocator = nullptr;
+    VarcharVector *col2 = new VarcharVector(allocator, 1024, numRows);
+    int32_t ids[]= {0, 1, 2};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col2, ids, numRows);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i * 3);
+        std::string tmp = "test";
+        col2->SetValue(i, reinterpret_cast<const uint8_t *>(tmp.c_str()), tmp.length());
+    }
+    const int32_t projectCount = 2;
+    int32_t projectIndices[projectCount] = {0, 1};
+    VectorBatch *batch = new VectorBatch(numCols, numRows);
+    batch->NewVectors(inputTypes);
+    batch->SetVector(0, col1);
+    batch->SetVector(1, dictionaryVector);
+
+    std::string expr = "$operator$LESS_THAN:boolean(#0, 6)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
+                                                                   inputTypes,
+                                                                   numCols,
+                                                                   projectIndices,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(batch);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 2);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, col1->GetValue(i));
+        uint8_t *data = nullptr;
+        int32_t len = ((VarcharVector *)ret[0]->GetVector(1))->GetValue(i, &data);
+        std::string result(data, data + len);
+        data = nullptr;
+        len = dictionaryVector->GetVarchar(i, &data);
+        std::string expected(data, data + len);
+        EXPECT_EQ(result, expected);
+    }
+
+    VectorHelper::FreeVecBatch(batch);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
 TEST(FilterTest, TestFilterDictionaryVecNested) {
     const int32_t numCols = 3;
     int32_t inputTypes[] = {1, 1, 1};

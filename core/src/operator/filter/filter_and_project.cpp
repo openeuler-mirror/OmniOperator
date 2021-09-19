@@ -125,11 +125,10 @@ unique_ptr<vector<uint8_t>> GetDataHelper(uint8_t actualChar[], int32_t len)
     return move(accStr);
 }
 
-void GetVarcharData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
-                    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, std::vector<int64_t> &data, uint32_t col)
+void GetVarcharData(Vector *col, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
+                    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, std::vector<int64_t> &data, uint32_t nRows)
 {
-    uint32_t nRows = vecBatch->GetRowCount();
-    auto vcVec = static_cast<VarcharVector *>(vecBatch->GetVector(col));
+    auto vcVec = static_cast<VarcharVector *>(col);
     // Create array to hold addresses
     unique_ptr<vec64> vcData = make_unique<vec64>();
 
@@ -158,14 +157,13 @@ void GetVarcharData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> 
     vcdataVec.push_back(move(vcData));
 }
 
-void GetDecimal128Data(VectorBatch *&vecBatch, std::vector<int64_t> &data, uint32_t col)
+void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 {
     int32_t longs = 2;
-    uint32_t nRows = vecBatch->GetRowCount();
-    int64_t *values = reinterpret_cast<int64_t *>(vecBatch->GetVector(col)->GetValues());
+    int64_t *values = reinterpret_cast<int64_t *>(col->GetValues());
     // create new vector to store addresses of rows
     unique_ptr<vec64> vcData = make_unique<vec64>();
-    int32_t positionOffset = vecBatch->GetVector(col)->GetPositionOffset();
+    int32_t positionOffset = col->GetPositionOffset();
 
     for (int32_t row = 0; row < nRows; row++) {
         int64_t *index = &((values)[(positionOffset + row) * longs]);
@@ -192,10 +190,10 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
             dictionaryVecs.push_back(colVec);
         }
         // varchar vec GetValues is different from the rest
-        if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
-            GetVarcharData(vecBatch, vcdataVec, stringvalVec, data, i);
-        } else if (vecBatch->GetVector(i)->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
-            GetDecimal128Data(vecBatch, data, i);
+        if (colVec->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
+            GetVarcharData(colVec, vcdataVec, stringvalVec, data, vecBatch->GetRowCount());
+        } else if (colVec->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+            GetDecimal128Data(colVec, data, vecBatch->GetRowCount());
         } else {
             // data handling
             auto dc = colVec->GetValues();
