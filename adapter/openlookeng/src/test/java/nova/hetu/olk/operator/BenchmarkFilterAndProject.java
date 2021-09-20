@@ -5,14 +5,12 @@
 package nova.hetu.olk.operator;
 
 import com.google.common.collect.ImmutableList;
-import io.airlift.slice.Slice;
 import io.prestosql.SessionTestUtils;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.operator.DriverYieldSignal;
 import io.prestosql.operator.project.PageProcessor;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PageBuilder;
-import io.prestosql.spi.block.Block;
 import io.prestosql.spi.function.OperatorType;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.gen.ExpressionCompiler;
@@ -41,16 +39,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.google.common.base.Preconditions.checkState;
-import static io.airlift.slice.Slices.utf8Slice;
 import static io.prestosql.memory.context.AggregatedMemoryContext.newSimpleAggregatedMemoryContext;
 import static io.prestosql.metadata.MetadataManager.createTestMetadataManager;
 import static io.prestosql.spi.function.Signature.internalOperator;
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.spi.type.BooleanType.BOOLEAN;
-import static io.prestosql.spi.type.DoubleType.DOUBLE;
 import static io.prestosql.spi.type.IntegerType.INTEGER;
-import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.sql.relational.Expressions.call;
 import static io.prestosql.sql.relational.Expressions.constant;
 import static io.prestosql.sql.relational.Expressions.field;
@@ -66,9 +60,6 @@ public class BenchmarkFilterAndProject
     private static final int EXTENDED_PRICE = 1;
     private static final int DISCOUNT = 2;
     private static final int QUANTITY = 3;
-
-    private static final Slice MIN_SHIP_DATE = utf8Slice("1994-01-01");
-    private static final Slice MAX_SHIP_DATE = utf8Slice("1995-01-01");
 
     private Page inputPage;
     private List<Page> inputPages;
@@ -90,11 +81,6 @@ public class BenchmarkFilterAndProject
         omniCompiledProcessor = getOmniCompiledProcessor();
     }
 
-    public void finished()
-    {
-
-    }
-
     private PageProcessor getCompiledProcessor()
     {
         return new ExpressionCompiler(metadata, new PageFunctionCompiler(metadata, 10_000))
@@ -113,15 +99,6 @@ public class BenchmarkFilterAndProject
                     OptionalInt.empty(), inputTypes)
                 .get();
     }
-
-    // @Benchmark
-    // public Page handCoded()
-    // {
-    //     PageBuilder pageBuilder = new PageBuilder(ImmutableList.of(DOUBLE));
-    //     int count = Tpch1FilterAndProject.process(inputPage, 0, inputPage.getPositionCount(), pageBuilder);
-    //     checkState(count == inputPage.getPositionCount());
-    //     return pageBuilder.build();
-    // }
 
     @Benchmark
     public List<Optional<Page>> compiledWithoutOmniFilterAndProject()
@@ -162,8 +139,7 @@ public class BenchmarkFilterAndProject
         AtomicLong cpuTime = new AtomicLong(0);
         CountDownLatch countDownLatch = new CountDownLatch(runnables.size());
         long totalUsedTimeStart = System.nanoTime();
-        for (int i = 0; i < runnables.size(); i++) {
-            Runnable runnable = runnables.get(i);
+        for (Runnable runnable : runnables) {
             Thread thread = new Thread(() -> {
                 long cpuStart = currentThreadCpuTime();
                 long wallStart = System.nanoTime();
@@ -197,7 +173,6 @@ public class BenchmarkFilterAndProject
     {
 //        testBenchmarkForDiffSelectedRatio();
         selectedRatio = 0.8f;
-        // for (int i = 16; i <= 128; i *= 2) {
         for (int i = 1; i <= 1; i++) {
             List<Runnable> tasks = new ArrayList<>();
             for (int j = 0; j < i; j++) {
@@ -276,63 +251,15 @@ public class BenchmarkFilterAndProject
         return pageBuilder.build();
     }
 
-    private static final class Tpch1FilterAndProject
-    {
-        public static int process(Page page, int start, int end, PageBuilder pageBuilder)
-        {
-            Block discountBlock = page.getBlock(DISCOUNT);
-            int position = start;
-            for (; position < end; position++) {
-                // where shipdate >= '1994-01-01'
-                //    and shipdate < '1995-01-01'
-                //    and discount >= 0.05
-                //    and discount <= 0.07
-                //    and quantity < 24;
-                if (filter(position, discountBlock, page.getBlock(SHIP_DATE), page.getBlock(QUANTITY))) {
-                    project(position, pageBuilder, page.getBlock(EXTENDED_PRICE), discountBlock);
-                }
-            }
-
-            return position;
-        }
-
-        private static void project(int position, PageBuilder pageBuilder, Block extendedPriceBlock, Block discountBlock)
-        {
-            pageBuilder.declarePosition();
-            if (discountBlock.isNull(position) || extendedPriceBlock.isNull(position)) {
-                pageBuilder.getBlockBuilder(0).appendNull();
-            }
-            else {
-                DOUBLE.writeDouble(pageBuilder.getBlockBuilder(0), DOUBLE.getDouble(extendedPriceBlock, position) * DOUBLE.getDouble(discountBlock, position));
-            }
-        }
-
-        private static boolean filter(int position, Block discountBlock, Block shipDateBlock, Block quantityBlock)
-        {
-            return !shipDateBlock.isNull(position) && VARCHAR.getSlice(shipDateBlock, position).compareTo(MAX_SHIP_DATE) < 0;
-        }
-    }
-
     // where shipdate <= CONDITION ,Currently OmniFilter Native Codegen just support $operator$LESS_THAN_OR_EQUAL(#0, 10471)
     private static final RowExpression FILTER_FOR_Q1_OMNI_FILTER = call(internalOperator(OperatorType.LESS_THAN_OR_EQUAL, BOOLEAN.getTypeSignature(), INTEGER.getTypeSignature(), INTEGER.getTypeSignature()),
             BOOLEAN,
             field(SHIP_DATE, BIGINT),
             constant(CONDITION, BIGINT));
 
-//    private static final RowExpression FILTER_FOR_Q1_OMNI_FILTER = call(OperatorType.LESS_THAN_OR_EQUAL.getFunctionName().toString(), new BuiltInFunctionHandle(internalOperator(OperatorType.LESS_THAN_OR_EQUAL, BOOLEAN.getTypeSignature(), INTEGER.getTypeSignature(), INTEGER.getTypeSignature())),
-//            BOOLEAN,
-//            field(SHIP_DATE, BIGINT),
-//            constant(CONDITION, BIGINT));
-
     private static final RowExpression PROJECT = call(
             internalOperator(OperatorType.MULTIPLY, BIGINT.getTypeSignature(), BIGINT.getTypeSignature(), BIGINT.getTypeSignature()),
             BIGINT,
             field(EXTENDED_PRICE, BIGINT),
             field(DISCOUNT, BIGINT));
-
-//    private static final RowExpression PROJECT = call(OperatorType.MULTIPLY.getFunctionName().toString(),
-//            new BuiltInFunctionHandle(internalOperator(OperatorType.MULTIPLY, BIGINT.getTypeSignature(), BIGINT.getTypeSignature(), BIGINT.getTypeSignature())),
-//            BIGINT,
-//            field(EXTENDED_PRICE, BIGINT),
-//            field(DISCOUNT, BIGINT));
 }
