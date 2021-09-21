@@ -37,6 +37,7 @@ LLVMCompiler::LLVMCompiler()
 {
     this->config = std::make_unique<Config>();
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
     this->context = std::make_unique<llvm::LLVMContext>();
     this->layout = std::make_unique<llvm::StringRef>();
@@ -494,3 +495,4 @@ string build_param_key(llvm::Function &func, int arg_pos)
 }
 }
 }
+
