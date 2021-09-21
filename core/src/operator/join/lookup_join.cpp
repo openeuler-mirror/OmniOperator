@@ -182,6 +182,187 @@ int64_t LookupJoinOperator::GetNextJoinPosition(int64_t currentJoinPosition, int
     return result;
 }
 
+template<typename T>
+void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+{
+    int64_t hash;
+    omniruntime::vec::Vector *result = nullptr;
+    int32_t idIndex;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(i)) {
+                nulls[i] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<T *>(vec)->GetValue(i));
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    } else {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            result = vec;
+            idIndex = i;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            hash = HashUtil::HashValue(static_cast<T *>(result)->GetValue(idIndex));
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    }
+}
+
+void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+{
+    int64_t hash;
+    omniruntime::vec::Vector *result = nullptr;
+    int32_t idIndex;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(i)) {
+                nulls[i] = true;
+                continue;
+            }
+            hash = HashUtil::HashDecimal64Value(static_cast<omniruntime::vec::LongVector *>(vec)->GetValue(i));
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    } else {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            result = vec;
+            idIndex = i;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            hash = HashUtil::HashDecimal64Value(static_cast<omniruntime::vec::LongVector *>(vec)->GetValue(i));
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    }
+}
+
+void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+{
+    int64_t hash;
+    omniruntime::vec::Vector *result = nullptr;
+    int32_t idIndex;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    Decimal128 decimal128Value;
+    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            if (vec->IsValueNull(i)) {
+                nulls[i] = true;
+                continue;
+            }
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vec)->GetValue(i);
+            hash = HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    } else {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            result = vec;
+            idIndex = i;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vec)->GetValue(i);
+            hash = HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    }
+}
+
+void CalculateColVarCharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+{
+    int64_t hash;
+    Decimal128 decimal128Value;
+    uint8_t *varcharValue = nullptr;
+    int32_t valueLength;
+    omniruntime::vec::Vector *result = nullptr;
+    int32_t idIndex;
+    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
+    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            varcharValue = nullptr;
+            valueLength = static_cast<omniruntime::vec::VarcharVector *>(vec)->GetValue(i, &varcharValue);
+            hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    } else {
+        for (int32_t i = 0; i < rowCount; ++i) {
+            result = vec;
+            idIndex = i;
+            do {
+                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
+                idIndex = dictionaryVector->GetIds()[idIndex];
+                result = dictionaryVector->GetDictionary();
+            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            if (result->IsValueNull(idIndex)) {
+                nulls[i] = true;
+                continue;
+            }
+            varcharValue = nullptr;
+            valueLength = static_cast<omniruntime::vec::VarcharVector *>(vec)->GetValue(i, &varcharValue);
+            hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+            hashes[i] = HashUtil::CombineHash(hashes[i], hash);
+        }
+    }
+}
+
+SPECIALIZE(OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES)
+void
+PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, int32_t hashColsCount,
+               int64_t *hashes, bool *nulls)
+{
+    for (int32_t i = 0; i < hashColsCount; ++i) {
+        switch (hashColTypes[i]) {
+            case omniruntime::vec::OMNI_VEC_TYPE_INT:
+            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+                CalculateColHashes<omniruntime::vec::IntVector>(hashCols[i], rowCount, hashes, nulls);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+                CalculateColHashes<omniruntime::vec::LongVector>(hashCols[i], rowCount, hashes, nulls);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+                CalculateColHashes<omniruntime::vec::DoubleVector>(hashCols[i], rowCount, hashes, nulls);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+                CalculateColHashes<omniruntime::vec::BooleanVector>(hashCols[i], rowCount, hashes, nulls);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+                CalculateColDec64Hashes(hashCols[i], rowCount, hashes, nulls);
+                break;
+            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128: {
+                CalculateColDec128Hashes(hashCols[i], rowCount, hashes, nulls);
+                break;
+            }
+            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
+                CalculateColVarCharHashes(hashCols[i], rowCount, hashes, nulls);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+}
+
 JoinProbe::JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
     int32_t hashColsCount)
 {
@@ -201,9 +382,16 @@ JoinProbe::JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols
         probeHashColumns[columnIdx] = probeAllColumns[hashColumn];
     }
     this->position = -1;
+    this->hashes = new int64_t[this->positionCount]();
+    this->nulls = new bool[this->positionCount]();
+    PopulateHashes(probeHashColumns, this->positionCount, hashColTypes, hashColsCount, hashes, nulls);
 }
 
-JoinProbe::~JoinProbe() {}
+JoinProbe::~JoinProbe()
+{
+    delete[] hashes;
+    delete[] nulls;
+}
 
 bool JoinProbe::AdvanceNextPosition()
 {
@@ -213,26 +401,13 @@ bool JoinProbe::AdvanceNextPosition()
 
 int64_t JoinProbe::GetCurrentJoinPosition(const JoinHashTables *hashTables) const
 {
-    if (CurrentRowContainsNull()) {
+    if (nulls[position]) {
         return -1;
     }
 
     int64_t currentJoinPosition = hashTables->GetJoinPosition(position, probeHashColumns, probeHashColTypes,
-        probeHashColsCount, probeAllColumns, probeAllColsCount);
+        probeHashColsCount, probeAllColumns, probeAllColsCount, hashes[position]);
     return currentJoinPosition;
-}
-
-bool JoinProbe::CurrentRowContainsNull() const
-{
-    Vector *column = nullptr;
-    for (int32_t columnIdx = 0; columnIdx < probeHashColsCount; columnIdx++) {
-        int32_t rowIdx = position;
-        column = VectorHelper::GetDictionary(probeHashColumns[columnIdx], rowIdx);
-        if (column->IsValueNull(rowIdx)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 LookupJoinOutputBuilder::LookupJoinOutputBuilder(const int32_t *probeTypes, int32_t *probeOutputCols,

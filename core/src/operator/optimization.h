@@ -41,6 +41,10 @@
 #define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS "hash-strategy-position-equals-row-ignore-nulls"
 #endif
 
+#ifndef OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES
+#define OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES "hash-lookup-join-populate-hashes"
+#endif
+
 #ifndef OMNIJIT_TOPN_COMPARE
 #define OMNIJIT_TOPN_COMPARE "topn-compare"
 #endif

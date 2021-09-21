@@ -108,6 +108,8 @@ private:
     int32_t *probeHashColTypes;
     int32_t probeHashColsCount;
     int32_t position;
+    int64_t *hashes;
+    bool *nulls;
 };
 
 class LookupJoinOutputBuilder {

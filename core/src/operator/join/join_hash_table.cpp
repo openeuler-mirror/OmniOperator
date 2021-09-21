@@ -187,9 +187,8 @@ int64_t HashRow(int32_t rowIndex, Vector **columns, const int32_t *columnTypes, 
 }
 
 int64_t JoinHashTables::GetJoinPosition(int32_t position, Vector **joinColumns, int32_t *joinColumnTypes,
-    int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount) const
+    int32_t joinColumnsCount, Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const
 {
-    int64_t rawHash = HashRow(position, joinColumns, joinColumnTypes, joinColumnsCount);
     JoinHashTable *hashTable = nullptr;
     if (hashTableCount != 1) {
         int32_t partition = HashUtil::GetRawHashPartition(rawHash, partitionMask);

@@ -86,7 +86,7 @@ Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &has
 Context *CreateTestHashTableContext(ParamValue &hashColTypes, ParamValue &hashColCount);
 Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOutputCols,
     ParamValue &probeOutputColsCount, ParamValue &buildOutputTypes, ParamValue &buildOutputCols,
-    ParamValue &buildOutputColsCount);
+    ParamValue &buildOutputColsCount, ParamValue &pHashColTypes, ParamValue &pHashColCount);
 
 JitContext *CreateTestLookupJoinJitContext(const int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
@@ -98,8 +98,6 @@ JitContext *CreateTestLookupJoinJitContext(const int32_t *probeTypes, int32_t pr
     ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
     ParamValue pBuildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
     ParamValue pBuildOutputColsCount = ParamValue(&buildOutputColsCount);
-    auto *lookupJoinContext = CreateTestLookupJoinContext(pProbeTypes, pProbeOutputCols, pProbeOutputColsCount,
-        pBuildOutputTypes, pBuildOutputCols, pBuildOutputColsCount);
 
     int32_t hashColTypes[probeHashColsCount];
     for (int32_t i = 0; i < probeHashColsCount; i++) {
@@ -107,6 +105,10 @@ JitContext *CreateTestLookupJoinJitContext(const int32_t *probeTypes, int32_t pr
     }
     ParamValue pHashColTypes = ParamValue(hashColTypes, probeHashColsCount);
     ParamValue pHashColCount = ParamValue(&probeHashColsCount);
+
+    auto *lookupJoinContext = CreateTestLookupJoinContext(pProbeTypes, pProbeOutputCols, pProbeOutputColsCount,
+        pBuildOutputTypes, pBuildOutputCols, pBuildOutputColsCount, pHashColTypes, pHashColCount);
+
     auto *joinHashTableContext = CreateTestHashTableContext(pHashColTypes, pHashColCount);
     auto *pagesHashStrategyContext = CreateTestHashStrategyContext(pHashColTypes, pHashColCount);
 
@@ -122,7 +124,7 @@ JitContext *CreateTestLookupJoinJitContext(const int32_t *probeTypes, int32_t pr
 
 Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOutputCols,
     ParamValue &probeOutputColsCount, ParamValue &buildOutputTypes, ParamValue &buildOutputCols,
-    ParamValue &buildOutputColsCount)
+    ParamValue &buildOutputColsCount, ParamValue &pHashColTypes, ParamValue &pHashColCount)
 {
     auto *buildBuildColumnsSp = new Specialization();
     buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_3, &buildOutputTypes);
@@ -130,7 +132,12 @@ Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOu
     buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_5, &buildOutputColsCount);
     buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_6, &probeOutputColsCount);
 
-    map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp } };
+    auto *populateHashesSp = new Specialization();
+    populateHashesSp->AddSpecializedParam(PARAM_OFFSET_2, &pHashColTypes);
+    populateHashesSp->AddSpecializedParam(PARAM_OFFSET_3, &pHashColCount);
+
+    map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
+        { OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
     auto *lookupJoinContext = new Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
     return lookupJoinContext;
 }
@@ -140,7 +147,9 @@ Context *CreateTestHashTableContext(ParamValue &hashColTypes, ParamValue &hashCo
     auto *hashRowSp = new Specialization();
     hashRowSp->AddSpecializedParam(PARAM_OFFSET_2, &hashColTypes);
     hashRowSp->AddSpecializedParam(PARAM_OFFSET_3, &hashColCount);
+
     map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
+
     auto *joinHashTableContext = new Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
     return joinHashTableContext;
 }
@@ -153,6 +162,7 @@ Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &has
 
     map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
         *positionEqualsRowIgnoreNullsSp } };
+
     auto *pagesHashStrategyContext =
         new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
     return pagesHashStrategyContext;
