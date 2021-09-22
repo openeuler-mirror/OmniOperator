@@ -95,12 +95,11 @@ OmniStatus HashAggregationOperator::Init()
 {
     int32_t colSize = groupByCols.size() + aggCols.size();
     sourceTypes = std::make_unique<int32_t[]>(colSize).release();
-    int32_t idx = 0;
     for (auto &c : groupByCols) {
-        sourceTypes[idx++] = static_cast<int32_t>(c.input.GetId());
+        sourceTypes[c.idx] = static_cast<int32_t>(c.input.GetId());
     }
     for (auto &c : aggCols) {
-        sourceTypes[idx++] = static_cast<int32_t>(c.input.GetId());
+        sourceTypes[c.idx] = static_cast<int32_t>(c.input.GetId());
     }
     return OMNI_STATUS_NORMAL;
 }

@@ -240,12 +240,14 @@ public final class OperatorUtils {
                 return new DoubleArrayOmniBlock(positionCount, Optional.of(valueIsNull), doubles);
             }
             case "Int128ArrayBlock": {
-                long[] longs = new long[positionCount];
+                long[] longs = new long[positionCount * 2];
                 for (int j = 0; j < positionCount; j++) {
                     if (block.isNull(j)) {
                         valueIsNull[j] = true;
                     } else {
-                        longs[j] = (long) block.get(j);
+                        long [] data = (long[]) block.get(j);
+                        longs[j * 2] = data[0];
+                        longs[j * 2 + 1] = data[1];
                     }
                 }
                 return new Int128ArrayOmniBlock(positionCount, Optional.of(valueIsNull), longs);
