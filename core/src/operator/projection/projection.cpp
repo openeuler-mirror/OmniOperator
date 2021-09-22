@@ -253,16 +253,23 @@ omniruntime::vec::Vector *Projection::Project(omniruntime::vec::VectorBatch *vec
             break;
         }
     }
+    const int vecSize = outVec->GetSize();
+    bool newNullValues[vecSize];
+    Vector *projectedVec = nullptr;
     if (outType == STRINGD) {
-        return ProjectHelperVarWidth(*vecBatch, outVec.release(), numSelectedRows, selectedRows, *va);
+        projectedVec = ProjectHelperVarWidth(
+            *vecBatch, outVec.release(), numSelectedRows, selectedRows, *va, newNullValues);
     } else {
-        return ProjectHelperFixedWidth(*vecBatch, outVec.release(), numSelectedRows, selectedRows, *va);
+        projectedVec = ProjectHelperFixedWidth(
+            *vecBatch, outVec.release(), numSelectedRows, selectedRows, *va, newNullValues);
     }
+    projectedVec->SetValueNulls(0, newNullValues, vecSize);
+    return projectedVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
     omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
-    int32_t selectedRows[], omniruntime::vec::VectorAllocator &va) const
+    int32_t selectedRows[], omniruntime::vec::VectorAllocator &va, bool *newNullValues) const
 {
     // Contains arrays with addresses for varchar vecs
     std::vector<unique_ptr<std::vector<int64_t>>> vcdataVec;
@@ -284,10 +291,9 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     this->projector(data.data(), vecBatch.GetRowCount(),
-        *cvecVals,
-        selectedRows, numSelectedRows, bitmap.data());
+        *cvecVals, selectedRows, numSelectedRows, bitmap.data(), newNullValues);
 
-    VarcharVector *outVarcharVec = static_cast<VarcharVector *>(outVec);
+    auto *outVarcharVec = static_cast<VarcharVector *>(outVec);
     for (int i = 0; i < numSelectedRows; i++) {
         auto charArr = reinterpret_cast<uint8_t *>(ov[i]);
 
@@ -309,7 +315,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 
 omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
     omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
-    int32_t selectedRows[], omniruntime::vec::VectorAllocator &va) const
+    int32_t selectedRows[], omniruntime::vec::VectorAllocator &va, bool *newNullValues) const
 {
     // Contains arrays with addresses for varchar vecs
     std::vector<unique_ptr<std::vector<int64_t>>> vcdataVec;
@@ -326,25 +332,23 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
 
     if (outVec->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
-        // using projector
         vector<int64_t> oVec(numSelectedRows);
         auto ov = oVec.data();
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         this->projector(data.data(), vecBatch.GetRowCount(), *cvecVals,
-                        selectedRows, numSelectedRows, bitmap.data());
+                        selectedRows, numSelectedRows, bitmap.data(), newNullValues);
         auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
         for (int i = 0; i < numSelectedRows; i++) {
             int64_t *value = reinterpret_cast<int64_t *>(ov[i]);
             outDecimal128Vec->SetValue(i, Decimal128(*(value + 1), *value));
         }
     } else {
-        // using projec
         auto ov = outVec->GetValues();
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         int32_t nReturned = this->projector(data.data(), vecBatch.GetRowCount(), *cvecVals,
-                                            selectedRows, numSelectedRows, bitmap.data());
+                                            selectedRows, numSelectedRows, bitmap.data(), newNullValues);
     }
 
     data.clear();

@@ -10,13 +10,17 @@ using namespace omniruntime::expressions;
 
 
 namespace {
-    const int ARG2 = 2;
+    const int INPUT_TABLE_INDEX = 0;
+    const int NUM_ROWS_INDEX = 1;
+    const int OUTPUT_ADDRESS_INDEX = 2;
     const int SELECTED = 3;
     const int NUM_SELECTED = 4;
     const int BITMAP = 5;
+    const int NEW_NULL_VALUES_INDEX = 6;
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
     const int ARGUMENT_TWO = 2;
+    const int IS_NULL_INDEX = 2;
 }
 int64_t ProjectionCodeGen::GetFunction()
 {
@@ -51,6 +55,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // bitmap is a 2d array of booleans
     Type *bitmapArg = Type::getInt64PtrTy(*context);
     args.push_back(bitmapArg);
+    // bool array to hold null values
+    args.push_back(Type::getInt1PtrTy(*context));
+
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -59,11 +66,11 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     BasicBlock *incrementCounter = BasicBlock::Create(*context, "INCREMENT_COUNTER", funcDecl);
     BasicBlock *endBlock = BasicBlock::Create(*context, "END_BLOCK", funcDecl);
     // preprocessing
-    Argument *input = funcDecl->getArg(0);
+    Argument *input = funcDecl->getArg(INPUT_TABLE_INDEX);
     input->setName("INPUT_TABLE");
-    Argument *numRows = funcDecl->getArg(1);
+    Argument *numRows = funcDecl->getArg(NUM_ROWS_INDEX);
     numRows->setName("NUM_ROWS");
-    Argument *outputAddress = funcDecl->getArg(ARG2);
+    Argument *outputAddress = funcDecl->getArg(OUTPUT_ADDRESS_INDEX);
     outputAddress->setName("OUTPUT_ADDRESS");
 
     // Only use these values if filter enabled
@@ -79,6 +86,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Argument *bitmap = funcDecl->getArg(BITMAP);
     bitmap->setName("BITMAP");
 
+    Argument *nullValuesAddress = funcDecl->getArg(NEW_NULL_VALUES_INDEX);
+    nullValuesAddress->setName("NULL_VALUES_ADDRESS");
+
     Value *minusOne = this->CreateConstantInt(-1);
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
@@ -86,7 +96,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // filterFuncArgs contains the values of the arguments to the filter function
     // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < datatypes.size())
     // filterFuncArgs[2 * i+1] contains a boolean value stating whether argument i is null
-    projFuncArgs.reserve(ARG2 * nArgs);
+    projFuncArgs.reserve(IS_NULL_INDEX * nArgs);
     Value *gep;
     Value *elementAddr;
     Value *elementPtr;
@@ -224,6 +234,11 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
     // *gep = ret
     builder->CreateStore(ret, gep);
+
+    // update null values
+    gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
+    builder->CreateStore(bitmapValue, gep);
+
     builder->CreateBr(incrementCounter);
     // Increment loop counter
     builder->SetInsertPoint(incrementCounter);
