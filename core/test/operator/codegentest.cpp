@@ -1410,6 +1410,7 @@ TEST(CodeGenTest, ProjectionCodeGen) {
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = false;
     }
+    bool newNullValues[3];
 
     string testname = "DecimalProjectTest";
     vector<DataType> typeVec = vector<DataType>(types, types + 1);
@@ -1419,10 +1420,10 @@ TEST(CodeGenTest, ProjectionCodeGen) {
     auto ov = oVec.data();
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
-    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *)) (intptr_t) lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *);
+    func = (int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *)) (intptr_t) lc->GetFunction();
 
-    int32_t r = func(vals, 3, *cvecVals, nullptr, 3,  (int64_t*)(bitmap));
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3,  (int64_t*)(bitmap), newNullValues);
     int64_t *result = reinterpret_cast<int64_t*>(oVec[0]);
     EXPECT_EQ(*result, 110);
     EXPECT_EQ(*(result + 1), 0);

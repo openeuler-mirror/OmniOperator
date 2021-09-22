@@ -14,7 +14,7 @@
 #include "../../common/expressions.h"
 
 using vec64 = std::vector<int64_t>;
-using ProjFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *);
+using ProjFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *);
 
 namespace omniruntime {
 namespace op {
@@ -44,10 +44,10 @@ public:
     }
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
         omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
-        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va) const;
+        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va, bool *newNullValues) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
         omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
-        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va) const;
+        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va, bool *newNullValues) const;
 
     omniruntime::vec::Vector *Project(omniruntime::vec::VectorBatch *vecBatch, int32_t *selectedRows,
         int32_t numSelectedRows) const;

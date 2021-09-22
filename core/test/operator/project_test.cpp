@@ -62,7 +62,7 @@ VectorBatch* CreateInput(const int32_t numRows,
 
 int32_t* MakeInts(const int32_t size, const int32_t start = 0)
 {
-    int32_t* arr = new int32_t[size];
+    auto* arr = new int32_t[size];
     int32_t idx = 0;
     for (int32_t i = start; i < start + size; i++) {
         arr[idx++] = i;
@@ -72,7 +72,7 @@ int32_t* MakeInts(const int32_t size, const int32_t start = 0)
 
 int64_t* MakeDecimals(const int32_t size, const int32_t start = 0)
 {
-    int64_t* arr = new int64_t[size * 2];
+    auto* arr = new int64_t[size * 2];
     int32_t idx = 0;
     for (int64_t i = start; i < start + size; i++) {
         if (i >= 0) {
@@ -89,7 +89,7 @@ int64_t* MakeDecimals(const int32_t size, const int32_t start = 0)
 
 int64_t* MakeLongs(const int32_t size, const int64_t start = 0)
 {
-    int64_t* arr = new int64_t[size];
+    auto* arr = new int64_t[size];
     int32_t idx = 0;
     for (int64_t i = start; i < start + size; i++) {
         arr[idx++] = i;
@@ -99,9 +99,9 @@ int64_t* MakeLongs(const int32_t size, const int64_t start = 0)
 
 double* MakeDoubles(const int32_t size, const double start = 0)
 {
-    double* arr = new double[size];
+    auto* arr = new double[size];
     int32_t idx = 0;
-    for (double i = start; i < start + size; i += 1) {
+    for (double i = start; i < start + size; i++) {
         arr[idx++] = i;
     }
     return arr;
@@ -117,6 +117,15 @@ TEST (ProjectTest, Simple) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            t->GetVector(0)->SetValueNotNull(i);
+        } else {
+            t->GetVector(0)->SetValueNull(i);
+        }
+    }
+
     op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -124,6 +133,15 @@ TEST (ProjectTest, Simple) {
         int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, i + 5);
     }
+
+    for (int32_t i = 0; i < numReturned; i++) {
+        if (i % 2 == 0) {
+            EXPECT_FALSE(t->GetVector(0)->IsValueNull(i));
+        } else {
+            EXPECT_TRUE(t->GetVector(0)->IsValueNull(i));
+        }
+    }
+
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
