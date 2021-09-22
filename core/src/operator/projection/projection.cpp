@@ -112,7 +112,13 @@ void GetProjVarcharData(Vector *col, vector<unique_ptr<vector<int64_t>>> &vcdata
         uint8_t *actualChar = nullptr;
         int32_t len = vcVec->GetValue(j, &actualChar);
 
-        /// Truncate the resulting string
+        // len is -1 only when the value is null
+        // treat it as an empty string for now, need to handle null value properly
+        if (len < 0) {
+            len = 0;
+        }
+
+        // Truncate the resulting string
         unique_ptr<Uint8vec> accStr = GetProjDataHelper(actualChar, len);
 
         actualChar = accStr->data();
