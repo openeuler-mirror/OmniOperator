@@ -44,6 +44,7 @@ import nova.hetu.omniruntime.constants.AggType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VecType;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -161,7 +162,7 @@ public class TestHashAggregationOmniOperator
             Thread thread = new Thread(() -> {
                 try {
                     List<Page> input = builderPage();
-                    List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+                    List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
                     List<Page> pages;
 
                     HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(id, new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes, omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);
@@ -260,7 +261,7 @@ public class TestHashAggregationOmniOperator
             Thread thread = new Thread(() -> {
                 try {
                     List<Page> input = builderPageWithDiffLayout();
-                    List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+                    List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
                     List<Page> pages;
 
                     HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(id, new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes, omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);

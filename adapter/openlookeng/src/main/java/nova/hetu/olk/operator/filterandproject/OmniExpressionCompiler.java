@@ -6,6 +6,7 @@ package nova.hetu.olk.operator.filterandproject;
 
 import static io.prestosql.operator.project.PageFieldsToInputParametersRewriter.rewritePageFieldsToInputParameters;
 
+import io.prestosql.execution.TaskId;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.operator.project.PageFieldsToInputParametersRewriter;
 import io.prestosql.operator.project.PageFilter;
@@ -16,6 +17,8 @@ import io.prestosql.sql.gen.ExpressionProfiler;
 import io.prestosql.sql.gen.PageFunctionCompiler;
 import io.prestosql.sql.relational.DeterminismEvaluator;
 import io.prestosql.sql.relational.RowExpression;
+import nova.hetu.omniruntime.vector.VecAllocator;
+import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,10 +47,10 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         this.determinismEvaluator = new DeterminismEvaluator(metadata);
     }
 
-    @Override
     public Supplier<PageProcessor> compilePageProcessor(Optional<RowExpression> filter,
-        List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
-        List<Type> inputTypes) {
+            List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
+            List<Type> inputTypes, TaskId taskId) {
+        VecAllocator vecAllocator = VecAllocatorFactory.get(taskId.getFullId());
         OmniProjection proj = new OmniProjection(projections, inputTypes, filter);
         Optional<PageFilter> pageFilter;
         if (filter.isPresent()) {
@@ -65,7 +68,7 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
             pageFilter = Optional.empty();
         }
         return () -> {
-            return new OmniPageProcessor(pageFilter, proj, initialBatchSize, new ExpressionProfiler());
+            return new OmniPageProcessor(vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler());
         };
     }
 }

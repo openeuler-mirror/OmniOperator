@@ -4,6 +4,8 @@
 
 package nova.hetu.omniruntime.vector;
 
+import nova.hetu.omniruntime.OmniLibs;
+
 /**
  * vec allocator
  *
@@ -11,16 +13,18 @@ package nova.hetu.omniruntime.vector;
  */
 public class VecAllocator implements AutoCloseable {
     /**
-     * global vector allocator scope
-     */
-    public static String GLOBAL_SCOPE = "___GLOBAL_SCOPE___";
-
-    /**
      * global vector allocator
      */
-    public static final VecAllocator GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(newAllocatorNative(GLOBAL_SCOPE));
+    public static final VecAllocator GLOBAL_VECTOR_ALLOCATOR;
+
+    private static String GLOBAL_SCOPE = "___GLOBAL_SCOPE___";
 
     private long nativeAllocator;
+
+    static {
+        OmniLibs.load();
+        GLOBAL_VECTOR_ALLOCATOR = new VecAllocator(newAllocatorNative(GLOBAL_SCOPE));
+    }
 
     public VecAllocator(String scope) {
         nativeAllocator = newAllocatorNative(scope);

@@ -15,40 +15,18 @@ using namespace std;
 using namespace vec;
 class PartitionedOutputOperatorFactory : public OperatorFactory {
 public:
-    PartitionedOutputOperatorFactory(
-            const VecTypes &sourceTypes,
-            int32_t sourceTypeCount,
-            bool replicatesAnyRow,
-            int nullChannel,
-            int32_t *partitionChannels,
-            int32_t partitionChannelsCount,
-            int32_t partitionCount,
-            int32_t *bucketToPartition,
-            int32_t bucketToPartitionCount,
-            bool isHashPrecomputed,
-            int32_t *hashChannelTypes,
-            int32_t hashChannelTypesCount,
-            int32_t *hashChannels,
-            int32_t hashChannelsCount);
+    PartitionedOutputOperatorFactory(const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
+        int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
+        int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
+        int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperatorFactory() override;
 
-    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(
-            const VecTypes &sourceTypes,
-            int32_t sourceTypeCount,
-            bool replicatesAnyRow,
-            int nullChannel,
-            int32_t *partitionChannels,
-            int32_t partitionChannelsCount,
-            int32_t partitionCount,
-            int32_t *bucketToPartition,
-            int32_t bucketToPartitionCount,
-            bool isHashPrecomputed,
-            int32_t *hashChannelTypes,
-            int32_t hashChannelTypesCount,
-            int32_t *hashChannels,
-            int32_t hashChannelsCount
-    );
+    static PartitionedOutputOperatorFactory *CreatePartitionedOutputOperatorFactory(const VecTypes &sourceTypes,
+        int32_t sourceTypeCount, bool replicatesAnyRow, int nullChannel, int32_t *partitionChannels,
+        int32_t partitionChannelsCount, int32_t partitionCount, int32_t *bucketToPartition,
+        int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
+        int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
 
     Operator *CreateOperator() override;
 
@@ -132,26 +110,14 @@ private:
     int32_t hashChannelTypesCount;
     int32_t *hashChannels;
     int32_t hashChannelsCount;
-
 };
 
 class PartitionedOutputOperator : public Operator {
 public:
-    PartitionedOutputOperator(
-        const VecTypes &sourceTypes,
-        int32_t sourceTypeCount,
-        bool replicatesAnyRow,
-        int nullChannel,
-        int32_t *partitionChannels,
-        int32_t partitionChannelsCount,
-        int32_t partitionCount,
-        int32_t *bucketToPartition,
-        int32_t bucketToPartitionCount,
-        bool isHashPrecomputed,
-        int32_t *hashChannelTypes,
-        int32_t hashChannelTypesCount,
-        int32_t *hashChannels,
-        int32_t hashChannelsCount);
+    PartitionedOutputOperator(const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,
+        int nullChannel, int32_t *partitionChannels, int32_t partitionChannelsCount, int32_t partitionCount,
+        int32_t *bucketToPartition, int32_t bucketToPartitionCount, bool isHashPrecomputed, int32_t *hashChannelTypes,
+        int32_t hashChannelTypesCount, int32_t *hashChannels, int32_t hashChannelsCount);
 
     ~PartitionedOutputOperator() override;
 

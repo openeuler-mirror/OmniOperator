@@ -517,4 +517,9 @@ public abstract class Vec implements Closeable {
     public void setClosable(boolean isCloseable) {
         this.isCloseable = isCloseable;
     }
+
+    public VecAllocator getAllocator()
+    {
+        return allocator;
+    }
 }

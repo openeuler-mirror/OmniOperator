@@ -35,17 +35,17 @@ import io.prestosql.operator.PartitionedOutputOperator;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PageBuilder;
 import io.prestosql.spi.block.Block;
-import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.predicate.NullableValue;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.planner.plan.PlanNodeId;
+import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.shuffle.PageProducer;
 
@@ -64,7 +64,7 @@ import static io.prestosql.spi.block.PageBuilderStatus.DEFAULT_MAX_PAGE_SIZE_IN_
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 /**
  * The type Omni project operator.
@@ -92,7 +92,7 @@ public class PartitionedOutputOmniOperator
             return;
         }
         page = pagePreprocessor.apply(page);
-        partitionFunction.partitionPage(page);
+        partitionFunction.partitionPage(omniOperator.getVecAllocator(), page);
 
         operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
 
@@ -270,11 +270,12 @@ public class PartitionedOutputOmniOperator
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
+            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(
                     operatorId,
                     planNodeId,
                     PartitionedOutputOperator.class.getSimpleName());
-            OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
+            OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator(vecAllocator);
             return new PartitionedOutputOmniOperator(
                     operatorContext,
                     sourceTypes,
@@ -458,15 +459,16 @@ public class PartitionedOutputOmniOperator
         /**
          * partition Page
          *
+         * @param vecAllocator vector allocator
          * @param page page
          */
-        public void partitionPage(Page page) {
+        public void partitionPage(VecAllocator vecAllocator, Page page) {
             requireNonNull(page, "page is null");
 
             Page partitionFunctionArgs = getPartitionFunctionArguments(page);
 
-            VecBatch vecBatch0 = getVecBatch(page, getClass().getSimpleName());
-            VecBatch vecBatch1 = getVecBatch(partitionFunctionArgs, getClass().getSimpleName());
+            VecBatch vecBatch0 = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
+            VecBatch vecBatch1 = buildVecBatch(vecAllocator, partitionFunctionArgs, getClass().getSimpleName());
             ArrayList vecList = new ArrayList(Arrays.asList(vecBatch0.getVectors()));
             vecList.addAll(Arrays.asList(vecBatch1.getVectors()));
             VecBatch vecBatch = new VecBatch(vecList);

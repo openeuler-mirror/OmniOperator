@@ -12,6 +12,7 @@ import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Dictionary omni block encoding.
@@ -19,6 +20,12 @@ import io.prestosql.spi.block.DictionaryId;
  * @since 20210630
  */
 public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
+    private final VecAllocator vecAllocator;
+
+    public DictionaryOmniBlockEncoding(VecAllocator vecAllocator) {
+        this.vecAllocator = vecAllocator;
+    }
+
     @Override
     public void writeBlock(BlockEncodingSerde blockEncodingSerde, SliceOutput sliceOutput, Block block) {
         // The down casts here are safe because it is the block itself the provides this encoding implementation.

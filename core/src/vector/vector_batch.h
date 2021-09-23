@@ -47,15 +47,17 @@ public:
 
     void GetVectorTypeIds(int32_t *typeIds);
 
-    void NewVectors(const int *types);
+    void NewVectors(VectorAllocator *vecAllocator, const int *types);
 
-    void NewVectors(const std::vector<VecType> &types);
+    void NewVectors(VectorAllocator *vecAllocator, const std::vector<VecType> &types);
 
     void ReleaseAllVectors();
 
+    void TraceRecord(VectorLeakDetector &leakDetector, std::string opName, VecOpType opType);
+
 private:
     void Init();
-    Vector *NewContainerVec();
+    Vector *NewContainerVec(VectorAllocator *vecAllocator);
 
     int vectorCount;
     int rowCount;

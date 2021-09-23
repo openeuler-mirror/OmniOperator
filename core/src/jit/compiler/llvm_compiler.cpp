@@ -82,7 +82,7 @@ void LLVMCompiler::LoadExtraLibraries()
             llvm::errs() << "Failed to load core library at path " << s << "\n";
             llvm::errs() << err << "\n";
         } else {
-            LLVM_DEBUG_LOG("Successfully loaded core library at path %s", s);
+            LLVM_DEBUG_LOG("Successfully loaded core library at path %s", s.c_str());
         }
     }
 }

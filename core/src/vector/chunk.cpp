@@ -10,8 +10,7 @@
 
 namespace omniruntime {
 namespace vec {
-Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes))
-{}
+Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes)) {}
 
 Chunk::~Chunk()
 {

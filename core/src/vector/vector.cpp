@@ -2,30 +2,23 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include <cstring>
 #include <stdint.h>
 #include "vector.h"
-#include "../util/debug.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 
-omniruntime::vec::VectorAllocatorManager g_vectorAllocatorManager =
-    omniruntime::vec::VectorAllocatorManager::GetInstance();
-omniruntime::vec::VectorAllocator *g_vectorAllocator = g_vectorAllocatorManager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME);
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
-    : size(size), positionOffset(0), capacityInBytes(capacityInBytes), type(type)
+    : allocator(allocator), size(size), positionOffset(0), capacityInBytes(capacityInBytes), type(type)
 {
-    if (allocator != nullptr) {
-        reference = allocator->NewVector(capacityInBytes, size, type);
-        this->allocator = allocator;
-    } else {
-        reference = g_vectorAllocator->NewVector(capacityInBytes, size, type);
-        this->allocator = g_vectorAllocator;
-    }
+    ASSERT(allocator != nullptr);
+    reference = allocator->NewVector(capacityInBytes, size, type);
     valuesAddress = reference->GetValuesAddress();
     valueNullsAddress = reference->GetValueNullsAddress();
     valueOffsetsAddress = reference->GetValueOffsetsAddress();
+#ifdef DEBUG_VECTOR
+    allocator->GetLeakDetector().Record(this, "", VecOpType::NEW);
+#endif
 }
 
 Vector::Vector(Vector *vector, int size, int positionOffset)
@@ -35,21 +28,35 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
       positionOffset(vector->positionOffset + positionOffset),
       capacityInBytes(vector->GetCapacityInBytes()),
       type(vector->type)
-
 {
     reference->IncRef();
     valuesAddress = reference->GetValuesAddress();
     valueNullsAddress = reference->GetValueNullsAddress();
     valueOffsetsAddress = reference->GetValueOffsetsAddress();
+#ifdef DEBUG_VECTOR
+    allocator->GetLeakDetector().Record(this, "", VecOpType::NEW);
+#endif
+}
+
+Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset)
+    : allocator(allocator), capacityInBytes(capacityInBytes), size(size), type(type), positionOffset(positionOffset)
+{
+#ifdef DEBUG_VECTOR
+    allocator->GetLeakDetector().Record(this, "", VecOpType::NEW);
+#endif
 }
 
 Vector::~Vector()
 {
+#ifdef DEBUG_VECTOR
+    this->allocator->GetLeakDetector().Record(this, "", VecOpType::FREE);
+#endif
     if (reference == nullptr) {
         return;
     }
     if (0 == reference->DecRef()) {
         delete reference;
+        reference = nullptr;
     }
 }
 

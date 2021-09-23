@@ -39,6 +39,7 @@ cmake-build-debug
 cmake-build-debug-coverage
 
 core/omni-runtime.cbp
+core/config.h
 bindings/java/*.log
 omtest
 install_manifest.txt

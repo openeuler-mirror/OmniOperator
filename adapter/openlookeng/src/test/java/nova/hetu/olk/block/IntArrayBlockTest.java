@@ -12,6 +12,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import org.testng.annotations.Test;
 
@@ -26,7 +27,7 @@ public class IntArrayBlockTest
        blockBuilder.appendNull();
        INTEGER.writeLong(blockBuilder, Integer.MAX_VALUE);
        Block onHeapBlock = blockBuilder.build();
-       Block block = OperatorUtils.getOffHeapBlock(onHeapBlock);
+       Block block = OperatorUtils.buildOffHeapBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, onHeapBlock);
 
        assertTrue(block.isNull(0));
        assertEquals(INTEGER.getLong(block, 1), 42);

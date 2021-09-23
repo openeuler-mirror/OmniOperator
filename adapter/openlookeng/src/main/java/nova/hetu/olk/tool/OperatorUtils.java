@@ -45,6 +45,7 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.ArrayList;
@@ -165,13 +166,14 @@ public final class OperatorUtils {
     /**
      * Transfer to off heap pages list.
      *
+     * @param vecAllocator vector allocator
      * @param pages the pages
      * @return the list
      */
-    public static List<Page> transferToOffHeapPages(List<Page> pages) {
+    public static List<Page> transferToOffHeapPages(VecAllocator vecAllocator, List<Page> pages) {
         List<Page> offHeapInput = new ArrayList<>();
         for (Page page : pages) {
-            Block[] blocks = getOffHeapBlocks(page.getBlocks());
+            Block[] blocks = getOffHeapBlocks(vecAllocator, page.getBlocks());
             offHeapInput.add(new Page(blocks));
         }
         return offHeapInput;
@@ -180,18 +182,19 @@ public final class OperatorUtils {
     /**
      * Transfer to off heap pages page.
      *
+     * @param vecAllocator vector allocator
      * @param page the page
      * @return the page
      */
-    public static Page transferToOffHeapPages(Page page) {
-        Block[] blocks = getOffHeapBlocks(page.getBlocks());
+    public static Page transferToOffHeapPages(VecAllocator vecAllocator, Page page) {
+        Block[] blocks = getOffHeapBlocks(vecAllocator, page.getBlocks());
         return new Page(blocks);
     }
 
-    private static Block[] getOffHeapBlocks(Block[] blocks) {
+    private static Block[] getOffHeapBlocks(VecAllocator vecAllocator, Block[] blocks) {
         Block[] res = new Block[blocks.length];
         for (int i = 0; i < blocks.length; i++) {
-            res[i] = getOffHeapBlock(blocks[i]);
+            res[i] = buildOffHeapBlock(vecAllocator, blocks[i]);
         }
         return res;
     }
@@ -199,10 +202,11 @@ public final class OperatorUtils {
     /**
      * Gets off heap block.
      *
+     * @param vecAllocator vector allocator
      * @param block the block
      * @return the off heap block
      */
-    public static Block getOffHeapBlock(Block block) {
+    public static Block buildOffHeapBlock(VecAllocator vecAllocator, Block block) {
         if (block.isExtensionBlock()) {
             return block;
         }
@@ -218,7 +222,7 @@ public final class OperatorUtils {
                         ints[j] = (int) block.get(j);
                     }
                 }
-                return new IntArrayOmniBlock(positionCount, Optional.of(valueIsNull), ints);
+                return new IntArrayOmniBlock(vecAllocator, positionCount, Optional.of(valueIsNull), ints);
             }
             case "LongArrayBlock": {
                 long[] longs = new long[positionCount];
@@ -229,7 +233,7 @@ public final class OperatorUtils {
                         longs[j] = (long) block.get(j);
                     }
                 }
-                return new LongArrayOmniBlock(positionCount, Optional.of(valueIsNull), longs);
+                return new LongArrayOmniBlock(vecAllocator, positionCount, Optional.of(valueIsNull), longs);
             }
             case "DoubleArrayBlock": {
                 double[] doubles = new double[positionCount];
@@ -240,7 +244,7 @@ public final class OperatorUtils {
                         doubles[j] = (double) block.get(j);
                     }
                 }
-                return new DoubleArrayOmniBlock(positionCount, Optional.of(valueIsNull), doubles);
+                return new DoubleArrayOmniBlock(vecAllocator, positionCount, Optional.of(valueIsNull), doubles);
             }
             case "Int128ArrayBlock": {
                 long[] longs = new long[positionCount * 2];
@@ -253,17 +257,17 @@ public final class OperatorUtils {
                         longs[j * 2 + 1] = data[1];
                     }
                 }
-                return new Int128ArrayOmniBlock(positionCount, Optional.of(valueIsNull), longs);
+                return new Int128ArrayOmniBlock(vecAllocator, positionCount, Optional.of(valueIsNull), longs);
             }
             case "VariableWidthBlock": {
-                return getVariableWidthOmniBlock(block, positionCount, valueIsNull);
+                return getVariableWidthOmniBlock(vecAllocator, block, positionCount, valueIsNull);
             }
             case "DictionaryBlock": {
-                return new DictionaryOmniBlock(getOffHeapBlock(((DictionaryBlock) block).getDictionary()),
+                return new DictionaryOmniBlock(buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
                     ((DictionaryBlock) block).getIdsArray());
             }
             case "LazyBlock": {
-                return ((LazyBlock) block).getBlock();
+                return buildOffHeapBlock(vecAllocator, block.getLoadedBlock());
             }
             case "RowBlock": {
                 RowBlock rowBlock = (RowBlock) block;
@@ -281,7 +285,7 @@ public final class OperatorUtils {
         return null;
     }
 
-    private static VariableWidthOmniBlock getVariableWidthOmniBlock(Block block, int positionCount,
+    private static VariableWidthOmniBlock getVariableWidthOmniBlock(VecAllocator vecAllocator, Block block, int positionCount,
         boolean[] valueIsNull) {
         int[] offsets = ((VariableWidthBlock) block).getOffsets();
         for (int j = 0; j < positionCount; j++) {
@@ -292,7 +296,7 @@ public final class OperatorUtils {
 
         int arrayOffset = 0;
         int dataLength = offsets[arrayOffset + positionCount] - offsets[arrayOffset];
-        VarcharVec varcharVec = new VarcharVec(dataLength, positionCount);
+        VarcharVec varcharVec = new VarcharVec(vecAllocator, dataLength, positionCount);
         Slice slice = ((VariableWidthBlock) block).getRawSlice(0);
         if (slice.hasByteArray()) {
             varcharVec.put(0, slice.byteArray(), slice.byteArrayOffset(), offsets, 0, positionCount);
@@ -302,19 +306,19 @@ public final class OperatorUtils {
     }
 
     /**
-     * Gets vec batch.
+     * Build a vector by {@link Block}
      *
      * @param page the page
      * @param operatorName the operator name
      * @return the vec batch
      */
-    public static VecBatch getVecBatch(Page page, String operatorName) {
+    public static VecBatch buildVecBatch(VecAllocator vecAllocator, Page page, String operatorName) {
         List<Vec> vecList = new ArrayList<>();
 
         for (int i = 0; i < page.getChannelCount(); i++) {
             Block block = page.getBlock(i);
             if (!block.isExtensionBlock()) {
-                vecList.add((Vec) OperatorUtils.getOffHeapBlock(block).getValues());
+                vecList.add((Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues());
                 log.warn("transfer the onheap pages to offheap pages in %s with %s rows", operatorName,
                     page.getPositionCount());
             } else {
@@ -323,7 +327,7 @@ public final class OperatorUtils {
                 } else if (block instanceof DictionaryBlock) {
                     vecList.add(getDictionaryVec((DictionaryBlock<?>) block));
                 } else if (block instanceof RowBlock) {
-                    vecList.add(getContainerVec((RowBlock) block));
+                    vecList.add(getContainerVec(vecAllocator, (RowBlock) block));
                 } else {
                     vecList.add((Vec) block.getValues());
                 }
@@ -341,7 +345,7 @@ public final class OperatorUtils {
         return (Vec) block.getLoadedBlock().getValues();
     }
 
-    private static Vec getContainerVec(RowBlock block) {
+    private static Vec getContainerVec(VecAllocator vecAllocator, RowBlock block) {
         Block[] rawFieldBlocks = block.getRawFieldBlocks();
         int numFields = rawFieldBlocks.length;
         long[] vectorAddresses = new long[numFields];
@@ -351,7 +355,7 @@ public final class OperatorUtils {
             long nativeVectorAddress = vec.getNativeVector();
             vectorAddresses[i] = nativeVectorAddress;
         }
-        return new ContainerVec(numFields, block.getPositionCount(), vectorAddresses, vecTypes);
+        return new ContainerVec(vecAllocator, numFields, block.getPositionCount(), vectorAddresses, vecTypes);
     }
 
     private static Vec getDictionaryVec(DictionaryBlock<?> block) {

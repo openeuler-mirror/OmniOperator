@@ -36,6 +36,7 @@ import io.prestosql.testing.MaterializedResult;
 import io.prestosql.testing.TestingTaskContext;
 import nova.hetu.olk.tool.OperatorUtils;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -71,7 +72,7 @@ public class TestWindowOmniOperator
                 .row(2, 5L, 0.4)
                 .row(1, 6L, 0.1)
                 .build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
                 0,
@@ -110,7 +111,7 @@ public class TestWindowOmniOperator
                 .row(1, 6L, 0.1)
                 .row(1, 4L, 0.2)
                 .build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
                 0,
@@ -149,7 +150,7 @@ public class TestWindowOmniOperator
                 .row(2, 5L, 0.4)
                 .row(1, 6L, 0.1)
                 .build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
                 0,
@@ -188,7 +189,7 @@ public class TestWindowOmniOperator
                 .row(2, 5L, 0.4)
                 .row(1, 6L, 0.1)
                 .build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         WindowOmniOperator.WindowOmniOperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
                 0,

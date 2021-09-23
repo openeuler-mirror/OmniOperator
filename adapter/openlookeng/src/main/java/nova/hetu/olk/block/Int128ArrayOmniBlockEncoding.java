@@ -10,6 +10,7 @@ import io.airlift.slice.SliceInput;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.Int128ArrayBlockEncoding;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Int 128 array omni block encoding.
@@ -17,6 +18,12 @@ import io.prestosql.spi.block.Int128ArrayBlockEncoding;
  * @since 20210630
  */
 public class Int128ArrayOmniBlockEncoding extends Int128ArrayBlockEncoding {
+    private final VecAllocator vecAllocator;
+
+    public Int128ArrayOmniBlockEncoding(VecAllocator vecAllocator) {
+        this.vecAllocator = vecAllocator;
+    }
+
     @Override
     public Block readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
         int positionCount = sliceInput.readInt();
@@ -31,6 +38,6 @@ public class Int128ArrayOmniBlockEncoding extends Int128ArrayBlockEncoding {
             }
         }
 
-        return new Int128ArrayOmniBlock(0, positionCount, valueIsNull, values);
+        return new Int128ArrayOmniBlock(vecAllocator, 0, positionCount, valueIsNull, values);
     }
 }

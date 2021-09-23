@@ -7,7 +7,7 @@ package nova.hetu.olk.operator;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.createExpressions;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -23,11 +23,13 @@ import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.planner.plan.AggregationNode.Step;
 import io.prestosql.sql.planner.plan.PlanNodeId;
+import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.constants.AggType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Arrays;
@@ -95,7 +97,7 @@ public class HashAggregationOmniOperator implements Operator {
     public void addInput(Page page) {
         checkState(!finishing, "Operator is already finishing");
         requireNonNull(page, "page is null");
-        VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
         omniOperator.addInput(vecBatch);
         vecBatch.releaseAllVectors();
         vecBatch.close();
@@ -243,9 +245,10 @@ public class HashAggregationOmniOperator implements Operator {
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
+            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                 HashAggregationOmniOperator.class.getSimpleName());
-            OmniOperator omniOperator = omniFactory.createOperator();
+            OmniOperator omniOperator = omniFactory.createOperator(vecAllocator);
             return new HashAggregationOmniOperator(operatorContext, omniOperator);
         }
 

@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/projection/projection.h"
 #include "../../src/vector/vector_helper.h"
+#include "../../src/vector/vector_allocator_factory.h"
 #include <string>
 #include <vector>
 #include <chrono>
@@ -21,7 +22,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
-    vecBatch->NewVectors(inputTypes);
+    vecBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypes[i]) {
             case OMNI_VEC_TYPE_INT:
@@ -51,7 +52,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                 ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
                 break;
             default: {
-                DebugError("No such data type %d", inputTypes[i]);
+                LogError("No such data type %d", inputTypes[i]);
                 break;
             }
         }
@@ -364,9 +365,10 @@ TEST(ProjectTest, ProjectString1) {
 TEST (ProjectTest, DictionaryVecTest) {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
-    IntVector *col1 = new IntVector(nullptr, numRows);
-    IntVector *col2 = new IntVector(nullptr, numRows);
-    IntVector *col3 = new IntVector(nullptr, numRows);
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, numRows);
     int32_t ids[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
     DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
 
@@ -378,7 +380,7 @@ TEST (ProjectTest, DictionaryVecTest) {
 
     VectorBatch *batch = new VectorBatch(numCols, numRows);
     int32_t inputTypes[numCols] = {1, 1, 1};
-    batch->NewVectors(inputTypes);
+    batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryVector);
@@ -408,9 +410,10 @@ TEST (ProjectTest, DictionaryVecTest) {
 TEST (ProjectTest, DictionaryVecNestedTest) {
     const int32_t numCols = 3;
     const int32_t numRows = 10;
-    IntVector *col1 = new IntVector(nullptr, numRows);
-    IntVector *col2 = new IntVector(nullptr, numRows);
-    IntVector *col3 = new IntVector(nullptr, 3);
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, 3);
     int32_t data[] = {4, 5, 6};
     col3->SetValues(0, data, 3);
     int32_t ids[] = {1, 2};
@@ -424,7 +427,7 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
 
     VectorBatch *batch = new VectorBatch(numCols, numRows);
     int32_t inputTypes[numCols] = {1, 1, 1};
-    batch->NewVectors(inputTypes);
+    batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryNested);

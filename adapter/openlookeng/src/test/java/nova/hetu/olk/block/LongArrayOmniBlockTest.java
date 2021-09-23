@@ -12,6 +12,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import org.testng.annotations.Test;
 
@@ -24,7 +25,7 @@ public class LongArrayOmniBlockTest {
         blockBuilder.appendNull();
         BIGINT.writeLong(blockBuilder, Long.MAX_VALUE);
         Block onHeapBlock = blockBuilder.build();
-        Block block = OperatorUtils.getOffHeapBlock(onHeapBlock);
+        Block block = OperatorUtils.buildOffHeapBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, onHeapBlock);
 
         assertTrue(block.isNull(0));
         assertEquals(BIGINT.getLong(block, 1), 42L);

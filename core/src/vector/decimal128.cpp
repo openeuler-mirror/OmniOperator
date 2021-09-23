@@ -508,10 +508,10 @@ Decimal128 operator % (const Decimal128 &left, const Decimal128 &right)
     return remainder;
 }
 
-std::ostream& operator << (std::ostream &os, const Decimal128 &decimal128)
+std::ostream &operator << (std::ostream &os, const Decimal128 &decimal128)
 {
-    os << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.HighBits()
-       << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.LowBits();
+    os << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.HighBits() <<
+        std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.LowBits();
     return os;
 }
 }

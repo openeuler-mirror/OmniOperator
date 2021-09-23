@@ -11,7 +11,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.createExpressions;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -34,10 +34,12 @@ import io.prestosql.spi.PageBuilder;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.gen.JoinFilterFunctionCompiler.JoinFilterFunctionFactory;
 import io.prestosql.sql.planner.plan.PlanNodeId;
+import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.io.IOException;
@@ -135,6 +137,7 @@ public class HashBuilderOmniOperator implements Operator {
         @Override
         public Operator createOperator(DriverContext driverContext) {
             checkState(!closed, "Factory is already closed");
+            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                 HashBuilderOmniOperator.class.getSimpleName());
 
@@ -142,7 +145,7 @@ public class HashBuilderOmniOperator implements Operator {
                 driverContext.getLifespan());
             int partitionIndex = getAndIncrementPartitionIndex(driverContext.getLifespan());
             verify(partitionIndex < lookupSourceFactory.partitions());
-            OmniOperator omniOperator = omniHashBuilderOperatorFactory.createOperator();
+            OmniOperator omniOperator = omniHashBuilderOperatorFactory.createOperator(vecAllocator);
             return new HashBuilderOmniOperator(operatorContext, lookupSourceFactory, partitionIndex, outputChannels,
                 hashChannels, preComputedHashChannel, filterFunctionFactory, sortChannel, searchFunctionFactories,
                 omniOperator);
@@ -342,7 +345,7 @@ public class HashBuilderOmniOperator implements Operator {
             return;
         }
 
-        VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
         omniOperator.addInput(vecBatch);
 
         operatorContext.recordOutput(page.getSizeInBytes(), positionCount);

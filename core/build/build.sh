@@ -1,31 +1,58 @@
 #!/bin/bash
 
+# clean environment
 if [[ -z $OMNI_HOME ]]; then
   lib_home=/opt/lib
 else
   lib_home=/$OMNI_HOME/lib
 fi
 rm -rf libomni_runtime.so $lib_home/libomni_vector.so $lib_home/libsecurec.so $lib_home/externalfunctions.so $lib_home/ir
-echo "enter" $(dirname $(readlink -f $0))
+echo "-- Enter" $(dirname $(readlink -f $0))
 cd $(dirname $(readlink -f $0))
 rm -rf `ls | grep -v "build.sh"`
-if [ $# != 0 ] ; then
-  if [ $1 = 'debug' ] && [ $2 = 'low' ];then
-    echo "-- Enable low level debug"
-    cmake ../ -DDEBUG_LEVEL_LOW=ON -DCMAKE_BUILD_TYPE=Debug
-  elif [ $1 = 'debug' ] && [ $2 = 'high' ];then
-    echo "-- Enable high level debug"
-    cmake ../ -DDEBUG_LEVEL_HIGH=ON -DCMAKE_BUILD_TYPE=Debug
-  elif [ $1 = 'debug' ] && [ $2 = 'op' ];then
-    echo "-- Enable native operator debug"
-    cmake ../ -DDEBUG_OPERATOR=ON  -DCMAKE_BUILD_TYPE=Debug
-  elif [ $1 = 'debug' ] && [ $2 = 'llvm' ];then
-    echo "-- Enable jit and codegen debug"
-    cmake ../ -DDEBUG_LLVM=ON  -DCMAKE_BUILD_TYPE=Debug
-  elif [ $1 = 'release' ];then
-    cmake ../  -DCMAKE_BUILD_TYPE=Release
+
+#append_options
+append_options()
+{
+  if [ $# = 1 ]; then
+    echo "-- Enable Operator,Vector,LLVM Debug"
+    options="$options -DDEBUG_OPERATOR=ON -DDEBUG_VECTOR=ON -DDEBUG_LLVM=ON"
+  else
+    for i in $* ; do
+        if [ $i != $1 ]; then
+            if [ $i = 'op' ]; then
+              echo "-- Enable Operator Debug"
+              options="$options -DDEBUG_OPERATOR=ON"
+            elif [ $i = 'vec' ]; then
+              echo "-- Enable Vector Debug"
+              options="$options -DDEBUG_VECTOR=ON"
+            elif [ $i = 'llvm' ]; then
+              echo "-- Enable LLVM Debug"
+              options="$options -DDEBUG_LLVM=ON"
+            fi
+        fi
+    done
   fi
+}
+
+# options
+if [ $# != 0 ] ; then
+  options=""
+  if [ $1 = 'debug' ]; then
+    echo "-- Enable Debug"
+    options="$options -DCMAKE_BUILD_TYPE=Debug -DDEBUG=ON"
+    append_options $*
+  elif [ $1 = 'trace' ]; then
+    echo "-- Enable Trace"
+    options="$options -DCMAKE_BUILD_TYPE=Debug -DTRACE=ON"
+    append_options $*
+  elif [ $1 = 'release' ];then
+    echo "-- Enable Release"
+    options="$options -DCMAKE_BUILD_TYPE=Release"
+  fi
+  cmake ../ $options
 else
+  echo "-- Enable Release"
   cmake ../ -DCMAKE_BUILD_TYPE=Release
 fi
 make clean

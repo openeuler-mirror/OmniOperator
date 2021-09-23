@@ -5,15 +5,14 @@
 #include "gtest/gtest.h"
 #include "vector.h"
 #include "vector_allocator.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 #include "boolean_vector.h"
 
 using namespace omniruntime::vec;
 
 TEST(BooleanVector, newVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     BooleanVector *vector = new BooleanVector(allocator, 256);
     EXPECT_EQ(vector->GetSize(), 256);
@@ -29,14 +28,13 @@ TEST(BooleanVector, newVector)
     EXPECT_EQ(vector1->GetType().GetId(), OMNI_VEC_TYPE_BOOLEAN);
     delete vector1;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(BooleanVector, sliceVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *originalVector = new BooleanVector(allocator, 10);
@@ -65,14 +63,13 @@ TEST(BooleanVector, sliceVector)
     EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(BooleanVector, setAndGetValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *vector = new BooleanVector(allocator, 256);
@@ -84,14 +81,13 @@ TEST(BooleanVector, setAndGetValue)
         EXPECT_EQ(vector->GetValue(i), i % 2);
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test setValues
 TEST(BooleanVector, setValues)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     const int size = 5;
@@ -111,14 +107,13 @@ TEST(BooleanVector, setValues)
 
     delete boolVector1;
     delete boolVector2;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is null
 TEST(BooleanVector, setValueNull)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *vector = new BooleanVector(allocator, 256);
@@ -137,14 +132,13 @@ TEST(BooleanVector, setValueNull)
         }
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyPosition
 TEST(BooleanVector, copyPositions)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *originalVector = new BooleanVector(allocator, 4);
@@ -163,14 +157,13 @@ TEST(BooleanVector, copyPositions)
 
     delete originalVector;
     delete copyPostionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyRegion
 TEST(BooleanVector, copyRegion)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     BooleanVector *originalVector = new BooleanVector(allocator, 4);
@@ -186,16 +179,5 @@ TEST(BooleanVector, copyRegion)
 
     delete originalVector;
     delete copyRegionVector;
-    manager.DeleteAllocator(&allocator);
-}
-
-TEST(BooleanVector, jniFreeVector)
-{
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    BooleanVector *oritianlVector = new BooleanVector(allocator, 256);
-    Vector *vector = (Vector *)oritianlVector;
-    delete vector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }

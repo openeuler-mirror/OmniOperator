@@ -73,17 +73,14 @@ Operator *AggregationOperatorFactory::CreateOperator()
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-#ifdef DEBUG_LEVEL_HIGH
-    DebugFuncEntry;
-#endif
     this->PreLoop(vecBatch);
 
     int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t aggColNum = this->aggCols.size();
     if (vectorCount != aggColNum) {
-        DebugError("Doing pure aggregation needs column number to equal with aggregate column number, but vectorCount "
+        LogError("Doing pure aggregation needs column number to equal with aggregate column number, but vectorCount "
                    "= %d aggColNum =%d",
-            vectorCount, aggColNum);
+                 vectorCount, aggColNum);
     }
 
     auto vectorTypes = std::make_unique<int32_t[]>(vectorCount);
@@ -101,9 +98,6 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     }
 
     this->PostLoop(vecBatch);
-#ifdef DEBUG_LEVEL_HIGH
-    DebugFuncExit;
-#endif
     return 0;
 }
 
@@ -171,13 +165,13 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
                 if (state.count == 0) {
-                    DebugError("Divisor is zero! column index = %d", colIdx);
+                    LogError("Divisor is zero! column index = %d", colIdx);
                 }
                 dynamic_cast<DoubleVector *>(vector)->SetValue(0, *reinterpret_cast<double *>(state.avgVal));
                 break;
             }
             default: {
-                DebugError("Not support %d aggregate id!", aggType);
+                LogError("Not support %d aggregate id!", aggType);
                 break;
             }
         }
@@ -190,7 +184,6 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t colSize = aggCols.size();
 
     auto types = std::make_unique<int32_t[]>(colSize);
-    int32_t idx = 0;
     for (int32_t i = 0; i < colSize; ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
             types[i] = OMNI_VEC_TYPE_LONG;
@@ -204,14 +197,10 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     }
 
     VectorBatch *vecBatch = new VectorBatch(colSize, 1);
-    vecBatch->NewVectors(types.get());
+    vecBatch->NewVectors(this->vecAllocator, types.get());
     FillResultVectors(vecBatch);
     result.push_back(vecBatch);
-#ifdef DEBUG_LEVEL_LOW
-    std::stringstream os;
-    os << std::this_thread::get_id();
-    DebugPrint("Thread %s: end of getResult.", os.str().c_str());
-#endif
+
     // set finished.
 
     SetStatus(OMNI_STATUS_FINISHED);

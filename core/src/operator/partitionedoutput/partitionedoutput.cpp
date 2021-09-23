@@ -221,7 +221,7 @@ void ALWAYS_INLINE Insert(Vector *origintVector, int32_t originRowIndex, Vector 
             InsertContainer(origintVector, originRowIndex, currentVector, currentRowIndex);
             break;
         default: {
-            DebugError("No such data type %d", origintVector->GetType().GetId());
+            LogError("No such data type %d", origintVector->GetType().GetId());
             break;
         }
     }
@@ -349,7 +349,7 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
 void PartitionedOutputOperator::BuildVecBatch(int32_t vecCount, int32_t rowCount)
 {
     VectorBatch *vectorBatch = std::make_unique<VectorBatch>(vecCount, rowCount).release();
-    vectorBatch->NewVectors(sourceTypes.Get());
+    vectorBatch->NewVectors(this->vecAllocator, sourceTypes.Get());
     vectorBatches.push_back(vectorBatch);
 }
 

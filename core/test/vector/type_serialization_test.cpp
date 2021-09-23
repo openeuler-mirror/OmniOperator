@@ -12,7 +12,7 @@ using LongVecType = omniruntime::vec::LongVecType;
 using DoubleVecType = omniruntime::vec::DoubleVecType;
 using Decimal128VecType = omniruntime::vec::Decimal128VecType;
 
-TEST(VecTypeSerializer, Serialization)
+TEST(VecTypeSerializer, serialization)
 {
     Decimal128VecType decimal(10, 2);
     std::vector<VecType> types = { IntVecType(),        DoubleVecType(),      decimal,

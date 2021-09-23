@@ -19,9 +19,9 @@ public:
 
     Decimal128() : Decimal128(0, 0) {}
 
-    Decimal128(const Decimal128& rhs) = default;
+    Decimal128(const Decimal128 &rhs) = default;
 
-    Decimal128& operator=(const Decimal128& rhs) = default;
+    Decimal128 &operator = (const Decimal128 &rhs) = default;
 
     // / \brief Convert any integer value into a Decimal128.
     template <typename T,
@@ -97,7 +97,7 @@ Decimal128 operator / (const Decimal128 &left, const Decimal128 &right);
 
 Decimal128 operator % (const Decimal128 &left, const Decimal128 &right);
 
-std::ostream& operator << (std::ostream &os, const Decimal128 &decimal128);
+std::ostream &operator << (std::ostream &os, const Decimal128 &decimal128);
 }
 }
 

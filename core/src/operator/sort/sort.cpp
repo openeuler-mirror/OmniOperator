@@ -43,7 +43,8 @@ Operator *SortOperatorFactory::CreateOperator()
 
 // function implements for class Sort
 SortOperator::SortOperator(const VecTypes &vecTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
-    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts) : sourceTypes(vecTypes)
+    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts)
+    : sourceTypes(vecTypes)
 {
     this->outputCols = outputCols;
     this->sortCols = sortCols;
@@ -99,7 +100,8 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
         auto start = START();
         OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
         vecBatch = std::make_unique<VectorBatch>(outputColsCount).release();
-        pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount);
+        pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
+            this->vecAllocator);
         OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));
         position += rowCount;
         outputPages.push_back(vecBatch);

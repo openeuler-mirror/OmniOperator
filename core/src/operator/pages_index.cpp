@@ -24,9 +24,10 @@ void QuickSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
     int32_t to);
 template <typename T>
-T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch);
+T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+    VectorAllocator *vecAllocator);
 VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
-    uint32_t width);
+    uint32_t width, VectorAllocator *vecAllocator);
 
 int32_t GetMedianPosition(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
     const int32_t *sortNullFirsts, int32_t sortColCount, int64_t *valueAddresses, Vector ***columns, int32_t from,
@@ -1069,7 +1070,7 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, cons
 
 SPECIALIZE(OMNIJIT_PAGE_INDEX_GET_OUTPUT)
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
-    const int32_t *sourceTypes, int32_t offset, int32_t length) const
+    const int32_t *sourceTypes, int32_t offset, int32_t length, VectorAllocator *vecAllocator) const
 {
     Vector ***inputVecBatches = this->columns;
     int64_t *valueAddresses = this->valueAddresses;
@@ -1084,31 +1085,32 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         switch (colTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
-                outputVecBatch->SetVector(j, ConstructVector<IntVector>(valueAddresses, offset, length, inputVecBatch));
+                outputVecBatch->SetVector(j,
+                    ConstructVector<IntVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<LongVector>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<LongVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<DoubleVector>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<DoubleVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
             case OMNI_VEC_TYPE_BOOLEAN:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<BooleanVector>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<BooleanVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
             case OMNI_VEC_TYPE_VARCHAR: {
                 auto vecType = (VarcharVecType &)vecTypes[outputCol];
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length,
-                                                                      inputVecBatch, vecType.GetWidth());
+                                                                      inputVecBatch, vecType.GetWidth(), vecAllocator);
                 outputVecBatch->SetVector(j, varcharVector);
                 break;
             }
             case OMNI_VEC_TYPE_DECIMAL128:
                 outputVecBatch->SetVector(j,
-                    ConstructVector<Decimal128Vector>(valueAddresses, offset, length, inputVecBatch));
+                    ConstructVector<Decimal128Vector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
             default:
                 break;
@@ -1186,13 +1188,14 @@ template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *
 }
 
 template <typename T>
-T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch)
+T *ConstructVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
+    VectorAllocator *vecAllocator)
 {
     int64_t valueAddress = 0;
     Vector *inputVector = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
-    auto outputVector = std::make_unique<T>(nullptr, length).release();
+    auto outputVector = std::make_unique<T>(vecAllocator, length).release();
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;
@@ -1221,15 +1224,14 @@ void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *out
 }
 
 VarcharVector *ConstructVarcharVector(int64_t *valueAddresses, int32_t offset, int32_t length, Vector **inputVecBatch,
-    uint32_t width)
+    uint32_t width, VectorAllocator *vecAllocator)
 {
     int64_t valueAddress = 0;
     Vector *inputVector = nullptr;
     int32_t pageIndex = 0;
     int32_t position = 0;
 
-    VarcharVector *outputVector =
-        std::make_unique<VarcharVector>(static_cast<VectorAllocator *>(nullptr), length * width, length).release();
+    VarcharVector *outputVector = std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t outputIndex = 0;

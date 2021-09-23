@@ -17,6 +17,7 @@ package nova.hetu.olk.block;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 
 import io.prestosql.spi.block.AbstractRowBlock;
 import io.prestosql.spi.block.Block;
@@ -24,6 +25,7 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Vec;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.Optional;
@@ -39,6 +41,8 @@ import javax.annotation.Nullable;
  */
 public class RowOmniBlock<T> extends AbstractRowBlock<T> {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(RowOmniBlock.class).instanceSize();
+
+    private final VecAllocator vecAllocator;
 
     private final int startOffset;
 
@@ -134,13 +138,12 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
             long nativeVectorAddress = vec.getNativeVector();
             vectorAddresses[i] = nativeVectorAddress;
         }
-        return new ContainerVec(this.numFields, this.positionCount, vectorAddresses, vecTypes);
+        return new ContainerVec(vecAllocator, this.numFields, this.positionCount, vectorAddresses, vecTypes);
     }
 
     /**
      * Use createRowBlockInternal or fromFieldBlocks instead of this method.  The caller of this method is assumed to have
      * validated the arguments with validateConstructorArguments.
-     *
      * @param startOffset the start offset
      * @param positionCount the position count
      * @param rowIsNull the row is null
@@ -148,8 +151,9 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
      * @param fieldBlocks the field blocks
      */
     public RowOmniBlock(int startOffset, int positionCount, @Nullable boolean[] rowIsNull, int[] fieldBlockOffsets,
-        Block[] fieldBlocks) {
+            Block[] fieldBlocks) {
         super(fieldBlocks.length);
+        this.vecAllocator = getVecAllocatorFromBlocks(fieldBlocks);
 
         this.startOffset = startOffset;
         this.positionCount = positionCount;

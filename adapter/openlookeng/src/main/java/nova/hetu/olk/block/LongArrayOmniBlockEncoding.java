@@ -10,6 +10,7 @@ import io.airlift.slice.SliceInput;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.LongArrayBlockEncoding;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Long array omni block encoding.
@@ -17,6 +18,12 @@ import io.prestosql.spi.block.LongArrayBlockEncoding;
  * @since 20210630
  */
 public class LongArrayOmniBlockEncoding extends LongArrayBlockEncoding {
+    private final VecAllocator vecAllocator;
+
+    public LongArrayOmniBlockEncoding(VecAllocator vecAllocator) {
+        this.vecAllocator = vecAllocator;
+    }
+
     @Override
     public Block<Long> readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
         int positionCount = sliceInput.readInt();
@@ -29,6 +36,6 @@ public class LongArrayOmniBlockEncoding extends LongArrayBlockEncoding {
                 values[position] = sliceInput.readLong();
             }
         }
-        return new LongArrayOmniBlock(0, positionCount, valueIsNull, values);
+        return new LongArrayOmniBlock(vecAllocator, 0, positionCount, valueIsNull, values);
     }
 }

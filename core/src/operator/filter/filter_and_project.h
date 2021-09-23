@@ -20,13 +20,14 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *);
 
 namespace omniruntime {
 namespace op {
-using RowFilterFunc = bool (*)(int64_t*, bool*, int32_t);
+using RowFilterFunc = bool (*)(int64_t *, bool *, int32_t);
 
 class RowFilter {
 public:
     RowFilter();
     ~RowFilter();
     RowFilterFunc CreateFilter(std::string expression, std::vector<expressions::DataType> inputTypes);
+
 private:
     std::unique_ptr<FilterCodeGen> codegen = nullptr;
 };
@@ -55,7 +56,7 @@ private:
 
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(std::unique_ptr<Filter> const &filter, int32_t inputTypes[], int32_t vecCount,
+    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t inputTypes[], int32_t vecCount,
         const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount)
         : filter(filter),
           inputTypes(inputTypes),

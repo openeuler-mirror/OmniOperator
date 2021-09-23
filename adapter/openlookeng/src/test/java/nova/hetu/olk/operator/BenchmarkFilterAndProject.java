@@ -7,6 +7,7 @@ package nova.hetu.olk.operator;
 import com.google.common.collect.ImmutableList;
 import io.airlift.slice.Slice;
 import io.prestosql.SessionTestUtils;
+import io.prestosql.execution.TaskId;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.operator.DriverYieldSignal;
 import io.prestosql.operator.project.PageProcessor;
@@ -110,7 +111,7 @@ public class BenchmarkFilterAndProject
         inputTypes.add(BIGINT);
         return new OmniExpressionCompiler(metadata, new PageFunctionCompiler(metadata, 10_000))
                 .compilePageProcessor(Optional.of(FILTER_FOR_Q1_OMNI_FILTER), ImmutableList.of(PROJECT), Optional.empty(),
-                    OptionalInt.empty(), inputTypes)
+                    OptionalInt.empty(), inputTypes, new TaskId("test"))
                 .get();
     }
 

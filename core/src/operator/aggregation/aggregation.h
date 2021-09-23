@@ -39,6 +39,7 @@ public:
     ~AggregationCommonOperatorFactory() override {}
     virtual OmniStatus Init() = 0;
     virtual OmniStatus Close() = 0;
+
 protected:
     int inputRaw;
     int outputPartial;

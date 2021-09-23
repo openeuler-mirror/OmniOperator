@@ -1,4 +1,5 @@
-#cmakedefine DEBUG_OPERATOR
-#cmakedefine DEBUG_LEVEL_LOW
-#cmakedefine DEBUG_LEVEL_HIGH
 #cmakedefine DEBUG
+#cmakedefine TRACE
+#cmakedefine DEBUG_OPERATOR
+#cmakedefine DEBUG_VECTOR
+#cmakedefine DEBUG_LLVM

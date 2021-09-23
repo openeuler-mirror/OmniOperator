@@ -133,9 +133,7 @@ protected:
     Vector(Vector *vector, int size, int offset);
 
     // this method does not apply for memory for chunk,it is mainly used for dictionary vector or other vector
-    Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset)
-        : allocator(allocator), capacityInBytes(capacityInBytes), size(size), type(type), positionOffset(positionOffset)
-    {}
+    Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset);
 
     void *valuesAddress = nullptr;
     void *valueNullsAddress = nullptr;

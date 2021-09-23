@@ -82,7 +82,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     }
     auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
     for (int32_t i = 0; i < this->projectVecCount; i++) {
-        Vector *col = this->projections[i]->Project(vecBatch, selectedRows, numSelectedRows);
+        Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows);
         projectedData->SetVector(i, col);
     }
     this->projectedVecs = std::move(projectedData);

@@ -12,10 +12,10 @@ extern "C" {
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
  * Method:    createOperatorNative
- * Signature: (J)J
+ * Signature: (J)JJ
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *, jobject,
-    jlong);
+    jlong, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory

@@ -5,6 +5,7 @@ project(omni-runtime)
 cmake_minimum_required(VERSION 3.10)
 
 # configure cmake
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_COMPILER "clang++-12")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC -finline-functions")
@@ -46,13 +47,17 @@ configure_file(
 )
 
 # options
-option(DEBUG_OPERATOR "Using for debug into native operator code" OFF)
-message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")
-option(DEBUG_LLVM "Using for debug into JIT and codegen code" OFF)
-message(STATUS "Option DEBUG_OPERATOR: ${DEBUG_OPERATOR}")
-option(DEBUG_LEVEL_LOW "Low debug level" OFF)
-message(STATUS "Option DEBUG_LEVEL_LOW: ${DEBUG_LEVEL_LOW}")
-option(DEBUG_LEVEL_HIGH "High debug level" OFF)
-message(STATUS "Option DEBUG_LEVEL_HIGH: ${DEBUG_LEVEL_HIGH}")
 option(DEBUG "Debug" OFF)
 message(STATUS "Option DEBUG: ${DEBUG}")
+
+option(DEBUG "Trace" OFF)
+message(STATUS "Option TRACE: ${TRACE}")
+
+option(DEBUG_OPERATOR "Using for debug into native operator code" OFF)
+message(STATUS "Option DEBUG_OPERATOR: ${DEBUG_OPERATOR}")
+
+option(DEBUG_VECTOR "Using for debug into native vector code" OFF)
+message(STATUS "Option DEBUG_VECTOR: ${DEBUG_VECTOR}")
+
+option(DEBUG_LLVM "Using for debug into JIT and codegen code" OFF)
+message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")

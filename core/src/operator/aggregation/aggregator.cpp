@@ -63,7 +63,7 @@ void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type
     int64_t avgCnt = avgCountVector->GetValue(offset);
     if (avgCnt == 0) {
         // Fixme use error code
-        DebugError("Divisor should not be zero! Offset = %d", offset);
+        LogError("Divisor should not be zero! Offset = %d", offset);
     }
     groupSlot.avgVal = std::make_unique<double>(avgVal * avgCnt / avgCnt).release();
     groupSlot.avgCnt = avgCnt;
@@ -88,7 +88,7 @@ void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_
     int64_t avgCnt = avgCountVector->GetValue(offset);
     if (avgCnt == 0) {
         // Fixme use error code
-        DebugError("Divisor should not be zero! Offset = %d", offset);
+        LogError("Divisor should not be zero! Offset = %d", offset);
     }
     groupSlot.avgCnt += avgCnt;
     *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;
@@ -385,7 +385,7 @@ void ALWAYS_INLINE ProcessIntermediateAvg(GroupBySlot &groupSlot, Vector *colPtr
     int64_t avgCnt = avgCountVector->GetValue(offset);
     if (avgCnt == 0) {
         // Fixme use error code
-        DebugError("Divisor should not be zero! Offset = %d", offset);
+        LogError("Divisor should not be zero! Offset = %d", offset);
     }
     groupSlot.avgCnt += avgCnt;
     *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;

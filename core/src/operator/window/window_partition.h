@@ -53,7 +53,7 @@ public:
         return currentPosition < partitionEnd;
     }
 
-    void ProcessNextRow(omniruntime::vec::VectorBatch *vecBatch, int32_t index);
+    void ProcessNextRow(VectorBatch *vecBatch, int32_t index);
 
     void UpdatePeerGroup();
 
