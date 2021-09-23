@@ -69,7 +69,8 @@ public class OmniRowExpressionUtil {
             Type type = rowExpression.getType();
             if ((type instanceof VarcharType || type instanceof CharType)
                 && constantExpression.getValue() instanceof Slice) {
-                return ((Slice) constantExpression.getValue()).toStringAscii();
+                String varcharValue = ((Slice) constantExpression.getValue()).toStringAscii();
+                return "'" + varcharValue + "'";
             }
 
             if (type instanceof DecimalType && !((DecimalType) type).isShort()
