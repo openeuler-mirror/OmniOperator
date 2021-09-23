@@ -326,12 +326,13 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
         VectorHelper::GetValue(vecBatch->GetVector(startVecIndex), rowIndex, &rowHash); // partitioned page index 0
     } else {
         for (int i = 0; i < hashChannelsCount; ++i) {
+            int32_t tmpRowIndex = rowIndex;
             int type = hashChannelTypes[i];
             Vector *vector = vecBatch->GetVector(startVecIndex + hashChannels[i]);
             long hash = 0;
-            vector = VectorHelper::GetDictionary(vector, rowIndex);
-            if (!vector->IsValueNull(rowIndex)) {
-                hash = GetHash(rowIndex, type, vector);
+            vector = VectorHelper::GetDictionary(vector, tmpRowIndex);
+            if (!vector->IsValueNull(tmpRowIndex)) {
+                hash = GetHash(tmpRowIndex, type, vector);
             }
             rowHash = HashUtil::CombineHash(rowHash, hash);
         }
