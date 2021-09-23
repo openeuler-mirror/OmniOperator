@@ -253,6 +253,9 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
                 case OMNI_VEC_TYPE_BOOLEAN:
                     ((BooleanVec) dest).set(offSet + index, ((DictionaryVec) src).getBoolean(index));
                     break;
+                case OMNI_VEC_TYPE_VARCHAR:
+                    ((VarcharVec) dest).set(offSet + index, ((DictionaryVec) src).getBytes(index));
+                    break;
                 default:
                     throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + src.getType());
             }

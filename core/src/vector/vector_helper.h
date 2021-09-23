@@ -204,6 +204,15 @@ public:
         return result->CopyPositions(positions, 0, size);
     }
 
+    static VecTypeId ALWAYS_INLINE GetOrgTypeId(Vector *vector)
+    {
+        VecTypeId typeId = vector->GetType().GetId();
+        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
+            typeId = static_cast<DictionaryVector *>(vector)->GetDictionaryType().GetId();
+        }
+        return typeId;
+    }
+
     static void FreeVecBatch(VectorBatch *vecBatch);
 
     static void FreeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount);

@@ -251,6 +251,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         add(StandardTypes.DECIMAL);
         add(StandardTypes.ROW);
         add(StandardTypes.DOUBLE);
+        add(StandardTypes.VARBINARY);
     }};
 
     /**

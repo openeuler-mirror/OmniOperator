@@ -119,14 +119,17 @@ void ALWAYS_INLINE GenerateCombinedHashes(Vector** vectors,
 {
     for (int32_t i = 0; i < colNum; ++i) {
         uint32_t idx = colIdx[i];
-        HashAggregationOperator::FUNCTIONS[static_cast<VecTypeId>(types[idx])]
-        .hashFunc(vectors[idx], start, rowCount, combinedHashVal);
+        auto *vector = vectors[idx];
+        // FIXME: dictionary refactor here.
+        HashAggregationOperator::FUNCTIONS[VectorHelper::GetOrgTypeId(vector)]
+        .hashFunc(vector, start, rowCount, combinedHashVal);
     }
 }
 
 void* ALWAYS_INLINE DuplicateGroupByTuple(int32_t type, Vector* vector, uint32_t offset)
 {
-    return HashAggregationOperator::FUNCTIONS[static_cast<VecTypeId>(type)].duplicateKey(vector, offset);
+    // FIXME: dictionary refactor here.
+    return HashAggregationOperator::FUNCTIONS[VectorHelper::GetOrgTypeId(vector)].duplicateKey(vector, offset);
 }
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
