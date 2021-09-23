@@ -100,6 +100,9 @@ public final class OperatorUtils {
                 return DoubleVecType.DOUBLE;
             case StandardTypes.BOOLEAN:
                 return BooleanVecType.BOOLEAN;
+            case StandardTypes.VARBINARY:
+                // FIXME: the max varbinary length is 8000. when varchar support dynamic allocate, pls fix it.
+                return new VarcharVecType(8000);
             case StandardTypes.VARCHAR:
             case StandardTypes.CHAR:
                 int width = signature.getParameters().get(0).getLongLiteral().intValue();

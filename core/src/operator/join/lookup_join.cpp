@@ -522,6 +522,9 @@ void ConstructProbeColumns(VectorBatch *vectorBatch, Vector **probeAllColumns, c
     const int32_t *probeOutputCols, int32_t probeOutputColsCount, bool isSequentialProbeIndices,
     std::vector<int32_t> &probeIndex, int32_t position, int32_t rowCount)
 {
+    if (probeOutputCols == nullptr) {
+        return;
+    }
     int32_t probeLength = probeIndex.size();
     if (!isSequentialProbeIndices || probeLength == 0) {
         // probeIndices are discrete
