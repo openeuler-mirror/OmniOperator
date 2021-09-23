@@ -65,12 +65,16 @@ public:
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
+    void AggProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
     virtual void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) = 0;
+    void AggProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset);
     virtual void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) = 0;
+    void AggInsert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
     virtual void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) = 0;
     virtual void Initiate(Vector *colPtr, int32_t type, uint32_t offset) = 0;
     bool IsInputRaw() const;
     bool IsOutputPartial() const;
+
     AggregateType GetType() const
     {
         return type;

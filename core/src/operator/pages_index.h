@@ -72,4 +72,5 @@ inline int32_t DecodePosition(int64_t sliceAddress)
     return static_cast<int32_t>(sliceAddress);
 }
 
+using CompareFunc = int32_t (*)(Vector *leftVector, int32_t leftPosition, Vector *rightVector, int32_t rightPosition);
 #endif

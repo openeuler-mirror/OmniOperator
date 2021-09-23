@@ -38,9 +38,10 @@ void VectorHelper::FreeVecBatches(std::vector<VectorBatch *> &vecBatches)
 
 void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
 {
-    vector = GetDictionary(vector, rowIndex);
+    int32_t originalRowIndex;
+    vector = ExpandVectorAndIndex(vector, rowIndex, originalRowIndex);
     auto vecType = vector->GetType();
-    if (vector->IsValueNull(rowIndex)) {
+    if (vector->IsValueNull(originalRowIndex)) {
         std::cout << "NULL"
                   << "\t";
         return;

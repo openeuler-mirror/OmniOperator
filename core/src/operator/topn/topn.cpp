@@ -75,13 +75,7 @@ template <typename T>
 void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
     int32_t position)
 {
-    if (vector->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
-        auto dictionaryVector = static_cast<DictionaryVector *>(vector);
-        SetVectorForSingleRowVecBatch<T>(singleRowVecBatch, colIndex, dictionaryVector->GetDictionary(),
-            dictionaryVector->GetIds()[position]);
-    } else {
-        singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
-    }
+    singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
 }
 
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
@@ -89,28 +83,29 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
     auto typeIds = sourceTypes.GetIds();
     VectorBatch *singleRowVecBatch = new VectorBatch(sourceTypesCount);
     for (int i = 0; i < sourceTypesCount; ++i) {
-        Vector *vector = vectorBatch->GetVector(i);
+        int32_t originalPosition;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
         switch (typeIds[i]) {
             case OMNI_VEC_TYPE_BOOLEAN:
-                SetVectorForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, position);
+                SetVectorForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
-                SetVectorForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, position);
+                SetVectorForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64:
-                SetVectorForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, position);
+                SetVectorForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                SetVectorForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, position);
+                SetVectorForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             case OMNI_VEC_TYPE_VARCHAR: {
-                SetVectorForSingleRowVecBatch<VarcharVector>(singleRowVecBatch, i, vector, position);
+                SetVectorForSingleRowVecBatch<VarcharVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             }
             case OMNI_VEC_TYPE_DECIMAL128:
-                SetVectorForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, position);
+                SetVectorForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             default:
                 break;
@@ -192,8 +187,8 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
     for (const VecType &item : sourceTypes.Get()) {
         if (item.GetId() == OMNI_VEC_TYPE_VARCHAR) {
             auto vecType = (VarcharVecType &)item;
-            VarcharVector *varcharVector = new VarcharVector(vecAllocator,
-                positionCount * vecType.GetWidth(), positionCount);
+            VarcharVector *varcharVector =
+                new VarcharVector(vecAllocator, positionCount * vecType.GetWidth(), positionCount);
             for (int i = 0; i < positionCount; ++i) {
                 uint8_t *value = nullptr;
                 int32_t valueLength = (static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex)))
@@ -229,11 +224,12 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
         Vector *leftVector = left->GetVector(sortCol);
         Vector *rightVector = right->GetVector(sortCol);
 
-        leftVector = VectorHelper::GetDictionary(leftVector, leftPosition);
-        rightVector = VectorHelper::GetDictionary(rightVector, rightPosition);
+        int32_t originalLeftPosition, originalRightPosition;
+        leftVector = VectorHelper::ExpandVectorAndIndex(leftVector, leftPosition, originalLeftPosition);
+        rightVector = VectorHelper::ExpandVectorAndIndex(rightVector, rightPosition, originalRightPosition);
 
-        compare =
-            OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, leftPosition, rightVector, rightPosition);
+        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, originalLeftPosition, rightVector,
+            originalRightPosition);
         if (sortAscendings[i] == 0) {
             compare = -compare;
         }

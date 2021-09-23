@@ -17,7 +17,7 @@ TEST(DoubleVector, newVector)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 2048);
-    EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_DOUBLE);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_DOUBLE);
     delete vector;
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);

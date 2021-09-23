@@ -168,14 +168,14 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, std::vector<unique_ptr<s
     for (int32_t i = 0; i < nCols; i++) {
         Vector *colVec = vecBatch.GetVector(i);
         // handle dictionary vec
-        if (colVec->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
-            colVec = VectorHelper::ExtractDictionary(colVec);
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
+            colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
             dictionaryVecs.push_back(colVec);
         }
         // varchar vec GetValues is different from the rest
-        if (colVec->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
+        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
             GetProjVarcharData(colVec, vcdataVec, stringvalVec, data, vecBatch.GetRowCount());
-        } else if (colVec->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetProjDecimal128Data(colVec, data, vecBatch.GetRowCount());
         } else {
             // data handling
@@ -208,21 +208,8 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         // TODO: optimize branches and extract common functions
         if (dEx->isColumn) {
             Vector *colVec = vecBatch->GetVector(dEx->colVal);
-            if (colVec->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY) {
-                omniruntime::vec::Vector *result = colVec;
-                int32_t size = numSelectedRows;
-                int32_t positions[size];
-                int32_t *preIds = nullptr;
-                do {
-                    auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-                    int32_t *currentIds = dictionaryVector->GetIds();
-                    result = dictionaryVector->GetDictionary();
-                    for (int32_t i = 0; i < size; i++) {
-                        positions[i] = (preIds == nullptr) ? currentIds[selectedRows[i]] : currentIds[preIds[i]];
-                    }
-                    preIds = positions;
-                } while (result->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY);
-                return result->CopyPositions(preIds, 0, numSelectedRows);
+            if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
+                return static_cast<DictionaryVector *>(colVec)->ExtractDictionary(selectedRows, numSelectedRows);
             } else {
                 return colVec->CopyPositions(selectedRows, 0, numSelectedRows);
             }
@@ -330,7 +317,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     // contents of bitmap are modified in getProjData method
     std::vector<int64_t> data = GetProjData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
 
-    if (outVec->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+    if (outVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
         vector<int64_t> oVec(numSelectedRows);
         auto ov = oVec.data();
         void *vecVals = &ov;

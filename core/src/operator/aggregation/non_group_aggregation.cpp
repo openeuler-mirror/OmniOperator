@@ -107,7 +107,7 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
 {
     for (int32_t aggIdx = 0; aggIdx < colNum; ++aggIdx) {
         int32_t type = aggDataType[aggIdx];
-        aggregators[aggIdx]->ProcessNonGroup(vectors[aggIdx], type, offset);
+        aggregators[aggIdx]->AggProcessNonGroup(vectors[aggIdx], type, offset);
     }
 }
 

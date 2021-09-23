@@ -152,51 +152,28 @@ public:
         return vector;
     }
 
-    static omniruntime::vec::Vector *GetDictionary(omniruntime::vec::Vector *vector, int32_t &rowIndex)
+    static Vector *ExpandVectorAndIndex(Vector *vector, int32_t index, int32_t &originalIndex)
     {
-        if (vector->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+        if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+            originalIndex = index;
             return vector;
         }
-        omniruntime::vec::Vector *result = vector;
-        int32_t idIndex = rowIndex;
-        do {
-            auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-            idIndex = dictionaryVector->GetIds()[idIndex];
-            result = dictionaryVector->GetDictionary();
-        } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
-        rowIndex = idIndex;
-        return result;
+        // TODO: add RLE type.
+
+        return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndId(index, originalIndex);
     }
 
-    static omniruntime::vec::Vector *ExtractDictionary(omniruntime::vec::Vector *vector)
+    static Vector *ExpandVectorAndIndexes(Vector *vector, int32_t offset, int32_t length, int32_t *originalIndexes)
     {
-        if (vector->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
-            return vector;
-        }
-
-        omniruntime::vec::Vector *result = vector;
-        int32_t size = vector->GetSize();
-        int32_t positions[size];
-        int32_t *preIds = nullptr;
-        do {
-            auto dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-            int32_t *currentIds = dictionaryVector->GetIds();
-            result = dictionaryVector->GetDictionary();
-            for (int32_t i = 0; i < size; i++) {
-                positions[i] = (preIds == nullptr) ? currentIds[i] : currentIds[preIds[i]];
+        if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+            for (int i = 0; i < length; ++i) {
+                originalIndexes[i] = offset + i;
             }
-            preIds = positions;
-        } while (result->GetType().GetId() == OMNI_VEC_TYPE_DICTIONARY);
-        return result->CopyPositions(positions, 0, size);
-    }
-
-    static VecTypeId ALWAYS_INLINE GetOrgTypeId(Vector *vector)
-    {
-        VecTypeId typeId = vector->GetType().GetId();
-        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
-            typeId = static_cast<DictionaryVector *>(vector)->GetDictionaryType().GetId();
+            return vector;
         }
-        return typeId;
+        // TODO: add RLE type.
+
+        return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(offset, length, originalIndexes);
     }
 
     static void FreeVecBatch(VectorBatch *vecBatch);

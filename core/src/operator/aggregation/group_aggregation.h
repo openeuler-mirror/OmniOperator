@@ -10,38 +10,35 @@
 #include "../hash_util.h"
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
+
+#ifdef DEBUG_OPERATOR
 #define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types) \
-do {                                                                                                    \
-    int32_t k = 0;                                                                                      \
-    for (int32_t i = 0; i < group_by_num; ++i, ++k) {                                                   \
-        auto vector = vector_batch->GetVector(group_by_idx[i]);                                        \
-        auto typeId = vector->GetType().GetId();                                                         \
-        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                    \
-            typeId = static_cast<DictionaryVector*>(vector)->GetDictionaryType().GetId();    \
-        }                                                                                               \
-        if (typeId != operator_types[k]) {                                                    \
-            printf("Warning at %s: %d, vector type %d != operator column type %d!\n",                    \
-                __FILE__,                                                                              \
-                __LINE__,                                                                              \
-                typeId,                                                       \
-                operator_types[k]);                                                                    \
-        }                                                                                               \
-    }                                                                                                  \
-    for (int32_t i = 0; i < agg_num; ++i, ++k) {                                                  \
-        auto vector = vector_batch->GetVector(agg_idx[i]);                                        \
-        auto typeId = vector->GetType().GetId();                                                         \
-        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                    \
-            typeId = static_cast<DictionaryVector*>(vector)->GetDictionaryType().GetId();      \
-        }                                                                                               \
-        if (typeId != operator_types[k]) {                                                    \
-            printf("Warning at %s: %d, vector type %d != operator column type %d!\n",                    \
-                __FILE__,                                                                              \
-                __LINE__,                                                                              \
-                typeId,                                                                       \
-                operator_types[k]);                                                                    \
-        }                                                                                               \
-    }                                                                                                   \
-} while (0)                                                                          \
+    do {                                                                                               \
+        int32_t k = 0;                                                                                 \
+        for (int32_t i = 0; i < group_by_num; ++i, ++k) {                                              \
+            auto vector = vector_batch->GetVector(group_by_idx[i]);                                    \
+            auto typeId = vector->GetTypeId();                                                   \
+            if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                  \
+                typeId = static_cast<DictionaryVector *>(vector)->GetDictionaryType().GetId();         \
+            }                                                                                          \
+            if (typeId != operator_types[k]) {                                                         \
+                LogWarn("vector type %d != operator column type %d!", typeId, operator_types[k]);      \
+            }                                                                                          \
+        }                                                                                              \
+        for (int32_t i = 0; i < agg_num; ++i, ++k) {                                                   \
+            auto vector = vector_batch->GetVector(agg_idx[i]);                                         \
+            auto typeId = vector->GetTypeId();                                                   \
+            if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                  \
+                typeId = static_cast<DictionaryVector *>(vector)->GetDictionaryType().GetId();         \
+            }                                                                                          \
+            if (typeId != operator_types[k]) {                                                         \
+                LogWarn("vector type %d != operator column type %d!", typeId, operator_types[k]);      \
+            }                                                                                          \
+        }                                                                                              \
+    } while (0)
+#else
+#define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types)
+#endif
 
 namespace omniruntime {
 namespace op {
@@ -51,7 +48,7 @@ using RowIterator = std::unordered_map<uint64_t, std::vector<GroupBySlot>, HashU
 class HashAggregationOperatorFactory;
 class HashAggregationOperator;
 
-using HashFunc = void (*)(Vector *vector, const uint32_t s, const uint32_t r, int64_t *hashVal);
+using HashFunc = void (*)(Vector *vector, const uint32_t r, const int32_t *ri, int64_t *hashVal);
 using DuplicateKeyValue = void *(*)(Vector *vector, const uint32_t offset);
 using SetVector = void (*)(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
@@ -70,14 +67,13 @@ using FunctionByDataType = struct {
 
 using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
 
-template<typename V, typename D>
-void HashFuncImpl(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
-void HashVarcharFuncImpl(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
-void HashDecimalFunc(Vector* vector, const uint32_t start, const uint32_t rowCount, int64_t* combinedHash);
+template <typename V, typename D>
+void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
+void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
+void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
 
-template<typename V, typename D>
-void* DuplicateKeyValueImpl(Vector* vector, const uint32_t offset);
-void* DuplicateVarcharKeyValue(Vector* vector, const uint32_t offset);
+template <typename V, typename D> void *DuplicateKeyValueImpl(Vector *vector, const uint32_t offset);
+void *DuplicateVarcharKeyValue(Vector *vector, const uint32_t offset);
 
 template <typename V>
 void SetVectorImpl(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
