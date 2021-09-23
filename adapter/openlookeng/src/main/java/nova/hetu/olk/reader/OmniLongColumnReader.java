@@ -8,6 +8,7 @@ import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.prestosql.orc.reader.ReaderUtils.minNonNullValueSize;
 import static io.prestosql.orc.reader.ReaderUtils.unpackLongNulls;
+import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromExtensionProperties;
 
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.orc.OrcColumn;
@@ -15,10 +16,12 @@ import io.prestosql.orc.OrcCorruptionException;
 import io.prestosql.orc.reader.LongColumnReader;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.type.Type;
+import java.util.Map;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 
 import java.io.IOException;
 import java.util.Optional;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni long column reader.
@@ -26,6 +29,8 @@ import java.util.Optional;
  * @since 20210630
  */
 public class OmniLongColumnReader extends LongColumnReader {
+    private final VecAllocator vecAllocator;
+
     /**
      * Instantiates a new Omni long column reader.
      *
@@ -34,9 +39,10 @@ public class OmniLongColumnReader extends LongColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniLongColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext)
+    public OmniLongColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
         throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
+        vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
     }
 
     @Override
@@ -44,7 +50,7 @@ public class OmniLongColumnReader extends LongColumnReader {
         verify(dataStream != null);
         long[] values = new long[nextBatchSize];
         dataStream.next(values, nextBatchSize);
-        return new LongArrayOmniBlock(nextBatchSize, Optional.empty(), values);
+        return new LongArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), values);
     }
 
     @Override
@@ -64,6 +70,6 @@ public class OmniLongColumnReader extends LongColumnReader {
 
         long[] result = unpackLongNulls(longNonNullValueTemp, isNull);
 
-        return new LongArrayOmniBlock(nextBatchSize, Optional.of(isNull), result);
+        return new LongArrayOmniBlock(vecAllocator, nextBatchSize, Optional.of(isNull), result);
     }
 }

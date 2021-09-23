@@ -12,6 +12,7 @@ import io.airlift.slice.SliceOutput;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncoding;
 import io.prestosql.spi.block.BlockEncodingSerde;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Double array omni block encoding.
@@ -23,6 +24,12 @@ public class DoubleArrayOmniBlockEncoding implements BlockEncoding {
      * The constant NAME.
      */
     public static final String NAME = "DOUBLE_ARRAY";
+
+    private final VecAllocator vecAllocator;
+
+    public DoubleArrayOmniBlockEncoding(VecAllocator vecAllocator) {
+        this.vecAllocator = vecAllocator;
+    }
 
     @Override
     public String getName() {
@@ -56,6 +63,6 @@ public class DoubleArrayOmniBlockEncoding implements BlockEncoding {
             }
         }
 
-        return new DoubleArrayOmniBlock(0, positionCount, valueIsNull, values);
+        return new DoubleArrayOmniBlock(vecAllocator, 0, positionCount, valueIsNull, values);
     }
 }

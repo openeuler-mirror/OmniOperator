@@ -30,6 +30,7 @@ import io.prestosql.testing.MaterializedResult;
 import io.prestosql.testing.TestingTaskContext;
 import nova.hetu.olk.tool.OperatorUtils;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -67,7 +68,7 @@ public class TestOrderByOmniOperator
         List<Page> input = rowPagesBuilder(BIGINT, DOUBLE)
                 .addSequencePage(numberOfRows, 0, 0)
                 .build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         OrderByOmniOperator.OrderByOmniOperatorFactory operatorFactory = createOrderByOmniOperatorFactory(
                 0,
@@ -104,7 +105,7 @@ public class TestOrderByOmniOperator
                 .row(-1L, -0.1)
                 .row(4L, 0.4)
                 .build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(input);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         OrderByOmniOperator.OrderByOmniOperatorFactory operatorFactory = createOrderByOmniOperatorFactory(
                 0,

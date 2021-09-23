@@ -4,11 +4,14 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
+
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import nova.hetu.omniruntime.OmniLibs;
 
 import java.util.concurrent.ExecutionException;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni operator factory.
@@ -46,7 +49,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
     }
 
     // createOperator
-    private static native long createOperatorNative(long factoryAddress);
+    private static native long createOperatorNative(long factoryAddress, long vecAllocatorAddress);
 
     /**
      * Gets native operator factory.
@@ -62,9 +65,23 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      *
      * @return the omni operator
      */
+    public OmniOperator createOperator(VecAllocator vecAllocator) {
+        if (vecAllocator == null) {
+            System.out.println(Thread.getAllStackTraces());
+            return createOperator();
+        }
+        long nativeOperator = createOperatorNative(nativeOperatorFactory, vecAllocator.getNativeAllocator());
+        return new OmniOperator(nativeOperator, vecAllocator);
+    }
+
+    /**
+     * Create operator omni operator.
+     *
+     * @return the omni operator
+     */
     public OmniOperator createOperator() {
-        long nativeOperator = createOperatorNative(nativeOperatorFactory);
-        return new OmniOperator(nativeOperator);
+        long nativeOperator = createOperatorNative(nativeOperatorFactory, GLOBAL_VECTOR_ALLOCATOR.getNativeAllocator());
+        return new OmniOperator(nativeOperator, GLOBAL_VECTOR_ALLOCATOR);
     }
 
     /**

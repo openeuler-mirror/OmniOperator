@@ -12,21 +12,16 @@ namespace omniruntime {
 namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
-    AggregationOperator(std::vector<ColumnIndex> aggCol,
-                        std::vector<std::unique_ptr<Aggregator>> aggs,
-                        bool inputRaw,
-                        bool outputPartial)
+    AggregationOperator(std::vector<ColumnIndex> aggCol, std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw,
+        bool outputPartial)
         : aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {}
 
     ~AggregationOperator() override {}
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
-    inline void InLoop(omniruntime::vec::Vector **vectors,
-                       uint32_t offset,
-                       int32_t colNum,
-                       const int32_t *aggDataType,
-                       const int32_t *aggFuncType);
+    inline void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, int32_t colNum, const int32_t *aggDataType,
+        const int32_t *aggFuncType);
     inline void PreLoop(omniruntime::vec::VectorBatch *vecBatch)
     {
         sourceTypes = new int32_t[aggCols.size()];
@@ -47,11 +42,8 @@ class AggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    AggregationOperatorFactory(vec::VecTypes& aggInput,
-                               vec::VecTypes& aggOutput,
-                               PrepareContext aggFuncType,
-                               bool inputRaw,
-                               bool outputPartial)
+    AggregationOperatorFactory(vec::VecTypes &aggInput, vec::VecTypes &aggOutput, PrepareContext aggFuncType,
+        bool inputRaw, bool outputPartial)
         : aggInputTypes(aggInput),
           aggOutputTypes(aggOutput),
           aggFuncTypeContext(aggFuncType),
@@ -61,6 +53,7 @@ public:
     ~AggregationOperatorFactory() override {}
     OmniStatus Init() override;
     OmniStatus Close() override;
+
 private:
     vec::VecTypes aggInputTypes;
     vec::VecTypes aggOutputTypes;

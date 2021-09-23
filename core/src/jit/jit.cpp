@@ -40,7 +40,7 @@ namespace omniruntime {
                     std::cerr << "Error: Failed to load template: " + context.getJitTemplate() << std::endl;
                     return false;
                 }
-                LLVM_DEBUG_LOG("Loaded template: %s", context.getJitTemplate());
+                LLVM_DEBUG_LOG("Loaded template: %s", context.getJitTemplate().c_str());
 
                 for (auto &specializationPair : context.getSpecializations()) {
                     this->compiler->AddSpecialization(specializationPair.first, specializationPair.second);

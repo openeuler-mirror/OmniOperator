@@ -31,13 +31,14 @@ using namespace omniruntime::op;
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
  * Method:    createOperatorNative
- * Signature: (J)J
+ * Signature: (J)JJ
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *env,
-    jobject jObj, jlong jNativeFactoryObj)
+    jobject jObj, jlong jNativeFactoryObj, jlong jNativeVecAllocatorObj)
 {
     JNI_DEBUG_LOG("create omni operator starting.");
     auto start = START();
+    VectorAllocator *vectorAllocator = (VectorAllocator *)jNativeVecAllocatorObj;
     OperatorFactory *operatorFactory = (OperatorFactory *)jNativeFactoryObj;
     JitContext *jitContext = operatorFactory->GetJitContext();
     omniruntime::op::Operator *nativeOperator = nullptr;
@@ -55,6 +56,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
         JNI_DEBUG_LOG("JIT create omni operator finished, elapsed time: %ld ms.", END(start));
     }
 #endif
+    nativeOperator->SetVecAllocator(vectorAllocator);
     return reinterpret_cast<int64_t>(nativeOperator);
 }
 

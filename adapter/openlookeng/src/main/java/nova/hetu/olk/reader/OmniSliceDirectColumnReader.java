@@ -26,6 +26,7 @@ import nova.hetu.olk.block.VariableWidthOmniBlock;
 
 import java.io.IOException;
 import java.util.Optional;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni slice direct column reader.
@@ -33,6 +34,8 @@ import java.util.Optional;
  * @since 20210630
  */
 public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
+    private final VecAllocator vecAllocator;
+
     /**
      * Instantiates a new Omni slice direct column reader.
      *
@@ -40,8 +43,9 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
      * @param maxCodePointCount the max code point count
      * @param isCharType the is char type
      */
-    public OmniSliceDirectColumnReader(OrcColumn column, int maxCodePointCount, boolean isCharType) {
+    public OmniSliceDirectColumnReader(VecAllocator vecAllocator, OrcColumn column, int maxCodePointCount, boolean isCharType) {
         super(column, maxCodePointCount, isCharType);
+        this.vecAllocator = vecAllocator;
     }
 
     @Override
@@ -127,7 +131,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
         readOffset = 0;
         nextBatchSize = 0;
         if (totalLength == 0) {
-            return new VariableWidthOmniBlock(currentBatchSize, EMPTY_SLICE, offsetVector,
+            return new VariableWidthOmniBlock(vecAllocator, currentBatchSize, EMPTY_SLICE, offsetVector,
                 Optional.ofNullable(isNullVector));
         }
         if (totalLength > ONE_GIGABYTE) {
@@ -179,11 +183,11 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
         }
 
         // this can lead to over-retention but unlikely to happen given truncation rarely happens
-        return new VariableWidthOmniBlock(currentBatchSize, slice, offsetVector, Optional.ofNullable(isNullVector));
+        return new VariableWidthOmniBlock(vecAllocator, currentBatchSize, slice, offsetVector, Optional.ofNullable(isNullVector));
     }
 
     private RunLengthEncodedBlock readAllNullsBlock() {
         return new RunLengthEncodedBlock(
-            new VariableWidthOmniBlock(1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
+            new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
     }
 }

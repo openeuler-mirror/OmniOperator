@@ -10,7 +10,7 @@ import static io.prestosql.memory.context.AggregatedMemoryContext.newSimpleAggre
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static nova.hetu.olk.tool.OperatorUtils.createExpressions;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -31,11 +31,13 @@ import io.prestosql.spi.type.Type;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import io.prestosql.testing.TestingSession;
 import io.prestosql.testing.TestingTaskContext;
+import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.ArrayList;
@@ -135,9 +137,10 @@ public class OrderByOmniOperator implements Operator {
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
+            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                 OrderByOmniOperator.class.getSimpleName());
-            OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator();
+            OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator(vecAllocator);
             return new OrderByOmniOperator(operatorContext, sourceTypes, outputChannels, sortChannels, sortAscendings,
                 sortNullFirsts, omniSortOperator);
         }
@@ -147,7 +150,7 @@ public class OrderByOmniOperator implements Operator {
          *
          * @return the operator
          */
-        public Operator createOperator() {
+        public Operator createOperator(VecAllocator vecAllocator) {
             // all this is prepared for a fake driverContext to avoid change the original pipeline
             Executor mockExecutor = MoreExecutors.directExecutor();
             ScheduledExecutorService mockScheduledExecutorService = newSingleThreadScheduledExecutor();
@@ -163,7 +166,7 @@ public class OrderByOmniOperator implements Operator {
             OperatorContext mockOperatorContext = mockDriverContext.addOperatorContext(1,
                 new PlanNodeId("Fake node for creating the OrderByOmniOperator"), "OrderByOmniOperator type");
 
-            OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator();
+            OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator(vecAllocator);
             return new OrderByOmniOperator(mockOperatorContext, sourceTypes, outputChannels, sortChannels,
                 sortAscendings, sortNullFirsts, omniSortOperator);
         }
@@ -265,7 +268,7 @@ public class OrderByOmniOperator implements Operator {
             return;
         }
 
-        VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
         omniOperator.addInput(vecBatch);
         inputVecBatchs.add(vecBatch);
     }

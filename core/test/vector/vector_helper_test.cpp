@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "vector.h"
 #include "vector_allocator.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 #include "int_vector.h"
 #include "long_vector.h"
 #include "double_vector.h"
@@ -20,8 +20,7 @@ using namespace omniruntime::vec;
 
 TEST(VectorHelper, setAndGetValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test_helper1");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper1");
     EXPECT_TRUE(allocator != nullptr);
 
     // int32 test
@@ -105,14 +104,13 @@ TEST(VectorHelper, setAndGetValue)
     delete dictionaryVarchar;
     delete dictionaryVarcharVec;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(VectorHelper, printVectorValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test_helper2");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test_helper2");
     EXPECT_TRUE(allocator != nullptr);
 
     auto *dictionaryVarchar = new VarcharVector(allocator, 100, 10);
@@ -127,6 +125,6 @@ TEST(VectorHelper, printVectorValue)
     delete dictionaryVarchar;
     delete dictionaryVarcharVec;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }

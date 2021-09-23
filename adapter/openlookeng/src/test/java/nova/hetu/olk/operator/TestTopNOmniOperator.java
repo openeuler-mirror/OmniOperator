@@ -39,6 +39,7 @@ import io.prestosql.testing.MaterializedResult;
 import nova.hetu.olk.block.DictionaryOmniBlock;
 import nova.hetu.olk.block.IntArrayOmniBlock;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -90,7 +91,7 @@ public class TestTopNOmniOperator
                 .pageBreak()
                 .build();
         //transfer on-heap page to off-heap
-        List<Page> offHeapInput = transferToOffHeapPages(input);
+        List<Page> offHeapInput = transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         OperatorFactory operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(
                 0,
@@ -113,7 +114,7 @@ public class TestTopNOmniOperator
     {
 
         int[] ints={2,1,4,3,2};
-        IntArrayOmniBlock intArrayOmniBlock = new IntArrayOmniBlock(ints.length, Optional.empty(),ints);
+        IntArrayOmniBlock intArrayOmniBlock = new IntArrayOmniBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, ints.length, Optional.empty(),ints);
         int[] ids = {0, 1, 2, 3, 4};
         DictionaryOmniBlock<Integer> integerDictionaryOmniBlock = new DictionaryOmniBlock<Integer>(intArrayOmniBlock,ids);
         Page input = new Page(integerDictionaryOmniBlock);
@@ -149,7 +150,7 @@ public class TestTopNOmniOperator
                 .row(4, 6L)
                 .build();
 
-        List<Page> offHeapInput = transferToOffHeapPages(input);
+        List<Page> offHeapInput = transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         OperatorFactory operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(
                 0,
@@ -215,7 +216,7 @@ public class TestTopNOmniOperator
                 .row(6L, 0.6)
                 .pageBreak()
                 .build();
-        List<Page> offHeapInput = transferToOffHeapPages(input);
+        List<Page> offHeapInput = transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         OperatorFactory operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(
                 0,

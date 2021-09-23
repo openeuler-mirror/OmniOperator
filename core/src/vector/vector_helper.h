@@ -21,21 +21,7 @@
 
 namespace omniruntime {
 namespace vec {
-#define STATIC_CAST_VEC_GET(CLASS, VEC, INDEX) static_cast<CLASS *>(VEC)->GetValue(INDEX)
-#define STATIC_CAST_VEC_SET(CLASS, VEC, INDEX, VALUE) static_cast<CLASS *>(VEC)->SetValue(INDEX, VALUE)
-
-#define INT32_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
-#define INT32_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
-
-#define LONG_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
-#define LONG_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
-
-#define DOUBLE_VEC_GET(VEC, INDEX) STATIC_CAST_VEC_GET(IntVector, VEC, INDEX)
-#define DOUBLE_SET_SET(VEC, INDEX, VALUE) STATIC_CAST_VEC_SET(IntVector, VEC, INDEX, VALUE)
-
 class VectorHelper {
-    using uint8vec = std::vector<uint8_t>;
-    using vec64 = std::vector<int64_t>;
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
@@ -55,15 +41,15 @@ public:
                 static_cast<BooleanVector *>(vector)->SetValue(index, *static_cast<bool *>(value));
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
-                static_cast<VarcharVector *>(vector)->SetValue(index, reinterpret_cast<const uint8_t *>(
-                        static_cast<std::string *>(value)->c_str()),
-                                                               static_cast<std::string *>(value)->length());
+                static_cast<VarcharVector *>(vector)->SetValue(index,
+                    reinterpret_cast<const uint8_t *>(static_cast<std::string *>(value)->c_str()),
+                    static_cast<std::string *>(value)->length());
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
                 static_cast<Decimal128Vector *>(vector)->SetValue(index, *static_cast<Decimal128 *>(value));
                 break;
             default:
-                DebugError("No such data type %d", vector->GetType().GetId());
+                LogError("No such data type %d", vector->GetType().GetId());
                 break;
         }
     }
@@ -75,7 +61,7 @@ public:
                 static_cast<VarcharVector *>(vector)->SetValue(index, static_cast<uint8_t *>(value), length);
                 break;
             default:
-                DebugError("No such data type %d", vector->GetType().GetId());
+                LogError("No such data type %d", vector->GetType().GetId());
                 break;
         }
     }
@@ -118,7 +104,7 @@ public:
                 break;
             }
             default:
-                DebugError("No such data type %d", vector->GetType().GetId());
+                LogError("No such data type %d", vector->GetType().GetId());
                 break;
         }
         return length;
@@ -159,7 +145,7 @@ public:
                 break;
             }
             default: {
-                DebugError("No such data type %d", typeId);
+                LogError("No such data type %d", typeId);
                 break;
             }
         }

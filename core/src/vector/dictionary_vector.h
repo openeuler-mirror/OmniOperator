@@ -34,7 +34,7 @@ public:
         return size;
     }
 
-    const VecType& GetDictionaryType()
+    const VecType &GetDictionaryType()
     {
         VecTypeId dictionaryType = dictionary->GetType().GetId();
         if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
@@ -61,7 +61,7 @@ public:
 
     DictionaryVector *CopyRegion(int positionOffset, int length) override;
 
-    /// Append Ids. Vectors must use the same dictionary
+    // / Append Ids. Vectors must use the same dictionary
     void Append(Vector *other, int positionOffset, int length) override;
 
 private:

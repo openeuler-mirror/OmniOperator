@@ -11,6 +11,7 @@
 #include "../operator.h"
 #include "../../vector/vector_types.h"
 #include "../../vector/vector_type.h"
+#include "hash_builder.h"
 
 namespace omniruntime {
 namespace op {
@@ -118,8 +119,8 @@ public:
         int32_t *buildOutputCols, const vec::VecTypes &buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() {}
     void AppendRow(int32_t probePosition, int64_t partitionedJoinPosition);
-    void BuildOutput(const JoinProbe *joinProbe, const JoinHashTables *hashTables,
-        std::vector<omniruntime::vec::VectorBatch *> &outputTables);
+    void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
+        std::vector<VectorBatch *> &outputTables);
 
 private:
     const int32_t *probeTypes;

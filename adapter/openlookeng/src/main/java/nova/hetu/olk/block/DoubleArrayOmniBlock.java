@@ -17,6 +17,7 @@ import io.prestosql.spi.block.BlockBuilder;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.Vec;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.Optional;
@@ -31,6 +32,8 @@ import javax.annotation.Nullable;
  */
 public class DoubleArrayOmniBlock implements Block<Double> {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(DoubleArrayOmniBlock.class).instanceSize();
+
+    private final VecAllocator vecAllocator;
 
     private final int arrayOffset;
 
@@ -47,13 +50,13 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     /**
      * Instantiates a new Double array omni block.
-     *
+     * @param vecAllocator vector allocator
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public DoubleArrayOmniBlock(int positionCount, Optional<boolean[]> valueIsNull, double[] values) {
-        this(0, positionCount, valueIsNull.orElse(null), values);
+    public DoubleArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<boolean[]> valueIsNull, double[] values) {
+        this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
     /**
@@ -79,13 +82,14 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     /**
      * Instantiates a new Double array omni block.
-     *
+     * @param vecAllocator vector allocator
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    DoubleArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, double[] values) {
+    DoubleArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, boolean[] valueIsNull, double[] values) {
+        this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -98,7 +102,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
             throw new IllegalArgumentException("values length is less than positionCount");
         }
 
-        this.values = new DoubleVec(positionCount);
+        this.values = new DoubleVec(vecAllocator, positionCount);
         this.values.put(values, 0, arrayOffset, positionCount);
 
         if (valueIsNull != null && valueIsNull.length - arrayOffset < positionCount) {
@@ -127,6 +131,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
      * @param values the values
      */
     DoubleArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, DoubleVec values) {
+        this.vecAllocator = values.getAllocator();
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -245,7 +250,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new DoubleArrayOmniBlock(0, 1, isNull(position) ? new boolean[] {true} : null,
+        return new DoubleArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new boolean[] {true} : null,
             new double[] {values.get(position)});
     }
 

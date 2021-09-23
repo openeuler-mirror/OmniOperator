@@ -23,6 +23,7 @@ import org.openjdk.jol.info.ClassLayout;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import javax.annotation.Nullable;
 
@@ -52,25 +53,27 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
     /**
      * Instantiates a new Variable width omni block.
      *
+     * @param vecAllocator vector allocator
      * @param positionCount the position count
      * @param slice the slice
      * @param offsets the offsets
      * @param valueIsNull the value is null
      */
-    public VariableWidthOmniBlock(int positionCount, Slice slice, int[] offsets, Optional<boolean[]> valueIsNull) {
-        this(0, positionCount, slice, offsets, valueIsNull.orElse(null));
+    public VariableWidthOmniBlock(VecAllocator vecAllocator, int positionCount, Slice slice, int[] offsets, Optional<boolean[]> valueIsNull) {
+        this(vecAllocator, 0, positionCount, slice, offsets, valueIsNull.orElse(null));
     }
 
     /**
      * Instantiates a new Variable width omni block.
      *
+     * @param vecAllocator vector allocator
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param slice the slice
      * @param offsets the offsets
      * @param valueIsNull the value is null
      */
-    VariableWidthOmniBlock(int arrayOffset, int positionCount, Slice slice, int[] offsets, boolean[] valueIsNull) {
+    VariableWidthOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, Slice slice, int[] offsets, boolean[] valueIsNull) {
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -85,7 +88,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
         }
 
         int dataLength = offsets[arrayOffset + positionCount] - offsets[arrayOffset];
-        this.values = new VarcharVec(dataLength, positionCount);
+        this.values = new VarcharVec(vecAllocator, dataLength, positionCount);
 
         if (offsets.length - arrayOffset < (positionCount + 1)) {
             throw new IllegalArgumentException("offsets length is less than positionCount");

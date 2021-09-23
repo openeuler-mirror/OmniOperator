@@ -131,7 +131,7 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
         return 0;
     }
     VectorBatch *tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
-    tmpVecBatch->NewVectors(sourceTypes.Get());
+    tmpVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
     int64_t rowNum = 0;
     auto typeIds = sourceTypes.GetIds();
     while (!pq.empty()) {
@@ -192,7 +192,7 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
     for (const VecType &item : sourceTypes.Get()) {
         if (item.GetId() == OMNI_VEC_TYPE_VARCHAR) {
             auto vecType = (VarcharVecType &)item;
-            VarcharVector *varcharVector = new VarcharVector(static_cast<VectorAllocator *>(nullptr),
+            VarcharVector *varcharVector = new VarcharVector(vecAllocator,
                 positionCount * vecType.GetWidth(), positionCount);
             for (int i = 0; i < positionCount; ++i) {
                 uint8_t *value = nullptr;

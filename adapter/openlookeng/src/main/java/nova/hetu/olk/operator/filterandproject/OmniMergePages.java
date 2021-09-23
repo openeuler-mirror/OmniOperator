@@ -8,7 +8,8 @@ import static io.prestosql.operator.WorkProcessor.TransformationState.finished;
 import static io.prestosql.operator.WorkProcessor.TransformationState.needsMoreData;
 import static io.prestosql.operator.WorkProcessor.TransformationState.ofResult;
 import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 
 import com.google.common.collect.Lists;
@@ -31,6 +32,7 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.ArrayList;
@@ -147,7 +149,8 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
     public void appendPage(Page page) {
         lastInputPage = page;
 
-        VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
+        VecAllocator vecAllocator = getVecAllocatorFromBlocks(page.getBlocks());
+        VecBatch vecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
 
         totalPositions += page.getPositionCount();
         updatePageSize(page);
@@ -191,7 +194,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
         } else {
             // Merge buffered vectors
             Iterator<Page> result = new VecBatchToPageIterator(new Iterator<VecBatch>() {
-                private final VecBatch result = new VecBatch(createBlankVectors(vecTypes));
+                private final VecBatch result = new VecBatch(createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes));
 
                 @Override
                 public boolean hasNext() {
@@ -204,7 +207,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
                 }
             });
             finalPage = result.next();
-            merge(getVecBatch(finalPage, getClass().getSimpleName()));
+            merge(buildVecBatch(getVecAllocatorFromBlocks(finalPage.getBlocks()), finalPage, getClass().getSimpleName()));
         }
         resetStatus();
         return finalPage;
@@ -276,27 +279,29 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
     /**
      * Create blank vectors list.
      *
+     *
+     * @param vecAllocator
      * @param vecTypes the vec types
      * @return the list
      */
-    public List<Vec> createBlankVectors(VecType[] vecTypes) {
+    public List<Vec> createBlankVectors(VecAllocator vecAllocator, VecType[] vecTypes) {
         List<Vec> vecsResult = new ArrayList<>();
         for (int i = 0; i < vecTypes.length; i++) {
             VecType type = vecTypes[i];
             switch (type.getId()) {
                 case OMNI_VEC_TYPE_INT:
                 case OMNI_VEC_TYPE_DATE32:
-                    vecsResult.add(new IntVec(totalPositions));
+                    vecsResult.add(new IntVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_LONG:
                 case OMNI_VEC_TYPE_DECIMAL64:
-                    vecsResult.add(new LongVec(totalPositions));
+                    vecsResult.add(new LongVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_DOUBLE:
-                    vecsResult.add(new DoubleVec(totalPositions));
+                    vecsResult.add(new DoubleVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_BOOLEAN:
-                    vecsResult.add(new BooleanVec(totalPositions));
+                    vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_VARCHAR:
                     int totalCapacity = 0;
@@ -304,10 +309,10 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
                         Vec src = batch.getVectors()[i];
                         totalCapacity = totalCapacity + src.getCapacityInBytes();
                     }
-                    vecsResult.add(new VarcharVec(totalCapacity, totalPositions));
+                    vecsResult.add(new VarcharVec(vecAllocator, totalCapacity, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_DECIMAL128:
-                    vecsResult.add(new Decimal128Vec(totalPositions));
+                    vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
                     break;
                 default:
                     throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + type);

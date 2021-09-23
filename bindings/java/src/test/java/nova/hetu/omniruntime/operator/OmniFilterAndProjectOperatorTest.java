@@ -601,11 +601,10 @@ public class OmniFilterAndProjectOperatorTest {
         String str = "$operator$LESS_THAN_OR_EQUAL:boolean(#0, 500)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projectIndices);
         final int numRows = 1000;
-        List<Vec> table = createTable(numRows);
         for (int i = 0; i < 1000; i++) {
             Thread thread = new Thread(() -> {
                 OmniOperator op = factory.createOperator();
-                op.addInput(new VecBatch(table));
+                op.addInput(new VecBatch(createTable(numRows)));
                 assertTrue(op.getOutput().hasNext());
                 VecBatch res = op.getOutput().next();
                 // System.out.println(res.getLength());

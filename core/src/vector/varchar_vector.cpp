@@ -61,14 +61,13 @@ VarcharVector *VarcharVector::CopyRegion(int positionOffset, int length)
     }
 
     // copy nulls
-    vector->SetValueNulls(0,
-                          static_cast<bool *>(valueNullsAddress) + positionOffset + this->positionOffset, length);
+    vector->SetValueNulls(0, static_cast<bool *>(valueNullsAddress) + positionOffset + this->positionOffset, length);
 
     // copy data
     errno_t ret = EOK;
     if (totalDataLen > 0) {
         ret = memcpy_s(reinterpret_cast<uint8_t *>(vector->GetValues()), totalDataLen,
-                       (reinterpret_cast<uint8_t *>(valuesAddress)) + startOffset, totalDataLen);
+            (reinterpret_cast<uint8_t *>(valuesAddress)) + startOffset, totalDataLen);
     }
 
     if (ret != EOK) {

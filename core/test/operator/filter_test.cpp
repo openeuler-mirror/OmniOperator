@@ -8,6 +8,7 @@
 #include <vector>
 #include <chrono>
 #include "../../src/vector/vector_helper.h"
+#include "../../src/vector/vector_allocator_factory.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -20,7 +21,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
-    vecBatch->NewVectors(inputTypes);
+    vecBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
     for (int i = 0; i < numCols; ++i) {
         switch (inputTypes[i]) {
             case OMNI_VEC_TYPE_INT:
@@ -50,7 +51,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                 ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
                 break;
             default: {
-                DebugError("No such data type %d", inputTypes[i]);
+                LogError("No such data type %d", inputTypes[i]);
                 break;
             }
         }
@@ -1699,9 +1700,10 @@ TEST(FilterTest, TestFilterDictionaryVec) {
     int32_t inputTypes[] = {1, 1, 1};
 
     const int32_t numRows = 10;
-    IntVector *col1 = new IntVector(nullptr, numRows);
-    IntVector *col2 = new IntVector(nullptr, numRows);
-    IntVector *col3 = new IntVector(nullptr, numRows);
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, numRows);
     int32_t ids[]= {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
     DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
 
@@ -1713,7 +1715,7 @@ TEST(FilterTest, TestFilterDictionaryVec) {
     const int32_t projectCount = 3;
     int32_t projectIndices[projectCount] = {0, 1, 2};
     VectorBatch *batch = new VectorBatch(numCols, numRows);
-    batch->NewVectors(inputTypes);
+    batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryVector);
@@ -1765,7 +1767,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     const int32_t projectCount = 2;
     int32_t projectIndices[projectCount] = {0, 1};
     VectorBatch *batch = new VectorBatch(numCols, numRows);
-    batch->NewVectors(inputTypes);
+    batch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, dictionaryVector);
 
@@ -1804,9 +1806,10 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
     int32_t inputTypes[] = {1, 1, 1};
 
     const int32_t numRows = 10;
-    IntVector *col1 = new IntVector(nullptr, numRows);
-    IntVector *col2 = new IntVector(nullptr, numRows);
-    IntVector *col3 = new IntVector(nullptr, 3);
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, 3);
     int32_t data[] = {4, 5, 6};
     col3->SetValues(0, data, 3);
     int32_t ids[]= {1, 2};
@@ -1820,7 +1823,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
     const int32_t projectCount = 3;
     int32_t projectIndices[projectCount] = {0, 1, 2};
     VectorBatch *batch = new VectorBatch(numCols, numRows);
-    batch->NewVectors(inputTypes);
+    batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryNested);

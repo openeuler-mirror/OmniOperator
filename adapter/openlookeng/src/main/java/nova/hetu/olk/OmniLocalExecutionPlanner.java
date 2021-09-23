@@ -56,6 +56,7 @@ import io.hetu.core.transport.execution.buffer.PagesSerdeFactory;
 import io.prestosql.Session;
 import io.prestosql.dynamicfilter.DynamicFilterCacheManager;
 import io.prestosql.execution.ExplainAnalyzeContext;
+import io.prestosql.execution.TaskId;
 import io.prestosql.execution.TaskManagerConfig;
 import io.prestosql.execution.buffer.LazyOutputBuffer;
 import io.prestosql.execution.buffer.OutputBuffer;
@@ -145,6 +146,7 @@ import io.prestosql.sql.tree.Expression;
 import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.statestore.StateStoreProvider;
 import io.prestosql.statestore.listener.StateStoreListenerManager;
+
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
 import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
@@ -157,9 +159,12 @@ import nova.hetu.olk.operator.TopNOmniOperator;
 import nova.hetu.olk.operator.WindowOmniOperator;
 import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
 import nova.hetu.olk.tool.OperatorUtils;
+import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.omniruntime.constants.AggType;
 import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.VecAllocator;
+import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 import nova.hetu.shuffle.PageProducer;
 
 import java.util.ArrayList;
@@ -338,13 +343,25 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
     public LocalExecutionPlan plan(TaskContext taskContext, PlanNode plan, TypeProvider types,
         PartitioningScheme partitioningScheme, StageExecutionDescriptor stageExecutionDescriptor,
         List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
+
+        TaskId taskId = taskContext.getTaskId();
+        VecAllocator vecAllocator = VecAllocatorFactory.create(taskId.getFullId(),  ()-> {
+            taskContext.getTaskStateMachine().addStateChangeListenerToTail(state -> {
+                if (state.isDone()) {
+                    VecAllocatorFactory.delete(taskId.getFullId());
+                }
+            });
+        });
+
+        VecAllocatorHelper.setVectorAllocatorToTaskContext(taskContext, vecAllocator);
+
         List<Symbol> outputLayout = partitioningScheme.getOutputLayout();
 
         if (outputBuffer instanceof LazyOutputBuffer
             && ((LazyOutputBuffer) outputBuffer).getDelegate().getSerde() != null) {
             ((LazyOutputBuffer) outputBuffer).getDelegate()
                 .getSerde()
-                .setBlockEncodingSerde(new InternalOmniBlockEncodingSerde(metadata));
+                .setBlockEncodingSerde(new InternalOmniBlockEncodingSerde(metadata, taskId));
         }
 
         if (partitioningScheme.getPartitioning().getHandle().equals(FIXED_BROADCAST_DISTRIBUTION)
@@ -652,7 +669,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         translatedFilter, translatedProjections, sourceNode.getId());
                     Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
                         translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                        OptionalInt.empty(), inputTypes);
+                        OptionalInt.empty(), inputTypes, context.getTaskId());
 
                     boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
                     int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024
@@ -674,7 +691,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 } else {
                     Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
                         translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                        OptionalInt.empty(), inputTypes);
+                        OptionalInt.empty(), inputTypes, context.getTaskId());
 
                     OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
                         context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
@@ -807,7 +824,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 context.setDriverInstanceCount(getTaskConcurrency(session));
             }
 
-            BlockEncodingSerde blockEncodingSerde = new InternalOmniBlockEncodingSerde(metadata);
+            BlockEncodingSerde blockEncodingSerde = new InternalOmniBlockEncodingSerde(metadata, context.getTaskId());
             log.info("using OmniInternalBlockEncodingSerde!!!");
             OperatorFactory operatorFactory = new ExchangeOperator.ExchangeOperatorFactory(context.getNextOperatorId(),
                 node.getId(), exchangeClientSupplier,

@@ -6,7 +6,7 @@ package nova.hetu.olk.operator.filterandproject;
 
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 
 import io.prestosql.operator.project.InputChannels;
@@ -21,6 +21,7 @@ import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
@@ -54,7 +55,7 @@ public class OmniPageFilter implements PageFilter {
      * @param projects the projects
      */
     public OmniPageFilter(RowExpression rowExpression, boolean isDeterministic, InputChannels inputChannels,
-        List<Type> inputTypes, int[] projects) {
+            List<Type> inputTypes, int[] projects) {
         RowExpression filterExpression = requireNonNull(rowExpression, "filterExpression is null");
         this.inputChannels = requireNonNull(inputChannels, "inputChannels is null");
         this.isDeterministic = isDeterministic;
@@ -91,9 +92,10 @@ public class OmniPageFilter implements PageFilter {
      * Gets operator.
      *
      * @return the operator
+     * @param vecAllocator vector allocator
      */
-    public OmniPageFilterOperator getOperator() {
-        return new OmniPageFilterOperator(operatorFactory.createOperator(), inputTypes, projects);
+    public OmniPageFilterOperator getOperator(VecAllocator vecAllocator) {
+        return new OmniPageFilterOperator(operatorFactory.createOperator(vecAllocator), inputTypes, projects);
     }
 
     /**
@@ -144,12 +146,12 @@ public class OmniPageFilter implements PageFilter {
          * @param page the page
          * @return the page
          */
-        public Page filterWithProject(ConnectorSession session, Page page) {
+        public Page filterWithProject(VecAllocator vecAllocator, ConnectorSession session, Page page) {
             if (page.getPositionCount() <= 0) {
                 page.close();
                 return null;
             }
-            VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
+            VecBatch vecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
             operator.addInput(vecBatch);
             Iterator<Page> result = new VecBatchToPageIterator(operator.getOutput());
 

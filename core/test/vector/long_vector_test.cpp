@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "vector_allocator.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 #include "long_vector.h"
 #include "../util/test_util.h"
 
@@ -12,8 +12,7 @@ using namespace omniruntime::vec;
 
 TEST(LongVector, sliceVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *originalVector = new LongVector(allocator, 10);
@@ -42,14 +41,13 @@ TEST(LongVector, sliceVector)
     EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(LongVector, setAndGetValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -61,14 +59,13 @@ TEST(LongVector, setAndGetValue)
         EXPECT_EQ(vector->GetValue(i), i * 2);
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test SetValues
 TEST(LongVector, SetValues)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != NULL);
 
     const int size = 5;
@@ -88,22 +85,21 @@ TEST(LongVector, SetValues)
 
     delete longVector1;
     delete longVector2;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
 TEST(LongVector, SetValueOutOfBounds1)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(256, 256), runtime_error);
+    EXPECT_THROW(vector->SetValue(256, 256), std::runtime_error);
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
@@ -111,23 +107,21 @@ TEST(LongVector, SetValueOutOfBounds1)
 #ifdef DEBUG
 TEST(LongVector, SetValueOutOfBounds2)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(-1, 256), runtime_error);
+    EXPECT_THROW(vector->SetValue(-1, 256), std::runtime_error);
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
 // Test SetValues/get
 TEST(LongVector, SetValuesWithoutOffset)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -142,14 +136,13 @@ TEST(LongVector, SetValuesWithoutOffset)
 
     delete[] value;
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test SetValues/get with offset
 TEST(LongVector, SetValuesWithOffset)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -164,14 +157,14 @@ TEST(LongVector, SetValuesWithOffset)
 
     delete[] value;
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
 TEST(LongVector, SetValuesWithoutOffsetOutOfBounds)
 {
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -180,19 +173,18 @@ TEST(LongVector, SetValuesWithoutOffsetOutOfBounds)
         value[i] = i * 2;
     }
 
-    EXPECT_THROW(vector->SetValues(0, value, 257), runtime_error);
+    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
 
     delete[] value;
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
 // Test is null
-TEST(LongVector, SetValueNull)
+TEST(LongVector, setValueNull)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *vector = new LongVector(allocator, 256);
@@ -211,14 +203,13 @@ TEST(LongVector, SetValueNull)
         }
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyPosition
 TEST(LongVector, copyPositions)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("longVector");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("longVector");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *originalVector = new LongVector(allocator, 4);
@@ -237,14 +228,13 @@ TEST(LongVector, copyPositions)
 
     delete originalVector;
     delete copyPostionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyRegion
 TEST(LongVector, copyRegion)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("longVector");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("longVector");
     EXPECT_TRUE(allocator != NULL);
 
     LongVector *originalVector = new LongVector(allocator, 4);
@@ -260,13 +250,12 @@ TEST(LongVector, copyRegion)
 
     delete originalVector;
     delete copyRegionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 TEST(Vector, jniFreeVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     LongVector *longVector = new LongVector(allocator, 256);
@@ -298,8 +287,7 @@ private:
 // Performance test
 TEST(LongVector, performanceCompare)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     int ROW_COUNT = 100000000;
 
     Timer timer;

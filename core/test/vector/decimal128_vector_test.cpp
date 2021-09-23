@@ -10,8 +10,8 @@ using namespace omniruntime::vec;
 
 TEST(Decimal128Vector, SliceVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 10);
@@ -40,14 +40,14 @@ TEST(Decimal128Vector, SliceVector)
     EXPECT_EQ(slice2->GetReference(), 1);
     delete slice2;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(Decimal128Vector, SetAndGetValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -59,14 +59,14 @@ TEST(Decimal128Vector, SetAndGetValue)
         EXPECT_TRUE(vector->GetValue(i) == i * 2);
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test SetValues
 TEST(Decimal128Vector, SetValues)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != NULL);
 
     const int size = 5;
@@ -90,22 +90,22 @@ TEST(Decimal128Vector, SetValues)
 
     delete Decimal128Vector1;
     delete Decimal128Vector2;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
 TEST(Decimal128Vector, SetValueOutOfBounds1)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(256, 256), runtime_error);
+    EXPECT_THROW(vector->SetValue(256, 256), std::runtime_error);
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
@@ -113,23 +113,21 @@ TEST(Decimal128Vector, SetValueOutOfBounds1)
 #ifdef DEBUG
 TEST(Decimal128Vector, SetValueOutOfBounds2)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(-1, 256), runtime_error);
+    EXPECT_THROW(vector->SetValue(-1, 256), std::runtime_error);
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
 // Test SetValues/get
 TEST(Decimal128Vector, SetValuesWithoutOffset)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -147,14 +145,13 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
 
     delete[] value;
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test SetValues/get with offset
 TEST(Decimal128Vector, SetValuesWithOffset)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -172,15 +169,14 @@ TEST(Decimal128Vector, SetValuesWithOffset)
 
     delete[] value;
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
 TEST(Decimal128Vector, SetValuesWithoutOffsetOutOfBounds)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -189,19 +185,18 @@ TEST(Decimal128Vector, SetValuesWithoutOffsetOutOfBounds)
         value[i] = i * 2;
     }
 
-    EXPECT_THROW(vector->SetValues(0, value, 257), runtime_error);
+    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
 
     delete[] value;
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
 // Test is null
 TEST(Decimal128Vector, SetValueNull)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
@@ -220,14 +215,13 @@ TEST(Decimal128Vector, SetValueNull)
         }
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyPosition
 TEST(Decimal128Vector, CopyPositions)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("Decimal128Vector");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("Decimal128Vector");
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
@@ -246,14 +240,13 @@ TEST(Decimal128Vector, CopyPositions)
 
     delete originalVector;
     delete copyPostionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyRegion
 TEST(Decimal128Vector, CopyRegion)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("Decimal128Vector");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("Decimal128Vector");
     EXPECT_TRUE(allocator != NULL);
 
     Decimal128Vector *originalVector = new Decimal128Vector(allocator, 4);
@@ -269,7 +262,7 @@ TEST(Decimal128Vector, CopyRegion)
 
     delete originalVector;
     delete copyRegionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 class Decimal128VectorTest {
@@ -296,8 +289,7 @@ private:
 // Performance test
 TEST(Decimal128Vector, PerformanceCompare)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     int ROW_COUNT = 100000000;
 
     Timer timer;

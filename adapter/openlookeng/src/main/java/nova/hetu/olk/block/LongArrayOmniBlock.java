@@ -24,6 +24,7 @@ import org.openjdk.jol.info.ClassLayout;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import javax.annotation.Nullable;
 
@@ -34,6 +35,8 @@ import javax.annotation.Nullable;
  */
 public class LongArrayOmniBlock implements Block<Long> {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(LongArrayOmniBlock.class).instanceSize();
+
+    private final VecAllocator vecAllocator;
 
     private final int arrayOffset;
 
@@ -51,12 +54,13 @@ public class LongArrayOmniBlock implements Block<Long> {
     /**
      * Instantiates a new Long array omni block.
      *
+     * @param vecAllocator vector allocator
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(int positionCount, Optional<boolean[]> valueIsNull, long[] values) {
-        this(0, positionCount, valueIsNull.orElse(null), values);
+    public LongArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<boolean[]> valueIsNull, long[] values) {
+        this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
     /**
@@ -83,12 +87,14 @@ public class LongArrayOmniBlock implements Block<Long> {
     /**
      * Instantiates a new Long array omni block.
      *
+     * @param vecAllocator vector allocator
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, long[] values) {
+    public LongArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, boolean[] valueIsNull, long[] values) {
+        this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -101,7 +107,7 @@ public class LongArrayOmniBlock implements Block<Long> {
             throw new IllegalArgumentException("values length is less than positionCount");
         }
 
-        this.values = new LongVec(positionCount);
+        this.values = new LongVec(vecAllocator, positionCount);
         this.values.put(values, 0, arrayOffset, positionCount);
 
         if (valueIsNull != null && valueIsNull.length - arrayOffset < positionCount) {
@@ -130,6 +136,7 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param values the values
      */
     public LongArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, LongVec values) {
+        vecAllocator = values.getAllocator();
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -262,7 +269,7 @@ public class LongArrayOmniBlock implements Block<Long> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new LongArrayOmniBlock(0, 1, isNull(position) ? new boolean[] {true} : null,
+        return new LongArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new boolean[] {true} : null,
             new long[] {values.get(position)});
     }
 

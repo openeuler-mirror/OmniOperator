@@ -12,6 +12,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.EncoderUtil;
 import io.prestosql.spi.block.RowBlockEncoding;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import javax.annotation.Nullable;
 
@@ -21,6 +22,12 @@ import javax.annotation.Nullable;
  * @since 20210630
  */
 public class RowOmniBlockEncoding extends RowBlockEncoding {
+    private final VecAllocator vecAllocator;
+
+    public RowOmniBlockEncoding(VecAllocator vecAllocator) {
+        this.vecAllocator = vecAllocator;
+    }
+
     @Override
     public Block readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
         int numFields = sliceInput.readInt();

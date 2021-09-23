@@ -15,7 +15,7 @@
 #include "../hash_util.h"
 #include "../util/operator_util.h"
 
-#if defined(DEBUG_LEVEL_LOW) || defined(DEBUG_LEVEL_HIGH)
+#if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
 #endif
 namespace omniruntime {
@@ -51,7 +51,7 @@ OmniStatus HashAggregationOperatorFactory::Init()
                 break;
             }
             default: {
-                DebugError("No such agg func type %d", aggFuncTypeContext.context[i]);
+                LogError("No such agg func type %d", aggFuncTypeContext.context[i]);
                 ret = OMNI_STATUS_ERROR;
             }
         }
@@ -188,9 +188,7 @@ void HashAggregationOperator::InLoop(Vector **vectors,
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-#ifdef DEBUG_LEVEL_HIGH
-    DebugFuncEntry;
-#endif
+    LogTrace("Enter Func");
     this->PreLoop(vecBatch);
     int32_t vectorCount = vecBatch->GetVectorCount();
     auto vectorTypes = std::make_unique<int32_t[]>(vectorCount);
@@ -287,7 +285,7 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch* vecBatch,
         for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
              ++rIdx, rowIterator++) {
             if (rowIterator->second[colIndex].avgCnt == 0) {
-                DebugError("Divisor is zero! key = %ld", rowIterator->first);
+                LogError("Divisor is zero! key = %ld", rowIterator->first);
             }
             DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
             doubleVector->SetValue(rIdx, *(reinterpret_cast<double *>(rowIterator->second[colIndex].avgVal)));
@@ -299,7 +297,7 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch* vecBatch,
         for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != groupedRows.end();
              ++rIdx, rowIterator++) {
             if (rowIterator->second[colIndex].avgCnt == 0) {
-                DebugError("Divisor is zero! key = %ld", rowIterator->first);
+                LogError("Divisor is zero! key = %ld", rowIterator->first);
             }
             vector->SetValue(rIdx, *(reinterpret_cast<double *>(rowIterator->second[colIndex].avgVal)));
         }
@@ -343,22 +341,19 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch,
                 break;
             }
             default: {
-                DebugError("No such aggregate type %d\n", aggType);
+                LogError("No such aggregate type %d\n", aggType);
                 break;
             }
         }
     }
     rowIterator = resultIterator;
-#ifdef DEBUG_LEVEL_HIGH
-    DebugFuncExit;
-#endif
 }
 
-void SetVectors(VectorBatch *vectorBatch, const std::vector<VecType> &types, int32_t rowCount)
+void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<VecType> &types, int32_t rowCount)
 {
     for (int colIndex = 0; colIndex < vectorBatch->GetVectorCount(); ++colIndex) {
         VecType type = types[colIndex];
-        HashAggregationOperator::FUNCTIONS[type.GetId()].setVector(vectorBatch, type, colIndex, nullptr, rowCount);
+        HashAggregationOperator::FUNCTIONS[type.GetId()].setVector(vectorBatch, type, colIndex, vecAllocator, rowCount);
     }
 }
 
@@ -383,7 +378,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
         for (int32_t i = 0; i < vecBatchCount; ++i) {
             int32_t rowCount = std::min(maxRowNum, static_cast<int32_t>((this->groupedRows.size() - currentPosition)));
             auto vecBatch = std::make_unique<VectorBatch>(colCount);
-            SetVectors(vecBatch.get(), types, rowCount);
+            SetVectors(this->vecAllocator, vecBatch.get(), types, rowCount);
             FillGroupByVectors(vecBatch.get(), 0, groupByColSize, rowIterator, rowCount);
             FillAggVectors(vecBatch.get(), groupByColSize, colCount, rowIterator, rowCount);
             result.push_back(vecBatch.release());
@@ -511,33 +506,27 @@ void* ALWAYS_INLINE DuplicateVarcharKeyValue(Vector* vector, const uint32_t offs
 }
 
 template<typename V>
-void SetVectorImpl(VectorBatch* vectorBatch,
+void SetVectorImpl(VectorBatch* vecBatch,
                    VecType& type,
                    int32_t columnIndex,
-                   VectorAllocator* allocator,
+                   VectorAllocator* vecAllocator,
                    int32_t rowCount)
 {
-    vectorBatch->SetVector(columnIndex, new V(allocator, rowCount));
+    vecBatch->SetVector(columnIndex, new V(vecAllocator, rowCount));
 }
 
-void SetVarcharVector(VectorBatch* vectorBatch,
-                      VecType& type,
-                      int32_t columnIndex,
-                      VectorAllocator* allocator,
-                      int32_t rowCount)
+void SetVarcharVector(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+    int32_t rowCount)
 {
-    vectorBatch->SetVector(columnIndex,
-                           new VarcharVector(allocator, rowCount * ((VarcharVecType&)type).GetWidth(),rowCount));
+    vecBatch->SetVector(columnIndex,
+        new VarcharVector(vecAllocator, rowCount * ((VarcharVecType &)type).GetWidth(), rowCount));
 }
 
-void SetContainerVector(VectorBatch* vectorBatch,
-                        VecType& type,
-                        int32_t columnIndex,
-                        VectorAllocator* allocator,
-                        int32_t rowCount)
+void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
+    int32_t rowCount)
 {
-    DoubleVector *doubleVector = new DoubleVector(nullptr, rowCount);
-    LongVector *longVector = new LongVector(nullptr, rowCount);
+    DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
+    LongVector *longVector = new LongVector(vecAllocator, rowCount);
     Vector **vectorAddresses = new Vector *[2];
     vectorAddresses[0] = doubleVector;
     vectorAddresses[1] = longVector;
@@ -545,8 +534,8 @@ void SetContainerVector(VectorBatch* vectorBatch,
     vecTypes[0] = DoubleVecType::Instance();
     vecTypes[1] = LongVecType::Instance();
     ContainerVector *containerVector =
-            new ContainerVector(nullptr, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, vecTypes);
-    vectorBatch->SetVector(columnIndex, containerVector);
+        new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, vecTypes);
+    vecBatch->SetVector(columnIndex, containerVector);
 }
 
 template<typename V, typename D>

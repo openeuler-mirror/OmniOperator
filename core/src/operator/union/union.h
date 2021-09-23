@@ -13,15 +13,14 @@
 using namespace std;
 namespace omniruntime {
 namespace op {
-
-class UnionOperatorFactory: public OperatorFactory{
+class UnionOperatorFactory : public OperatorFactory {
 public:
     UnionOperatorFactory(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
 
     ~UnionOperatorFactory() override;
 
-    static UnionOperatorFactory *CreateUnionOperatorFactory(
-        const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
+    static UnionOperatorFactory *CreateUnionOperatorFactory(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount,
+        bool isDistinct);
 
     Operator *CreateOperator() override;
 
@@ -31,7 +30,7 @@ private:
     bool isDistinct;
 };
 
-class UnionOperator: public Operator{
+class UnionOperator : public Operator {
 public:
     UnionOperator(const vec::VecTypes &sourceTypes, int32_t sourceTypesCount, bool isDistinct);
 
@@ -50,4 +49,4 @@ private:
 }
 }
 
-#endif //__UNION_H__
+#endif // __UNION_H__

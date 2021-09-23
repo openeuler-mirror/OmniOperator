@@ -150,9 +150,10 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
 VarcharVector *CreateVarcharVector(VarcharVecType &type, std::string *values, int32_t length)
 {
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     uint32_t width = type.GetWidth();
     VarcharVector *vector =
-        std::make_unique<VarcharVector>(static_cast<VectorAllocator *>(nullptr), length * width, length).release();
+        std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
     }
@@ -161,7 +162,8 @@ VarcharVector *CreateVarcharVector(VarcharVecType &type, std::string *values, in
 
 Decimal128Vector *CreateDecimal128Vector(Decimal128 *values, int32_t length)
 {
-    Decimal128Vector *vector = std::make_unique<Decimal128Vector>(nullptr, length).release();
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    Decimal128Vector *vector = std::make_unique<Decimal128Vector>(vecAllocator, length).release();
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, values[i]);
     }

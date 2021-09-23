@@ -5,16 +5,18 @@
 #include <long_vector.h>
 #include "gtest/gtest.h"
 #include "vector_batch.h"
+#include "vector_allocator_factory.h"
 
 using namespace omniruntime::vec;
 
 TEST(VectorBatch, constructVectorBatchWithVectorCount)
 {
+    VectorAllocator *allocator = VectorAllocatorFactory::GetGlobalAllocator();
     VectorBatch *vectorBatch = new VectorBatch(4);
-    LongVector *vector0 = new LongVector(nullptr, 1024);
-    LongVector *vector1 = new LongVector(nullptr, 1024);
-    LongVector *vector2 = new LongVector(nullptr, 1024);
-    LongVector *vector3 = new LongVector(nullptr, 1024);
+    LongVector *vector0 = new LongVector(allocator, 1024);
+    LongVector *vector1 = new LongVector(allocator, 1024);
+    LongVector *vector2 = new LongVector(allocator, 1024);
+    LongVector *vector3 = new LongVector(allocator, 1024);
 
     vectorBatch->SetVector(0, vector0);
     vectorBatch->SetVector(1, vector1);
@@ -31,7 +33,7 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
 {
     int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->NewVectors(types);
+    vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
     for (int i = 0; i < 4; ++i) {
         EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
@@ -43,7 +45,7 @@ TEST(VectorBatch, getVectorCount)
 {
     int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->NewVectors(types);
+    vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
     EXPECT_EQ(4, vectorBatch->GetVectorCount());
     EXPECT_EQ(1024, vectorBatch->GetRowCount());
@@ -54,7 +56,7 @@ TEST(VectorBatch, getVectorTypes)
 {
     int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
-    vectorBatch->NewVectors(types);
+    vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
     const VecType *vectorTypes = vectorBatch->GetVectorTypes();
     for (int i = 0; i < 4; ++i) {

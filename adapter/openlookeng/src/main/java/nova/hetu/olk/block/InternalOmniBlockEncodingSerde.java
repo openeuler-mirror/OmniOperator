@@ -9,11 +9,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import io.airlift.slice.SliceInput;
+import io.prestosql.execution.TaskId;
 import io.airlift.slice.SliceOutput;
 import io.prestosql.metadata.InternalBlockEncodingSerde;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncoding;
+import nova.hetu.omniruntime.vector.VecAllocator;
+import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,17 +34,18 @@ public class InternalOmniBlockEncodingSerde extends InternalBlockEncodingSerde {
      * Instantiates a new Internal omni block encoding serde.
      *
      * @param metadata the metadata
+     * @param taskId
      */
-    public InternalOmniBlockEncodingSerde(Metadata metadata) {
+    public InternalOmniBlockEncodingSerde(Metadata metadata, TaskId taskId) {
         super(metadata);
-        addBlockEncoding(new VariableWidthOmniBlockEncoding());
-        addBlockEncoding(new IntArrayOmniBlockEncoding());
-        addBlockEncoding(new DoubleArrayOmniBlockEncoding());
-        addBlockEncoding(new LongArrayOmniBlockEncoding());
-        addBlockEncoding(new Int128ArrayOmniBlockEncoding());
-        addBlockEncoding(new DictionaryOmniBlockEncoding());
-        addBlockEncoding(new RowOmniBlockEncoding());
-
+        VecAllocator vecAllocator = VecAllocatorFactory.get(taskId.getFullId());
+        addBlockEncoding(new VariableWidthOmniBlockEncoding(vecAllocator));
+        addBlockEncoding(new IntArrayOmniBlockEncoding(vecAllocator));
+        addBlockEncoding(new DoubleArrayOmniBlockEncoding(vecAllocator));
+        addBlockEncoding(new LongArrayOmniBlockEncoding(vecAllocator));
+        addBlockEncoding(new Int128ArrayOmniBlockEncoding(vecAllocator));
+        addBlockEncoding(new DictionaryOmniBlockEncoding(vecAllocator));
+        addBlockEncoding(new RowOmniBlockEncoding(vecAllocator));
     }
 
     /**

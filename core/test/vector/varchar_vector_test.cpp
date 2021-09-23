@@ -3,19 +3,16 @@
  */
 
 #include <sstream>
-#include <cstring>
 #include "gtest/gtest.h"
-#include "vector.h"
 #include "vector_allocator.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 #include "varchar_vector.h"
 
 using namespace omniruntime::vec;
 
 TEST(VarcharVector, newVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
     VarcharVector *vector = new VarcharVector(allocator, 1024, 256);
     EXPECT_EQ(vector->GetSize(), 256);
@@ -24,14 +21,13 @@ TEST(VarcharVector, newVector)
     EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_VARCHAR);
     delete vector;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(VarcharVector, sliceVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
     int size = 10;
@@ -79,14 +75,13 @@ TEST(VarcharVector, sliceVector)
     EXPECT_EQ(sliceVector2->GetReference(), 1);
 
     delete sliceVector2;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(VarcharVector, setAndGetValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 4);
@@ -107,14 +102,13 @@ TEST(VarcharVector, setAndGetValue)
     }
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is null
-TEST(VarcharVector, SetValueNull)
+TEST(VarcharVector, setValueNull)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator,1024, 256);
@@ -138,15 +132,13 @@ TEST(VarcharVector, SetValueNull)
         }
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
-
 // Test is copyPosition
-TEST(VarcharVector, CopyPositions)
+TEST(VarcharVector, copyPositions)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 4);
@@ -174,14 +166,14 @@ TEST(VarcharVector, CopyPositions)
     }
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    delete copyPostionVector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is CopyRegion
-TEST(VarcharVector, CopyRegion)
+TEST(VarcharVector, copyRegion)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("varchar");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
     EXPECT_TRUE(allocator != nullptr);
 
     VarcharVector *vector = new VarcharVector(allocator, 1024, 4);
@@ -206,24 +198,13 @@ TEST(VarcharVector, CopyRegion)
     }
 
     delete vector;
-    manager.DeleteAllocator(&allocator);
-}
-
-TEST(VarcharVector, jniFreeVector)
-{
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    VarcharVector *oritianlVector = new VarcharVector(allocator, 1024, 256);
-    Vector *vector = (Vector *)oritianlVector;
-    delete vector;
+    delete copyRegionVector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 TEST(VarcharVector, emptyString)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     std::vector<std::string> data = {"e", "abc", "", "hg", ""};
@@ -241,5 +222,5 @@ TEST(VarcharVector, emptyString)
     }
 
     delete original;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }

@@ -14,7 +14,7 @@ import static io.prestosql.operator.LookupJoinOperators.JoinType.INNER;
 import static io.prestosql.operator.LookupJoinOperators.JoinType.PROBE_OUTER;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.createExpressions;
-import static nova.hetu.olk.tool.OperatorUtils.getVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_FULL;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT;
@@ -42,11 +42,13 @@ import io.prestosql.operator.StaticLookupSourceProvider;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.planner.plan.PlanNodeId;
+import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.io.IOException;
@@ -292,7 +294,7 @@ public class LookupJoinOmniOperator implements Operator {
         if (positionCount == 0) {
             return;
         }
-        VecBatch vecBatch = getVecBatch(page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
         omniOperator.addInput(vecBatch);
         result = new VecBatchToPageIterator(omniOperator.getOutput());
         if (!result.hasNext()) {
@@ -504,6 +506,8 @@ public class LookupJoinOmniOperator implements Operator {
         @Override
         public Operator createOperator(DriverContext driverContext) {
             checkState(!closed, "Factory is already closed");
+            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+
             LookupSourceFactory lookupSourceFactory = joinBridgeManager.getJoinBridge(driverContext.getLifespan());
 
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
@@ -512,7 +516,7 @@ public class LookupJoinOmniOperator implements Operator {
             lookupSourceFactory.setTaskContext(driverContext.getPipelineContext().getTaskContext());
 
             joinBridgeManager.probeOperatorCreated(driverContext.getLifespan());
-            OmniOperator omniOperator = omniLookupJoinOperatorFactory.createOperator();
+            OmniOperator omniOperator = omniLookupJoinOperatorFactory.createOperator(vecAllocator);
             return new LookupJoinOmniOperator(operatorContext, probeTypes, joinType, lookupSourceFactory,
                 () -> joinBridgeManager.probeOperatorClosed(driverContext.getLifespan()), totalOperatorsCount,
                 omniOperator);

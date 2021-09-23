@@ -12,6 +12,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import org.testng.annotations.Test;
 
@@ -27,7 +28,7 @@ public class TestDoubleArrayOmniBlock
         DOUBLE.writeDouble(blockBuilder, Double.MAX_VALUE);
         Block onHeapblock = blockBuilder.build();
 
-        Block block = OperatorUtils.getOffHeapBlock(onHeapblock);
+        Block block = OperatorUtils.buildOffHeapBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, onHeapblock);
 
         assertTrue(block.isNull(0));
         assertEquals(DOUBLE.getDouble(block, 1), 42.33);

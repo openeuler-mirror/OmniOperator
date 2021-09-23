@@ -22,6 +22,7 @@ import nova.hetu.omniruntime.vector.VarcharVec;
 
 import java.io.IOException;
 import java.util.Optional;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni slice dictionary column reader.
@@ -32,8 +33,9 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
     /**
      * The Dictionary block.
      */
-    protected VariableWidthOmniBlock dictionaryBlock = new VariableWidthOmniBlock(1,
-        wrappedBuffer(EMPTY_DICTIONARY_DATA), EMPTY_DICTIONARY_OFFSETS, Optional.of(new boolean[] {true}));
+    protected VariableWidthOmniBlock dictionaryBlock;
+
+    private final VecAllocator vecAllocator;
 
     /**
      * Instantiates a new Omni slice dictionary column reader.
@@ -43,9 +45,12 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
      * @param maxCodePointCount the max code point count
      * @param isCharType the is char type
      */
-    public OmniSliceDictionaryColumnReader(OrcColumn column, LocalMemoryContext systemMemoryContext,
-        int maxCodePointCount, boolean isCharType) {
+    public OmniSliceDictionaryColumnReader(VecAllocator vecAllocator, OrcColumn column, LocalMemoryContext systemMemoryContext,
+                                           int maxCodePointCount, boolean isCharType) {
         super(column, systemMemoryContext, maxCodePointCount, isCharType);
+        this.vecAllocator = vecAllocator;
+        this.dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, 1,
+                wrappedBuffer(EMPTY_DICTIONARY_DATA), EMPTY_DICTIONARY_OFFSETS, Optional.of(new boolean[] {true}));
     }
 
     @Override
@@ -102,7 +107,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
             isNullVector[positionCount - 1] = true;
             dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
             dictionaryBlock.close();
-            dictionaryBlock = new VariableWidthOmniBlock(positionCount, wrappedBuffer(dictionaryData),
+            dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, positionCount, wrappedBuffer(dictionaryData),
                 dictionaryOffsets, Optional.of(isNullVector));
             currentDictionaryData = dictionaryData;
         }
@@ -110,7 +115,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
 
     private RunLengthEncodedBlock readAllNullsBlock() {
         return new RunLengthEncodedBlock(
-            new VariableWidthOmniBlock(1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
+            new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
     }
 
     @Override

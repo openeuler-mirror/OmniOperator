@@ -56,6 +56,7 @@ import io.prestosql.testing.MaterializedResult;
 import io.prestosql.testing.TestingTaskContext;
 import nova.hetu.olk.tool.OperatorUtils;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -139,7 +140,7 @@ public class TestHashJoinOmniOperator
         List<Page> probeInput = probePages
                 .addSequencePage(1000, 0, 1000, 2000)
                 .build();
-        List<Page> offHeapPagesProbeInput = OperatorUtils.transferToOffHeapPages(probeInput);
+        List<Page> offHeapPagesProbeInput = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, probeInput);
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages, buildSideSetup.getOperatorFactory());
 
         // build drivers and operators
@@ -187,7 +188,7 @@ public class TestHashJoinOmniOperator
                 .row(1L)
                 .row(2L)
                 .build();
-        List<Page> offHeapPagesProbeInput = OperatorUtils.transferToOffHeapPages(probeInput);
+        List<Page> offHeapPagesProbeInput = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, probeInput);
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages, buildSideSetup.getBuildOperatorFactory());
 
         // build drivers and operators
@@ -361,7 +362,7 @@ public class TestHashJoinOmniOperator
         Operator operator = joinOperatorFactory.createOperator(taskContext.addPipelineContext(0, true, true, false).addDriverContext());
 
         List<Page> pages = probePages.row(6L).build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(pages);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, pages);
         operator.addInput(offHeapPages.get(0));
         Page outputPage = operator.getOutput();
         assertNull(outputPage);
@@ -386,7 +387,7 @@ public class TestHashJoinOmniOperator
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(probeInput);
+        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, probeInput);
 
         OperatorFactory joinOperatorFactory =LookupJoinOmniOperator.innerJoin(
                 0,
@@ -426,7 +427,7 @@ public class TestHashJoinOmniOperator
         List<Page> probeInput = probePages
                 .addSequencePage(15, 20, 1020, 2020)
                 .build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(probeInput);
+        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, probeInput);
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperator.probeOuterJoin(
                 0,
                 new PlanNodeId("test"),
@@ -566,7 +567,7 @@ public class TestHashJoinOmniOperator
         DriverContext collectDriverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
 
         List<Page> builds = buildPages.build();
-        List<Page> toOffHeapPages = OperatorUtils.transferToOffHeapPages(builds);
+        List<Page> toOffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, builds);
         ValuesOperatorFactory valuesOperatorFactory = new ValuesOperatorFactory(0, new PlanNodeId("values"), toOffHeapPages);
 
         LocalExchangeSinkOperatorFactory sinkOperatorFactory = new LocalExchangeSinkOperatorFactory(localExchangeFactory, 1, new PlanNodeId("sink"), localExchangeSinkFactoryId, Function.identity());

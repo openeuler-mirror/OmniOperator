@@ -36,6 +36,11 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
     VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
     Operator *nativeOperator = (Operator *)jOperatorAddress;
     int32_t ret = nativeOperator->AddInput(vecBatch);
+
+#ifdef DEBUG_VECTOR
+    auto &leakDetector = nativeOperator->GetVecAllocator()->GetLeakDetector();
+    vecBatch->TraceRecord(leakDetector, typeid(*nativeOperator).name(), VecOpType::ADD_INPUT);
+#endif
     return ret;
 }
 
@@ -50,11 +55,18 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     JNI_DEBUG_LOG("get output starting.");
     auto start = START();
     Operator *nativeOperator = (Operator *)jOperatorAddr;
-    std::vector<VectorBatch *> outputPages;
-    int32_t errNo = nativeOperator->GetOutput(outputPages);
+    std::vector<VectorBatch *> outputVecBatches;
+    int32_t errNo = nativeOperator->GetOutput(outputVecBatches);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
-    jobjectArray result = transform(env, outputPages);
+    jobjectArray result = transform(env, outputVecBatches);
     JNI_DEBUG_LOG("transform finished, elapsed time: %ld ms.", END(start));
+
+#ifdef DEBUG_VECTOR
+    auto &leakDetector = nativeOperator->GetVecAllocator()->GetLeakDetector();
+    for (int i = 0; i < outputVecBatches.size(); ++i) {
+        outputVecBatches[i]->TraceRecord(leakDetector, typeid(*nativeOperator).name(), VecOpType::GET_OUTPUT);
+    }
+#endif
     return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->GetStatus());
 }
 

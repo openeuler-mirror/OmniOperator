@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "vector_allocator.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 #include "container_vector.h"
 #include "../util/test_util.h"
 
@@ -16,8 +16,7 @@ const VecType VECTOR_TYPES[] = {DoubleVecType::Instance(), LongVecType::Instance
 
 TEST(ContainerVector, sliceVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -44,15 +43,15 @@ TEST(ContainerVector, sliceVector)
     EXPECT_EQ(slice1->GetReference(), 1);
 
     delete slice1;
-
-    manager.DeleteAllocator(&allocator);
+    delete doubleVector;
+    delete longVector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test set/get
 TEST(ContainerVector, setAndGetValue)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -70,21 +69,23 @@ TEST(ContainerVector, setAndGetValue)
         EXPECT_EQ(vector->getValue(i), i * 2);
     }
     delete vector;
-    manager.DeleteAllocator(&allocator);
+    delete doubleVector;
+    delete longVector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test out of bounds
 #ifdef DEBUG
 TEST(ContainerVector, setValueOutOfBounds1)
 {
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     ContainerVector *vector = new ContainerVector(allocator, 256);
-    EXPECT_THROW(vector->setValue(256, 256), runtime_error);
+    EXPECT_THROW(vector->setValue(256, 256), std::runtime_error);
 
     delete vector;
-    manager.deleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
@@ -92,14 +93,14 @@ TEST(ContainerVector, setValueOutOfBounds1)
 #ifdef DEBUG
 TEST(ContainerVector, setValueOutOfBounds2)
 {
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     ContainerVector *vector = new ContainerVector(allocator, 256);
-    EXPECT_THROW(vector->setValue(-1, 256), runtime_error);
+    EXPECT_THROW(vector->setValue(-1, 256), std::runtime_error);
 
     delete vector;
-    manager.deleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 
@@ -107,7 +108,7 @@ TEST(ContainerVector, setValueOutOfBounds2)
 #ifdef DEBUG
 TEST(ContainerVector, setValuesWithoutOffsetOutOfBounds)
 {
-    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     ContainerVector *vector = new ContainerVector(allocator, 256);
@@ -116,20 +117,20 @@ TEST(ContainerVector, setValuesWithoutOffsetOutOfBounds)
         value[i] = i * 2;
     }
 
-    EXPECT_THROW(vector->setValues(0, value, 257), runtime_error);
+    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
 
     delete[] value;
     delete vector;
-    manager.deleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 #endif
 //
 // // Test is null
 // TEST(ContainerVector, setValueNull) {
-//    VectorAllocator *allocator = manager.getOrCreateAllocator("test");
-//    EXPECT_TRUE(allocator != nullptr);
+//    VectorAllocator *vecAllocator = VectorAllocatorFactory::getOrCreateAllocator("test");
+//    EXPECT_TRUE(vecAllocator != nullptr);
 //
-//    ContainerVector *vector = new ContainerVector(allocator, 256);
+//    ContainerVector *vector = new ContainerVector(vecAllocator, 256);
 //    for (int i = 0; i < 256; i++) {
 //        if (i % 5 == 0) {
 //            vector->setValueNull(i);
@@ -145,14 +146,13 @@ TEST(ContainerVector, setValuesWithoutOffsetOutOfBounds)
 //        }
 //    }
 //    delete vector;
-//    manager.deleteAllocator(&allocator);
+//    VectorAllocatorFactory::deleteAllocator(&vecAllocator);
 // }
 
 // Test is copyPosition
 TEST(ContainerVector, copyPositions)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("longVector");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -172,15 +172,16 @@ TEST(ContainerVector, copyPositions)
     }
 
     delete vector;
+    delete doubleVector;
+    delete longVector;
     delete copyPostionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 // Test is copyRegion
 TEST(ContainerVector, copyRegion)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("longVector");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != NULL);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -198,14 +199,15 @@ TEST(ContainerVector, copyRegion)
     }
 
     delete vector;
+    delete doubleVector;
+    delete longVector;
     delete copyRegionVector;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 TEST(ContainerVector, jniFreeVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
@@ -217,23 +219,30 @@ TEST(ContainerVector, jniFreeVector)
         const_cast<VecType *>(VECTOR_TYPES));
     Vector *vec = (Vector *)vector;
     delete vec;
+    delete doubleVector;
+    delete longVector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
 TEST(ContainerVector, getVectorAllocator)
 {
-    DoubleVector *doubleVector = new DoubleVector(nullptr, POSITION_COUNT);
-    LongVector *longVector = new LongVector(nullptr, POSITION_COUNT);
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+    DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
+    LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
     Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
     vectorAddresses[0] = doubleVector;
     vectorAddresses[1] = longVector;
-    ContainerVector *vector = new ContainerVector(nullptr, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
+    ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
         const_cast<VecType *>(VECTOR_TYPES));
 
     int64_t doubleVecAddr = vector->getValue(0);
     auto doubleVec = reinterpret_cast<Vector *>(doubleVecAddr);
-    auto allocator = doubleVec->GetAllocator();
 
     delete vector;
+    delete doubleVector;
+    delete longVector;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 // Test is not writable
 

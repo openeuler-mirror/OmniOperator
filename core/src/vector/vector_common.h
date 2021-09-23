@@ -16,7 +16,7 @@
 #include "container_vector.h"
 #include "decimal128_vector.h"
 #include "decimal128.h"
-#include "vector_allocator_manager.h"
+#include "vector_allocator_factory.h"
 #include "vector_allocator.h"
 #include "boolean_vector.h"
 #include "dictionary_vector.h"

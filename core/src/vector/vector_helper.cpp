@@ -41,7 +41,8 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
     vector = GetDictionary(vector, rowIndex);
     auto vecType = vector->GetType();
     if (vector->IsValueNull(rowIndex)) {
-        std::cout << "NULL" << "\t";
+        std::cout << "NULL"
+                  << "\t";
         return;
     }
     switch (vecType.GetId()) {
@@ -71,16 +72,17 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            Decimal128 result = static_cast<Decimal128Vector*>(vector)->GetValue(rowIndex);
+            Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex);
             std::cout << result << "\t";
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {
-            std::cout << "to parse container vec" << "\t";
+            std::cout << "to parse container vec"
+                      << "\t";
             break;
         }
         default:
-            DebugError("Error vector type %d", vecType.GetId());
+            LogError("Error vector type %d", vecType.GetId());
     }
 }
 

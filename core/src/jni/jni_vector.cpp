@@ -165,15 +165,17 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_newAllocatorNative(JNIEnv *env, jclass jcls,
     jstring jScopeId)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(manager.GetOrCreateAllocator(GLOBAL_SCOPE_NAME)));
+    auto scope = env->GetStringUTFChars(jScopeId, JNI_FALSE);
+    VectorAllocator *vectorAllocator = VectorAllocatorFactory::GetOrCreateAllocator(scope);
+    env->ReleaseStringUTFChars(jScopeId, scope);
+    return reinterpret_cast<uintptr_t>(vectorAllocator);
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecAllocator_freeAllocatorNative(JNIEnv *env, jclass jcls,
     jlong jAllocator)
 {
     VectorAllocator *allocator = TransformAllocator(jAllocator);
-    allocator->FreeAllVectors();
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     return 0;
 }
 

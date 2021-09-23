@@ -13,6 +13,7 @@ import io.airlift.slice.Slices;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.VariableWidthBlockEncoding;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Variable width omni block encoding.
@@ -20,6 +21,13 @@ import io.prestosql.spi.block.VariableWidthBlockEncoding;
  * @since 20210630
  */
 public class VariableWidthOmniBlockEncoding extends VariableWidthBlockEncoding {
+    private final VecAllocator vecAllocator;
+
+    public VariableWidthOmniBlockEncoding(VecAllocator vecAllocator)
+    {
+        this.vecAllocator = vecAllocator;
+    }
+
     @Override
     public Block readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
         int positionCount = sliceInput.readInt();
@@ -32,6 +40,6 @@ public class VariableWidthOmniBlockEncoding extends VariableWidthBlockEncoding {
         int blockSize = sliceInput.readInt();
         Slice slice = sliceInput.readSlice(blockSize);
 
-        return new VariableWidthOmniBlock(0, positionCount, slice, offsets, valueIsNull);
+        return new VariableWidthOmniBlock(vecAllocator, 0, positionCount, slice, offsets, valueIsNull);
     }
 }

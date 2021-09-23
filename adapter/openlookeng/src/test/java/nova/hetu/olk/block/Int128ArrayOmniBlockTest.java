@@ -10,6 +10,7 @@ import static org.testng.AssertJUnit.assertTrue;
 import io.prestosql.spi.block.Block;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
@@ -23,7 +24,7 @@ public class Int128ArrayOmniBlockTest
        int positionCount = 4;
        long[] values = {0L, 0L, 0L, 42L, 0L, 0L, Long.MAX_VALUE, Long.MAX_VALUE};
        boolean[] valueIsNull = {true, false, true, false};
-       Int128ArrayOmniBlock block = new Int128ArrayOmniBlock(positionCount, Optional.of(valueIsNull), values);
+       Int128ArrayOmniBlock block = new Int128ArrayOmniBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, positionCount, Optional.of(valueIsNull), values);
 
        assertTrue(block.isNull(0));
        assertEquals(block.get(1), new long[]{0L, 42L});

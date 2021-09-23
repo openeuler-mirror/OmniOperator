@@ -4,15 +4,11 @@
 
 package nova.hetu.olk.block;
 
-import static io.prestosql.spi.block.TestingSession.SESSION;
-import static io.prestosql.spi.type.VarcharType.VARCHAR;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-
 import io.airlift.slice.DynamicSliceOutput;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.prestosql.execution.EmptyMockMetadata;
+import io.prestosql.execution.TaskId;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.block.BlockEncodingSerde;
@@ -20,16 +16,21 @@ import io.prestosql.spi.type.Type;
 import io.prestosql.spi.util.BloomFilter;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.vector.VarcharVec;
-
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 
+import static io.prestosql.spi.block.TestingSession.SESSION;
+import static io.prestosql.spi.type.VarcharType.VARCHAR;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 public class TestVariableWidthOmniBlock
 {
-    private final BlockEncodingSerde blockEncodingSerde = new InternalOmniBlockEncodingSerde(new EmptyMockMetadata());
+    private final BlockEncodingSerde blockEncodingSerde = new InternalOmniBlockEncodingSerde(new EmptyMockMetadata(), new TaskId("test"));
 
     @Test
     public void testCreateBlock()
@@ -113,7 +114,7 @@ public class TestVariableWidthOmniBlock
         VARCHAR.writeString(blockBuilder, "alice");
         blockBuilder.appendNull();
         VARCHAR.writeString(blockBuilder, "bob");
-        Block block =OperatorUtils.getOffHeapBlock(blockBuilder.build());
+        Block block =OperatorUtils.buildOffHeapBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, blockBuilder.build());
 
         assertTrue(block.isNull(0));
         assertEquals(VARCHAR.getObjectValue(SESSION, block, 1), "alice");
@@ -136,7 +137,7 @@ public class TestVariableWidthOmniBlock
         VARCHAR.writeString(blockBuilder, "bob");
         VARCHAR.writeString(blockBuilder, "charlie");
         VARCHAR.writeString(blockBuilder, "dave");
-        return OperatorUtils.getOffHeapBlock(blockBuilder.build());
+        return OperatorUtils.buildOffHeapBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, blockBuilder.build());
     }
 
     private VariableWidthOmniBlock getBlock(int count)
@@ -155,8 +156,7 @@ public class TestVariableWidthOmniBlock
             offset += value.getBytes().length;
         }
         Slice slice = Slices.wrappedBuffer(buffer.toString().getBytes());
-
-        return new VariableWidthOmniBlock(count, slice, offsets, Optional.empty());
+        return new VariableWidthOmniBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, count, slice, offsets, Optional.empty());
     }
 
     private BloomFilter getBf(int size)

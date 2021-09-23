@@ -9,6 +9,7 @@ import static io.airlift.slice.SizeOf.sizeOf;
 import static io.prestosql.orc.reader.ReaderUtils.minNonNullValueSize;
 import static io.prestosql.orc.reader.ReaderUtils.unpackInt128Nulls;
 import static io.prestosql.orc.reader.ReaderUtils.unpackLongNulls;
+import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromExtensionProperties;
 
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
@@ -20,11 +21,13 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.type.Decimals;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.UnscaledDecimal128Arithmetic;
+import java.util.Map;
 import nova.hetu.olk.block.Int128ArrayOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 
 import java.io.IOException;
 import java.util.Optional;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni decimal column reader.
@@ -32,6 +35,8 @@ import java.util.Optional;
  * @since 20210630
  */
 public class OmniDecimalColumnReader extends DecimalColumnReader {
+    private final VecAllocator vecAllocator;
+
     /**
      * Instantiates a new Omni decimal column reader.
      *
@@ -40,9 +45,10 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniDecimalColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext)
+    public OmniDecimalColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
         throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
+        vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
     }
 
     @Override
@@ -69,7 +75,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
                 data[i] = Decimals.rescale(data[i], (int) sourceScale, type.getScale());
             }
         }
-        return new LongArrayOmniBlock(nextBatchSize, Optional.empty(), data);
+        return new LongArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), data);
     }
 
     private Block readLongNotNullBlock() throws IOException {
@@ -87,7 +93,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
                     Slices.wrappedLongArray(data, offset, 2));
             }
         }
-        return new Int128ArrayOmniBlock(nextBatchSize, Optional.empty(), data);
+        return new Int128ArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), data);
     }
 
     @Override
@@ -122,7 +128,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
 
         long[] result = unpackLongNulls(nonNullValueTemp, isNull);
 
-        return new LongArrayOmniBlock(nextBatchSize, Optional.of(isNull), result);
+        return new LongArrayOmniBlock(vecAllocator, nextBatchSize, Optional.of(isNull), result);
     }
 
     private Block readLongNullBlock(boolean[] isNull, int nonNullCount) throws IOException {
@@ -149,6 +155,6 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
 
         long[] result = unpackInt128Nulls(nonNullValueTemp, isNull);
 
-        return new Int128ArrayOmniBlock(nextBatchSize, Optional.of(isNull), result);
+        return new Int128ArrayOmniBlock(vecAllocator, nextBatchSize, Optional.of(isNull), result);
     }
 }

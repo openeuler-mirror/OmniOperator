@@ -348,10 +348,11 @@ VectorBatch **ConstructHashBuilderTestData(int32_t tableCount, int32_t columnCou
     VectorBatch **vectorBatches = new VectorBatch *[tableCount];
     int32_t positionCount = BUILD_POSITION_COUNT;
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     for (int32_t vecBatchIdx = 0; vecBatchIdx < tableCount; vecBatchIdx++) {
         VectorBatch *vecBatch = new VectorBatch(columnCount);
         for (int32_t vecIdx = 0; vecIdx < columnCount; vecIdx++) {
-            LongVector *vector = new LongVector(nullptr, positionCount);
+            LongVector *vector = new LongVector(vecAllocator, positionCount);
             for (int32_t position = 0; position < positionCount; position++) {
                 int64_t value = numbers[position % numberCount];
                 vector->SetValue(position, value);
@@ -429,8 +430,7 @@ void TestHashBuilder(struct HashJoinThreadArgs *hashJoinThreadArgs)
     if (hashJoinThreadArgs->isOriginal) {
         hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderOperatorFactory->CreateOperator());
     } else {
-        opt_module hashBuilderModule = reinterpret_cast<opt_module>(hashBuilderOperatorFactory->GetJitContext()->func);
-        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(hashBuilderModule(hashBuilderOperatorFactory));
+        hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderOperatorFactory));
     }
     if (hashJoinThreadArgs->partitionIndex != -1) {
         hashBuilderOperator->AddInput(hashJoinThreadArgs->buildVecBatches[hashJoinThreadArgs->partitionIndex]);
@@ -452,8 +452,7 @@ void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
     if (hashJoinThreadArgs->isOriginal) {
         lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->CreateOperator());
     } else {
-        opt_module lookupJoinModule = reinterpret_cast<opt_module>(lookupJoinOperatorFactory->GetJitContext()->func);
-        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinModule(lookupJoinOperatorFactory));
+        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinOperatorFactory));;
     }
     const int32_t maxLoopCount = 1000;
     for (int loop = 0; loop < maxLoopCount; loop++) {
@@ -560,10 +559,11 @@ TEST(NativeOmniJoinTest, TestHashBuilderJITMultiThreads)
 VectorBatch **ConstructBuilderTestData(int32_t *numbers, int32_t numberCount)
 {
     VectorBatch **vectorBatches = new VectorBatch *[numberCount];
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     for (int32_t vecBatchIdx = 0; vecBatchIdx < numberCount; vecBatchIdx++) {
         VectorBatch *vectorBatch = new VectorBatch(COLUMN_COUNT_4);
         for (int32_t colIdx = 0; colIdx < COLUMN_COUNT_4; colIdx++) {
-            LongVector *column = new LongVector(nullptr, 1);
+            LongVector *column = new LongVector(vecAllocator, 1);
             column->SetValue(0, numbers[vecBatchIdx]);
             vectorBatch->SetVector(colIdx, column);
         }
@@ -580,11 +580,12 @@ VectorBatch **ConstructProbeTestData(const int32_t *numbers, int32_t numberCount
         return nullptr;
     }
     int32_t positionCount = PROBE_POSITION_COUNT;
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT_1];
     for (int32_t vecBatchIdx = 0; vecBatchIdx < VEC_BATCH_COUNT_1; vecBatchIdx++) {
         VectorBatch *vecBatch = new VectorBatch(COLUMN_COUNT_4);
         for (int32_t colIdx = 0; colIdx < COLUMN_COUNT_4; colIdx++) {
-            LongVector *vector = new LongVector(nullptr, positionCount);
+            LongVector *vector = new LongVector(vecAllocator, positionCount);
             for (int32_t posIdx = 0; posIdx < positionCount; posIdx++) {
                 int64_t value = numbers[(posIdx % numberCount)];
                 vector->SetValue(posIdx, value);

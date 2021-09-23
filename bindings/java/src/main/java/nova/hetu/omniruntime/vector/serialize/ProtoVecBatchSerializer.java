@@ -26,6 +26,7 @@ import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.VariableWidthVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecFactory;
 
@@ -195,7 +196,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             int rowCount = protoVecBatch.getRowCount();
             Vec[] vecs = new Vec[vecCount];
             for (int i = 0; i < vecCount; i++) {
-                vecs[i] = buildVec(protoVecBatch.getVectors(i));
+                vecs[i] = buildVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, protoVecBatch.getVectors(i));
             }
             return new VecBatch(vecs, rowCount);
         } catch (InvalidProtocolBufferException e) {
@@ -203,48 +204,64 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         }
     }
 
-    private Vec buildVec(VecBatchSerde.Vec protoVec) {
+    @Override
+    public VecBatch deserialize(VecAllocator vecAllocator, byte[] bytes) {
+        try {
+            VecBatchSerde.VecBatch protoVecBatch = VecBatchSerde.VecBatch.parseFrom(bytes);
+            int vecCount = protoVecBatch.getVecCount();
+            int rowCount = protoVecBatch.getRowCount();
+            Vec[] vecs = new Vec[vecCount];
+            for (int i = 0; i < vecCount; i++) {
+                vecs[i] = buildVec(vecAllocator, protoVecBatch.getVectors(i));
+            }
+            return new VecBatch(vecs, rowCount);
+        } catch (InvalidProtocolBufferException e) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_INNER_ERROR, "deserialize failed." + e.getCause());
+        }
+    }
+
+    private Vec buildVec(VecAllocator vecAllocator, VecBatchSerde.Vec protoVec) {
         VecBatchSerde.VecTypeExt protoTypeExt = protoVec.getTypeExt();
         int vecSize = protoVec.getSize();
         Vec vec;
         switch (protoTypeExt.getId()) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
-                vec = new IntVec(vecSize);
+                vec = new IntVec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DATE64:
             case OMNI_VEC_TYPE_DECIMAL64:
-                vec = new LongVec(vecSize);
+                vec = new LongVec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_SHORT:
-                vec = new ShortVec(vecSize);
+                vec = new ShortVec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_BOOLEAN:
-                vec = new BooleanVec(vecSize);
+                vec = new BooleanVec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                vec = new DoubleVec(vecSize);
+                vec = new DoubleVec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
-                vec = new VarcharVec(protoVec.getValues().size(), protoVec.getSize());
+                vec = new VarcharVec(vecAllocator, protoVec.getValues().size(), protoVec.getSize());
                 if (vec instanceof VarcharVec) {
                     ((VarcharVec) vec).setOffsetsBuf(protoVec.getOffsets().toByteArray());
                 }
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
-                vec = new Decimal128Vec(vecSize);
+                vec = new Decimal128Vec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_CONTAINER:
                 int vecCount = protoVec.getSubVectorsCount();
                 long[] subVecAddresses = new long[vecCount];
                 VecType[] subVecTypes = new VecType[vecCount];
                 for (int i = 0; i < vecCount; i++) {
-                    Vec subVec = buildVec(protoVec.getSubVectors(i));
+                    Vec subVec = buildVec(vecAllocator, protoVec.getSubVectors(i));
                     subVecAddresses[i] = subVec.getNativeVector();
                     subVecTypes[i] = subVec.getType();
                 }
-                return new ContainerVec(vecCount, protoVec.getSize(), subVecAddresses, subVecTypes);
+                return new ContainerVec(vecAllocator, vecCount, protoVec.getSize(), subVecAddresses, subVecTypes);
             // TODO: support other data types
             case OMNI_VEC_TYPE_TIME32:
             case OMNI_VEC_TYPE_TIME64:

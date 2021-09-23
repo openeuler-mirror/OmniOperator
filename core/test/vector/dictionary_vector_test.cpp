@@ -11,14 +11,13 @@
 #include "decimal128_vector.h"
 #include "decimal128.h"
 #include "varchar_vector.h"
-#include <vector_allocator_manager.h>
+#include <vector_allocator_factory.h>
 
 using namespace omniruntime::vec;
 
 TEST(DictionaryVector, appendVector)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     int *ids1 = new int[5];
     int *ids2 = new int[5];
@@ -45,14 +44,13 @@ TEST(DictionaryVector, appendVector)
     delete[] ids1;
     delete[] ids2;
     delete[] ids;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, CopyRegion)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -68,14 +66,13 @@ TEST(DictionaryVector, CopyRegion)
     delete dictionary;
     delete dictionaryVector;
     delete copyRegion;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, copyPostions)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -112,14 +109,13 @@ TEST(DictionaryVector, copyPostions)
     delete dictionaryVector1;
     delete copyPositions1;
 
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, LongType)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new LongVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -139,14 +135,13 @@ TEST(DictionaryVector, LongType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, IntType)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new IntVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -166,14 +161,13 @@ TEST(DictionaryVector, IntType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, BooleanType)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new BooleanVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -193,14 +187,13 @@ TEST(DictionaryVector, BooleanType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, DoubleType)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new DoubleVector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -220,14 +213,13 @@ TEST(DictionaryVector, DoubleType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, VarcharType)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new VarcharVector(allocator, 1024, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -263,14 +255,13 @@ TEST(DictionaryVector, VarcharType)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
 
 TEST(DictionaryVector, Decimal128)
 {
-    VectorAllocatorManager manager = VectorAllocatorManager::GetInstance();
-    VectorAllocator *allocator = manager.GetOrCreateAllocator("test");
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
     EXPECT_TRUE(allocator != nullptr);
     auto *dictionary = new Decimal128Vector(allocator, 10);
     for (int32_t i = 0; i < 10; i++) {
@@ -291,6 +282,6 @@ TEST(DictionaryVector, Decimal128)
     delete dictionary;
     delete dictionaryVector;
     delete nested;
-    manager.DeleteAllocator(&allocator);
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }

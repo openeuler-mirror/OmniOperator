@@ -8,6 +8,7 @@ import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.prestosql.orc.reader.ReaderUtils.minNonNullValueSize;
 import static io.prestosql.orc.reader.ReaderUtils.unpackDoubleNulls;
+import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromExtensionProperties;
 
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.orc.OrcColumn;
@@ -15,10 +16,12 @@ import io.prestosql.orc.OrcCorruptionException;
 import io.prestosql.orc.reader.DoubleColumnReader;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.type.Type;
+import java.util.Map;
 import nova.hetu.olk.block.DoubleArrayOmniBlock;
 
 import java.io.IOException;
 import java.util.Optional;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni double column reader.
@@ -26,6 +29,8 @@ import java.util.Optional;
  * @since 20210630
  */
 public class OmniDoubleColumnReader extends DoubleColumnReader {
+    private final VecAllocator vecAllocator;
+
     /**
      * The Non null value temp.
      */
@@ -39,9 +44,10 @@ public class OmniDoubleColumnReader extends DoubleColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniDoubleColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext)
+    public OmniDoubleColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
         throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
+        vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
     }
 
     @Override
@@ -49,7 +55,7 @@ public class OmniDoubleColumnReader extends DoubleColumnReader {
         verify(dataStream != null);
         double[] values = new double[nextBatchSize];
         dataStream.next(values, nextBatchSize);
-        return new DoubleArrayOmniBlock(nextBatchSize, Optional.empty(), values);
+        return new DoubleArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), values);
     }
 
     @Override
@@ -65,6 +71,6 @@ public class OmniDoubleColumnReader extends DoubleColumnReader {
 
         double[] result = unpackDoubleNulls(nonNullValueTemp, isNull);
 
-        return new DoubleArrayOmniBlock(isNull.length, Optional.of(isNull), result);
+        return new DoubleArrayOmniBlock(vecAllocator, isNull.length, Optional.of(isNull), result);
     }
 }

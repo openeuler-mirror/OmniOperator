@@ -11,6 +11,9 @@
 #include "../../src/operator/operator_factory.h"
 #include "../../src/vector/vector_types.h"
 #include "../../src/vector/vector_type.h"
+#include "../../src/vector/vector_allocator_factory.h"
+
+using namespace omniruntime::vec;
 
 const int32_t PARAM_OFFSET_0 = 0;
 const int32_t PARAM_OFFSET_1 = 1;
@@ -101,7 +104,8 @@ private:
 
 template <typename T, typename V> T *CreateVector(V *values, int32_t length)
 {
-    auto vector = new T(nullptr, length);
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    auto vector = new T(vecAllocator, length);
     vector->SetValues(0, values, length);
     return vector;
 }

@@ -17,6 +17,7 @@ import io.prestosql.spi.block.IntArrayBlockEncoding;
 import io.prestosql.spi.util.BloomFilter;
 import nova.hetu.omniruntime.vector.IntVec;
 
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.Optional;
@@ -32,6 +33,8 @@ import javax.annotation.Nullable;
  */
 public class IntArrayOmniBlock implements Block<Integer> {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(IntArrayOmniBlock.class).instanceSize();
+
+    private final VecAllocator vecAllocator;
 
     private final int arrayOffset;
 
@@ -49,12 +52,13 @@ public class IntArrayOmniBlock implements Block<Integer> {
     /**
      * Instantiates a new Int array omni block.
      *
+     * @param vecAllocator
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public IntArrayOmniBlock(int positionCount, Optional<boolean[]> valueIsNull, int[] values) {
-        this(0, positionCount, valueIsNull.orElse(null), values);
+    public IntArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<boolean[]> valueIsNull, int[] values) {
+        this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
     /**
@@ -81,12 +85,14 @@ public class IntArrayOmniBlock implements Block<Integer> {
     /**
      * Instantiates a new Int array omni block.
      *
+     * @param vecAllocator
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    IntArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, int[] values) {
+    IntArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, boolean[] valueIsNull, int[] values) {
+        this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -100,7 +106,7 @@ public class IntArrayOmniBlock implements Block<Integer> {
             throw new IllegalArgumentException("values length is less than positionCount");
         }
 
-        this.values = new IntVec(positionCount);
+        this.values = new IntVec(vecAllocator, positionCount);
         this.values.put(values, 0, arrayOffset, positionCount);
 
         if (valueIsNull != null && valueIsNull.length - arrayOffset < positionCount) {
@@ -129,6 +135,7 @@ public class IntArrayOmniBlock implements Block<Integer> {
      * @param values the values
      */
     IntArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, IntVec values) {
+        this.vecAllocator = values.getAllocator();
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -247,7 +254,7 @@ public class IntArrayOmniBlock implements Block<Integer> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new IntArrayOmniBlock(0, 1, isNull(position) ? new boolean[] {true} : null,
+        return new IntArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new boolean[] {true} : null,
             new int[] {values.get(position)});
     }
 

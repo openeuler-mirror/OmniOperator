@@ -56,7 +56,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     }
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(nullptr, dataSize);
+    IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
@@ -84,7 +84,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
 
     int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -114,7 +114,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     int32_t data0[dataSize] = {0, 1, 2, 4, 5, 2, 3};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(nullptr, dataSize);
+    IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
@@ -135,7 +135,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {0, 1, 2, 2, 3};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -162,7 +162,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
 
     VectorBatch *inputVecBatch = new VectorBatch(1);
-    IntVector *column0 = new IntVector(nullptr, dataSize);
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
     inputVecBatch->SetVector(0, column0);
 
@@ -184,7 +185,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {2, 2, 1, 1, 0};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -210,12 +211,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VectorBatch *inputVecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, dataSize);
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
-    LongVector *column1 = new LongVector(nullptr, dataSize);
+    LongVector *column1 = new LongVector(vecAllocator, dataSize);
     column1->SetValues(0, data1, dataSize);
-    DoubleVector *column2 = new DoubleVector(nullptr, dataSize);
+    DoubleVector *column2 = new DoubleVector(vecAllocator, dataSize);
     column2->SetValues(0, data2, dataSize);
     inputVecBatch->SetVector(0, column0);
     inputVecBatch->SetVector(1, column1);
@@ -239,13 +241,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     int64_t expectData2[expectedDataSize] = {0, 3, 1, 4, 2};
-    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
     double expectData3[expectedDataSize] = {6.6, 3.3, 5.5, 2.2, 4.4};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -273,12 +275,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VectorBatch *inputVecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, dataSize);
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
-    LongVector *column1 = new LongVector(nullptr, dataSize);
+    LongVector *column1 = new LongVector(vecAllocator, dataSize);
     column1->SetValues(0, data1, dataSize);
-    DoubleVector *column2 = new DoubleVector(nullptr, dataSize);
+    DoubleVector *column2 = new DoubleVector(vecAllocator, dataSize);
     column2->SetValues(0, data2, dataSize);
     inputVecBatch->SetVector(0, column0);
     inputVecBatch->SetVector(1, column1);
@@ -302,13 +305,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
     std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     int64_t expectData2[expectedDataSize] = {3, 0, 4, 1, 5};
-    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
     double expectData3[expectedDataSize] = {3.3, 6.6, 2.2, 5.5, 1.1};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -336,12 +339,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VectorBatch *inputVecBatch = new VectorBatch(3);
-    IntVector *column0 = new IntVector(nullptr, dataSize);
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
     column0->SetValues(0, data0, dataSize);
-    LongVector *column1 = new LongVector(nullptr, dataSize);
+    LongVector *column1 = new LongVector(vecAllocator, dataSize);
     column1->SetValues(0, data1, dataSize);
-    DoubleVector *column2 = new DoubleVector(nullptr, dataSize);
+    DoubleVector *column2 = new DoubleVector(vecAllocator, dataSize);
     column2->SetValues(0, data2, dataSize);
     inputVecBatch->SetVector(0, column0);
     inputVecBatch->SetVector(1, column1);
@@ -365,13 +369,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     int32_t expectData1[expectedDataSize] = {2, 1, 0, 2, 1};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     int64_t expectData2[expectedDataSize] = {5, 4, 3, 2, 1};
-    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
     double expectData3[expectedDataSize] = {1.1, 2.2, 3.3, 4.4, 5.5};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -420,17 +424,18 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVectorBatches;
     topNOperator->GetOutput(outputVectorBatches);
     int32_t expectData1[expectedDataSize] = {2,0, 0, 1, 1};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     int64_t expectData2[expectedDataSize] = {5,0, 3, 1, 4};
-    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
     double expectData3[expectedDataSize] = {1.1,6.6, 3.3, 5.5, 2.2};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -481,17 +486,18 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVectorBatches;
     topNOperator->GetOutput(outputVectorBatches);
     int32_t expectData1[expectedDataSize] = {2,0, 0, 1, 1};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     int64_t expectData2[expectedDataSize] = {5,0, 3, 1, 4};
-    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
     double expectData3[expectedDataSize] = {1.1,6.6, 3.3, 5.5, 2.2};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
     expectVecorBatch->SetVector(0, expectCol1);
@@ -545,17 +551,18 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVectorBatches;
     topNOperator->GetOutput(outputVectorBatches);
     int32_t expectData1[expectedDataSize] = {0, 1, 1, -1, -1};
-    IntVector *expectCol1 = new IntVector(nullptr, expectedDataSize);
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
     int64_t expectData2[expectedDataSize] = {3, 1, 4, -1, 0};
-    LongVector *expectCol2 = new LongVector(nullptr, expectedDataSize);
+    LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
     double expectData3[expectedDataSize] = {3.3, 5.5, 2.2, 1.1, 6.6};
-    DoubleVector *expectCol3 = new DoubleVector(nullptr, expectedDataSize);
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
     VectorBatch *expectVecorBatch = new VectorBatch(3);
     expectVecorBatch->SetVector(0, expectCol1);

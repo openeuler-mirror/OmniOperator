@@ -200,11 +200,12 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = std::make_unique<VectorBatch>(finalOutputColsCount, rowCount).release();
-    vecBatch->NewVectors(outputTypes);
+    vecBatch->NewVectors(vecAllocator, outputTypes);
 
     // build the output data with original input vecBatch, input data are not changed in window operator
     // we add extra columns of window result to the output vecBatch in window partition
-    pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount);
+    pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
+        GetVecAllocator());
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
             int32_t partitionStart = partition == nullptr ? 0 : partition->GetPartitionEnd();
