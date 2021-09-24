@@ -166,6 +166,8 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 import nova.hetu.shuffle.PageProducer;
+import nova.hetu.omniruntime.operator.OmniOperatorFactory;
+import nova.hetu.olk.operator.filterandproject.OmniPageProcessor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -439,7 +441,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         } catch (Exception e) {
             return null;
         }
-
         for (OperatorFactory operatorFactory : physicalOperation.getOperatorFactories()) {
             // if the operator is source or output operator then continue
             if (operatorFactory instanceof TableScanOperator.TableScanOperatorFactory
@@ -451,6 +452,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 || operatorFactory instanceof TaskOutputOperator.TaskOutputOperatorFactory) {
                 continue;
             }
+
             // if there is a operator not support by OmniRuntime, then fall back
             if (!operatorFactory.isExtensionOperatorFactory()) {
                 log.warn("There is a operator not support by OmniRuntime: %s", operatorFactory.toString());
@@ -459,8 +461,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             // if there is a data type not support by OmniRuntime, then fall back
             if (notSupportTypes(operatorFactory.getSourceTypes())) {
-                log.warn("There is a data type not support by OmniRuntime: %s",
-                    operatorFactory.getSourceTypes().toString());
+                log.warn("There is a data type not support by OmniRuntime: %s", operatorFactory.getSourceTypes().toString());
                 return null;
             }
         }
@@ -661,47 +662,62 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             List<RowExpression> translatedProjections = projections.stream()
                 .map(expression -> toRowExpression(expression, expressionTypes, sourceLayout))
                 .collect(toImmutableList());
-            try {
-                if (columns != null) {
-                    // TODO: Need Support RecordCursor Filter And Project Omni Codegen
 
-                    Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(
-                        translatedFilter, translatedProjections, sourceNode.getId());
-                    Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
-                        translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                        OptionalInt.empty(), inputTypes, context.getTaskId());
+            if (columns != null) {
+                // TODO: Need Support RecordCursor Filter And Project Omni Codegen
 
-                    boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
-                    int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024
-                        * 1024; // convert from MB to bytes
-
-                    SourceOperatorFactory operatorFactory
-                        = new ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory(context.getSession(),
-                        context.getNextOperatorId(), planNodeId, sourceNode, pageSourceProvider, cursorProcessor,
-                        pageProcessor, table, columns, dynamicFilter, getTypes(projections, expressionTypes),
-                        stateStoreProvider, metadata, dynamicFilterCacheManager,
-                        getFilterAndProjectMinOutputPageSize(session),
-                        getFilterAndProjectMinOutputPageRowCount(session), strategy, reuseTableScanMappingId,
-                        spillEnabled, Optional.of(spillerFactory), spillerThreshold, consumerTableScanNodeCount);
-
-                    return new PhysicalOperation(operatorFactory, outputMappings, context,
-                        stageExecutionDescriptor.isScanGroupedExecution(sourceNode.getId())
-                            ? GROUPED_EXECUTION
-                            : UNGROUPED_EXECUTION);
-                } else {
-                    Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
-                        translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                        OptionalInt.empty(), inputTypes, context.getTaskId());
-
-                    OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
-                        context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
-                        getFilterAndProjectMinOutputPageSize(session),
-                        getFilterAndProjectMinOutputPageRowCount(session));
-
-                    return new PhysicalOperation(operatorFactory, outputMappings, context, source);
+                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler
+                    (metadata, pageFunctionCompiler);
+                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor
+                    (translatedFilter, translatedProjections, inputTypes, context.getTaskId());
+                OmniPageProcessor omniPageProcessor = oPageProcessor.get();
+                OmniOperatorFactory omniOperatorFactory = omniPageProcessor.getProjection().getFactory();
+                if (omniOperatorFactory.getNativeOperatorFactory() == 0) {
+                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
                 }
-            } catch (RuntimeException e) {
-                throw new PrestoException(COMPILER_ERROR, "Compiler failed", e);
+
+                boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
+                int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024
+                    * 1024; // convert from MB to bytes
+
+                Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
+                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
+                    OptionalInt.empty(), inputTypes, context.getTaskId());
+                Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(
+                    translatedFilter, translatedProjections, sourceNode.getId());
+                SourceOperatorFactory operatorFactory
+                    = new ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory(context.getSession(),
+                    context.getNextOperatorId(), planNodeId, sourceNode, pageSourceProvider, cursorProcessor,
+                    pageProcessor, table, columns, dynamicFilter, getTypes(projections, expressionTypes),
+                    stateStoreProvider, metadata, dynamicFilterCacheManager,
+                    getFilterAndProjectMinOutputPageSize(session),
+                    getFilterAndProjectMinOutputPageRowCount(session), strategy, reuseTableScanMappingId,
+                    spillEnabled, Optional.of(spillerFactory), spillerThreshold, consumerTableScanNodeCount);
+
+                return new PhysicalOperation(operatorFactory, outputMappings, context,
+                    stageExecutionDescriptor.isScanGroupedExecution(sourceNode.getId())
+                        ? GROUPED_EXECUTION
+                        : UNGROUPED_EXECUTION);
+            } else {
+                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler
+                    (metadata, pageFunctionCompiler);
+                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor
+                    (translatedFilter, translatedProjections, inputTypes, context.getTaskId());
+                OmniPageProcessor omniPageProcessor = oPageProcessor.get();
+                OmniOperatorFactory omniOperatorFactory = omniPageProcessor.getProjection().getFactory();
+                if (omniOperatorFactory.getNativeOperatorFactory() == 0) {
+                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
+                }
+
+                Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
+                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
+                    OptionalInt.empty(), inputTypes, context.getTaskId());
+                OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
+                    context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
+                    getFilterAndProjectMinOutputPageSize(session),
+                    getFilterAndProjectMinOutputPageRowCount(session));
+
+                return new PhysicalOperation(operatorFactory, outputMappings, context, source);
             }
         }
 

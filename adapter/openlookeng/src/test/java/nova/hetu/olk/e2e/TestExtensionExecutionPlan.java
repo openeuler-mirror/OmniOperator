@@ -197,4 +197,20 @@ public class TestExtensionExecutionPlan {
                 .build().getMaterializedRows());
     }
 
+    @Test
+    public void testNotSupportExpression() {
+        String VALUES = "" + "SELECT *\n" + "FROM (\n" + "  VALUES\n" + "    ( CAST(true AS boolean), 1),\n"
+            + "    ( CAST(false AS boolean), 2)\n" + ") AS orders (orderkey, orderstatus)";
+        @Language("SQL") String query = format(
+            "SELECT x.orderkey, x.orderstatus " + "FROM (%s) x cross join (%s) y", VALUES, VALUES);
+
+        MaterializedResult actual = queryRunner.execute(query);
+        MaterializedResult expected = resultBuilder(TEST_SESSION, BIGINT, INTEGER)
+        .row(true, 1)
+        .row(false, 2)
+        .row(true, 1)
+        .row(false, 2)
+        .build();
+        assertEqualsIgnoreOrder(actual.getMaterializedRows(), expected.getMaterializedRows());
+    }
 }

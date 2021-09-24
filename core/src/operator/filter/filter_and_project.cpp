@@ -42,16 +42,20 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
 
     Parser parserObject;
     parsedExpr = parserObject.ParseRowExpression(expression, inputTypes, vecCount);
+    if (parsedExpr != nullptr) {
+        this->isSupportedExpr = true;
+        unique_ptr<Compiler> compiler = make_unique<Compiler>(*parsedExpr, inputTypes, vecCount);
+        this->filter = compiler->Compile();
 
-    unique_ptr<Compiler> compiler = make_unique<Compiler>(*parsedExpr, inputTypes, vecCount);
-    this->filter = compiler->Compile();
-
-    for (int32_t i = 0; i < this->projectVecCount; i++) {
-        auto exp = make_unique<DataExpr>();
-        exp->isColumn = true;
-        exp->colVal = this->projectIndex[i];
-        exp->dataType = ColTypeTrans(inputTypes[projectIndex[i]]);
-        projections.push_back(make_unique<Projection>(inputTypes, vecCount, *(exp.release()), true));
+        for (int32_t i = 0; i < this->projectVecCount; i++) {
+            auto exp = make_unique<DataExpr>();
+            exp->isColumn = true;
+            exp->colVal = this->projectIndex[i];
+            exp->dataType = ColTypeTrans(inputTypes[projectIndex[i]]);
+            projections.push_back(make_unique<Projection>(inputTypes, vecCount, *(exp.release()), true));
+        }
+    } else {
+        this->isSupportedExpr = false;
     }
 }
 

@@ -525,8 +525,11 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     int32_t inputLength = (int32_t)jInputLength;
     jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
     int32_t projectLength = (int32_t)jProjectLength;
-    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
-        filterExpression, inputTypeIds, inputLength, projectIndices, projectLength);
+    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory
+        (filterExpression, inputTypeIds, inputLength, projectIndices, projectLength);
+    if (!factory->isSupportedExpr) {
+        return 0;
+    }
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
     env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     return (int64_t)factory;
