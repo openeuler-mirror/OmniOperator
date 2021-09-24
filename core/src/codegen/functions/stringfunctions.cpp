@@ -66,29 +66,73 @@ extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t regexToMatch)
 
 extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t startIdx)
 {
-    char *s = (char *) (uintptr_t)str;
+    char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
     int32_t length = 0;
-    while (s[length + startIdx] != '\0') {
+    // calculate length of original string
+    while (s[length] != '\0') {
         length++;
     }
-    auto ret = std::make_unique<char[]>(length+1).release();
-    for (int i = 0; i < length; i++) {
-        ret[i] = s[startIdx + i];
+
+    if (startIdx == 0 || length == 0 || startIdx + length < 0 || startIdx > length) {
+        auto ret = std::make_unique<char[]>(1).release();
+        ret[0] = '\0';
+        return (int64_t)(ret);
     }
-    ret[length] = '\0';
+
+    if (startIdx > 0) {
+        startIdx -= 1;
+    } else {
+        // negative start is relative to end of string
+        startIdx += length;
+    }
+
+    auto ret = std::make_unique<char[]>((length - startIdx) + 1).release();
+    for (int indexStart = startIdx, i = 0; indexStart < length; indexStart++, i++) {
+        ret[i] = s[indexStart];
+    }
+    ret[(length - startIdx) + 1] = '\0';
     return (int64_t)(ret);
 }
 
 
 extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t startIdx, int32_t length)
 {
-    char *s = (char *) (uintptr_t)str;
-
-    auto ret = std::make_unique<char[]>(length+1).release();
-    for (int i = 0; i < length; i++) {
-        ret[i] = s[startIdx + i];
+    char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
+    int32_t totalLength = 0;
+    // calculate length of original string
+    while (s[totalLength] != '\0') {
+        totalLength++;
     }
-    ret[length] = '\0';
+    if (startIdx == 0 || (length <= 0) || (totalLength == 0) || startIdx + totalLength < 0 || startIdx > totalLength) {
+        auto ret = std::make_unique<char[]>(1).release();
+        ret[0] = '\0';
+        return (int64_t)(ret);
+    }
+    int endIdx;
+    if (startIdx > 0) {
+        startIdx = startIdx - 1;
+        // Quick exit if we are sure that the position is after the end
+        if (totalLength - startIdx <= length) {
+            endIdx = totalLength;
+        } else if (length == 0) {
+            endIdx = startIdx;
+        } else {
+            endIdx = startIdx + length;
+        }
+    } else {
+        // negative start is relative to end of string
+        startIdx += totalLength;
+        if (startIdx + length < totalLength) {
+            endIdx = startIdx + length;
+        } else {
+            endIdx = totalLength;
+        }
+    }
+    auto ret = std::make_unique<char[]>((endIdx - startIdx) + 1).release();
+    for (int indexStart = startIdx, i = 0; indexStart < endIdx; indexStart++, i++) {
+        ret[i] = s[indexStart];
+    }
+    ret[(endIdx - startIdx) + 1] = '\0';
     return (int64_t)(ret);
 }
 
