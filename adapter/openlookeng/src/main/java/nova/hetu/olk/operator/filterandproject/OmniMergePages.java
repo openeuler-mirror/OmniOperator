@@ -193,9 +193,9 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
             finalPage = new Page(lastInputPage.getPositionCount());
         } else {
             // Merge buffered vectors
+            VecBatch mergeResult = new VecBatch(createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes));
+            merge(mergeResult);
             Iterator<Page> result = new VecBatchToPageIterator(new Iterator<VecBatch>() {
-                private final VecBatch result = new VecBatch(createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes));
-
                 @Override
                 public boolean hasNext() {
                     return true;
@@ -203,11 +203,10 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
 
                 @Override
                 public VecBatch next() {
-                    return result;
+                    return mergeResult;
                 }
             });
             finalPage = result.next();
-            merge(buildVecBatch(getVecAllocatorFromBlocks(finalPage.getBlocks()), finalPage, getClass().getSimpleName()));
         }
         resetStatus();
         return finalPage;
