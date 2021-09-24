@@ -2,7 +2,6 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
 
-
 package nova.hetu.olk.tool;
 
 import static io.prestosql.spi.type.Decimals.MAX_SHORT_PRECISION;
@@ -18,6 +17,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.block.RowBlock;
+import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.block.VariableWidthBlock;
 import io.prestosql.spi.type.StandardTypes;
 import io.prestosql.spi.type.Type;
@@ -60,8 +60,7 @@ import java.util.Optional;
 public final class OperatorUtils {
     private static final Logger log = Logger.get(OperatorUtils.class);
 
-    private OperatorUtils() {
-    }
+    private OperatorUtils() {}
 
     /**
      * To vec types vec type [ ].
@@ -207,12 +206,24 @@ public final class OperatorUtils {
      * @return the off heap block
      */
     public static Block buildOffHeapBlock(VecAllocator vecAllocator, Block block) {
+        return buildOffHeapBlock(vecAllocator, block, block.getClass().getSimpleName(), block.getPositionCount());
+    }
+
+    /**
+     * Gets off heap block.
+     *
+     * @param vecAllocator vector allocator
+     * @param block the block
+     * @param type the actual block type, e.g. RunLengthEncodedBlock or DictionaryBlock
+     * @param positionCount the position count of the block
+     * @return the off heap block
+     */
+    public static Block buildOffHeapBlock(VecAllocator vecAllocator, Block block, String type, int positionCount) {
         if (block.isExtensionBlock()) {
             return block;
         }
-        int positionCount = block.getPositionCount();
         boolean[] valueIsNull = new boolean[positionCount];
-        switch (block.getClass().getSimpleName()) {
+        switch (type) {
             case "IntArrayBlock": {
                 int[] ints = new int[positionCount];
                 for (int j = 0; j < positionCount; j++) {
@@ -252,7 +263,7 @@ public final class OperatorUtils {
                     if (block.isNull(j)) {
                         valueIsNull[j] = true;
                     } else {
-                        long [] data = (long[]) block.get(j);
+                        long[] data = (long[]) block.get(j);
                         longs[j * 2] = data[0];
                         longs[j * 2 + 1] = data[1];
                     }
@@ -263,8 +274,16 @@ public final class OperatorUtils {
                 return getVariableWidthOmniBlock(vecAllocator, block, positionCount, valueIsNull);
             }
             case "DictionaryBlock": {
-                return new DictionaryOmniBlock(buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
-                    ((DictionaryBlock) block).getIdsArray());
+                return new DictionaryOmniBlock(
+                        buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
+                        ((DictionaryBlock) block).getIdsArray());
+            }
+            case "RunLengthEncodedBlock": {
+                return buildOffHeapBlock(
+                        vecAllocator,
+                        block,
+                        ((RunLengthEncodedBlock) block).getValue().getClass().getSimpleName(),
+                        block.getPositionCount());
             }
             case "LazyBlock": {
                 return buildOffHeapBlock(vecAllocator, block.getLoadedBlock());
@@ -276,8 +295,8 @@ public final class OperatorUtils {
                         valueIsNull[j] = true;
                     }
                 }
-                return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(), Optional.of(valueIsNull),
-                    rowBlock.getRawFieldBlocks());
+                return RowOmniBlock.fromFieldBlocks(
+                        rowBlock.getPositionCount(), Optional.of(valueIsNull), rowBlock.getRawFieldBlocks());
             }
             default:
                 break;
@@ -285,8 +304,23 @@ public final class OperatorUtils {
         return null;
     }
 
-    private static VariableWidthOmniBlock getVariableWidthOmniBlock(VecAllocator vecAllocator, Block block, int positionCount,
-        boolean[] valueIsNull) {
+    private static VariableWidthOmniBlock getVariableWidthOmniBlock(
+            VecAllocator vecAllocator, Block block, int positionCount, boolean[] valueIsNull) {
+        if (block instanceof RunLengthEncodedBlock) {
+            VariableWidthBlock variableWidthBlock = (VariableWidthBlock) ((RunLengthEncodedBlock) block).getValue();
+            VarcharVec vec = new VarcharVec(variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
+
+            for (int i = 0; i < positionCount; i++) {
+                if (block.isNull(i)) {
+                    valueIsNull[i] = true;
+                    vec.setNull(i);
+                } else {
+                    vec.set(i, (byte[]) block.get(i));
+                }
+            }
+            return new VariableWidthOmniBlock(positionCount, vec);
+        }
+
         int[] offsets = ((VariableWidthBlock) block).getOffsets();
         for (int j = 0; j < positionCount; j++) {
             if (block.isNull(j)) {
@@ -319,8 +353,9 @@ public final class OperatorUtils {
             Block block = page.getBlock(i);
             if (!block.isExtensionBlock()) {
                 vecList.add((Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues());
-                log.warn("transfer the onheap pages to offheap pages in %s with %s rows", operatorName,
-                    page.getPositionCount());
+                log.warn(
+                        "transfer the onheap pages to offheap pages in %s with %s rows",
+                        operatorName, page.getPositionCount());
             } else {
                 if (block instanceof LazyBlock) {
                     vecList.add(getVecInLazyBlock((LazyBlock) block));
