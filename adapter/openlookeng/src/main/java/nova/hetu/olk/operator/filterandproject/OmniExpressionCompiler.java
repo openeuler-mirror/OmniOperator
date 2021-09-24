@@ -47,6 +47,18 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         this.determinismEvaluator = new DeterminismEvaluator(metadata);
     }
 
+    /**
+     * Instantiates a new PageProcessor.
+     *
+     * @param filter the row expression filter
+     * @param classNameSuffix (optional) class name suffix used for creating page processor
+     * @param projections the row expression projections
+     * @param inputTypes list of input types
+     * @param initialBatchSize initial batch size
+     * @param taskId the task identifier
+     * @return Supplier<PageProcessor> supplier page processor
+     */
+    @Override
     public Supplier<PageProcessor> compilePageProcessor(Optional<RowExpression> filter,
             List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
             List<Type> inputTypes, TaskId taskId) {
@@ -69,6 +81,39 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         }
         return () -> {
             return new OmniPageProcessor(vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler());
+        };
+    }
+
+    /**
+     * Instantiates a new OmniPageProcessor
+     *
+     * @param filter the row expression filter
+     * @param projections the row expression projections
+     * @param inputTypes list of input types
+     * @param taskId the task identifier
+     * @return Supplier<OmniPageProcessor> supplier omni page processor
+     */
+    public Supplier<OmniPageProcessor> getOmniPageProcessor(Optional<RowExpression> filter,
+        List<? extends RowExpression> projections, List<Type> inputTypes, TaskId taskId) {
+        VecAllocator vecAllocator = VecAllocatorFactory.get(taskId.getFullId());
+        Optional<PageFilter> pageFilter;
+        OmniProjection proj = new OmniProjection(projections, inputTypes, filter);
+        if (filter.isPresent()) {
+            RowExpression re = filter.get();
+            PageFieldsToInputParametersRewriter.Result result = rewritePageFieldsToInputParameters(re);
+            int[] projects = result.getInputChannels()
+                .getInputChannels()
+                .stream()
+                .mapToInt(Integer::intValue)
+                .toArray();
+            pageFilter = Optional.of(
+                new OmniPageFilter(re, determinismEvaluator.isDeterministic(re), result.getInputChannels(), inputTypes,
+                    proj.getNeededCols()));
+        } else {
+            pageFilter = Optional.empty();
+        }
+        return () -> {
+            return new OmniPageProcessor(vecAllocator, pageFilter, proj, OptionalInt.empty(), new ExpressionProfiler());
         };
     }
 }

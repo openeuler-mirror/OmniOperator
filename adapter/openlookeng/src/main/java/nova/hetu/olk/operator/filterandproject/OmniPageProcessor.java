@@ -72,6 +72,10 @@ public class OmniPageProcessor extends PageProcessor {
         this.expressionProfiler = requireNonNull(expressionProfiler, "expressionProfiler is null");
     }
 
+    public OmniProjection getProjection() {
+        return this.projection;
+    }
+
     @Override
     public WorkProcessor<Page> createWorkProcessor(ConnectorSession session, DriverYieldSignal yieldSignal,
         LocalMemoryContext memoryContext, Page page) {

@@ -95,6 +95,8 @@ public:
 
     Operator *CreateOperator() override;
 
+    bool isSupportedExpr;
+
 private:
     std::string expression;
     int32_t *inputTypes;

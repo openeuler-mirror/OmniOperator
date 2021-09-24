@@ -37,6 +37,7 @@ public class OmniFilterAndProjectOperatorFactory
 
     @Override
     protected long createNativeOperatorFactory(Context context) {
+        // long nativeOperatorFactory is 0 if operations/data-types are unsupported
         return createFilterAndProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes),
                 context.inputTypes.length, context.expression, context.projectIndices, context.projectIndices.length);
     }

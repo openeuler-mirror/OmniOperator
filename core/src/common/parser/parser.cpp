@@ -226,7 +226,10 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     if (ph.FuncDeclMatch(opStr, args, true)) {
         return std::make_unique<FuncExpr>(opStr, args, type).release();
     }
-    // default to false
+    // if operator is not supported, return nullptr
+#ifdef DEBUG
+    cout << "operator is not supported" << endl;
+#endif
     return nullptr;
 }
 
@@ -348,8 +351,10 @@ DataExpr *Parser::GenerateDataHelper(const string& dataStr, DataType currDataTyp
             return std::make_unique<DataExpr>(FixString(dataStr)).release();
         }
         default: {
-            // create string data with value "Invalid data"
-            return std::make_unique<DataExpr>("Invalid data").release();
+#ifdef DEBUG
+    cout << "datatype is not supported" << endl;
+#endif
+            return nullptr;
         }
     }
 }
