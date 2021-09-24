@@ -133,7 +133,6 @@ void FreeDecimalArrays()
     for (int i = 0; i < g_decimalArraysToFree.size(); i++) {
         g_decimalArraysToFree[i].reset();
         g_decimalArraysToFree[i] = nullptr;
-        i++;
     }
     g_decimalArraysToFree.clear();
 }

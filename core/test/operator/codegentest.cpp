@@ -878,7 +878,7 @@ TEST(CodeGenTest, DateCast) {
 }
 
 TEST(CodeGenTest, SubstrIn) {
-    string unparsed = "IN:boolean(substr:varchar(#2, 0, 2), '12', '21', '13', '31', '34', '43')";
+    string unparsed = "IN:boolean(substr:varchar(#2, 1, 2), '12', '21', '13', '31', '34', '43')";
     // string unparsed = "IN(substr(#2, 5), '12', '21', '13', '31', '34', '43')";
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
