@@ -213,20 +213,20 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
         int32_t sortCol = sortCols[i];
         int32_t colTypeId = sourceTypeIds[sortCol];
 
-        compare = OperatorUtil::CompareNull(left->GetVector(sortCol), leftPosition, right->GetVector(sortCol),
-            rightPosition, sortNullFirsts[i]);
-        if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
-            break;
-        } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
-            continue;
-        }
-
         Vector *leftVector = left->GetVector(sortCol);
         Vector *rightVector = right->GetVector(sortCol);
 
         int32_t originalLeftPosition, originalRightPosition;
         leftVector = VectorHelper::ExpandVectorAndIndex(leftVector, leftPosition, originalLeftPosition);
         rightVector = VectorHelper::ExpandVectorAndIndex(rightVector, rightPosition, originalRightPosition);
+
+        compare = OperatorUtil::CompareNull(leftVector, originalLeftPosition, rightVector,
+                                            originalRightPosition, sortNullFirsts[i]);
+        if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
+            break;
+        } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
+            continue;
+        }
 
         compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, originalLeftPosition, rightVector,
             originalRightPosition);
