@@ -9,9 +9,9 @@
 #include "../../jit/annotation.h"
 #include "../util/operator_util.h"
 #include "../../vector/vector_helper.h"
+#include "../pages_hash_strategy.h"
 
 #include <vector>
-#include <algorithm>
 #include <memory>
 
 using namespace omniruntime::vec;
@@ -182,7 +182,7 @@ int64_t LookupJoinOperator::GetNextJoinPosition(int64_t currentJoinPosition, int
     return result;
 }
 
-template<typename T>
+template <typename T>
 void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
 {
     int64_t hash;
@@ -301,9 +301,8 @@ void CalculateColVarCharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
 }
 
 SPECIALIZE(OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES)
-void
-PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, int32_t hashColsCount,
-               int64_t *hashes, bool *nulls)
+void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, int32_t hashColsCount, int64_t *hashes,
+    bool *nulls)
 {
     for (int32_t i = 0; i < hashColsCount; ++i) {
         switch (hashColTypes[i]) {
@@ -406,6 +405,29 @@ void LookupJoinOutputBuilder::AppendRow(int32_t probePosition, int64_t partition
     buildIndex.push_back(partitionedJoinPosition);
 }
 
+Vector *GetBuildColumnAndRowIndex(const JoinHashTables *hashTables, int64_t partitionedJoinPosition, int32_t outputCol,
+    int32_t &originalRowIndex)
+{
+    JoinHashTable *hashTable = nullptr;
+    int32_t joinPosition = -1;
+    if (hashTables->GetHashTableCount() != 1) {
+        int32_t partition = hashTables->DecodePartition(partitionedJoinPosition);
+        joinPosition = hashTables->DecodeJoinPosition(partitionedJoinPosition);
+        hashTable = hashTables->GetHashTable(partition);
+    } else {
+        joinPosition = static_cast<int32_t>(partitionedJoinPosition);
+        hashTable = hashTables->GetHashTable(0);
+    }
+
+    PagesHash *pagesHash = hashTable->GetPagesHash();
+    int64_t address = pagesHash->GetAddresses()[joinPosition];
+    int32_t vecBatchIndex = DecodeSliceIndex(address);
+    int32_t rowIndex = DecodePosition(address);
+    Vector *vector = pagesHash->GetPagesHashStrategy()->GetBuildColumns()[outputCol][vecBatchIndex];
+    vector = VectorHelper::ExpandVectorAndIndex(vector, rowIndex, originalRowIndex);
+    return vector;
+}
+
 template <typename T, typename V>
 T *ConstructBuildColumn(VectorAllocator *vecAllocator, const JoinHashTables *hashTables, int32_t outputCol,
     int64_t *buildIndex, int32_t offset, int32_t length)
@@ -420,8 +442,15 @@ T *ConstructBuildColumn(VectorAllocator *vecAllocator, const JoinHashTables *has
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         partitionedJoinPosition = buildIndex[rowIdx];
         if (partitionedJoinPosition != -1) {
-            hashTables->GetBuildValue(&value, partitionedJoinPosition, outputCol);
-            vector->SetValue(index++, value);
+            int32_t originalRowIndex;
+            T *buildVector = static_cast<T *>(
+                GetBuildColumnAndRowIndex(hashTables, partitionedJoinPosition, outputCol, originalRowIndex));
+            if (buildVector->IsValueNull(originalRowIndex)) {
+                vector->SetValueNull(index++);
+            } else {
+                V value = buildVector->GetValue(originalRowIndex);
+                vector->SetValue(index++, value);
+            }
         } else {
             vector->SetValueNull(index++);
         }
@@ -434,22 +463,28 @@ VarcharVector *ConstructBuildVarcharColumn(VectorAllocator *vecAllocator, const 
     int32_t outputCol, int64_t *buildIndex, int32_t offset, int32_t length, uint32_t width)
 {
     int64_t partitionedJoinPosition = -1;
-    uint8_t *value = nullptr;
-    int32_t valueLen = 0;
-    auto *column = std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
+    auto *vector = std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
     int32_t start = offset;
     int32_t end = offset + length;
     int32_t index = 0;
     for (int32_t rowIdx = start; rowIdx < end; rowIdx++) {
         partitionedJoinPosition = buildIndex[rowIdx];
         if (partitionedJoinPosition != -1) {
-            valueLen = hashTables->GetBuildValue(&value, partitionedJoinPosition, outputCol);
-            column->SetValue(index++, value, valueLen);
+            int32_t originalRowIndex;
+            VarcharVector *buildVector = static_cast<VarcharVector *>(
+                GetBuildColumnAndRowIndex(hashTables, partitionedJoinPosition, outputCol, originalRowIndex));
+            if (buildVector->IsValueNull(originalRowIndex)) {
+                vector->SetValueNull(index++);
+            } else {
+                uint8_t *value = nullptr;
+                int32_t valueLen = buildVector->GetValue(originalRowIndex, &value);
+                vector->SetValue(index++, value, valueLen);
+            }
         } else {
-            column->SetValueNull(index++);
+            vector->SetValueNull(index++);
         }
     }
-    return column;
+    return vector;
 }
 
 void ConstructProbeColumnsFromSlice(VectorBatch *vectorBatch, Vector **probeAllColumns, const int32_t *probeOutputCols,

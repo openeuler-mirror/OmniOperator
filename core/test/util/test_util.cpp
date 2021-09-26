@@ -50,27 +50,6 @@ bool TypesMatch(const VecType *actualTypes, const VecType *expectTypes, int32_t 
     return true;
 }
 
-bool ValueMatch(DictionaryVector *actualVector, DictionaryVector *expectedVector, int32_t position)
-{
-    VecType type = actualVector->GetDictionary()->GetType();
-    int32_t actualPosition = actualVector->GetIds()[position];
-    int32_t expectPosition = expectedVector->GetIds()[position];
-    switch (type.GetId()) {
-        case OMNI_VEC_TYPE_INT: {
-            int32_t actual = actualVector->GetInt(actualPosition);
-            int32_t expect = expectedVector->GetInt(expectPosition);
-            return actual == expect;
-        }
-        case OMNI_VEC_TYPE_LONG: {
-            int64_t actual = actualVector->GetLong(actualPosition);
-            int64_t expect = expectedVector->GetLong(expectPosition);
-            return actual == expect;
-        }
-        default:
-            return false;
-    }
-}
-
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 {
     if (actualColumn->GetType() != expectColumn->GetType()) {
@@ -91,44 +70,40 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
         if (actualCol->IsValueNull(actualIndex) != expectCol->IsValueNull(expectIndex)) {
             return false;
-        }
-        else if ((actualCol->IsValueNull(actualIndex) == expectCol->IsValueNull(expectIndex)) &&
-            actualCol->IsValueNull(actualIndex)){
+        } else if ((actualCol->IsValueNull(actualIndex) == expectCol->IsValueNull(expectIndex)) &&
+            actualCol->IsValueNull(actualIndex)) {
             continue;
-        }
-        else {
-            switch (actualColumn->GetType().GetId()) {
+        } else {
+            switch (actualCol->GetType().GetId()) {
                 case OMNI_VEC_TYPE_INT:
                 case OMNI_VEC_TYPE_DATE32:
-                    result = (static_cast<IntVector *>(actualColumn)->GetValue(i) ==
-                              static_cast<IntVector *>(expectColumn)->GetValue(i));
+                    result = (static_cast<IntVector *>(actualCol)->GetValue(actualIndex) ==
+                        static_cast<IntVector *>(expectCol)->GetValue(expectIndex));
                     break;
                 case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64:
-                    result = (static_cast<LongVector *>(actualColumn)->GetValue(i) ==
-                              static_cast<LongVector *>(expectColumn)->GetValue(i));
+                case OMNI_VEC_TYPE_DECIMAL64: {
+                    int64_t actual = static_cast<LongVector *>(actualCol)->GetValue(actualIndex);
+                    int64_t expected = static_cast<LongVector *>(expectCol)->GetValue(expectIndex);
+                    result = (actual == expected);
                     break;
+                }
                 case OMNI_VEC_TYPE_DOUBLE:
-                    result = (std::fabs(static_cast<DoubleVector *>(actualColumn)->GetValue(i) -
-                                        static_cast<DoubleVector *>(expectColumn)->GetValue(i)) <= DBL_EPSILON);
+                    result = (std::fabs(static_cast<DoubleVector *>(actualCol)->GetValue(actualIndex) -
+                        static_cast<DoubleVector *>(expectCol)->GetValue(expectIndex)) <= DBL_EPSILON);
                     break;
                 case OMNI_VEC_TYPE_BOOLEAN:
-                    result = (static_cast<BooleanVector *>(actualColumn)->GetValue(i) ==
-                              static_cast<BooleanVector *>(expectColumn)->GetValue(i));
+                    result = (static_cast<BooleanVector *>(actualCol)->GetValue(actualIndex) ==
+                        static_cast<BooleanVector *>(expectCol)->GetValue(expectIndex));
                     break;
                 case OMNI_VEC_TYPE_DECIMAL128:
-                    result = (static_cast<Decimal128Vector *>(actualColumn)->GetValue(i) ==
-                              static_cast<Decimal128Vector *>(expectColumn)->GetValue(i));
-                    break;
-                case OMNI_VEC_TYPE_DICTIONARY:
-                    result = ValueMatch(static_cast<DictionaryVector *>(actualColumn),
-                                        static_cast<DictionaryVector *>(expectColumn), i);
+                    result = (static_cast<Decimal128Vector *>(actualCol)->GetValue(actualIndex) ==
+                        static_cast<Decimal128Vector *>(expectCol)->GetValue(expectIndex));
                     break;
                 case OMNI_VEC_TYPE_VARCHAR: {
                     uint8_t *actual = nullptr;
-                    int32_t actualLength = static_cast<VarcharVector *>(actualColumn)->GetValue(i, &actual);
+                    int32_t actualLength = static_cast<VarcharVector *>(actualCol)->GetValue(actualIndex, &actual);
                     uint8_t *expected = nullptr;
-                    int32_t expectedLength = static_cast<VarcharVector *>(expectColumn)->GetValue(i, &expected);
+                    int32_t expectedLength = static_cast<VarcharVector *>(expectCol)->GetValue(expectIndex, &expected);
                     if (actualLength != expectedLength || memcmp(actual, expected, actualLength) != 0) {
                         result = false;
                     } else {
@@ -148,12 +123,11 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
     return true;
 }
 
-VarcharVector *CreateVarcharVector(VarcharVecType &type, std::string *values, int32_t length)
+VarcharVector *CreateVarcharVector(VarcharVecType type, std::string *values, int32_t length)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     uint32_t width = type.GetWidth();
-    VarcharVector *vector =
-        std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
+    VarcharVector *vector = std::make_unique<VarcharVector>(vecAllocator, length * width, length).release();
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, reinterpret_cast<const uint8_t *>(values[i].c_str()), values[i].length());
     }
@@ -297,7 +271,7 @@ void AssertDictionaryVectorVarcharEquals(DictionaryVector *vector, std::string *
             continue;
         }
         uint8_t *data = nullptr;
-        int32_t  len = vector->GetVarchar(i, &data);
+        int32_t len = vector->GetVarchar(i, &data);
         std::string actual(data, data + len);
         ASSERT_EQ(actual, values[i]);
     }

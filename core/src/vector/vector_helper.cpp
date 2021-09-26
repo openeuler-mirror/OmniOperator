@@ -49,31 +49,31 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
     switch (vecType.GetId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
-            std::cout << std::dec << static_cast<IntVector *>(vector)->GetValue(rowIndex) << "\t";
+            std::cout << std::dec << static_cast<IntVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64: {
-            std::cout << std::dec << static_cast<LongVector *>(vector)->GetValue(rowIndex) << "\t";
+            std::cout << std::dec << static_cast<LongVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            std::cout << static_cast<DoubleVector *>(vector)->GetValue(rowIndex) << "\t";
+            std::cout << static_cast<DoubleVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_BOOLEAN: {
-            std::cout << static_cast<BooleanVector *>(vector)->GetValue(rowIndex) << "\t";
+            std::cout << static_cast<BooleanVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
         case OMNI_VEC_TYPE_VARCHAR: {
             uint8_t *value = nullptr;
-            int32_t len = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &value);
+            int32_t len = static_cast<VarcharVector *>(vector)->GetValue(originalRowIndex, &value);
             std::string valueString(value, value + len);
             std::cout << valueString << "\t";
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(rowIndex);
+            Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(originalRowIndex);
             std::cout << result << "\t";
             break;
         }
@@ -90,7 +90,8 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
 void VectorHelper::PrintVecBatch(VectorBatch *vecBatch)
 {
     int32_t vectorCount = vecBatch->GetVectorCount();
-    for (int32_t rowIdx = 0; rowIdx < vecBatch->GetVector(0)->GetSize(); ++rowIdx) {
+    int32_t rowCount = vecBatch->GetRowCount();
+    for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
         for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
             auto vector = vecBatch->GetVector(colIdx);
             PrintVectorValue(vector, rowIdx);

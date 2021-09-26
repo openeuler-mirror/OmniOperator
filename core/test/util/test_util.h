@@ -25,7 +25,7 @@ const int32_t PARAM_OFFSET_6 = 6;
 
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::vec::VecTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::vec::VarcharVecType &type, std::string *values, int32_t length);
+omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::vec::VarcharVecType type, std::string *values, int32_t length);
 omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::vec::VecType &vecType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...);
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *expectedValues);

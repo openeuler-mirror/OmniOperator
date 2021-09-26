@@ -4,10 +4,8 @@
  */
 #include "join_hash_table.h"
 #include "../pages_hash_strategy.h"
-#include "../../vector/vector_helper.h"
 #include "../optimization.h"
 #include "../../jit/annotation.h"
-#include "../util/operator_util.h"
 
 #include <algorithm>
 #include <memory>
@@ -15,7 +13,6 @@
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
-const int32_t CACHE_SIZE = 131072; // 128KB
 const int32_t BLOCK_SIZE = 1024;
 
 int32_t NumberOfTrailingZeros(int32_t value)
@@ -214,52 +211,6 @@ int64_t JoinHashTables::GetJoinPosition(int32_t position, Vector **joinColumns, 
     }
 }
 
-int32_t JoinHashTables::GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const
-{
-    JoinHashTable *hashTable = nullptr;
-    if (hashTableCount != 1) {
-        int32_t partition = DecodePartition(partitionedJoinPosition);
-        int32_t joinPosition = DecodeJoinPosition(partitionedJoinPosition);
-        hashTable = hashTables[partition];
-        return hashTable->GetBuildValue(value, joinPosition, outputCol);
-    } else {
-        hashTable = hashTables[0];
-        return hashTable->GetBuildValue(value, static_cast<int32_t>(partitionedJoinPosition), outputCol);
-    }
-}
-
-void JoinHashTables::Clear(int32_t partitionIndex)
-{
-    if (hashTableSize == 0) {
-        return;
-    }
-    if (hashTables[partitionIndex] != nullptr) {
-        delete hashTables[partitionIndex];
-    }
-    hashTables[partitionIndex] = nullptr;
-    hashTableSize--;
-}
-
-int64_t JoinHashTables::EncodePartitionedJoinPosition(int32_t partition, int32_t joinPosition) const
-{
-    int64_t result = static_cast<int64_t>(joinPosition) << shiftSize;
-    result |= partition;
-    return result;
-}
-
-int32_t JoinHashTables::DecodePartition(int64_t partitionedJoinPosition) const
-{
-    int32_t result = static_cast<int32_t>(partitionedJoinPosition & partitionMask);
-    return result;
-}
-
-int32_t JoinHashTables::DecodeJoinPosition(int64_t partitionedJoinPosition) const
-{
-    uint64_t result = static_cast<uint64_t>(partitionedJoinPosition);
-    result = result >> shiftSize;
-    return static_cast<int32_t>(result);
-}
-
 JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, int64_t *addresses, int32_t addressesCount)
 {
     positionLinks = std::make_unique<ArrayPositionLinks>(addressesCount).release();
@@ -300,11 +251,6 @@ int32_t JoinHashTable::StartJoinPosition(int32_t currentJoinPosition, int32_t pr
     }
 
     return positionLinks->Start(currentJoinPosition);
-}
-
-int32_t JoinHashTable::GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const
-{
-    return pagesHash->GetBuildValue(value, joinPosition, outputCol);
 }
 
 void JoinHashTable::PrintHashTable(int32_t partitionIndex) const
@@ -723,15 +669,6 @@ int32_t PagesHash::GetAddressIndex(int probePosition, Vector **joinColumns, int3
     }
 
     return -1;
-}
-
-int32_t PagesHash::GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const
-{
-    int64_t address = addresses[joinPosition];
-    int32_t vecBatchIndex = DecodeSliceIndex(address);
-    int32_t rowIndex = DecodePosition(address);
-
-    return VectorHelper::GetValue(pagesHashStrategy->GetBuildColumns()[outputCol][vecBatchIndex], rowIndex, value);
 }
 
 bool PagesHash::PositionEqualsPositionIgnoreNulls(int32_t leftPosition, int32_t rightPosition) const

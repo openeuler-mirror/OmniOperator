@@ -34,11 +34,11 @@ public:
         return size;
     }
 
-    const VecType &GetDictionaryType()
+    const VecType &ExtractDictionaryType()
     {
         VecTypeId dictionaryType = dictionary->GetTypeId();
         if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-            return static_cast<DictionaryVector *>(dictionary)->GetDictionaryType();
+            return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryType();
         }
         return dictionary->GetType();
     }
