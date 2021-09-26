@@ -118,18 +118,20 @@ bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIn
     bool result = true;
     bool isSame = leftTableIndex == rightTableIndex;
 
+    int32_t originalLeftRowIndex, originalRightRowIndex;
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        leftColumn = VectorHelper::GetDictionary(leftColumn, leftRowIndex);
+        leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftRowIndex, originalLeftRowIndex);
         if (isSame) {
             rightColumn = leftColumn;
+            originalRightRowIndex = rightRowIndex;
         } else {
             rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-            rightColumn = VectorHelper::GetDictionary(rightColumn, rightRowIndex);
+            rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
         }
 
-        result =
-            ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, leftRowIndex, rightColumn, rightRowIndex);
+        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, originalLeftRowIndex, rightColumn,
+            originalRightRowIndex);
         if (!result) {
             return false;
         }
@@ -142,13 +144,14 @@ bool PositionEqualsRowIgnoreNulls(int32_t buildTableIndex, int32_t buildRowIndex
     Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, int32_t hashColCount)
 {
     bool result = true;
+    int32_t originalBuildRowIndex, originalProbeRowIndex;
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
-        buildColumn = VectorHelper::GetDictionary(buildColumn, buildRowIndex);
-        probeColumn = VectorHelper::GetDictionary(probeColumn, probePosition);
-        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, buildRowIndex, probeColumn,
-            probePosition);
+        buildColumn = VectorHelper::ExpandVectorAndIndex(buildColumn, buildRowIndex, originalBuildRowIndex);
+        probeColumn = VectorHelper::ExpandVectorAndIndex(probeColumn, probePosition, originalProbeRowIndex);
+        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, originalBuildRowIndex, probeColumn,
+            originalProbeRowIndex);
         if (!result) {
             return false;
         }
@@ -166,19 +169,20 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
     bool rightIsNull = false;
     bool result = true;
 
+    int32_t originalLeftRowIndex, originalRightRowIndex;
     for (int32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-        leftColumn = VectorHelper::GetDictionary(leftColumn, leftRowIndex);
-        rightColumn = VectorHelper::GetDictionary(rightColumn, rightRowIndex);
-        leftIsNull = leftColumn->IsValueNull(leftRowIndex);
-        rightIsNull = rightColumn->IsValueNull(rightRowIndex);
+        leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftRowIndex, originalLeftRowIndex);
+        rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
+        leftIsNull = leftColumn->IsValueNull(originalLeftRowIndex);
+        rightIsNull = rightColumn->IsValueNull(originalRightRowIndex);
         if (leftIsNull || rightIsNull) {
             return false;
         }
 
-        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, leftRowIndex, rightColumn,
-            rightRowIndex);
+        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, originalLeftRowIndex,
+            rightColumn, originalRightRowIndex);
         if (!result) {
             return false;
         }

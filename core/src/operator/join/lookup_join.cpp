@@ -188,8 +188,7 @@ void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t
     int64_t hash;
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
-    omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
-    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -200,13 +199,7 @@ void CalculateColHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t
         }
     } else {
         for (int32_t i = 0; i < rowCount; ++i) {
-            result = vec;
-            idIndex = i;
-            do {
-                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-                idIndex = dictionaryVector->GetIds()[idIndex];
-                result = dictionaryVector->GetDictionary();
-            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
@@ -223,7 +216,7 @@ void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, in
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
-    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -234,13 +227,7 @@ void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, in
         }
     } else {
         for (int32_t i = 0; i < rowCount; ++i) {
-            result = vec;
-            idIndex = i;
-            do {
-                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-                idIndex = dictionaryVector->GetIds()[idIndex];
-                result = dictionaryVector->GetDictionary();
-            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
@@ -258,7 +245,7 @@ void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, i
     int32_t idIndex;
     omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
     Decimal128 decimal128Value;
-    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             if (vec->IsValueNull(i)) {
                 nulls[i] = true;
@@ -270,13 +257,7 @@ void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, i
         }
     } else {
         for (int32_t i = 0; i < rowCount; ++i) {
-            result = vec;
-            idIndex = i;
-            do {
-                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-                idIndex = dictionaryVector->GetIds()[idIndex];
-                result = dictionaryVector->GetDictionary();
-            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;
@@ -297,7 +278,7 @@ void CalculateColVarCharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
     omniruntime::vec::Vector *result = nullptr;
     int32_t idIndex;
     omniruntime::vec::DictionaryVector *dictionaryVector = nullptr;
-    if (vec->GetType().GetId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+    if (vec->GetTypeId() != omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
         for (int32_t i = 0; i < rowCount; ++i) {
             varcharValue = nullptr;
             valueLength = static_cast<omniruntime::vec::VarcharVector *>(vec)->GetValue(i, &varcharValue);
@@ -306,13 +287,7 @@ void CalculateColVarCharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
         }
     } else {
         for (int32_t i = 0; i < rowCount; ++i) {
-            result = vec;
-            idIndex = i;
-            do {
-                dictionaryVector = static_cast<omniruntime::vec::DictionaryVector *>(result);
-                idIndex = dictionaryVector->GetIds()[idIndex];
-                result = dictionaryVector->GetDictionary();
-            } while (result->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY);
+            result = static_cast<DictionaryVector *>(vec)->ExtractDictionaryAndId(i, idIndex);
             if (result->IsValueNull(idIndex)) {
                 nulls[i] = true;
                 continue;

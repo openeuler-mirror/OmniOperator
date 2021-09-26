@@ -83,11 +83,11 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 
     bool result = true;
     for (int32_t i = 0; i < actualColumn->GetSize(); i++) {
-        int32_t actualIndex = i;
-        int32_t expectIndex = i;
+        int32_t actualIndex;
+        int32_t expectIndex;
 
-        Vector *actualCol = VectorHelper::GetDictionary(actualColumn, actualIndex);
-        Vector *expectCol = VectorHelper::GetDictionary(expectColumn, expectIndex);
+        Vector *actualCol = VectorHelper::ExpandVectorAndIndex(actualColumn, i, actualIndex);
+        Vector *expectCol = VectorHelper::ExpandVectorAndIndex(expectColumn, i, expectIndex);
 
         if (actualCol->IsValueNull(actualIndex) != expectCol->IsValueNull(expectIndex)) {
             return false;
@@ -242,8 +242,8 @@ void AssertVarcharVectorEquals(VarcharVector *vector, std::string *expectedValue
 void AssertDictionaryVectorIntEquals(DictionaryVector *vector, int32_t *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        int32_t rowIndex = i;
-        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
@@ -254,8 +254,8 @@ void AssertDictionaryVectorIntEquals(DictionaryVector *vector, int32_t *values)
 void AssertDictionaryVectorLongEquals(DictionaryVector *vector, int64_t *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        int32_t rowIndex = i;
-        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
@@ -267,8 +267,8 @@ void AssertDictionaryVectorBooleanEquals(DictionaryVector *vector, bool *values)
 {
     // TODO::handle null
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        int32_t rowIndex = i;
-        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
@@ -279,8 +279,8 @@ void AssertDictionaryVectorBooleanEquals(DictionaryVector *vector, bool *values)
 void AssertDictionaryVectorDoubleEquals(DictionaryVector *vector, double *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        int32_t rowIndex = i;
-        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
@@ -291,8 +291,8 @@ void AssertDictionaryVectorDoubleEquals(DictionaryVector *vector, double *values
 void AssertDictionaryVectorVarcharEquals(DictionaryVector *vector, std::string *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        int32_t rowIndex = i;
-        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
@@ -306,8 +306,8 @@ void AssertDictionaryVectorVarcharEquals(DictionaryVector *vector, std::string *
 void AssertDictionaryVectorDecimal128Equals(DictionaryVector *vector, Decimal128 *values)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        int32_t rowIndex = i;
-        Vector *originalVec = VectorHelper::GetDictionary(vector, rowIndex);
+        int32_t rowIndex;
+        Vector *originalVec = VectorHelper::ExpandVectorAndIndex(vector, i, rowIndex);
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
@@ -387,7 +387,7 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
                 AssertDictionaryVectorEquals(dynamic_cast<DictionaryVector *>(vector), args);
                 break;
             default:
-                std::cerr << "Unsupported type : " << vector->GetType().GetId() << std::endl;
+                std::cerr << "Unsupported type : " << vector->GetTypeId() << std::endl;
                 break;
         }
     }

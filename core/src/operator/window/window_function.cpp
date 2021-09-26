@@ -177,23 +177,26 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t 
     if (start > end) {
         return;
     }
-    Vector ***originalVectorBatch = windowIndex->GetPagesIndex()->GetColumns();
+    Vector ***vectorBatch = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
     uint32_t varcharWidth = (dataType.GetId() == OMNI_VEC_TYPE_VARCHAR) ? ((VarcharVecType &)dataType).GetWidth() : 0;
 
     // this is important to package data into an extra vector and use it to do the aggregation
-    Vector *resultVector = VectorHelper::CreateVector(vecAllocator, dataType.GetId(), rowCount * varcharWidth, rowCount);
+    Vector *resultVector =
+        VectorHelper::CreateVector(vecAllocator, dataType.GetId(), rowCount * varcharWidth, rowCount);
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
-        int64_t originalAddress =
+        int64_t sliceAddress =
             windowIndex->GetPagesIndex()->GetValueAddresses()[resultVectorPosition + windowIndex->GetStart()];
-        int32_t originalVectorIndex = DecodeSliceIndex(originalAddress);
-        int32_t originalVectorPosition = DecodePosition(originalAddress);
+        int32_t vectorIndex = DecodeSliceIndex(sliceAddress);
+        int32_t vectorPosition = DecodePosition(sliceAddress);
 
         // actually the data to the aggregation function are from the sorted data with SortPagesIndexIfNecessary()
         // function since the implementation of SortPagesIndexIfNecessary will never return dictionary block here we add
-        // the GetDictionary to ensure we send the right data to aggregation
-        Vector *originalVector = originalVectorBatch[argumentChannels][originalVectorIndex];
-        originalVector = VectorHelper::GetDictionary(originalVector, originalVectorPosition);
+        // the ExpandVectorAndIndex to ensure we send the right data to aggregation
+        Vector *vector = vectorBatch[argumentChannels][vectorIndex];
+        int32_t originalVectorPosition;
+        Vector *originalVector =
+                VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
         AccumulateData(start, resultVector, resultVectorPosition, originalVectorPosition, originalVector);
     }
 }
@@ -242,6 +245,7 @@ void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Ve
             default:
                 break;
         }
-        aggregator->ProcessNonGroup(resultVector, dataType.GetId(), resultVectorPosition - start);
+
+        aggregator->AggProcessNonGroup(resultVector, dataType.GetId(), resultVectorPosition - start);
     }
 }

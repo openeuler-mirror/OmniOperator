@@ -18,7 +18,7 @@ TEST(VarcharVector, newVector)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 1024);
-    EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_VARCHAR);
     delete vector;
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);

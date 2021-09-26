@@ -14,6 +14,9 @@
 #include "../../vector/boolean_vector.h"
 #include "../../vector/dictionary_vector.h"
 
+namespace omniruntime {
+namespace op {
+using namespace vec;
 class OperatorUtil {
 public:
     using CompareStatus = enum CompareStatus {
@@ -34,33 +37,33 @@ public:
     static const int32_t SIZE_OF_DECIMAL128 = SIZE_OF_LONG << 1;
     static const int32_t SIZE_OF_DATE32 = SIZE_OF_INT;
 
-    static int32_t GetTypeSize(const omniruntime::vec::VecType &vecType)
+    static int32_t GetTypeSize(const VecType &vecType)
     {
         switch (vecType.GetId()) {
-            case omniruntime::vec::OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_INT:
                 return OperatorUtil::SIZE_OF_INT;
-            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_LONG:
                 return OperatorUtil::SIZE_OF_LONG;
-            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_VEC_TYPE_DOUBLE:
                 return OperatorUtil::SIZE_OF_DOUBLE;
-            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_VEC_TYPE_BOOLEAN:
                 return OperatorUtil::SIZE_OF_BOOL;
-            case omniruntime::vec::OMNI_VEC_TYPE_SHORT:
+            case OMNI_VEC_TYPE_SHORT:
                 return OperatorUtil::SIZE_OF_SHORT;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_DECIMAL64:
                 return OperatorUtil::SIZE_OF_DECIMAL64;
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_VEC_TYPE_DECIMAL128:
                 return OperatorUtil::SIZE_OF_DECIMAL128;
-            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+            case OMNI_VEC_TYPE_DATE32:
                 return OperatorUtil::SIZE_OF_DATE32;
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
-                return ((omniruntime::vec::VarcharVecType &)vecType).GetWidth();
+            case OMNI_VEC_TYPE_VARCHAR:
+                return ((VarcharVecType &)vecType).GetWidth();
             default:
                 return 0;
         }
     }
 
-    static int32_t GetOutputRowSize(const std::vector<omniruntime::vec::VecType> &vecTypes, const int32_t *outputCols,
+    static int32_t GetOutputRowSize(const std::vector<VecType> &vecTypes, const int32_t *outputCols,
         int32_t outputColsCount)
     {
         int32_t rowSize = 0;
@@ -70,7 +73,7 @@ public:
         return rowSize;
     }
 
-    static int32_t GetRowSize(const std::vector<omniruntime::vec::VecType> &vecTypes)
+    static int32_t GetRowSize(const std::vector<VecType> &vecTypes)
     {
         int32_t rowSize = 0;
         for (int32_t i = 0; i < vecTypes.size(); i++) {
@@ -84,7 +87,7 @@ public:
         return (MAX_VEC_BATCH_SIZE_IN_BYTES + rowSize - 1) / rowSize;
     }
 
-    static int32_t GetMaxRowCount(const std::vector<omniruntime::vec::VecType> &vecTypes, const int32_t *outputCols,
+    static int32_t GetMaxRowCount(const std::vector<VecType> &vecTypes, const int32_t *outputCols,
         int32_t outputColsCount)
     {
         int32_t rowSize = GetOutputRowSize(vecTypes, outputCols, outputColsCount);
@@ -96,39 +99,35 @@ public:
         return ((positionCount + maxRowCount - 1) / maxRowCount);
     }
 
-    static ALWAYS_INLINE int32_t CompareVectorAtPosition(int32_t colTypeId, omniruntime::vec::Vector *leftColumn,
-        int32_t leftColumnPosition, omniruntime::vec::Vector *rightColumn, int32_t rightColumnPosition)
+    static ALWAYS_INLINE int32_t CompareVectorAtPosition(int32_t colTypeId, Vector *leftColumn,
+        int32_t leftColumnPosition, Vector *rightColumn, int32_t rightColumnPosition)
     {
         switch (colTypeId) {
-            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
-                return (static_cast<omniruntime::vec::BooleanVector *>(leftColumn)->GetValue(leftColumnPosition) -
-                    static_cast<omniruntime::vec::BooleanVector *>(rightColumn)->GetValue(rightColumnPosition));
-            case omniruntime::vec::OMNI_VEC_TYPE_INT:
-            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
-                return (static_cast<omniruntime::vec::IntVector *>(leftColumn)->GetValue(leftColumnPosition) -
-                    static_cast<omniruntime::vec::IntVector *>(rightColumn)->GetValue(rightColumnPosition));
-            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
-                return (static_cast<omniruntime::vec::LongVector *>(leftColumn)->GetValue(leftColumnPosition) -
-                    static_cast<omniruntime::vec::LongVector *>(rightColumn)->GetValue(rightColumnPosition));
-            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
-                return CompareDouble(static_cast<omniruntime::vec::DoubleVector *>(leftColumn), leftColumnPosition,
-                    static_cast<omniruntime::vec::DoubleVector *>(rightColumn), rightColumnPosition);
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
-                return CompareVarchar(static_cast<omniruntime::vec::VarcharVector *>(leftColumn), leftColumnPosition,
-                    static_cast<omniruntime::vec::VarcharVector *>(rightColumn), rightColumnPosition);
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
-                return CompareDecimal128(static_cast<omniruntime::vec::Decimal128Vector *>(leftColumn),
-                    leftColumnPosition, static_cast<omniruntime::vec::Decimal128Vector *>(rightColumn),
-                    rightColumnPosition);
+            case OMNI_VEC_TYPE_BOOLEAN:
+                return (static_cast<BooleanVector *>(leftColumn)->GetValue(leftColumnPosition) -
+                    static_cast<BooleanVector *>(rightColumn)->GetValue(rightColumnPosition));
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+                return (static_cast<IntVector *>(leftColumn)->GetValue(leftColumnPosition) -
+                    static_cast<IntVector *>(rightColumn)->GetValue(rightColumnPosition));
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
+                return (static_cast<LongVector *>(leftColumn)->GetValue(leftColumnPosition) -
+                    static_cast<LongVector *>(rightColumn)->GetValue(rightColumnPosition));
+            case OMNI_VEC_TYPE_DOUBLE:
+                return CompareDouble(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
+            case OMNI_VEC_TYPE_VARCHAR:
+                return CompareVarchar(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
+            case OMNI_VEC_TYPE_DECIMAL128:
+                return CompareDecimal128(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             default:
                 break;
         }
         return 0;
     }
 
-    static ALWAYS_INLINE CompareStatus CompareNull(omniruntime::vec::Vector *leftColumn, int32_t leftPosition,
-        omniruntime::vec::Vector *rightColumn, int32_t rightPosition, int32_t nullsFirst)
+    static ALWAYS_INLINE CompareStatus CompareNull(Vector *leftColumn, int32_t leftPosition, Vector *rightColumn,
+        int32_t rightPosition, int32_t nullsFirst)
     {
         bool leftIsNull = leftColumn->IsValueNull(leftPosition);
         bool rightIsNull = rightColumn->IsValueNull(rightPosition);
@@ -145,25 +144,37 @@ public:
         return COMPARE_STATUS_OTHER;
     }
 
-    static ALWAYS_INLINE int32_t CompareDouble(omniruntime::vec::DoubleVector *leftColumn, int32_t leftColumnPosition,
-        omniruntime::vec::DoubleVector *rightColumn, int32_t rightColumnPosition)
+    template <typename V>
+    static ALWAYS_INLINE int32_t CompareTemplate(Vector *leftVector, int32_t leftPosition, Vector *rightVector,
+        int32_t rightPosition)
     {
-        if (leftColumn->GetValue(leftColumnPosition) > rightColumn->GetValue(rightColumnPosition)) {
+        return static_cast<V *>(leftVector)->GetValue(leftPosition) -
+            static_cast<V *>(rightVector)->GetValue(rightPosition);
+    }
+
+    static ALWAYS_INLINE int32_t CompareDouble(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
+        int32_t rightColumnPosition)
+    {
+        auto leftDoubleColumn = static_cast<DoubleVector *>(leftColumn);
+        auto rightDoubleColumn = static_cast<DoubleVector *>(rightColumn);
+        if (leftDoubleColumn->GetValue(leftColumnPosition) > rightDoubleColumn->GetValue(rightColumnPosition)) {
             return COMPARE_STATUS_GREATER_THAN;
-        } else if (leftColumn->GetValue(leftColumnPosition) < rightColumn->GetValue(rightColumnPosition)) {
+        } else if (leftDoubleColumn->GetValue(leftColumnPosition) < rightDoubleColumn->GetValue(rightColumnPosition)) {
             return COMPARE_STATUS_LESS_THAN;
         } else {
             return COMPARE_STATUS_EQUAL;
         }
     }
 
-    static ALWAYS_INLINE int32_t CompareVarchar(omniruntime::vec::VarcharVector *leftColumn, int32_t leftColumnPosition,
-        omniruntime::vec::VarcharVector *rightColumn, int32_t rightColumnPosition)
+    static ALWAYS_INLINE int32_t CompareVarchar(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
+        int32_t rightColumnPosition)
     {
+        auto leftVarCharColumn = static_cast<VarcharVector *>(leftColumn);
+        auto rightVarCharColumn = static_cast<VarcharVector *>(rightColumn);
         uint8_t *leftValue = nullptr;
-        int32_t leftLength = leftColumn->GetValue(leftColumnPosition, &leftValue);
+        int32_t leftLength = leftVarCharColumn->GetValue(leftColumnPosition, &leftValue);
         uint8_t *rightValue = nullptr;
-        int32_t rightLength = rightColumn->GetValue(rightColumnPosition, &rightValue);
+        int32_t rightLength = rightVarCharColumn->GetValue(rightColumnPosition, &rightValue);
         int32_t result = memcmp(leftValue, rightValue, std::min(leftLength, rightLength));
         if (result != 0) {
             return (result > 0) ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
@@ -174,11 +185,13 @@ public:
         }
     }
 
-    static ALWAYS_INLINE int32_t CompareDecimal128(omniruntime::vec::Decimal128Vector *leftColumn,
-        int32_t leftColumnPosition, omniruntime::vec::Decimal128Vector *rightColumn, int32_t rightColumnPosition)
+    static ALWAYS_INLINE int32_t CompareDecimal128(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
+        int32_t rightColumnPosition)
     {
-        omniruntime::vec::Decimal128 leftValue = leftColumn->GetValue(leftColumnPosition);
-        omniruntime::vec::Decimal128 rightValue = rightColumn->GetValue(rightColumnPosition);
+        auto leftDecimalColumn = static_cast<Decimal128Vector *>(leftColumn);
+        auto rightDecimalColumn = static_cast<Decimal128Vector *>(rightColumn);
+        Decimal128 leftValue = leftDecimalColumn->GetValue(leftColumnPosition);
+        Decimal128 rightValue = rightDecimalColumn->GetValue(rightColumnPosition);
         if (leftValue > rightValue) {
             return COMPARE_STATUS_GREATER_THAN;
         } else if (leftValue < rightValue) {
@@ -188,5 +201,6 @@ public:
         }
     }
 };
-
+}
+}
 #endif // OMNI_RUNTIME_OPERATOR_UTIL_H

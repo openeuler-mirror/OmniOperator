@@ -36,12 +36,29 @@ public:
 
     const VecType &GetDictionaryType()
     {
-        VecTypeId dictionaryType = dictionary->GetType().GetId();
+        VecTypeId dictionaryType = dictionary->GetTypeId();
         if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
             return static_cast<DictionaryVector *>(dictionary)->GetDictionaryType();
         }
         return dictionary->GetType();
     }
+
+    Vector *ExtractDictionaryAndId(int32_t position, int32_t &originalId)
+    {
+        ASSERT(position < size);
+        VecTypeId dictionaryType = dictionary->GetTypeId();
+        if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
+            return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryAndId(position, originalId);
+        }
+        originalId = ids[position];
+        return dictionary;
+    }
+
+    Vector *ExtractDictionaryAndIds(int32_t positionOffset, int32_t length, int32_t *originalIds);
+
+    Vector *ExtractDictionary();
+
+    Vector *ExtractDictionary(const int32_t *positions, int32_t length);
 
     int32_t GetInt(int32_t position) const;
 

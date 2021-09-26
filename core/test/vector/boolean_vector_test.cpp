@@ -18,14 +18,14 @@ TEST(BooleanVector, newVector)
     EXPECT_EQ(vector->GetSize(), 256);
     EXPECT_EQ(vector->GetPositionOffset(), 0);
     EXPECT_EQ(vector->GetCapacityInBytes(), 256);
-    EXPECT_EQ(vector->GetType().GetId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     delete vector;
 
     BooleanVector *vector1 = new BooleanVector(allocator, 251);
     EXPECT_EQ(vector1->GetSize(), 251);
     EXPECT_EQ(vector1->GetPositionOffset(), 0);
     EXPECT_EQ(vector1->GetCapacityInBytes(), 251);
-    EXPECT_EQ(vector1->GetType().GetId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(vector1->GetTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     delete vector1;
 
     VectorAllocatorFactory::DeleteAllocator(&allocator);

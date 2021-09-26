@@ -51,9 +51,14 @@ public:
         return valuesAddress;
     }
 
-    const VecType &GetType()
+    const VecType &GetType() const
     {
         return type;
+    }
+
+    VecTypeId GetTypeId() const
+    {
+        return type.GetId();
     }
 
     int GetCapacityInBytes() const

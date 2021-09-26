@@ -285,3 +285,61 @@ TEST(DictionaryVector, Decimal128)
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
+
+TEST(DictionaryVector, NestedDictionaryVectorExtract)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+    auto *dictionary = new LongVector(allocator, 10);
+    for (int32_t i = 0; i < 10; i++) {
+        dictionary->SetValue(i, i);
+    }
+
+    int32_t ids[] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
+    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 10);
+
+    int32_t nestedIds[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 8);
+
+    Vector * checkDictionary = nested->ExtractDictionary();
+    EXPECT_EQ(nested->GetLong(0), dictionary->GetValue(1));
+    EXPECT_EQ(nested->GetLong(1), dictionary->GetValue(2));
+    EXPECT_EQ(nested->GetLong(2), dictionary->GetValue(2));
+    EXPECT_EQ(nested->GetLong(3), dictionary->GetValue(3));
+    EXPECT_EQ(nested->GetLong(4), dictionary->GetValue(3));
+    delete dictionary;
+    delete dictionaryVector;
+    delete nested;
+    delete checkDictionary;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    EXPECT_TRUE(allocator == nullptr);
+}
+
+TEST(DictionaryVector, NestedDictionaryVectorGetIds)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+    auto *dictionary = new LongVector(allocator, 10);
+    for (int32_t i = 0; i < 10; i++) {
+        dictionary->SetValue(i, i);
+    }
+
+    int32_t ids[] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
+    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 10);
+
+    int32_t nestedIds[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 8);
+
+    int32_t originalIds[5];
+    nested->ExtractDictionaryAndIds(0, 5, originalIds);
+    EXPECT_EQ(originalIds[0], 1);
+    EXPECT_EQ(originalIds[1], 2);
+    EXPECT_EQ(originalIds[2], 2);
+    EXPECT_EQ(originalIds[3], 3);
+    EXPECT_EQ(originalIds[4], 3);
+    delete dictionary;
+    delete dictionaryVector;
+    delete nested;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    EXPECT_TRUE(allocator == nullptr);
+}

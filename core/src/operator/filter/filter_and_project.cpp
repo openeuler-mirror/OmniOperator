@@ -189,14 +189,14 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
     for (int32_t i = 0; i < nCols; i++) {
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
         // handle dictionary vec
-        if (colVec->GetType().GetId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
-            colVec = VectorHelper::ExtractDictionary(colVec);
+        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
+            colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
             dictionaryVecs.push_back(colVec);
         }
         // varchar vec GetValues is different from the rest
-        if (colVec->GetType().GetId() == OMNI_VEC_TYPE_VARCHAR) {
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_VARCHAR) {
             GetVarcharData(colVec, vcdataVec, stringvalVec, data, vecBatch->GetRowCount());
-        } else if (colVec->GetType().GetId() == OMNI_VEC_TYPE_DECIMAL128) {
+        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetDecimal128Data(colVec, data, vecBatch->GetRowCount());
         } else {
             // data handling
