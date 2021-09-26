@@ -193,7 +193,7 @@ Vector *DictionaryVector::ExtractDictionary(const int32_t *positions, int32_t le
 
 Vector *DictionaryVector::ExtractDictionaryAndIds(int32_t positionOffset, int32_t length, int32_t *originalIds)
 {
-    ASSERT((originalIds != nullptr) && (positionOffset + length < size));
+    ASSERT((originalIds != nullptr) && (positionOffset + length <= size));
     Vector *dictionary = this;
     int32_t *preIds = nullptr;
     do {
