@@ -7,6 +7,7 @@
 #include "decimalfunctions.h"
 #include <vector>
 #include <memory>
+#include <mutex>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -16,7 +17,13 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-static vector<unique_ptr<int64_t[]>> g_decimalArraysToFree;
+mutex g_codegenMutex;
+
+vector<int64_t*>& GetArraysToFree()
+{
+    static vector<int64_t*> decimalArraysToFree;
+    return decimalArraysToFree;
+}
 
 extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
 {
@@ -44,12 +51,14 @@ extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y)
 
     lValue += rValue;
 
-    auto result = std::make_unique<int64_t[]>(length).release();
+    auto result = new int64_t[length];
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_decimalArraysToFree.push_back(static_cast<unique_ptr<int64_t[]>>(result));
+    g_codegenMutex.lock();
+    GetArraysToFree().push_back(result);
+    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
@@ -63,12 +72,14 @@ extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y)
 
     lValue -= rValue;
 
-    auto result = std::make_unique<int64_t[]>(length).release();
+    auto result = new int64_t[length];
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_decimalArraysToFree.push_back(static_cast<unique_ptr<int64_t[]>>(result));
+    g_codegenMutex.lock();
+    GetArraysToFree().push_back(result);
+    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
@@ -82,12 +93,14 @@ extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y)
 
     lValue /= rValue;
 
-    auto result = std::make_unique<int64_t[]>(length).release();
+    auto result = new int64_t[length];
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_decimalArraysToFree.push_back(static_cast<unique_ptr<int64_t[]>>(result));
+    g_codegenMutex.lock();
+    GetArraysToFree().push_back(result);
+    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
@@ -101,12 +114,14 @@ extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y)
 
     lValue *= rValue;
 
-    auto result = std::make_unique<int64_t[]>(length).release();
+    auto result = new int64_t[length];
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_decimalArraysToFree.push_back(static_cast<unique_ptr<int64_t[]>>(result));
+    g_codegenMutex.lock();
+    GetArraysToFree().push_back(result);
+    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
@@ -118,21 +133,25 @@ extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x)
 
     value.Abs();
 
-    auto result = std::make_unique<int64_t[]>(length).release();
+    auto result = new int64_t[length];
 
     result[0] = value.LowBits();
     result[1] = value.HighBits();
 
-    g_decimalArraysToFree.push_back(static_cast<unique_ptr<int64_t[]>>(result));
+    g_codegenMutex.lock();
+    GetArraysToFree().push_back(result);
+    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
 
 void FreeDecimalArrays()
 {
-    for (int i = 0; i < g_decimalArraysToFree.size(); i++) {
-        g_decimalArraysToFree[i].reset();
-        g_decimalArraysToFree[i] = nullptr;
+    g_codegenMutex.lock();
+    for (int i = 0; i < GetArraysToFree().size(); i++) {
+        delete[] GetArraysToFree()[i];
+        GetArraysToFree()[i] = nullptr;
     }
-    g_decimalArraysToFree.clear();
+    GetArraysToFree().clear();
+    g_codegenMutex.unlock();
 }
