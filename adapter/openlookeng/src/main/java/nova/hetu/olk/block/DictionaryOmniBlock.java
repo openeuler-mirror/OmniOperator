@@ -158,14 +158,51 @@ public class DictionaryOmniBlock<T> implements Block<T> {
         }
     }
 
+    /**
+     * Instantiates a new Dictionary omni block.
+     *
+     * @param idsOffset the ids offset
+     * @param positionCount the position count
+     * @param dictionary the dictionary
+     * @param ids the ids
+     * @param dictionaryIsCompacted the dictionary is compacted
+     * @param dictionarySourceId the dictionary source id
+     */
+    public DictionaryOmniBlock(int idsOffset, int positionCount, Block dictionary, DictionaryVec dictionaryVec,
+        int[] ids, boolean dictionaryIsCompacted, DictionaryId dictionarySourceId) {
+        requireNonNull(dictionary, "dictionary is null");
+        requireNonNull(ids, "ids is null");
+
+        if (positionCount < 0) {
+            throw new IllegalArgumentException("positionCount is negative");
+        }
+
+        this.idsOffset = idsOffset;
+        if (ids.length - idsOffset < positionCount) {
+            throw new IllegalArgumentException("ids length is less than positionCount");
+        }
+
+        this.positionCount = positionCount;
+        this.dictionary = dictionary;
+        this.ids = ids;
+        this.dictionarySourceId = requireNonNull(dictionarySourceId, "dictionarySourceId is null");
+        this.retainedSizeInBytes = INSTANCE_SIZE + dictionary.getRetainedSizeInBytes() + sizeOf(ids);
+        this.dictionaryVec = dictionaryVec;
+
+        if (dictionaryIsCompacted) {
+            this.sizeInBytes = this.retainedSizeInBytes;
+            this.uniqueIds = dictionary.getPositionCount();
+        }
+    }
+
     @Override
     public Vec getValues() {
-        return new DictionaryVec((Vec) dictionary.getValues(), ids);
+        return dictionaryVec;
     }
 
     @Override
     public void close() {
-        ((Vec) dictionary.getValues()).close();
+        dictionaryVec.close();
     }
 
     @Override

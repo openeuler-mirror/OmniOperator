@@ -156,8 +156,8 @@ public class VecBatchToPageIterator implements Iterator<Page> {
             default:
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + vecType.getId());
         }
-        DictionaryOmniBlock block = new DictionaryOmniBlock(0, dictionaryVec.getSize(), dictionaryBlock, ids, false,
-            randomDictionaryId());
+        DictionaryOmniBlock block = new DictionaryOmniBlock(0, dictionaryVec.getSize(), dictionaryBlock,
+            dictionaryVec, ids, false, randomDictionaryId());
         return block;
     }
 }
