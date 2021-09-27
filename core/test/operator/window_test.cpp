@@ -798,7 +798,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
         Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
         BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(),
         Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal64VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
+        Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
     int32_t argumentChannels[7] = {0, 1, 2, 3, 4, 5, 8};
 
     // dealing data with the operator
@@ -818,7 +818,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
         Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
         BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(),
         Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-        Decimal64VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
+        Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -832,7 +832,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
     int32_t expectData10[DATA_SIZE] = {22, 22, 44, 44, 66, 66};
     int32_t expectData11[DATA_SIZE] = {222, 222, 444, 444, 666, 666};
     int64_t expectData12[DATA_SIZE] = {2222, 2222, 4444, 4444, 6666, 6666};
-    int64_t expectData13[DATA_SIZE] = {22222, 22222, 44444, 44444, 66666, 66666};
+    Decimal128 expectData13[DATA_SIZE] = {Decimal128(22222), Decimal128(22222), Decimal128(44444), Decimal128(44444), Decimal128(66666), Decimal128(66666)};
     double expectData14[DATA_SIZE] = {2.2, 2.2, 4.4, 4.4, 6.6, 6.6};
     Decimal128 expectData15[DATA_SIZE] = {Decimal128(2, 2), Decimal128(2, 2), Decimal128(4, 4), Decimal128(4, 4), Decimal128(6, 6), Decimal128(6, 6)};
 
