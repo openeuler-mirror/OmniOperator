@@ -208,6 +208,10 @@ public class TestUtils {
         }
 
         for (int i = 0; i < vec.getSize(); i++) {
+            if (vec.isNull(i)) {
+                assertEquals(null, expectedData[i]);
+                continue;
+            }
             switch (typeId) {
                 case OMNI_VEC_TYPE_INT:
                 case OMNI_VEC_TYPE_DATE32:

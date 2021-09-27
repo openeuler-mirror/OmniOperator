@@ -20,34 +20,50 @@ class JoinHashTable;
 class JoinHashTables {
 public:
     explicit JoinHashTables(int32_t hashTableCount);
+
     ~JoinHashTables();
+
     int32_t GetHashTableSize()
     {
         return hashTableSize;
     }
+
     int32_t GetHashTableCount() const
     {
         return hashTableCount;
     }
+
+    int64_t EncodePartitionedJoinPosition(int32_t partition, int32_t joinPosition) const
+    {
+        int64_t result = static_cast<int64_t>(joinPosition) << shiftSize;
+        result |= partition;
+        return result;
+    }
+
+    int32_t DecodePartition(int64_t partitionedJoinPosition) const
+    {
+        auto result = static_cast<int32_t>(partitionedJoinPosition & partitionMask);
+        return result;
+    }
+
+    int32_t DecodeJoinPosition(int64_t partitionedJoinPosition) const
+    {
+        auto result = static_cast<uint64_t>(partitionedJoinPosition);
+        result = result >> shiftSize;
+        return static_cast<int32_t>(result);
+    }
+
     void AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable);
     JoinHashTable *GetHashTable(int32_t partitionIndex) const;
     bool IsJoinPositionEligible() const;
     int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
-    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
-            int32_t *joinColumnTypes, int32_t joinColumnsCount,
-            omniruntime::vec::Vector **allColumns,
-            int32_t allColumnsCount, int64_t rawHash) const;
-    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
-            int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns,
-            int32_t allColumnsCount, int64_t rawHash) const;
-    int32_t GetBuildValue(void *value, int64_t partitionedJoinPosition, int32_t outputCol) const;
-    void Clear(int32_t partitionIndex);
+    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t *joinColumnTypes,
+        int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns, int32_t allColumnsCount,
+        int64_t rawHash) const;
+    int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
+        omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
 
 private:
-    int64_t EncodePartitionedJoinPosition(int32_t partition, int32_t joinPosition) const;
-    int32_t DecodePartition(int64_t partitionedJoinPosition) const;
-    int32_t DecodeJoinPosition(int64_t partitionedJoinPosition) const;
-
     JoinHashTable **hashTables; // actually, the type is JoinHashTable **
     int32_t hashTableCount;
     std::atomic_int32_t hashTableSize;
@@ -74,10 +90,8 @@ public:
     int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
         omniruntime::vec::Vector **allColumns, int64_t rawHash) const;
     int32_t GetNextJoinPosition(int32_t currentJoinPosition, int probePosition) const;
-    int32_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns,
-        int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns,
-        int32_t allColumnsCount, int64_t rawHash) const;
-    int32_t GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
+    int32_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
+        omniruntime::vec::Vector **allColumns, int32_t allColumnsCount, int64_t rawHash) const;
     void PrintHashTable(int32_t partitionIndex) const;
 
 private:
@@ -103,9 +117,9 @@ public:
     }
     void SetAddressIndex(ArrayPositionLinks *positionLinks, int32_t realPosition, int64_t hash,
         int64_t *totalHashCollisions) const;
-    int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns,
-        int32_t joinColumnsCount, int64_t rawHash) const;
-    int32_t GetBuildValue(void *value, int32_t joinPosition, int32_t outputCol) const;
+    int32_t GetAddressIndex(int probePosition, omniruntime::vec::Vector **joinColumns, int32_t joinColumnsCount,
+        int64_t rawHash) const;
+
     int8_t *GetPositionToHashes() const
     {
         return positionToHashes;
@@ -117,6 +131,11 @@ public:
     int32_t GetAddressesCount() const
     {
         return addressesCount;
+    }
+
+    PagesHashStrategy *GetPagesHashStrategy() const
+    {
+        return pagesHashStrategy;
     }
 
 private:

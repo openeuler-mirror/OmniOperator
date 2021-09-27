@@ -39,10 +39,10 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
-using omniruntime::op::RowProjection;
 using omniruntime::op::RowFilter;
-using omniruntime::op::RowProjFunc;
 using omniruntime::op::RowFilterFunc;
+using omniruntime::op::RowProjection;
+using omniruntime::op::RowProjFunc;
 using namespace std;
 using namespace omniruntime::expressions;
 
@@ -50,20 +50,21 @@ using namespace omniruntime::expressions;
 // The logic for filtering out rows from final output is handled in C++ when
 // processing each row individually, so to LLVM it is exactly the same as a projection.
 // Check CodeGenTest.RowFilter for a dedicated test using the RowFilter class instead.
-TEST(CodeGenTest, SimpleFilter) {
+TEST(CodeGenTest, SimpleFilter)
+{
     string unparsed = "$operator$LESS_THAN:boolean(#0, 50)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
 
     const int numRows = 100;
-    int32_t* col1 = new int32_t[numRows];
+    int32_t *col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i; 
+        col1[i] = i;
     }
 
-    int64_t* table = new int64_t[numCols];
-    table[0] = (int64_t) col1;
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
 
     const int32_t entries = numRows * numCols;
     bool *bitmap = new bool[entries];
@@ -77,12 +78,12 @@ TEST(CodeGenTest, SimpleFilter) {
     EXPECT_EQ(lc.GetReturnType(), BOOLD);
 
     for (int32_t i = 0; i < 50; i++) {
-        bool* res = (bool*) func(table, bitmap, i);
-        EXPECT_TRUE(*res);
+        bool res = *((bool *)func(table, bitmap, i));
+        EXPECT_TRUE(res);
     }
     for (int32_t i = 50; i < 100; i++) {
-        bool* res = (bool*) func(table, bitmap, i);
-        EXPECT_FALSE(*res);
+        bool res = *((bool *)func(table, bitmap, i));
+        EXPECT_FALSE(res);
     }
 
     delete[] col1;
@@ -90,20 +91,21 @@ TEST(CodeGenTest, SimpleFilter) {
     delete[] bitmap;
 }
 // Simple project example using individual row processing.
-TEST(CodeGenTest, SimpleProject) {
+TEST(CodeGenTest, SimpleProject)
+{
     string unparsed = "ADD:int(#0, 50)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
 
     const int numRows = 100;
-    int32_t* col1 = new int32_t[numRows];
+    int32_t *col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i; 
+        col1[i] = i;
     }
 
-    int64_t* table = new int64_t[numCols];
-    table[0] = (int64_t) col1;
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
 
     const int32_t entries = numRows * numCols;
     bool *bitmap = new bool[entries];
@@ -117,8 +119,8 @@ TEST(CodeGenTest, SimpleProject) {
     EXPECT_EQ(lc.GetReturnType(), INT32D);
 
     for (int32_t i = 0; i < 100; i++) {
-        int32_t* res = (int32_t*) func(table, bitmap, i);
-        EXPECT_EQ(*res, i + 50);
+        int32_t res = *((int32_t *)func(table, bitmap, i));
+        EXPECT_EQ(res, i + 50);
     }
 
     delete[] col1;
@@ -126,25 +128,26 @@ TEST(CodeGenTest, SimpleProject) {
     delete[] bitmap;
 }
 // A more complicated test for individual row projection
-TEST (CodeGenTest, SingleProject) {
+TEST(CodeGenTest, SingleProject)
+{
     string unparsed = "IF:int($operator$GREATER_THAN:boolean(#1, 3000000000), ADD:int(#0, 10), MULTIPLY:int(#0, -1))";
 
     const int32_t numCols = 2;
     DataType types[numCols] = {DataType::INT32D, DataType::INT64D};
 
     const int numRows = 1000;
-    int32_t* col1 = new int32_t[numRows];
+    int32_t *col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i; 
+        col1[i] = i;
     }
-    int64_t* col2 = new int64_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         col2[i] = i % 2 ? 4000000000 : 12;
     }
 
-    int64_t* table = new int64_t[numCols];
-    table[0] = (int64_t) col1;
-    table[1] = (int64_t) col2;
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
+    table[1] = (int64_t)col2;
 
     const int32_t entries = numRows * numCols;
     bool *bitmap = new bool[entries];
@@ -158,8 +161,8 @@ TEST (CodeGenTest, SingleProject) {
     EXPECT_EQ(lc.GetReturnType(), INT32D);
 
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t* res = (int32_t*) func(table, bitmap, i);
-        EXPECT_EQ(*res, i % 2 ? i + 10 : -i);
+        int32_t res = *((int32_t *)func(table, bitmap, i));
+        EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
 
     delete[] col1;
@@ -169,25 +172,26 @@ TEST (CodeGenTest, SingleProject) {
 }
 
 // Test the short circuit functionality in the case that the projection is a column index.
-TEST (CodeGenTest, ShortCircuitProject) {
+TEST(CodeGenTest, ShortCircuitProject)
+{
     string unparsed = "#1";
 
     const int32_t numCols = 2;
     DataType types[numCols] = {DataType::INT32D, DataType::INT64D};
 
     const int numRows = 1000;
-    int32_t* col1 = new int32_t[numRows];
+    int32_t *col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i; 
+        col1[i] = i;
     }
-    int64_t* col2 = new int64_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         col2[i] = i % 10;
     }
 
-    int64_t* table = new int64_t[numCols];
-    table[0] = (int64_t) col1;
-    table[1] = (int64_t) col2;
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
+    table[1] = (int64_t)col2;
 
     const int32_t entries = numRows * numCols;
     bool *bitmap = new bool[entries];
@@ -203,8 +207,8 @@ TEST (CodeGenTest, ShortCircuitProject) {
     EXPECT_EQ(lc.GetIndexIfColumnProjection(), 1);
 
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t* res = (int32_t*) func(table, bitmap, i);
-        EXPECT_EQ(*res, i % 10);
+        int32_t res = *((int32_t *)func(table, bitmap, i));
+        EXPECT_EQ(res, i % 10);
     }
 
     delete[] col1;
@@ -214,19 +218,20 @@ TEST (CodeGenTest, ShortCircuitProject) {
 }
 
 // Test the row filter
-TEST (CodeGenTest, RowFilter) {
+TEST(CodeGenTest, RowFilter)
+{
     string unparsed = "$operator$EQUAL:boolean(#0, 0)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
 
     const int numRows = 1000;
-    int32_t* col1 = new int32_t[numRows];
+    int32_t *col1 = new int32_t[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col1[i] = i % 2; 
+        col1[i] = i % 2;
     }
-    int64_t* table = new int64_t[numCols];
-    table[0] = (int64_t) col1;
+    int64_t *table = new int64_t[numCols];
+    table[0] = (int64_t)col1;
 
     const int32_t entries = numRows * numCols;
     bool *bitmap = new bool[entries];
@@ -249,11 +254,13 @@ TEST (CodeGenTest, RowFilter) {
     delete[] bitmap;
 }
 
-TEST(CodeGenTest, Operators1) {
-    string unparsed = "AND:boolean($operator$GREATER_THAN_OR_EQUAL:boolean(ADD:int(#0, 2), 4), AND:boolean($operator$LESS_THAN:boolean(#1, 4), $operator$EQUAL:boolean(#2, 2)))";
+TEST(CodeGenTest, Operators1)
+{
+    string unparsed = "AND:boolean($operator$GREATER_THAN_OR_EQUAL:boolean(ADD:int(#0, 2), 4), "
+        "AND:boolean($operator$LESS_THAN:boolean(#1, 4), $operator$EQUAL:boolean(#2, 2)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -262,12 +269,12 @@ TEST(CodeGenTest, Operators1) {
     int32_t v2[1] = {3};
     int32_t v3[1] = {2};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -279,21 +286,21 @@ TEST(CodeGenTest, Operators1) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, int64_t*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, int64_t*)) (intptr_t) lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
     // number of rows that passed filter
-    int32_t result = func(vals, 1, selected, (int64_t*)((int64_t*)(bitmap)));
+    int32_t result = func(vals, 1, selected, (int64_t *)((int64_t *)(bitmap)));
     EXPECT_EQ(result, 1);
 
     v1[0] = 2;
     v2[0] = 4;
     v3[0] = 2;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, ((int64_t*)(bitmap)));
+    result = func(vals, 1, selected, ((int64_t *)(bitmap)));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -306,11 +313,13 @@ TEST(CodeGenTest, Operators1) {
     delete expr;
 }
 
-TEST(CodeGenTest, MathFunctions1) {
-    string unparsed = "AND:boolean($operator$EQUAL:boolean(abs:int(#0), abs:int(#2)), $operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
+TEST(CodeGenTest, MathFunctions1)
+{
+    string unparsed = "AND:boolean($operator$EQUAL:boolean(abs:int(#0), abs:int(#2)), "
+        "$operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -319,12 +328,12 @@ TEST(CodeGenTest, MathFunctions1) {
     int32_t v2[1] = {123};
     int32_t v3[1] = {123};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -337,20 +346,20 @@ TEST(CodeGenTest, MathFunctions1) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
     std::cout << "result: " << result << std::endl;
 
     v1[0] = 10000;
     v2[0] = 10000;
     v3[0] = -10001;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -364,11 +373,12 @@ TEST(CodeGenTest, MathFunctions1) {
 }
 
 
-TEST(CodeGenTest, MathFunctions2) {
+TEST(CodeGenTest, MathFunctions2)
+{
     string unparsed = "BETWEEN:boolean(#1, #0, #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -380,12 +390,12 @@ TEST(CodeGenTest, MathFunctions2) {
     //    vals[0] = reinterpret_cast<int64_t>(v1);
     //    vals[1] = reinterpret_cast<int64_t>(v2);
     //    vals[2] = reinterpret_cast<int64_t>(v3);
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -398,29 +408,29 @@ TEST(CodeGenTest, MathFunctions2) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = 100;
     v2[0] = 1245;
     v3[0] = -12356;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     v1[0] = 100;
     v2[0] = 1245;
     v3[0] = 12356;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     for (int i = 0; i < 3; i++) {
@@ -434,11 +444,13 @@ TEST(CodeGenTest, MathFunctions2) {
 }
 
 
-TEST(CodeGenTest, MathFunctions3) {
-    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), $operator$LESS_THAN:boolean(#0, 0))";
+TEST(CodeGenTest, MathFunctions3)
+{
+    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
+        "$operator$LESS_THAN:boolean(#0, 0))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -447,12 +459,12 @@ TEST(CodeGenTest, MathFunctions3) {
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -465,39 +477,39 @@ TEST(CodeGenTest, MathFunctions3) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = 100;
     v2[0] = 1245;
     v3[0] = -12356;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     v1[0] = -12;
     v2[0] = 1245;
     v3[0] = 123;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = -12222;
     v2[0] = -12312;
     v3[0] = 42;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     for (int i = 0; i < 3; i++) {
@@ -511,11 +523,12 @@ TEST(CodeGenTest, MathFunctions3) {
 }
 
 
-TEST(CodeGenTest, MathFunctions4) {
+TEST(CodeGenTest, MathFunctions4)
+{
     string unparsed = "IN:boolean(#0, 1, 2, 3, 4, 5)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -524,12 +537,12 @@ TEST(CodeGenTest, MathFunctions4) {
     int32_t v2[1] = {0};
     int32_t v3[1] = {21};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -542,49 +555,49 @@ TEST(CodeGenTest, MathFunctions4) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = 3;
     v2[0] = 1245;
     v3[0] = -12356;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = 5;
     v2[0] = 1245;
     v3[0] = 123;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = 0;
     v2[0] = -12312;
     v3[0] = 42;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     v1[0] = 123;
     v2[0] = -43;
     v3[0] = 542;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -598,11 +611,12 @@ TEST(CodeGenTest, MathFunctions4) {
 }
 
 // For testing different types
-TEST(CodeGenTest, CastNumbers1) {
+TEST(CodeGenTest, CastNumbers1)
+{
     string unparsed = "$operator$EQUAL:boolean(abs:double(CAST:double(#0)), abs:double(CAST:double(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -612,12 +626,12 @@ TEST(CodeGenTest, CastNumbers1) {
     int64_t v2[1] = {10000};
     double v3[1] = {12.34};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -630,29 +644,29 @@ TEST(CodeGenTest, CastNumbers1) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = 2000000000;
     v2[0] = 3000000000;
     v3[0] = -234;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     v1[0] = -1000000;
     v2[0] = -1000000;
     v3[0] = 133.324234;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     for (int i = 0; i < 3; i++) {
@@ -665,11 +679,12 @@ TEST(CodeGenTest, CastNumbers1) {
     delete expr;
 }
 
-TEST(CodeGenTest, CastNumbers2) {
+TEST(CodeGenTest, CastNumbers2)
+{
     string unparsed = "$operator$GREATER_THAN:boolean(CAST:double(#1), #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -679,12 +694,12 @@ TEST(CodeGenTest, CastNumbers2) {
     int64_t v2[1] = {12};
     double v3[1] = {12.34};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -697,29 +712,29 @@ TEST(CodeGenTest, CastNumbers2) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     v1[0] = 2000000000;
     v2[0] = -233;
     v3[0] = -234.2142;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = -1000000;
     v2[0] = 12;
     v3[0] = 12;
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -733,12 +748,13 @@ TEST(CodeGenTest, CastNumbers2) {
 }
 
 
-TEST(CodeGenTest, Like) {
+TEST(CodeGenTest, Like)
+{
     string unparsed = "LIKE:boolean(#2, '%hello%world%')";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -752,12 +768,12 @@ TEST(CodeGenTest, Like) {
     s2 = "asjd fehellojdsl kfjworlddslk  jf ";
     int64_t v3[1] = {(int64_t) (s2.c_str())};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -770,9 +786,9 @@ TEST(CodeGenTest, Like) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
 
@@ -781,11 +797,11 @@ TEST(CodeGenTest, Like) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "asjd fehell ojdsl kfjwo rld dslk  jf ";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -799,12 +815,13 @@ TEST(CodeGenTest, Like) {
 }
 
 
-TEST(CodeGenTest, DateCast) {
+TEST(CodeGenTest, DateCast)
+{
     string unparsed = "$operator$GREATER_THAN:boolean(CAST:int(#2), #0)";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -819,12 +836,12 @@ TEST(CodeGenTest, DateCast) {
     s2 = "1994-01-01";
     int64_t v3[1] = {(int64_t) (s2.c_str())};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -836,10 +853,10 @@ TEST(CodeGenTest, DateCast) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
 
-    int32_t (*func)(int64_t*, int32_t, int32_t*, int64_t*);
-    func = (int32_t (*)(int64_t*, int32_t, int32_t*, int64_t*)) (intptr_t) lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
 
@@ -848,11 +865,11 @@ TEST(CodeGenTest, DateCast) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "1996-01-02";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = {8766};
@@ -860,11 +877,11 @@ TEST(CodeGenTest, DateCast) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "1993-11-12";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -877,12 +894,13 @@ TEST(CodeGenTest, DateCast) {
     delete lc;
 }
 
-TEST(CodeGenTest, SubstrIn) {
+TEST(CodeGenTest, SubstrIn)
+{
     string unparsed = "IN:boolean(substr:varchar(#2, 1, 2), '12', '21', '13', '31', '34', '43')";
     // string unparsed = "IN(substr(#2, 5), '12', '21', '13', '31', '34', '43')";
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -897,12 +915,12 @@ TEST(CodeGenTest, SubstrIn) {
     s2 = "2134121";
     int64_t v3[1] = {(int64_t) (s2.c_str())};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -915,9 +933,9 @@ TEST(CodeGenTest, SubstrIn) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
     FreeStrings();
 
@@ -927,11 +945,11 @@ TEST(CodeGenTest, SubstrIn) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "233425";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
     FreeStrings();
 
@@ -940,11 +958,11 @@ TEST(CodeGenTest, SubstrIn) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "424321";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
     FreeStrings();
 
@@ -958,12 +976,13 @@ TEST(CodeGenTest, SubstrIn) {
     delete lc;
 }
 
-TEST(CodeGenTest, ConcatStr) {
+TEST(CodeGenTest, ConcatStr)
+{
     string unparsed = "$operator$EQUAL:boolean(concat:varchar(#1, #2), 'helloworld')";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -978,12 +997,12 @@ TEST(CodeGenTest, ConcatStr) {
     s2 = "world";
     int64_t v3[1] = {(int64_t) (s2.c_str())};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -994,9 +1013,9 @@ TEST(CodeGenTest, ConcatStr) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
     FreeStrings();
 
@@ -1006,11 +1025,11 @@ TEST(CodeGenTest, ConcatStr) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "world ";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
     FreeStrings();
 
@@ -1020,11 +1039,11 @@ TEST(CodeGenTest, ConcatStr) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "world";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
     FreeStrings();
 
@@ -1039,12 +1058,13 @@ TEST(CodeGenTest, ConcatStr) {
     delete lc;
 }
 
-TEST(CodeGenTest, StringWithOps) {
+TEST(CodeGenTest, StringWithOps)
+{
     string unparsed = "OR:boolean($operator$EQUAL:boolean(#2, 'Sunday'), $operator$EQUAL:boolean(#2, 'Saturday'))";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -1058,12 +1078,12 @@ TEST(CodeGenTest, StringWithOps) {
     s2 = "Saturday";
     int64_t v3[1] = {(int64_t) (s2.c_str())};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -1076,9 +1096,9 @@ TEST(CodeGenTest, StringWithOps) {
 
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
 
@@ -1087,11 +1107,11 @@ TEST(CodeGenTest, StringWithOps) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "Sunday";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     v1[0] = {8766};
@@ -1099,11 +1119,11 @@ TEST(CodeGenTest, StringWithOps) {
     v2[0] = {(int64_t) (s1.c_str())};
     s2 = "Monday";
     v3[0] = {(int64_t) (s2.c_str())};
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -1116,12 +1136,13 @@ TEST(CodeGenTest, StringWithOps) {
     delete lc;
 }
 
-TEST(CodeGenTest, Coalesce) {
+TEST(CodeGenTest, Coalesce)
+{
     string unparsed = "$operator$EQUAL:boolean(COALESCE:long(#0, 0), 123)";
 
 
     DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
     cout << endl;
@@ -1130,12 +1151,12 @@ TEST(CodeGenTest, Coalesce) {
     int64_t v2[1] = {234};
     int64_t v3[1] = {345};
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) v1;
-    vals[1] = (int64_t) v2;
-    vals[2] = (int64_t) v3;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -1147,15 +1168,15 @@ TEST(CodeGenTest, Coalesce) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -1168,20 +1189,21 @@ TEST(CodeGenTest, Coalesce) {
     delete lc;
 }
 
-TEST(CodeGenTest, IsNull) {
+TEST(CodeGenTest, IsNull)
+{
     string unparsed = "IS_NULL:boolean(#0)";
 
     DataType types[1] = {DataType::INT64D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
     expr->PrintExprTree();
 
     int64_t v1[1] = {123};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t) v1;
+    vals[0] = (int64_t)v1;
     auto *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[1];
+    bool **bitmap = new bool *[1];
     bitmap[0] = new bool[1];
     bitmap[0][0] = false;
 
@@ -1190,14 +1212,14 @@ TEST(CodeGenTest, IsNull) {
     auto *lc = new FilterCodeGen(testName, *expr, typeVec);
 
     bool (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (bool (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (bool (*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    bool result = func(vals, 1, selected, (int64_t*)(bitmap));
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, false);
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, true);
 
     delete[] bitmap[0];
@@ -1208,20 +1230,21 @@ TEST(CodeGenTest, IsNull) {
     delete lc;
 }
 
-TEST(CodeGenTest, IsNotNull) {
+TEST(CodeGenTest, IsNotNull)
+{
     string unparsed = "IS_NOT_NULL:boolean(#0)";
 
     DataType types[1] = {DataType::INT64D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
     expr->PrintExprTree();
 
     int64_t v1[1] = {123};
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t) v1;
+    vals[0] = (int64_t)v1;
     auto *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[1];
+    bool **bitmap = new bool *[1];
     bitmap[0] = new bool[1];
     bitmap[0][0] = false;
 
@@ -1230,14 +1253,14 @@ TEST(CodeGenTest, IsNotNull) {
     auto *lc = new FilterCodeGen(testName, *expr, typeVec);
 
     bool (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (bool (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (bool (*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    bool result = func(vals, 1, selected, (int64_t*)(bitmap));
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, true);
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t*)(bitmap));
+    result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, false);
 
     delete[] bitmap[0];
@@ -1248,12 +1271,12 @@ TEST(CodeGenTest, IsNotNull) {
     delete lc;
 }
 
-TEST(CodeGenTest, DecimalOperators1) {
-
+TEST(CodeGenTest, DecimalOperators1)
+{
     string unparsed = "$operator$EQUAL:boolean(ADD:decimal(#0, 5), 15)";
 
     DataType types[1] = {DataType::DECIMAL128D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
     expr->PrintExprTree();
 
@@ -1263,11 +1286,11 @@ TEST(CodeGenTest, DecimalOperators1) {
     int64_t c[2] = {(int64_t) c1, (int64_t) (c1 + 2)};
 
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t) c;
+    vals[0] = (int64_t)c;
 
     int32_t *selected = new int32_t[2];
 
-    bool** bitmap = new bool*[1];
+    bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = false;
@@ -1278,9 +1301,9 @@ TEST(CodeGenTest, DecimalOperators1) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 2, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 2, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     delete[] bitmap;
@@ -1290,12 +1313,12 @@ TEST(CodeGenTest, DecimalOperators1) {
     delete lc;
 }
 
-TEST(CodeGenTest, DecimalOperators2) {
-
+TEST(CodeGenTest, DecimalOperators2)
+{
     string unparsed = "BETWEEN:boolean(#0, #1, #2)";
 
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
 
@@ -1310,13 +1333,13 @@ TEST(CodeGenTest, DecimalOperators2) {
     int64_t e[1] = {(int64_t) e1};
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) c;
-    vals[1] = (int64_t) d;
-    vals[2] = (int64_t) e;
+    vals[0] = (int64_t)c;
+    vals[1] = (int64_t)d;
+    vals[2] = (int64_t)e;
 
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -1327,9 +1350,9 @@ TEST(CodeGenTest, DecimalOperators2) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
 
     delete[] bitmap;
@@ -1339,12 +1362,13 @@ TEST(CodeGenTest, DecimalOperators2) {
     delete lc;
 }
 
-TEST(CodeGenTest, DecimalOperators3) {
-
-    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), $operator$LESS_THAN:boolean(#0, 0))";
+TEST(CodeGenTest, DecimalOperators3)
+{
+    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
+        "$operator$LESS_THAN:boolean(#0, 0))";
 
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
 
@@ -1359,13 +1383,13 @@ TEST(CodeGenTest, DecimalOperators3) {
     int64_t e[1] = {(int64_t) e1};
 
     int64_t *vals = new int64_t[3];
-    vals[0] = (int64_t) c;
-    vals[1] = (int64_t) d;
-    vals[2] = (int64_t) e;
+    vals[0] = (int64_t)c;
+    vals[1] = (int64_t)d;
+    vals[2] = (int64_t)e;
 
     int32_t *selected = new int32_t[1];
 
-    bool** bitmap = new bool*[3];
+    bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
@@ -1376,9 +1400,9 @@ TEST(CodeGenTest, DecimalOperators3) {
     FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
-    func = (int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t*)(bitmap));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 1);
 
     delete[] bitmap;
@@ -1388,12 +1412,12 @@ TEST(CodeGenTest, DecimalOperators3) {
     delete lc;
 }
 
-TEST(CodeGenTest, ProjectionCodeGen) {
-
+TEST(CodeGenTest, ProjectionCodeGen)
+{
     string unparsed = "$operator$ADD:decimal(#0, 100)";
 
     DataType types[1] = {DataType::DECIMAL128D};
-    Parser parser{};
+    Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
     expr->PrintExprTree();
 
@@ -1403,9 +1427,9 @@ TEST(CodeGenTest, ProjectionCodeGen) {
 
 
     int64_t *vals = new int64_t[1];
-    vals[0] = (int64_t) c;
+    vals[0] = (int64_t)c;
 
-    bool** bitmap = new bool*[1];
+    bool **bitmap = new bool *[1];
     bitmap[0] = new bool[3];
     for (int i = 0; i < 3; i++) {
         bitmap[0][i] = false;
@@ -1421,18 +1445,18 @@ TEST(CodeGenTest, ProjectionCodeGen) {
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *);
-    func = (int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *)) (intptr_t) lc->GetFunction();
+    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *))(intptr_t)lc->GetFunction();
 
-    int32_t r = func(vals, 3, *cvecVals, nullptr, 3,  (int64_t*)(bitmap), newNullValues);
-    int64_t *result = reinterpret_cast<int64_t*>(oVec[0]);
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), newNullValues);
+    int64_t *result = reinterpret_cast<int64_t *>(oVec[0]);
     EXPECT_EQ(*result, 110);
     EXPECT_EQ(*(result + 1), 0);
 
-    result = reinterpret_cast<int64_t*>(oVec[1]);
+    result = reinterpret_cast<int64_t *>(oVec[1]);
     EXPECT_EQ(*(result), 120);
     EXPECT_EQ(*(result + 1), 0);
 
-    result = reinterpret_cast<int64_t*>(oVec[2]);
+    result = reinterpret_cast<int64_t *>(oVec[2]);
     EXPECT_EQ(*(result), 130);
     EXPECT_EQ(*(result + 1), 0);
 
@@ -1441,4 +1465,3 @@ TEST(CodeGenTest, ProjectionCodeGen) {
     delete expr;
     delete lc;
 }
-

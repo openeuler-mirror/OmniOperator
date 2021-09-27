@@ -71,10 +71,14 @@ JitContext *CreateTestHashBuilderJitContext(const int32_t *buildTypes, int32_t b
         { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp }
     };
 
-    auto *hashBuilderContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("hash_builder"), std::map<std::string, Specialization>());
-    auto *joinHashTableContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
-    auto *pagesHashStrategyContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *joinHashTableContext, *pagesHashStrategyContext });
+    auto *hashBuilderContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("hash_builder"),
+        std::map<std::string, Specialization>());
+    auto *joinHashTableContext =
+        new omniruntime::jit::Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
+    auto *pagesHashStrategyContext =
+        new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *joinHashTableContext,
+        *pagesHashStrategyContext });
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
@@ -163,8 +167,7 @@ Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &has
     map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
         *positionEqualsRowIgnoreNullsSp } };
 
-    auto *pagesHashStrategyContext =
-        new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
+    auto *pagesHashStrategyContext = new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
     return pagesHashStrategyContext;
 }
 
@@ -208,15 +211,20 @@ VectorBatch *ConstructSimpleProbeData()
 
 VectorBatch *ConstructSimpleExpectedData()
 {
+    const uint32_t originalDataSize = 10;
     const uint32_t expectedDataSize = 18;
     VecTypes expectedTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
-    int64_t expectedData0[expectedDataSize] = {78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65};
+    int64_t expectedData0[originalDataSize] = {78, 78, 78, 78, 78, 78, 78, 82, 82, 65};
     int64_t expectedData1[expectedDataSize] = {70, 70, 79, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70};
-    VectorBatch *vectorBatch = CreateVectorBatch(expectedTypes, expectedDataSize, expectedData0, expectedData1);
 
+    Vector *expectedVec0 = CreateVector<LongVector, int64_t>(expectedData0, originalDataSize);
     int32_t ids[expectedDataSize] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
-    DictionaryVector *expectedVec0 = new DictionaryVector(vectorBatch->GetVector(0), ids, expectedDataSize);
+    expectedVec0 = new DictionaryVector(expectedVec0, ids, expectedDataSize);
+    Vector *expectedVec1 = CreateVector<LongVector, int64_t>(expectedData1, expectedDataSize);
+
+    VectorBatch *vectorBatch = new VectorBatch(2, expectedDataSize);
     vectorBatch->SetVector(0, expectedVec0);
+    vectorBatch->SetVector(1, expectedVec1);
     return vectorBatch;
 }
 
@@ -452,7 +460,8 @@ void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
     if (hashJoinThreadArgs->isOriginal) {
         lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->CreateOperator());
     } else {
-        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinOperatorFactory));;
+        lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinOperatorFactory));
+        ;
     }
     const int32_t maxLoopCount = 1000;
     for (int loop = 0; loop < maxLoopCount; loop++) {
@@ -1145,6 +1154,90 @@ TEST(NativeOmniJoinTest, TestLookupEqualityJoinDictionary)
     VectorHelper::FreeVecBatch(probeVecBatch);
     VectorHelper::FreeVecBatch(buildVecBatch);
     VectorHelper::FreeVecBatches(output);
+    delete hashBuilderOperator;
+    delete lookupJoinOperator;
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
+
+TEST(NativeOmniJoinTest, TestLookupEqualityJoinHasOutputNulls)
+{
+    // construct input data
+    const int32_t DATA_SIZE = 4;
+    VecTypes buildTypes(std::vector<VecType>({ LongVecType(), VarcharVecType(3) }));
+    int64_t buildData0[DATA_SIZE] = {1, 0, 3, 0};
+    std::string buildData1[DATA_SIZE] = {"aaa", "11", "ccc", "33"};
+    VectorBatch *buildVecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData0, buildData1);
+    buildVecBatch->GetVector(0)->SetValueNull(1);
+    buildVecBatch->GetVector(0)->SetValueNull(3);
+
+    int32_t buildJoinCols[1] = {1};
+    int32_t joinColsCount = 1;
+    int32_t operatorCount = 1;
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+        buildTypes, buildJoinCols, joinColsCount, operatorCount);
+    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
+        buildJoinCols, joinColsCount, operatorCount);
+    hashBuilderFactory->SetJitContext(hashBuilderJitContext);
+    HashBuilderOperator *hashBuilderOperator =
+        dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator->AddInput(buildVecBatch);
+    std::vector<VectorBatch *> hashBuildOutput;
+    hashBuilderOperator->GetOutput(hashBuildOutput);
+
+    VecTypes probeTypes(std::vector<VecType>({ LongVecType(), VarcharVecType(2) }));
+    int64_t probeData0[DATA_SIZE] = {0, 2, 0, 4};
+    std::string probeData1[DATA_SIZE] = {"11", "22", "33", "44"};
+    VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, DATA_SIZE, probeData0, probeData1);
+    probeVecBatch->GetVector(0)->SetValueNull(0);
+    probeVecBatch->GetVector(0)->SetValueNull(2);
+
+    int32_t probeOutputCols[2]= {0, 1};
+    int32_t probeOutputColsCount = 2;
+    int32_t probeHashCols[1] = {1};
+    int32_t probeHashColsCount = 1;
+    int32_t buildOutputCols[2] = {0, 1};
+    VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), VarcharVecType(3) }));
+    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
+        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
+        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
+        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    lookupJoinFactory->SetJitContext(lookupJoinJitContext);
+    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    lookupJoinOperator->AddInput(probeVecBatch);
+    std::vector<VectorBatch *> output;
+    lookupJoinOperator->GetOutput(output);
+
+    EXPECT_EQ(output.size(), 1);
+    VectorHelper::PrintVecBatch(output[0]);
+
+    const int32_t ORIGINAL_DATA_SIZE = 4;
+    const int32_t EXPECTED_DATA_SIZE = 2;
+    int64_t expectedData0[ORIGINAL_DATA_SIZE] = {0, 2, 0, 4};
+    std::string expectedData1[ORIGINAL_DATA_SIZE] = {"11", "22", "33", "44"};
+    int64_t expectedData2[EXPECTED_DATA_SIZE] = {0, 0};
+    std::string expectedData3[EXPECTED_DATA_SIZE] = {"11", "33"};
+    VectorBatch *expectedVecBatch = new VectorBatch(4, EXPECTED_DATA_SIZE);
+    int32_t ids[2] = {0, 2};
+    Vector *expectedVector0 = CreateVector<LongVector, int64_t>(expectedData0, ORIGINAL_DATA_SIZE);
+    expectedVector0->SetValueNull(0);
+    expectedVector0->SetValueNull(2);
+    expectedVecBatch->SetVector(0, std::make_unique<DictionaryVector>(expectedVector0, ids, 2).release());
+    Vector *expectedVector1 = CreateVarcharVector(VarcharVecType(2), expectedData1, ORIGINAL_DATA_SIZE);
+    expectedVecBatch->SetVector(1, std::make_unique<DictionaryVector>(expectedVector1, ids, 2).release());
+    Vector *expectedVector2 = CreateVector<LongVector, int64_t>(expectedData2, EXPECTED_DATA_SIZE);
+    expectedVector2->SetValueNull(0);
+    expectedVector2->SetValueNull(1);
+    expectedVecBatch->SetVector(2, expectedVector2);
+    expectedVecBatch->SetVector(3, CreateVarcharVector(VarcharVecType(3), expectedData3, EXPECTED_DATA_SIZE));
+    EXPECT_TRUE(VecBatchMatch(output[0], expectedVecBatch));
+
+    VectorHelper::FreeVecBatch(probeVecBatch);
+    VectorHelper::FreeVecBatch(buildVecBatch);
+    VectorHelper::FreeVecBatches(output);
+    VectorHelper::FreeVecBatch(expectedVecBatch);
     delete hashBuilderOperator;
     delete lookupJoinOperator;
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);

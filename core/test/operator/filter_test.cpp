@@ -1753,9 +1753,9 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     int32_t inputTypes[] = {1, 15};
 
     const int32_t numRows = 3;
-    IntVector *col1 = new IntVector(nullptr, numRows);
-    VectorAllocator *allocator = nullptr;
-    VarcharVector *col2 = new VarcharVector(allocator, 1024, numRows);
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    VarcharVector *col2 = new VarcharVector(vecAllocator, 1024, numRows);
     int32_t ids[]= {0, 1, 2};
     DictionaryVector *dictionaryVector = new DictionaryVector(col2, ids, numRows);
 

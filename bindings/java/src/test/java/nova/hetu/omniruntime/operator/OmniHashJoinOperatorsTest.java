@@ -405,7 +405,7 @@ public class OmniHashJoinOperatorsTest {
     @Test
     public void testLeftHashEqualityJoinDictionary() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
-        Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {111L, 11L, 333L, 33L}};
+        Object[][] buildDatas = {{1L, null, 3L, null}, {111L, 11L, 333L, 33L}};
         Vec[] vecs = new Vec[2];
         int[] ids = {0, 1, 2, 3};
         vecs[0] = createLongVec(buildDatas[0]);
@@ -421,7 +421,7 @@ public class OmniHashJoinOperatorsTest {
         hashBuilderOperator.getOutput();
 
         VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
-        Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}};
+        Object[][] probeDatas = {{null, 2L, null, 4L}, {11L, 22L, 33L, 44L}};
         Vec[] probeVecs = new Vec[2];
         probeVecs[0] = createLongVec(probeDatas[0]);
         probeVecs[1] = createDictionaryVec(probeTypes[1], probeDatas[1], ids);
@@ -449,7 +449,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(len, 2);
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {
-                {1L, 3L}, {11L, 33L}, {2L, 4L}, {11L, 33L}
+                {null, null}, {11L, 33L}, {null, null}, {11L, 33L}
         };
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(probeVecBatch);

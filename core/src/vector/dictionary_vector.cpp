@@ -175,7 +175,7 @@ Vector *DictionaryVector::ExtractDictionary()
 
 Vector *DictionaryVector::ExtractDictionary(const int32_t *positions, int32_t length)
 {
-    ASSERT((positions != nullptr) && (length < size));
+    ASSERT((positions != nullptr) && (length <= size));
     Vector *dictionary = this;
     int32_t newPositions[length];
     int32_t *preIds = nullptr;

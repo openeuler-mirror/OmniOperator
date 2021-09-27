@@ -150,6 +150,7 @@ uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMan
             return expected->getAddress();
         } else {
             errs() << "Cannot find mangled function name: " << functionName << "\n";
+            return 0;
         }
     } else {
         for (auto const &function : this->functionSymbols) {
