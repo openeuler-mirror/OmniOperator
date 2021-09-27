@@ -4,7 +4,11 @@
 
 package nova.hetu.omniruntime.operator.aggregator;
 
+import static java.util.Objects.requireNonNull;
+import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
+
 import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.VecType;
@@ -13,45 +17,49 @@ import nova.hetu.omniruntime.type.VecTypeSerializer;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
-
 /**
  * The type Omni hash aggregation operator factory.
  *
  * @since 20210630
  */
 public class OmniHashAggregationOperatorFactory
-        extends OmniOperatorFactory<OmniHashAggregationOperatorFactory.Context> {
+    extends OmniOperatorFactory<OmniHashAggregationOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni hash aggregation operator factory.
      *
-     * @param groupByChanel    the group by chanel
-     * @param groupByTypes     the group by types
-     * @param aggChannels      the agg channels
-     * @param aggTypes         the agg types
+     * @param groupByChanel the group by chanel
+     * @param groupByTypes the group by types
+     * @param aggChannels the agg channels
+     * @param aggTypes the agg types
      * @param aggFunctionTypes the agg function types
-     * @param aggOutputTypes   the agg output types
-     * @param inputRaw         the input raw
-     * @param outputPartial    the output partial
+     * @param aggOutputTypes the agg output types
+     * @param inputRaw the input raw
+     * @param outputPartial the output partial
      */
     public OmniHashAggregationOperatorFactory(String[] groupByChanel, VecType[] groupByTypes, String[] aggChannels,
-            VecType[] aggTypes, AggType[] aggFunctionTypes, VecType[] aggOutputTypes, boolean inputRaw,
-            boolean outputPartial) {
-        super(new Context(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes,
-                inputRaw, outputPartial));
+        VecType[] aggTypes, AggType[] aggFunctionTypes, VecType[] aggOutputTypes, boolean inputRaw,
+        boolean outputPartial) {
+        super(new FactoryContext(
+            new JitContext(groupByChanel, groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes,
+                inputRaw, outputPartial)));
     }
 
     private static native long createHashAggregationOperatorFactory(String[] groupByChanel, String groupByTypes,
-            String[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw,
-            boolean outputPartial);
+        String[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw,
+        boolean outputPartial, long JitContext);
+
+    private static native long createHashAggregationJitContext(String[] groupByChanel, String groupByTypes,
+        String[] aggChannels, String aggTypes, int[] aggFunctionTypes, String aggOutputTypes, boolean inputRaw,
+        boolean outputPartial);
 
     @Override
-    protected long createNativeOperatorFactory(Context context) {
+    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
+        JitContext context = factoryContext.getJitContext();
         return createHashAggregationOperatorFactory(context.groupByChanel,
-                VecTypeSerializer.serialize(context.groupByTypes), context.aggChannels,
-                VecTypeSerializer.serialize(context.aggTypes), toNativeConstants(context.aggFunctionTypes),
-                VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial);
+            VecTypeSerializer.serialize(context.groupByTypes), context.aggChannels,
+            VecTypeSerializer.serialize(context.aggTypes), toNativeConstants(context.aggFunctionTypes),
+            VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial,
+            factoryContext.getNativeJitContext());
     }
 
     /**
@@ -59,7 +67,7 @@ public class OmniHashAggregationOperatorFactory
      *
      * @since 20210630
      */
-    public static class Context extends OmniOperatorFactoryContext {
+    public static class JitContext implements OmniJitContext {
         private final String[] groupByChanel;
 
         private final VecType[] groupByTypes;
@@ -79,17 +87,17 @@ public class OmniHashAggregationOperatorFactory
         /**
          * Instantiates a new Context.
          *
-         * @param groupByChanel    the group by chanel
-         * @param groupByTypes     the group by types
-         * @param aggChannels      the agg channels
-         * @param aggTypes         the agg types
+         * @param groupByChanel the group by chanel
+         * @param groupByTypes the group by types
+         * @param aggChannels the agg channels
+         * @param aggTypes the agg types
          * @param aggFunctionTypes the agg function types
-         * @param aggOutputTypes   the agg output types
-         * @param inputRaw         the input raw
-         * @param outputPartial    the output partial
+         * @param aggOutputTypes the agg output types
+         * @param inputRaw the input raw
+         * @param outputPartial the output partial
          */
-        public Context(String[] groupByChanel, VecType[] groupByTypes, String[] aggChannels, VecType[] aggTypes,
-                AggType[] aggFunctionTypes, VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+        public JitContext(String[] groupByChanel, VecType[] groupByTypes, String[] aggChannels, VecType[] aggTypes,
+            AggType[] aggFunctionTypes, VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
             this.groupByChanel = requireNonNull(groupByChanel, "requireNonNull");
             this.groupByTypes = requireNonNull(groupByTypes, "groupByTypes");
             this.aggChannels = requireNonNull(aggChannels, "aggChannels");
@@ -103,8 +111,8 @@ public class OmniHashAggregationOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(groupByChanel), Arrays.hashCode(groupByTypes),
-                    Arrays.hashCode(aggChannels), Arrays.hashCode(aggTypes), Arrays.hashCode(aggFunctionTypes),
-                    inputRaw, outputPartial);
+                Arrays.hashCode(aggChannels), Arrays.hashCode(aggTypes), Arrays.hashCode(aggFunctionTypes), inputRaw,
+                outputPartial);
         }
 
         @Override
@@ -115,11 +123,35 @@ public class OmniHashAggregationOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context that = (Context) obj;
+            JitContext that = (JitContext) obj;
             return Arrays.equals(groupByChanel, that.groupByChanel) && Arrays.equals(groupByTypes, that.groupByTypes)
-                    && Arrays.equals(aggTypes, that.aggTypes) && Arrays.equals(aggChannels, that.aggChannels)
-                    && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && inputRaw == that.inputRaw
-                    && outputPartial == that.outputPartial;
+                && Arrays.equals(aggTypes, that.aggTypes) && Arrays.equals(aggChannels, that.aggChannels)
+                && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes) && inputRaw == that.inputRaw
+                && outputPartial == that.outputPartial;
+        }
+    }
+
+    /**
+     * The type Factory context.
+     *
+     * @since 20210630
+     */
+    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param jitContext the jit context
+         */
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
+        }
+
+        @Override
+        protected long createNativeJitContext(JitContext context) {
+            return createHashAggregationJitContext(context.groupByChanel,
+                VecTypeSerializer.serialize(context.groupByTypes), context.aggChannels,
+                VecTypeSerializer.serialize(context.aggTypes), toNativeConstants(context.aggFunctionTypes),
+                VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial);
         }
     }
 }

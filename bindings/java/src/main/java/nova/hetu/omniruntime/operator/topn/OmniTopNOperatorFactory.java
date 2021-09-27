@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.operator.topn;
 
+import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.VecType;
@@ -17,40 +18,40 @@ import java.util.Objects;
  *
  * @since 20210630
  */
-public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperatorFactory.Context> {
+public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni top n operator factory.
      *
-     * @param sourceTypes    the source types
-     * @param limitN         the limit n
-     * @param sortCols       the sort cols
+     * @param sourceTypes the source types
+     * @param limitN the limit n
+     * @param sortCols the sort cols
      * @param sortAssendings the sort assendings
      * @param sortNullFirsts the sort null firsts
      */
-    public OmniTopNOperatorFactory(
-            VecType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings, int[] sortNullFirsts) {
-        super(new Context(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts));
+    public OmniTopNOperatorFactory(VecType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings,
+        int[] sortNullFirsts) {
+        super(new FactoryContext(new JitContext(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts)));
     }
 
-    private static native long createTopNOperatorFactory(
-            String sourceTypes, int limitN, String[] sortCols, int[] sortAssendings, int[] sortNullFirsts);
+    private static native long createTopNOperatorFactory(String sourceTypes, int limitN, String[] sortCols,
+        int[] sortAssendings, int[] sortNullFirsts, long nativeJitContext);
+
+    private static native long createTopNJitContext(String sourceTypes, int limitN, String[] sortCols,
+        int[] sortAssendings, int[] sortNullFirsts);
 
     @Override
-    protected long createNativeOperatorFactory(Context context) {
-        return createTopNOperatorFactory(
-                VecTypeSerializer.serialize(context.sourceTypes),
-                context.limitN,
-                context.sortCols,
-                context.sortAssendings,
-                context.sortNullFirsts);
+    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
+        JitContext context = factoryContext.getJitContext();
+        return createTopNOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.limitN,
+            context.sortCols, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
     }
 
     /**
-     * The type Context.
+     * The type Jit context.
      *
      * @since 20210630
      */
-    public static class Context extends OmniOperatorFactoryContext {
+    public static class JitContext implements OmniJitContext {
         private final VecType[] sourceTypes;
 
         private final int limitN;
@@ -64,14 +65,14 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
         /**
          * Instantiates a new Context.
          *
-         * @param sourceTypes    the source types
-         * @param limitN         the limit n
-         * @param sortCols       the sort cols
+         * @param sourceTypes the source types
+         * @param limitN the limit n
+         * @param sortCols the sort cols
          * @param sortAssendings the sort assendings
          * @param sortNullFirsts the sort null firsts
          */
-        public Context(
-                VecType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings, int[] sortNullFirsts) {
+        public JitContext(VecType[] sourceTypes, int limitN, String[] sortCols, int[] sortAssendings,
+            int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
             this.sortCols = sortCols;
@@ -81,7 +82,8 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
 
         @Override
         public int hashCode() {
-            return Objects.hash(sourceTypes, limitN, sortCols, sortAssendings, sortNullFirsts);
+            return Objects.hash(Arrays.hashCode(sourceTypes), limitN, Arrays.hashCode(sortCols),
+                Arrays.hashCode(sortAssendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -92,12 +94,32 @@ public class OmniTopNOperatorFactory extends OmniOperatorFactory<OmniTopNOperato
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context context = (Context) obj;
-            return limitN == context.limitN
-                    && Arrays.equals(sourceTypes, context.sourceTypes)
-                    && Arrays.equals(sortCols, context.sortCols)
-                    && Arrays.equals(sortAssendings, context.sortAssendings)
-                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts);
+            JitContext context = (JitContext) obj;
+            return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes) && Arrays.equals(
+                sortCols, context.sortCols) && Arrays.equals(sortAssendings, context.sortAssendings) && Arrays.equals(
+                sortNullFirsts, context.sortNullFirsts);
+        }
+    }
+
+    /**
+     * The type Context.
+     *
+     * @since 20210630
+     */
+    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param jitContext the jit context
+         */
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
+        }
+
+        @Override
+        protected long createNativeJitContext(JitContext context) {
+            return createTopNJitContext(VecTypeSerializer.serialize(context.sourceTypes), context.limitN,
+                context.sortCols, context.sortAssendings, context.sortNullFirsts);
         }
     }
 }

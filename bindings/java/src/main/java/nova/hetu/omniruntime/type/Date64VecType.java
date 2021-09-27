@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * date32 vec type
  *
@@ -32,5 +34,10 @@ public class Date64VecType extends VecType {
 
     public DateUnit getDateUnit() {
         return dateUnit;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(dateUnit, super.getId());
     }
 }

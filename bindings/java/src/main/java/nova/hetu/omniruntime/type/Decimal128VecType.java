@@ -7,6 +7,8 @@ package nova.hetu.omniruntime.type;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * Decimal128 vec type
  *
@@ -38,7 +40,7 @@ public class Decimal128VecType extends VecType {
      * Construct of decima128 vector type.
      *
      * @param precision the precision of decimal.
-     * @param scale     the scale of decimal.
+     * @param scale the scale of decimal.
      */
     @JsonCreator
     public Decimal128VecType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
@@ -53,5 +55,10 @@ public class Decimal128VecType extends VecType {
 
     public int getScale() {
         return scale;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(precision, scale, super.getId());
     }
 }

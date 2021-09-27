@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.operator.union;
 
+import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.VecType;
@@ -17,7 +18,7 @@ import java.util.Objects;
  *
  * @since 20210630
  */
-public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOperatorFactory.Context> {
+public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni union operator factory.
      *
@@ -25,26 +26,37 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      * @param isDistinct mark union or union all
      */
     public OmniUnionOperatorFactory(VecType[] sourceTypes, boolean isDistinct) {
-        super(new Context(sourceTypes, isDistinct));
+        super(new FactoryContext(new JitContext(sourceTypes, isDistinct)));
     }
 
     @Override
-    protected long createNativeOperatorFactory(Context context) {
-        return createUnionOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct);
+    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
+        JitContext context = factoryContext.getJitContext();
+        return createUnionOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct,
+            factoryContext.getNativeJitContext());
     }
 
-    private static native long createUnionOperatorFactory(String sourceTypes, boolean isDistinct);
+    private static native long createUnionOperatorFactory(String sourceTypes, boolean isDistinct, long jitcontext);
+
+    private static native long createUnionJitContext(String sourceTypes, boolean isDistinct);
 
     /**
      * The type Context.
      *
      * @since 20210630
      */
-    public static class Context extends OmniOperatorFactoryContext {
+    public static class JitContext implements OmniJitContext {
         private final VecType[] sourceTypes;
+
         private final boolean isDistinct;
 
-        public Context(VecType[] sourceTypes, boolean isDistinct) {
+        /**
+         * Instantiates a new Jit context.
+         *
+         * @param sourceTypes the source types
+         * @param isDistinct the is distinct
+         */
+        public JitContext(VecType[] sourceTypes, boolean isDistinct) {
             this.sourceTypes = sourceTypes;
             this.isDistinct = isDistinct;
         }
@@ -57,17 +69,40 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context context = null;
-            if ( obj instanceof Context) {
-                context = (Context) obj;
+            JitContext context = null;
+            if (obj instanceof JitContext) {
+                context = (JitContext) obj;
             }
-            return isDistinct == context.isDistinct &&
-                    Arrays.equals(sourceTypes, context.sourceTypes);
+            return isDistinct == context.isDistinct && Arrays.equals(sourceTypes, context.sourceTypes);
         }
 
         @Override
         public int hashCode() {
-            return  Objects.hash(Arrays.hashCode(sourceTypes), isDistinct);
+            return Objects.hash(Arrays.hashCode(sourceTypes), isDistinct);
+        }
+    }
+
+    /**
+     * The type Factory context.
+     *
+     * @since 20210630
+     */
+    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param jitContext the jit context
+         */
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
+        }
+
+        @Override
+        protected long createNativeJitContext(JitContext context) {
+            //todo: use createUnionJitContext when there is a jit optimization in future.
+            // return createUnionJitContext(
+            //     VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct);
+            return 0;
         }
     }
 }

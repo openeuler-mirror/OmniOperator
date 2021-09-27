@@ -4,14 +4,15 @@
 
 package nova.hetu.omniruntime.type;
 
+import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_INNER_ERROR;
+import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_NOSUPPORT;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
-import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_INNER_ERROR;
-import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_NOSUPPORT;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 /**
  * Vector type serializer, used for serialize and deserialize the vector type.
@@ -113,13 +114,13 @@ public class VecTypeSerializer {
             case OMNI_VEC_TYPE_DECIMAL64:
                 if (type instanceof Decimal64VecType) {
                     return typeExt.setPrecision(((Decimal64VecType) type).getPrecision())
-                            .setScale(((Decimal64VecType) type).getScale());
+                        .setScale(((Decimal64VecType) type).getScale());
                 }
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
                 if (type instanceof Decimal128VecType) {
                     return typeExt.setPrecision(((Decimal128VecType) type).getPrecision())
-                            .setScale(((Decimal128VecType) type).getScale());
+                        .setScale(((Decimal128VecType) type).getScale());
                 }
                 break;
             case OMNI_VEC_TYPE_DATE32:
@@ -198,9 +199,8 @@ public class VecTypeSerializer {
 
         @JsonCreator
         public VecTypeExt(@JsonProperty("id") VecType.VecTypeId id, @JsonProperty("width") int width,
-                @JsonProperty("precision") int precision, @JsonProperty("scale") int scale,
-                @JsonProperty("dateUnit") VecType.DateUnit dateUnit,
-                @JsonProperty("timeUnit") VecType.TimeUnit timeUnit) {
+            @JsonProperty("precision") int precision, @JsonProperty("scale") int scale,
+            @JsonProperty("dateUnit") VecType.DateUnit dateUnit, @JsonProperty("timeUnit") VecType.TimeUnit timeUnit) {
             this.id = id;
             this.width = width;
             this.precision = precision;

@@ -14,49 +14,9 @@ import java.util.Objects;
  */
 public class OmniOperatorFactoryTest {
     /**
-     * The type Mock operator factory.
+     * The Check factory.
      */
-    public static class MockOperatorFactory extends OmniOperatorFactory<MockOperatorFactory.MockContext> {
-        /**
-         * Instantiates a new Mock operator factory.
-         *
-         * @param context the context
-         */
-        public MockOperatorFactory(long context) {
-            super(new MockContext(context));
-        }
-
-        @Override
-        protected long createNativeOperatorFactory(MockContext context) {
-            return System.nanoTime();
-        }
-
-        /**
-         * The type Mock context.
-         */
-        public static class MockContext extends OmniOperatorFactoryContext {
-            private final long context;
-
-            /**
-             * Instantiates a new Mock context.
-             *
-             * @param context the context
-             */
-            public MockContext(long context) {
-                this.context = context;
-            }
-
-            @Override
-            public int hashCode() {
-                return Objects.hash(context);
-            }
-
-            @Override
-            public boolean equals(Object that) {
-                return context == ((MockContext) that).context;
-            }
-        }
-    }
+    MockOperatorFactory checkFactory = new MockOperatorFactory(1);
 
     /**
      * Test operator factory cache.
@@ -69,11 +29,6 @@ public class OmniOperatorFactoryTest {
         MockOperatorFactory factory3 = new MockOperatorFactory(2);
         assertNotEquals(factory1.getNativeOperatorFactory(), factory3.getNativeOperatorFactory());
     }
-
-    /**
-     * The Check factory.
-     */
-    MockOperatorFactory checkFactory = new MockOperatorFactory(1);
 
     /**
      * Test operator factory cache multi thread.
@@ -94,6 +49,65 @@ public class OmniOperatorFactoryTest {
         }
         for (Thread thread : threads) {
             thread.join();
+        }
+    }
+
+    /**
+     * The type Mock operator factory.
+     */
+    public static class MockOperatorFactory extends OmniOperatorFactory<MockOperatorFactory.FactoryContext> {
+        /**
+         * Instantiates a new Mock operator factory.
+         *
+         * @param context the context
+         */
+        public MockOperatorFactory(long context) {
+            super(new FactoryContext(new JitContext(context)));
+        }
+
+        @Override
+        protected long createNativeOperatorFactory(FactoryContext context) {
+            return System.nanoTime();
+        }
+
+        /**
+         * The type Mock context.
+         */
+        public static class JitContext implements OmniJitContext {
+            private final long context;
+
+            /**
+             * Instantiates a new Mock context.
+             *
+             * @param context the context
+             */
+            public JitContext(long context) {
+                this.context = context;
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(context);
+            }
+
+            @Override
+            public boolean equals(Object that) {
+                return context == ((JitContext) that).context;
+            }
+        }
+
+        public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
+            /**
+             * Instantiates a new Context.
+             */
+            public FactoryContext(JitContext jitContext) {
+                super(jitContext);
+            }
+
+            @Override
+            protected long createNativeJitContext(JitContext context) {
+                return context.context;
+            }
         }
     }
 }

@@ -4,12 +4,12 @@
 
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
+
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
-
-import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
 /**
  * The type Omni operator.
@@ -72,6 +72,11 @@ public final class OmniOperator implements AutoCloseable {
         closeNative(nativeOperator);
     }
 
+    /**
+     * Gets vec allocator.
+     *
+     * @return the vec allocator
+     */
     public VecAllocator getVecAllocator() {
         return vecAllocator;
     }

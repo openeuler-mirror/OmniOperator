@@ -8,10 +8,11 @@ import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+
 import nova.hetu.omniruntime.OmniLibs;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.util.concurrent.ExecutionException;
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni operator factory.
@@ -21,9 +22,9 @@ import nova.hetu.omniruntime.vector.VecAllocator;
  */
 public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> {
     private static final Cache<OmniOperatorFactoryContext, Long> FACTORY_CACHE = CacheBuilder.newBuilder()
-            .expireAfterAccess(java.time.Duration.ofHours(24))
-            .maximumSize(100000)
-            .build();
+        .expireAfterAccess(java.time.Duration.ofHours(24))
+        .maximumSize(100000)
+        .build();
 
     static {
         OmniLibs.load();
@@ -63,6 +64,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
     /**
      * Create operator omni operator.
      *
+     * @param vecAllocator the vec allocator
      * @return the omni operator
      */
     public OmniOperator createOperator(VecAllocator vecAllocator) {
