@@ -1372,19 +1372,19 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     result.clear();
     delete[] input;
 
-    groupTypes[0] = OMNI_VEC_TYPE_DECIMAL64;
-    groupTypes[1] = OMNI_VEC_TYPE_DECIMAL64;
-    aggTypes[0] = OMNI_VEC_TYPE_DECIMAL64;
-    aggTypes[1] = OMNI_VEC_TYPE_DECIMAL64;
+    groupTypes[0] = OMNI_VEC_TYPE_DATE32;
+    groupTypes[1] = OMNI_VEC_TYPE_DATE32;
+    aggTypes[0] = OMNI_VEC_TYPE_DATE32;
+    aggTypes[1] = OMNI_VEC_TYPE_DATE32;
     input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
-    c0 = {0, Decimal64VecType::Instance(), Decimal64VecType::Instance()};
-    c1 = {1, Decimal64VecType::Instance(), Decimal64VecType::Instance()};
-    c2 = {2, Decimal64VecType::Instance(), Decimal64VecType::Instance()};
-    c3 = {3, Decimal64VecType::Instance(), Decimal64VecType::Instance()};
+    c0 = {0, Date32VecType::Instance(), Date32VecType::Instance()};
+    c1 = {1, Date32VecType::Instance(), Date32VecType::Instance()};
+    c2 = {2, Date32VecType::Instance(), Date32VecType::Instance()};
+    c3 = {3, Date32VecType::Instance(), Date32VecType::Instance()};
     groupByColumns = {c0, c1};
     aggregateColumns = {c2, c3};
-    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DECIMAL64, OMNI_VEC_TYPE_DECIMAL64, INPUT_MODE, OUTPUT_MODE));
-    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DECIMAL64, OMNI_VEC_TYPE_DECIMAL64, INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DATE32, OMNI_VEC_TYPE_DATE32, INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DATE32, OMNI_VEC_TYPE_DATE32, INPUT_MODE, OUTPUT_MODE));
     groupBy = new HashAggregationOperator(groupByColumns, aggregateColumns, std::move(aggs), true, false);
     groupBy->Init();
 
@@ -1410,19 +1410,19 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     result.clear();
     delete[] input;
 
-    groupTypes[0] = OMNI_VEC_TYPE_DATE32;
-    groupTypes[1] = OMNI_VEC_TYPE_DATE32;
-    aggTypes[0] = OMNI_VEC_TYPE_DATE32;
-    aggTypes[1] = OMNI_VEC_TYPE_DATE32;
+    groupTypes[0] = OMNI_VEC_TYPE_LONG;
+    groupTypes[1] = OMNI_VEC_TYPE_INT;
+    aggTypes[0] = OMNI_VEC_TYPE_DECIMAL64;
+    aggTypes[1] = OMNI_VEC_TYPE_INT;
     input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
-    c0 = {0, Date32VecType::Instance(), Date32VecType::Instance()};
-    c1 = {1, Date32VecType::Instance(), Date32VecType::Instance()};
-    c2 = {2, Date32VecType::Instance(), Date32VecType::Instance()};
-    c3 = {3, Date32VecType::Instance(), Date32VecType::Instance()};
-    groupByColumns = {c0, c1};
-    aggregateColumns = {c2, c3};
-    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DATE32, OMNI_VEC_TYPE_DATE32, INPUT_MODE, OUTPUT_MODE));
-    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DATE32, OMNI_VEC_TYPE_DATE32, INPUT_MODE, OUTPUT_MODE));
+    c0 = {0, LongVecType::Instance(), LongVecType::Instance()};
+    c1 = {1, IntVecType::Instance(), LongVecType::Instance()};
+    c2 = {2, Decimal64VecType::Instance(), Decimal128VecType::Instance()};
+    c3 = {3, IntVecType::Instance(), LongVecType::Instance()};
+    groupByColumns = {c1, c0};
+    aggregateColumns = {c3, c2};
+    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_DECIMAL64, OMNI_VEC_TYPE_DECIMAL128, INPUT_MODE, OUTPUT_MODE));
+    aggs.push_back(std::make_unique<SumAggregator>(OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, INPUT_MODE, OUTPUT_MODE));
     groupBy = new HashAggregationOperator(groupByColumns, aggregateColumns, std::move(aggs), true, false);
     groupBy->Init();
 

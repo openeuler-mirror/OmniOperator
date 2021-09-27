@@ -25,10 +25,24 @@ void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_
     groupSlot.val = val.release();
 }
 
+void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset)
+{
+    auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
+    auto val = std::make_unique<Decimal128>(curVal);
+    groupBySlot.val = val.release();
+}
+
 template <typename V, typename D>
 void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
 {
     *(static_cast<D *>(groupSlot.val)) += (static_cast<V *>(colPtr))->GetValue(offset);
+}
+
+void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+{
+    auto val = (static_cast<LongVector *>(colPtr))->GetValue(offset);
+    auto v = std::make_unique<Decimal128>(val);
+    *(static_cast<Decimal128 *>(groupSlot.val)) += *v;
 }
 
 template <typename V, typename D>
@@ -39,10 +53,24 @@ void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint3
     groupSlot = { val.release() };
 }
 
+void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+{
+    auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
+    auto val = std::make_unique<Decimal128>(curVal);
+    groupSlot = { val.release() };
+}
+
 template <typename V, typename D>
 void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
 {
     *(static_cast<D *>(groupSlot.val)) += (static_cast<V *>(colPtr))->GetValue(offset);
+}
+
+void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+{
+    auto val = (static_cast<LongVector *>(colPtr))->GetValue(offset);
+    auto v = std::make_unique<Decimal128>(val);
+    *(static_cast<Decimal128 *>(groupSlot.val)) += *v;
 }
 
 template <typename V, typename D>

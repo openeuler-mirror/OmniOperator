@@ -13,26 +13,25 @@ const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 
 #ifdef DEBUG_OPERATOR
 #define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types) \
-    do {                                                                                               \
-        int32_t k = 0;                                                                                 \
-        for (int32_t i = 0; i < group_by_num; ++i, ++k) {                                              \
+    do {                                                                                   \
+        for (int32_t i = 0; i < group_by_num; ++i) {                                              \
             auto vector = vector_batch->GetVector(group_by_idx[i]);                                    \
             auto typeId = vector->GetTypeId();                                                   \
             if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                  \
                 typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryType().GetId();         \
             }                                                                                          \
-            if (typeId != operator_types[k]) {                                                         \
-                LogWarn("vector type %d != operator column type %d!", typeId, operator_types[k]);      \
+            if (typeId != operator_types[group_by_idx[i]]) {                                           \
+                LogWarn("Group by vector type %d != operator column type %d!", typeId, operator_types[group_by_idx[i]]);  \
             }                                                                                          \
         }                                                                                              \
-        for (int32_t i = 0; i < agg_num; ++i, ++k) {                                                   \
+        for (int32_t i = 0; i < agg_num; ++i) {                                                   \
             auto vector = vector_batch->GetVector(agg_idx[i]);                                         \
             auto typeId = vector->GetTypeId();                                                   \
             if (typeId == OMNI_VEC_TYPE_DICTIONARY) {                                                  \
                 typeId = static_cast<DictionaryVector *>(vector)->ExtractDictionaryType().GetId();         \
             }                                                                                          \
-            if (typeId != operator_types[k]) {                                                         \
-                LogWarn("vector type %d != operator column type %d!", typeId, operator_types[k]);      \
+            if (typeId != operator_types[agg_idx[i]]) {                                                 \
+                LogWarn("Aggregate vector type %d != operator column type %d!", typeId, operator_types[agg_idx[i]]);  \
             }                                                                                          \
         }                                                                                              \
     } while (0)

@@ -118,12 +118,16 @@ using AggFunctionByType = struct {
 
 template<typename V, typename D>
 void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
 void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
@@ -181,8 +185,8 @@ public:
     static constexpr AggFunctionByType SUM_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
         {   OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
         {
-            OMNI_VEC_TYPE_INT, SumInsertImpl<IntVector, int32_t>, SumProcessGroupImpl<IntVector, int32_t>,
-            SumInitiateImpl<IntVector, int32_t>, SumProcessNonGroupImpl<IntVector, int32_t>
+            OMNI_VEC_TYPE_INT, SumInsertImpl<IntVector, int64_t>, SumProcessGroupImpl<IntVector, int64_t>,
+            SumInitiateImpl<IntVector, int64_t>, SumProcessNonGroupImpl<IntVector, int64_t>
         },
         {
             OMNI_VEC_TYPE_LONG, SumInsertImpl<LongVector, int64_t>, SumProcessGroupImpl<LongVector, int64_t>,
@@ -195,8 +199,8 @@ public:
         {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
         {
-            OMNI_VEC_TYPE_DECIMAL64, SumInsertImpl<LongVector, int64_t>, SumProcessGroupImpl<LongVector, int64_t>,
-            SumInitiateImpl<LongVector, int64_t>, SumProcessNonGroupImpl<LongVector, int64_t>
+            OMNI_VEC_TYPE_DECIMAL64, SumInsertDecimalImpl, SumProcessGroupDecimalImpl,
+            SumInitiateDecimalImpl, SumProcessNonGroupDecimalImpl
         },
         {
             OMNI_VEC_TYPE_DECIMAL128, SumInsertImpl<Decimal128Vector, Decimal128>,

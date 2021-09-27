@@ -463,11 +463,17 @@ void ALWAYS_INLINE HashDecimalFunc(Vector *vector, const uint32_t rowCount, cons
 
 template <typename V, typename D> void *ALWAYS_INLINE DuplicateKeyValueImpl(Vector *vector, const uint32_t offset)
 {
+    if (vector->IsValueNull(offset)) {
+        return nullptr;
+    }
     return std::make_unique<D>(static_cast<V *>(vector)->GetValue(offset)).release();
 }
 
 void *ALWAYS_INLINE DuplicateVarcharKeyValue(Vector *vector, const uint32_t offset)
 {
+    if (vector->IsValueNull(offset)) {
+        return nullptr;
+    }
     uint8_t *data = nullptr;
     int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &data));
     return reinterpret_cast<void *>(new std::string(reinterpret_cast<char *>(data), 0, valLen));
