@@ -1954,3 +1954,56 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     delete op;
     delete factory;
 }
+
+TEST(FilterTest, FilterStringWithNull) {
+    vector<string*> strings;
+
+    const int32_t numCols = 1;
+    int32_t* inputTypes = new int32_t[numCols];
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+
+    const int32_t numRows = 2;
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VarcharVector *col0 = new VarcharVector(vecAllocator, 1024, numRows);
+    std::string str = "hello";
+    col0->SetValue(0, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+    col0->SetValueNull(1);
+
+    const int32_t projectCount = 1;
+    int32_t projectIndices[projectCount] = {0};
+
+    VectorBatch *batch = new VectorBatch(numCols, numRows);
+    batch->NewVectors(vecAllocator, inputTypes);
+    batch->SetVector(0, col0);
+
+
+    std::string expr = "$operator$EQUAL:boolean(#0, 'hello')";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
+                                                                   inputTypes,
+                                                                   numCols,
+                                                                   projectIndices,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(batch);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    EXPECT_EQ(numReturned, 1);
+
+    for (int32_t i = 0; i < numReturned; i++) {
+        VarcharVector *vcVec = ((VarcharVector*) ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+        std::string actualStr(actualChar, actualChar + len);
+        EXPECT_EQ(actualStr, "hello");
+    }
+
+
+    VectorHelper::FreeVecBatch(batch);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete op;
+    delete factory;
+}
