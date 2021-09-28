@@ -25,7 +25,6 @@ import static io.prestosql.operator.PipelineExecutionStrategy.GROUPED_EXECUTION;
 import static io.prestosql.operator.PipelineExecutionStrategy.UNGROUPED_EXECUTION;
 import static io.prestosql.operator.ReuseExchangeOperator.STRATEGY.REUSE_STRATEGY_DEFAULT;
 import static io.prestosql.operator.WindowFunctionDefinition.window;
-import static io.prestosql.spi.StandardErrorCode.COMPILER_ERROR;
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.sql.planner.SystemPartitioningHandle.COORDINATOR_DISTRIBUTION;
 import static io.prestosql.sql.planner.SystemPartitioningHandle.FIXED_ARBITRARY_DISTRIBUTION;
@@ -86,6 +85,7 @@ import io.prestosql.operator.StreamingAggregationOperator;
 import io.prestosql.operator.TableScanOperator;
 import io.prestosql.operator.TaskContext;
 import io.prestosql.operator.TaskOutputOperator;
+import io.prestosql.operator.ValuesOperator;
 import io.prestosql.operator.WindowFunctionDefinition;
 import io.prestosql.operator.aggregation.AccumulatorFactory;
 import io.prestosql.operator.exchange.LocalExchange;
@@ -97,7 +97,6 @@ import io.prestosql.operator.project.PageProcessor;
 import io.prestosql.operator.window.FrameInfo;
 import io.prestosql.operator.window.WindowFunctionSupplier;
 import io.prestosql.spi.Page;
-import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.SortOrder;
 import io.prestosql.spi.connector.ColumnHandle;
@@ -146,7 +145,6 @@ import io.prestosql.sql.tree.Expression;
 import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.statestore.StateStoreProvider;
 import io.prestosql.statestore.listener.StateStoreListenerManager;
-
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
 import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
@@ -158,16 +156,16 @@ import nova.hetu.olk.operator.PartitionedOutputOmniOperator;
 import nova.hetu.olk.operator.TopNOmniOperator;
 import nova.hetu.olk.operator.WindowOmniOperator;
 import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
+import nova.hetu.olk.operator.filterandproject.OmniPageProcessor;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 import nova.hetu.shuffle.PageProducer;
-import nova.hetu.omniruntime.operator.OmniOperatorFactory;
-import nova.hetu.olk.operator.filterandproject.OmniPageProcessor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -347,7 +345,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
 
         TaskId taskId = taskContext.getTaskId();
-        VecAllocator vecAllocator = VecAllocatorFactory.create(taskId.getFullId(),  ()-> {
+        VecAllocator vecAllocator = VecAllocatorFactory.create(taskId.getFullId(), () -> {
             taskContext.getTaskStateMachine().addStateChangeListenerToTail(state -> {
                 if (state.isDone()) {
                     VecAllocatorFactory.delete(taskId.getFullId());
@@ -434,28 +432,34 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         } catch (Exception e) {
             return null;
         }
-        for (OperatorFactory operatorFactory : physicalOperation.getOperatorFactories()) {
-            // if the operator is source or output operator then continue
-            if (operatorFactory instanceof TableScanOperator.TableScanOperatorFactory
-                || operatorFactory instanceof ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory
-                || operatorFactory instanceof FilterAndProjectOperator.FilterAndProjectOperatorFactory
-                || operatorFactory instanceof ExchangeOperator.ExchangeOperatorFactory
-                || operatorFactory instanceof LocalExchangeSinkOperator.LocalExchangeSinkOperatorFactory
-                || operatorFactory instanceof LocalExchangeSourceOperator.LocalExchangeSourceOperatorFactory
-                || operatorFactory instanceof TaskOutputOperator.TaskOutputOperatorFactory) {
-                continue;
-            }
 
-            // if there is a operator not support by OmniRuntime, then fall back
-            if (!operatorFactory.isExtensionOperatorFactory()) {
-                log.warn("There is a operator not support by OmniRuntime: %s", operatorFactory.toString());
-                return null;
-            }
+        for (DriverFactory driverFactory : context.getDriverFactories()) {
+            for (OperatorFactory operatorFactory : driverFactory.getOperatorFactories()) {
+                // if the operator is source or output operator then continue
+                if (operatorFactory instanceof TableScanOperator.TableScanOperatorFactory
+                    || operatorFactory instanceof ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory
+                    || operatorFactory instanceof FilterAndProjectOperator.FilterAndProjectOperatorFactory
+                    || operatorFactory instanceof ExchangeOperator.ExchangeOperatorFactory
+                    || operatorFactory instanceof LocalExchangeSinkOperator.LocalExchangeSinkOperatorFactory
+                    || operatorFactory instanceof LocalExchangeSourceOperator.LocalExchangeSourceOperatorFactory
+                    || operatorFactory instanceof TaskOutputOperator.TaskOutputOperatorFactory
+                    || operatorFactory instanceof DynamicFilterSourceOperator.DynamicFilterSourceOperatorFactory
+                    || operatorFactory instanceof ValuesOperator.ValuesOperatorFactory) {
+                    continue;
+                }
 
-            // if there is a data type not support by OmniRuntime, then fall back
-            if (notSupportTypes(operatorFactory.getSourceTypes())) {
-                log.warn("There is a data type not support by OmniRuntime: %s", operatorFactory.getSourceTypes().toString());
-                return null;
+                // if there is a operator not support by OmniRuntime, then fall back
+                if (!operatorFactory.isExtensionOperatorFactory()) {
+                    log.warn("There is a operator not support by OmniRuntime: %s", operatorFactory.toString());
+                    return null;
+                }
+
+                // if there is a data type not support by OmniRuntime, then fall back
+                if (notSupportTypes(operatorFactory.getSourceTypes())) {
+                    log.warn("There is a data type not support by OmniRuntime: %s",
+                        operatorFactory.getSourceTypes().toString());
+                    return null;
+                }
             }
         }
 
@@ -481,7 +485,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             .map(LocalPlannerAware.class::cast)
             .forEach(LocalPlannerAware::localPlannerComplete);
 
-        log.info("create the omni local execution plan successful");
+        log.debug("create the omni local execution plan successful!");
         return new LocalExecutionPlan(context.getDriverFactories(), partitionedSourceOrder, stageExecutionDescriptor);
     }
 
@@ -659,10 +663,10 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             if (columns != null) {
                 // TODO: Need Support RecordCursor Filter And Project Omni Codegen
 
-                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler
-                    (metadata, pageFunctionCompiler);
-                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor
-                    (translatedFilter, translatedProjections, inputTypes, context.getTaskId());
+                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler(metadata,
+                    pageFunctionCompiler);
+                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor(
+                    translatedFilter, translatedProjections, inputTypes, context.getTaskId());
                 OmniPageProcessor omniPageProcessor = oPageProcessor.get();
                 OmniOperatorFactory omniOperatorFactory = omniPageProcessor.getProjection().getFactory();
                 if (omniOperatorFactory.getNativeOperatorFactory() == 0) {
@@ -674,28 +678,28 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     * 1024; // convert from MB to bytes
 
                 Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
-                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                    OptionalInt.empty(), inputTypes, context.getTaskId());
-                Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(
-                    translatedFilter, translatedProjections, sourceNode.getId());
+                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
+                    inputTypes, context.getTaskId());
+                Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(translatedFilter,
+                    translatedProjections, sourceNode.getId());
                 SourceOperatorFactory operatorFactory
                     = new ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory(context.getSession(),
                     context.getNextOperatorId(), planNodeId, sourceNode, pageSourceProvider, cursorProcessor,
                     pageProcessor, table, columns, dynamicFilter, getTypes(projections, expressionTypes),
                     stateStoreProvider, metadata, dynamicFilterCacheManager,
-                    getFilterAndProjectMinOutputPageSize(session),
-                    getFilterAndProjectMinOutputPageRowCount(session), strategy, reuseTableScanMappingId,
-                    spillEnabled, Optional.of(spillerFactory), spillerThreshold, consumerTableScanNodeCount);
+                    getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session),
+                    strategy, reuseTableScanMappingId, spillEnabled, Optional.of(spillerFactory), spillerThreshold,
+                    consumerTableScanNodeCount);
 
                 return new PhysicalOperation(operatorFactory, outputMappings, context,
                     stageExecutionDescriptor.isScanGroupedExecution(sourceNode.getId())
                         ? GROUPED_EXECUTION
                         : UNGROUPED_EXECUTION);
             } else {
-                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler
-                    (metadata, pageFunctionCompiler);
-                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor
-                    (translatedFilter, translatedProjections, inputTypes, context.getTaskId());
+                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler(metadata,
+                    pageFunctionCompiler);
+                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor(
+                    translatedFilter, translatedProjections, inputTypes, context.getTaskId());
                 OmniPageProcessor omniPageProcessor = oPageProcessor.get();
                 OmniOperatorFactory omniOperatorFactory = omniPageProcessor.getProjection().getFactory();
                 if (omniOperatorFactory.getNativeOperatorFactory() == 0) {
@@ -703,12 +707,11 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 }
 
                 Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
-                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                    OptionalInt.empty(), inputTypes, context.getTaskId());
+                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
+                    inputTypes, context.getTaskId());
                 OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
                     context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
-                    getFilterAndProjectMinOutputPageSize(session),
-                    getFilterAndProjectMinOutputPageRowCount(session));
+                    getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session));
 
                 return new PhysicalOperation(operatorFactory, outputMappings, context, source);
             }
@@ -834,7 +837,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             }
 
             BlockEncodingSerde blockEncodingSerde = new InternalOmniBlockEncodingSerde(metadata, context.getTaskId());
-            log.info("using OmniInternalBlockEncodingSerde!!!");
+            log.debug("using OmniInternalBlockEncodingSerde!");
             OperatorFactory operatorFactory = new ExchangeOperator.ExchangeOperatorFactory(context.getNextOperatorId(),
                 node.getId(), exchangeClientSupplier,
                 new PagesSerdeFactory(blockEncodingSerde, isExchangeCompressionEnabled(session)));
