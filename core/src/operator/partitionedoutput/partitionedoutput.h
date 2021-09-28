@@ -213,7 +213,7 @@ private:
     int32_t hashChannelsCount;
     vector<VectorBatch *> vectorBatches = {};
     map<int, vector<int>> partitionedMap = {};
-    void BuildVecBatch(vector <VecType> &vecTypes, int32_t vecCount, int32_t rowCount);
+    void BuildVecBatch(int32_t vecCount, int32_t rowCount);
     int32_t GetPartition(VectorBatch *vecBatch, int32_t startVecIndex, int32_t rowIndex);
     void MergeVectorBatch(VectorBatch *vecBatch, int32_t vecCount);
 };
