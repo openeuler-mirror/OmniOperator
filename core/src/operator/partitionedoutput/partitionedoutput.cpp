@@ -177,15 +177,10 @@ void ALWAYS_INLINE Insert(Vector *origintVector, int32_t originRowIndex, Vector 
 
 void PartitionedOutputOperator::MergeVectorBatch(VectorBatch *vecBatch, int32_t vecCount)
 {
-    vector<VecType> outputVecTypes;
-    const VecType *inputVecTypes = vecBatch->GetVectorTypes();
-    for (int i = 0; i < sourceTypeCount; ++i) {
-        outputVecTypes.push_back(inputVecTypes[i]);
-    }
     for (int i = 0; i < partitionedMap.size(); ++i) {
         vector<int> rowList = partitionedMap[i];
         int32_t currentVecBatchRowCount = rowList.size();
-        BuildVecBatch(outputVecTypes, vecCount, currentVecBatchRowCount);
+        BuildVecBatch(vecCount, currentVecBatchRowCount);
         VectorBatch *vectorBatch = vectorBatches[i];
         for (int vecIdx = 0; vecIdx < vecCount; ++vecIdx) {
             for (int j = 0; j < currentVecBatchRowCount; ++j) {
@@ -302,10 +297,10 @@ int32_t PartitionedOutputOperator::GetPartition(VectorBatch *vecBatch, int32_t s
     return partition;
 }
 
-void PartitionedOutputOperator::BuildVecBatch(vector<VecType> &vecTypes, int32_t vecCount, int32_t rowCount)
+void PartitionedOutputOperator::BuildVecBatch(int32_t vecCount, int32_t rowCount)
 {
     VectorBatch *vectorBatch = std::make_unique<VectorBatch>(vecCount, rowCount).release();
-    vectorBatch->NewVectors(this->vecAllocator, vecTypes);
+    vectorBatch->NewVectors(this->vecAllocator, sourceTypes.Get());
     vectorBatches.push_back(vectorBatch);
 }
 
