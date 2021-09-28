@@ -359,6 +359,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
         List<Symbol> outputLayout = partitioningScheme.getOutputLayout();
 
+        if (outputBuffer instanceof LazyOutputBuffer
+            && ((LazyOutputBuffer) outputBuffer).getDelegate().getSerde() != null) {
+            ((LazyOutputBuffer) outputBuffer).getDelegate()
+                .getSerde()
+                .setBlockEncodingSerde(new InternalOmniBlockEncodingSerde(metadata, taskId));
+        }
+
         if (partitioningScheme.getPartitioning().getHandle().equals(FIXED_BROADCAST_DISTRIBUTION)
             || partitioningScheme.getPartitioning().getHandle().equals(FIXED_ARBITRARY_DISTRIBUTION)
             || partitioningScheme.getPartitioning().getHandle().equals(SCALED_WRITER_DISTRIBUTION) || partitioningScheme
