@@ -56,12 +56,11 @@ void BooleanVector::Append(Vector *other, int positionOffset, int length)
     if (positionOffset + length > size) {
         return;
     }
-    uint8_t *destination = reinterpret_cast<uint8_t *>(this->GetValues()) + positionOffset;
-    uint8_t *src = (other->GetPositionOffset()) + (reinterpret_cast<uint8_t *>(other->GetValues()));
-    errno_t ret = memcpy_s(destination, capacityInBytes, src, length);
-    if (ret != EOK) {
-        std::cerr << "append failed in boolean vector." << std::endl;
-    }
+    int32_t otherPositionOffset = other->GetPositionOffset();
+    bool *otherValues = static_cast<bool *>(other->GetValues()) + otherPositionOffset;
+    bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
+    SetValues(positionOffset, otherValues, length);
+    SetValueNulls(positionOffset, otherValueNulls, length);
 }
 } // namespace vec
 } // namespace omniruntime
