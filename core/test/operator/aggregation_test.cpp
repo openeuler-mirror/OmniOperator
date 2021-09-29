@@ -619,8 +619,6 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
         std::cerr << "Building input data failed!" << std::endl;
         return;
     }
-    std::cout<<"input:"<<std::endl;
-    omniruntime::vec::VectorHelper::PrintVecBatch(input[0]);
 
     input[0]->GetVector(2)->SetValueNull(0);
     input[0]->GetVector(2)->SetValueNull(1);
@@ -631,9 +629,6 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     input[0]->GetVector(3)->SetValueNull(1);
     input[0]->GetVector(4)->SetValueNull(1);
     input[0]->GetVector(5)->SetValueNull(1);
-
-    std::cout<<"input:"<<std::endl;
-    omniruntime::vec::VectorHelper::PrintVecBatch(input[0]);
 
     // First stage
     ColumnIndex c0 = {0, LongVecType::Instance(), LongVecType::Instance()};
