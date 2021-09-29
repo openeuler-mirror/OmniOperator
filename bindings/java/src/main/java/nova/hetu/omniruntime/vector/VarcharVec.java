@@ -12,10 +12,6 @@ import nova.hetu.omniruntime.type.VarcharVecType;
  * @since 2021-07-17
  */
 public class VarcharVec extends VariableWidthVec {
-    private static final byte[] EMPTY_BYTE_ARRAY = new byte[] {};
-
-    private int lastOffsetPosition = -1;
-
     public VarcharVec(int capacityInBytes, int size) {
         super(capacityInBytes, size, VarcharVecType.VARCHAR);
     }
@@ -118,14 +114,6 @@ public class VarcharVec extends VariableWidthVec {
             newOffsets[i] = srcOffsets[offsetIndex + i] - srcOffsets[offsetIndex] + startOffset;
         }
         return newOffsets;
-    }
-
-    private void fillSlots(int index) {
-        for (int i = lastOffsetPosition + 1; i < index; i++) {
-            int startOffset = getValueOffset(i);
-            setValueOffset(i + 1, startOffset);
-        }
-        lastOffsetPosition = index - 1;
     }
 
     private void setData(int offsetInBytes, byte[] data, int start, int length) {

@@ -111,8 +111,6 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
-    void SetValueNulls(int startIndex, bool *nulls, int length);
-
     void SetValueNullBitMap(int startIndex);
 
     int GetValueOffset(int index)
@@ -139,6 +137,8 @@ protected:
 
     // this method does not apply for memory for chunk,it is mainly used for dictionary vector or other vector
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset);
+
+    void SetValueNulls(int startIndex, bool *nulls, int length);
 
     void *valuesAddress = nullptr;
     void *valueNullsAddress = nullptr;

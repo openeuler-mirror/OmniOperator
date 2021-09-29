@@ -141,8 +141,8 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             VariableWidthVec variableWidthVec = (VariableWidthVec) compactVec;
             // reset byteBuffer position, avoid serializing the samge vector,
             // the serialized data length is 0.
-            variableWidthVec.getOffsets().position(0);
-            protoVecBuilder.setOffsets(ByteString.copyFrom((variableWidthVec).getOffsets()));
+            variableWidthVec.getOffsetsBuf().position(0);
+            protoVecBuilder.setOffsets(ByteString.copyFrom((variableWidthVec).getOffsetsBuf()));
         }
 
         // reset byteBuffer position, avoid serializing the samge vector,

@@ -48,10 +48,6 @@ private:
     void GetData(int index, uint8_t *dst, int start, int length);
 
     void SetData(int index, const uint8_t *data, int start, int length);
-
-    void FillSlots(int index);
-
-    int lastOffsetPosition = -1;
 };
 }
 }

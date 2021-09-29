@@ -40,6 +40,11 @@ public abstract class Vec implements Closeable {
     protected final OmniBuf valuesBuf;
 
     /**
+     * The nulls of vector, it is a bitmap.
+     */
+    protected final OmniBuf nullsBuf;
+
+    /**
      * The specialized vector allocator.
      */
     private final VecAllocator allocator;
@@ -53,11 +58,6 @@ public abstract class Vec implements Closeable {
      * The {@link VecType} of this vector
      */
     private final VecType type;
-
-    /**
-     * The nulls of vector, it is a bitmap.
-     */
-    private final OmniBuf nullsBuf;
 
     /**
      * The capacity in bytes of this vector.

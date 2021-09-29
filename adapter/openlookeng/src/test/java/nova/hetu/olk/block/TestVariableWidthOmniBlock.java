@@ -19,6 +19,7 @@ import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
@@ -84,6 +85,37 @@ public class TestVariableWidthOmniBlock
         }
         newBlock1.close();
         copyRegionBlock.close();
+    }
+
+    @Test
+    public void testVarcharVecWithLastValueIsNull()
+    {
+        int position = 5;
+        String[] strs = new String[]{"alice", "bob", "charlie"};
+        StringBuilder builder = new StringBuilder();
+        for (String data : strs) {
+            builder.append(data);
+        }
+        int[] offset = new int[] {0, 5, 8, 15};
+        VarcharVec values = new VarcharVec(1024, position);
+        values.put(0, builder.toString().getBytes(StandardCharsets.UTF_8), 0, offset, 0, 3);
+        values.setNull(3);
+        values.setNull(4);
+        VariableWidthOmniBlock block = new VariableWidthOmniBlock(position, values);
+        int totalLen = 0;
+        for (int i = 0; i < position; i++) {
+            totalLen += block.getSliceLength(i);
+        }
+        assertEquals(totalLen, 15);
+        totalLen = 0;
+        VariableWidthOmniBlock block1 = new VariableWidthOmniBlock(3, values.slice(2, 5));
+        for (int i = 0; i < 3; i++) {
+            totalLen += block1.getSliceLength(i);
+        }
+        assertEquals(totalLen, 7);
+
+        block.close();
+        block1.close();
     }
 
     @Test

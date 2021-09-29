@@ -250,7 +250,6 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         projectedVec = ProjectHelperFixedWidth(
             *vecBatch, outVec.release(), numSelectedRows, selectedRows, *vecAllocator, newNullValues);
     }
-    projectedVec->SetValueNulls(0, newNullValues, vecSize);
     return projectedVec;
 }
 
@@ -282,6 +281,10 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 
     auto *outVarcharVec = static_cast<VarcharVector *>(outVec);
     for (int i = 0; i < numSelectedRows; i++) {
+        if (newNullValues[i]) {
+            outVarcharVec->SetValueNull(i);
+            continue;
+        }
         auto charArr = reinterpret_cast<uint8_t *>(ov[i]);
 
         int j = 0;
@@ -340,6 +343,13 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     data.clear();
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;
+    }
+
+    // set null
+    for (int i = 0; i < numSelectedRows; i++) {
+        if (newNullValues[i]) {
+            outVec->SetValueNull(i);
+        }
     }
     return outVec;
 }
