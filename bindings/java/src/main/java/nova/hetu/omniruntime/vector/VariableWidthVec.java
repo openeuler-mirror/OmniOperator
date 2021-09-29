@@ -20,6 +20,11 @@ public abstract class VariableWidthVec extends Vec {
      */
     protected  OmniBuf offsetsBuf;
 
+    /**
+     * last set index
+     */
+    protected int lastOffsetPosition = -1;
+
     public VariableWidthVec(int capacityInBytes, int size, VecType type) {
         super(capacityInBytes, size, type);
         this.offsetsBuf = OmniBufFactory.create(
@@ -135,7 +140,7 @@ public abstract class VariableWidthVec extends Vec {
      *
      * @return offsets byte buffer
      */
-    public ByteBuffer getOffsets() {
+    public ByteBuffer getOffsetsBuf() {
         return offsetsBuf.getBuffer();
     }
 
@@ -146,5 +151,25 @@ public abstract class VariableWidthVec extends Vec {
      */
     public void setOffsetsBuf(byte[] buf) {
         offsetsBuf.setBytes(0, buf, 0, buf.length);
+    }
+
+    @Override
+    public void setNull(int index) {
+        fillSlots(index);
+        nullsBuf.setByte(index + offset, (byte) 1);
+        setValueOffset(index + 1, getValueOffset(index));
+        lastOffsetPosition = index;
+    }
+
+    /**
+     * fill offset
+     *
+     * @param index index of want to set
+     */
+    protected void fillSlots(int index) {
+        for (int i = lastOffsetPosition + 1; i < index; i++) {
+            setValueOffset(i + 1, getValueOffset(i));
+        }
+        lastOffsetPosition = index - 1;
     }
 }

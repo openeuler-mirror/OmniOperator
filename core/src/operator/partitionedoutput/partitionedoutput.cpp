@@ -193,7 +193,11 @@ void PartitionedOutputOperator::MergeVectorBatch(VectorBatch *vecBatch, int32_t 
                 Vector *newVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(vecIdx), newRowIndex,
                                                                        originalNewRowIndex);
                 if (oldVector->IsValueNull(originalOldRowIndex)) {
-                    newVector->SetValueNull(originalNewRowIndex);
+                    if (newVector->GetTypeId() == OMNI_VEC_TYPE_VARCHAR) {
+                        static_cast<VarcharVector *>(newVector)->SetValueNull(originalNewRowIndex);
+                    } else {
+                        newVector->SetValueNull(originalNewRowIndex);
+                    }
                     continue;
                 }
                 Insert(oldVector, originalOldRowIndex, newVector, originalNewRowIndex);

@@ -98,15 +98,6 @@ void VarcharVector::SetData(int index, const uint8_t *value, int start, int data
     data = nullptr;
 }
 
-void VarcharVector::FillSlots(int index)
-{
-    for (int i = lastOffsetPosition + 1; i < index; i++) {
-        int startOffset = GetValueOffset(i);
-        SetValueOffset(i + 1, startOffset);
-    }
-    lastOffsetPosition = index - 1;
-}
-
 void VarcharVector::Append(Vector *other, int positionOffset, int length)
 {
     if (positionOffset + length > size) {
