@@ -27,8 +27,12 @@ RowProjection::~RowProjection()
     this->codegen.reset();
 }
 
+// Return nullptr if expression is unsupported
 RowProjFunc RowProjection::Create(std::vector<DataType> &inputTypes)
 {
+    if (this->expression == nullptr) {
+        return nullptr;
+    }
     this->codegen = std::make_unique<ProjectionCodeGen>("single_row_project", *this->expression, inputTypes, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fPtr;
@@ -36,14 +40,19 @@ RowProjFunc RowProjection::Create(std::vector<DataType> &inputTypes)
     return *castedRef;
 }
 
+// Return INVALIDDATAD if expression is unsupported
 DataType RowProjection::GetReturnType()
 {
+    if (this->expression == nullptr) {
+        return INVALIDDATAD;
+    }
     return this->expression->GetExprDataType();
 }
 
 bool RowProjection::IsColumnProjection()
 {
-    return this->expression->GetType() == ExprType::DATA_E && static_cast<DataExpr *>(this->expression)->isColumn;
+    return this->expression != nullptr && this->expression->GetType() == ExprType::DATA_E &&
+        static_cast<DataExpr *>(this->expression)->isColumn;
 }
 
 int RowProjection::GetIndexIfColumnProjection()

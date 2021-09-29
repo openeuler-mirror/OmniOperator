@@ -24,12 +24,13 @@ using RowFilterFunc = bool (*)(int64_t *, bool *, int32_t);
 
 class RowFilter {
 public:
-    RowFilter();
+    RowFilter(std::string &expression, std::vector<expressions::DataType> &inputType);
     ~RowFilter();
-    RowFilterFunc CreateFilter(std::string expression, std::vector<expressions::DataType> inputTypes);
+    RowFilterFunc Create(std::vector<expressions::DataType> &inputTypes);
 
 private:
     std::unique_ptr<FilterCodeGen> codegen = nullptr;
+    expressions::Expr *expression;
 };
 
 class Filter {
