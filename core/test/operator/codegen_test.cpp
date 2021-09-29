@@ -240,17 +240,74 @@ TEST(CodeGenTest, RowFilter)
     }
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
-    RowFilter lc;
-
-    RowFilterFunc func = lc.CreateFilter(unparsed, vecTypes);
+    auto filter = new RowFilter(unparsed, vecTypes);
+    EXPECT_FALSE(filter == nullptr);
+    auto filterFunc = filter->Create(vecTypes);
+    EXPECT_FALSE(filter == nullptr);
 
     for (int32_t i = 0; i < numRows; i++) {
-        bool res = func(table, bitmap, i);
+        bool res = filterFunc(table, bitmap, i);
         EXPECT_EQ(res, i % 2 == 0);
     }
 
     delete[] col1;
     delete[] table;
+    delete[] bitmap;
+}
+
+TEST (CodeGenTest, RowFilterString) {
+    DataType types[2] = {DataType::STRINGD, DataType::STRINGD};
+
+    string s1;
+    string s2;
+
+    s1 = "hello world";
+    int64_t v1[1] = {(int64_t) (s1.c_str())};
+    s2 = "world hello";
+    int64_t v2[1] = {(int64_t) (s2.c_str())};
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t) v1;
+    vals[1] = (int64_t) v2;
+    int32_t *selected = new int32_t[1];
+
+    bool *bitmap = new bool[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[i] = false;
+    }
+
+    string testname = "stringTest1";
+    vector<DataType> typeVec = vector<DataType>(types, types + 2);
+
+    std::string expr = "$operator$EQUAL:boolean(substr:varchar(#0, 1, 5), 'hello')";
+    auto filter = new RowFilter(expr, typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    auto filterFunc = filter->Create(typeVec);
+    EXPECT_FALSE(filter == nullptr);
+
+    bool res = filterFunc(vals, bitmap, 0);
+    EXPECT_EQ(res, true);
+    delete filter;
+
+    expr = "$operator$EQUAL:boolean(substr:varchar(#1, 1, 5), 'hello')";
+    filter = new RowFilter(expr, typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    filterFunc = filter->Create(typeVec);
+    EXPECT_FALSE(filter == nullptr);
+
+    res = filterFunc(vals, bitmap, 0);
+    EXPECT_EQ(res, false);
+
+    delete filter;
+    expr = "$operator$EQUAL:boolean(substr:varchar(#0, 1, 5), substr:varchar(#1, 7, 11))";
+    filter = new RowFilter(expr, typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    filterFunc = filter->Create(typeVec);
+    EXPECT_FALSE(filter == nullptr);
+
+    res = filterFunc(vals, bitmap, 0);
+    EXPECT_EQ(res, true);
+
+    delete[] vals;
     delete[] bitmap;
 }
 

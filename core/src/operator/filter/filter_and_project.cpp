@@ -13,16 +13,24 @@ using namespace omniruntime::expressions;
 using namespace std;
 
 using Uint8vec = std::vector<uint8_t>;
-RowFilter::RowFilter() : codegen(nullptr) {}
-
-RowFilter::~RowFilter() {}
-
-RowFilterFunc RowFilter::CreateFilter(std::string expression, std::vector<DataType> inputTypes)
+RowFilter::RowFilter(std::string &expression, std::vector<expressions::DataType> &inputTypes)
+    : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
-    Expr *expr =
-        parser.ParseRowExpression(expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
-    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *expr, inputTypes);
+    this->expression = parser.ParseRowExpression(
+        expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
+}
+
+RowFilter::~RowFilter()
+{
+    delete this->expression;
+    this->codegen.reset();
+}
+
+// Return nullptr if expression is unsupported
+RowFilterFunc RowFilter::Create(std::vector<DataType> &inputTypes)
+{
+    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *this->expression, inputTypes);
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fAddr;
     auto castedRef = static_cast<RowFilterFunc *>(refFunc);
