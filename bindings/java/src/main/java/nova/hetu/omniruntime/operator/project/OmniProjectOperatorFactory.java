@@ -4,38 +4,44 @@
 
 package nova.hetu.omniruntime.operator.project;
 
+import static java.util.Objects.requireNonNull;
+
+import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.type.VecTypeSerializer;
 
+import java.util.Arrays;
 import java.util.Objects;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * The type Omni project operator factory.
  *
  * @since 20210630
  */
-public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectOperatorFactory.Context> {
+public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni project operator factory.
      *
      * @param expressions the expressions
-     * @param inputTypes  the input types
+     * @param inputTypes the input types
      */
     public OmniProjectOperatorFactory(String[] expressions, VecType[] inputTypes) {
-        super(new Context(expressions, inputTypes));
+        super(new FactoryContext(new JitContext(expressions, inputTypes)));
     }
 
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
-            int expressionsLength);
+        int expressionsLength, long jitContext);
+
+    private static native long createProjectJitContext(String inputTypes, int inputLength, Object[] expressions,
+        int expressionsLength);
 
     @Override
-    protected long createNativeOperatorFactory(Context context) {
+    protected long createNativeOperatorFactory(FactoryContext factoryContext) {
+        JitContext context = factoryContext.getJitContext();
         return createProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
-                context.expressions, context.expressions.length);
+            context.expressions, context.expressions.length, factoryContext.getNativeJitContext());
     }
 
     /**
@@ -43,7 +49,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
      *
      * @since 20210630
      */
-    public static class Context extends OmniOperatorFactoryContext {
+    public static class JitContext implements OmniJitContext {
         private final VecType[] inputTypes;
 
         private final String[] expressions;
@@ -52,16 +58,16 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * Instantiates a new Context.
          *
          * @param expressions the expressions
-         * @param inputTypes  the input types
+         * @param inputTypes the input types
          */
-        public Context(String[] expressions, VecType[] inputTypes) {
+        public JitContext(String[] expressions, VecType[] inputTypes) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expressions = requireNonNull(expressions, "Expressions is null.");
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(expressions, inputTypes);
+            return Objects.hash(Arrays.hashCode(expressions), Arrays.hashCode(inputTypes));
         }
 
         @Override
@@ -72,8 +78,33 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            Context that = (Context) obj;
-            return Objects.equals(expressions, that.expressions) && Objects.equals(inputTypes, that.inputTypes);
+            JitContext that = (JitContext) obj;
+            return Arrays.equals(expressions, that.expressions) && Arrays.equals(inputTypes, that.inputTypes);
+        }
+    }
+
+    /**
+     * The type Factory context.
+     *
+     * @since 20210630
+     */
+    public static class FactoryContext extends OmniOperatorFactoryContext<JitContext> {
+        /**
+         * Instantiates a new Context.
+         *
+         * @param jitContext the jit context
+         */
+        public FactoryContext(JitContext jitContext) {
+            super(jitContext);
+        }
+
+        @Override
+        protected long createNativeJitContext(JitContext context) {
+            //todo: use createProjectJitContext when there is a jit optimization in future.
+            // return createProjectJitContext(
+            //     VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
+            //     context.expressions, context.expressions.length);
+            return 0;
         }
     }
 }

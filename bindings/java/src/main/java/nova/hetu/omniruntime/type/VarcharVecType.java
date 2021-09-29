@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * date32 vec type
  *
@@ -34,13 +36,17 @@ public class VarcharVecType extends VecType {
         super(VecTypeId.OMNI_VEC_TYPE_VARCHAR);
         if (width > MAX_WIDTH) {
             this.width = MAX_WIDTH;
-        }
-        else {
+        } else {
             this.width = width;
         }
     }
 
     public int getWidth() {
         return width;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(width, super.getId());
     }
 }

@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.type;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * Decimal64 vec type
  *
@@ -37,7 +39,7 @@ public class Decimal64VecType extends VecType {
      * Construct of decimal64 vector type
      *
      * @param precision the precision of decimal
-     * @param scale     the scale of decimal
+     * @param scale the scale of decimal
      */
     public Decimal64VecType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
         super(VecTypeId.OMNI_VEC_TYPE_DECIMAL64);
@@ -51,5 +53,10 @@ public class Decimal64VecType extends VecType {
 
     public int getScale() {
         return scale;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(precision, scale, super.getId());
     }
 }

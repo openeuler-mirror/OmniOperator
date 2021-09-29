@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.type;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * date32 vec type
@@ -78,5 +79,22 @@ public class VecType implements Serializable {
         MILLISEC,
         MICROSEC,
         NANOSEC
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        VecType vecType = (VecType) o;
+        return id == vecType.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
