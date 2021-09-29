@@ -56,12 +56,12 @@ void DoubleVector::Append(Vector *other, int positionOffset, int length)
     if (positionOffset + length > size) {
         return;
     }
-    uint8_t *destination = (uint8_t *)this->GetValues() + positionOffset * BYTES;
-    uint8_t *src = (other->GetPositionOffset() * BYTES) + (reinterpret_cast<uint8_t *>(other->GetValues()));
-    errno_t ret = memcpy_s(destination, capacityInBytes, src, length * BYTES);
-    if (ret != EOK) {
-        std::cerr << "append failed in double vector." << std::endl;
-    }
+
+    int32_t otherPositionOffset = other->GetPositionOffset();
+    double *otherValues = static_cast<double *>(other->GetValues()) + otherPositionOffset;
+    bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
+    SetValues(positionOffset, otherValues, length);
+    SetValueNulls(positionOffset, otherValueNulls, length);
 }
 }
 }
