@@ -21,6 +21,13 @@ import static io.prestosql.SystemSessionProperties.isExchangeCompressionEnabled;
 import static io.prestosql.SystemSessionProperties.isSpillEnabled;
 import static io.prestosql.SystemSessionProperties.isSpillOrderBy;
 import static io.prestosql.SystemSessionProperties.isSpillReuseExchange;
+import static io.prestosql.SystemSessionProperties.isSpillWindowOperator;
+import static io.prestosql.SystemSessionProperties.getOmniAggEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniPartitionedOutputEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniTopNEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniOrderByEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniJoinEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniWindowEnabled;
 import static io.prestosql.operator.PipelineExecutionStrategy.GROUPED_EXECUTION;
 import static io.prestosql.operator.PipelineExecutionStrategy.UNGROUPED_EXECUTION;
 import static io.prestosql.operator.ReuseExchangeOperator.STRATEGY.REUSE_STRATEGY_DEFAULT;
@@ -91,11 +98,21 @@ import io.prestosql.operator.aggregation.AccumulatorFactory;
 import io.prestosql.operator.exchange.LocalExchange;
 import io.prestosql.operator.exchange.LocalExchangeSinkOperator;
 import io.prestosql.operator.exchange.LocalExchangeSourceOperator;
+import io.prestosql.operator.exchange.LocalMergeSourceOperator;
 import io.prestosql.operator.index.IndexJoinLookupStats;
 import io.prestosql.operator.project.CursorProcessor;
 import io.prestosql.operator.project.PageProcessor;
 import io.prestosql.operator.window.FrameInfo;
 import io.prestosql.operator.window.WindowFunctionSupplier;
+import io.prestosql.operator.TopNOperator;
+import io.prestosql.operator.PartitionedOutputOperator;
+import io.prestosql.operator.AggregationOperator;
+import io.prestosql.operator.MergeOperator;
+import io.prestosql.operator.HashAggregationOperator;
+import io.prestosql.operator.OrderByOperator;
+import io.prestosql.operator.WindowOperator;
+import io.prestosql.operator.HashBuilderOperator;
+
 import io.prestosql.spi.Page;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.SortOrder;
@@ -343,7 +360,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
     public LocalExecutionPlan plan(TaskContext taskContext, PlanNode plan, TypeProvider types,
         PartitioningScheme partitioningScheme, StageExecutionDescriptor stageExecutionDescriptor,
         List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
-
         TaskId taskId = taskContext.getTaskId();
         VecAllocator vecAllocator = VecAllocatorFactory.create(taskId.getFullId(), () -> {
             taskContext.getTaskStateMachine().addStateChangeListenerToTail(state -> {
@@ -417,12 +433,26 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         }
 
         boolean isHashPrecomputed = partitioningScheme.getHashColumn().isPresent();
-        return plan(taskContext, stageExecutionDescriptor, plan, outputLayout, types, partitionedSourceOrder,
-            pageProducers,
-            new PartitionedOutputOmniOperator.PartitionedOutputOmniFactory(partitionFunction, partitionChannels,
-                partitionConstants, partitioningScheme.isReplicateNullsAndAny(), nullChannel, outputBuffer,
-                pageProducers, maxPagePartitioningBufferSize, partitioningScheme.getBucketToPartition().get(),
-                isHashPrecomputed, partitionChannelTypes));
+        if (getOmniPartitionedOutputEnabled(taskContext.getSession())) {
+            return plan(taskContext, stageExecutionDescriptor, plan, outputLayout, types, partitionedSourceOrder,
+                    pageProducers,
+                    new PartitionedOutputOmniOperator.PartitionedOutputOmniFactory(partitionFunction, partitionChannels,
+                            partitionConstants, partitioningScheme.isReplicateNullsAndAny(), nullChannel, outputBuffer,
+                            pageProducers, maxPagePartitioningBufferSize, partitioningScheme.getBucketToPartition().get(),
+                            isHashPrecomputed, partitionChannelTypes));
+        } else {
+            return plan(taskContext, stageExecutionDescriptor, plan, outputLayout, types, partitionedSourceOrder,
+                    pageProducers,
+                    new PartitionedOutputOperator.PartitionedOutputFactory(
+                            partitionFunction,
+                            partitionChannels,
+                            partitionConstants,
+                            partitioningScheme.isReplicateNullsAndAny(),
+                            nullChannel,
+                            outputBuffer,
+                            pageProducers,
+                            maxPagePartitioningBufferSize));
+        }
     }
 
     @Override
@@ -456,11 +486,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 }
 
                 // if there is a operator not support by OmniRuntime, then fall back
-                if (!operatorFactory.isExtensionOperatorFactory()) {
-                    log.warn("There is a operator not support by OmniRuntime: %s", operatorFactory.toString());
-                    return null;
-                }
-
                 // if there is a data type not support by OmniRuntime, then fall back
                 if (notSupportTypes(operatorFactory.getSourceTypes())) {
                     log.warn("There is a data type not support by OmniRuntime: %s",
@@ -542,9 +567,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             }
 
             OperatorFactory operatorFactory;
-
-            operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(context.getNextOperatorId(), node.getId(),
-                source.getTypes(), (int) node.getCount(), sortChannels, sortOrders);
+            if (getOmniTopNEnabled(session)) {
+                operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(context.getNextOperatorId(), node.getId(),
+                        source.getTypes(), (int) node.getCount(), sortChannels, sortOrders);
+            } else {
+                operatorFactory = new TopNOperator.TopNOperatorFactory(context.getNextOperatorId(), node.getId(),
+                        source.getTypes(), (int) node.getCount(), sortChannels, sortOrders);
+            }
 
             return new PhysicalOperation(operatorFactory, source.getLayout(), context, source);
         }
@@ -800,11 +829,21 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             for (int i = 0; i < source.getTypes().size(); i++) {
                 outputChannels.add(i);
             }
-
-            OperatorFactory operatorFactory = new LocalMergeSourceOmniOperator.LocalMergeSourceOmniOperatorFactory(
-                context.getNextOperatorId(), context.getNextOperatorId(), node.getId(), exchangeFactory, types,
-                orderingCompiler, sortChannels, orderings, outputChannels.build());
-
+            OperatorFactory operatorFactory;
+            if (getOmniOrderByEnabled(context.getSession())) {
+                operatorFactory = new LocalMergeSourceOmniOperator.LocalMergeSourceOmniOperatorFactory(
+                    context.getNextOperatorId(), context.getNextOperatorId(), node.getId(), exchangeFactory, types,
+                    orderingCompiler, sortChannels, orderings, outputChannels.build());
+            } else {
+                operatorFactory = new LocalMergeSourceOperator.LocalMergeSourceOperatorFactory(
+                        context.getNextOperatorId(),
+                        node.getId(),
+                        exchangeFactory,
+                        types,
+                        orderingCompiler,
+                        sortChannels,
+                        orderings);
+            }
             return new PhysicalOperation(operatorFactory, layout, context, UNGROUPED_EXECUTION);
         }
 
@@ -831,10 +870,25 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             List<Type> types = getSourceOperatorTypes(node, context.getTypes());
             ImmutableList<Integer> outputChannels = IntStream.range(0, types.size()).boxed().collect(toImmutableList());
 
-            OperatorFactory operatorFactory = new MergeOmniOperator.MergeOmniOperatorFactory(
-                context.getNextOperatorId(), context.getNextOperatorId(), node.getId(), exchangeClientSupplier,
-                new PagesSerdeFactory(metadata.getBlockEncodingSerde(), isExchangeCompressionEnabled(session)),
-                orderingCompiler, types, outputChannels, sortChannels, sortOrder);
+            OperatorFactory operatorFactory;
+            if (getOmniOrderByEnabled(session)) {
+                operatorFactory = new MergeOmniOperator.MergeOmniOperatorFactory(
+                        context.getNextOperatorId(), context.getNextOperatorId(), node.getId(), exchangeClientSupplier,
+                        new PagesSerdeFactory(metadata.getBlockEncodingSerde(), isExchangeCompressionEnabled(session)),
+                        orderingCompiler, types, outputChannels, sortChannels, sortOrder);
+            } else {
+                operatorFactory = new MergeOperator.MergeOperatorFactory(
+                        context.getNextOperatorId(),
+                        node.getId(),
+                        exchangeClientSupplier,
+                        new PagesSerdeFactory(metadata.getBlockEncodingSerde(), isExchangeCompressionEnabled(session)),
+                        orderingCompiler,
+                        types,
+                        outputChannels,
+                        sortChannels,
+                        sortOrder);
+            }
+
             return new PhysicalOperation(operatorFactory, makeLayout(node), context, UNGROUPED_EXECUTION);
         }
 
@@ -890,9 +944,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             }
             ImmutableList<AccumulatorFactory> factories = accumulatorFactories.build();
             ImmutableList<AggregationNode.Aggregation> aggregationToOmni = aggregationBuilder.build();
-            // use omni aggregation operator
-            return new AggregationOmniOperator.AggregationOmniOperatorFactory(context.getNextOperatorId(), planNodeId,
-                source.getTypes(), aggregationToOmni, factories, step);
+            if (getOmniAggEnabled(session)) {
+                // use omni aggregation operator
+                return new AggregationOmniOperator.AggregationOmniOperatorFactory(context.getNextOperatorId(), planNodeId,
+                        source.getTypes(), aggregationToOmni, factories, step);
+            }
+            return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId,
+                    step, factories, useSystemMemory);
         }
 
         private PhysicalOperation planGroupByAggregation(AggregationNode node, PhysicalOperation source,
@@ -956,22 +1014,23 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     joinCompiler);
             } else {
                 Optional<Integer> hashChannel = hashSymbol.map(channelGetter(source));
-                // when omni is turned on there is no hash channel
-                int[] groupByInputChannels = Ints.toArray(groupByChannels);
-                VecType[] groupByInputTypes = OperatorUtils.toVecTypes(groupByTypes);
-                int aggregationSize = aggregationOutputSymbols.size();
-                int[] aggregationInputChannels = new int[aggregationSize];
-                VecType[] aggregationInputTypes = new VecType[aggregationSize];
-                AggType[] aggregatorTypes = new AggType[aggregationSize];
-                VecType[] aggregationOutputTypes = new VecType[aggregationSize];
+                if (getOmniAggEnabled(session)) {
+                    // when omni is turned on there is no hash channel
+                    int[] groupByInputChannels = Ints.toArray(groupByChannels);
+                    VecType[] groupByInputTypes = OperatorUtils.toVecTypes(groupByTypes);
+                    int aggregationSize = aggregationOutputSymbols.size();
+                    int[] aggregationInputChannels = new int[aggregationSize];
+                    VecType[] aggregationInputTypes = new VecType[aggregationSize];
+                    AggType[] aggregatorTypes = new AggType[aggregationSize];
+                    VecType[] aggregationOutputTypes = new VecType[aggregationSize];
 
-                // TODO move this logic to native side
-                int countStarIndex = -1;
-                int actualIndex = 0;
-                for (int i = 0; i < aggregationSize; ++i) {
-                    Signature signature = aggregations.get(aggregationOutputSymbols.get(i)).getSignature();
-                    AccumulatorFactory accumulatorFactory = accumulatorFactories.get(i);
-                    List<Integer> inputChannels = accumulatorFactory.getInputChannels();
+                    // TODO move this logic to native side
+                    int countStarIndex = -1;
+                    int actualIndex = 0;
+                    for (int i = 0; i < aggregationSize; ++i) {
+                        Signature signature = aggregations.get(aggregationOutputSymbols.get(i)).getSignature();
+                        AccumulatorFactory accumulatorFactory = accumulatorFactories.get(i);
+                        List<Integer> inputChannels = accumulatorFactory.getInputChannels();
 
                     if ("count".equals(signature.getName()) && inputChannels.size() == 0) {
                         // for count(*) need to count on another input channel
@@ -995,33 +1054,52 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     aggregationOutputTypes[i] = OperatorUtils.toVecType(signature.getReturnType());
                 }
 
-                for (int i = 0; i < aggregationSize; i++) {
-                    Signature signature = aggregations.get(aggregationOutputSymbols.get(i)).getSignature();
-                    // aggregator type, eg:sum,avg...
-                    switch (signature.getName()) {
-                        case "sum":
-                            aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_SUM;
-                            break;
-                        case "avg":
-                            aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_AVG;
-                            break;
-                        case "count":
-                            aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_COUNT;
-                            break;
-                        case "min":
-                            aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_MIN;
-                            break;
-                        case "max":
-                            aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_MAX;
-                            break;
-                        default:
-                            throw new UnsupportedOperationException(
-                                "unsupported Aggregator type by OmniRuntime: " + signature.getName());
+                    for (int i = 0; i < aggregationSize; i++) {
+                        Signature signature = aggregations.get(aggregationOutputSymbols.get(i)).getSignature();
+                        // aggregator type, eg:sum,avg...
+                        switch (signature.getName()) {
+                            case "sum":
+                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_SUM;
+                                break;
+                            case "avg":
+                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_AVG;
+                                break;
+                            case "count":
+                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_COUNT;
+                                break;
+                            case "min":
+                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_MIN;
+                                break;
+                            case "max":
+                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_MAX;
+                                break;
+                            default:
+                                throw new UnsupportedOperationException(
+                                        "unsupported Aggregator type by OmniRuntime: " + signature.getName());
+                        }
                     }
+                    return new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(context.getNextOperatorId(),
+                            planNodeId, source.getTypes(), groupByInputChannels, groupByInputTypes, aggregationInputChannels,
+                            aggregationInputTypes, aggregatorTypes, aggregationOutputTypes, step);
                 }
-                return new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(context.getNextOperatorId(),
-                    planNodeId, source.getTypes(), groupByInputChannels, groupByInputTypes, aggregationInputChannels,
-                    aggregationInputTypes, aggregatorTypes, aggregationOutputTypes, step);
+                return new HashAggregationOperator.HashAggregationOperatorFactory(
+                        context.getNextOperatorId(),
+                        planNodeId,
+                        groupByTypes,
+                        groupByChannels,
+                        ImmutableList.copyOf(globalGroupingSets),
+                        step,
+                        hasDefaultOutput,
+                        accumulatorFactories,
+                        hashChannel,
+                        groupIdChannel,
+                        expectedGroups,
+                        maxPartialAggregationMemorySize,
+                        spillEnabled,
+                        unspillMemoryLimit,
+                        spillerFactory,
+                        joinCompiler,
+                        useSystemMemory);
             }
         }
 
@@ -1045,8 +1123,24 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             boolean spillEnabled = isSpillEnabled(context.getSession()) && isSpillOrderBy(context.getSession());
 
-            OperatorFactory operator = createOrderByOmniOperatorFactory(context.getNextOperatorId(), node.getId(),
-                source.getTypes(), outputChannels.build(), orderByChannels, sortOrder.build());
+            OperatorFactory operator;
+            if (getOmniOrderByEnabled(context.getSession())) {
+                operator = createOrderByOmniOperatorFactory(context.getNextOperatorId(), node.getId(),
+                        source.getTypes(), outputChannels.build(), orderByChannels, sortOrder.build());
+            } else {
+                operator = new OrderByOperator.OrderByOperatorFactory(
+                        context.getNextOperatorId(),
+                        node.getId(),
+                        source.getTypes(),
+                        outputChannels.build(),
+                        10_000,
+                        orderByChannels,
+                        sortOrder.build(),
+                        pagesIndexFactory,
+                        spillEnabled,
+                        Optional.of(spillerFactory),
+                        orderingCompiler);
+            }
             return new PhysicalOperation(operator, source.getLayout(), context, source);
         }
 
@@ -1118,11 +1212,30 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 outputMappings.put(symbol, channel);
                 channel++;
             }
-            OperatorFactory operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
-                context.getNextOperatorId(), node.getId(), source.getTypes(), outputChannels.build(),
-                windowFunctionsBuilder.build(), partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                node.getPreSortedOrderPrefix(), 10_000);
-
+            OperatorFactory operatorFactory;
+            if (getOmniWindowEnabled(session)) {
+                operatorFactory = new WindowOmniOperator.WindowOmniOperatorFactory(
+                        context.getNextOperatorId(), node.getId(), source.getTypes(), outputChannels.build(),
+                        windowFunctionsBuilder.build(), partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                        node.getPreSortedOrderPrefix(), 10_000);
+            } else {
+                operatorFactory = new WindowOperator.WindowOperatorFactory(
+                        context.getNextOperatorId(),
+                        node.getId(),
+                        source.getTypes(),
+                        outputChannels.build(),
+                        windowFunctionsBuilder.build(),
+                        partitionChannels,
+                        preGroupedChannels,
+                        sortChannels,
+                        sortOrder,
+                        node.getPreSortedOrderPrefix(),
+                        10_000,
+                        pagesIndexFactory,
+                        isSpillEnabled(session) && isSpillWindowOperator(session),
+                        spillerFactory,
+                        orderingCompiler);
+            }
             return new PhysicalOperation(operatorFactory, outputMappings.build(), context, source);
         }
 
@@ -1230,12 +1343,32 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         filterBuildChannels, getDynamicFilteringMaxPerDriverValueCount(buildContext.getSession()),
                         getDynamicFilteringMaxPerDriverSize(buildContext.getSession())));
             });
+            if (getOmniJoinEnabled(context.getSession())) {
+                HashBuilderOmniOperator.HashBuilderOmniOperatorFactory hashBuilderOmniOperatorFactory
+                        = new HashBuilderOmniOperator.HashBuilderOmniOperatorFactory(buildContext.getNextOperatorId(),
+                        node.getId(), lookupSourceFactoryManager, buildSource.getTypes(), buildOutputChannels, buildChannels,
+                        buildHashChannel, filterFunctionFactory, sortChannel, searchFunctionFactories, taskCount);
+                factoriesBuilder.add(hashBuilderOmniOperatorFactory);
+            }else {
+                HashBuilderOperator.HashBuilderOperatorFactory hashBuilderOperatorFactory = new HashBuilderOperator.HashBuilderOperatorFactory(
+                        buildContext.getNextOperatorId(),
+                        node.getId(),
+                        lookupSourceFactoryManager,
+                        buildOutputChannels,
+                        buildChannels,
+                        buildHashChannel,
+                        filterFunctionFactory,
+                        sortChannel,
+                        searchFunctionFactories,
+                        10_000,
+                        pagesIndexFactory,
+                        spillEnabled && !buildOuter && taskCount > 1,
+                        singleStreamSpillerFactory);
 
-            HashBuilderOmniOperator.HashBuilderOmniOperatorFactory hashBuilderOmniOperatorFactory
-                = new HashBuilderOmniOperator.HashBuilderOmniOperatorFactory(buildContext.getNextOperatorId(),
-                node.getId(), lookupSourceFactoryManager, buildSource.getTypes(), buildOutputChannels, buildChannels,
-                buildHashChannel, filterFunctionFactory, sortChannel, searchFunctionFactories, taskCount);
-            factoriesBuilder.add(hashBuilderOmniOperatorFactory);
+                factoriesBuilder.add(hashBuilderOperatorFactory);
+            }
+
+
             context.addDriverFactory(buildContext.isInputDriver(), false, factoriesBuilder.build(),
                 buildContext.getDriverInstanceCount(), buildSource.getPipelineExecutionStrategy());
 
@@ -1288,9 +1421,11 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             OptionalInt totalOperatorsCount = context.getDriverInstanceCount();
             checkState(!spillEnabled || totalOperatorsCount.isPresent(),
                 "A fixed distribution is required for JOIN when spilling is enabled");
-
-            return createOmniLookupJoin(node, lookupSourceFactoryManager, context, probeTypes, probeOutputChannels,
-                probeJoinChannels, probeHashChannel, totalOperatorsCount);
+            if (getOmniJoinEnabled(context.getSession())) {
+                return createOmniLookupJoin(node, lookupSourceFactoryManager, context, probeTypes, probeOutputChannels,
+                        probeJoinChannels, probeHashChannel, totalOperatorsCount);
+            }
+            return getLookUpJoinOperatorFactory(node, lookupSourceFactoryManager, context, probeTypes, probeOutputChannels, probeJoinChannels, probeHashChannel, totalOperatorsCount);
         }
 
         /**
@@ -1353,6 +1488,21 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 channel++;
             }
             return outputMappings.build();
+        }
+    }
+
+    private OperatorFactory getLookUpJoinOperatorFactory(JoinNode node, JoinBridgeManager<? extends LookupSourceFactory> lookupSourceFactoryManager, LocalExecutionPlanContext context, List<Type> probeTypes, List<Integer> probeOutputChannels, List<Integer> probeJoinChannels, OptionalInt probeHashChannel, OptionalInt totalOperatorsCount) {
+        switch (node.getType()) {
+            case INNER:
+                return lookupJoinOperators.innerJoin(context.getNextOperatorId(), node.getId(), lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel, Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+            case LEFT:
+                return lookupJoinOperators.probeOuterJoin(context.getNextOperatorId(), node.getId(), lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel, Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+            case RIGHT:
+                return lookupJoinOperators.lookupOuterJoin(context.getNextOperatorId(), node.getId(), lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel, Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+            case FULL:
+                return lookupJoinOperators.fullOuterJoin(context.getNextOperatorId(), node.getId(), lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel, Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+            default:
+                throw new UnsupportedOperationException("Unsupported join type: " + node.getType());
         }
     }
 }
