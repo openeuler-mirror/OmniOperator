@@ -981,6 +981,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     } else if ("count".equals(signature.getName())) {
                         actualIndex = groupByChannels.get(0);
                         aggregationInputTypes[i] = groupByInputTypes[0];
+                        aggregationInputChannels[i] = inputChannels.get(0);
                     } else if (step == FINAL && "avg".equals(signature.getName())) {
                         aggregationInputTypes[i] = ContainerVecType.CONTAINER;
                         actualIndex = i;
