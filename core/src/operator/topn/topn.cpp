@@ -185,19 +185,25 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
 {
     int vecIndex = 0;
     for (const VecType &item : sourceTypes.Get()) {
-        if (item.GetId() == OMNI_VEC_TYPE_VARCHAR) {
-            auto vecType = (VarcharVecType &)item;
-            VarcharVector *varcharVector =
+        if (item.GetId() != OMNI_VEC_TYPE_VARCHAR) {
+            vecIndex++;
+            continue;
+        }
+        auto vecType = (VarcharVecType &)item;
+        VarcharVector *varcharVector =
                 new VarcharVector(vecAllocator, positionCount * vecType.GetWidth(), positionCount);
-            for (int i = 0; i < positionCount; ++i) {
+        VarcharVector *tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
+        for (int i = 0; i < positionCount; ++i) {
+            if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {
+                varcharVector->SetValueNull(i);
+            } else {
                 uint8_t *value = nullptr;
-                int32_t valueLength = (static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex)))
-                                          ->GetValue(positionCount - i - 1, &value);
+                int32_t valueLength = tempVarcharVec->GetValue(positionCount - i - 1, &value);
                 varcharVector->SetValue(i, value, valueLength);
             }
-            delete tmpVecBatch->GetVector(vecIndex);
-            tmpVecBatch->SetVector(vecIndex, varcharVector);
         }
+        delete tmpVecBatch->GetVector(vecIndex);
+        tmpVecBatch->SetVector(vecIndex, varcharVector);
         vecIndex++;
     }
 }
