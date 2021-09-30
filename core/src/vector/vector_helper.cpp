@@ -78,8 +78,11 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         case OMNI_VEC_TYPE_CONTAINER: {
-            std::cout << "to parse container vec"
-                      << "\t";
+            ContainerVector *containerVector = static_cast<ContainerVector *>(vector);
+            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
+            LongVector *longVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
+            std::cout << "temp average: " << doubleVector->GetValue(originalRowIndex)
+            << " temp count: " << longVector->GetValue(originalRowIndex) << "\t";
             break;
         }
         default:
