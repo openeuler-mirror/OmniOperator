@@ -60,7 +60,8 @@ import java.util.Optional;
 public final class OperatorUtils {
     private static final Logger log = Logger.get(OperatorUtils.class);
 
-    private OperatorUtils() {}
+    private OperatorUtils() {
+    }
 
     /**
      * To vec types vec type [ ].
@@ -275,15 +276,12 @@ public final class OperatorUtils {
             }
             case "DictionaryBlock": {
                 return new DictionaryOmniBlock(
-                        buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
-                        ((DictionaryBlock) block).getIdsArray());
+                    buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
+                    ((DictionaryBlock) block).getIdsArray());
             }
             case "RunLengthEncodedBlock": {
-                return buildOffHeapBlock(
-                        vecAllocator,
-                        block,
-                        ((RunLengthEncodedBlock) block).getValue().getClass().getSimpleName(),
-                        block.getPositionCount());
+                return buildOffHeapBlock(vecAllocator, block,
+                    ((RunLengthEncodedBlock) block).getValue().getClass().getSimpleName(), block.getPositionCount());
             }
             case "LazyBlock": {
                 return buildOffHeapBlock(vecAllocator, block.getLoadedBlock());
@@ -295,8 +293,8 @@ public final class OperatorUtils {
                         valueIsNull[j] = true;
                     }
                 }
-                return RowOmniBlock.fromFieldBlocks(
-                        rowBlock.getPositionCount(), Optional.of(valueIsNull), rowBlock.getRawFieldBlocks());
+                return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(), Optional.of(valueIsNull),
+                    rowBlock.getRawFieldBlocks());
             }
             default:
                 break;
@@ -304,8 +302,8 @@ public final class OperatorUtils {
         return null;
     }
 
-    private static VariableWidthOmniBlock getVariableWidthOmniBlock(
-            VecAllocator vecAllocator, Block block, int positionCount, boolean[] valueIsNull) {
+    private static VariableWidthOmniBlock getVariableWidthOmniBlock(VecAllocator vecAllocator, Block block,
+        int positionCount, boolean[] valueIsNull) {
         if (block instanceof RunLengthEncodedBlock) {
             VariableWidthBlock variableWidthBlock = (VariableWidthBlock) ((RunLengthEncodedBlock) block).getValue();
             VarcharVec vec = new VarcharVec(variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
@@ -353,9 +351,13 @@ public final class OperatorUtils {
             Block block = page.getBlock(i);
             if (!block.isExtensionBlock()) {
                 vecList.add((Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues());
-                log.warn(
-                        "transfer the onheap pages to offheap pages in %s with %s rows",
-                        operatorName, page.getPositionCount());
+
+                // since we dont implement RunLengthEncodeBlock yet, so the transfer of RunLengthEncodeBlock
+                // is regarded as normal at present.
+                if (!(block instanceof RunLengthEncodedBlock)) {
+                    log.warn("transfer the onheap pages to offheap pages in %s for %s with %s rows", operatorName,
+                        block.getClass().getSimpleName(), page.getPositionCount());
+                }
             } else {
                 if (block instanceof LazyBlock) {
                     vecList.add(getVecInLazyBlock((LazyBlock) block));
