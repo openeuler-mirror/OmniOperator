@@ -34,6 +34,7 @@ using AggregateType = enum AggregateType {
     OMNI_AGGREGATION_TYPE_MAX,
     OMNI_AGGREGATION_TYPE_MIN,
     OMNI_AGGREGATION_TYPE_DNV,
+    OMNI_AGGREGATION_TYPE_INVALIDE
 };
 
 using GroupBySlot = union GroupBySlot {

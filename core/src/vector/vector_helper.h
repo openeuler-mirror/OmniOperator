@@ -186,6 +186,8 @@ public:
 
     static void PrintVectorValue(Vector *vector, int32_t rowIndex);
 
+    static VectorBatch* ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches);
+
 private:
 };
 } // namespace vec
