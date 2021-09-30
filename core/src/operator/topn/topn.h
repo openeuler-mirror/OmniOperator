@@ -11,6 +11,7 @@
 #include "../operator.h"
 #include "../operator_factory.h"
 #include "../../vector/vector_type_serializer.h"
+#include "../../vector/varchar_vector.h"
 
 namespace omniruntime {
 namespace op {
@@ -93,8 +94,10 @@ private:
 
     void HandleVarchar(int64_t positionCount, vec::VectorBatch *tmpVecBatch) const;
 
-    void SetValueForVectorBatch(int64_t rowNum, const int32_t *typeIds, int64_t index, int i, vec::Vector *pqVector,
-        vec::Vector *tmpVector) const;
+    void SetValueForVectorBatch(int32_t typeId, int64_t index, vec::Vector *pqVector, vec::Vector *tmpVector) const;
+
+    void SetVarcharValueForVectorBatch(int64_t rowNum, vec::VarcharVector *pqVector,
+        vec::VarcharVector *tmpVector) const;
 };
 }
 }

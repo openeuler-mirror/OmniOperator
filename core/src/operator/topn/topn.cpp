@@ -135,10 +135,12 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
         for (int i = 0; i < sourceTypesCount; ++i) {
             Vector *pqVector = pqVecBatch->GetVector(i);
             Vector *tmpVector = tmpVecBatch->GetVector(i);
-            if (pqVector->IsValueNull(0)) {
-                tmpVector->SetValueNull(index);
+            if (typeIds[i] == OMNI_VEC_TYPE_VARCHAR) {
+                SetVarcharValueForVectorBatch(rowNum, static_cast<VarcharVector *>(pqVector),
+                    static_cast<VarcharVector *>(tmpVector));
+            } else {
+                SetValueForVectorBatch(typeIds[i], index, pqVector, tmpVector);
             }
-            SetValueForVectorBatch(rowNum, typeIds, index, i, pqVector, tmpVector);
         }
         rowNum++;
         pq.pop();
@@ -148,10 +150,13 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
     return 0;
 }
 
-void TopNOperator::SetValueForVectorBatch(int64_t rowNum, const int32_t *typeIds, int64_t index, int i,
-    Vector *pqVector, Vector *tmpVector) const
+void TopNOperator::SetValueForVectorBatch(int32_t typeId, int64_t index, Vector *pqVector, Vector *tmpVector) const
 {
-    switch (typeIds[i]) {
+    if (pqVector->IsValueNull(0)) {
+        tmpVector->SetValueNull(index);
+        return;
+    }
+    switch (typeId) {
         case OMNI_VEC_TYPE_BOOLEAN:
             SetValueForVector<BooleanVector>(pqVector, tmpVector, index);
             break;
@@ -166,19 +171,24 @@ void TopNOperator::SetValueForVectorBatch(int64_t rowNum, const int32_t *typeIds
         case OMNI_VEC_TYPE_DOUBLE:
             SetValueForVector<DoubleVector>(pqVector, tmpVector, index);
             break;
-        case OMNI_VEC_TYPE_VARCHAR: {
-            uint8_t *value = nullptr;
-            int32_t valueLength = (static_cast<VarcharVector *>(pqVector))->GetValue(0, &value);
-            (static_cast<VarcharVector *>(tmpVector))
-                ->SetValue(rowNum, reinterpret_cast<const uint8_t *>(value), valueLength);
-            break;
-        }
         case OMNI_VEC_TYPE_DECIMAL128:
             SetValueForVector<Decimal128Vector>(pqVector, tmpVector, index);
             break;
         default:
             break;
     }
+}
+
+void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *pqVector,
+    VarcharVector *tmpVector) const
+{
+    if (pqVector->IsValueNull(0)) {
+        tmpVector->SetValueNull(rowNum);
+        return;
+    }
+    uint8_t *value = nullptr;
+    int32_t valueLength = pqVector->GetValue(0, &value);
+    tmpVector->SetValue(rowNum, reinterpret_cast<const uint8_t *>(value), valueLength);
 }
 
 void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
@@ -191,7 +201,7 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
         }
         auto vecType = (VarcharVecType &)item;
         VarcharVector *varcharVector =
-                new VarcharVector(vecAllocator, positionCount * vecType.GetWidth(), positionCount);
+            new VarcharVector(vecAllocator, positionCount * vecType.GetWidth(), positionCount);
         VarcharVector *tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
         for (int i = 0; i < positionCount; ++i) {
             if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {
@@ -226,8 +236,8 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
         leftVector = VectorHelper::ExpandVectorAndIndex(leftVector, leftPosition, originalLeftPosition);
         rightVector = VectorHelper::ExpandVectorAndIndex(rightVector, rightPosition, originalRightPosition);
 
-        compare = OperatorUtil::CompareNull(leftVector, originalLeftPosition, rightVector,
-                                            originalRightPosition, sortNullFirsts[i]);
+        compare = OperatorUtil::CompareNull(leftVector, originalLeftPosition, rightVector, originalRightPosition,
+            sortNullFirsts[i]);
         if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
             break;
         } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
