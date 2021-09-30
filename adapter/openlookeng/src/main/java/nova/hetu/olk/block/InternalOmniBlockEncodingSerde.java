@@ -9,12 +9,18 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import io.airlift.slice.SliceInput;
-import io.prestosql.execution.TaskId;
 import io.airlift.slice.SliceOutput;
+import io.prestosql.execution.TaskId;
 import io.prestosql.metadata.InternalBlockEncodingSerde;
 import io.prestosql.metadata.Metadata;
+import io.prestosql.spi.block.ArrayBlockEncoding;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncoding;
+import io.prestosql.spi.block.ByteArrayBlockEncoding;
+import io.prestosql.spi.block.LazyBlockEncoding;
+import io.prestosql.spi.block.RunLengthBlockEncoding;
+import io.prestosql.spi.block.ShortArrayBlockEncoding;
+import io.prestosql.spi.block.SingleRowBlockEncoding;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 
@@ -46,6 +52,20 @@ public class InternalOmniBlockEncodingSerde extends InternalBlockEncodingSerde {
         addBlockEncoding(new Int128ArrayOmniBlockEncoding(vecAllocator));
         addBlockEncoding(new DictionaryOmniBlockEncoding(vecAllocator));
         addBlockEncoding(new RowOmniBlockEncoding(vecAllocator));
+
+        addBlockEncoding(new ByteArrayBlockEncoding());
+        addBlockEncoding(new ShortArrayBlockEncoding());
+        addBlockEncoding(new ArrayBlockEncoding());
+        addBlockEncoding(new SingleRowBlockEncoding());
+        addBlockEncoding(new RunLengthBlockEncoding());
+        addBlockEncoding(new LazyBlockEncoding());
+    }
+
+    private static String readLengthPrefixedString(SliceInput input) {
+        int length = input.readInt();
+        byte[] bytes = new byte[length];
+        input.readBytes(bytes);
+        return new String(bytes, UTF_8);
     }
 
     /**
@@ -71,7 +91,7 @@ public class InternalOmniBlockEncodingSerde extends InternalBlockEncodingSerde {
     }
 
     @Override
-    public void writeBlock(SliceOutput output, Block block){
+    public void writeBlock(SliceOutput output, Block block) {
         while (true) {
             // get the encoding name
             String encodingName = block.getEncodingName();
@@ -94,13 +114,6 @@ public class InternalOmniBlockEncodingSerde extends InternalBlockEncodingSerde {
 
             break;
         }
-    }
-
-    private static String readLengthPrefixedString(SliceInput input) {
-        int length = input.readInt();
-        byte[] bytes = new byte[length];
-        input.readBytes(bytes);
-        return new String(bytes, UTF_8);
     }
 
     /**
