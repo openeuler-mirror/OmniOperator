@@ -8,10 +8,14 @@ import static io.prestosql.operator.WorkProcessor.TransformationState.finished;
 import static io.prestosql.operator.WorkProcessor.TransformationState.needsMoreData;
 import static io.prestosql.operator.WorkProcessor.TransformationState.ofResult;
 import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
+import static nova.hetu.olk.tool.OperatorUtils.createBlankVectors;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
+import static nova.hetu.olk.tool.OperatorUtils.merge;
+import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
+import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_VARCHAR;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import io.prestosql.memory.context.LocalMemoryContext;
@@ -19,24 +23,14 @@ import io.prestosql.operator.WorkProcessor;
 import io.prestosql.operator.project.MergePageStatus;
 import io.prestosql.operator.project.MergePages;
 import io.prestosql.spi.Page;
-import io.prestosql.spi.PrestoException;
-import io.prestosql.spi.StandardErrorCode;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.BooleanVec;
-import nova.hetu.omniruntime.vector.Decimal128Vec;
-import nova.hetu.omniruntime.vector.DictionaryVec;
-import nova.hetu.omniruntime.vector.DoubleVec;
-import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.LongVec;
-import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -193,75 +187,22 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
             finalPage = new Page(lastInputPage.getPositionCount());
         } else {
             // Merge buffered vectors
-            VecBatch mergeResult = new VecBatch(createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes));
-            merge(mergeResult);
-            Iterator<Page> result = new VecBatchToPageIterator(new Iterator<VecBatch>() {
-                @Override
-                public boolean hasNext() {
-                    return true;
+            int[] varcharCapacities = new int[vecTypes.length];
+            for (int channel = 0; channel < vecTypes.length; channel++) {
+                if (vecTypes[channel].getId() == OMNI_VEC_TYPE_VARCHAR) {
+                    for (VecBatch batch : this.vecBatches) {
+                        Vec src = batch.getVectors()[channel];
+                        varcharCapacities[channel] = varcharCapacities[channel] + src.getCapacityInBytes();
+                    }
                 }
+            }
 
-                @Override
-                public VecBatch next() {
-                    return mergeResult;
-                }
-            });
-            finalPage = result.next();
+            VecBatch mergeResult = new VecBatch(createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes, totalPositions, varcharCapacities));
+            merge(mergeResult, this.vecBatches);
+            finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
         }
         resetStatus();
         return finalPage;
-    }
-
-    /**
-     * This method is used to merge the buffered vectors together
-     * into a final result vector. It invokes append method defined natively
-     * to perform merge operation.
-     *
-     * @param result Stores final resulting vectors
-     */
-    public void merge(VecBatch result) {
-        int index = 0;
-        for (Vec dest : result.getVectors()) {
-            int offSet = 0;
-            for (VecBatch batch : this.vecBatches) {
-                Vec src = batch.getVectors()[index];
-
-                int positionCount = src.getSize();
-                if (src instanceof DictionaryVec) {
-                    appendDictionaryValues(src, dest, offSet);
-                } else {
-                    dest.append(src, offSet, positionCount);
-                }
-                offSet += positionCount;
-                src.close();
-            }
-            index++;
-        }
-    }
-
-    private void appendDictionaryValues(Vec src, Vec dest, int offSet) {
-        for (int index = 0; index < src.getSize(); index++) {
-            VecType.VecTypeId id = ((DictionaryVec) src).getDictionary().getType().getId();
-            switch (id) {
-                case OMNI_VEC_TYPE_INT:
-                    ((IntVec) dest).set(offSet + index, ((DictionaryVec) src).getInt(index));
-                    break;
-                case OMNI_VEC_TYPE_LONG:
-                    ((LongVec) dest).set(offSet + index, ((DictionaryVec) src).getLong(index));
-                    break;
-                case OMNI_VEC_TYPE_DOUBLE:
-                    ((DoubleVec) dest).set(offSet + index, ((DictionaryVec) src).getDouble(index));
-                    break;
-                case OMNI_VEC_TYPE_BOOLEAN:
-                    ((BooleanVec) dest).set(offSet + index, ((DictionaryVec) src).getBoolean(index));
-                    break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                    ((VarcharVec) dest).set(offSet + index, ((DictionaryVec) src).getBytes(index));
-                    break;
-                default:
-                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + src.getType());
-            }
-        }
     }
 
     /**
@@ -273,50 +214,5 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
         totalPositions = 0;
         vecBatches.clear();
         this.status = MergePageStatus.EMPTY;
-    }
-
-    /**
-     * Create blank vectors list.
-     *
-     *
-     * @param vecAllocator
-     * @param vecTypes the vec types
-     * @return the list
-     */
-    public List<Vec> createBlankVectors(VecAllocator vecAllocator, VecType[] vecTypes) {
-        List<Vec> vecsResult = new ArrayList<>();
-        for (int i = 0; i < vecTypes.length; i++) {
-            VecType type = vecTypes[i];
-            switch (type.getId()) {
-                case OMNI_VEC_TYPE_INT:
-                case OMNI_VEC_TYPE_DATE32:
-                    vecsResult.add(new IntVec(vecAllocator, totalPositions));
-                    break;
-                case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64:
-                    vecsResult.add(new LongVec(vecAllocator, totalPositions));
-                    break;
-                case OMNI_VEC_TYPE_DOUBLE:
-                    vecsResult.add(new DoubleVec(vecAllocator, totalPositions));
-                    break;
-                case OMNI_VEC_TYPE_BOOLEAN:
-                    vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
-                    break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                    int totalCapacity = 0;
-                    for (VecBatch batch : this.vecBatches) {
-                        Vec src = batch.getVectors()[i];
-                        totalCapacity = totalCapacity + src.getCapacityInBytes();
-                    }
-                    vecsResult.add(new VarcharVec(vecAllocator, totalCapacity, totalPositions));
-                    break;
-                case OMNI_VEC_TYPE_DECIMAL128:
-                    vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
-                    break;
-                default:
-                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + type);
-            }
-        }
-        return vecsResult;
     }
 }

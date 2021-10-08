@@ -39,8 +39,11 @@ import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
+import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
+import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
@@ -146,6 +149,48 @@ public final class OperatorUtils {
             expressions[i] = "#" + columns[i];
         }
         return expressions;
+    }
+
+    /**
+     * Create blank vectors for given size and types.
+     *
+     * @param vecAllocator VecAllocator used to create vectors
+     * @param vecTypes Vec types
+     * @param totalPositions Size for all the vectors
+     * @param varcharCapacities Array of capacity values for all vectors, vectors other than varchar has capacity 0
+     * @return List contains blank vectors
+     */
+    public static List<Vec> createBlankVectors(
+        VecAllocator vecAllocator, VecType[] vecTypes, int totalPositions, int[] varcharCapacities) {
+        List<Vec> vecsResult = new ArrayList<>();
+        for (int i = 0; i < vecTypes.length; i++) {
+            VecType type = vecTypes[i];
+            switch (type.getId()) {
+                case OMNI_VEC_TYPE_INT:
+                case OMNI_VEC_TYPE_DATE32:
+                    vecsResult.add(new IntVec(vecAllocator, totalPositions));
+                    break;
+                case OMNI_VEC_TYPE_LONG:
+                case OMNI_VEC_TYPE_DECIMAL64:
+                    vecsResult.add(new LongVec(vecAllocator, totalPositions));
+                    break;
+                case OMNI_VEC_TYPE_DOUBLE:
+                    vecsResult.add(new DoubleVec(vecAllocator, totalPositions));
+                    break;
+                case OMNI_VEC_TYPE_BOOLEAN:
+                    vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
+                    break;
+                case OMNI_VEC_TYPE_VARCHAR:
+                    vecsResult.add(new VarcharVec(vecAllocator, varcharCapacities[i], totalPositions));
+                    break;
+                case OMNI_VEC_TYPE_DECIMAL128:
+                    vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
+                    break;
+                default:
+                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + type);
+            }
+        }
+        return vecsResult;
     }
 
     private static Block getDictionary(DictionaryVec vec) {
@@ -340,6 +385,7 @@ public final class OperatorUtils {
     /**
      * Build a vector by {@link Block}
      *
+     * @param vecAllocator VecAllocator to create vectors
      * @param page the page
      * @param operatorName the operator name
      * @return the vec batch
@@ -371,8 +417,59 @@ public final class OperatorUtils {
             }
         }
 
-        VecBatch vecBatch = new VecBatch(vecList);
-        return vecBatch;
+        return new VecBatch(vecList);
+    }
+
+    /**
+     * This method is used to merge the buffered VecBatches together
+     * into a final result VecBatch. It invokes append method defined natively
+     * to perform merge operation.
+     *
+     * @param resultVecBatch Stores final resulting vectors
+     */
+    public static void merge(VecBatch resultVecBatch, List<VecBatch> vecBatchesToMerge) {
+        int index = 0;
+        for (Vec dest : resultVecBatch.getVectors()) {
+            int offSet = 0;
+            for (VecBatch batch : vecBatchesToMerge) {
+                Vec src = batch.getVectors()[index];
+
+                int positionCount = src.getSize();
+                if (src instanceof DictionaryVec) {
+                    appendDictionaryValues(src, dest, offSet);
+                } else {
+                    dest.append(src, offSet, positionCount);
+                }
+                offSet += positionCount;
+                src.close();
+            }
+            index++;
+        }
+    }
+
+    private static void appendDictionaryValues(Vec src, Vec dest, int offSet) {
+        for (int index = 0; index < src.getSize(); index++) {
+            VecType.VecTypeId id = ((DictionaryVec) src).getDictionary().getType().getId();
+            switch (id) {
+                case OMNI_VEC_TYPE_INT:
+                    ((IntVec) dest).set(offSet + index, ((DictionaryVec) src).getInt(index));
+                    break;
+                case OMNI_VEC_TYPE_LONG:
+                    ((LongVec) dest).set(offSet + index, ((DictionaryVec) src).getLong(index));
+                    break;
+                case OMNI_VEC_TYPE_DOUBLE:
+                    ((DoubleVec) dest).set(offSet + index, ((DictionaryVec) src).getDouble(index));
+                    break;
+                case OMNI_VEC_TYPE_BOOLEAN:
+                    ((BooleanVec) dest).set(offSet + index, ((DictionaryVec) src).getBoolean(index));
+                    break;
+                case OMNI_VEC_TYPE_VARCHAR:
+                    ((VarcharVec) dest).set(offSet + index, ((DictionaryVec) src).getBytes(index));
+                    break;
+                default:
+                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + src.getType());
+            }
+        }
     }
 
     private static Vec getVecInLazyBlock(LazyBlock block) {

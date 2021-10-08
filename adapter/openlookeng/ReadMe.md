@@ -20,6 +20,7 @@ extension_execution_planner_jar_path=file:///xxPath/omni-openLooKeng-adapter-1.2
 extension_execution_planner_class_path=nova.hetu.olk.OmniLocalExecutionPlanner
 // add the class path of the extension merge pages
 extension_merge_pages_class_path=nova.hetu.olk.operator.filterandproject.OmniMergePages
+extension_merging_page_output_class_path=nova.hetu.olk.operator.filterandproject.OmniMergingPageOutput
 
 ### config the properties for scan operator
 
