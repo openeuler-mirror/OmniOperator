@@ -34,13 +34,13 @@ public:
         return size;
     }
 
-    const VecType &ExtractDictionaryType()
+    VecTypeId ExtractDictionaryTypeId()
     {
         VecTypeId dictionaryType = dictionary->GetTypeId();
         if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-            return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryType();
+            return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryTypeId();
         }
-        return dictionary->GetType();
+        return dictionary->GetTypeId();
     }
 
     Vector *ExtractDictionaryAndId(int32_t position, int32_t &originalId)

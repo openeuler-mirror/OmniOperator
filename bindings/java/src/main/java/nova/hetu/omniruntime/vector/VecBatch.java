@@ -4,10 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import static nova.hetu.omniruntime.vector.Vec.getTypeNative;
-
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -56,12 +53,12 @@ public class VecBatch implements Closeable {
      *
      * @param nativeVecBatch
      */
-    public VecBatch(long nativeVecBatch, long[] nativeVectors, int rowCount) {
+    public VecBatch(long nativeVecBatch, long[] nativeVectors, int[] vecTypeIds, int rowCount) {
         int vecCount = nativeVectors.length;
         Vec[] newVectors = new Vec[vecCount];
         for (int idx = 0; idx < vecCount; idx++) {
             long nativeVector = nativeVectors[idx];
-            VecType vecType = VecTypeSerializer.deserializeSingle(getTypeNative(nativeVector));
+            VecType vecType = VecType.create(vecTypeIds[idx]);
             newVectors[idx] = VecFactory.create(nativeVector, vecType);
         }
         this.rowCount = rowCount;

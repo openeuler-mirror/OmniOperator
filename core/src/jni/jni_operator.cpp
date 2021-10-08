@@ -5,7 +5,6 @@
 
 #include <vector>
 #include <algorithm>
-#include <src/vector/long_vector.h>
 #include <src/vector/vector_batch.h>
 #include "jni_operator.h"
 #include "jni_common_def.h"
@@ -21,10 +20,17 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
     int32_t idx = 0;
     for (auto vecBatch : result) {
         int32_t vecCount = vecBatch->GetVectorCount();
-        jlongArray vecAddresses = env->NewLongArray(vecCount);
-        env->SetLongArrayRegion(vecAddresses, 0, vecCount, (const jlong *)vecBatch->GetVectors());
-        jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), vecAddresses,
-            vecBatch->GetRowCount());
+        // set vector addresses parameter to vector batch construct.
+        jlongArray jVecAddresses = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *)vecBatch->GetVectors());
+
+        // set vector type ids parameter to vector batch construct.
+        jintArray jVecTypeIds = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *)vecBatch->GetVectorTypeIds());
+
+        // create vector batch java object.
+        jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), jVecAddresses,
+                                     jVecTypeIds, vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }
     return res;

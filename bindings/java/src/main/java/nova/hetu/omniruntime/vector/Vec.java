@@ -199,12 +199,12 @@ public abstract class Vec implements Closeable {
     private static native int getOffsetNative(long nativeVector);
 
     /**
-     * get type from native vector
+     * get type id from native vector
      *
      * @param nativeVector native vector address
      * @return vec type
      */
-    protected static native String getTypeNative(long nativeVector);
+    protected static native int getTypeIdNative(long nativeVector);
 
     private static native long getValuesNative(long nativeVector);
 

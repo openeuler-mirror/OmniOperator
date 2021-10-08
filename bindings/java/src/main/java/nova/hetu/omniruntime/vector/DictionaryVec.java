@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.DictionaryVecType;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 /**
  * dictionary vec
@@ -21,7 +20,7 @@ public class DictionaryVec extends Vec {
     public DictionaryVec(long nativeVector) {
         super(nativeVector, DictionaryVecType.DICTIONARY);
         long dictionaryNative = getDictionaryNative(nativeVector);
-        VecType type = VecTypeSerializer.deserializeSingle(getTypeNative(dictionaryNative));
+        VecType type = VecType.create(getTypeIdNative(dictionaryNative));
         this.dictionary = VecFactory.create(dictionaryNative, type);
         this.ids = getIdsNative(nativeVector);
     }

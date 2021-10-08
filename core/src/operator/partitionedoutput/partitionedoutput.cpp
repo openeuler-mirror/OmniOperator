@@ -127,7 +127,7 @@ void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, 
 
 void ALWAYS_INLINE Insert(Vector *origintVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex)
 {
-    switch (origintVector->GetType().GetId()) {
+    switch (origintVector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             int32_t value = static_cast<IntVector *>(origintVector)->GetValue(originRowIndex);
@@ -169,7 +169,7 @@ void ALWAYS_INLINE Insert(Vector *origintVector, int32_t originRowIndex, Vector 
             InsertContainer(origintVector, originRowIndex, currentVector, currentRowIndex);
             break;
         default: {
-            LogError("No such data type %d", origintVector->GetType().GetId());
+            LogError("No such data type %d", origintVector->GetTypeId());
             break;
         }
     }
@@ -226,7 +226,7 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
 
 long GetHash(int32_t rowIndex, int type, Vector *vector)
 {
-    switch (vector->GetType().GetId()) {
+    switch (vector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32:
             return HashUtil::HashValue(static_cast<IntVector *>(vector)->GetValue(rowIndex));

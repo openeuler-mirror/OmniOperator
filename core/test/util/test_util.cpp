@@ -6,13 +6,11 @@
 #include <cfloat>
 #include <gtest/gtest.h>
 #include "test_util.h"
-#include "../../src/vector/dictionary_vector.h"
-#include "../../src/vector/vector_types.h"
 #include "../../src/vector/vector_helper.h"
 
 using namespace omniruntime::vec;
 
-bool TypesMatch(const VecType *actualTypes, const VecType *expectTypes, int32_t columnNumber);
+bool TypesMatch(const int32_t *actualTypes, const int32_t *expectTypes, int32_t columnNumber);
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn);
 
 bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
@@ -26,7 +24,7 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
         return false;
     }
 
-    if (!TypesMatch(outputPages->GetVectorTypes(), expectPage->GetVectorTypes(), columnNumber)) {
+    if (!TypesMatch(outputPages->GetVectorTypeIds(), expectPage->GetVectorTypeIds(), columnNumber)) {
         return false;
     }
 
@@ -39,10 +37,10 @@ bool VecBatchMatch(VectorBatch *outputPages, VectorBatch *expectPage)
     return true;
 }
 
-bool TypesMatch(const VecType *actualTypes, const VecType *expectTypes, int32_t columnNumber)
+bool TypesMatch(const int32_t *actualTypeIds, const int32_t *expectTypeIds, int32_t columnNumber)
 {
     for (int32_t i = 0; i < columnNumber; i++) {
-        if (actualTypes[i] != expectTypes[i]) {
+        if (actualTypeIds[i] != expectTypeIds[i]) {
             return false;
         }
     }
@@ -52,7 +50,7 @@ bool TypesMatch(const VecType *actualTypes, const VecType *expectTypes, int32_t 
 
 bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
 {
-    if (actualColumn->GetType() != expectColumn->GetType()) {
+    if (actualColumn->GetTypeId() != expectColumn->GetTypeId()) {
         return false;
     }
 
@@ -74,7 +72,7 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
             actualCol->IsValueNull(actualIndex)) {
             continue;
         } else {
-            switch (actualCol->GetType().GetId()) {
+            switch (actualCol->GetTypeId()) {
                 case OMNI_VEC_TYPE_INT:
                 case OMNI_VEC_TYPE_DATE32:
                     result = (static_cast<IntVector *>(actualCol)->GetValue(actualIndex) ==
@@ -293,7 +291,7 @@ void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
 {
     VecTypeId vecTypeId;
     Vector *dictionary = vector->GetDictionary();
-    while ((vecTypeId = dictionary->GetType().GetId()) == OMNI_VEC_TYPE_DICTIONARY) {
+    while ((vecTypeId = dictionary->GetTypeId()) == OMNI_VEC_TYPE_DICTIONARY) {
         dictionary = static_cast<DictionaryVector *>(dictionary)->GetDictionary();
     }
 
@@ -336,7 +334,7 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *vector = vectorBatch->GetVectors()[i];
         EXPECT_EQ(vector->GetSize(), expectedRowCount);
-        switch (vector->GetType().GetId()) {
+        switch (vector->GetTypeId()) {
             case omniruntime::vec::OMNI_VEC_TYPE_INT:
             case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
                 AssertVectorEquals(dynamic_cast<IntVector *>(vector), va_arg(args, int32_t *));
@@ -392,4 +390,15 @@ void DeleteOperatorFactory(OperatorFactory *operatorFactory)
         delete operatorFactory->GetJitContext();
     }
     delete operatorFactory;
+}
+
+void ToVectorTypes(int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes)
+{
+    for (int i = 0; i < vecTypeCount; ++i) {
+        if (vecTypeIds[i] == OMNI_VEC_TYPE_VARCHAR) {
+            vecTypes.push_back(VarcharVecType(50));
+            continue;
+        }
+        vecTypes.push_back(VecType(vecTypeIds[i]));
+    }
 }

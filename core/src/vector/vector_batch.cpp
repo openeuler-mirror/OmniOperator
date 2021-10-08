@@ -13,10 +13,9 @@
 
 namespace omniruntime {
 namespace vec {
-VectorBatch::VectorBatch(int vectorCount, int rowCount) : vectorCount(vectorCount), rowCount(rowCount)
+VectorBatch::VectorBatch(int vectorCount, int rowCount)
+    : vectorCount(vectorCount), rowCount(rowCount), vectors(nullptr), vectorTypeIds(nullptr)
 {
-    vectors = nullptr;
-    vectorTypes = nullptr;
     Init();
 }
 
@@ -28,13 +27,13 @@ void VectorBatch::Init()
         return;
     }
     vectors = new Vector *[vectorCount];
-    vectorTypes = new VecType[vectorCount];
+    vectorTypeIds = new int32_t[vectorCount];
 }
 
 VectorBatch::~VectorBatch()
 {
     delete[] vectors;
-    delete[] vectorTypes;
+    delete[] vectorTypeIds;
 }
 
 Vector *VectorBatch::NewContainerVec(VectorAllocator *vecAllocator)
@@ -50,60 +49,10 @@ Vector *VectorBatch::NewContainerVec(VectorAllocator *vecAllocator)
     return new ContainerVector(vecAllocator, rowCount, vectorAddresses, 2, vecTypes);
 }
 
-// deprecation, will remove when all operator complete refactor.
-void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const int *types)
-{
-    for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
-        vectorTypes[colIndex] = (VecType)types[colIndex];
-        switch (types[colIndex]) {
-            case OMNI_VEC_TYPE_BOOLEAN:
-                SetVector(colIndex, new BooleanVector(vecAllocator, rowCount));
-                break;
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32: {
-                SetVector(colIndex, new IntVector(vecAllocator, rowCount));
-                break;
-            }
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64: {
-                SetVector(colIndex, new LongVector(vecAllocator, rowCount));
-                break;
-            }
-            case OMNI_VEC_TYPE_DOUBLE: {
-                SetVector(colIndex, new DoubleVector(vecAllocator, rowCount));
-                break;
-            }
-            case OMNI_VEC_TYPE_CONTAINER: {
-                Vector *containerVector = NewContainerVec(vecAllocator);
-                SetVector(colIndex, containerVector);
-                break;
-            }
-                // TODO: add short support to codegen
-            case OMNI_VEC_TYPE_SHORT: {
-                SetVector(colIndex, new IntVector(vecAllocator, rowCount));
-                break;
-            }
-            case OMNI_VEC_TYPE_VARCHAR: {
-                // TODO: set capacity appropriately
-                // capacity = rowCount * 50 can't handle a vector of strings with average length above 50
-                SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * 50, rowCount));
-                break;
-            }
-            case OMNI_VEC_TYPE_DECIMAL128: {
-                SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCount));
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-    }
-}
-
 void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<VecType> &types)
 {
     for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
-        vectorTypes[colIndex] = (VecType)types[colIndex];
+        vectorTypeIds[colIndex] = types[colIndex].GetId();
         switch (types[colIndex].GetId()) {
             case OMNI_VEC_TYPE_BOOLEAN:
                 SetVector(colIndex, new BooleanVector(vecAllocator, rowCount));
@@ -150,17 +99,15 @@ void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<Ve
 void VectorBatch::SetVector(int index, Vector *vector)
 {
     vectors[index] = vector;
-    vectorTypes[index] = vector->GetType();
+    vectorTypeIds[index] = vector->GetTypeId();
     if (rowCount == 0) {
         rowCount = vector->GetSize();
     }
 }
 
-void VectorBatch::GetVectorTypeIds(int32_t *typeIds)
+const int32_t *VectorBatch::GetVectorTypeIds()
 {
-    for (int32_t i = 0; i < vectorCount; ++i) {
-        typeIds[i] = vectorTypes[i].GetId();
-    }
+    return vectorTypeIds;
 }
 
 void VectorBatch::ReleaseAllVectors()
