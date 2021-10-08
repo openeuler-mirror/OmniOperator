@@ -25,9 +25,12 @@ const int32_t PARAM_OFFSET_6 = 6;
 
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::vec::VecTypes &types, int32_t rowCount, ...);
-omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::vec::VarcharVecType type, std::string *values, int32_t length);
-omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::vec::VecType &vecType, int32_t rowCount, int32_t *ids, int32_t idsCount, ...);
-void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...);
+omniruntime::vec::VarcharVector *CreateVarcharVector(omniruntime::vec::VarcharVecType type, std::string *values,
+    int32_t length);
+omniruntime::vec::DictionaryVector *CreateDictionaryVector(omniruntime::vec::VecType &vecType, int32_t rowCount,
+    int32_t *ids, int32_t idsCount, ...);
+void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
+    int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::DoubleVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::string *expectedValues);
 
@@ -41,12 +44,14 @@ public:
 
     ~Timer() {}
 
-    void setStart() {
+    void setStart()
+    {
         clock_gettime(CLOCK_REALTIME, &wall_start);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_start);
     }
 
-    void calculateElapse() {
+    void calculateElapse()
+    {
         clock_gettime(CLOCK_REALTIME, &wall_end);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_end);
         long seconds_wall = wall_end.tv_sec - wall_start.tv_sec;
@@ -57,7 +62,8 @@ public:
         cpu_elapsed = seconds_cpu + ns_cpu * 1e-9;
     }
 
-    void start(const char *title) {
+    void start(const char *title)
+    {
         wall_elapsed = 0;
         cpu_elapsed = 0;
         clock_gettime(CLOCK_REALTIME, &wall_start);
@@ -65,7 +71,8 @@ public:
         this->title = title;
     }
 
-    void end() {
+    void end()
+    {
         clock_gettime(CLOCK_REALTIME, &wall_end);
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &cpu_end);
         long seconds_wall = wall_end.tv_sec - wall_start.tv_sec;
@@ -77,15 +84,18 @@ public:
         std::cout << title << " \t: wall " << wall_elapsed << " \tcpu " << cpu_elapsed << std::endl;
     }
 
-    double getWallElapse() {
+    double getWallElapse()
+    {
         return wall_elapsed;
     }
 
-    double getCpuElapse() {
+    double getCpuElapse()
+    {
         return cpu_elapsed;
     }
 
-    void reset() {
+    void reset()
+    {
         wall_elapsed = 0;
         cpu_elapsed = 0;
         clock_gettime(CLOCK_REALTIME, &wall_start);
@@ -120,5 +130,7 @@ template <typename T, typename E> void AssertVectorEquals(T *vector, E *expected
         EXPECT_EQ(vector->GetValue(i), expectedValues[i]);
     }
 }
+
+void ToVectorTypes(int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes);
 
 #endif

@@ -40,14 +40,7 @@ public:
         return rowCount;
     }
 
-    const VecType *GetVectorTypes() const
-    {
-        return vectorTypes;
-    }
-
-    void GetVectorTypeIds(int32_t *typeIds);
-
-    void NewVectors(VectorAllocator *vecAllocator, const int *types);
+    const int32_t *GetVectorTypeIds();
 
     void NewVectors(VectorAllocator *vecAllocator, const std::vector<VecType> &types);
 
@@ -62,7 +55,7 @@ private:
     int vectorCount;
     int rowCount;
     Vector **vectors;
-    VecType *vectorTypes;
+    int32_t *vectorTypeIds;
 };
 } // namespace vec
 } // namespace omniruntime

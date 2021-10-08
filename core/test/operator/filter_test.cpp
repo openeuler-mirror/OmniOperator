@@ -3,12 +3,12 @@
  * Description: ...
  */
 #include "gtest/gtest.h"
+#include "../util/test_util.h"
 #include "../../src/operator/filter/filter_and_project.h"
 #include <iostream>
 #include <vector>
 #include <chrono>
 #include "../../src/vector/vector_helper.h"
-#include "../../src/vector/vector_allocator_factory.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -17,13 +17,15 @@ using namespace std;
 
 VectorBatch* CreateInput(const int32_t numRows,
                          const int32_t numCols,
-                         int32_t* inputTypes,
+                         int32_t* inputTypeIds,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     vecBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
     for (int i = 0; i < numCols; ++i) {
-        switch (inputTypes[i]) {
+        switch (inputTypeIds[i]) {
             case OMNI_VEC_TYPE_INT:
                 ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
                 break;
@@ -51,7 +53,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                 ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
                 break;
             default: {
-                LogError("No such data type %d", inputTypes[i]);
+                LogError("No such data type %d", inputTypeIds[i]);
                 break;
             }
         }
@@ -1697,7 +1699,7 @@ TEST (FilterTest, Multithreading) {
 
 TEST(FilterTest, TestFilterDictionaryVec) {
     const int32_t numCols = 3;
-    int32_t inputTypes[] = {1, 1, 1};
+    int32_t inputTypeIds[] = {1, 1, 1};
 
     const int32_t numRows = 10;
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -1715,6 +1717,8 @@ TEST(FilterTest, TestFilterDictionaryVec) {
     const int32_t projectCount = 3;
     int32_t projectIndices[projectCount] = {0, 1, 2};
     VectorBatch *batch = new VectorBatch(numCols, numRows);
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -1722,7 +1726,7 @@ TEST(FilterTest, TestFilterDictionaryVec) {
 
     std::string expr = "BETWEEN(#1, #0, #2)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
-                                                                   inputTypes,
+                                                                   inputTypeIds,
                                                                    numCols,
                                                                    projectIndices,
                                                                    projectCount);
@@ -1750,7 +1754,7 @@ TEST(FilterTest, TestFilterDictionaryVec) {
 
 TEST(FilterTest, TestFilterDictionaryVarchar) {
     const int32_t numCols = 2;
-    int32_t inputTypes[] = {1, 15};
+    int32_t inputTypeIds[] = {1, 15};
 
     const int32_t numRows = 3;
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -1767,13 +1771,15 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     const int32_t projectCount = 2;
     int32_t projectIndices[projectCount] = {0, 1};
     VectorBatch *batch = new VectorBatch(numCols, numRows);
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     batch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, dictionaryVector);
 
     std::string expr = "$operator$LESS_THAN:boolean(#0, 6)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
-                                                                   inputTypes,
+                                                                   inputTypeIds,
                                                                    numCols,
                                                                    projectIndices,
                                                                    projectCount);
@@ -1803,7 +1809,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
 
 TEST(FilterTest, TestFilterDictionaryVecNested) {
     const int32_t numCols = 3;
-    int32_t inputTypes[] = {1, 1, 1};
+    int32_t inputTypeIds[] = {1, 1, 1};
 
     const int32_t numRows = 10;
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -1823,6 +1829,8 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
     const int32_t projectCount = 3;
     int32_t projectIndices[projectCount] = {0, 1, 2};
     VectorBatch *batch = new VectorBatch(numCols, numRows);
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -1830,7 +1838,7 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
 
     std::string expr = "BETWEEN(#1, #0, #2)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
-                                                                   inputTypes,
+                                                                   inputTypeIds,
                                                                    numCols,
                                                                    projectIndices,
                                                                    projectCount);
@@ -1959,8 +1967,8 @@ TEST(FilterTest, FilterStringWithNull) {
     vector<string*> strings;
 
     const int32_t numCols = 1;
-    int32_t* inputTypes = new int32_t[numCols];
-    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+    int32_t* inputTypeIds = new int32_t[numCols];
+    inputTypeIds[0] = OMNI_VEC_TYPE_VARCHAR;
 
     const int32_t numRows = 2;
     auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -1973,13 +1981,15 @@ TEST(FilterTest, FilterStringWithNull) {
     int32_t projectIndices[projectCount] = {0};
 
     VectorBatch *batch = new VectorBatch(numCols, numRows);
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col0);
 
 
     std::string expr = "$operator$EQUAL:boolean(#0, 'hello')";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
-                                                                   inputTypes,
+                                                                   inputTypeIds,
                                                                    numCols,
                                                                    projectIndices,
                                                                    projectCount);
@@ -2003,7 +2013,6 @@ TEST(FilterTest, FilterStringWithNull) {
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
 
-    delete[] inputTypes;
     delete op;
     delete factory;
 }

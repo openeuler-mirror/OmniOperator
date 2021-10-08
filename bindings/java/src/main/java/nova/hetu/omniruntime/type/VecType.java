@@ -39,6 +39,16 @@ public class VecType implements Serializable {
     }
 
     /**
+     * Create a vector type object.
+     *
+     * @param typeId create vector type by vector type id.
+     * @return vector type.
+     */
+    public static VecType create(int typeId) {
+        return new VecType(VecTypeId.values()[typeId]);
+    }
+
+    /**
      * The vector type id
      */
     public enum VecTypeId {

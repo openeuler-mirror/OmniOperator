@@ -182,8 +182,6 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     LogTrace("Enter Func");
     this->PreLoop(vecBatch);
     int32_t vectorCount = vecBatch->GetVectorCount();
-    auto vectorTypes = std::make_unique<int32_t[]>(vectorCount);
-    vecBatch->GetVectorTypeIds(vectorTypes.get());
     int32_t groupColNum = this->groupByCols.size();
     auto groupByColIdx = std::make_unique<int32_t[]>(groupColNum);
     int32_t aggColNum = this->aggCols.size();

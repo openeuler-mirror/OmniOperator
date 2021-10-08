@@ -83,9 +83,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
                  vectorCount, aggColNum);
     }
 
-    auto vectorTypes = std::make_unique<int32_t[]>(vectorCount);
-    vecBatch->GetVectorTypeIds(vectorTypes.get());
-
+    auto vectorTypeIds = vecBatch->GetVectorTypeIds();
     auto aggFuncTypes = std::make_unique<int32_t[]>(aggColNum);
 
     for (int32_t i = 0; i < aggColNum; ++i) {
@@ -94,7 +92,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 
     int32_t rowCount = vecBatch->GetRowCount();
     for (int32_t rowOffst = 0; rowOffst < rowCount; ++rowOffst) {
-        this->InLoop(vecBatch->GetVectors(), rowOffst, vectorCount, vectorTypes.get(), aggFuncTypes.get());
+        this->InLoop(vecBatch->GetVectors(), rowOffst, vectorCount, vectorTypeIds, aggFuncTypes.get());
     }
 
     this->PostLoop(vecBatch);
@@ -113,7 +111,7 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
 
 void ALWAYS_INLINE FillNormalAggregate(Vector* vector, GroupBySlot& state)
 {
-    switch (vector->GetType().GetId()) {
+    switch (vector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             static_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
@@ -184,20 +182,21 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t colSize = aggCols.size();
 
     auto types = std::make_unique<int32_t[]>(colSize);
+    std::vector<VecType> vecTypes;
     for (int32_t i = 0; i < colSize; ++i) {
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
-            types[i] = OMNI_VEC_TYPE_LONG;
+            vecTypes.push_back(LongVecType::Instance());
             continue;
         }
         if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
-            types[i] = OMNI_VEC_TYPE_DOUBLE;
+            vecTypes.push_back(DoubleVecType::Instance());
             continue;
         }
-        types[i] = aggCols[i].output.GetId();
+        vecTypes.push_back(aggCols[i].output);
     }
 
     VectorBatch *vecBatch = new VectorBatch(colSize, 1);
-    vecBatch->NewVectors(this->vecAllocator, types.get());
+    vecBatch->NewVectors(this->vecAllocator, vecTypes);
     FillResultVectors(vecBatch);
     result.push_back(vecBatch);
 

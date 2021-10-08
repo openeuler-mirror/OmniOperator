@@ -91,10 +91,10 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getOffsetNative(JNI
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    getTypeNative
+ * Method:    getTypeIdNative
  * Signature: (J)I
  */
-JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeNative(JNIEnv *, jclass, jlong);
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getTypeIdNative(JNIEnv *, jclass, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec

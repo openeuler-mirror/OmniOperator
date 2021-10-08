@@ -3,9 +3,9 @@
  * Description: ...
  */
 #include "gtest/gtest.h"
+#include "../util/test_util.h"
 #include "../../src/operator/projection/projection.h"
 #include "../../src/vector/vector_helper.h"
-#include "../../src/vector/vector_allocator_factory.h"
 #include <string>
 #include <vector>
 #include <chrono>
@@ -18,13 +18,15 @@ namespace project_test {
 
 VectorBatch* CreateInput(const int32_t numRows,
                          const int32_t numCols,
-                         int32_t* inputTypes,
+                         int32_t* inputTypeIds,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     vecBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), inputTypes);
     for (int i = 0; i < numCols; ++i) {
-        switch (inputTypes[i]) {
+        switch (inputTypeIds[i]) {
             case OMNI_VEC_TYPE_INT:
                 ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
                 break;
@@ -52,7 +54,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                 ((Decimal128Vector *)vecBatch->GetVector(i))->SetValues(0, (int64_t *) allData[i], numRows);
                 break;
             default: {
-                LogError("No such data type %d", inputTypes[i]);
+                LogError("No such data type %d", inputTypeIds[i]);
                 break;
             }
         }
@@ -379,7 +381,9 @@ TEST (ProjectTest, DictionaryVecTest) {
     }
 
     VectorBatch *batch = new VectorBatch(numCols, numRows);
-    int32_t inputTypes[numCols] = {1, 1, 1};
+    int32_t inputTypeIds[numCols] = {1, 1, 1};
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -388,7 +392,7 @@ TEST (ProjectTest, DictionaryVecTest) {
     const int32_t numProject = 3;
     string exprs[numProject] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)",
                                 "$operator$ADD:int(#2, 10)"};
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
     vector<VectorBatch *> ret;
@@ -426,7 +430,9 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     }
 
     VectorBatch *batch = new VectorBatch(numCols, numRows);
-    int32_t inputTypes[numCols] = {1, 1, 1};
+    int32_t inputTypeIds[numCols] = {1, 1, 1};
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -435,7 +441,7 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     const int32_t numProjs = 3;
     string exprs[numProjs] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)",
                               "$operator$ADD:int(#2, 10)"};
-    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, inputTypes, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, inputTypeIds, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
     vector<VectorBatch *> ret;

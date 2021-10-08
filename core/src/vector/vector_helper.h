@@ -25,7 +25,7 @@ class VectorHelper {
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
-        switch (vector->GetType().GetId()) {
+        switch (vector->GetTypeId()) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
                 static_cast<IntVector *>(vector)->SetValue(index, *static_cast<int32_t *>(value));
@@ -49,19 +49,19 @@ public:
                 static_cast<Decimal128Vector *>(vector)->SetValue(index, *static_cast<Decimal128 *>(value));
                 break;
             default:
-                LogError("No such data type %d", vector->GetType().GetId());
+                LogError("No such data type %d", vector->GetTypeId());
                 break;
         }
     }
 
     static void SetValue(Vector *vector, int32_t index, void *value, int32_t length)
     {
-        switch (vector->GetType().GetId()) {
+        switch (vector->GetTypeId()) {
             case OMNI_VEC_TYPE_VARCHAR:
                 static_cast<VarcharVector *>(vector)->SetValue(index, static_cast<uint8_t *>(value), length);
                 break;
             default:
-                LogError("No such data type %d", vector->GetType().GetId());
+                LogError("No such data type %d", vector->GetTypeId());
                 break;
         }
     }
@@ -69,7 +69,7 @@ public:
     static int32_t GetValue(Vector *vector, int32_t index, void *value)
     {
         int32_t length = 0;
-        switch (vector->GetType().GetId()) {
+        switch (vector->GetTypeId()) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
                 *static_cast<int32_t *>(value) = static_cast<IntVector *>(vector)->GetValue(index);
@@ -104,7 +104,7 @@ public:
                 break;
             }
             default:
-                LogError("No such data type %d", vector->GetType().GetId());
+                LogError("No such data type %d", vector->GetTypeId());
                 break;
         }
         return length;

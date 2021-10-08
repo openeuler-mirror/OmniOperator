@@ -207,7 +207,7 @@ void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Ve
     if (originalVector->IsValueNull(originalVectorPosition)) {
         resultVector->SetValueNull(resultVectorPosition - start);
     } else {
-        switch (originalVector->GetType().GetId()) {
+        switch (originalVector->GetTypeId()) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
                 int32_t actual = static_cast<IntVector *>(originalVector)->GetValue(originalVectorPosition);

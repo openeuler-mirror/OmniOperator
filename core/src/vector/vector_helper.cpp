@@ -40,13 +40,13 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
 {
     int32_t originalRowIndex;
     vector = ExpandVectorAndIndex(vector, rowIndex, originalRowIndex);
-    auto vecType = vector->GetType();
+    auto vecTypeId = vector->GetTypeId();
     if (vector->IsValueNull(originalRowIndex)) {
         std::cout << "NULL"
                   << "\t";
         return;
     }
-    switch (vecType.GetId()) {
+    switch (vecTypeId) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             std::cout << std::dec << static_cast<IntVector *>(vector)->GetValue(originalRowIndex) << "\t";
@@ -86,7 +86,7 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         default:
-            LogError("Error vector type %d", vecType.GetId());
+            LogError("Error vector type %d", vecTypeId);
     }
 }
 

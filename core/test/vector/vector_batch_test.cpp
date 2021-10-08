@@ -9,6 +9,14 @@
 
 using namespace omniruntime::vec;
 
+void VectorBatchTestInitVecTypes(std::vector<VecType> &types)
+{
+    types.push_back(IntVecType::Instance());
+    types.push_back(DoubleVecType::Instance());
+    types.push_back(LongVecType::Instance());
+    types.push_back(DoubleVecType::Instance());
+}
+
 TEST(VectorBatch, constructVectorBatchWithVectorCount)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetGlobalAllocator();
@@ -31,7 +39,8 @@ TEST(VectorBatch, constructVectorBatchWithVectorCount)
 
 TEST(VectorBatch, constructVectorBatchWithTypes)
 {
-    int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
+    std::vector<VecType> types;
+    VectorBatchTestInitVecTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
@@ -43,7 +52,8 @@ TEST(VectorBatch, constructVectorBatchWithTypes)
 
 TEST(VectorBatch, getVectorCount)
 {
-    int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
+    std::vector<VecType> types;
+    VectorBatchTestInitVecTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
@@ -54,13 +64,14 @@ TEST(VectorBatch, getVectorCount)
 
 TEST(VectorBatch, getVectorTypes)
 {
-    int32_t types[] = {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
+    std::vector<VecType> types;
+    VectorBatchTestInitVecTypes(types);
     VectorBatch *vectorBatch = new VectorBatch(4, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
-    const VecType *vectorTypes = vectorBatch->GetVectorTypes();
+    const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
     for (int i = 0; i < 4; ++i) {
-        EXPECT_EQ(types[i], vectorTypes[i].GetId());
+        EXPECT_EQ(types[i].GetId(), vectorTypeIds[i]);
     }
     delete vectorBatch;
 }
