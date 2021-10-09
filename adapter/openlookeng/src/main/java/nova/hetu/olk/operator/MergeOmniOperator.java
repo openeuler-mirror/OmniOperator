@@ -216,7 +216,15 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
         if (!blockedOnSplits.isDone()) {
             return blockedOnSplits;
         }
-        return orderByOmniOperator.isBlocked();
+
+        // use the first exchange client as the signal if data are ready
+        if (pageProducers.size() > 0) {
+            ListenableFuture<?> future = pageProducers.get(0).isBlocked();
+            if (!future.isDone()) {
+                return future;
+            }
+        }
+        return NOT_BLOCKED;
     }
 
     @Override
