@@ -232,7 +232,7 @@ void CalculateColDec64Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, in
                 nulls[i] = true;
                 continue;
             }
-            hash = HashUtil::HashDecimal64Value(static_cast<omniruntime::vec::LongVector *>(vec)->GetValue(i));
+            hash = HashUtil::HashDecimal64Value(static_cast<omniruntime::vec::LongVector *>(result)->GetValue(i));
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
     }
@@ -262,7 +262,7 @@ void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, i
                 nulls[i] = true;
                 continue;
             }
-            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vec)->GetValue(i);
+            decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(result)->GetValue(i);
             hash = HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
@@ -293,7 +293,7 @@ void CalculateColVarCharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
                 continue;
             }
             varcharValue = nullptr;
-            valueLength = static_cast<omniruntime::vec::VarcharVector *>(vec)->GetValue(i, &varcharValue);
+            valueLength = static_cast<omniruntime::vec::VarcharVector *>(result)->GetValue(i, &varcharValue);
             hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
         }
