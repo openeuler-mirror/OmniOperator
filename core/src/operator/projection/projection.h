@@ -15,7 +15,7 @@
 #include "projection.h"
 
 using vec64 = std::vector<int64_t>;
-using ProjFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, bool *);
+using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, bool *);
 
 namespace omniruntime {
 namespace op {
@@ -45,17 +45,20 @@ public:
         delete this->expr;
         this->codegen.reset();
     }
+    bool IsSupported();
+
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-        omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
-        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va, bool *newNullValues) const;
+        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, omniruntime::vec::Vector *outVec,
+        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-        omniruntime::vec::Vector *outVec, int32_t numSelectedRows,
-        int32_t selectedRows[], omniruntime::vec::VectorAllocator &va, bool *newNullValues) const;
+        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, omniruntime::vec::Vector *outVec,
+        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-        int32_t numSelectedRows) const;
+        int32_t numSelectedRows, std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap) const;
 
-    Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch) const;
+    Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch,
+        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap) const;
 
     omniruntime::expressions::DataType GetOutputType() const
     {
@@ -67,6 +70,8 @@ private:
     int32_t nCols;
     omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
+    std::set<int32_t> expressionColumns;
+    bool isSupported = true;
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)
@@ -76,6 +81,8 @@ private:
     // numSelectedRows: number of rows which pass the filter
     // bitmap: 2D boolean array where bitmap[col][row] is true if data[row][col] is null
     ProjFunc projector;
+
+    bool Initialize(bool filter);
 };
 
 class ProjectionOperator : public Operator {
@@ -107,12 +114,14 @@ public:
         int32_t nCols);
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
+    bool IsSupported();
 
 private:
     int32_t *inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
     int32_t nProj;
+    bool isSupported = true;
 };
 }
 }
