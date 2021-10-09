@@ -25,6 +25,10 @@ class VectorHelper {
 public:
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
+        if (value == nullptr) {
+            vector->SetValueNull(index);
+            return;
+        }
         switch (vector->GetTypeId()) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
