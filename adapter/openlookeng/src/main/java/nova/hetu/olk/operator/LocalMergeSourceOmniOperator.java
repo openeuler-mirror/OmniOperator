@@ -158,7 +158,14 @@ public class LocalMergeSourceOmniOperator implements Operator {
 
     @Override
     public ListenableFuture<?> isBlocked() {
-        return orderByOmniOperator.isBlocked();
+        // use the first exchange client as the signal if data are ready
+        if (sources.size() > 0) {
+            ListenableFuture<?> future = sources.get(0).waitForReading();
+            if (!future.isDone()) {
+                return future;
+            }
+        }
+        return NOT_BLOCKED;
     }
 
     @Override
