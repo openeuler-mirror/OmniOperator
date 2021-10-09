@@ -274,7 +274,7 @@ public class PartitionedOutputOmniOperator
             OperatorContext operatorContext = driverContext.addOperatorContext(
                     operatorId,
                     planNodeId,
-                    PartitionedOutputOperator.class.getSimpleName());
+                    PartitionedOutputOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator(vecAllocator);
             return new PartitionedOutputOmniOperator(
                     operatorContext,

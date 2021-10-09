@@ -50,6 +50,9 @@ TopNOperator::~TopNOperator()
         item->ReleaseAllVectors();
         delete item;
     }
+    for (const auto &item : rowComparatorList) {
+        delete item;
+    }
 }
 
 int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
@@ -66,6 +69,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
                 pq.pop();
             }
             singleRowVectorBatchList.push_back(singleRowVecBatch);
+            rowComparatorList.push_back(rowComparator);
         }
     }
     return 0;
