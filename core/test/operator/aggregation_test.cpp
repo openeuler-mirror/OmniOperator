@@ -758,7 +758,7 @@ TEST(HashAggregationOperatorTest, original_multiple_threads)
     nativeOperatorFactory->Init();
     uint64_t factoryObjAddr = reinterpret_cast<uint64_t>(nativeOperatorFactory);
 
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1, 2, 4, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
