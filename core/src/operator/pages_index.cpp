@@ -920,7 +920,7 @@ template <typename T> void SetValue(Vector *inputVector, int32_t inputIndex, T *
 {
     if (inputVector->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
         auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
-        SetValue(dictionaryVector->GetDictionary(), dictionaryVector->GetIds()[inputIndex], outputVector, outputIndex);
+        SetValue(dictionaryVector->GetDictionary(), dictionaryVector->GetId(inputIndex), outputVector, outputIndex);
     } else {
         outputVector->SetValueNull(outputIndex, inputVector->IsValueNull(inputIndex));
         outputVector->SetValue(outputIndex, static_cast<T *>(inputVector)->GetValue(inputIndex));
@@ -953,7 +953,7 @@ void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *out
 {
     if (inputVector->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
         auto dictionaryVector = static_cast<DictionaryVector *>(inputVector);
-        SetVarcharValue(dictionaryVector->GetDictionary(), dictionaryVector->GetIds()[inputIndex], outputVector,
+        SetVarcharValue(dictionaryVector->GetDictionary(), dictionaryVector->GetId(inputIndex), outputVector,
             outputIndex);
     } else {
         outputVector->SetValueNull(outputIndex, inputVector->IsValueNull(inputIndex));

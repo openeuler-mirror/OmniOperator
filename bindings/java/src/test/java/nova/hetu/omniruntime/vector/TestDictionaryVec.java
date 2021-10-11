@@ -36,7 +36,8 @@ public class TestDictionaryVec {
         DictionaryVec slice = dictionaryVec.slice(offset, 7);
         assertEquals(slice.getSize(), 4);
         for (int i = 0; i < slice.getSize(); i++) {
-            assertEquals(slice.getLong(i), originalVec.get(i + offset), "Error item value at: " + i);
+            long v = slice.getLong(i);
+            assertEquals(v, originalVec.get(i + offset), "Error item value at: " + i);
         }
 
         originalVec.close();

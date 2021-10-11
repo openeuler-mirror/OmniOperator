@@ -1,9 +1,8 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
+
 #include "dictionary_vector.h"
-#include <memory>
-#include <map>
 #include "int_vector.h"
 #include "long_vector.h"
 #include "double_vector.h"
@@ -13,19 +12,28 @@
 
 namespace omniruntime {
 namespace vec {
-DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, uint32_t idsCount)
-    : Vector(dictionary->GetAllocator(), dictionary->GetCapacityInBytes(), idsCount, DictionaryVecType::Instance(), 0),
-      dictionary(dictionary->Slice(0, dictionary->GetSize())),
-      ids(nullptr)
+DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount)
+    : DictionaryVector(dictionary->GetAllocator(), idsCount)
 {
-    InitIds(ids, idsCount);
+    this->dictionary = dictionary->Slice(0, dictionary->GetSize());
+    memcpy_s(valuesAddress, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
 }
 
-void DictionaryVector::InitIds(int32_t *ids, uint32_t idsCount)
+DictionaryVector::DictionaryVector(Vector *dictionary, int32_t idsCount)
+    : DictionaryVector(dictionary->GetAllocator(), idsCount)
 {
-    if (idsCount < INT32_MAX) {
-        this->ids = new int32_t[idsCount];
-        memcpy_s(this->ids, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
+    this->dictionary = dictionary->Slice(0, dictionary->GetSize());
+}
+
+DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t idsCount)
+    : FixedWidthVector<int32_t>(allocator, idsCount * sizeof(int32_t), idsCount, DictionaryVecType::Instance()),
+      dictionary(nullptr)
+{}
+
+DictionaryVector::~DictionaryVector()
+{
+    if (dictionary != nullptr) {
+        delete dictionary;
     }
 }
 
@@ -33,9 +41,9 @@ int32_t DictionaryVector::GetInt(int32_t position) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
     if (dictionaryType == OMNI_VEC_TYPE_INT || dictionaryType == OMNI_VEC_TYPE_DATE32) {
-        return static_cast<IntVector *>(dictionary)->GetValue(ids[position]);
+        return static_cast<IntVector *>(dictionary)->GetValue(GetId(position));
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-        return static_cast<DictionaryVector *>(dictionary)->GetInt(ids[position]);
+        return static_cast<DictionaryVector *>(dictionary)->GetInt(GetId(position));
     } else {
         std::cerr << "unsupported type:" << dictionaryType << std::endl;
         return -1;
@@ -46,9 +54,9 @@ int64_t DictionaryVector::GetLong(int32_t position) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
     if (dictionaryType == OMNI_VEC_TYPE_LONG || dictionaryType == OMNI_VEC_TYPE_DECIMAL64) {
-        return static_cast<LongVector *>(dictionary)->GetValue(ids[position]);
+        return static_cast<LongVector *>(dictionary)->GetValue(GetId(position));
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-        return static_cast<DictionaryVector *>(dictionary)->GetLong(ids[position]);
+        return static_cast<DictionaryVector *>(dictionary)->GetLong(GetId(position));
     } else {
         std::cerr << "unsupported type:" << dictionaryType << std::endl;
         return -1;
@@ -59,9 +67,9 @@ double DictionaryVector::GetDouble(int32_t position) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
     if (dictionaryType == OMNI_VEC_TYPE_DOUBLE) {
-        return static_cast<DoubleVector *>(dictionary)->GetValue(ids[position]);
+        return static_cast<DoubleVector *>(dictionary)->GetValue(GetId(position));
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-        return static_cast<DictionaryVector *>(dictionary)->GetDouble(ids[position]);
+        return static_cast<DictionaryVector *>(dictionary)->GetDouble(GetId(position));
     } else {
         std::cerr << "unsupported type:" << dictionaryType << std::endl;
         return -1;
@@ -72,9 +80,9 @@ bool DictionaryVector::GetBoolean(int32_t position) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
     if (dictionaryType == OMNI_VEC_TYPE_BOOLEAN) {
-        return static_cast<BooleanVector *>(dictionary)->GetValue(ids[position]);
+        return static_cast<BooleanVector *>(dictionary)->GetValue(GetId(position));
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-        return static_cast<DictionaryVector *>(dictionary)->GetBoolean(ids[position]);
+        return static_cast<DictionaryVector *>(dictionary)->GetBoolean(GetId(position));
     } else {
         std::cerr << "unsupported type:" << dictionaryType << std::endl;
         return -1;
@@ -85,9 +93,9 @@ int32_t DictionaryVector::GetVarchar(int32_t position, uint8_t **dst) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
     if (dictionaryType == OMNI_VEC_TYPE_VARCHAR) {
-        return static_cast<VarcharVector *>(dictionary)->GetValue(ids[position], dst);
+        return static_cast<VarcharVector *>(dictionary)->GetValue(GetId(position), dst);
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-        return static_cast<DictionaryVector *>(dictionary)->GetVarchar(ids[position], dst);
+        return static_cast<DictionaryVector *>(dictionary)->GetVarchar(GetId(position), dst);
     } else {
         std::cerr << "unsupported type:" << dictionaryType << std::endl;
         return -1;
@@ -98,9 +106,9 @@ Decimal128 DictionaryVector::GetDecimal128(int32_t position) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
     if (dictionaryType == OMNI_VEC_TYPE_DECIMAL128) {
-        return static_cast<Decimal128Vector *>(dictionary)->GetValue(ids[position]);
+        return static_cast<Decimal128Vector *>(dictionary)->GetValue(GetId(position));
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-        return static_cast<DictionaryVector *>(dictionary)->GetDecimal128(ids[position]);
+        return static_cast<DictionaryVector *>(dictionary)->GetDecimal128(GetId(position));
     } else {
         std::cerr << "unsupported type:" << dictionaryType << std::endl;
         return -1;
@@ -109,36 +117,22 @@ Decimal128 DictionaryVector::GetDecimal128(int32_t position) const
 
 DictionaryVector *DictionaryVector::Slice(int32_t positionOffset, int32_t length)
 {
-    auto dictionaryVector = new DictionaryVector(dictionary, ids + positionOffset, length);
-    return dictionaryVector;
+    return new DictionaryVector(this, length, positionOffset);
 }
 
 DictionaryVector *DictionaryVector::CopyPositions(const int *positions, int offset, int length)
 {
-    std::vector<int32_t> positionsToCopy;
-    std::unordered_map<int32_t, int32_t> oldIndexToNewIndex;
-    std::vector<int32_t> newIds;
-    int32_t index = 0;
-    for (int i = 0; i < length; i++) {
+    DictionaryVector *vector = new DictionaryVector(this->dictionary, length);
+    for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];
-        int oldIndex = ids[position];
-        if (oldIndexToNewIndex.find(oldIndex) == oldIndexToNewIndex.end()) { // not reuse index
-            oldIndexToNewIndex[oldIndex] = index++;
-            positionsToCopy.push_back(oldIndex);
-        }
-        newIds.push_back(oldIndexToNewIndex.find(oldIndex)->second);
+        vector->SetId(i, GetId(position));
     }
-
-    Vector *newDictionary = dictionary->CopyPositions(positionsToCopy.data(), 0, index);
-    auto *dictionaryVector = new DictionaryVector(newDictionary, newIds.data(), length);
-    // dictionary method will slice for newDictionary,so need to free it
-    delete newDictionary;
-    return dictionaryVector;
+    return vector;
 }
 
 DictionaryVector *DictionaryVector::CopyRegion(int positionOffset, int length)
 {
-    return new DictionaryVector(dictionary, ids + positionOffset, length);
+    return new DictionaryVector(dictionary, GetIds() + positionOffset, length);
 }
 
 void DictionaryVector::Append(Vector *other, int positionOffset, int length)
@@ -147,8 +141,8 @@ void DictionaryVector::Append(Vector *other, int positionOffset, int length)
     if (positionOffset + length > size) {
         return;
     }
-    int32_t *destination = this->ids + positionOffset;
-    int32_t *src = otherVector->GetPositionOffset() + otherVector->GetIds();
+    int32_t *destination = GetIds() + positionOffset;
+    int32_t *src = otherVector->GetIds() + otherVector->GetPositionOffset();
     errno_t ret = memcpy_s(destination, size * sizeof(int32_t), src, length * sizeof(int32_t));
 
     if (ret != EOK) {
@@ -207,5 +201,7 @@ Vector *DictionaryVector::ExtractDictionaryAndIds(int32_t positionOffset, int32_
     } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
     return dictionary;
 }
+
+void DictionaryVector::SetValues(int startIndex, const int32_t *values, int length) {}
 } // namespace vec
 } // namespace omniruntime

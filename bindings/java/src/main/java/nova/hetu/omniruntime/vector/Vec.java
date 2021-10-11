@@ -165,20 +165,7 @@ public abstract class Vec implements Closeable {
                 true);
     }
 
-    protected Vec(Vec dictionary, int[] ids, VecType type) {
-        this.nativeVector = newDictionaryVectorNative(dictionary.getNativeVector(), ids);
-        this.allocator = dictionary.allocator;
-        this.capacityInBytes = getCapacityInBytesNative(nativeVector);
-        this.size = ids.length;
-        this.type = type;
-        this.offset = 0;
-        this.valuesBuf = null;
-        this.nullsBuf = null;
-    }
-
     private static native long newVectorNative(long allocator, int capacityInBytes, int size, int typeId);
-
-    private static native long newDictionaryVectorNative(long nativeDictionary, int[] ids);
 
     private static native void freeVectorNative(long allocator, long nativeVector);
 

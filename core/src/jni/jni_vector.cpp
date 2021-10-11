@@ -23,16 +23,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
         VectorHelper::CreateVector(TransformAllocator(jAllocator), jVectorTypeId, jCapacityInBytes, jValueCount)));
 }
 
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *env, jclass jcls,
-    jlong jDictionary, jintArray jIds)
-{
-    Vector *dictionary = TransformVector(jDictionary);
-    jint *ids = env->GetIntArrayElements(jIds, JNI_FALSE);
-    jsize idsCount = env->GetArrayLength(jIds);
-    DictionaryVector *dictionaryVector = std::make_unique<DictionaryVector>(dictionary, ids, idsCount).release();
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(dictionaryVector));
-}
-
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector, jint jStartIndex, jint jLength)
 {
@@ -203,21 +193,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDicti
         reinterpret_cast<void *>(reinterpret_cast<DictionaryVector *>(nativeVector)->GetDictionary()));
 }
 
-JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getIdsNative(JNIEnv *env, jclass jcls,
-    jlong jNativeVector)
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictionaryNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector, jlong jNativeDictionary)
 {
-    Vector *nativeVector = TransformVector(jNativeVector);
-    DictionaryVector *dictionaryVector = reinterpret_cast<DictionaryVector *>(nativeVector);
-    int32_t *ids = dictionaryVector->GetIds();
-    int32_t idsCount = dictionaryVector->GetIdsCount();
-
-    jintArray jResult = env->NewIntArray(idsCount);
-    jint *result = env->GetIntArrayElements(jResult, nullptr);
-    for (int32_t i = 0; i < idsCount; i++) {
-        result[i] = ids[i];
-    }
-    env->ReleaseIntArrayElements(jResult, result, 0);
-    return jResult;
+    DictionaryVector *nativeVector = reinterpret_cast<DictionaryVector *>(jNativeVector);
+    Vector *nativeDictionary = TransformVector(jNativeDictionary);
+    nativeVector->SetDictionary(nativeDictionary->Slice(0, nativeDictionary->GetSize()));
 }
 
 Vector *TransformVector(long vectorAddr)
