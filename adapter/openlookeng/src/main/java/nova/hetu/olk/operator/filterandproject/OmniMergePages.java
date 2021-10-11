@@ -10,10 +10,9 @@ import static io.prestosql.operator.WorkProcessor.TransformationState.ofResult;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.olk.tool.OperatorUtils.createBlankVectors;
-import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 import static nova.hetu.olk.tool.OperatorUtils.merge;
+import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
-import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_VARCHAR;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -26,7 +25,6 @@ import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -39,20 +37,20 @@ import java.util.List;
  * @since 20210630
  */
 public class OmniMergePages extends MergePages.MergePagesTransformation {
+    private final VecType[] vecTypes;
+
+    /**
+     * The Vec batches.
+     */
+    List<VecBatch> vecBatches;
+
     private long currentPageSizeInBytes;
 
     private long retainedSizeInBytes;
 
     private int totalPositions;
 
-    private final VecType[] vecTypes;
-
     private Page lastInputPage;
-
-    /**
-     * The Vec batches.
-     */
-    List<VecBatch> vecBatches;
 
     private MergePageStatus status;
 
@@ -186,18 +184,8 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
         if (vecBatches.isEmpty()) {
             finalPage = new Page(lastInputPage.getPositionCount());
         } else {
-            // Merge buffered vectors
-            int[] varcharCapacities = new int[vecTypes.length];
-            for (int channel = 0; channel < vecTypes.length; channel++) {
-                if (vecTypes[channel].getId() == OMNI_VEC_TYPE_VARCHAR) {
-                    for (VecBatch batch : this.vecBatches) {
-                        Vec src = batch.getVectors()[channel];
-                        varcharCapacities[channel] = varcharCapacities[channel] + src.getCapacityInBytes();
-                    }
-                }
-            }
-
-            VecBatch mergeResult = new VecBatch(createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes, totalPositions, varcharCapacities));
+            VecBatch mergeResult = new VecBatch(
+                createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes, totalPositions));
             merge(mergeResult, this.vecBatches);
             finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
         }

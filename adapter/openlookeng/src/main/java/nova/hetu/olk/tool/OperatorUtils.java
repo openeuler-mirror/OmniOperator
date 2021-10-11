@@ -157,11 +157,9 @@ public final class OperatorUtils {
      * @param vecAllocator VecAllocator used to create vectors
      * @param vecTypes Vec types
      * @param totalPositions Size for all the vectors
-     * @param varcharCapacities Array of capacity values for all vectors, vectors other than varchar has capacity 0
      * @return List contains blank vectors
      */
-    public static List<Vec> createBlankVectors(
-        VecAllocator vecAllocator, VecType[] vecTypes, int totalPositions, int[] varcharCapacities) {
+    public static List<Vec> createBlankVectors(VecAllocator vecAllocator, VecType[] vecTypes, int totalPositions) {
         List<Vec> vecsResult = new ArrayList<>();
         for (int i = 0; i < vecTypes.length; i++) {
             VecType type = vecTypes[i];
@@ -181,7 +179,8 @@ public final class OperatorUtils {
                     vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_VARCHAR:
-                    vecsResult.add(new VarcharVec(vecAllocator, varcharCapacities[i], totalPositions));
+                    // FIXME: now the width is hardcode to 100, we should support to get the width from type
+                    vecsResult.add(new VarcharVec(vecAllocator, totalPositions * 100, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_DECIMAL128:
                     vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
@@ -451,6 +450,9 @@ public final class OperatorUtils {
         for (int index = 0; index < src.getSize(); index++) {
             VecType.VecTypeId id = ((DictionaryVec) src).getDictionary().getType().getId();
             switch (id) {
+                case OMNI_VEC_TYPE_DICTIONARY:
+                    appendDictionaryValues(((DictionaryVec) src).getDictionary(), dest, offSet);
+                    break;
                 case OMNI_VEC_TYPE_INT:
                     ((IntVec) dest).set(offSet + index, ((DictionaryVec) src).getInt(index));
                     break;

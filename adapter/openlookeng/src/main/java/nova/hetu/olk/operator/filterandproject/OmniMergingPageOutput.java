@@ -55,7 +55,7 @@ import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_VARCHAR
  *
  * @since 20210930
  */
-public class OmniMergingPageOutput {
+public class OmniMergingPageOutput extends MergingPageOutput{
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(MergingPageOutput.class).instanceSize();
     private static final int MAX_MIN_PAGE_SIZE = 1024 * 1024;
 
@@ -81,6 +81,7 @@ public class OmniMergingPageOutput {
 
     public OmniMergingPageOutput(
         Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount, int maxPageSizeInBytes) {
+        super(types,minPageSizeInBytes,minRowCount,maxPageSizeInBytes);
         List<Type> blockTypes = ImmutableList.copyOf(requireNonNull(types, "types is null"));
         this.vecTypes = blockTypes.stream().map(OperatorUtils::toVecType).toArray(VecType[]::new);
         checkArgument(minPageSizeInBytes >= 0, "minPageSizeInBytes must be greater or equal than zero");
@@ -204,18 +205,8 @@ public class OmniMergingPageOutput {
             return;
         }
 
-        int[] varcharCapacities = new int[vecTypes.length];
-        for (int channel = 0; channel < vecTypes.length; channel++) {
-            if (vecTypes[channel].getId() == OMNI_VEC_TYPE_VARCHAR) {
-                for (VecBatch batch : this.bufferedPages) {
-                    Vec src = batch.getVectors()[channel];
-                    varcharCapacities[channel] = varcharCapacities[channel] + src.getCapacityInBytes();
-                }
-            }
-        }
-
         VecBatch resultVecBatch = new VecBatch(createBlankVectors(
-            this.vecAllocator, this.vecTypes, bufferSize, varcharCapacities));
+            this.vecAllocator, this.vecTypes, bufferSize));
         merge(resultVecBatch, this.bufferedPages);
         outputQueue.add(new VecBatchToPageIterator(ImmutableList.of(resultVecBatch).iterator()).next());
 

@@ -747,7 +747,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     inputTypes, context.getTaskId());
                 OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
                     context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
-                    getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session));
+                    getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session), session);
 
                 return new PhysicalOperation(operatorFactory, outputMappings, context, source);
             }
