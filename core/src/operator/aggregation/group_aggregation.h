@@ -6,6 +6,7 @@
 #define GROUP_AGGREGATION_H
 
 #include "aggregation.h"
+#include "robin_hood.h"
 #include "../../vector/vector_types.h"
 #include "../hash_util.h"
 
@@ -43,13 +44,14 @@ const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
 namespace omniruntime {
 namespace op {
 using namespace vec;
-using BucketIterator = std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>::iterator;
+using BucketIterator = robin_hood::unordered_flat_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>::iterator;
 using ChainIterator = std::vector<std::vector<GroupBySlot>>::iterator;
 
 class HashAggregationOperatorFactory;
 class HashAggregationOperator;
 
 using HashFunc = void (*)(Vector *vector, const uint32_t r, const int32_t *ri, int64_t *hashVal);
+using HashFuncVect = void (*)(Vector *vector, const uint32_t s, const uint32_t r, int64_t *hashVal);
 using DuplicateKeyValue = void *(*)(Vector *vector, const uint32_t offset);
 using IsSameNodeFunc = void(*)(Vector* vector, const uint32_t offset, void *val, bool &isSame);
 using SetVector = void (*)(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
@@ -61,6 +63,7 @@ using ReleaseMemory = void (*)(GroupBySlot &rowIterator, int32_t columnIndex, Ve
 using FunctionByDataType = struct {
     VecTypeId vecTypeId;
     HashFunc hashFunc;
+    HashFuncVect hashFuncVect;
     IsSameNodeFunc isSameNode;
     DuplicateKeyValue duplicateKey;
     SetVector setVector;
@@ -74,6 +77,11 @@ template <typename V, typename D>
 void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
 void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
 void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
+
+template <typename V, typename D>
+void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash);
+void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash);
+void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash);
 
 template<typename V, typename D>
 void IsSameNodeFuncImpl(Vector* vector, const uint32_t offset, void *val, bool &isSame);
@@ -106,7 +114,9 @@ public:
     HashAggregationOperator(std::vector<ColumnIndex> groupByCol, std::vector<ColumnIndex> aggCol,
         std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
         : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
-    {}
+    {
+        groupedRows.reserve(512);
+    }
 
     ~HashAggregationOperator() override {}
 
@@ -127,39 +137,39 @@ public:
     void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
         int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);
     void PostLoop(VectorBatch *vecBatch) const;
-    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>& GetStates()
+    robin_hood::unordered_flat_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>& GetStates()
     {
         return groupedRows;
     }
 
     static constexpr FunctionByDataType FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
-        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
         {
-            OMNI_VEC_TYPE_INT, HashFuncImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
+            OMNI_VEC_TYPE_INT, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
             DuplicateKeyValueImpl<IntVector, int32_t>, SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>,
             ReleaseMemoryImpl<int32_t>
         },
         {
-            OMNI_VEC_TYPE_LONG, HashFuncImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>,
+            OMNI_VEC_TYPE_LONG, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>,
             DuplicateKeyValueImpl<LongVector, int64_t>, SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>,
             ReleaseMemoryImpl<int64_t>
         },
         {
-            OMNI_VEC_TYPE_DOUBLE, HashFuncImpl<DoubleVector, double>, IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
+            OMNI_VEC_TYPE_DOUBLE, HashFuncImpl<DoubleVector, double>,HashFuncVectImpl<DoubleVector, double>, IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
             SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>, ReleaseMemoryImpl<double>
         },
         {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
         {
-            OMNI_VEC_TYPE_DECIMAL64, HashFuncImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
+            OMNI_VEC_TYPE_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
             SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>, ReleaseMemoryImpl<int64_t>
         },
         {
-            OMNI_VEC_TYPE_DECIMAL128, HashDecimalFunc, IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
+            OMNI_VEC_TYPE_DECIMAL128, HashDecimalFunc, HashDecimalVectFunc, IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
             SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>, ReleaseMemoryImpl<Decimal128>
         },
         {
-            OMNI_VEC_TYPE_DATE32, HashFuncImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
+            OMNI_VEC_TYPE_DATE32, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
             SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>, ReleaseMemoryImpl<int32_t>
         },
         {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
@@ -169,11 +179,11 @@ public:
         {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
         {
-            OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue,
+            OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue,
             ReleaseMemoryImpl<std::string>
         },
-        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr,nullptr, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
     };
 
 private:
@@ -203,7 +213,7 @@ private:
     friend void FillVarcharValue(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
                                  ChainIterator &tempRowIterator,
                                  ChainIterator &finalRowIterator, int colIndex);
-    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> groupedRows;
+    robin_hood::unordered_flat_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
 };
