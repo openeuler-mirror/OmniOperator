@@ -298,6 +298,8 @@ public class LookupJoinOmniOperator implements Operator {
         omniOperator.addInput(vecBatch);
         result = new VecBatchToPageIterator(omniOperator.getOutput());
         if (!result.hasNext()) {
+            vecBatch.releaseAllVectors();
+            vecBatch.close();
             return;
         }
         state = State.HAS_OUTPUT;
