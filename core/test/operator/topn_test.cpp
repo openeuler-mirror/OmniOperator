@@ -10,6 +10,7 @@
 #include "../util/test_util.h"
 #include "../../src/vector/vector_helper.h"
 #include <src/operator/optimization.h>
+#include <perf_util.h>
 #include "../../src/jit/jit.h"
 #include "../../libconfig.h"
 
@@ -100,7 +101,87 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
+TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
+    using namespace omniruntime::op;
+    using namespace std;
 
+    // construct input data
+    const int32_t dataSize = 100000000;
+    const int32_t expectedDataSize = 5;
+
+    // prepare data
+    int32_t *data0=new int32_t[dataSize] ;
+    for (int i = 0; i < dataSize; ++i){
+        data0[i] = rand();
+    }
+
+    VectorBatch *inputVecBatch = new VectorBatch(1);
+    IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
+    column0->SetValues(0, data0, dataSize);
+    inputVecBatch->SetVector(0, column0);
+
+    std::vector<VecType> types = { IntVecType::Instance() };
+    VecTypes sourceTypes(types);
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
+                                                                     1);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,1, 1);
+    topNOperatorFactory->SetJitContext(jitContext);
+    auto s=clock();
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    auto *perfUtil = new PerfUtil();
+    perfUtil->Init();
+    perfUtil->Reset();
+    perfUtil->Start();
+    topNOperator->AddInput(inputVecBatch);
+    perfUtil->Stop();
+    long instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("TopN with OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+    vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    auto e = clock();
+    cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
+
+    TopNOperatorFactory *topNOperatorFactory2=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
+                                                                     1);
+    auto topNOp=topNOperatorFactory2->CreateOperator();
+    perfUtil->Init();
+    perfUtil->Reset();
+    perfUtil->Start();
+    topNOp->AddInput(inputVecBatch);
+    perfUtil->Stop();
+     instCount = perfUtil->GetData();
+    if (instCount != -1) {
+        printf("TopN without OmniJit, used %lld instructions\n", perfUtil->GetData());
+    }
+    vector<VectorBatch *> outputVecorBatchs2;
+    topNOp->GetOutput(outputVecorBatchs2);
+    auto e2 = clock();
+    cout<<"topn performance takes: "<<(double)(e2-s)/CLOCKS_PER_SEC<<endl;
+
+    int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
+    IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(1);
+    expectVecorBatch->SetVector(0, expectCol1);
+
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
     using namespace omniruntime::op;
     using namespace std;
@@ -373,6 +454,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
+
 
 TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
 {
