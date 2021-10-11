@@ -83,8 +83,9 @@ public class HashAggregationOmniOperator implements Operator {
         return finished;
     }
 
+
     @Override
-    public void close() throws Exception {
+    public void close() {
         omniOperator.close();
     }
 

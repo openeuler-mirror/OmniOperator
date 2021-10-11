@@ -348,7 +348,7 @@ uintptr_t CreateHashFactoryWithoutJit(bool inputRaw, bool outputPartial)
     uint32_t* aggFunType = new uint32_t[2];
     aggFunType[0] = OMNI_AGGREGATION_TYPE_SUM;
     aggFunType[1] = OMNI_AGGREGATION_TYPE_AVG;
-    uint32_t retTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
+    uint32_t retTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     PrepareContext groupByColContext = {groupCols, 2};
     PrepareContext aggColContext = {aggCols, 2};
     PrepareContext aggFuncTypeContext = {aggFunType, 2};
@@ -383,7 +383,7 @@ void perfTestOriginal(int64_t moduleAddr, VectorBatch** input)
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
-    EXPECT_EQ(result[0]->GetRowCount(), 4);
+    EXPECT_EQ(result[0]->GetRowCount(), 1);
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
@@ -404,7 +404,7 @@ void perfTest(int64_t moduleAddr, VectorBatch** input, int32_t vecBatchNum, int3
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
-    EXPECT_EQ(result[0]->GetRowCount(), 4);
+    EXPECT_EQ(result[0]->GetRowCount(), 1);
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
@@ -542,7 +542,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     delete groupBy3;
 
     EXPECT_EQ(result2[0]->GetVectorCount(), 7);
-    EXPECT_EQ(result2[0]->GetRowCount(), 4);
+    EXPECT_EQ(result2[0]->GetRowCount(), 1);
 
     std::cout << std::endl;
     for (auto vecBatch : result2) {
@@ -589,10 +589,9 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     std::vector<VectorBatch*> result1;
     int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
-     for(auto &i:aggs1){
-         delete i.release();
+    auto resBatch = VectorHelper::ConcatVectorBatches(result1);
 
-     }
+    groupByVarChar->Close();
     delete groupByVarChar;
     std::string expectData1[3] = {"2", "0","1"};
     int64_t expectData2[3] = {2,3,3};
@@ -600,7 +599,7 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     std::string expectData4[3] = {"4.4", "6.6","5.5"};
     VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(),VarcharVecType(1), VarcharVecType(3) }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
-    EXPECT_TRUE(VecBatchMatch(result1[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
 }
 
 TEST(HashAggregationOperatorTest, verify_null_correctness)

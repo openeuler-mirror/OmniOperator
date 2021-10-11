@@ -102,5 +102,113 @@ void VectorHelper::PrintVecBatch(VectorBatch *vecBatch)
         std::cout << std::endl;
     }
 }
+
+VectorBatch* VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches)
+{
+    if (vecBatches.empty()) {
+        return nullptr;
+    }
+    int32_t rowCount = 0;
+    int32_t vectorCount = vecBatches[0]->GetVectorCount();
+    auto allocator = vecBatches[0]->GetVector(0)->GetAllocator();
+    auto types = vecBatches[0]->GetVectorTypeIds();
+    for (auto pV : vecBatches) {
+        rowCount += pV->GetRowCount();
+    }
+
+    VectorBatch *result = new VectorBatch(vectorCount, rowCount);
+
+    for (int32_t i = 0; i < vectorCount; ++i) {
+        switch (types[i]) {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
+                IntVector *vector = new IntVector(allocator, rowCount);
+                result->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
+                LongVector *vector = new LongVector(allocator, rowCount);
+                result->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                DoubleVector *vector = new DoubleVector(allocator, rowCount);
+                result->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_BOOLEAN: {
+                BooleanVector *vector = new BooleanVector(allocator, rowCount);
+                result->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                VarcharVector *vector = new VarcharVector(allocator, 50 * rowCount, rowCount);
+                result->SetVector(i, vector);
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                break;
+            }
+            case OMNI_VEC_TYPE_CONTAINER: {
+                break;
+            }
+            default:
+                LogError("Error vector type %d", types[i]);
+        }
+    }
+
+    int32_t offset = 0;
+    for (auto pV : vecBatches) {
+        int32_t rc = pV->GetRowCount();
+        for (int32_t i = 0; i < vectorCount; ++i) {
+            auto vector = pV->GetVector(i);
+            auto resVec = result->GetVector(i);
+            switch (types[i]) {
+                case OMNI_VEC_TYPE_INT:
+                case OMNI_VEC_TYPE_DATE32: {
+                    auto rValues = static_cast<int32_t *>(static_cast<IntVector*>(vector)->GetValues());
+                    static_cast<IntVector*>(resVec)->SetValues(offset, rValues, rc);
+                    break;
+                }
+                case OMNI_VEC_TYPE_LONG:
+                case OMNI_VEC_TYPE_DECIMAL64: {
+                    auto rValues = static_cast<int64_t *>(static_cast<IntVector*>(vector)->GetValues());
+                    static_cast<LongVector*>(resVec)->SetValues(offset, rValues, rc);
+                    break;
+                }
+                case OMNI_VEC_TYPE_DOUBLE: {
+                    auto rValues = static_cast<double *>(static_cast<DoubleVector*>(vector)->GetValues());
+                    static_cast<DoubleVector*>(resVec)->SetValues(offset, rValues, rc);
+                    break;
+                }
+                case OMNI_VEC_TYPE_BOOLEAN: {
+                    auto rValues = static_cast<bool *>(static_cast<BooleanVector*>(vector)->GetValues());
+                    static_cast<BooleanVector*>(resVec)->SetValues(offset, rValues, rc);
+                    break;
+                }
+                case OMNI_VEC_TYPE_VARCHAR: {
+                    for (int32_t j = 0; j < rc; ++j) {
+                        uint8_t *data = nullptr;
+                        int32_t len = static_cast<VarcharVector*>(vector)->GetValue(j, &data);
+                        std::string val(reinterpret_cast<char *>(data), len);
+                        static_cast<VarcharVector*>(resVec)->SetValue(offset + j, data, len);
+                    }
+                    break;
+                }
+                case OMNI_VEC_TYPE_DECIMAL128: {
+                    break;
+                }
+                case OMNI_VEC_TYPE_CONTAINER: {
+                    break;
+                }
+                default:
+                    LogError("Error vector type %d", types[i]);
+            }
+        }
+        offset += rc;
+    }
+    return result;
+}
 } // namespace vec
 } // namespace omniruntime
