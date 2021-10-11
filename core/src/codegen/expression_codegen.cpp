@@ -114,17 +114,10 @@ ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr, std::vector
     // Create IR builder to create IR instructions
     builder = std::make_unique<IRBuilder<>>(*context);
 
-    // Time function registering process
-    auto start = std::chrono::steady_clock::now();
     fr = std::make_unique<FunctionRegistry>(jit, context, module).release();
     // Only register the necessary functions for the expression
     // Necessary functions are found using RequiredFunctions method
     fr->RegisterNecessaryFuncs(RequiredFunctions(cpExpr));
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> frTime = end - start;
-#ifdef DEBUG
-    std::cout << "Time to register functions: " << frTime.count() << "seconds" << std::endl;
-#endif
     funcNameToSignature = fr->funcNameToSignatureMap;
 }
 

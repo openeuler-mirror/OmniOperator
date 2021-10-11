@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.10)
 # configure cmake
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_COMPILER "clang++-12")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC -fno-limit-debug-info")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC -finline-functions")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 

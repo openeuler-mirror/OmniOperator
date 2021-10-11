@@ -706,9 +706,12 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     omniruntime::op::ProjectionOperatorFactory *factory =
         new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputTypeIds, inputLength);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
-    return (int64_t)factory;
 
-    // TODO: ReleaseStringUTFChars
+    if (!factory->IsSupported()) {
+        return 0;
+    }
+
+    return (int64_t)factory;
 }
 
 JitContext *createHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildHashCols,
