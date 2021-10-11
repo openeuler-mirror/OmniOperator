@@ -12,42 +12,40 @@ import nova.hetu.omniruntime.type.VecType;
  *
  * @since 2021-07-17
  */
-public class DictionaryVec extends Vec {
+public class DictionaryVec extends FixedWidthVec {
+    private static final int BYTES = Integer.BYTES;
+
     private Vec dictionary;
 
     private int[] ids;
 
     public DictionaryVec(long nativeVector) {
         super(nativeVector, DictionaryVecType.DICTIONARY);
-        long dictionaryNative = getDictionaryNative(nativeVector);
-        VecType type = VecType.create(getTypeIdNative(dictionaryNative));
-        this.dictionary = VecFactory.create(dictionaryNative, type);
-        this.ids = getIdsNative(nativeVector);
+        loadDictionaryAndIds(size);
     }
 
     public DictionaryVec(Vec dictionary, int[] ids) {
-        super(dictionary, ids, DictionaryVecType.DICTIONARY);
+        super(dictionary.getAllocator(), ids.length * BYTES, ids.length, DictionaryVecType.DICTIONARY);
+        // set ids
+        valuesBuf.setIntArray(0, ids, 0, ids.length * BYTES);
+        // set dictionary vector
+        setDictionaryNative(getNativeVector(), dictionary.getNativeVector());
+
         this.dictionary = dictionary;
         this.ids = ids;
     }
 
     private DictionaryVec(DictionaryVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
-        long dictionaryNative = getDictionaryNative(getNativeVector());
-        this.dictionary = VecFactory.create(dictionaryNative, vector.dictionary.getType());
-        this.ids = getIdsNative(getNativeVector());
+        loadDictionaryAndIds(isSlice == true ? vector.getSize() : length);
     }
 
     private DictionaryVec(DictionaryVec vector, int[] positions, int offset, int length) {
         super(vector, positions, offset, length);
-        long dictionaryNative = getDictionaryNative(getNativeVector());
-        this.dictionary = VecFactory.create(dictionaryNative, vector.dictionary.getType());
-        this.ids = getIdsNative(getNativeVector());
+        loadDictionaryAndIds(length);
     }
 
     private static native long getDictionaryNative(long nativeVector);
-
-    private static native int[] getIdsNative(long nativeVector);
 
     public Vec getDictionary() {
         return dictionary;
@@ -57,13 +55,22 @@ public class DictionaryVec extends Vec {
         return ids;
     }
 
+    private void loadDictionaryAndIds(int idsCount) {
+        long dictionaryNative = getDictionaryNative(getNativeVector());
+        VecType type = VecType.create(getTypeIdNative(dictionaryNative));
+        this.dictionary = VecFactory.create(dictionaryNative, type);
+        this.ids = new int[idsCount];
+        valuesBuf.getIntArray(0, ids, 0, ids.length * BYTES);
+    }
+
     /**
-     * position array length
+     * get the specified integer at the specified absolute
      *
-     * @return position array length
+     * @param index the element offset in vec
+     * @return int value
      */
-    public int getSize() {
-        return ids.length;
+    public int getId(int index) {
+        return ids[index + offset];
     }
 
     /**
@@ -74,9 +81,9 @@ public class DictionaryVec extends Vec {
      */
     public int getInt(int index) {
         if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
-            return ((IntVec) dictionary).get(ids[index]);
+            return ((IntVec) dictionary).get(getId(index));
         } else {
-            return ((DictionaryVec) dictionary).getInt(ids[index]);
+            return ((DictionaryVec) dictionary).getInt(getId(index));
         }
     }
 
@@ -87,10 +94,11 @@ public class DictionaryVec extends Vec {
      * @return long value
      */
     public long getLong(int index) {
+        int dicIndex = getId(index);
         if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
-            return ((LongVec) dictionary).get(ids[index]);
+            return ((LongVec) dictionary).get(dicIndex);
         } else {
-            return ((DictionaryVec) dictionary).getLong(ids[index]);
+            return ((DictionaryVec) dictionary).getLong(dicIndex);
         }
     }
 
@@ -102,9 +110,9 @@ public class DictionaryVec extends Vec {
      */
     public double getDouble(int index) {
         if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
-            return ((DoubleVec) dictionary).get(ids[index]);
+            return ((DoubleVec) dictionary).get(getId(index));
         } else {
-            return ((DictionaryVec) dictionary).getDouble(ids[index]);
+            return ((DictionaryVec) dictionary).getDouble(getId(index));
         }
     }
 
@@ -116,9 +124,9 @@ public class DictionaryVec extends Vec {
      */
     public boolean getBoolean(int index) {
         if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
-            return ((BooleanVec) dictionary).get(ids[index]);
+            return ((BooleanVec) dictionary).get(getId(index));
         } else {
-            return ((DictionaryVec) dictionary).getBoolean(ids[index]);
+            return ((DictionaryVec) dictionary).getBoolean(getId(index));
         }
     }
 
@@ -130,9 +138,9 @@ public class DictionaryVec extends Vec {
      */
     public byte[] getBytes(int index) {
         if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
-            return ((VarcharVec) dictionary).get(ids[index]);
+            return ((VarcharVec) dictionary).get(getId(index));
         } else {
-            return ((DictionaryVec) dictionary).getBytes(ids[index]);
+            return ((DictionaryVec) dictionary).getBytes(getId(index));
         }
     }
 
@@ -144,15 +152,15 @@ public class DictionaryVec extends Vec {
      */
     public long[] getDecimal128(int index) {
         if (dictionary.getType().getId() != VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY) {
-            return ((Decimal128Vec) dictionary).get(ids[index]);
+            return ((Decimal128Vec) dictionary).get(getId(index));
         } else {
-            return ((DictionaryVec) dictionary).getDecimal128(ids[index]);
+            return ((DictionaryVec) dictionary).getDecimal128(getId(index));
         }
     }
 
     @Override
     public boolean isNull(int index) {
-        return dictionary.isNull(ids[index]);
+        return dictionary.isNull(getId(index));
     }
 
     @Override
@@ -174,4 +182,6 @@ public class DictionaryVec extends Vec {
     public DictionaryVec copyRegion(int positionOffset, int length) {
         return new DictionaryVec(this, positionOffset, length, false);
     }
+
+    private static native void setDictionaryNative(long nativeVector, long nativeDictionaryVector);
 }

@@ -38,14 +38,6 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
 #endif
 }
 
-Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type, int32_t positionOffset)
-    : allocator(allocator), capacityInBytes(capacityInBytes), size(size), type(type), positionOffset(positionOffset)
-{
-#ifdef DEBUG_VECTOR
-    allocator->GetLeakDetector().Record(this, "", VecOpType::NEW);
-#endif
-}
-
 Vector::~Vector()
 {
 #ifdef DEBUG_VECTOR

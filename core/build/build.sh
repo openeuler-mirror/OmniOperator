@@ -15,7 +15,9 @@ rm -rf `ls | grep -v "build.sh"`
 append_options()
 {
   if [ $# = 1 ]; then
-    echo "-- Enable Operator,Vector,LLVM Debug"
+    echo "-- Enable Debug"
+  elif [ $2 = 'all' ]; then
+    echo "-- Enable All Module Debug, Include: OPERATOR,VECTOR,LLVM"
     options="$options -DDEBUG_OPERATOR=ON -DDEBUG_VECTOR=ON -DDEBUG_LLVM=ON"
   else
     for i in $* ; do

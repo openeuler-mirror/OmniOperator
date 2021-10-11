@@ -5,33 +5,25 @@
 #define __DICTIONARY_VECTOR_H__
 
 #include "vector.h"
+#include "fixed_width_vector.h"
+#include "vector_allocator.h"
 #include "decimal128.h"
 
 namespace omniruntime {
 namespace vec {
-class DictionaryVector : public Vector {
+class DictionaryVector : public FixedWidthVector<int32_t> {
 public:
-    DictionaryVector(Vector *dictionary, int32_t *ids, uint32_t idsCount);
+    DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount);
 
-    ~DictionaryVector()
-    {
-        delete dictionary;
-        delete[] ids;
-    }
+    DictionaryVector(Vector *dictionary, int32_t idsCount);
+
+    DictionaryVector(VectorAllocator *allocator, int32_t idsCount);
+
+    ~DictionaryVector();
 
     Vector *GetDictionary() const
     {
         return dictionary;
-    }
-
-    int32_t *GetIds() const
-    {
-        return ids;
-    }
-
-    int32_t GetIdsCount()
-    {
-        return size;
     }
 
     VecTypeId ExtractDictionaryTypeId()
@@ -50,7 +42,7 @@ public:
         if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
             return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryAndId(position, originalId);
         }
-        originalId = ids[position];
+        originalId = GetId(position);
         return dictionary;
     }
 
@@ -59,6 +51,18 @@ public:
     Vector *ExtractDictionary();
 
     Vector *ExtractDictionary(const int32_t *positions, int32_t length);
+
+    // inline for high performance.
+    int32_t ALWAYS_INLINE GetId(int index) const
+    {
+        return ((int32_t *)valuesAddress)[index + positionOffset];
+    }
+
+    // inline for high performance.
+    void ALWAYS_INLINE SetId(int index, int32_t id)
+    {
+        ((int32_t *)valuesAddress)[index] = id;
+    }
 
     int32_t GetInt(int32_t position) const;
 
@@ -78,13 +82,25 @@ public:
 
     DictionaryVector *CopyRegion(int positionOffset, int length) override;
 
+    void SetValues(int startIndex, const int32_t *values, int length) override;
+
     // / Append Ids. Vectors must use the same dictionary
     void Append(Vector *other, int positionOffset, int length) override;
 
+    void SetDictionary(Vector *dictionary)
+    {
+        this->dictionary = dictionary;
+    }
+
 private:
-    void InitIds(int32_t *ids, uint32_t idsCount);
+    DictionaryVector(DictionaryVector *vector, int size, int positionOffset)
+        : FixedWidthVector(vector, size, positionOffset),
+          dictionary(vector->dictionary->Slice(0, vector->dictionary->GetSize())) {};
+    int32_t *GetIds() const
+    {
+        return (int32_t *)valuesAddress;
+    }
     Vector *dictionary;
-    int32_t *ids;
 };
 } // namespace vec
 } // namespace omniruntime

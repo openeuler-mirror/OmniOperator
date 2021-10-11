@@ -391,21 +391,13 @@ public class DictionaryOmniBlock<T> implements Block<T> {
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
 
-        IntArrayList positionsToCopy = new IntArrayList();
-        Map<Integer, Integer> oldIndexToNewIndex = new HashMap<>();
         int[] newIds = new int[length];
 
         for (int i = 0; i < length; i++) {
             int position = positions[offset + i];
-            int oldIndex = getId(position);
-            if (!oldIndexToNewIndex.containsKey(oldIndex)) {
-                oldIndexToNewIndex.put(oldIndex, positionsToCopy.size());
-                positionsToCopy.add(oldIndex);
-            }
-            newIds[i] = oldIndexToNewIndex.get(oldIndex);
+            newIds[i] = getId(position);
         }
-        return new DictionaryOmniBlock(dictionary.copyPositions(positionsToCopy.elements(), 0, positionsToCopy.size()),
-            newIds);
+        return new DictionaryOmniBlock(dictionary, newIds);
     }
 
     @Override

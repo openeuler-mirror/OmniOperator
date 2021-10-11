@@ -405,11 +405,11 @@ public final class OperatorUtils {
                 }
             } else {
                 if (block instanceof LazyBlock) {
-                    vecList.add(getVecInLazyBlock((LazyBlock) block));
+                    vecList.add(buildVecInLazyBlock((LazyBlock) block));
                 } else if (block instanceof DictionaryBlock) {
-                    vecList.add(getDictionaryVec((DictionaryBlock<?>) block));
+                    vecList.add(buildDictionaryVec((DictionaryBlock<?>) block));
                 } else if (block instanceof RowBlock) {
-                    vecList.add(getContainerVec(vecAllocator, (RowBlock) block));
+                    vecList.add(buildContainerVec(vecAllocator, (RowBlock) block));
                 } else {
                     vecList.add((Vec) block.getValues());
                 }
@@ -474,14 +474,14 @@ public final class OperatorUtils {
         }
     }
 
-    private static Vec getVecInLazyBlock(LazyBlock block) {
+    private static Vec buildVecInLazyBlock(LazyBlock block) {
         if (block.getLoadedBlock() instanceof DictionaryBlock) {
-            return getDictionaryVec((DictionaryBlock<?>) block.getLoadedBlock());
+            return buildDictionaryVec((DictionaryBlock<?>) block.getLoadedBlock());
         }
         return (Vec) block.getLoadedBlock().getValues();
     }
 
-    private static Vec getContainerVec(VecAllocator vecAllocator, RowBlock block) {
+    private static Vec buildContainerVec(VecAllocator vecAllocator, RowBlock block) {
         Block[] rawFieldBlocks = block.getRawFieldBlocks();
         int numFields = rawFieldBlocks.length;
         long[] vectorAddresses = new long[numFields];
@@ -494,9 +494,9 @@ public final class OperatorUtils {
         return new ContainerVec(vecAllocator, numFields, block.getPositionCount(), vectorAddresses, vecTypes);
     }
 
-    private static Vec getDictionaryVec(DictionaryBlock<?> block) {
+    private static Vec buildDictionaryVec(DictionaryBlock<?> block) {
         if (block.getDictionary() instanceof DictionaryBlock) {
-            getDictionaryVec(block);
+            buildDictionaryVec(block);
         }
         return new DictionaryVec((Vec) block.getDictionary().getValues(), block.getIdsArray());
     }

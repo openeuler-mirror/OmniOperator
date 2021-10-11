@@ -20,14 +20,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
 
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
- * Method:    newDictionaryVectorNative
- * Signature: (J[I)J
- */
-JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *, jclass, jlong,
-    jintArray);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    sliceVectorNative
  * Signature: (JII)J
  */
@@ -141,6 +133,14 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
     jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_DictionaryVec
+ * Method:    setDictionaryNative
+ * Signature: (J)[I
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictionaryNative(JNIEnv *, jclass,
+    jlong, jlong);
+
+/*
  * Class:     nova_hetu_omniruntime_vector_VecAllocator
  * Method:    newAllocatorNative
  * Signature: (Ljava/lang/String;)J
@@ -175,13 +175,6 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatc
  * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative(JNIEnv *, jclass, jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_vector_DictionaryVec
- * Method:    getIdsNative
- * Signature: (J)[I
- */
-JNIEXPORT jintArray JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getIdsNative(JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus
 }

@@ -103,7 +103,7 @@ public:
             case OMNI_VEC_TYPE_DICTIONARY: {
                 auto *dictionaryVector = static_cast<DictionaryVector *>(vector);
                 Vector *dictionary = dictionaryVector->GetDictionary();
-                int32_t id = dictionaryVector->GetIds()[index];
+                int32_t id = dictionaryVector->GetId(index);
                 length = VectorHelper::GetValue(dictionary, id, value);
                 break;
             }
@@ -146,6 +146,10 @@ public:
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
                 vector = new Decimal128Vector(allocator, size);
+                break;
+            }
+            case OMNI_VEC_TYPE_DICTIONARY: {
+                vector = new DictionaryVector(allocator, size);
                 break;
             }
             default: {

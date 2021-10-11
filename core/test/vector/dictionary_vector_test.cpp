@@ -35,7 +35,7 @@ TEST(DictionaryVector, appendVector)
     dest->Append(src1, 0, 5);
     dest->Append(src2, 5, 5);
     for (int i = 0; i < 5; i++) {
-        EXPECT_EQ(dest->GetIds()[i], i);
+        EXPECT_EQ(dest->GetId(i), i);
     }
     delete dictionary;
     delete src1;

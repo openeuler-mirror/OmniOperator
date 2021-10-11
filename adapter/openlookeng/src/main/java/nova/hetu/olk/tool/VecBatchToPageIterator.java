@@ -73,17 +73,17 @@ public class VecBatchToPageIterator implements Iterator<Page> {
                 blocks[i] = new Int128ArrayOmniBlock(positionCount, (Decimal128Vec) vectors[i]);
             } else if (vectors[i] instanceof ContainerVec) {
                 ContainerVec containerVec = (ContainerVec) vectors[i];
-                RowBlock rowBlock = getContainerVec(containerVec);
+                RowBlock rowBlock = buildContainerVec(containerVec);
                 blocks[i] = rowBlock;
             } else if (vectors[i] instanceof DictionaryVec) {
                 DictionaryVec dictionaryVec = (DictionaryVec) vectors[i];
-                blocks[i] = getDictionaryBlock(dictionaryVec);
+                blocks[i] = buildDictionaryBlock(dictionaryVec);
             }
         }
         return new Page(positionCount, blocks);
     }
 
-    private RowBlock getContainerVec(ContainerVec containerVec) {
+    private RowBlock buildContainerVec(ContainerVec containerVec) {
         VecType[] vecTypes = containerVec.getVecTypes();
         int positionCount = containerVec.getPositionCount();
         Block[] rowBlocks = new Block[vecTypes.length];
@@ -126,7 +126,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
         return new RowBlock(0, positionCount, null, fieldBlockOffsets, rowBlocks);
     }
 
-    private DictionaryOmniBlock getDictionaryBlock(DictionaryVec dictionaryVec) {
+    private DictionaryOmniBlock buildDictionaryBlock(DictionaryVec dictionaryVec) {
         Vec dictionary = dictionaryVec.getDictionary();
         VecType vecType = dictionary.getType();
         int[] ids = dictionaryVec.getIds();
@@ -151,7 +151,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
                 dictionaryBlock = new Int128ArrayOmniBlock(dictionary.getSize(), (Decimal128Vec) dictionary);
                 break;
             case OMNI_VEC_TYPE_DICTIONARY:
-                dictionaryBlock = getDictionaryBlock((DictionaryVec) dictionary);
+                dictionaryBlock = buildDictionaryBlock((DictionaryVec) dictionary);
                 break;
             default:
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + vecType.getId());

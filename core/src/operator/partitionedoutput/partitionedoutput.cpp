@@ -153,7 +153,7 @@ void ALWAYS_INLINE Insert(Vector *origintVector, int32_t originRowIndex, Vector 
         case OMNI_VEC_TYPE_DICTIONARY: {
             auto *dictionaryVector = static_cast<DictionaryVector *>(origintVector);
             Vector *dictionary = dictionaryVector->GetDictionary();
-            int32_t id = dictionaryVector->GetIds()[originRowIndex];
+            int32_t id = dictionaryVector->GetId(originRowIndex);
             Insert(dictionary, id, currentVector, currentRowIndex);
             break;
         }
@@ -265,7 +265,7 @@ long GetHash(int32_t rowIndex, int type, Vector *vector)
         case OMNI_VEC_TYPE_DICTIONARY: {
             auto *dictionaryVector = static_cast<DictionaryVector *>(vector);
             Vector *vector = dictionaryVector->GetDictionary();
-            rowIndex = dictionaryVector->GetIds()[rowIndex];
+            rowIndex = dictionaryVector->GetId(rowIndex);
             return GetHash(rowIndex, vector->GetTypeId(), vector);
         }
         default:
