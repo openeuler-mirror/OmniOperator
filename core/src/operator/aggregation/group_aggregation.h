@@ -11,6 +11,7 @@
 #include "../hash_util.h"
 
 const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
+const int32_t DEFAULT_HASHTABLE_SIZE = 512;
 
 #ifdef DEBUG_OPERATOR
 #define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types)               \
@@ -115,7 +116,7 @@ public:
         std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
         : groupByCols(groupByCol), aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
     {
-        groupedRows.reserve(512);
+        groupedRows.reserve(DEFAULT_HASHTABLE_SIZE);
     }
 
     ~HashAggregationOperator() override {}
@@ -155,7 +156,7 @@ public:
             ReleaseMemoryImpl<int64_t>
         },
         {
-            OMNI_VEC_TYPE_DOUBLE, HashFuncImpl<DoubleVector, double>,HashFuncVectImpl<DoubleVector, double>, IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
+            OMNI_VEC_TYPE_DOUBLE, HashFuncImpl<DoubleVector, double>, HashFuncVectImpl<DoubleVector, double>, IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
             SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>, ReleaseMemoryImpl<double>
         },
         {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr, nullptr},
@@ -182,7 +183,7 @@ public:
             OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue,
             ReleaseMemoryImpl<std::string>
         },
-        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr,nullptr, nullptr, nullptr, nullptr, nullptr},
+        {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
     };
 

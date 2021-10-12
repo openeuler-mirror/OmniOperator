@@ -120,7 +120,8 @@ void ALWAYS_INLINE GenerateCombinedHashes(Vector **vectors, uint32_t start, uint
         }
         else {
             int32_t newIndexes[rowCount];
-            Vector *originalVector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(start, rowCount, newIndexes);
+            Vector *originalVector = static_cast<DictionaryVector *>(vector)->
+		    ExtractDictionaryAndIds(start, rowCount, newIndexes);
             HashAggregationOperator::FUNCTIONS[originalVector->GetTypeId()].hashFunc(originalVector, rowCount,
                                                                                      newIndexes, combinedHashVal);
         }
@@ -150,8 +151,8 @@ void *ALWAYS_INLINE DuplicateGroupByTuple(Vector *vector, uint32_t offset)
 int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t* types, const int32_t colNum,
                                           const int32_t* colIdx, std::vector<std::vector<GroupBySlot>> &sameBucket)
 {
-    //early break
-    if(sameBucket.empty()){
+    // early break
+    if (sameBucket.empty()) {
         return -1;
     }
     for (auto it = 0; it < sameBucket.size(); it++) {
