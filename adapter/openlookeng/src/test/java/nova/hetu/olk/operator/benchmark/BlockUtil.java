@@ -23,9 +23,11 @@ import static io.prestosql.spi.type.DoubleType.DOUBLE;
 import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.RealType.REAL;
 import static io.prestosql.spi.type.TimestampType.TIMESTAMP;
+import static io.prestosql.spi.type.VarcharType.VARCHAR;
 
 import static java.lang.Float.floatToRawIntBits;
 
+import io.airlift.slice.Slice;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.block.DictionaryBlock;
@@ -371,5 +373,30 @@ public final class BlockUtil {
     public static Block createLongDecimalDictionaryBlock(List<Integer> values, DecimalType type) {
         Block block = createLongDecimalBlock(values, type);
         return createDictionaryBlock(block);
+    }
+
+    public static Block buildVarcharBlock(int rowSize, int width, int offset) {
+        BlockBuilder blockBuilder = VARCHAR.createBlockBuilder(null, rowSize);
+        for (int i = 0; i < rowSize; i++) {
+            VARCHAR.writeString(blockBuilder, createFixedWidthString(i, offset, width));
+        }
+        return blockBuilder.build();
+    }
+
+    public static Slice[] getBlockSlices(Block block, int rowSize, int width) {
+        Slice[] slice = new Slice[rowSize];
+        for (int i = 0; i < rowSize; i++) {
+            slice[i] = block.getSlice(i, 0, width);
+        }
+        return slice;
+    }
+
+    private static String createFixedWidthString(int index, int offset, int width) {
+        String str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int j = 0; j < width; j++) {
+            stringBuilder.append(str.charAt((index + offset + j) % str.length()));
+        }
+        return stringBuilder.toString();
     }
 }
