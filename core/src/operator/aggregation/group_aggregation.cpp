@@ -111,13 +111,20 @@ void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
 void ALWAYS_INLINE GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t *types,
     const int32_t colNum, const int32_t *colIdx, int64_t *combinedHashVal)
 {
+
     for (int32_t i = 0; i < colNum; ++i) {
         uint32_t idx = colIdx[i];
         auto *vector = vectors[idx];
-        int32_t originalIndexes[rowCount];
-        Vector *originalVector = VectorHelper::ExpandVectorAndIndexes(vector, start, rowCount, originalIndexes);
-        HashAggregationOperator::FUNCTIONS[originalVector->GetTypeId()].hashFunc(originalVector, rowCount,
-            originalIndexes, combinedHashVal);
+        if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+            HashAggregationOperator::FUNCTIONS[vector->GetTypeId()].hashFuncVect(vector, start, rowCount, combinedHashVal);
+        }
+        else {
+            int32_t newIndexes[rowCount];
+            Vector *originalVector = static_cast<DictionaryVector *>(vector)->
+		    ExtractDictionaryAndIds(start, rowCount, newIndexes);
+            HashAggregationOperator::FUNCTIONS[originalVector->GetTypeId()].hashFunc(originalVector, rowCount,
+                                                                                     newIndexes, combinedHashVal);
+        }
     }
 }
 
@@ -144,6 +151,10 @@ void *ALWAYS_INLINE DuplicateGroupByTuple(Vector *vector, uint32_t offset)
 int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t* types, const int32_t colNum,
                                           const int32_t* colIdx, std::vector<std::vector<GroupBySlot>> &sameBucket)
 {
+    // early break
+    if (sameBucket.empty()) {
+        return -1;
+    }
     for (auto it = 0; it < sameBucket.size(); it++) {
         bool isSame = true;
         for (int32_t i = 0; i < colNum && isSame; ++i) {
@@ -163,7 +174,6 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
 {
     static const int blockSize = 1024;
     int64_t combinedHashVal[blockSize];
-    uint32_t end;
     uint32_t run = blockSize;
     for (uint32_t start = 0; start < rowCount; start = start + blockSize) {
         for (int i = 0; i < blockSize; ++i) {
@@ -177,32 +187,32 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
         for (uint32_t offset = 0; offset < run; ++offset) {
             int64_t hash = combinedHashVal[offset];
             int32_t isSamePos = -1;
-            if (groupedRows.find(hash) != groupedRows.end()) {
-                isSamePos = IsSameGroupByTuples(vectors, offset, types, groupByColNum, groupByColIdx, groupedRows[hash]);
-            }
+            int32_t actualOffset = start + offset;
+            auto &bucket = groupedRows[hash];
+            isSamePos = IsSameGroupByTuples(vectors, actualOffset, types, groupByColNum, groupByColIdx,
+                                            bucket);
             if (isSamePos == -1) {
                 std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
                 for (int32_t i = 0; i < groupByColNum; ++i) {
                     uint32_t idx = groupByColIdx[i];
-                    groupByTuple[i].val = DuplicateGroupByTuple(vectors[idx], start + offset);
+                    groupByTuple[i].val = DuplicateGroupByTuple(vectors[idx], actualOffset);
                 }
-                groupedRows[hash].push_back(groupByTuple);
-                size_t chainLength = groupedRows[hash].size();
+                bucket.push_back(groupByTuple);
+                size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggColNum; ++i) {
                     int32_t idx = aggColIdx[i];
                     int32_t type = types[idx];
                     Vector *colPtr = vectors[idx];
-                    GroupBySlot &state = groupedRows[hash][chainLength-1][groupByColNum + i];
-                    aggregators[i]->AggInsert(state, colPtr, type, start + offset);
+                    GroupBySlot &state = bucket[chainLength - 1][groupByColNum + i];
+                    aggregators[i]->AggInsert(state, colPtr, type, actualOffset);
                 }
             } else {
-                auto& bucket = groupedRows[hash];
                 for (int32_t i = 0; i < aggColNum; ++i) {
                     int32_t idx = aggColIdx[i];
                     int32_t type = types[idx];
                     Vector *colPtr = vectors[idx];
                     GroupBySlot &state = bucket[isSamePos][groupByColNum + i];
-                    aggregators[i]->AggProcessGroup(state, colPtr, type, start + offset);
+                    aggregators[i]->AggProcessGroup(state, colPtr, type, actualOffset);
                 }
             }
         }
@@ -454,48 +464,79 @@ OmniStatus HashAggregationOperator::Close()
     }
 }
 
-template <typename V, typename D>
+template<typename V, typename D>
+void ALWAYS_INLINE
+HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash)
+{
+    uint64_t hash;
+    std::hash<D> hasher;
+    for (int32_t i = 0; i < rowCount; ++i) {
+        int idx = i + start;
+        hash = !vector->IsValueNull(idx) * hasher(static_cast<V *>(vector)->GetValue(idx));
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
+    }
+}
+
+void ALWAYS_INLINE
+HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash)
+{
+    std::hash<std::string> hashVarChar;
+    uint8_t *data = nullptr;
+    for (int32_t i = 0; i < rowCount; ++i) {
+        int idx = i + start;
+        int valLen = static_cast<VarcharVector *>(vector)->GetValue(idx, &data);
+        std::string val(reinterpret_cast<char *>(data), valLen);
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * hashVarChar(val));
+    }
+}
+
+void ALWAYS_INLINE
+HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash)
+{
+    for (int32_t i = 0; i < rowCount; ++i) {
+        int idx = i + start;
+        Decimal128 val = static_cast<Decimal128Vector *>(vector)->GetValue(idx);
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) *
+                                                                 HashUtil::HashValue(val.LowBits(),
+                                                                                     val.HighBits()));
+    }
+}
+
+template<typename V, typename D>
 void ALWAYS_INLINE HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    int64_t *combinedHash)
+                                int64_t *combinedHash)
 {
     uint64_t hash;
     std::hash<D> hasher;
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t idx = rowIndexes[i];
-        if (vector->IsValueNull(idx)) {
-            continue;
-        }
-        hash = hasher(static_cast<V *>(vector)->GetValue(idx));
+        hash = !vector->IsValueNull(idx) * hasher(static_cast<V *>(vector)->GetValue(idx));
         combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
     }
 }
 
 void ALWAYS_INLINE HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    int64_t *combinedHash)
+                                       int64_t *combinedHash)
 {
     std::hash<std::string> hashVarChar;
     uint8_t *data = nullptr;
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t idx = rowIndexes[i];
-        if (vector->IsValueNull(idx)) {
-            continue;
-        }
         int valLen = static_cast<VarcharVector *>(vector)->GetValue(idx, &data);
         std::string val(reinterpret_cast<char *>(data), valLen);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hashVarChar(val));
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * hashVarChar(val));
     }
 }
 
 void ALWAYS_INLINE HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    int64_t *combinedHash)
+                                   int64_t *combinedHash)
 {
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t idx = rowIndexes[i];
-        if (vector->IsValueNull(idx)) {
-            continue;
-        }
         Decimal128 val = static_cast<Decimal128Vector *>(vector)->GetValue(idx);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], HashUtil::HashValue(val.LowBits(), val.HighBits()));
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) *
+                                                                 HashUtil::HashValue(val.LowBits(),
+                                                                                     val.HighBits()));
     }
 }
 
