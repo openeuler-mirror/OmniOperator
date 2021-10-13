@@ -1,10 +1,11 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * Description: code generation methods
+ * Description: Expression code generator
  */
 #ifndef __EXPRESSION_CODEGEN_H__
 #define __EXPRESSION_CODEGEN_H__
 
+#include "./codegen_value.h"
 #include "../common/expressions.h"
 #include "../common/parser/parser.h"
 #include "../common/expr_printer.h"
@@ -41,6 +42,8 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
+
+using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
 class CodegenContext {
 public:
@@ -82,7 +85,7 @@ public:
     void Visit(omniruntime::expressions::FuncExpr &e) override;
 
     // returns llvm value ptr of codegen functions
-    llvm::Value* VisitExpr(omniruntime::expressions::Expr &e);
+    CodeGenValuePtr VisitExpr(omniruntime::expressions::Expr &e);
 
 // TODO: Figure out which of these can be private
 protected:
@@ -125,7 +128,7 @@ protected:
         omniruntime::expressions::Expr &value2Expr, llvm::Function &func);
     bool InitializeCodegenContext();
 
-    llvm::Value* value;
+    CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
     bool useCoalesceArgs = false;
     std::string funcName;
