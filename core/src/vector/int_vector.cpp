@@ -35,7 +35,7 @@ IntVector *IntVector::CopyPositions(const int *positions, int offset, int length
     for (int i = 0; i < length; ++i) {
         int position = positions[offset + i];
         vector->SetValue(i, GetValue(position));
-        vector->SetValueNulls(i, ((bool *)valueNullsAddress) + position + positionOffset, 1);
+        vector->SetValueNull(i, IsValueNull(position));
     }
     return vector;
 }

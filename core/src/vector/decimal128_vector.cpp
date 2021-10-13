@@ -34,7 +34,7 @@ Decimal128Vector *Decimal128Vector::CopyPositions(const int32_t *positions, int3
     for (int32_t i = 0; i < length; ++i) {
         int32_t position = positions[offset + i];
         vector->SetValue(i, GetValue(position));
-        vector->SetValueNulls(i, ((bool *)valueNullsAddress) + position + positionOffset, 1);
+        vector->SetValueNull(i, IsValueNull(position));
     }
     return vector;
 }
