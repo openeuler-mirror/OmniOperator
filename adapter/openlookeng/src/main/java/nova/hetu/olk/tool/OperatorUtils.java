@@ -192,21 +192,6 @@ public final class OperatorUtils {
         return vecsResult;
     }
 
-    private static Block getDictionary(DictionaryVec vec) {
-        Vec dictionary = vec.getDictionary();
-        VecType vecType = dictionary.getType();
-        int positionCount = dictionary.getSize();
-
-        switch (vecType.getId()) {
-            case OMNI_VEC_TYPE_INT:
-                return new IntArrayOmniBlock(positionCount, Optional.empty(), (IntVec) dictionary);
-            case OMNI_VEC_TYPE_LONG:
-                return new LongArrayOmniBlock(positionCount, Optional.empty(), (LongVec) dictionary);
-            default:
-                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + vecType);
-        }
-    }
-
     /**
      * Transfer to off heap pages list.
      *

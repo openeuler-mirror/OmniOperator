@@ -348,7 +348,7 @@ public class PartitionedOutputOmniOperator
 
         operatorContext.setInfoSupplier(this::getInfo);
         this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(
-                PartitionedOutputOperator.class.getSimpleName());
+                PartitionedOutputOmniOperator.class.getSimpleName());
         this.partitionsInitialRetainedSize = this.partitionFunction.getRetainedSizeInBytes();
         this.systemMemoryContext.setBytes(partitionsInitialRetainedSize);
     }
