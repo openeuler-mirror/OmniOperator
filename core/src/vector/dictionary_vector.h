@@ -40,7 +40,7 @@ public:
         ASSERT(position < size);
         VecTypeId dictionaryType = dictionary->GetTypeId();
         if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
-            return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryAndId(position, originalId);
+            return static_cast<DictionaryVector *>(dictionary)->ExtractDictionaryAndId(GetId(position), originalId);
         }
         originalId = GetId(position);
         return dictionary;
