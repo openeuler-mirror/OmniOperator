@@ -16,7 +16,8 @@ namespace {
     const int SELECTED = 3;
     const int NUM_SELECTED = 4;
     const int BITMAP = 5;
-    const int NEW_NULL_VALUES_INDEX = 6;
+    const int NEW_NULL_VALUES_INDEX = 7;
+    const int OFFSETS_INDEX = 6;
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
     const int ARGUMENT_TWO = 2;
@@ -55,6 +56,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // bitmap is a 2d array of booleans
     Type *bitmapArg = Type::getInt64PtrTy(*context);
     args.push_back(bitmapArg);
+    // Offsets for columns
+    args.push_back(Type::getInt64PtrTy(*context));
     // bool array to hold null values
     args.push_back(Type::getInt1PtrTy(*context));
 
@@ -86,6 +89,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Argument *bitmap = funcDecl->getArg(BITMAP);
     bitmap->setName("BITMAP");
 
+    Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
+    bitmap->setName("OFFSETS");
+
     Argument *nullValuesAddress = funcDecl->getArg(NEW_NULL_VALUES_INDEX);
     nullValuesAddress->setName("NULL_VALUES_ADDRESS");
 
@@ -94,17 +100,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> projFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
-    // filterFuncArgs[2 * i] contains the value of the ith argument (where 0 <= i < datatypes.size())
-    // filterFuncArgs[2 * i+1] contains a boolean value stating whether argument i is null
-    projFuncArgs.reserve(IS_NULL_INDEX * nArgs);
+    // value*, bitmap*, offset*, rowIdx
+    projFuncArgs.reserve(4);
     Value *gep;
-    Value *elementAddr;
-    Value *elementPtr;
-    Value *elementValue;
-    // for bitmap
-    Value *bitmapIdx = nullptr;
-    Value *bitmapGEP;
-    Value *bitmapValue;
 
     DataType type;
     CallInst *ret;
@@ -171,57 +169,10 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         rowIndexVal = curIndexVal;
     }
 
-    for (int32_t i = 0; i < nArgs; i++) {
-        Value *colValue = this->CreateConstantInt(i);
-        // Find address of this column in the addresses array argument.
-        gep = builder->CreateGEP(input, colValue);
-
-        // Load the address value.
-        elementAddr = builder->CreateLoad(gep);
-        type = this->datatypes.at(i);
-
-        // Convert the column address to array of proper datatype.
-        switch (type) {
-            case DataType::BOOLD:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt1PtrTy(*context));
-                break;
-            case DataType::INT32D:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt32PtrTy(*context));
-                break;
-            case DataType::INT64D:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-                break;
-            case DataType::DOUBLED:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getDoublePtrTy(*context));
-                break;
-            case DataType::STRINGD:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-                break;
-            case DataType::DECIMAL128D:
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-                break;
-            default:
-                LLVM_DEBUG_LOG("Unsupported column data type %d", type);
-                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-                break;
-        }
-        // Find the address of the row to be processed.
-        gep = builder->CreateGEP(elementPtr, rowIndexVal);
-        // Value to be processed.
-        elementValue = builder->CreateLoad(gep);
-        // Pass to filter function's arguments.
-        projFuncArgs.push_back(elementValue);
-
-        // Get bitmap value bitmap[i][j]
-
-        bitmapGEP = builder->CreateGEP(bitmap, colValue);
-        bitmapValue = builder->CreateLoad(bitmapGEP);
-        bitmapValue = builder->CreateIntToPtr(bitmapValue, Type::getInt1PtrTy(*context));
-        bitmapGEP = builder->CreateGEP(bitmapValue, curIndexVal);
-        bitmapValue = builder->CreateLoad(bitmapGEP);
-        // Pass whether the current value is null to projection function arguments
-        projFuncArgs.push_back(bitmapValue);
-    }
+    projFuncArgs.push_back(input);
+    projFuncArgs.push_back(bitmap);
+    projFuncArgs.push_back(offsets);
+    projFuncArgs.push_back(rowIndexVal);
 
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection

@@ -15,7 +15,7 @@
 #include "projection.h"
 
 using vec64 = std::vector<int64_t>;
-using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, bool *);
+using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *, bool *);
 
 namespace omniruntime {
 namespace op {
@@ -48,17 +48,17 @@ public:
     bool IsSupported();
 
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, omniruntime::vec::Vector *outVec,
+        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, omniruntime::vec::Vector *outVec,
+        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-        int32_t numSelectedRows, std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap) const;
+        int32_t numSelectedRows, std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets) const;
 
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch,
-        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap) const;
+        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets) const;
 
     omniruntime::expressions::DataType GetOutputType() const
     {

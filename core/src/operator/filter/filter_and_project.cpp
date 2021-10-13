@@ -96,7 +96,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection
         Vector *col = this->projections[i]->Project(
-            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, vector<int64_t> {}, vector<int64_t> {});
+            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, vector<int64_t> {}, vector<int64_t> {}, vector<int64_t> {});
         projectedData->SetVector(i, col);
     }
     this->projectedVecs = std::move(projectedData);

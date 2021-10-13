@@ -42,6 +42,23 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 
+class CodegenContext {
+public:
+    explicit CodegenContext() :
+            data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr) {}
+
+    explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx) :
+            data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx) {}
+
+    friend class ExpressionCodeGen;
+
+private:
+    llvm::Value *data;
+    llvm::Value *nullBitmap;
+    llvm::Value *offsets;
+    llvm::Value *rowIdx;
+};
+
 // Given an expression generates the function for it.
 class ExpressionCodeGen : public ExprVisitor {
 
@@ -51,7 +68,6 @@ public:
     ~ExpressionCodeGen() override;
 
     std::string DumpCode();
-    void GetArgs();
     virtual int64_t GetFunction() = 0;
 
     // visitor methods
@@ -67,9 +83,6 @@ public:
 
     // returns llvm value ptr of codegen functions
     llvm::Value* VisitExpr(omniruntime::expressions::Expr &e);
-    llvm::Value* value;
-    std::map<std::string, llvm::Value *> codegenArgs;
-    bool useCoalesceArgs = false;
 
 // TODO: Figure out which of these can be private
 protected:
@@ -109,9 +122,12 @@ protected:
     llvm::Function* CreateCoalesceFuncHelper(omniruntime::expressions::DataType retType,
         omniruntime::expressions::DataExpr &dExpr1, omniruntime::expressions::Expr &value2Expr);
     llvm::Function *CreateCoalesceFuncHelper2(omniruntime::expressions::DataExpr &dExpr1,
-                                          omniruntime::expressions::Expr &value2Expr, std::map<std::string,
-                                          llvm::Value *> fArgs, llvm::Function &func);
+        omniruntime::expressions::Expr &value2Expr, llvm::Function &func);
+    bool InitializeCodegenContext();
 
+    llvm::Value* value;
+    std::unique_ptr<CodegenContext> codegenContext;
+    bool useCoalesceArgs = false;
     std::string funcName;
     omniruntime::expressions::Expr *expr = nullptr;
     std::vector<omniruntime::expressions::DataType> &datatypes;
