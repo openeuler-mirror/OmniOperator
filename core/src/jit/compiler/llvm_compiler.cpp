@@ -167,6 +167,7 @@ uint64_t LLVMCompiler::GetJitedFunction(std::string functionName, bool isNameMan
         llvm::errs() << "Cannot find function name: " << functionName << "\n";
         return 0;
     }
+    return 0;
 }
 
 // replaces the value of parameters passed to a function

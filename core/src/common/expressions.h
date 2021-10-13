@@ -10,6 +10,8 @@
 #include <map>
 #include "../vector/decimal128.h"
 
+class ExprVisitor;
+
 namespace omniruntime {
 namespace expressions {
 
@@ -74,7 +76,6 @@ enum ExprType {
     INVALID_E
 };
 
-
 // Helper function to get DataType from a string representing the type
 DataType StringToDataType(std::string dt);
 
@@ -83,10 +84,9 @@ class Expr {
 public:
         DataType dataType; // dataType of returned value
         DataType GetExprDataType();
-
         virtual ExprType GetType();
         virtual ~Expr() = default;
-        virtual void PrintExprTree();
+        virtual void Accept(ExprVisitor &visitor) = 0;
 };
 
 
@@ -111,7 +111,7 @@ public:
     explicit DataExpr(int64_t &val);
     DataExpr(int32_t val, DataType colType);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -132,7 +132,7 @@ public:
     UnaryExpr(Operator logOp, Expr *bodyexp);
     UnaryExpr(Operator uop, Expr *expr, DataType dt);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -147,8 +147,8 @@ public:
     ~BinaryExpr() override;
     BinaryExpr(Operator op, Expr *leftExpr, Expr *rightExpr);
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt);
-
-    void PrintExprTree() override;
+   
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -162,7 +162,7 @@ public:
     ~InExpr() override;
     explicit InExpr(std::vector<Expr*> args);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -177,7 +177,7 @@ public:
     ~BetweenExpr() override;
     BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -192,7 +192,7 @@ public:
     ~IfExpr() override;
     IfExpr(Expr* cond, Expr* texp, Expr* fexp);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -206,7 +206,7 @@ public:
     ~CoalesceExpr() override;
     CoalesceExpr(Expr* val1, Expr* val2);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -217,7 +217,7 @@ public:
     ~IsNullExpr() override;
     explicit IsNullExpr(Expr* value);
 
-    void PrintExprTree() override;
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
@@ -230,8 +230,8 @@ public:
     ~FuncExpr() override;
     FuncExpr(std::string fnName, std::vector<Expr*> args);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
-
-    void PrintExprTree() override;
+    
+    void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
