@@ -7,6 +7,7 @@
 
 #include "../common/expressions.h"
 #include "../common/parser/parser.h"
+#include "../common/expr_printer.h"
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
 #include "./functions/murmur3_hash.h"
@@ -38,78 +39,76 @@
 #include "llvm/Support/SourceMgr.h"
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 
 // Given an expression generates the function for it.
-class ExpressionCodeGen {
+class ExpressionCodeGen : public ExprVisitor {
 
 public:
     ExpressionCodeGen(std::string name, omniruntime::expressions::Expr &expr,
                       std::vector<omniruntime::expressions::DataType> &datatypes);
-    ~ExpressionCodeGen();
+    ~ExpressionCodeGen() override;
 
     std::string DumpCode();
+    void GetArgs();
     virtual int64_t GetFunction() = 0;
+
+    // visitor methods
+    void Visit(omniruntime::expressions::DataExpr &e) override;
+    void Visit(omniruntime::expressions::UnaryExpr &e) override;        
+    void Visit(omniruntime::expressions::BinaryExpr &e) override;
+    void Visit(omniruntime::expressions::InExpr &e) override;
+    void Visit(omniruntime::expressions::BetweenExpr &e) override;
+    void Visit(omniruntime::expressions::IfExpr &e) override;
+    void Visit(omniruntime::expressions::CoalesceExpr &e) override;
+    void Visit(omniruntime::expressions::IsNullExpr &e) override;
+    void Visit(omniruntime::expressions::FuncExpr &e) override;
+
+    // returns llvm value ptr of codegen functions
+    llvm::Value* VisitExpr(omniruntime::expressions::Expr &e);
+    llvm::Value* value;
+    std::map<std::string, llvm::Value *> codegenArgs;
+    bool useCoalesceArgs = false;
 
 // TODO: Figure out which of these can be private
 protected:
     // Parse a generic expression by calling the helper functions below
-    llvm::Value* ParseExpr(omniruntime::expressions::Expr &root, std::map<std::string, llvm::Value*>& args);
-
     llvm::Value* CreateConstantBool(bool n);
     llvm::Value* CreateConstantInt(int32_t n);
     llvm::Value* CreateConstantLong(int64_t n);
     llvm::Value* CreateConstantDouble(double n);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
-
     llvm::Function* CreateFunction();
-
-    // Parsing different kinds of expressions
-    llvm::Value* CodegenDataExpr(omniruntime::expressions::DataExpr &dExpr, std::map<std::string, llvm::Value*>& args);
-
-    // Helper functions and main function for parsing binary expressions
-    llvm::Value* CodegenBinaryExpr(omniruntime::expressions::BinaryExpr &bExpr, std::map<std::string,
-        llvm::Value*>& args);
-    llvm::Value *CodegenBinaryExprInt(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value *CodegenBinaryExprDouble(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value *CodegenBinaryExprString(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value *CodegenBinaryExprDecimal(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value* CodegenUnaryExpr(
-        omniruntime::expressions::UnaryExpr &uExpr, std::map<std::string, llvm::Value*>& args);
-    llvm::Value* CodegenIfExpr(omniruntime::expressions::IfExpr &ifExpr, std::map<std::string, llvm::Value*>& args);
-    llvm::Value* CodegenInExpr(omniruntime::expressions::InExpr &inExpr, std::map<std::string, llvm::Value*>& args);
-    llvm::Value* CodegenBetweenExpr(omniruntime::expressions::BetweenExpr &btExpr, std::map<std::string,
-        llvm::Value*>& args);
-    llvm::Value* CodegenCoalesceExpr(omniruntime::expressions::CoalesceExpr &cExpr, std::map<std::string,
-        llvm::Value*>& args);
-    llvm::Value* CodegenIsNullExpr(omniruntime::expressions::IsNullExpr &expr, std::map<std::string,
-            llvm::Value*>& args);
-
-    // Helper functions and main function for parsing function expressions
-    llvm::Value* CodegenFuncExpr(
-        omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
-    llvm::Value* CodegenFuncExprAbs(
-        omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
-    llvm::Value* CodegenFuncExprSubstr(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
-                                     llvm::Value*>& args);
-    llvm::Value* CodegenFuncExprCast(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
-                                   llvm::Value*>& args);
-    llvm::Value* CodegenFuncExprMm3Hash(omniruntime::expressions::FuncExpr &fExpr, std::map<std::string,
-                                      llvm::Value*>& args);
-    llvm::Value* CodegenFuncExprExt(
-        omniruntime::expressions::FuncExpr &fExpr, std::map<std::string, llvm::Value*>& args);
 
     // Helper functions for generating IR for operators and special forms
     llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *rhs);
     llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
-    llvm::Function* CreateConditional(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,
+    
+    // Helper functions and main function for parsing binary expressions
+    llvm::Value *BinaryExprIntHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    
+    // Helper functions and main function for parsing function expressions
+    llvm::Value* FuncExprAbsHelper(
+        omniruntime::expressions::FuncExpr &fExpr);
+    llvm::Value* FuncExprSubstrHelper(omniruntime::expressions::FuncExpr &fExpr);
+    llvm::Value* FuncExprCastHelper(omniruntime::expressions::FuncExpr &fExpr);
+    llvm::Value* FuncExprMm3HashHelper(omniruntime::expressions::FuncExpr &fExpr);
+    llvm::Value* FuncExprExtHelper(omniruntime::expressions::FuncExpr &fExpr);
+    llvm::Value* FuncExprCombineHashHelper(omniruntime::expressions::FuncExpr &fExpr);
+
+    // Helper functions and main function for parsing if expressions
+    llvm::Function* ConditionalHelper(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,
         omniruntime::expressions::Expr &ifTrue, omniruntime::expressions::Expr &ifFalse);
-    llvm::Function* CreateCoalesceFunc(omniruntime::expressions::DataType retType,
+
+    // Helper functions and main function for parsing coalesce expressions
+    llvm::Function* CreateCoalesceFuncHelper(omniruntime::expressions::DataType retType,
         omniruntime::expressions::DataExpr &dExpr1, omniruntime::expressions::Expr &value2Expr);
-    llvm::Function *CreateCoalesceFuncHelper(omniruntime::expressions::DataExpr &dExpr1,
+    llvm::Function *CreateCoalesceFuncHelper2(omniruntime::expressions::DataExpr &dExpr1,
                                           omniruntime::expressions::Expr &value2Expr, std::map<std::string,
                                           llvm::Value *> fArgs, llvm::Function &func);
 
@@ -133,6 +132,7 @@ protected:
     std::unique_ptr<llvm::orc::LLJIT> jit;
     llvm::orc::ResourceTrackerSP rt;
     FunctionRegistry *fr;
+    llvm::Function *func = nullptr;
 };
 
 #endif

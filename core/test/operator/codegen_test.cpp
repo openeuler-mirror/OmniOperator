@@ -19,6 +19,7 @@
 #include "../../src/codegen/func_registry.h"
 #include "../../src/operator/filter/filter_and_project.h"
 #include "../../src/operator/projection/projection.h"
+#include "../../src/common/expressions.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
@@ -319,7 +320,8 @@ TEST(CodeGenTest, Operators1)
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     int32_t v1[1] = {2};
@@ -378,7 +380,8 @@ TEST(CodeGenTest, MathFunctions1)
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     int32_t v1[1] = {-123};
@@ -437,7 +440,8 @@ TEST(CodeGenTest, MathFunctions2)
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     int32_t v1[1] = {1001};
@@ -509,7 +513,8 @@ TEST(CodeGenTest, MathFunctions3)
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     int32_t v1[1] = {1001};
@@ -587,7 +592,8 @@ TEST(CodeGenTest, MathFunctions4)
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     int32_t v1[1] = {1};
@@ -675,7 +681,8 @@ TEST(CodeGenTest, CastNumbers1)
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
 
@@ -743,7 +750,8 @@ TEST(CodeGenTest, CastNumbers2)
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
 
@@ -813,7 +821,8 @@ TEST(CodeGenTest, Like)
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     string s1;
@@ -880,7 +889,8 @@ TEST(CodeGenTest, DateCast)
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
 
@@ -959,7 +969,8 @@ TEST(CodeGenTest, SubstrIn)
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
 
@@ -1041,7 +1052,8 @@ TEST(CodeGenTest, ConcatStr)
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
 
@@ -1123,7 +1135,8 @@ TEST(CodeGenTest, StringWithOps)
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     string s1;
@@ -1201,7 +1214,8 @@ TEST(CodeGenTest, Coalesce)
     DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     int64_t v1[1] = {123};
@@ -1253,7 +1267,8 @@ TEST(CodeGenTest, IsNull)
     DataType types[1] = {DataType::INT64D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
 
     int64_t v1[1] = {123};
     auto *vals = new int64_t[1];
@@ -1294,7 +1309,8 @@ TEST(CodeGenTest, IsNotNull)
     DataType types[1] = {DataType::INT64D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
 
     int64_t v1[1] = {123};
     auto *vals = new int64_t[1];
@@ -1335,7 +1351,8 @@ TEST(CodeGenTest, DecimalOperators1)
     DataType types[1] = {DataType::DECIMAL128D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
 
     // creating decimal
     int64_t c1[4] = {10, 0, 9, 0};
@@ -1377,7 +1394,8 @@ TEST(CodeGenTest, DecimalOperators2)
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
 
     // creating decimal
     int64_t c1[2] = {4000, 0};
@@ -1427,7 +1445,8 @@ TEST(CodeGenTest, DecimalOperators3)
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
 
     // creating decimal
     int64_t c1[2] = {-12222, -1};
@@ -1476,7 +1495,8 @@ TEST(CodeGenTest, ProjectionCodeGen)
     DataType types[1] = {DataType::DECIMAL128D};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
 
     // creating decimal
     int64_t c1[6] = {10, 0, 20, 0, 30, 0};
