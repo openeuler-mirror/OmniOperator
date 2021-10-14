@@ -944,27 +944,41 @@ void ExpressionCodeGen::Visit(UnaryExpr &uExpr)
 
 void ExpressionCodeGen::Visit(IfExpr &ifExpr)
 {
-    IfExpr *ie = &ifExpr;
-    BasicBlock *currentBlock = builder->GetInsertBlock();
-    DataType retType = ie->trueExpr->GetExprDataType();
-    Expr *cond = ie->condition;
-    Expr *ifTrue = ie->trueExpr;
-    Expr *ifFalse = ie->falseExpr;
+    Expr *cond = ifExpr.condition;
+    Expr *ifTrue = ifExpr.trueExpr;
+    Expr *ifFalse = ifExpr.falseExpr;
 
-    Function *conditionalFunc = ConditionalHelper(retType, *cond, *ifTrue, *ifFalse);
-    builder->SetInsertPoint(currentBlock);
+    BasicBlock *trueBlock = BasicBlock::Create(*context, "TRUE_BLOCK", func);
+    BasicBlock *falseBlock = BasicBlock::Create(*context, "FALSE_BLOCK");
+    BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
 
-    std::vector<Value *> passArgs;
-    passArgs.push_back(this->codegenContext->data);
-    passArgs.push_back(this->codegenContext->nullBitmap);
-    passArgs.push_back(this->codegenContext->offsets);
-    passArgs.push_back(this->codegenContext->rowIdx);
+    CodeGenValuePtr evCond = VisitExpr(*cond);
 
-    CallInst *condCall = builder->CreateCall(conditionalFunc, passArgs, "EVAL_IF");
+    // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
+    // Otherwise goes to falseBlock and returns evFalse
+    builder->CreateCondBr(evCond->data, trueBlock, falseBlock);
+    builder->SetInsertPoint(trueBlock);
+    Value *evTrue = VisitExpr(*ifTrue)->data;
+    builder->CreateBr(mergeBlock);
+    // Codegen of 'true' can change the current block, update trueBlock for the PHI.
+    trueBlock = builder->GetInsertBlock();
 
-    InitializeCodegenContext(this->func->args());
+    func->getBasicBlockList().push_back(falseBlock);
+    builder->SetInsertPoint(falseBlock);
+    Value *evFalse = VisitExpr(*ifFalse)->data;
+    builder->CreateBr(mergeBlock);
+    // Codegen of 'false' can change the current block, update falseBlock for the PHI.
+    falseBlock = builder->GetInsertBlock();
 
-    this->value = make_shared<CodeGenValue>(condCall, this->CreateConstantBool(false));
+    // Emit merge block.
+    Type *phiType = this->ToLlvmType(ifExpr.GetExprDataType());
+    func->getBasicBlockList().push_back(mergeBlock);
+    builder->SetInsertPoint(mergeBlock);
+    PHINode *PN = builder->CreatePHI(phiType, 2, "iftmp");
+
+    PN->addIncoming(evTrue, trueBlock);
+    PN->addIncoming(evFalse, falseBlock);
+    this->value = make_shared<CodeGenValue>(PN, this->CreateConstantBool(false));
 }
 
 void ExpressionCodeGen::Visit(InExpr &inExpr)

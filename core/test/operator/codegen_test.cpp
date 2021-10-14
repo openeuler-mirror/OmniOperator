@@ -149,7 +149,7 @@ TEST(CodeGenTest, SimpleProject)
     delete[] offsets;
 }
 // A more complicated test for individual row projection
-TEST(CodeGenTest, DISABLED_SingleProject)
+TEST(CodeGenTest, SingleProject)
 {
     string unparsed = "IF:int($operator$GREATER_THAN:boolean(#1, 3000000000), ADD:int(#0, 10), MULTIPLY:int(#0, -1))";
 
@@ -565,7 +565,7 @@ TEST(CodeGenTest, MathFunctions2)
 }
 
 
-TEST(CodeGenTest, DISABLED_MathFunctions3)
+TEST(CodeGenTest, MathFunctions3)
 {
     string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
         "$operator$LESS_THAN:boolean(#0, 0))";
