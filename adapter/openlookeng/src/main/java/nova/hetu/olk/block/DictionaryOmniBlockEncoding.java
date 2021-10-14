@@ -12,6 +12,7 @@ import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
@@ -31,7 +32,7 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
         // The down casts here are safe because it is the block itself the provides this encoding implementation.
         DictionaryOmniBlock dictionaryBlock;
         if (block instanceof DictionaryBlock) {
-            dictionaryBlock = new DictionaryOmniBlock(((DictionaryBlock) block).getDictionary(),
+            dictionaryBlock = new DictionaryOmniBlock((Vec) (((DictionaryBlock) block).getDictionary().getValues()),
                 ((DictionaryBlock) block).getIdsArray());
         } else {
             dictionaryBlock = (DictionaryOmniBlock) block;
@@ -57,7 +58,6 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
 
         // release compact block
         if (compactDictionaryBlock != dictionaryBlock) {
-            compactDictionaryBlock.getDictionary().close();
             compactDictionaryBlock.close();
         }
         if (dictionaryBlock != block) {
@@ -85,7 +85,7 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
         // We always compact the dictionary before we send it. However, dictionaryBlock comes from sliceInput, which may over-retain memory.
         // As a result, setting dictionaryIsCompacted to true is not appropriate here.
         // TODO: fix DictionaryBlock so that dictionaryIsCompacted can be set to true when the underlying block over-retains memory.
-        return new DictionaryOmniBlock(positionCount, dictionaryBlock, ids, false,
+        return new DictionaryOmniBlock(positionCount, (Vec) dictionaryBlock.getValues(), ids, false,
             new DictionaryId(mostSignificantBits, leastSignificantBits, sequenceId));
     }
 }

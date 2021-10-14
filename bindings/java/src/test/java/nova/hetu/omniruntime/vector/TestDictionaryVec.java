@@ -46,6 +46,51 @@ public class TestDictionaryVec {
     }
 
     @Test
+    public void testNestedDictionaryVecSlice() {
+        LongVec originalVec = new LongVec(100);
+        for (int i = 0; i < originalVec.getSize(); i++) {
+            originalVec.set(i, i);
+        }
+
+        int[] ids = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+        DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
+        int[] nestedIds = {1,1,2,2,4,4,7,7};
+        DictionaryVec nestedDictionaryVec = new DictionaryVec(dictionaryVec, nestedIds);
+
+        originalVec.close();
+        dictionaryVec.close();
+
+        int offset = 3;
+        DictionaryVec slice = nestedDictionaryVec.slice(offset, 7);
+        assertEquals(slice.getSize(), 4);
+        long v = slice.getLong(0);
+        assertEquals(v, 2);
+        v = slice.getLong(1);
+        assertEquals(v, 4);
+        v = slice.getLong(2);
+        assertEquals(v, 4);
+        v = slice.getLong(3);
+        assertEquals(v, 7);
+
+        nestedDictionaryVec.close();
+
+        int[] copyIds = {0,1,2,3};
+        DictionaryVec copy = slice.copyPositions(copyIds, 0, 4);
+        assertEquals(copy.getSize(), 4);
+        v = copy.getLong(0);
+        assertEquals(v, 2);
+        v = copy.getLong(1);
+        assertEquals(v, 4);
+        v = copy.getLong(2);
+        assertEquals(v, 4);
+        v = copy.getLong(3);
+        assertEquals(v, 7);
+
+        slice.close();
+        copy.close();
+    }
+
+    @Test
     public void testGetLong() {
         LongVec originalVec = new LongVec(10);
         for (int i = 0; i < 10; i++) {

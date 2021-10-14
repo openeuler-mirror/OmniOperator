@@ -304,9 +304,12 @@ public final class OperatorUtils {
                 return getVariableWidthOmniBlock(vecAllocator, block, positionCount, valueIsNull);
             }
             case "DictionaryBlock": {
-                return new DictionaryOmniBlock(
-                    buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
+                Block dicBlock = buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary());
+                Block dictionaryOmniBlock = new DictionaryOmniBlock(
+                    (Vec)dicBlock.getValues(),
                     ((DictionaryBlock) block).getIdsArray());
+                dicBlock.close();
+                return dictionaryOmniBlock;
             }
             case "RunLengthEncodedBlock": {
                 return buildOffHeapBlock(vecAllocator, block,
@@ -483,6 +486,9 @@ public final class OperatorUtils {
         if (block.getDictionary() instanceof DictionaryBlock) {
             buildDictionaryVec(block);
         }
-        return new DictionaryVec((Vec) block.getDictionary().getValues(), block.getIdsArray());
+        Vec dictionary = (Vec) block.getDictionary().getValues();
+        Vec vec = new DictionaryVec(dictionary, block.getIdsArray());
+        dictionary.close();
+        return vec;
     }
 }
