@@ -1089,30 +1089,38 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     Expr *value1Expr = cExpr.value1;
     Expr *value2Expr = cExpr.value2;
 
-    // Only case that coalesce is used seems to be with a column as first argument
-    if (value1Expr->GetType() == ExprType::DATA_E) {
-        auto *dExpr1 = static_cast<DataExpr *>(value1Expr);
-        if (dExpr1->isColumn) {
-            BasicBlock *currentBlock = builder->GetInsertBlock();
+    CodeGenValuePtr val1Cond = VisitExpr(*value1Expr);
 
-            DataType retType = value1Expr->GetExprDataType();
-            Function *coalesceFunc = CreateCoalesceFuncHelper(retType, *dExpr1, *value2Expr);
-            builder->SetInsertPoint(currentBlock);
+    BasicBlock *isNullBlock = BasicBlock::Create(*context, "VAL1_NULL", func);
+    BasicBlock *isNotNullBlock = BasicBlock::Create(*context, "VAL1_NOT_NULL");
+    BasicBlock *mergeBlock = BasicBlock::Create(*context, "COALESCE_CONT");
 
-            InitializeCodegenContext(coalesceFunc->args());
-            std::vector<Value *> passArgs;
-            passArgs.push_back(this->codegenContext->data);
-            passArgs.push_back(this->codegenContext->nullBitmap);
-            passArgs.push_back(this->codegenContext->offsets);
-            passArgs.push_back(this->codegenContext->rowIdx);
+    // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
+    // Otherwise goes to falseBlock and returns evFalse
+    builder->CreateCondBr(val1Cond->isNull, isNullBlock, isNotNullBlock);
 
-            CallInst *condCall = builder->CreateCall(coalesceFunc, passArgs, "EVAL_COALESCE");
-            this->value = make_shared<CodeGenValue>(condCall, this->CreateConstantBool(false));
-            return;
-        }
-    }
-    // If the first argument is not a column DataExpr, just return it
-    this->value = VisitExpr(*value1Expr);
+    builder->SetInsertPoint(isNullBlock);
+    Value *evTrue = VisitExpr(*value2Expr)->data;
+    builder->CreateBr(mergeBlock);
+    // Codegen of 'true' can change the current block, update trueBlock for the PHI.
+    isNullBlock = builder->GetInsertBlock();
+
+    func->getBasicBlockList().push_back(isNotNullBlock);
+    builder->SetInsertPoint(isNotNullBlock);
+    Value *evFalse = val1Cond->data;
+    builder->CreateBr(mergeBlock);
+    // Codegen of 'false' can change the current block, update falseBlock for the PHI.
+    isNotNullBlock = builder->GetInsertBlock();
+
+    // Emit merge block.
+    Type *phiType = this->ToLlvmType(cExpr.GetExprDataType());
+    func->getBasicBlockList().push_back(mergeBlock);
+    builder->SetInsertPoint(mergeBlock);
+    PHINode *PN = builder->CreatePHI(phiType, 2, "iftmp");
+
+    PN->addIncoming(evTrue, isNullBlock);
+    PN->addIncoming(evFalse, isNotNullBlock);
+    this->value = make_shared<CodeGenValue>(PN, this->CreateConstantBool(false));
 }
 
 void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
