@@ -156,11 +156,13 @@ public class OmniPageFilter implements PageFilter {
             Iterator<Page> result = new VecBatchToPageIterator(operator.getOutput());
 
             if (!result.hasNext()) {
-                page.close();
+                vecBatch.releaseAllVectors();
+                vecBatch.close();
                 return null;
             }
             Page newPage = result.next();
-            page.close();
+            vecBatch.releaseAllVectors();
+            vecBatch.close();
             return newPage;
         }
 
