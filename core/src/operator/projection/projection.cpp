@@ -281,20 +281,21 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
     const int vecSize = outVec->GetSize();
     bool newNullValues[vecSize];
+    int32_t newLengthValues[vecSize];
     Vector *projectedVec = nullptr;
     if (outType == STRINGD) {
         projectedVec = ProjectHelperVarWidth(
-            *vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows, selectedRows, newNullValues);
+            *vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows, selectedRows, newNullValues, newLengthValues);
     } else {
         projectedVec = ProjectHelperFixedWidth(
-            *vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows, selectedRows, newNullValues);
+            *vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows, selectedRows, newNullValues, newLengthValues);
     }
     return projectedVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
     std::vector<int64_t> const &vecData, vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
-    int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const
+    int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const
 {
     // using projector
     vector<int64_t> oVec(numSelectedRows);
@@ -302,7 +303,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     this->projector(vecData.data(), vecBatch.GetRowCount(),
-        *cvecVals, selectedRows, numSelectedRows, bitmap.data(), offsets.data(), newNullValues);
+        *cvecVals, selectedRows, numSelectedRows, bitmap.data(), offsets.data(), newNullValues, newLengthValues);
 
     auto *outVarcharVec = static_cast<VarcharVector *>(outVec);
     for (int i = 0; i < numSelectedRows; i++) {
@@ -312,11 +313,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
         }
         auto charArr = reinterpret_cast<uint8_t *>(ov[i]);
 
-        int j = 0;
-        while (charArr[j] != '\0') {
-            j++;
-        }
-        outVarcharVec->SetValue(i, charArr, j);
+        outVarcharVec->SetValue(i, charArr, newLengthValues[i]);
     }
 
     return outVec;
@@ -324,7 +321,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 
 omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
     std::vector<int64_t> const &vecData, vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
-    int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const
+    int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const
 {
     if (outVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
         vector<int64_t> oVec(numSelectedRows);
@@ -332,7 +329,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals,
-                        selectedRows, numSelectedRows, bitmap.data(), offsets.data(), newNullValues);
+                        selectedRows, numSelectedRows, bitmap.data(), offsets.data(), newNullValues, newLengthValues);
         auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
         for (int i = 0; i < numSelectedRows; i++) {
             auto *value = reinterpret_cast<int64_t *>(ov[i]);
@@ -343,7 +340,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals,
-                                            selectedRows, numSelectedRows, bitmap.data(), offsets.data(), newNullValues);
+                                            selectedRows, numSelectedRows, bitmap.data(), offsets.data(), newNullValues, newLengthValues);
     }
 
     // set null

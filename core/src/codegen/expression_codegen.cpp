@@ -719,12 +719,13 @@ Function *ExpressionCodeGen::CreateFunction()
     std::vector<Type *> args;
     args.reserve(5);
     // Values in args vector follow the format:
-    // value*, bitmap*, offset*, rowIdx, isResultNull*
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt32Ty(*context));
     args.push_back(Type::getInt1PtrTy(*context));
+    args.push_back(Type::getInt32PtrTy(*context));
 
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
@@ -756,6 +757,11 @@ Function *ExpressionCodeGen::CreateFunction()
     Argument *isResultNull = func->getArg(4);
     Value *gep = builder->CreateGEP(isResultNull, this->CreateConstantInt(0), "IS_RESULT_NULL_ADDRESS");
     builder->CreateStore(result->isNull, gep);
+
+    // Update final output Length
+    Argument *outputLength = func->getArg(5);
+    gep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+    builder->CreateStore(result->length, gep);
 
     // Return value
     builder->CreateRet(result->data);

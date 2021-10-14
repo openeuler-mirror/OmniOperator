@@ -17,6 +17,7 @@ namespace {
     const int NUM_SELECTED = 4;
     const int BITMAP = 5;
     const int NEW_NULL_VALUES_INDEX = 7;
+    const int NEW_LENGTHS_VALUES_INDEX = 8;
     const int OFFSETS_INDEX = 6;
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
@@ -61,6 +62,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     args.push_back(Type::getInt64PtrTy(*context));
     // bool array to hold null values
     args.push_back(Type::getInt1PtrTy(*context));
+    // int array to hold output values
+    args.push_back(Type::getInt32PtrTy(*context));
 
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
@@ -96,12 +99,15 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Argument *nullValuesAddress = funcDecl->getArg(NEW_NULL_VALUES_INDEX);
     nullValuesAddress->setName("NULL_VALUES_ADDRESS");
 
+    Argument *outputLengthsAddress = funcDecl->getArg(NEW_LENGTHS_VALUES_INDEX);
+    outputLengthsAddress->setName("NEW_LENGTH_VALUES_ADDRESS");
+
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> projFuncArgs;
     // projFuncArgs contains the values of the arguments to the projection function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*
-    projFuncArgs.reserve(5);
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*
+    projFuncArgs.reserve(6);
     Value *gep;
 
     CallInst *ret;
@@ -178,6 +184,10 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     builder->CreateStore(CreateConstantBool(false), allocaInst);
     projFuncArgs.push_back(allocaInst);
 
+    // Create a integer pointer to store output length value
+    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
+    projFuncArgs.push_back(outputLenPtr);
+
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
     ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");
@@ -194,6 +204,11 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // update null values
     gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
     builder->CreateStore(isResultNull, gep);
+
+    auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
+    // update length values
+    gep = builder->CreateGEP(outputLengthsAddress, curIndexVal, "OUTPUT_LENGTHS_POINTER_ADDRESS");
+    builder->CreateStore(outputLen, gep);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter
