@@ -24,6 +24,7 @@ namespace {
     const int ARGUMENT_TWO = 2;
     const int ROW_PROJ_OFFSETS_INDEX = 2;
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
+    const int ROW_PROJ_LENGTH_INDEX = 4;
 }
 int64_t ProjectionCodeGen::GetFunction()
 {
@@ -229,6 +230,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
 
+    jit->getMainJITDylib().addGenerator(
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
@@ -243,7 +246,8 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
-        Type::getInt32Ty(context)
+        Type::getInt32Ty(context),
+        Type::getInt32PtrTy(context)
     };
     return args;
 }
@@ -275,6 +279,8 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     nulls->setName("NULLS");
     Argument *offsets = funcDecl->getArg(ROW_PROJ_OFFSETS_INDEX);
     offsets->setName("OFFSETS");
+    Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
+    lengthPtr->setName("LENGTH_PTR");
     Argument *rowIndex = funcDecl->getArg(ROW_PROJ_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
 
@@ -288,6 +294,8 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
     builder->CreateStore(CreateConstantBool(false), allocaInst);
     funcArgs.push_back(allocaInst);
+
+    funcArgs.push_back(lengthPtr);
 
     // Store the result
     AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");

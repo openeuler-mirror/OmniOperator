@@ -102,6 +102,34 @@ bool IsFunctionName(std::string fnName)
     return true;
 }
 
+/**
+ *  Usage example:
+ *
+ *  std::vector<Value *> values;
+ *  values.push_back(value1);
+ *  values.push_back(value2);
+ *  PrintValues("LLVM DEBUG: %d, %d\n", values);
+ */
+void ExpressionCodeGen::PrintValues(std::string format, std::vector<Value *> values)
+{
+    auto charType = Type::getInt8Ty(*context);
+    std::vector<llvm::Constant *> chars(format.size());
+    for(unsigned int i = 0; i < format.size(); i++)
+        chars[i] = ConstantInt::get(charType, format[i]);
+    chars.push_back(llvm::ConstantInt::get(charType, 0));
+    auto stringType = llvm::ArrayType::get(charType, chars.size());
+    //3. Create the declaration statement
+    auto globalDeclaration = (llvm::GlobalVariable*) module->getOrInsertGlobal(".str", stringType);
+    globalDeclaration->setInitializer(llvm::ConstantArray::get(stringType, chars));
+    globalDeclaration->setConstant(true);
+    globalDeclaration->setLinkage(llvm::GlobalValue::LinkageTypes::PrivateLinkage);
+    globalDeclaration->setUnnamedAddr (llvm::GlobalValue::UnnamedAddr::Global);
+
+    //4. Return a cast to an i8*
+    auto formatPtr = llvm::ConstantExpr::getBitCast(globalDeclaration, charType->getPointerTo());
+
+    builder->CreateCall(codegenContext->print, values, "printfCall");
+}
 
 ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr, std::vector<DataType> &datatypes)
     : datatypes(datatypes)
@@ -390,53 +418,6 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(
     }
 }
 
-// Create a LLVM Function that returns the value of a conditional (IF/CASE)
-Function *ExpressionCodeGen::ConditionalHelper(DataType retType, Expr &condExpr, Expr &ifTrueExpr, Expr &ifFalseExpr)
-{
-    Expr *cond = &condExpr;
-    Expr *ifTrue = &ifTrueExpr;
-    Expr *ifFalse = &ifFalseExpr;
-
-    std::vector<Type*> args = {
-            Type::getInt64PtrTy(*context),
-            Type::getInt64PtrTy(*context),
-            Type::getInt64PtrTy(*context),
-            Type::getInt32Ty(*context)
-    };
-    Type *retTypePtr = this->ToLlvmType(retType);
-    FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
-    Function *func = Function::Create(prototype, Function::ExternalLinkage, "IF_CONDITIONAL", module.get());
-
-    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx"};
-    int32_t idx = 0;
-    for (auto &arg : func->args()) {
-        arg.setName(argNames[idx]);
-        idx++;
-    }
-
-    BasicBlock *conditionalCheck = BasicBlock::Create(*context, "CONDITIONAL_CHECK", func);
-    BasicBlock *trueBlock = BasicBlock::Create(*context, "TRUE_BLOCK", func);
-    BasicBlock *falseBlock = BasicBlock::Create(*context, "FALSE_BLOCK", func);
-
-    InitializeCodegenContext(func->args());
-
-    builder->SetInsertPoint(conditionalCheck);
-    CodeGenValuePtr evCond = VisitExpr(*cond);
-
-    // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
-    // Otherwise goes to falseBlock and returns evFalse
-    builder->CreateCondBr(evCond->data, trueBlock, falseBlock);
-    builder->SetInsertPoint(trueBlock);
-    CodeGenValuePtr evTrue = VisitExpr(*ifTrue);
-    builder->CreateRet(evTrue->data);
-    builder->SetInsertPoint(falseBlock);
-    CodeGenValuePtr evFalse = VisitExpr(*ifFalse);
-    builder->CreateRet(evFalse->data);
-
-    llvm::verifyFunction(*func);
-    return func;
-}
-
 // Create a LLVM Function which returns the result of a COALESCE
 Function *ExpressionCodeGen::CreateCoalesceFuncHelper(DataType retType, DataExpr &dExpr1, Expr &value2Expr)
 {
@@ -704,13 +685,18 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
             codegenContext->offsets = &arg;
         } else if (argName == "rowIdx") {
             codegenContext->rowIdx = &arg;
-        } else if (argName == "isResultNull") {
+        } else if (argName == "isResultNull" || argName == "dataLength") {
             continue;;
         } else {
             LLVM_DEBUG_LOG("Invalid argument %s", argName.c_str());
             return false;
         }
     }
+
+    codegenContext->print = module->getOrInsertFunction("printf",
+       FunctionType::get(IntegerType::getInt32Ty(*context), PointerType::get(Type::getInt8Ty(*context), 0), true)
+    );
+
     return true;
 }
 
@@ -736,7 +722,7 @@ Function *ExpressionCodeGen::CreateFunction()
     FunctionType *prototype = FunctionType::get(this->ToLlvmType(expr->GetExprDataType()), args, false);
     func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
-    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx", "isResultNull"};
+    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx", "isResultNull", "dataLength"};
     int32_t idx = 0;
     for (auto &arg : func->args()) {
         arg.setName(argNames[idx]);
@@ -759,9 +745,11 @@ Function *ExpressionCodeGen::CreateFunction()
     builder->CreateStore(result->isNull, gep);
 
     // Update final output Length
-    Argument *outputLength = func->getArg(5);
-    gep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
-    builder->CreateStore(result->length, gep);
+    if (result->length != nullptr) {
+        Argument *outputLength = func->getArg(5);
+        gep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        builder->CreateStore(result->length, gep);
+    }
 
     // Return value
     builder->CreateRet(result->data);

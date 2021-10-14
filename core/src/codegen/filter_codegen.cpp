@@ -55,7 +55,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     Argument *bitmap = funcDecl->getArg(ARGUMENT_THREE);
     bitmap->setName("BITMAP");
     Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
-    bitmap->setName("OFFSETS");
+    offsets->setName("OFFSETS");
 
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
@@ -101,6 +101,11 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     builder->CreateStore(CreateConstantBool(false), allocaInst);
     filterFuncArgs.push_back(allocaInst);
 
+    // Create a int pointer to store data length
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
+    builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
+    filterFuncArgs.push_back(lengthAllocaInst);
+
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
     // If true, add row index to selected array, otherwise, process next row.
@@ -132,6 +137,8 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
 
+    jit->getMainJITDylib().addGenerator(
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(resTracker, std::move(threadSafeModule)));
@@ -181,6 +188,11 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
     builder->CreateStore(CreateConstantBool(false), allocaInst);
     funcArgs.push_back(allocaInst);
+
+    // Create a boolean pointer to store result null value
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "LENGTH_PTR");
+    builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
+    funcArgs.push_back(lengthAllocaInst);
 
     builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
 #ifdef DEBUG

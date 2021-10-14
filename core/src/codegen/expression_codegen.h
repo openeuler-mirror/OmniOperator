@@ -48,10 +48,10 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 class CodegenContext {
 public:
     explicit CodegenContext() :
-            data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr) {}
+            data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr), print(nullptr) {}
 
     explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx) :
-            data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx) {}
+            data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), print(nullptr) {}
 
     friend class ExpressionCodeGen;
 
@@ -60,6 +60,7 @@ private:
     llvm::Value *nullBitmap;
     llvm::Value *offsets;
     llvm::Value *rowIdx;
+    llvm::FunctionCallee print;
 };
 
 // Given an expression generates the function for it.
@@ -96,6 +97,7 @@ protected:
     llvm::Value* CreateConstantDouble(double n);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
+    void PrintValues(std::string format, std::vector<llvm::Value *> values);
     llvm::Function* CreateFunction();
 
     // Helper functions for generating IR for operators and special forms
