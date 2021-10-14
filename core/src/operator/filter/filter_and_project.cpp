@@ -196,8 +196,8 @@ void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
-                             vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[],
-                             std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
+    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[],
+    int64_t offsetsAddrs[], std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     std::vector<int64_t> data;
@@ -226,6 +226,11 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
         void *bitmapCol = &bc;
         auto cbitmapCol = static_cast<int64_t *>(bitmapCol);
         bitmap[i] = *cbitmapCol;
+
+        // offsets handling
+        auto offsets = colVec->GetValueOffsets();
+        void *columnOffsets = &offsets;
+        offsetsAddrs[i] = *static_cast<int64_t *>(columnOffsets);
     }
 
     return data;
@@ -239,14 +244,15 @@ int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t selectedRows[], int row
     vector<unique_ptr<vector<uint8_t>>> stringvalVec;
 
     vector<int64_t> bitmap(vecBatch->GetVectorCount());
+    vector<int64_t> offsets(vecBatch->GetVectorCount());
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
     vector<Vector *> dictionaryVecs;
 
     // contents of bitmap are appropriately modified in GetData
-    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
-    int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap.data());
+    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), offsets.data(), dictionaryVecs);
+    int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap.data(), offsets.data());
 
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;

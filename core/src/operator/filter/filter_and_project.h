@@ -16,11 +16,11 @@
 #include "../../common/expressions.h"
 
 using vec64 = std::vector<int64_t>;
-using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *);
+using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *);
 
 namespace omniruntime {
 namespace op {
-using RowFilterFunc = bool (*)(int64_t *, bool *, int32_t);
+using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t);
 
 class RowFilter {
 public:
@@ -52,6 +52,7 @@ private:
     // selectedRows: array of row numbers which pass the Filter; is modified in func
     // rowCount: number of rows in data
     // bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
+    // value offsets
     FilterFunc func;
 };
 

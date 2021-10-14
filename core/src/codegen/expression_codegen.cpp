@@ -395,17 +395,32 @@ Function *ExpressionCodeGen::ConditionalHelper(DataType retType, Expr &condExpr,
     Expr *ifTrue = &ifTrueExpr;
     Expr *ifFalse = &ifFalseExpr;
 
-    std::vector<Type *> args;
+    std::vector<Type*> args = {
+            Type::getInt64PtrTy(*context),
+            Type::getInt64PtrTy(*context),
+            Type::getInt64PtrTy(*context),
+            Type::getInt32Ty(*context)
+    };
     Type *retTypePtr = this->ToLlvmType(retType);
     FunctionType *prototype = FunctionType::get(retTypePtr, args, false);
     Function *func = Function::Create(prototype, Function::ExternalLinkage, "IF_CONDITIONAL", module.get());
+
+    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx"};
+    int32_t idx = 0;
+    for (auto &arg : func->args()) {
+        arg.setName(argNames[idx]);
+        idx++;
+    }
 
     BasicBlock *conditionalCheck = BasicBlock::Create(*context, "CONDITIONAL_CHECK", func);
     BasicBlock *trueBlock = BasicBlock::Create(*context, "TRUE_BLOCK", func);
     BasicBlock *falseBlock = BasicBlock::Create(*context, "FALSE_BLOCK", func);
 
+    InitializeCodegenContext(func->args());
+
     builder->SetInsertPoint(conditionalCheck);
     CodeGenValuePtr evCond = VisitExpr(*cond);
+
     // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
     builder->CreateCondBr(evCond->data, trueBlock, falseBlock);
@@ -627,10 +642,10 @@ void AddOptimizationPasses(legacy::FunctionPassManager *fpm, llvm::legacy::PassM
     mpm.add(createPruneEHPass());
 }
 
-bool ExpressionCodeGen::InitializeCodegenContext()
+bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)
 {
     this->codegenContext = std::make_unique<CodegenContext>();
-    for (auto &arg : func->args()) {
+    for (auto &arg : args) {
         auto argName = arg.getName().str();
         if (argName == "data") {
             codegenContext->data = &arg;
@@ -640,8 +655,10 @@ bool ExpressionCodeGen::InitializeCodegenContext()
             codegenContext->offsets = &arg;
         } else if (argName == "rowIdx") {
             codegenContext->rowIdx = &arg;
+        } else if (argName == "isResultNull") {
+            continue;;
         } else {
-            LLVM_DEBUG_LOG("Invalid argument %s", argName);
+            LLVM_DEBUG_LOG("Invalid argument %s", argName.c_str());
             return false;
         }
     }
@@ -651,13 +668,14 @@ bool ExpressionCodeGen::InitializeCodegenContext()
 Function *ExpressionCodeGen::CreateFunction()
 {
     std::vector<Type *> args;
-    args.reserve(4);
+    args.reserve(5);
     // Values in args vector follow the format:
-    // value*, bitmap*, offset*, rowIdx
+    // value*, bitmap*, offset*, rowIdx, isResultNull*
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt32Ty(*context));
+    args.push_back(Type::getInt1PtrTy(*context));
 
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
@@ -668,7 +686,7 @@ Function *ExpressionCodeGen::CreateFunction()
     FunctionType *prototype = FunctionType::get(this->ToLlvmType(expr->GetExprDataType()), args, false);
     func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
-    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx"};
+    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx", "isResultNull"};
     int32_t idx = 0;
     for (auto &arg : func->args()) {
         arg.setName(argNames[idx]);
@@ -678,12 +696,20 @@ Function *ExpressionCodeGen::CreateFunction()
     BasicBlock *body = BasicBlock::Create(*context, "CREATED_FUNC_BODY", func);
     builder->SetInsertPoint(body);
 
-    if (!InitializeCodegenContext()) {
+    if (!InitializeCodegenContext(func->args())) {
         return nullptr;
     }
 
-    Value *ret = VisitExpr(*expr)->data;
-    builder->CreateRet(ret);
+    // Generate code
+    auto result = VisitExpr(*expr);
+
+    // Update final null value
+    Argument *isResultNull = func->getArg(4);
+    Value *gep = builder->CreateGEP(isResultNull, this->CreateConstantInt(0), "IS_RESULT_NULL_ADDRESS");
+    builder->CreateStore(result->isNull, gep);
+
+    // Return value
+    builder->CreateRet(result->data);
     verifyFunction(*func);
     auto fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
     llvm::legacy::PassManager mpm;
@@ -875,14 +901,16 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
     Function *conditionalFunc = ConditionalHelper(retType, *cond, *ifTrue, *ifFalse);
     builder->SetInsertPoint(currentBlock);
 
-    InitializeCodegenContext();
     std::vector<Value *> passArgs;
-
     passArgs.push_back(this->codegenContext->data);
     passArgs.push_back(this->codegenContext->nullBitmap);
     passArgs.push_back(this->codegenContext->offsets);
     passArgs.push_back(this->codegenContext->rowIdx);
+
     CallInst *condCall = builder->CreateCall(conditionalFunc, passArgs, "EVAL_IF");
+
+    InitializeCodegenContext(this->func->args());
+
     this->value = make_shared<CodeGenValue>(condCall, this->CreateConstantBool(false));
 }
 
@@ -993,7 +1021,7 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
             Function *coalesceFunc = CreateCoalesceFuncHelper(retType, *dExpr1, *value2Expr);
             builder->SetInsertPoint(currentBlock);
 
-            InitializeCodegenContext();
+            InitializeCodegenContext(coalesceFunc->args());
             std::vector<Value *> passArgs;
             passArgs.push_back(this->codegenContext->data);
             passArgs.push_back(this->codegenContext->nullBitmap);

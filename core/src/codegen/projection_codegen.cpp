@@ -21,7 +21,8 @@ namespace {
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
     const int ARGUMENT_TWO = 2;
-    const int IS_NULL_INDEX = 2;
+    const int ROW_PROJ_OFFSETS_INDEX = 2;
+    const int ROW_PROJ_ROW_IDX_INDEX = 3;
 }
 int64_t ProjectionCodeGen::GetFunction()
 {
@@ -90,21 +91,19 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     bitmap->setName("BITMAP");
 
     Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
-    bitmap->setName("OFFSETS");
+    offsets->setName("OFFSETS");
 
     Argument *nullValuesAddress = funcDecl->getArg(NEW_NULL_VALUES_INDEX);
     nullValuesAddress->setName("NULL_VALUES_ADDRESS");
 
-    Value *minusOne = this->CreateConstantInt(-1);
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> projFuncArgs;
-    // filterFuncArgs contains the values of the arguments to the filter function
-    // value*, bitmap*, offset*, rowIdx
-    projFuncArgs.reserve(4);
+    // projFuncArgs contains the values of the arguments to the projection function
+    // value*, bitmap*, offset*, rowIdx, isResultNull*
+    projFuncArgs.reserve(5);
     Value *gep;
 
-    DataType type;
     CallInst *ret;
     // pre loop body
     builder->SetInsertPoint(preLoop);
@@ -174,6 +173,11 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     projFuncArgs.push_back(offsets);
     projFuncArgs.push_back(rowIndexVal);
 
+    // Create a boolean pointer to store result null value
+    AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
+    builder->CreateStore(CreateConstantBool(false), allocaInst);
+    projFuncArgs.push_back(allocaInst);
+
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
     ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");
@@ -186,9 +190,10 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // *gep = ret
     builder->CreateStore(ret, gep);
 
+    auto isResultNull = builder->CreateLoad(allocaInst, "IS_RESULT_NULL");
     // update null values
     gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
-    builder->CreateStore(bitmapValue, gep);
+    builder->CreateStore(isResultNull, gep);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter
@@ -221,7 +226,8 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
 {
     std::vector<Type*> args = {
         Type::getInt64PtrTy(context),
-        Type::getInt1PtrTy(context),
+        Type::getInt64PtrTy(context),
+        Type::getInt64PtrTy(context),
         Type::getInt32Ty(context)
     };
     return args;
@@ -241,20 +247,9 @@ datatype and casted appropriately.
 */
 int64_t ProjectionCodeGen::GetExpressionEvaluator()
 {
-    int32_t nCols = this->datatypes.size();
     // Array of addresses, bitmap, row index
     std::vector<Type*> args = GetSingleProjectArguments(*context);
-    int32_t retIdx = -1;
-    Function* baseFunc = nullptr;
-    // Special case for when the projection is only a column index
-    if (expr->GetType() == ExprType::DATA_E) {
-        auto *dEx = static_cast<DataExpr *>(expr);
-        if (dEx->isColumn) {
-            retIdx = dEx->colVal;
-        }
-    } else {
-        baseFunc = this->CreateFunction();
-    }
+    Function* baseFunc = this->CreateFunction();
     FunctionType* funcSignature = FunctionType::get(ToPointerType(expr->GetExprDataType()), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
@@ -263,50 +258,28 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     inputData->setName("INPUT_DATA");
     Argument *nulls = funcDecl->getArg(ARGUMENT_ONE);
     nulls->setName("NULLS");
-    Argument *rowIndex = funcDecl->getArg(ARGUMENT_TWO);
+    Argument *offsets = funcDecl->getArg(ROW_PROJ_OFFSETS_INDEX);
+    offsets->setName("OFFSETS");
+    Argument *rowIndex = funcDecl->getArg(ROW_PROJ_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
 
-    Value* gep;
-    Value* colValue;
-    Value* colPtr;
-    Value* colIndex;
+    std::vector<Value*> funcArgs;
+    funcArgs.push_back(inputData);
+    funcArgs.push_back(nulls);
+    funcArgs.push_back(offsets);
+    funcArgs.push_back(rowIndex);
 
-    if (retIdx != -1) {
-        gep = builder->CreateGEP(inputData, CreateConstantInt(retIdx));
-        colPtr = builder->CreateLoad(gep);
-        colPtr = builder->CreateIntToPtr(colPtr, ToPointerType(datatypes.at(retIdx)));
-        builder->CreateRet(builder->CreateGEP(colPtr, rowIndex));
-    } else {
-        Value* bitmapIdx;
-        Value* bitmapGEP;
-        std::vector<Value*> funcArgs;
-        for (int32_t i = 0; i < nCols; i++) {
-            // Get the address for column i
-            // gep is of type int64_t* pointing to the value of the address
-            colIndex = CreateConstantInt(i);
-            gep = builder->CreateGEP(inputData, colIndex);
-            // Derefence the gep, colPtr is now type int64_t
-            colPtr = builder->CreateLoad(gep);
-            // Convert colPtr to proper ponter type instead of int64_t
-            colPtr = builder->CreateIntToPtr(colPtr, ToPointerType(this->datatypes.at(i)));
-            // Get pointer to value at rowIndex for this column
-            gep = builder->CreateGEP(colPtr, rowIndex);
-            colValue = builder->CreateLoad(gep);
-            funcArgs.push_back(colValue);
+    // Create a boolean pointer to store result null value
+    AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
+    builder->CreateStore(CreateConstantBool(false), allocaInst);
+    funcArgs.push_back(allocaInst);
 
-            // Get bitmap value bitmap[nArgs * curIndexVal + i]
-            bitmapIdx = builder->CreateMul(CreateConstantInt(nCols), rowIndex, "FIRST_COL_IDX");
-            bitmapIdx = builder->CreateAdd(bitmapIdx, colIndex, "BITMAP_INDEX");
-            bitmapGEP = builder->CreateGEP(nulls, bitmapIdx);
-            funcArgs.push_back(builder->CreateLoad(bitmapGEP));
-        }
+    // Store the result
+    AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");
+    builder->CreateStore(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"), retStore);
 
-        // Store the result
-        AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");
-        builder->CreateStore(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"), retStore);
-
-        builder->CreateRet(retStore);
-    }
+    builder->CreateRet(retStore);
+    llvm::verifyFunction(*func);
 #ifdef DEBUG
     module->print(errs(), nullptr);
 #endif

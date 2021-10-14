@@ -126,11 +126,10 @@ protected:
         omniruntime::expressions::DataExpr &dExpr1, omniruntime::expressions::Expr &value2Expr);
     llvm::Function *CreateCoalesceFuncHelper2(omniruntime::expressions::DataExpr &dExpr1,
         omniruntime::expressions::Expr &value2Expr, llvm::Function &func);
-    bool InitializeCodegenContext();
+    bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
 
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
-    bool useCoalesceArgs = false;
     std::string funcName;
     omniruntime::expressions::Expr *expr = nullptr;
     std::vector<omniruntime::expressions::DataType> &datatypes;

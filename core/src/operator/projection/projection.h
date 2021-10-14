@@ -20,7 +20,7 @@ using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32
 namespace omniruntime {
 namespace op {
 using namespace vec;
-using RowProjFunc = void *(*)(int64_t *, bool *, int32_t);
+using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t);
 
 class RowProjection {
 public:
