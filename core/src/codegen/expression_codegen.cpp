@@ -565,8 +565,9 @@ void ExpressionCodeGen::FuncExprConcatHelper(omniruntime::expressions::FuncExpr 
 void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
 {
     if (fExpr.arguments.size() == FEXPR_VALUE3) {
-        Value *str= VisitExpr(*(fExpr.arguments[0]))->data;
-        Value *strLen = this->value->length;
+        auto strValue = VisitExpr(*(fExpr.arguments[0]));
+        Value *str= strValue->data;
+        Value *strLen = strValue->length;
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
         Value *length = VisitExpr(*(fExpr.arguments[LENGTH_LOC]))->data;
         AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");

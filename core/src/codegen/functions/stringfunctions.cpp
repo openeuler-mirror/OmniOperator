@@ -69,7 +69,7 @@ extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t strLen, int64_t regexToMa
 }
 
 
-extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int64_t strLen, int32_t startIdx, int64_t *outLen)
+extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int32_t startIdx, int64_t *outLen)
 {
     char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
 
@@ -95,7 +95,7 @@ extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int64_t strLen, int
 }
 
 
-extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int64_t strLen, int32_t startIdx, int32_t length, int64_t *outLen)
+extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t length, int64_t *outLen)
 {
     char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
 

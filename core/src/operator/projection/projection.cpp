@@ -180,57 +180,6 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool fil
     }
 }
 
-unique_ptr<vector<uint8_t>> GetProjDataHelper(const uint8_t actualChar[], int32_t len)
-{
-    auto accStr = make_unique<Uint8vec>(len + 1);
-    for (int32_t k = 0; k < len; k++) {
-        (*accStr)[k] = actualChar[k];
-    }
-    (*accStr)[len] = '\0';
-    return move(accStr);
-}
-
-void GetProjVarcharData(Vector *col, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
-                        vector<unique_ptr<vector<uint8_t>>> &stringvalVec, std::vector<int64_t> &data, uint32_t nRows)
-{
-    auto *vcVec = static_cast<omniruntime::vec::VarcharVector *>(col);
-    // Create array to hold addresses
-    unique_ptr<vec64> vcData = make_unique<vec64>();
-
-    for (int32_t j = 0; j < nRows; j++) {
-        // get data
-        uint8_t *actualChar = nullptr;
-        int32_t len = vcVec->GetValue(j, &actualChar);
-
-        // len is -1 only when the value is null
-        // treat it as an empty string for now, need to handle null value properly
-        if (len < 0) {
-            len = 0;
-        }
-
-        // Truncate the resulting string
-        unique_ptr<Uint8vec> accStr = GetProjDataHelper(actualChar, len);
-
-        actualChar = accStr->data();
-
-        // add to vector so it can be freed later
-        stringvalVec.push_back(move(accStr));
-
-        // add to subarray of data
-        auto ac = actualChar;
-        void *accChar = &ac;
-        auto caccChar = static_cast<int64_t *>(accChar);
-        vcData->push_back(*caccChar);
-    }
-    // data handling
-    auto dc = vcData->data();
-    void *dataCol = &dc;
-    auto cdataCol = static_cast<int64_t *>(dataCol);
-    data.push_back(*cdataCol);
-
-    vcdataVec.push_back(move(vcData));
-}
-
 void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 {
     int32_t longs = 2;
@@ -262,10 +211,7 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, std::vector<unique_ptr<s
             colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
             dictionaryVecs.push_back(colVec);
         }
-        // varchar vec GetValues is different from the rest
-        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
-            GetProjVarcharData(colVec, vcdataVec, stringvalVec, data, vecBatch.GetRowCount());
-        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetProjDecimal128Data(colVec, data, vecBatch.GetRowCount());
         } else {
             // data handling

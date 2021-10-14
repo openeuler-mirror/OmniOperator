@@ -1622,7 +1622,8 @@ TEST(CodeGenTest, StringBoolean)
     DataType types[1] = {DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
-    expr->PrintExprTree();
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
     cout << endl;
 
     string s1;
