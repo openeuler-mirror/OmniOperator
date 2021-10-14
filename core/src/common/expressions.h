@@ -59,7 +59,7 @@ enum DataType {
     DECIMAL64D = 6,
     DECIMAL128D = 7,
     STRINGD = 15,
-    INT64PTRD,
+    INT32PTRD,
     INVALIDDATAD
 };
 

@@ -532,7 +532,7 @@ void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr) {
     } else if (from == DataType::STRINGD) {
         argVals.push_back(this->value->length);
     } else if (to == DataType::STRINGD) {
-        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         argVals.push_back(outputLenPtr);
     }
 
@@ -550,11 +550,13 @@ void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr) {
 
 void ExpressionCodeGen::FuncExprConcatHelper(omniruntime::expressions::FuncExpr &fExpr)
 {
-    Value *str1 = VisitExpr(*(fExpr.arguments[0]))->data;
-    Value *str1Len = this->value->length;
-    Value *str2 = VisitExpr(*(fExpr.arguments[1]))->data;
-    Value *str2Len = this->value->length;
-    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+    auto str1Value = VisitExpr(*(fExpr.arguments[0]));
+    Value *str1 = str1Value->data;
+    Value *str1Len = str1Value->length;
+    auto str2Value = VisitExpr(*(fExpr.arguments[1]));
+    Value *str2 = str2Value->data;
+    Value *str2Len = str2Value->length;
+    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
     std::vector<Value *> argVals { str1, str1Len, str2, str2Len, outputLenPtr };
 
     auto f = module->getFunction(fr->concatStrExtStr);
@@ -570,7 +572,7 @@ void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
         Value *strLen = strValue->length;
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
         Value *length = VisitExpr(*(fExpr.arguments[LENGTH_LOC]))->data;
-        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         std::vector<Value*> argVals { str, strLen, startIdx, length, outputLenPtr};
         auto f = module->getFunction(fr->substrExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
@@ -581,7 +583,7 @@ void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
         Value *str= VisitExpr(*(fExpr.arguments[0]))->data;
         Value *strLen = this->value->length;
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
-        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         std::vector<Value *> argVals { str, strLen, startIdx, outputLenPtr};
 
         auto f = module->getFunction(fr->substrWithStartExtStr);
@@ -826,7 +828,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
             // Get length for varchar
             auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
             Value *offsetPtr = builder->CreateLoad(offsetsGEP);
-            offsetPtr = builder->CreateIntToPtr(offsetPtr, Type::getInt1PtrTy(*context));
+            offsetPtr = builder->CreateIntToPtr(offsetPtr, Type::getInt32PtrTy(*context));
             auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
             Value *startOffset = builder->CreateLoad(colOffsetGEP);
             colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, CreateConstantInt(1)));
@@ -854,7 +856,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
             Constant *strValConst =
                     ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
             Constant *strLenConst =
-                    ConstantInt::get(*context, APInt(INT64_VALUE, static_cast<int64_t>(dEx->stringVal->length())));
+                    ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
             this->value.reset(new CodeGenValue(strValConst, this->CreateConstantBool(true), strLenConst));
             break;
         }

@@ -32,8 +32,8 @@ Type* ToLlvmType(DataType t, LLVMContext* context)
             return Type::getInt64Ty(*context);
         case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
-        case DataType::INT64PTRD:
-            return Type::getInt64PtrTy(*context);
+        case DataType::INT32PTRD:
+            return Type::getInt32PtrTy(*context);
         default:
             std::cout << "Error: Unknown argument datatype " << t << endl;
             return nullptr;
@@ -156,14 +156,14 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
 void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 {
     if (fn == "substrExt") {
-        vector<DataType> substrExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32D, DataType::INT64PTRD};
+        vector<DataType> substrExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
         FunctionSignature substrExtSig (substrExtStr, substrExtTypes, DataType::INT64D,
                                         reinterpret_cast<void *>(SubstrExt));
         this->RegisterFunctionFromSignature(substrExtSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(substrExtStr, substrExtSig));
     }
     if (fn == "substrWithStartExt") {
-        vector <DataType> substrWithStartExtTypes{DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT64PTRD};
+        vector <DataType> substrWithStartExtTypes{DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
         FunctionSignature substrWithStartExtSig
                 (substrWithStartExtStr, substrWithStartExtTypes,
                  DataType::INT64D, reinterpret_cast<void *>(SubstrWithStartExt));
@@ -172,7 +172,7 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
                                                                       substrWithStartExtSig));
     }
     if (fn == "concat") {
-        vector<DataType> concatStrExtTypes {DataType::INT64D, DataType::INT64D, DataType::INT64D, DataType::INT64D, DataType::INT64PTRD};
+        vector<DataType> concatStrExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D, DataType::INT32PTRD};
         FunctionSignature concatStrExtSig (concatStrExtStr, concatStrExtTypes,
                                            DataType::INT64D, reinterpret_cast<void *>(ConcatStrExt));
         this->RegisterFunctionFromSignature(concatStrExtSig);
@@ -181,7 +181,7 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 
 
     if (fn == "LIKE") {
-        vector<DataType> likeExtTypes {DataType::INT64D, DataType::INT64D, DataType::INT64D, DataType::INT64D};
+        vector<DataType> likeExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D};
         FunctionSignature likeExtSig (likeExtStr, likeExtTypes, DataType::BOOLD,
                                       reinterpret_cast<void *>(LikeExt));
         this->RegisterFunctionFromSignature(likeExtSig);
@@ -287,7 +287,7 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
     // TODO: remove hard-coded strings
 
     // Always register string comparison
-    vector<DataType> strCompareExtTypes {DataType::INT64D, DataType::INT64D, DataType::INT64D, DataType::INT64D};
+    vector<DataType> strCompareExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D};
     FunctionSignature strCompareExtSig(strCompareExtStr, strCompareExtTypes, DataType::INT32D,
                                        reinterpret_cast<void*>(StrCompareExt));
     this->RegisterFunctionFromSignature(strCompareExtSig);

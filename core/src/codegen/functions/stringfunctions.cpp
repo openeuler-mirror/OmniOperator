@@ -38,7 +38,7 @@ namespace {
 vector<char *> stringsToFree;
 
 
-extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int64_t apLen, int64_t bp, int64_t bpLen)
+extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int32_t apLen, int64_t bp, int32_t bpLen)
 {
     char *a = reinterpret_cast<char *>((uintptr_t)ap);
     char *b = reinterpret_cast<char *>((uintptr_t)bp);
@@ -56,7 +56,7 @@ extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int64_t apLen, int64_t bp
 }
 
 
-extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t strLen, int64_t regexToMatch, int64_t regexLen)
+extern "C" DLLEXPORT bool LikeExt(int64_t str, int32_t strLen, int64_t regexToMatch, int32_t regexLen)
 {
     string S = string(reinterpret_cast<char *>(str), strLen);
     string R = string(reinterpret_cast<char *>(regexToMatch), regexLen);
@@ -69,7 +69,7 @@ extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t strLen, int64_t regexToMa
 }
 
 
-extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int32_t startIdx, int64_t *outLen)
+extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t *outLen)
 {
     char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
 
@@ -95,7 +95,7 @@ extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int
 }
 
 
-extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t length, int64_t *outLen)
+extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t length, int32_t *outLen)
 {
     char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
 
@@ -132,7 +132,7 @@ extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t star
 }
 
 
-extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int64_t apLen, int64_t bp, int64_t bpLen, int64_t *outLen)
+extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int32_t apLen, int64_t bp, int32_t bpLen, int32_t *outLen)
 {
     char *a = reinterpret_cast<char *>((uintptr_t)ap);
     char *b = reinterpret_cast<char *>((uintptr_t)bp);
@@ -151,7 +151,7 @@ extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int64_t apLen, int64_t bp,
     return (int64_t)(ret);
 }
 
-extern "C" DLLEXPORT int32_t CastString(int64_t str, int64_t strLen)
+extern "C" DLLEXPORT int32_t CastString(int64_t str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
