@@ -797,6 +797,8 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getDoublePtrTy(*context));
                 break;
             case DataType::STRINGD:
+                elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt8PtrTy(*context));
+                break;
             case DataType::DECIMAL128D:
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
                 break;
@@ -805,10 +807,30 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
                 elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
                 break;
         }
-        // Find the address of the row to be processed.
-        gep = builder->CreateGEP(elementPtr, rowIdx);
-        // Value to be processed.
-        Value *elementValue = builder->CreateLoad(gep);
+
+        Value *elementValue;
+        Value *length = nullptr;
+        if (dEx->GetExprDataType() == DataType::STRINGD) {
+            // Get offset for varchar
+            auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
+            Value *offsetPtr = builder->CreateLoad(offsetsGEP);
+            offsetPtr = builder->CreateIntToPtr(offsetPtr, Type::getInt32PtrTy(*context));
+            auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
+            Value *startOffset = builder->CreateLoad(colOffsetGEP);
+            // Find the address of the row to be processed.
+            gep = builder->CreateGEP(elementPtr, startOffset);
+            elementValue = builder->CreatePtrToInt(gep, Type::getInt64Ty(*context));
+
+            colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, CreateConstantInt(1)));
+            Value *endOffset = builder->CreateLoad(colOffsetGEP);
+            // Get length for varchar
+            length = builder->CreateSub(endOffset, startOffset);
+        } else {
+            // Find the address of the row to be processed.
+            gep = builder->CreateGEP(elementPtr, rowIdx);
+            // Value to be processed.
+            elementValue = builder->CreateLoad(gep);
+        }
 
         // Get isNull value
         auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
@@ -816,19 +838,6 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         bitmapValue = builder->CreateIntToPtr(bitmapValue, Type::getInt1PtrTy(*context));
         bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
         bitmapValue = builder->CreateLoad(bitmapGEP);
-
-        Value *length = nullptr;
-        if (dEx->GetExprDataType() == DataType::STRINGD) {
-            // Get length for varchar
-            auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
-            Value *offsetPtr = builder->CreateLoad(offsetsGEP);
-            offsetPtr = builder->CreateIntToPtr(offsetPtr, Type::getInt32PtrTy(*context));
-            auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
-            Value *startOffset = builder->CreateLoad(colOffsetGEP);
-            colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, CreateConstantInt(1)));
-            Value *endOffset = builder->CreateLoad(colOffsetGEP);
-            length = builder->CreateSub(endOffset, startOffset);
-        }
 
         this->value.reset(new CodeGenValue(elementValue, bitmapValue, length));
         return;

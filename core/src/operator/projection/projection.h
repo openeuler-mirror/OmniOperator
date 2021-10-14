@@ -52,7 +52,7 @@ public:
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
         std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int *newLengthValues) const;
+        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
         int32_t numSelectedRows, std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets) const;
