@@ -240,10 +240,10 @@ std::set<std::string> ExpressionCodeGen::RequiredFunctions(Expr &cpExpr)
 }
 
 // Other operations which require externed functions
-Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *rhs)
+Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
 {
     // call function
-    std::vector<Value *> argVals { lhs, rhs };
+    std::vector<Value *> argVals {lhs, lLen, rhs, rLen};
     auto f = module->getFunction(fr->strCompareExtStr);
     Value *ret = builder->CreateCall(f, argVals, "call_str_cmp");
     return ret;
@@ -330,24 +330,26 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(
 }
 
 Value *ExpressionCodeGen::BinaryExprStringHelper(
-    omniruntime::expressions::Operator op, Value &leftVal, Value &rightVal)
+        omniruntime::expressions::Operator op, Value &leftVal, Value &leftLen, Value &rightVal, Value &rightLen)
 {
-    Value *left = &leftVal;
-    Value *right = &rightVal;
+    Value *l = &leftVal;
+    Value *lLen = &leftLen;
+    Value *r = &rightVal;
+    Value *rLen = &rightLen;
 
     switch (op) {
         case LT:
-            return builder->CreateICmpSLT(this->StringCmp(left, right), CreateConstantInt(0));
+            return builder->CreateICmpSLT(this->StringCmp(l, lLen, r, rLen), CreateConstantInt(0));
         case GT:
-            return builder->CreateICmpSGT(this->StringCmp(left, right), CreateConstantInt(0));
+            return builder->CreateICmpSGT(this->StringCmp(l, lLen, r, rLen), CreateConstantInt(0));
         case LTE:
-            return builder->CreateICmpSLE(this->StringCmp(left, right), CreateConstantInt(0));
+            return builder->CreateICmpSLE(this->StringCmp(l, lLen, r, rLen), CreateConstantInt(0));
         case GTE:
-            return builder->CreateICmpSGE(this->StringCmp(left, right), CreateConstantInt(0));
+            return builder->CreateICmpSGE(this->StringCmp(l, lLen, r, rLen), CreateConstantInt(0));
         case EQ:
-            return builder->CreateICmpEQ(this->StringCmp(left, right), CreateConstantInt(0));
+            return builder->CreateICmpEQ(this->StringCmp(l, lLen, r, rLen), CreateConstantInt(0));
         case NEQ:
-            return builder->CreateICmpNE(this->StringCmp(left, right), CreateConstantInt(0));
+            return builder->CreateICmpNE(this->StringCmp(l, lLen, r, rLen), CreateConstantInt(0));
         default:
             std::cout << "Unsupported string binary operator " << op << std::endl;
             return this->CreateConstantBool(false);
@@ -481,73 +483,116 @@ Function *ExpressionCodeGen::CreateCoalesceFuncHelper2(DataExpr &dataExpr1, Expr
 }
 
 // Helper functions for parsing functions
-Value *ExpressionCodeGen::FuncExprAbsHelper(FuncExpr &fExpr)
+void ExpressionCodeGen::FuncExprAbsHelper(FuncExpr &fExpr)
 {
     std::string absFuncName = "Abs_" + DataTypeString(fExpr.dataType);
     std::vector<Value *> argVals { VisitExpr(*(fExpr.arguments[0]))->data };
     auto f = module->getFunction(absFuncName);
+    Value *ret;
     if (f) {
-        Value *ret = builder->CreateCall(f, argVals, absFuncName);
-        return ret;
+        ret = builder->CreateCall(f, argVals, absFuncName);
     } else {
         std::cout << "Unable to parse function " << absFuncName << std::endl;
-        return CreateConstantInt(0);
+        ret = CreateConstantInt(0);
     }
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
 }
 
-Value *ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr)
+void ExpressionCodeGen::FuncExprLikeHelper(omniruntime::expressions::FuncExpr &fExpr)
 {
+    Value *str = VisitExpr(*(fExpr.arguments[0]))->data;
+    Value *strLen = this->value->length;
+    Value *regex = VisitExpr(*(fExpr.arguments[1]))->data;
+    Value *regexLen = this->value->length;
+    std::vector<Value *> argVals { str, strLen, regex, regexLen };
+    auto f = module->getFunction(fr->likeExtStr);
+    Value *ret = builder->CreateCall(f, argVals, fr->likeExtStr);
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
+}
+
+void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr) {
     llvm::Value *val = VisitExpr(*(fExpr.arguments[0]))->data;
-    std::vector<Value *> argVals { val };
+    std::vector<Value *> argVals{val};
     DataType from = fExpr.arguments[0]->dataType;
     DataType to = fExpr.GetExprDataType();
 
     std::string castFuncName = "Cast_" + DataTypeString(from) + "_" + DataTypeString(to);
     std::cout << castFuncName << std::endl;
 
+    AllocaInst *outputLenPtr = nullptr;
+    Value *outputLen;
+    Value *ret;
     // if casting to same type, treat it as constant
     if (from == to) {
         auto *dataExpr = static_cast<DataExpr *>(fExpr.arguments[0]);
-        llvm::Value *ret = VisitExpr(*dataExpr)->data;
-        return ret;
+        Value *ret = VisitExpr(*dataExpr)->data;
+        Value *length = this->value->length;
+        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), length);
+        return;
+    } else if (from == DataType::STRINGD) {
+        argVals.push_back(this->value->length);
+    } else if (to == DataType::STRINGD) {
+        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+        argVals.push_back(outputLenPtr);
     }
 
     auto f = module->getFunction(castFuncName);
     if (f) {
-        Value *ret = builder->CreateCall(f, argVals, castFuncName);
-        return ret;
+        ret = builder->CreateCall(f, argVals, castFuncName);
+        outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
     } else {
         LLVM_DEBUG_LOG("Unable to parse function %s", castFuncName.c_str());
-        return CreateConstantInt(0);
+        ret = CreateConstantInt(0);
+        outputLen = nullptr;
     }
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), outputLen);
 }
 
-Value *ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
+void ExpressionCodeGen::FuncExprConcatHelper(omniruntime::expressions::FuncExpr &fExpr)
+{
+    Value *str1 = VisitExpr(*(fExpr.arguments[0]))->data;
+    Value *str1Len = this->value->length;
+    Value *str2 = VisitExpr(*(fExpr.arguments[1]))->data;
+    Value *str2Len = this->value->length;
+    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+    std::vector<Value *> argVals { str1, str1Len, str2, str2Len, outputLenPtr };
+
+    auto f = module->getFunction(fr->concatStrExtStr);
+    Value *ret = builder->CreateCall(f, argVals, fr->concatStrExtStr);
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
+}
+
+void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
 {
     if (fExpr.arguments.size() == FEXPR_VALUE3) {
-        Value *str = VisitExpr(*(fExpr.arguments[0]))->data;
+        Value *str= VisitExpr(*(fExpr.arguments[0]))->data;
+        Value *strLen = this->value->length;
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
         Value *length = VisitExpr(*(fExpr.arguments[LENGTH_LOC]))->data;
-        std::vector<Value *> argVals { str, startIdx, length };
-
+        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+        std::vector<Value*> argVals { str, strLen, startIdx, length, outputLenPtr};
         auto f = module->getFunction(fr->substrExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
-        return ret;
+        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
+        return;
     }
     if (fExpr.arguments.size() == FEXPR_VALUE2) {
-        Value *str = VisitExpr(*(fExpr.arguments[0]))->data;
+        Value *str= VisitExpr(*(fExpr.arguments[0]))->data;
+        Value *strLen = this->value->length;
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
-        std::vector<Value *> argVals { str, startIdx };
+        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt64Ty(*context), nullptr, "output_len");
+        std::vector<Value *> argVals { str, strLen, startIdx, outputLenPtr};
 
         auto f = module->getFunction(fr->substrWithStartExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrWithStartExtStr);
-        return ret;
+        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
+        return;
     }
     std::cout << "Error: Incorrect number of arguments used for substr" << std::endl;
-    return CreateConstantLong(0);
+    this->value = make_shared<CodeGenValue>(CreateConstantLong(0), this->CreateConstantBool(false));
 }
 
-Value *ExpressionCodeGen::FuncExprExtHelper(FuncExpr &fExpr)
+void ExpressionCodeGen::FuncExprExtHelper(FuncExpr &fExpr)
 {
     FunctionSignature fs = funcNameToSignature[fExpr.funcName];
 
@@ -571,10 +616,10 @@ Value *ExpressionCodeGen::FuncExprExtHelper(FuncExpr &fExpr)
     // Assume that the function name of the fExpr and in the module are matching
     auto f = module->getFunction(fExpr.funcName);
     Value *ret = builder->CreateCall(f, argVals, "call_" + fExpr.funcName);
-    return ret;
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
 }
 
-Value *ExpressionCodeGen::FuncExprMm3HashHelper(FuncExpr &fExpr)
+void ExpressionCodeGen::FuncExprMm3HashHelper(FuncExpr &fExpr)
 {
     llvm::Value *val = VisitExpr(*(fExpr.arguments[0]))->data;
     llvm::Value *seed = VisitExpr(*(fExpr.arguments[1]))->data;
@@ -582,16 +627,17 @@ Value *ExpressionCodeGen::FuncExprMm3HashHelper(FuncExpr &fExpr)
     std::vector<Value*> argVals {val, seed};
 
     auto f = module->getFunction(mm3FuncName);
+    Value *ret;
     if (f) {
-        Value *ret = builder->CreateCall(f, argVals, mm3FuncName);
-        return ret;
+        ret = builder->CreateCall(f, argVals, mm3FuncName);
     } else {
         LLVM_DEBUG_LOG("Unable to parse function %s", mm3FuncName.c_str());
-        return CreateConstantInt(0);
+        ret = CreateConstantInt(0);
     }
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
 }
 
-Value* ExpressionCodeGen::FuncExprCombineHashHelper(FuncExpr &fExpr)
+void ExpressionCodeGen::FuncExprCombineHashHelper(FuncExpr &fExpr)
 {
     Value *prevHashVal = VisitExpr(*(fExpr.arguments[0]))->data;
     Value *val = VisitExpr(*(fExpr.arguments[1]))->data;
@@ -605,7 +651,7 @@ Value* ExpressionCodeGen::FuncExprCombineHashHelper(FuncExpr &fExpr)
     auto f = module->getFunction(fr->combineHashStr);
     Value *ret = builder->CreateCall(f, argVals, fr->combineHashStr);
     DumpCode();
-    return ret;
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
 }
 
 std::string ExpressionCodeGen::DumpCode()
@@ -804,9 +850,11 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
             break;
         }
         case DataType::STRINGD: {
-            Constant *addr =
-                ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
-            this->value.reset(new CodeGenValue(addr, this->CreateConstantBool(true)));
+            Constant *strValConst =
+                    ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
+            Constant *strLenConst =
+                    ConstantInt::get(*context, APInt(INT64_VALUE, static_cast<int64_t>(dEx->stringVal->length())));
+            this->value.reset(new CodeGenValue(strValConst, this->CreateConstantBool(true), strLenConst));
             break;
         }
         case DataType::BOOLD: {
@@ -844,7 +892,9 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
         bExpr->right->dataType = biggerType;
     }
     Value *left = VisitExpr(*(bExpr->left))->data;
+    Value *leftLen = this->value->length;
     Value *right = VisitExpr(*(bExpr->right))->data;
+    Value *rightLen = this->value->length;
 
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
         this->value = make_shared<CodeGenValue>(builder->CreateAnd(left, right, "logical_and"), this->CreateConstantBool(false));
@@ -862,7 +912,7 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
         this->value = make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr->op, *left, *right), this->CreateConstantBool(false));
         return;
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
-        this->value = make_shared<CodeGenValue>(this->BinaryExprStringHelper(bExpr->op, *left, *right), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(this->BinaryExprStringHelper(bExpr->op, *left, *leftLen, *right, *rightLen), this->CreateConstantBool(false));
         return;
     } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
         this->value = make_shared<CodeGenValue>(this->BinaryExprDecimalHelper(bExpr->op, *left, *right), this->CreateConstantBool(false));
@@ -919,6 +969,7 @@ void ExpressionCodeGen::Visit(InExpr &inExpr)
     InExpr *iExpr = &inExpr;
     Expr *toCompare = iExpr->arguments[0];
     llvm::Value *val = VisitExpr(*toCompare)->data;
+    llvm::Value *valLen = this->value->length;
 
     llvm::Value *inArray = llvm::ConstantInt::get(*context, APInt(1, 0));
     // Handle types correctly
@@ -947,7 +998,8 @@ void ExpressionCodeGen::Visit(InExpr &inExpr)
                     break;
                 }
                 case STRINGD: {
-                    tmpCmp = builder->CreateICmpEQ(this->StringCmp(val, VisitExpr(*(iExpr->arguments[i]))->data),
+                    tmpCmp = builder->CreateICmpEQ(this->StringCmp(val, valLen, VisitExpr(*(iExpr->arguments[i]))->data,
+                                                                   this->value->length),
                         CreateConstantInt(0));
                     break;
                 }
@@ -973,8 +1025,11 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
     bExpr->value->dataType = biggerType;
 
     llvm::Value *val = VisitExpr(*(bExpr->value))->data;
+    llvm::Value *valLen = this->value->length;
     llvm::Value *lowerVal = VisitExpr(*(bExpr->lowerBound))->data;
+    llvm::Value *lowerValLen = this->value->length;
     llvm::Value *upperVal = VisitExpr(*(bExpr->upperBound))->data;
+    llvm::Value *upperValLen = this->value->length;
 
     if (bExpr->value->GetExprDataType() == DataType::INT32D || bExpr->value->GetExprDataType() == DataType::INT64D) {
         llvm::Value *cmpleft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
@@ -989,8 +1044,8 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
     } else if (bExpr->value->GetExprDataType() == STRINGD) {
-        llvm::Value *cmpleft = builder->CreateICmpSLE(this->StringCmp(lowerVal, val), CreateConstantInt(0));
-        llvm::Value *cmpright = builder->CreateICmpSLE(this->StringCmp(val, upperVal), CreateConstantInt(0));
+        llvm::Value *cmpleft = builder->CreateICmpSLE(this->StringCmp(lowerVal, lowerValLen, val, valLen), CreateConstantInt(0));
+        llvm::Value *cmpright = builder->CreateICmpSLE(this->StringCmp(val, valLen, upperVal, upperValLen), CreateConstantInt(0));
         llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
@@ -1051,47 +1106,36 @@ void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
 void ExpressionCodeGen::Visit(FuncExpr &fExpr)
 {
     if (fExpr.funcName == "abs") {
-        this->value = make_shared<CodeGenValue>(this->FuncExprAbsHelper(fExpr), this->CreateConstantBool(false));
+        this->FuncExprAbsHelper(fExpr);
         return;
     }
     if (fExpr.funcName == "substr") {
-        this->value = make_shared<CodeGenValue>(this->FuncExprSubstrHelper(fExpr), this->CreateConstantBool(false));
+        this->FuncExprSubstrHelper(fExpr);
         return;
     }
     if (fExpr.funcName == "concat") {
-        Value *str1 = VisitExpr(*(fExpr.arguments[0]))->data;
-        Value *str2 = VisitExpr(*(fExpr.arguments[1]))->data;
-        std::vector<Value *> argVals { str1, str2 };
-
-        auto f = module->getFunction(fr->concatStrExtStr);
-        Value *ret = builder->CreateCall(f, argVals, fr->concatStrExtStr);
-        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
+        this->FuncExprConcatHelper(fExpr);
         return;
     }
     if (fExpr.funcName == "CAST") {
-        this->value = make_shared<CodeGenValue>(this->FuncExprCastHelper(fExpr), this->CreateConstantBool(false));
+        this->FuncExprCastHelper(fExpr);
         return;
     }
     if (fExpr.funcName == "LIKE") {
-        Value *str1 = VisitExpr(*(fExpr.arguments[0]))->data;
-        Value *str2 = VisitExpr(*(fExpr.arguments[1]))->data;
-        std::vector<Value *> argVals { str1, str2 };
-        auto f = module->getFunction(fr->likeExtStr);
-        Value *ret = builder->CreateCall(f, argVals, fr->likeExtStr);
-        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
+        this->FuncExprLikeHelper(fExpr);
         return;
     }
     if (fExpr.funcName == "combine_hash") {
-        this->value = make_shared<CodeGenValue>(this->FuncExprCombineHashHelper(fExpr), this->CreateConstantBool(false));
+        this->FuncExprCombineHashHelper(fExpr);
         return;
     }
     if (fExpr.funcName == "mm3hash") {
-        this->value = make_shared<CodeGenValue>(this->FuncExprMm3HashHelper(fExpr), this->CreateConstantBool(false));
+        this->FuncExprMm3HashHelper(fExpr);
         return;
     }
     // external functions
     if (IsFunctionName(fExpr.funcName)) {
-        this->value = make_shared<CodeGenValue>(this->FuncExprExtHelper(fExpr), this->CreateConstantBool(false));
+        this->FuncExprExtHelper(fExpr);
         return;
     }
     LLVM_DEBUG_LOG("No function found with name %s", fExpr.funcName.c_str());

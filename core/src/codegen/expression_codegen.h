@@ -99,23 +99,26 @@ protected:
     llvm::Function* CreateFunction();
 
     // Helper functions for generating IR for operators and special forms
-    llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *rhs);
+    llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
     
     // Helper functions and main function for parsing binary expressions
     llvm::Value *BinaryExprIntHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
     llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
+    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value &leftVal, llvm::Value &leftLen,
+                                        llvm::Value &rightVal, llvm::Value &rightLen);
     llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
     
     // Helper functions and main function for parsing function expressions
-    llvm::Value* FuncExprAbsHelper(
+    void FuncExprAbsHelper(
         omniruntime::expressions::FuncExpr &fExpr);
-    llvm::Value* FuncExprSubstrHelper(omniruntime::expressions::FuncExpr &fExpr);
-    llvm::Value* FuncExprCastHelper(omniruntime::expressions::FuncExpr &fExpr);
-    llvm::Value* FuncExprMm3HashHelper(omniruntime::expressions::FuncExpr &fExpr);
-    llvm::Value* FuncExprExtHelper(omniruntime::expressions::FuncExpr &fExpr);
-    llvm::Value* FuncExprCombineHashHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprSubstrHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprCastHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprConcatHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprLikeHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprMm3HashHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprExtHelper(omniruntime::expressions::FuncExpr &fExpr);
+    void FuncExprCombineHashHelper(omniruntime::expressions::FuncExpr &fExpr);
 
     // Helper functions and main function for parsing if expressions
     llvm::Function* ConditionalHelper(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,

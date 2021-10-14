@@ -1024,8 +1024,8 @@ TEST(CodeGenTest, DateCast)
 TEST(CodeGenTest, SubstrIn)
 {
     string unparsed = "IN:boolean(substr:varchar(#2, 1, 2), '12', '21', '13', '31', '34', '43')";
-    // string unparsed = "IN(substr(#2, 5), '12', '21', '13', '31', '34', '43')";
-
+//     string unparsed = "IN(substr(#2, 5), '12', '21', '13', '31', '34', '43')";
+//    string unparsed = "substr:varchar(#2, 1, 7)";
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
     Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
@@ -1039,13 +1039,15 @@ TEST(CodeGenTest, SubstrIn)
 
     int32_t v1[1] = {8766};
     s1 = "asdf";
-    int64_t v2[1] = {(int64_t) (s1.c_str())};
+    int64_t v2[2] = {(int64_t) (s1.c_str()), static_cast<int64_t>(s1.length())};
+    int64_t v22[1] = {(int64_t)v2};
     s2 = "2134121";
-    int64_t v3[1] = {(int64_t) (s2.c_str())};
+    int64_t v3[2] = {(int64_t) (s2.c_str()), static_cast<int64_t>(s2.length())};
+    int64_t v33[1] = {(int64_t)v3};
     int64_t *vals = new int64_t[3];
     vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[1] = (int64_t)v22;
+    vals[2] = (int64_t)v33;
     int32_t *selected = new int32_t[1];
 
     bool **bitmap = new bool *[3];
@@ -1071,11 +1073,16 @@ TEST(CodeGenTest, SubstrIn)
     v1[0] = {8766};
     s1 = "j";
     v2[0] = {(int64_t) (s1.c_str())};
+    v2[1] = {static_cast<int64_t>(s1.length())};
+    v22[0] = {(int64_t)v2};
+
     s2 = "233425";
     v3[0] = {(int64_t) (s2.c_str())};
+    v3[1] = {static_cast<int64_t>(s2.length())};
+    v33[0] = {(int64_t)v3};
     vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[1] = (int64_t)v22;
+    vals[2] = (int64_t)v33;
 
     result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
@@ -1084,11 +1091,15 @@ TEST(CodeGenTest, SubstrIn)
     v1[0] = {8766};
     s1 = "j";
     v2[0] = {(int64_t) (s1.c_str())};
+    v2[1] = {static_cast<int64_t>(s1.length())};
+    v22[0] = {(int64_t)v2};
     s2 = "424321";
     v3[0] = {(int64_t) (s2.c_str())};
+    v3[1] = {static_cast<int64_t>(s2.length())};
+    v33[0] = {(int64_t)v3};
     vals[0] = (int64_t)v1;
-    vals[1] = (int64_t)v2;
-    vals[2] = (int64_t)v3;
+    vals[1] = (int64_t)v22;
+    vals[2] = (int64_t)v33;
 
     result = func(vals, 1, selected, (int64_t *)(bitmap));
     EXPECT_EQ(result, 0);
@@ -1599,6 +1610,56 @@ TEST(CodeGenTest, ProjectionCodeGen)
 
     delete[] bitmap;
     delete[] vals;
+    delete expr;
+    delete lc;
+}
+
+TEST(CodeGenTest, StringBoolean)
+{
+    string unparsed = "$operator$EQUAL:boolean(#0, 'Sunday')";
+
+
+    DataType types[1] = {DataType::STRINGD};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
+    expr->PrintExprTree();
+    cout << endl;
+
+    string s1;
+    string s2;
+
+    s1 = "Sunday";
+    s2 = "Sunday";
+    int64_t v1[4] = {(int64_t) (s1.c_str()), static_cast<int64_t>(s1.length()), (int64_t) (s2.c_str()), static_cast<int64_t>(s2.length())};
+
+
+    int64_t v[2] = {(int64_t) v1, (int64_t) (v1 + 2)};
+
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t)v;
+
+    int32_t *selected = new int32_t[2];
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[0][i] = false;
+    }
+
+    string testname = "stringTest1";
+    vector<DataType> typeVec = vector<DataType>(types, types + 1);
+    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *))(intptr_t)lc->GetFunction();
+
+    int32_t result = func(vals, 2, selected, (int64_t *)(bitmap));
+    EXPECT_EQ(result, 2);
+
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
     delete expr;
     delete lc;
 }

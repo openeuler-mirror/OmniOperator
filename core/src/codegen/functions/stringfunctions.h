@@ -22,12 +22,12 @@
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT bool StrCompareExt(int64_t ap, int64_t bp);
-extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t regexToMatch);
-extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t startIdx, int32_t length);
-extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t startIdx);
-extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int64_t bp);
-extern "C" DLLEXPORT int32_t CastString(int64_t str);
+extern "C" DLLEXPORT bool StrCompareExt(int64_t ap, int64_t apLen, int64_t bp, int64_t bpLen);
+extern "C" DLLEXPORT bool LikeExt(int64_t str, int64_t strLen, int64_t regexToMatch, int64_t regexLen);
+extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int64_t strLen, int32_t startIdx, int32_t length, int64_t *outLen);
+extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int64_t strLen, int32_t startIdx, int64_t *outLen);
+extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int64_t apLen, int64_t bp, int64_t bpLen, int64_t *outLen);
+extern "C" DLLEXPORT int32_t CastString(int64_t str, int64_t strLen);
 
 
 void FreeStrings();
