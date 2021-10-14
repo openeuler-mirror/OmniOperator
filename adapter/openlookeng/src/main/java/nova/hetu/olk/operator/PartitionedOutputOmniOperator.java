@@ -45,6 +45,7 @@ import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.shuffle.PageProducer;
@@ -465,36 +466,39 @@ public class PartitionedOutputOmniOperator
         public void partitionPage(VecAllocator vecAllocator, Page page) {
             requireNonNull(page, "page is null");
 
-            Page partitionFunctionArgs = getPartitionFunctionArguments(page);
+            VecBatch originalVecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
+            VecBatch originalAndPartitionArgVecBatch = addPartitionFunctionArguments(originalVecBatch);
 
-            VecBatch vecBatch0 = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
-            VecBatch vecBatch1 = buildVecBatch(vecAllocator, partitionFunctionArgs, getClass().getSimpleName());
-            ArrayList vecList = new ArrayList(Arrays.asList(vecBatch0.getVectors()));
-            vecList.addAll(Arrays.asList(vecBatch1.getVectors()));
-            VecBatch vecBatch = new VecBatch(vecList);
-
-            omniOperator.addInput(vecBatch);
-            vecBatch0.releaseAllVectors();
-            vecBatch0.close();
-            vecBatch1.close();
-            vecBatch.close();
+            omniOperator.addInput(originalAndPartitionArgVecBatch);
+            originalAndPartitionArgVecBatch.releaseAllVectors();
+            originalAndPartitionArgVecBatch.close();
+            originalVecBatch.close();
 
             Iterator<VecBatch> partitionedVecBatch = omniOperator.getOutput();
             vecBatchIterator = partitionedVecBatch;
             flush(true);
         }
 
-        private Page getPartitionFunctionArguments(Page page) {
-            Block[] blocks = new Block[partitionChannels.size()];
-            for (int i = 0; i < blocks.length; i++) {
+        private VecBatch addPartitionFunctionArguments(VecBatch vecBatch) {
+            int positionCount = vecBatch.getRowCount();
+            ArrayList<Vec> vecList = new ArrayList<>(Arrays.asList(vecBatch.getVectors()));
+            for (int i = 0; i < partitionChannels.size(); i++) {
                 Optional<Block> partitionConstant = partitionConstants.get(i);
                 if (partitionConstant.isPresent()) {
-                    blocks[i] = new RunLengthEncodedBlock(partitionConstant.get(), page.getPositionCount());
+                    Block block = OperatorUtils.buildOffHeapBlock(omniOperator.getVecAllocator(), partitionConstant.get());
+                    // Because there is no vec corresponding to RunLengthEncodedBlock,
+                    // the original data is directly constructed.
+                    int[] positions = new int[positionCount];
+                    Arrays.fill(positions, 0);
+                    vecList.add(((Vec)block.getValues()).copyPositions(positions, 0, positionCount));
+                    // there is no need to release partitionConstant because it is converted from NullableValue,
+                    // which is always in on heap
+                    block.close();
                 } else {
-                    blocks[i] = page.getBlock(partitionChannels.get(i));
+                    vecList.add(vecList.get(partitionChannels.get(i)).slice(0, positionCount));
                 }
             }
-            return new Page(page.getPositionCount(), blocks);
+            return new VecBatch(vecList);
         }
 
         /**
