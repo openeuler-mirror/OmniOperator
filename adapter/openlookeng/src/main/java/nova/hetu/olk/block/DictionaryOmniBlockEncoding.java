@@ -37,23 +37,32 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
             dictionaryBlock = (DictionaryOmniBlock) block;
         }
 
-        dictionaryBlock = dictionaryBlock.compact();
+        DictionaryOmniBlock compactDictionaryBlock = dictionaryBlock.compact();
 
         // positionCount
-        int positionCount = dictionaryBlock.getPositionCount();
+        int positionCount = compactDictionaryBlock.getPositionCount();
         sliceOutput.appendInt(positionCount);
 
         // dictionary
-        Block dictionary = dictionaryBlock.getDictionary();
+        Block dictionary = compactDictionaryBlock.getDictionary();
         blockEncodingSerde.writeBlock(sliceOutput, dictionary);
 
         // ids
-        sliceOutput.writeBytes(dictionaryBlock.getIds());
+        sliceOutput.writeBytes(compactDictionaryBlock.getIds());
 
         // instance id
-        sliceOutput.appendLong(dictionaryBlock.getDictionarySourceId().getMostSignificantBits());
-        sliceOutput.appendLong(dictionaryBlock.getDictionarySourceId().getLeastSignificantBits());
-        sliceOutput.appendLong(dictionaryBlock.getDictionarySourceId().getSequenceId());
+        sliceOutput.appendLong(compactDictionaryBlock.getDictionarySourceId().getMostSignificantBits());
+        sliceOutput.appendLong(compactDictionaryBlock.getDictionarySourceId().getLeastSignificantBits());
+        sliceOutput.appendLong(compactDictionaryBlock.getDictionarySourceId().getSequenceId());
+
+        // release compact block
+        if (compactDictionaryBlock != dictionaryBlock) {
+            compactDictionaryBlock.getDictionary().close();
+            compactDictionaryBlock.close();
+        }
+        if (dictionaryBlock != block) {
+            dictionaryBlock.close();
+        }
     }
 
     @Override
