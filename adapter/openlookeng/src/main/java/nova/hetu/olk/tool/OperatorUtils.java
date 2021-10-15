@@ -419,7 +419,7 @@ public final class OperatorUtils {
         for (Vec dest : resultVecBatch.getVectors()) {
             int offSet = 0;
             for (VecBatch batch : vecBatchesToMerge) {
-                Vec src = batch.getVectors()[index];
+                Vec src = batch.getVector(index);
 
                 int positionCount = src.getSize();
                 if (src instanceof DictionaryVec) {

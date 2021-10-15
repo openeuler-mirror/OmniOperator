@@ -470,13 +470,13 @@ public class PartitionedOutputOmniOperator
             VecBatch originalAndPartitionArgVecBatch = addPartitionFunctionArguments(originalVecBatch);
 
             omniOperator.addInput(originalAndPartitionArgVecBatch);
-            originalAndPartitionArgVecBatch.releaseAllVectors();
-            originalAndPartitionArgVecBatch.close();
-            originalVecBatch.close();
-
             Iterator<VecBatch> partitionedVecBatch = omniOperator.getOutput();
             vecBatchIterator = partitionedVecBatch;
             flush(true);
+
+            originalAndPartitionArgVecBatch.releaseAllVectors();
+            originalAndPartitionArgVecBatch.close();
+            originalVecBatch.close();
         }
 
         private VecBatch addPartitionFunctionArguments(VecBatch vecBatch) {

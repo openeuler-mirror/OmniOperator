@@ -142,28 +142,20 @@ public class OmniPageFilter implements PageFilter {
         /**
          * Filter with project page.
          *
-         * @param session the session
-         * @param page the page
+         * @param vecBatch the page
          * @return the page
          */
-        public Page filterWithProject(VecAllocator vecAllocator, ConnectorSession session, Page page) {
-            if (page.getPositionCount() <= 0) {
-                page.close();
+        public VecBatch filterAndProject(VecBatch vecBatch) {
+            if (vecBatch.getRowCount() <= 0) {
                 return null;
             }
-            VecBatch vecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
             operator.addInput(vecBatch);
-            Iterator<Page> result = new VecBatchToPageIterator(operator.getOutput());
+            Iterator<VecBatch> result = operator.getOutput();
 
             if (!result.hasNext()) {
-                vecBatch.releaseAllVectors();
-                vecBatch.close();
                 return null;
             }
-            Page newPage = result.next();
-            vecBatch.releaseAllVectors();
-            vecBatch.close();
-            return newPage;
+            return result.next();
         }
 
         /**
