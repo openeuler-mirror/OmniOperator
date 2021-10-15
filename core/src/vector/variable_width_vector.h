@@ -48,8 +48,6 @@ protected:
     }
 
     int32_t  lastOffsetPosition = -1;
-
-    ~VariableWidthVector() {}
 };
 }
 }
