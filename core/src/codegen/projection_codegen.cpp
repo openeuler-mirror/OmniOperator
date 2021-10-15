@@ -24,7 +24,8 @@ namespace {
     const int ARGUMENT_TWO = 2;
     const int ROW_PROJ_OFFSETS_INDEX = 2;
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
-    const int ROW_PROJ_LENGTH_INDEX = 4;
+    const int ROW_PROJ_NULL_INDEX = 4;
+    const int ROW_PROJ_LENGTH_INDEX = 5;
 }
 int64_t ProjectionCodeGen::GetFunction()
 {
@@ -181,9 +182,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     projFuncArgs.push_back(rowIndexVal);
 
     // Create a boolean pointer to store result null value
-    AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
-    builder->CreateStore(CreateConstantBool(false), allocaInst);
-    projFuncArgs.push_back(allocaInst);
+    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
+    projFuncArgs.push_back(isResultNullStore);
 
     // Create a integer pointer to store output length value
     AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
@@ -201,7 +202,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // *gep = ret
     builder->CreateStore(ret, gep);
 
-    auto isResultNull = builder->CreateLoad(allocaInst, "IS_RESULT_NULL");
+    auto isResultNull = builder->CreateLoad(isResultNullStore, "isResultNull");
     // update null values
     gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
     builder->CreateStore(isResultNull, gep);
@@ -247,6 +248,7 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
         Type::getInt32Ty(context),
+        Type::getInt1PtrTy(context),
         Type::getInt32PtrTy(context)
     };
     return args;
@@ -279,22 +281,19 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     nulls->setName("NULLS");
     Argument *offsets = funcDecl->getArg(ROW_PROJ_OFFSETS_INDEX);
     offsets->setName("OFFSETS");
-    Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
-    lengthPtr->setName("LENGTH_PTR");
     Argument *rowIndex = funcDecl->getArg(ROW_PROJ_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
+    Argument *nullIndex = funcDecl->getArg(ROW_PROJ_NULL_INDEX);
+    nullIndex->setName("NULL_INDEX");
+    Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
+    lengthPtr->setName("LENGTH_PTR");
 
     std::vector<Value*> funcArgs;
     funcArgs.push_back(inputData);
     funcArgs.push_back(nulls);
     funcArgs.push_back(offsets);
     funcArgs.push_back(rowIndex);
-
-    // Create a boolean pointer to store result null value
-    AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
-    builder->CreateStore(CreateConstantBool(false), allocaInst);
-    funcArgs.push_back(allocaInst);
-
+    funcArgs.push_back(nullIndex);
     funcArgs.push_back(lengthPtr);
 
     // Store the result

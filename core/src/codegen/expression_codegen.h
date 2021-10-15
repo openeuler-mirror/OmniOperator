@@ -48,10 +48,10 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 class CodegenContext {
 public:
     explicit CodegenContext() :
-            data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr), print(nullptr) {}
+            data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
 
-    explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx) :
-            data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), print(nullptr) {}
+    explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx, llvm::Value *isResultNull) :
+            data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull), print(nullptr) {}
 
     friend class ExpressionCodeGen;
 
@@ -60,6 +60,7 @@ private:
     llvm::Value *nullBitmap;
     llvm::Value *offsets;
     llvm::Value *rowIdx;
+    llvm::Value *isResultNull;
     llvm::FunctionCallee print;
 };
 

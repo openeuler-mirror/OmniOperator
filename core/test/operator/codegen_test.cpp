@@ -88,12 +88,14 @@ TEST(CodeGenTest, SimpleFilter)
     RowProjFunc func = lc.Create(vecTypes);
     EXPECT_EQ(lc.GetReturnType(), BOOLD);
 
+    bool *nullResult = new bool(false);
+
     for (int32_t i = 0; i < 50; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i));
+        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, (int64_t*) nullResult));
         EXPECT_TRUE(res);
     }
     for (int32_t i = 50; i < 100; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i));
+        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, (int64_t*) nullResult));
         EXPECT_FALSE(res);
     }
 
@@ -138,8 +140,10 @@ TEST(CodeGenTest, SimpleProject)
     RowProjFunc func = lc.Create(vecTypes);
     EXPECT_EQ(lc.GetReturnType(), INT32D);
 
+    bool *nullResult = new bool(false);
+
     for (int32_t i = 0; i < 100; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, (int64_t*) nullResult));
         EXPECT_EQ(res, i + 50);
     }
 
@@ -190,9 +194,11 @@ TEST(CodeGenTest, SingleProject)
     RowProjection lc(unparsed, vecTypes);
     RowProjFunc func = lc.Create(vecTypes);
     EXPECT_EQ(lc.GetReturnType(), INT32D);
+    
+    bool *nullResult = new bool(false);
 
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, (int64_t*) nullResult));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
 
@@ -246,8 +252,11 @@ TEST(CodeGenTest, ShortCircuitProject)
     EXPECT_TRUE(lc.IsColumnProjection());
     EXPECT_EQ(lc.GetIndexIfColumnProjection(), 1);
 
+    bool *nullResult = new bool[1];
+    nullResult[0] = false;
+
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, (int64_t*) nullResult));
         EXPECT_EQ(res, i % 10);
     }
 

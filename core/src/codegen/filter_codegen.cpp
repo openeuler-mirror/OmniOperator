@@ -61,8 +61,8 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*
-    filterFuncArgs.reserve(5);
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, length*
+    filterFuncArgs.reserve(6);
 
     CallInst *ret;
     // pre loop body
@@ -97,9 +97,9 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     filterFuncArgs.push_back(curIndexVal);
 
     // Create a boolean pointer to store result null value
-    AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
-    builder->CreateStore(CreateConstantBool(false), allocaInst);
-    filterFuncArgs.push_back(allocaInst);
+    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
+    filterFuncArgs.push_back(isResultNullStore);
 
     // Create a int pointer to store data length
     AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
@@ -185,9 +185,9 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(rowIndex);
 
     // Create a boolean pointer to store result null value
-    AllocaInst *allocaInst = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_RESULT_NULL");
-    builder->CreateStore(CreateConstantBool(false), allocaInst);
-    funcArgs.push_back(allocaInst);
+    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
+    funcArgs.push_back(isResultNullStore);
 
     // Create a boolean pointer to store result null value
     AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "LENGTH_PTR");

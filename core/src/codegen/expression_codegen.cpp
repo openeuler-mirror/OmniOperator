@@ -646,7 +646,9 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
             codegenContext->offsets = &arg;
         } else if (argName == "rowIdx") {
             codegenContext->rowIdx = &arg;
-        } else if (argName == "isResultNull" || argName == "dataLength") {
+        } else if (argName == "isResultNull") {
+            codegenContext->isResultNull = &arg;
+        } else if (argName == "dataLength") {
             continue;;
         } else {
             LLVM_DEBUG_LOG("Invalid argument %s", argName.c_str());
@@ -664,7 +666,7 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
 Function *ExpressionCodeGen::CreateFunction()
 {
     std::vector<Type *> args;
-    args.reserve(5);
+    args.reserve(6);
     // Values in args vector follow the format:
     // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*
     args.push_back(Type::getInt64PtrTy(*context));
@@ -700,16 +702,11 @@ Function *ExpressionCodeGen::CreateFunction()
     // Generate code
     auto result = VisitExpr(*expr);
 
-    // Update final null value
-    Argument *isResultNull = func->getArg(4);
-    Value *gep = builder->CreateGEP(isResultNull, this->CreateConstantInt(0), "IS_RESULT_NULL_ADDRESS");
-    builder->CreateStore(result->isNull, gep);
-
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(5);
-        gep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
-        builder->CreateStore(result->length, gep);
+        Value *lengthGep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        builder->CreateStore(result->length, lengthGep);
     }
 
     // Return value
@@ -734,6 +731,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         Value *vecBatch = this->codegenContext->data;
         Value *bitmap = this->codegenContext->nullBitmap;
         Value *offsets = this->codegenContext->offsets;
+        Value *isResultNull = this->codegenContext->isResultNull;
 
         Value *colIdx = this->CreateConstantInt(dEx->colVal);
         // Find address of this column in the addresses array argument.
@@ -799,6 +797,10 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         bitmapValue = builder->CreateIntToPtr(bitmapValue, Type::getInt1PtrTy(*context));
         bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
         bitmapValue = builder->CreateLoad(bitmapGEP);
+
+        isResultNull = builder->CreateLoad(isResultNull);
+        isResultNull = builder->CreateOr(isResultNull, bitmapValue);
+        builder->CreateStore(isResultNull, this->codegenContext->isResultNull);
 
         this->value.reset(new CodeGenValue(elementValue, bitmapValue, length));
         return;

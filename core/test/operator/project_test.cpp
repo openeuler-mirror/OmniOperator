@@ -154,6 +154,40 @@ TEST (ProjectTest, Simple) {
     delete factory;
 }
 
+TEST (ProjectTest, WithNullValues) {
+    const int32_t numRows = 1000;
+    int32_t* col = MakeInts(numRows, -5);
+    const int32_t numCols = 1;
+    string exprs[numCols] = {"$operator$abs:int(#0)"};
+    int32_t inputTypes[numCols] = {1};
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    for (int i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            t->GetVector(0)->SetValueNull(i);
+        }
+    }
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        if (i % 2 == 0) {
+            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
+        } else {
+            EXPECT_FALSE(ret[0]->GetVector(0)->IsValueNull(i));
+            int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
+            EXPECT_EQ(val0, abs(i - 5));
+        }
+    }
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col;
+    delete op;
+    delete factory;
+}
+
 TEST (ProjectTest, Negatives) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows, -5);
