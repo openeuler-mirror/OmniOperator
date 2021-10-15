@@ -131,17 +131,18 @@ public:
     {
         bool leftIsNull = leftColumn->IsValueNull(leftPosition);
         bool rightIsNull = rightColumn->IsValueNull(rightPosition);
-
-        if (leftIsNull && rightIsNull) {
-            return COMPARE_STATUS_EQUAL;
+        // we want to check the most likely comparison first
+        if (!leftIsNull && !rightIsNull) {
+            return COMPARE_STATUS_OTHER;
         }
         if (leftIsNull) {
+            if (rightIsNull) {
+                return COMPARE_STATUS_EQUAL;
+            }
             return nullsFirst ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_GREATER_THAN;
         }
-        if (rightIsNull) {
-            return nullsFirst ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
-        }
-        return COMPARE_STATUS_OTHER;
+        // we are left with right only
+        return nullsFirst ? COMPARE_STATUS_GREATER_THAN : COMPARE_STATUS_LESS_THAN;
     }
 
     template <typename V>
@@ -155,11 +156,11 @@ public:
     static ALWAYS_INLINE int32_t CompareDouble(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
         int32_t rightColumnPosition)
     {
-        auto leftDoubleColumn = static_cast<DoubleVector *>(leftColumn);
-        auto rightDoubleColumn = static_cast<DoubleVector *>(rightColumn);
-        if (leftDoubleColumn->GetValue(leftColumnPosition) > rightDoubleColumn->GetValue(rightColumnPosition)) {
+        double leftDouble = static_cast<DoubleVector *>(leftColumn)->GetValue(leftColumnPosition);
+        double rightDouble = static_cast<DoubleVector *>(rightColumn)->GetValue(rightColumnPosition);
+        if (leftDouble > rightDouble) {
             return COMPARE_STATUS_GREATER_THAN;
-        } else if (leftDoubleColumn->GetValue(leftColumnPosition) < rightDoubleColumn->GetValue(rightColumnPosition)) {
+        } else if (leftDouble < rightDouble) {
             return COMPARE_STATUS_LESS_THAN;
         } else {
             return COMPARE_STATUS_EQUAL;
