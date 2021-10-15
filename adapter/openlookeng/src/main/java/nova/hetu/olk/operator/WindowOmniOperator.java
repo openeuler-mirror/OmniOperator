@@ -342,7 +342,7 @@ public class WindowOmniOperator implements Operator {
         public Operator createOperator(DriverContext driverContext) {
             VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                HashAggregationOmniOperator.class.getSimpleName());
+                WindowOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniWindowOperatorFactory.createOperator(vecAllocator);
             return new WindowOmniOperator(operatorContext, omniOperator);
         }

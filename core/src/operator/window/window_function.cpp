@@ -108,20 +108,27 @@ void AggregateWindowFunction::Reset(WindowIndex *pWindowIndex)
 void AggregateWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
     int32_t frameStart, int32_t frameEnd)
 {
+    // the vector is used for aggregation in window operation
+    Vector *resultVector = nullptr;
     if (frameStart < 0) {
         ResetAccumulator();
     } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
         // same or expanding frame
-        Accumulate(column->GetAllocator(), currentEnd + 1, frameEnd);
+        Accumulate(&resultVector, column->GetAllocator(), currentEnd + 1, frameEnd);
         currentEnd = frameEnd;
     } else {
         // different frame
         ResetAccumulator();
-        Accumulate(column->GetAllocator(), frameStart, frameEnd);
+        Accumulate(&resultVector, column->GetAllocator(), frameStart, frameEnd);
         currentStart = frameStart;
         currentEnd = frameEnd;
     }
     EvaluateFinal(aggregator, column, index);
+
+    // after the EvaluateFinal, we should release the vector
+    if (resultVector != nullptr) {
+        delete resultVector;
+    }
 }
 unique_ptr<omniruntime::op::Aggregator> CreateAccumulator(int32_t aggregationType, const VecType &dataType)
 {
@@ -172,7 +179,7 @@ void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregat
     }
 }
 
-void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t start, int32_t end)
+void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator *vecAllocator, int32_t start, int32_t end)
 {
     if (start > end) {
         return;
@@ -182,7 +189,7 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t 
     uint32_t varcharWidth = (dataType.GetId() == OMNI_VEC_TYPE_VARCHAR) ? ((VarcharVecType &)dataType).GetWidth() : 0;
 
     // this is important to package data into an extra vector and use it to do the aggregation
-    Vector *resultVector =
+    *resultVector =
         VectorHelper::CreateVector(vecAllocator, dataType.GetId(), rowCount * varcharWidth, rowCount);
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
@@ -197,7 +204,7 @@ void AggregateWindowFunction::Accumulate(VectorAllocator *vecAllocator, int32_t 
         int32_t originalVectorPosition;
         Vector *originalVector =
                 VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
-        AccumulateData(start, resultVector, resultVectorPosition, originalVectorPosition, originalVector);
+        AccumulateData(start, *resultVector, resultVectorPosition, originalVectorPosition, originalVector);
     }
 }
 
