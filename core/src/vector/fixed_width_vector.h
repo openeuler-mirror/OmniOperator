@@ -21,8 +21,6 @@ public:
     void SetValue(int index, T value);
 
     virtual void SetValues(int startIndex, const T *values, int length) = 0;
-
-    ~FixedWidthVector() {}
 };
 }
 }
