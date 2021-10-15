@@ -97,7 +97,7 @@ protected:
     llvm::Value* CreateConstantDouble(double n);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
-    void PrintValues(std::string format, std::vector<llvm::Value *> values);
+    void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
     llvm::Function* CreateFunction();
 
     // Helper functions for generating IR for operators and special forms

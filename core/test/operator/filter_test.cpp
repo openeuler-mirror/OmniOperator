@@ -45,7 +45,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                     std::string s ((char *)(addr));
                     // std::cout << "s: " << s << std::endl;
                     ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()),
-                                                                        s.length() + 1);
+                                                                        s.length());
                 }
                 break;
             }

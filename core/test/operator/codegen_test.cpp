@@ -305,7 +305,7 @@ TEST(CodeGenTest, RowFilter)
     delete[] offsets;
 }
 
-TEST (CodeGenTest, DISABLED_RowFilterString) {
+TEST (CodeGenTest, RowFilterString) {
     DataType types[2] = {DataType::STRINGD, DataType::STRINGD};
     const int32_t numCols = 2;
     const int32_t numRows = 1;
@@ -1287,7 +1287,7 @@ TEST(CodeGenTest, StringWithOps)
     delete lc;
 }
 
-TEST(CodeGenTest, DISABLED_Coalesce)
+TEST(CodeGenTest, Coalesce)
 {
     string unparsed = "$operator$EQUAL:boolean(COALESCE:long(#0, 0), 123)";
 
