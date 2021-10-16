@@ -338,7 +338,7 @@ public final class OperatorUtils {
         int positionCount, boolean[] valueIsNull) {
         if (block instanceof RunLengthEncodedBlock) {
             VariableWidthBlock variableWidthBlock = (VariableWidthBlock) ((RunLengthEncodedBlock) block).getValue();
-            VarcharVec vec = new VarcharVec(variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
+            VarcharVec vec = new VarcharVec(vecAllocator,variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
 
             for (int i = 0; i < positionCount; i++) {
                 if (block.isNull(i)) {
