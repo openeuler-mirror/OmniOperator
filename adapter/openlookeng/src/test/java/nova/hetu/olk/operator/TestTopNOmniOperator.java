@@ -39,6 +39,7 @@ import io.prestosql.testing.MaterializedResult;
 import nova.hetu.olk.block.DictionaryOmniBlock;
 import nova.hetu.olk.block.IntArrayOmniBlock;
 
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -49,6 +50,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import nova.hetu.omniruntime.vector.serialize.VecBatchSerde;
 
 @Test(singleThreaded = true)
 public class TestTopNOmniOperator
@@ -116,7 +118,7 @@ public class TestTopNOmniOperator
         int[] ints={2,1,4,3,2};
         IntArrayOmniBlock intArrayOmniBlock = new IntArrayOmniBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, ints.length, Optional.empty(),ints);
         int[] ids = {0, 1, 2, 3, 4};
-        DictionaryOmniBlock<Integer> integerDictionaryOmniBlock = new DictionaryOmniBlock<Integer>(intArrayOmniBlock,ids);
+        DictionaryOmniBlock<Integer> integerDictionaryOmniBlock = new DictionaryOmniBlock<Integer>((Vec)intArrayOmniBlock.getValues(),ids);
         Page input = new Page(integerDictionaryOmniBlock);
 
         OperatorFactory operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(

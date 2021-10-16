@@ -77,7 +77,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
                 blocks[i] = rowBlock;
             } else if (vectors[i] instanceof DictionaryVec) {
                 DictionaryVec dictionaryVec = (DictionaryVec) vectors[i];
-                blocks[i] = buildDictionaryBlock(dictionaryVec);
+                blocks[i] = new DictionaryOmniBlock(dictionaryVec, false, randomDictionaryId());
             }
         }
         return new Page(positionCount, blocks);
@@ -124,40 +124,5 @@ public class VecBatchToPageIterator implements Iterator<Page> {
             fieldBlockOffsets[i] = i;
         }
         return new RowBlock(0, positionCount, null, fieldBlockOffsets, rowBlocks);
-    }
-
-    private DictionaryOmniBlock buildDictionaryBlock(DictionaryVec dictionaryVec) {
-        Vec dictionary = dictionaryVec.getDictionary();
-        VecType vecType = dictionary.getType();
-        int[] ids = dictionaryVec.getIds();
-        Block dictionaryBlock;
-
-        switch (vecType.getId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
-                dictionaryBlock = new IntArrayOmniBlock(dictionary.getSize(), (IntVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
-                dictionaryBlock = new LongArrayOmniBlock(dictionary.getSize(), (LongVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_DOUBLE:
-                dictionaryBlock = new DoubleArrayOmniBlock(dictionary.getSize(), (DoubleVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_VARCHAR:
-                dictionaryBlock = new VariableWidthOmniBlock(dictionary.getSize(), (VarcharVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_DECIMAL128:
-                dictionaryBlock = new Int128ArrayOmniBlock(dictionary.getSize(), (Decimal128Vec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_DICTIONARY:
-                dictionaryBlock = buildDictionaryBlock((DictionaryVec) dictionary);
-                break;
-            default:
-                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + vecType.getId());
-        }
-        DictionaryOmniBlock block = new DictionaryOmniBlock(0, dictionaryVec.getSize(), dictionaryBlock,
-            dictionaryVec, ids, false, randomDictionaryId());
-        return block;
     }
 }

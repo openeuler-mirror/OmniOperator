@@ -172,6 +172,7 @@ import nova.hetu.olk.operator.MergeOmniOperator;
 import nova.hetu.olk.operator.PartitionedOutputOmniOperator;
 import nova.hetu.olk.operator.TopNOmniOperator;
 import nova.hetu.olk.operator.WindowOmniOperator;
+import nova.hetu.olk.operator.filterandproject.FilterAndProjectOmniOperator;
 import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
 import nova.hetu.olk.operator.filterandproject.OmniPageProcessor;
 import nova.hetu.olk.tool.OperatorUtils;
@@ -475,7 +476,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 // if the operator is source or output operator then continue
                 if (operatorFactory instanceof TableScanOperator.TableScanOperatorFactory
                     || operatorFactory instanceof ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory
-                    || operatorFactory instanceof FilterAndProjectOperator.FilterAndProjectOperatorFactory
                     || operatorFactory instanceof ExchangeOperator.ExchangeOperatorFactory
                     || operatorFactory instanceof LocalExchangeSinkOperator.LocalExchangeSinkOperatorFactory
                     || operatorFactory instanceof LocalExchangeSourceOperator.LocalExchangeSourceOperatorFactory
@@ -745,7 +745,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
                     translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
                     inputTypes, context.getTaskId());
-                OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
+                OperatorFactory operatorFactory = new FilterAndProjectOmniOperator.FilterAndProjectOmniOperatorFactory(
                     context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
                     getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session), session);
 

@@ -104,6 +104,10 @@ public class VecBatch implements Closeable {
         return vectors;
     }
 
+    public Vec getVector(int index) {
+        return vectors[index];
+    }
+
     public long getNativeVectorBatch() {
         return nativeVectorBatch;
     }

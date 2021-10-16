@@ -19,12 +19,12 @@ import io.prestosql.operator.project.PageFilter;
 import io.prestosql.operator.project.PageProcessor;
 import io.prestosql.operator.project.SelectedPositions;
 import io.prestosql.spi.Page;
-import io.prestosql.spi.block.Block;
 import io.prestosql.spi.connector.ConnectorSession;
 import io.prestosql.sql.gen.ExpressionProfiler;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -54,13 +54,13 @@ public class OmniPageProcessor extends PageProcessor {
     /**
      * Instantiates a new Omni page processor.
      *
-     * @param filter the filter
-     * @param proj the proj
-     * @param initialBatchSize the initial batch size
+     * @param filter             the filter
+     * @param proj               the proj
+     * @param initialBatchSize   the initial batch size
      * @param expressionProfiler the expression profiler
      */
-    public OmniPageProcessor(VecAllocator vecAllocator, Optional<PageFilter> filter, OmniProjection proj, OptionalInt initialBatchSize,
-        ExpressionProfiler expressionProfiler) {
+    public OmniPageProcessor(VecAllocator vecAllocator, Optional<PageFilter> filter, OmniProjection proj,
+                             OptionalInt initialBatchSize, ExpressionProfiler expressionProfiler) {
         super(filter, initialBatchSize, expressionProfiler);
         this.vecAllocator = vecAllocator;
         if (filter.isPresent()) {
@@ -78,30 +78,45 @@ public class OmniPageProcessor extends PageProcessor {
 
     @Override
     public WorkProcessor<Page> createWorkProcessor(ConnectorSession session, DriverYieldSignal yieldSignal,
-        LocalMemoryContext memoryContext, Page page) {
+                                                   LocalMemoryContext memoryContext, Page page) {
         if (page.getPositionCount() == 0) {
+            page.close();
             return WorkProcessor.of();
         }
-        Page toProject = page;
+        VecBatch inputVecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
+        VecBatch toProjectVecBatch = inputVecBatch;
         if (omniPageFilterOperator.isPresent()) {
-            Page filterAndProjectPage = omniPageFilterOperator.get().filterWithProject(vecAllocator, session, page);
-            if (filterAndProjectPage == null) {
+            VecBatch filteredVecBatch = omniPageFilterOperator.get().filterAndProject(inputVecBatch);
+            inputVecBatch.releaseAllVectors();
+            inputVecBatch.close();
+            if (filteredVecBatch == null) {
                 return WorkProcessor.of();
             }
             // Filtered rows have already been made into a page by filterWithProject
-            toProject = filterAndProjectPage;
+            toProjectVecBatch = filteredVecBatch;
         }
         int[] neededCols = projection.getNeededCols();
         // Check for special case where excess columns are returned from nested query
-        if (toProject.getBlocks().length != neededCols.length) {
-            Block[] newBlocks = new Block[neededCols.length];
-            for (int i = 0; i < newBlocks.length; i++) {
-                newBlocks[i] = toProject.getBlock(neededCols[i]);
+        int toProjectVecCount = toProjectVecBatch.getVectorCount();
+        if (toProjectVecCount != neededCols.length) {
+            Vec[] neededVecs = new Vec[neededCols.length];
+            boolean[] neededColFlags = new boolean[toProjectVecCount];
+            for (int i = 0; i < neededVecs.length; i++) {
+                neededVecs[i] = toProjectVecBatch.getVector(neededCols[i]);
+                neededColFlags[neededCols[i]] = true;
             }
-            toProject = new Page(newBlocks);
+
+            for (int i = 0; i < toProjectVecCount; i++) {
+                if (!neededColFlags[i]) {
+                    toProjectVecBatch.getVector(i).close();
+                }
+            }
+            toProjectVecBatch.close();
+            toProjectVecBatch = new VecBatch(neededVecs);
         }
-        return WorkProcessor.create(new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext, toProject,
-            positionsRange(0, toProject.getPositionCount())));
+        return WorkProcessor.create(
+            new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext, toProjectVecBatch,
+                positionsRange(0, toProjectVecBatch.getRowCount())));
     }
 
     private class OmniProjectSelectedPositions implements WorkProcessor.Process<Page> {
@@ -113,7 +128,7 @@ public class OmniPageProcessor extends PageProcessor {
 
         private final LocalMemoryContext memoryContext;
 
-        private final Page page;
+        private final VecBatch vecBatch;
 
         private final SelectedPositions selectedPositions;
 
@@ -122,20 +137,21 @@ public class OmniPageProcessor extends PageProcessor {
         /**
          * Instantiates a new Omni project selected positions.
          *
-         * @param vecAllocator vector allocator
-         * @param session the session
-         * @param yieldSignal the yield signal
-         * @param memoryContext the memory context
-         * @param page the page
+         * @param vecAllocator      vector allocator
+         * @param session           the session
+         * @param yieldSignal       the yield signal
+         * @param memoryContext     the memory context
+         * @param vecBatch          the page
          * @param selectedPositions the selected positions
          */
-        public OmniProjectSelectedPositions(VecAllocator vecAllocator, ConnectorSession session, DriverYieldSignal yieldSignal,
-                LocalMemoryContext memoryContext, Page page, SelectedPositions selectedPositions) {
+        public OmniProjectSelectedPositions(VecAllocator vecAllocator, ConnectorSession session,
+                                            DriverYieldSignal yieldSignal, LocalMemoryContext memoryContext,
+                                            VecBatch vecBatch, SelectedPositions selectedPositions) {
             this.vecAllocator = vecAllocator;
             this.session = session;
             this.yieldSignal = yieldSignal;
             this.memoryContext = memoryContext;
-            this.page = page;
+            this.vecBatch = vecBatch;
             this.selectedPositions = selectedPositions;
             this.isFinished = false;
         }
@@ -147,15 +163,17 @@ public class OmniPageProcessor extends PageProcessor {
             }
             OmniOperator operator = projection.getFactory().createOperator(vecAllocator);
 
-            VecBatch vecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
             operator.addInput(vecBatch);
             Iterator<Page> result = new VecBatchToPageIterator(operator.getOutput());
             if (!result.hasNext()) {
+                vecBatch.releaseAllVectors();
+                vecBatch.close();
                 throw new OmniRuntimeException(OMNI_NATIVE_ERROR, "Filter returns empty result");
             }
             Page projectedPage = result.next();
             isFinished = true;
-            page.close();
+            vecBatch.releaseAllVectors();
+            vecBatch.close();
             return ofResult(projectedPage);
         }
     }

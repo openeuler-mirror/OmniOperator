@@ -304,9 +304,12 @@ public final class OperatorUtils {
                 return getVariableWidthOmniBlock(vecAllocator, block, positionCount, valueIsNull);
             }
             case "DictionaryBlock": {
-                return new DictionaryOmniBlock(
-                    buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary()),
+                Block dicBlock = buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary());
+                Block dictionaryOmniBlock = new DictionaryOmniBlock(
+                    (Vec)dicBlock.getValues(),
                     ((DictionaryBlock) block).getIdsArray());
+                dicBlock.close();
+                return dictionaryOmniBlock;
             }
             case "RunLengthEncodedBlock": {
                 return buildOffHeapBlock(vecAllocator, block,
@@ -335,7 +338,7 @@ public final class OperatorUtils {
         int positionCount, boolean[] valueIsNull) {
         if (block instanceof RunLengthEncodedBlock) {
             VariableWidthBlock variableWidthBlock = (VariableWidthBlock) ((RunLengthEncodedBlock) block).getValue();
-            VarcharVec vec = new VarcharVec(variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
+            VarcharVec vec = new VarcharVec(vecAllocator,variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
 
             for (int i = 0; i < positionCount; i++) {
                 if (block.isNull(i)) {
@@ -416,7 +419,7 @@ public final class OperatorUtils {
         for (Vec dest : resultVecBatch.getVectors()) {
             int offSet = 0;
             for (VecBatch batch : vecBatchesToMerge) {
-                Vec src = batch.getVectors()[index];
+                Vec src = batch.getVector(index);
 
                 int positionCount = src.getSize();
                 if (src instanceof DictionaryVec) {
@@ -483,6 +486,9 @@ public final class OperatorUtils {
         if (block.getDictionary() instanceof DictionaryBlock) {
             buildDictionaryVec(block);
         }
-        return new DictionaryVec((Vec) block.getDictionary().getValues(), block.getIdsArray());
+        Vec dictionary = (Vec) block.getDictionary().getValues();
+        Vec vec = new DictionaryVec(dictionary, block.getIdsArray());
+        dictionary.close();
+        return vec;
     }
 }

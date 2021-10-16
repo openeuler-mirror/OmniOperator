@@ -31,8 +31,8 @@ public class DictionaryVec extends FixedWidthVec {
         // set dictionary vector
         setDictionaryNative(getNativeVector(), dictionary.getNativeVector());
 
-        this.dictionary = dictionary;
         this.ids = ids;
+        loadDictionary();
     }
 
     private DictionaryVec(DictionaryVec vector, int offset, int length, boolean isSlice) {
@@ -56,11 +56,19 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     private void loadDictionaryAndIds(int idsCount) {
+        loadIds(idsCount);
+        loadDictionary();
+    }
+
+    private void loadIds(int idsCount) {
+        this.ids = new int[idsCount];
+        valuesBuf.getIntArray(0, ids, 0, ids.length * BYTES);
+    }
+
+    private void loadDictionary() {
         long dictionaryNative = getDictionaryNative(getNativeVector());
         VecType type = VecType.create(getTypeIdNative(dictionaryNative));
         this.dictionary = VecFactory.create(dictionaryNative, type);
-        this.ids = new int[idsCount];
-        valuesBuf.getIntArray(0, ids, 0, ids.length * BYTES);
     }
 
     /**
