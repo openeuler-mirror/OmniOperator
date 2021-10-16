@@ -267,10 +267,9 @@ void CalculateColDec128Hashes(omniruntime::vec::Vector *vec, int32_t rowCount, i
     }
 }
 
-void CalculateColVarCharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
+void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, int64_t *hashes, bool *nulls)
 {
     int64_t hash;
-    Decimal128 decimal128Value;
     uint8_t *varcharValue = nullptr;
     int32_t valueLength;
     omniruntime::vec::Vector *result = nullptr;
@@ -328,7 +327,7 @@ void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, 
                 break;
             }
             case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
-                CalculateColVarCharHashes(hashCols[i], rowCount, hashes, nulls);
+                CalculateColVarcharHashes(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
             default: {

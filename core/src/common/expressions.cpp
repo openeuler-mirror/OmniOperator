@@ -63,6 +63,9 @@ std::string DataTypeString(DataType dt)
         case DataType::STRINGD: return "string";
         case DataType::DECIMAL64D: return "decimal64";
         case DataType::DECIMAL128D: return "decimal128";
+        case DataType::INT32PTRD: return "int32ptr";
+        case DataType::INT8PTRD: return "int8ptr";
+        case DataType::VOIDD: return "void";
         case DataType::INVALIDDATAD: return "invalid";
     }
 }

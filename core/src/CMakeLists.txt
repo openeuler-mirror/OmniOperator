@@ -23,6 +23,8 @@ set(MY_LINK
 # SHARED mode will compile a so file
 add_library(${OM_TARGET} SHARED ${CMAKE_CURRENT_LIST_DIR})
 
+include_directories(/usr/lib/llvm-12/include)
+
 #dependent library
 target_link_libraries(${OM_TARGET}
         -Wl,--whole-archive
@@ -51,6 +53,15 @@ add_library(window_function SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/win
 add_library(window_partition SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_partition.cpp)
 add_library(topn SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp)
 add_library(memory_pool SHARED ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp)
+add_library(projection SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/projection/projection.cpp)
+add_library(operator_util SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp)
+add_library(expr_visitor SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_visitor.cpp)
+add_library(expressions SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp)
+add_library(parserhelper SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp)
+add_library(parser SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp)
+add_library(sort_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort_expr.cpp)
+add_library(hash_builder_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder_expr.cpp)
+add_library(lookup_join_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp)
 
 set(EXTERNAL_FUNCTIONS
         ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/external_func_registry.cpp
@@ -80,6 +91,15 @@ install(TARGETS
         window_partition
         topn
         memory_pool
+        projection
+        operator_util
+        expr_visitor
+        expressions
+        parserhelper
+        parser
+        sort_expr
+        hash_builder_expr
+        lookup_join_expr
         DESTINATION ${CMAKE_INSTALL_PREFIX}/jit_libs)
 
 install(TARGETS
@@ -94,7 +114,7 @@ function(compile_ir SOURCE_FILE)
 
     # compile ir
     set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${COMPILE_OPTION} ${SOURCE_FILE})
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${COMPILE_OPTION} ${SOURCE_FILE} "-I/usr/lib/llvm-12/include")
 
     # install ir
     install(FILES ${PROJECT_BINARY_DIR}/${SOURCE_NAME}.ll DESTINATION ${CMAKE_INSTALL_PREFIX}/ir)
@@ -118,6 +138,15 @@ set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/union/union.cpp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/projection/projection.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/common/expr_visitor.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort_expr.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder_expr.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp
         )
 foreach (SOURCE_FILE ${SOURCE_FILES})
     compile_ir(${SOURCE_FILE})

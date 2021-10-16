@@ -13,6 +13,9 @@
 #include "../../vector/decimal128_vector.h"
 #include "../../vector/boolean_vector.h"
 #include "../../vector/dictionary_vector.h"
+#include "../../vector/vector_batch.h"
+#include "../../vector/vector_types.h"
+#include "../projection/projection.h"
 
 namespace omniruntime {
 namespace op {
@@ -201,6 +204,19 @@ public:
             return COMPARE_STATUS_EQUAL;
         }
     }
+
+    static void CreateProjectFuncs(const VecTypes &intputTypes, const std::string *projectKeys,
+        int32_t projectKeysCount, std::vector<VecType> &newIntputTypes,
+        std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
+        std::vector<RowProjFunc> &projectFuncs);
+
+    static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const VecTypes &inputTypes,
+        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols);
+
+private:
+    static void ProjectVectors(const VecTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+        const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
+        int32_t rowCount, VectorBatch *newVecBatch);
 };
 }
 }

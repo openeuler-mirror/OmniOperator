@@ -22,6 +22,7 @@ message(STATUS "Build by ${CMAKE_BUILD_TYPE}")
 # clean all target
 set(target_generated ${CMAKE_INSTALL_PREFIX}/libomni_runtime.so
         ${CMAKE_INSTALL_PREFIX}/libomni_vector.so
+		${CMAKE_INSTALL_PREFIX}/libcodegen.so
         ${CMAKE_INSTALL_PREFIX}/libsecurec.so
         ${CMAKE_INSTALL_PREFIX}/ir
         ${CMAKE_INSTALL_PREFIX}/externalfunctions.so

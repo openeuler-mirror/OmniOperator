@@ -14,6 +14,7 @@
 #include "../../src/codegen/func_registry.h"
 #include "../../src/operator/filter/filter_and_project.h"
 #include "../../src/operator/execution_context.h"
+#include "../util/test_util.h"
 
 using omniruntime::op::RowFilter;
 using omniruntime::op::RowFilterFunc;
@@ -1861,5 +1862,35 @@ TEST(CodeGenTest, ProjectionCodeGen)
     delete[] vals;
     delete expr;
     delete lc;
+    delete context;
+}
+
+TEST(CodeGenTest, TestRowProjectVarchar)
+{
+    omniruntime::vec::VarcharVecType type(10);
+    std::string values[2] = {"hello", "world"};
+    omniruntime::vec::VarcharVector *vector = CreateVarcharVector(type, values, 2);
+
+    std::string expr = "substr:varchar(#0, 1, 5)";
+    std::vector<DataType> types;
+    types.push_back(DataType::STRINGD);
+    RowProjection rowProjection(expr, types);
+    RowProjFunc func = rowProjection.Create(types);
+
+    int64_t valuesAddr[1] = {(int64_t)(vector->GetValues())};
+    int64_t valueNulls[1] = {(int64_t)(vector->GetValueNulls())};
+    int64_t valueOffsets[1] = {(int64_t)(vector->GetValueOffsets())};
+    bool isNull;
+    int32_t length;
+    auto context = new ExecutionContext();
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &isNull, &length, reinterpret_cast<int64_t>(context));
+        uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
+        std::string result(value, value + length);
+        EXPECT_EQ(result, values[i]);
+    }
+    context->getArena()->Reset();
+
+    delete vector;
     delete context;
 }

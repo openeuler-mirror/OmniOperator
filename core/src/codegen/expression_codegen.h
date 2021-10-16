@@ -39,7 +39,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 

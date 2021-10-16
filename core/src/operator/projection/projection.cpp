@@ -10,15 +10,14 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
-using Uint8vec = std::vector<uint8_t>;
 namespace omniruntime {
 namespace op {
-RowProjection::RowProjection(std::string &expression, std::vector<DataType> &inputTypes)
+RowProjection::RowProjection(const std::string &expression, const std::vector<DataType> &inputTypes)
     : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
-    this->expression =
-        parser.ParseRowExpression(expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
+    this->expression = parser.ParseRowExpression(expression,
+        reinterpret_cast<int32_t *>(const_cast<DataType *>(inputTypes.data())), inputTypes.size());
 }
 
 RowProjection::~RowProjection()
@@ -65,7 +64,7 @@ int RowProjection::GetIndexIfColumnProjection()
 }
 }
 
-void GetColumnsInExpr(Expr *expr, set<int32_t>& columnsInExpression, bool isRoot)
+void GetColumnsInExpr(Expr *expr, set<int32_t> &columnsInExpression, bool isRoot)
 {
     switch (expr->GetType()) {
         case ExprType::DATA_E: {

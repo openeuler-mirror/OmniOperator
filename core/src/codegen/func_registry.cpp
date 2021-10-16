@@ -4,7 +4,6 @@
  */
 #include <vector>
 #include <map>
-#include "../common/expressions.h"
 #include "./functions/mathfunctions.h"
 #include "./functions/stringfunctions.h"
 #include "./functions/murmur3_hash.h"
