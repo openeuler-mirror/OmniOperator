@@ -58,5 +58,5 @@ else
   cmake ../ -DCMAKE_BUILD_TYPE=Release
 fi
 make clean
-make -j4
+make -j16
 make install
