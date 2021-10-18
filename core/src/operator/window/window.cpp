@@ -200,7 +200,10 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
 {
     rowCount = min(maxRowCount, positionCount - position);
     vecBatch = std::make_unique<VectorBatch>(finalOutputColsCount, rowCount).release();
-    vecBatch->NewVectors(vecAllocator, outputTypes);
+
+    // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
+    // result
+    InitResultVectors(outputTypes, vecBatch, rowCount, outputColsCount, finalOutputColsCount);
 
     // build the output data with original input vecBatch, input data are not changed in window operator
     // we add extra columns of window result to the output vecBatch in window partition
@@ -218,6 +221,49 @@ void WindowOperator::ProcessData(int32_t positionCount, int finalOutputColsCount
                 outputColsCount, windowFunctions, peerGroupHashStrategy.get());
         }
         partition->ProcessNextRow(vecBatch, j);
+    }
+}
+
+void WindowOperator::InitResultVectors(const std::vector<VecType> &outputTypes, VectorBatch *&vecBatch,
+    const int32_t &rowCount, const int32_t outputColsCount, const int finalOutputColsCount) const
+{
+    for (int colIndex = outputColsCount; colIndex < finalOutputColsCount; ++colIndex) {
+        auto type = outputTypes[colIndex];
+        switch (type.GetId()) {
+            case OMNI_VEC_TYPE_BOOLEAN:
+                vecBatch->SetVector(colIndex, new BooleanVector(vecAllocator, rowCount));
+                break;
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32: {
+                vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64: {
+                vecBatch->SetVector(colIndex, new LongVector(vecAllocator, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DOUBLE: {
+                vecBatch->SetVector(colIndex, new DoubleVector(vecAllocator, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_SHORT: {
+                vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_VARCHAR: {
+                int32_t width = (static_cast<const VarcharVecType *>(&type))->GetWidth();
+                vecBatch->SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * width, rowCount));
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                vecBatch->SetVector(colIndex, new Decimal128Vector(vecAllocator, rowCount));
+                break;
+            }
+            default: {
+                break;
+            }
+        }
     }
 }
 
