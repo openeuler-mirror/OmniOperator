@@ -66,8 +66,8 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
     }
     for (; position < vectorBatch->GetRowCount(); ++position) {
         VectorBatch *top = pq.top().GetVecBatch();
-        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount,
-                               sortCols, typeIds, sortAscendings, sortNullFirsts) < 0) {
+        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount, sortCols, typeIds,
+            sortAscendings, sortNullFirsts) < 0) {
             pq.pop();
             UpdateSingleRowVectorBatch(vectorBatch, top, position);
             pq.emplace(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, top);
@@ -96,12 +96,19 @@ void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, 
 void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
                                                 int32_t position)
 {
+    VarcharVector *single = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
+    // we just need to set value null
+    if (static_cast<VarcharVector *>(vector)->IsValueNull(position)) {
+        single->SetValueNull(0, true);
+        return;
+    }
     // we need to delete then re-allocate;
     delete static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
     singleRowVecBatch->SetVector(colIndex, (static_cast<VarcharVector *>(vector))->CopyRegion(position, 1));
 }
 
-void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch, int32_t position) const
+void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch,
+                                                VectorBatch *singleRowVecBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
     for (int i = 0; i < sourceTypesCount; ++i) {
