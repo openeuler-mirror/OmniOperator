@@ -683,7 +683,7 @@ std::vector<std::tuple<int32_t, int32_t>> GetRanges(int64_t *valueAddresses, Vec
         } else {
             currentIsNull = false;
             currentColumn = column;
-            currentColumnPosition = columnPosition;
+            currentColumnPosition = originalColumnPosition;
         }
         // single value range ?
         if (start + 1 != i) {
