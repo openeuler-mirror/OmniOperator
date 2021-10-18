@@ -136,7 +136,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
 
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
-
+    module->print(errs(), nullptr);
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();

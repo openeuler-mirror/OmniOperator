@@ -46,7 +46,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                     std::string s ((char *)(addr));
                     // std::cout << "s: " << s << std::endl;
                     ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()),
-                                                                        s.length() + 1);
+                                                                        s.length());
                 }
                 break;
             }
@@ -636,6 +636,75 @@ TEST (ProjectTest, MultipleDecimal128Columns) {
     delete[] col1;
     delete[] col2;
 
+    delete op;
+    delete factory;
+}
+
+TEST (ProjectTest, StringSubstr) {
+    vector<string*> strings;
+
+    const int32_t numCols = 1;
+    int32_t* inputTypes = new int32_t[numCols];
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+
+    const int32_t numRows = 100;
+    int64_t* col1 = new int64_t[numRows];
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            std::string *s = new std::string("helloasdf");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+        else {
+            std::string *s = new std::string("Bonjour");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+    }
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+
+
+    const int32_t numProject = 2;
+    std::string exprs[numProject] = {"concat:varchar(substr:varchar(#0, 1, 5), ' world')", "#0"};
+
+    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    string expected1 = "hello world";
+    string expected2 = "Bonjo world";
+    for (int32_t i = 0; i < numReturned; i += 20) {
+        VarcharVector *vcVec = ((VarcharVector*) ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+
+        // Truncate the resulting string
+        void *charArr = &actualChar;
+        auto charArrCasted = static_cast<char **>(charArr);
+        string actualStr (*charArrCasted, 0, len);
+        if (i % 2 == 0) {
+            EXPECT_EQ(actualStr, expected1);
+        } else {
+            EXPECT_EQ(actualStr, expected2);
+        }
+        std::cout << "string " << i << ": '" << actualStr << "' has length " << len << std::endl;
+    }
+
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
     delete op;
     delete factory;
 }
