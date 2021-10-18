@@ -108,13 +108,12 @@ void HashAggregationOperator::PreLoop(VectorBatch *vecBatch) {}
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
 
-void ALWAYS_INLINE GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t *types,
-    const int32_t colNum, const int32_t *colIdx, int64_t *combinedHashVal)
+void ALWAYS_INLINE GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount,
+    const int32_t colNum, int64_t *combinedHashVal)
 {
-
+    Vector *vector = nullptr;
     for (int32_t i = 0; i < colNum; ++i) {
-        uint32_t idx = colIdx[i];
-        auto *vector = vectors[idx];
+        vector = vectors[i];
         if (vector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
             HashAggregationOperator::FUNCTIONS[vector->GetTypeId()].hashFuncVect(vector, start, rowCount, combinedHashVal);
         }
@@ -148,8 +147,8 @@ void *ALWAYS_INLINE DuplicateGroupByTuple(Vector *vector, uint32_t offset)
         originalRowIndex);
 }
 
-int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t* types, const int32_t colNum,
-                                          const int32_t* colIdx, std::vector<std::vector<GroupBySlot>> &sameBucket)
+int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t colNum,
+                                           std::vector<std::vector<GroupBySlot>> &sameBucket)
 {
     // early break
     if (sameBucket.empty()) {
@@ -159,10 +158,11 @@ int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offse
         bool isSame = true;
         for (int32_t i = 0; i < colNum && isSame; ++i) {
             int32_t originalRowIndex;
-            Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vectors[colIdx[i]], offset, originalRowIndex);
-            HashAggregationOperator::FUNCTIONS[originalVector->GetTypeId()].isSameNode(originalVector, offset, sameBucket[it][i].val, isSame);
+            Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vectors[i], offset, originalRowIndex);
+            HashAggregationOperator::FUNCTIONS[originalVector->GetTypeId()].isSameNode(originalVector, offset,
+                                                                                       sameBucket[it][i].val, isSame);
         }
-        if(isSame) return it;
+        if (isSame) return it;
     }
     return -1;
 }
@@ -174,6 +174,17 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
 {
     static const int blockSize = 1024;
     int64_t combinedHashVal[blockSize];
+    Vector *groupByVectors[groupByColNum];
+    Vector *aggrByVectors[aggColNum];
+    int32_t aggrByTypes[aggColNum];
+    for (int i = 0; i < groupByColNum; ++i) {
+        groupByVectors[i] = vectors[groupByColIdx[i]];
+    }
+    for (int i = 0; i < aggColNum; ++i) {
+        int32_t idx = aggColIdx[i];
+        aggrByVectors[i] = vectors[idx];
+        aggrByTypes[i] = types[idx];
+    }
     uint32_t run = blockSize;
     for (uint32_t start = 0; start < rowCount; start = start + blockSize) {
         for (int i = 0; i < blockSize; ++i) {
@@ -182,37 +193,28 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
         if ((start + blockSize) > rowCount) {
             run = rowCount - start;
         }
-
-        GenerateCombinedHashes(vectors, start, run, types, groupByColNum, groupByColIdx, combinedHashVal);
+        GenerateCombinedHashes(groupByVectors, start, run, groupByColNum, combinedHashVal);
         for (uint32_t offset = 0; offset < run; ++offset) {
             int64_t hash = combinedHashVal[offset];
             int32_t isSamePos = -1;
             int32_t actualOffset = start + offset;
             auto &bucket = groupedRows[hash];
-            isSamePos = IsSameGroupByTuples(vectors, actualOffset, types, groupByColNum, groupByColIdx,
-                                            bucket);
+            isSamePos = IsSameGroupByTuples(groupByVectors, actualOffset, groupByColNum, bucket);
             if (isSamePos == -1) {
                 std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
                 for (int32_t i = 0; i < groupByColNum; ++i) {
-                    uint32_t idx = groupByColIdx[i];
-                    groupByTuple[i].val = DuplicateGroupByTuple(vectors[idx], actualOffset);
+                    groupByTuple[i].val = DuplicateGroupByTuple(groupByVectors[i], actualOffset);
                 }
                 bucket.push_back(groupByTuple);
                 size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    int32_t idx = aggColIdx[i];
-                    int32_t type = types[idx];
-                    Vector *colPtr = vectors[idx];
-                    GroupBySlot &state = bucket[chainLength - 1][groupByColNum + i];
-                    aggregators[i]->AggInsert(state, colPtr, type, actualOffset);
+                    aggregators[i]->AggInsert(bucket[chainLength - 1][groupByColNum + i],
+                                              aggrByVectors[i], aggrByTypes[i], actualOffset);
                 }
             } else {
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    int32_t idx = aggColIdx[i];
-                    int32_t type = types[idx];
-                    Vector *colPtr = vectors[idx];
-                    GroupBySlot &state = bucket[isSamePos][groupByColNum + i];
-                    aggregators[i]->AggProcessGroup(state, colPtr, type, actualOffset);
+                    aggregators[i]->AggProcessGroup(bucket[isSamePos][groupByColNum + i],
+                                                    aggrByVectors[i], aggrByTypes[i], actualOffset);
                 }
             }
         }
@@ -552,6 +554,7 @@ void IsSameNodeFuncImpl(Vector* vector,
     if (!isInputNull && !isIntermediateNull) {
         auto intTmp = static_cast<V *>(vector)->GetValue(offset);
         isSame = intTmp == *static_cast<D *>(val);
+		return;
     }
     if (isInputNull != isIntermediateNull) {
         isSame = false;
