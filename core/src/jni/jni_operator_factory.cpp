@@ -667,7 +667,7 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
-    JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jintArray jProjectIndices,
+    JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
     jint jProjectLength, jlong jitContext)
 {
     auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
@@ -675,11 +675,17 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputVecTypes = Deserialize(inputTypesCharPtr);
     auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
-    int32_t inputLength = (int32_t)jInputLength;
-    jint *projectIndices = env->GetIntArrayElements(jProjectIndices, JNI_FALSE);
-    int32_t projectLength = (int32_t)jProjectLength;
-    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
-        filterExpression, inputTypeIds, inputLength, projectIndices, projectLength);
+    auto inputLength = (int32_t)jInputLength;
+
+    auto *exprs = new std::string[jProjectLength];
+    for (int32_t i = 0; i < jProjectLength; i++) {
+        auto st = (jstring)(env->GetObjectArrayElement(jProjections, i));
+        auto rawString = env->GetStringUTFChars(st, nullptr);
+        exprs[i] = rawString;
+    }
+    auto projectLength = (int32_t)jProjectLength;
+    auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
+        filterExpression, inputTypeIds, inputLength, exprs, projectLength);
     if (!factory->isSupportedExpr) {
         return 0;
     }

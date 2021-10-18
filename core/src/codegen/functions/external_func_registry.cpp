@@ -11,6 +11,7 @@
 #include <dlfcn.h>
 
 #include "./external_func_registry.h"
+#include "../../util/debug.h"
 
 using namespace std;
 using namespace omniruntime::expressions;
@@ -56,8 +57,8 @@ int64_t ExternalFuncRegistry::FetchHandle() const
     // Get symbols from .so file
     auto handle = dlopen(EXTERNAL_FUNCTIONS_LIB_PATH.c_str(), RTLD_LAZY);
     if (!handle) {
-        std::cout << "Could not open externalfunctions library file; " << dlerror() << std::endl;
-        std::cout << "Error occurred with external functions. No external functions will be registered" << std::endl;
+        LLVM_DEBUG_LOG("Could not open externalfunctions library file; %s\n", dlerror());
+        LLVM_DEBUG_LOG("Error occurred with external functions. No external functions will be registered\n");
         return 0;
     }
 

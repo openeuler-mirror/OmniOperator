@@ -3,7 +3,6 @@
  * Description: FilterAndProject operator source file
  */
 #include "filter_and_project.h"
-#include "filter_compiler.h"
 #include "../../vector/vector_helper.h"
 
 namespace omniruntime {
@@ -38,11 +37,10 @@ RowFilterFunc RowFilter::Create(std::vector<DataType> &inputTypes)
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputTypes,
-    int32_t vecCount, int32_t projectIndex[], int32_t projectVecCount)
+    int32_t vecCount, std::string projectExprs[], int32_t projectVecCount)
 {
     this->inputTypes = inputTypes;
     this->vecCount = vecCount;
-    this->projectIndex = projectIndex;
     this->projectVecCount = projectVecCount;
     this->SetJitContext(nullptr);
 
@@ -52,15 +50,11 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     parsedExpr = parserObject.ParseRowExpression(expression, inputTypes, vecCount);
     if (parsedExpr != nullptr) {
         this->isSupportedExpr = true;
-        unique_ptr<Compiler> compiler = make_unique<Compiler>(*parsedExpr, inputTypes, vecCount);
-        this->filter = compiler->Compile();
+
+        this->filter = make_unique<Filter>(*parsedExpr, inputTypes, vecCount);
 
         for (int32_t i = 0; i < this->projectVecCount; i++) {
-            auto exp = make_unique<DataExpr>();
-            exp->isColumn = true;
-            exp->colVal = this->projectIndex[i];
-            exp->dataType = ColTypeTrans(inputTypes[projectIndex[i]]);
-            projections.push_back(make_unique<Projection>(inputTypes, vecCount, *(exp.release()), true));
+            projections.push_back(make_unique<Projection>(inputTypes, vecCount, projectExprs[i], true));
         }
     } else {
         this->isSupportedExpr = false;
@@ -84,51 +78,6 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
     return filterAndProjectOperator.release();
 }
 
-int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
-{
-    const int rowCount = vecBatch->GetRowCount();
-    int32_t selectedRows[rowCount];
-    int32_t numSelectedRows = this->filter->DoFilter(vecBatch, selectedRows, rowCount);
-    if (numSelectedRows <= 0) {
-        return 0;
-    }
-    auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
-    for (int32_t i = 0; i < this->projectVecCount; i++) {
-        // vecData and bitmap won't be used for filter projection
-        Vector *col = this->projections[i]->Project(
-            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, vector<int64_t> {}, vector<int64_t> {}, vector<int64_t> {});
-        projectedData->SetVector(i, col);
-    }
-    this->projectedVecs = std::move(projectedData);
-    return numSelectedRows;
-}
-
-int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
-{
-    if (this->projectedVecs == nullptr) {
-        return 0;
-    }
-
-    int rowCount = this->projectedVecs->GetRowCount();
-    data.push_back(this->projectedVecs.release());
-
-    // need to cleanup memory in old vecBatches
-    FreeStrings();
-    FreeDecimalArrays();
-    return rowCount;
-}
-
-Filter::Filter(unique_ptr<FilterCodeGen> codeGen, Expr &expr)
-{
-    this->codeGen = std::move(codeGen);
-    this->expr = &expr;
-
-    auto f = this->codeGen->GetFunction();
-    void *function = &f;
-    auto cfunction = static_cast<FilterFunc *>(function);
-    this->func = *cfunction;
-}
-
 void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 {
     int32_t longs = 2;
@@ -148,8 +97,8 @@ void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 // Helper function to return an array of data
 // Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
-    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[],
-    int64_t offsetsAddrs[], std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
+                             vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[],
+                             int64_t offsetsAddrs[], std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch->GetVectorCount();
     std::vector<int64_t> data;
@@ -185,8 +134,11 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, vector<unique_ptr<vector<in
     return data;
 }
 
-int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t selectedRows[], int rowCount) const
+int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
+    const int rowCount = vecBatch->GetRowCount();
+    int32_t selectedRows[rowCount];
+
     // Contains arrays with addresses for varchar vecs
     vector<unique_ptr<vector<int64_t>>> vcdataVec;
     // Contains all strings created in VarcharVector::GetValue method which need to be freed
@@ -201,14 +153,61 @@ int32_t Filter::DoFilter(VectorBatch *&vecBatch, int32_t selectedRows[], int row
 
     // contents of bitmap are appropriately modified in GetData
     std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), offsets.data(), dictionaryVecs);
-    int32_t ret = this->func(data.data(), rowCount, selectedRows, bitmap.data(), offsets.data());
+
+    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap.data(), offsets.data());
+
+    if (numSelectedRows <= 0) {
+        return 0;
+    }
+    auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
+
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        // vecData and bitmap won't be used for filter projection
+        Vector *col = this->projections[i]->Project(
+            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data, bitmap, offsets);
+        projectedData->SetVector(i, col);
+    }
+    this->projectedVecs = std::move(projectedData);
 
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;
     }
     data.clear();
 
-    return ret;
+    return numSelectedRows;
 }
+
+int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
+{
+    if (this->projectedVecs == nullptr) {
+        return 0;
+    }
+
+    int rowCount = this->projectedVecs->GetRowCount();
+    data.push_back(this->projectedVecs.release());
+
+    // need to cleanup memory in old vecBatches
+    FreeStrings();
+    FreeDecimalArrays();
+    return rowCount;
+}
+
+Filter::Filter(expressions::Expr &expression, int32_t inputTypes[], int32_t vecCount)
+{
+    vector<DataType> dataTypes;
+    dataTypes.reserve(vecCount);
+    for (int32_t i = 0; i < vecCount; i++) {
+        dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+    }
+    auto codeGenObj = make_unique<FilterCodeGen>("filterFunc", expression, dataTypes);
+
+    this->codeGen = std::move(codeGenObj);
+    this->expr = &expression;
+
+    auto f = this->codeGen->GetFunction();
+    void *function = &f;
+    this->Apply = *static_cast<FilterFunc *>(function);
+}
+
 } // end of op
 } // end of omniruntime

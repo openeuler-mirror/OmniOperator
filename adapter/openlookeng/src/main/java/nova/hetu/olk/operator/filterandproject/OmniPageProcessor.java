@@ -11,6 +11,7 @@ import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_NATIVE_ERROR;
 
+import com.google.common.collect.ImmutableList;
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.DriverYieldSignal;
 import io.prestosql.operator.WorkProcessor;
@@ -41,13 +42,10 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class OmniPageProcessor extends PageProcessor {
-    private final ExpressionProfiler expressionProfiler;
 
     private final OmniProjection projection;
 
     private final VecAllocator vecAllocator;
-
-    private final int projectBatchSize;
 
     private Optional<OmniPageFilter.OmniPageFilterOperator> omniPageFilterOperator = Optional.empty();
 
@@ -68,8 +66,6 @@ public class OmniPageProcessor extends PageProcessor {
             this.omniPageFilterOperator = Optional.of(((OmniPageFilter) pageFilter).getOperator(vecAllocator));
         }
         this.projection = requireNonNull(proj, "projection is null");
-        this.projectBatchSize = initialBatchSize.orElse(1);
-        this.expressionProfiler = requireNonNull(expressionProfiler, "expressionProfiler is null");
     }
 
     public OmniProjection getProjection() {
@@ -92,8 +88,8 @@ public class OmniPageProcessor extends PageProcessor {
             if (filteredVecBatch == null) {
                 return WorkProcessor.of();
             }
-            // Filtered rows have already been made into a page by filterWithProject
-            toProjectVecBatch = filteredVecBatch;
+            Iterator<Page> result = new VecBatchToPageIterator(ImmutableList.of(filteredVecBatch).iterator());
+            return WorkProcessor.of(result.next());
         }
         int[] neededCols = projection.getNeededCols();
         // Check for special case where excess columns are returned from nested query

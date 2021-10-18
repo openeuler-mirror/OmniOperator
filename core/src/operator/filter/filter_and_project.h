@@ -35,25 +35,25 @@ private:
 
 class Filter {
 public:
-    Filter(std::unique_ptr<FilterCodeGen> codegen, expressions::Expr &expr);
+    Filter(expressions::Expr &expression, int32_t inputTypes[], int32_t vecCount);
     ~Filter()
     {
         this->codeGen.reset();
         delete this->expr;
     }
-    int32_t DoFilter(omniruntime::vec::VectorBatch *&vecBatch, int32_t selectedRows[], int rowCount) const;
+
+    FilterFunc Apply;
 
 private:
     std::unique_ptr<FilterCodeGen> codeGen;
     expressions::Expr *expr;
     // Filter function is retrieved from FilterCodeGen
-    // arguments to func are (data, numSelectedRows, rowCount, bitmap)
+    // arguments to func are (data, numSelectedRows, rowCount, bitmap, offsets)
     // data: 2D array containing vector values
     // selectedRows: array of row numbers which pass the Filter; is modified in func
     // rowCount: number of rows in data
     // bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
     // value offsets
-    FilterFunc func;
 };
 
 class FilterAndProjectOperator : public Operator {
@@ -91,7 +91,7 @@ private:
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
     FilterAndProjectOperatorFactory(std::string expression, int32_t inputTypes[], int32_t vecCount,
-        int32_t projectIndex[], int32_t projectVecCount);
+        std::string projections[], int32_t projectVecCount);
 
     ~FilterAndProjectOperatorFactory() override;
 
