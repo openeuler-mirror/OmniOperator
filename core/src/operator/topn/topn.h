@@ -34,6 +34,8 @@ public:
 
     omniruntime::vec::VectorBatch *GetVecBatch() const;
 
+    void Update(int32_t i);
+
 private:
     const int32_t *sourceTypes;
     int32_t *sortCols = nullptr;
@@ -99,6 +101,9 @@ private:
 
     void SetVarcharValueForVectorBatch(int64_t rowNum, vec::VarcharVector *pqVector,
         vec::VarcharVector *tmpVector) const;
+
+    void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
+                                    int32_t position) const;
 };
 }
 }

@@ -58,18 +58,19 @@ TopNOperator::~TopNOperator()
 int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
     auto typeIds = sourceTypes.GetIds();
-    for (int32_t position = 0; position < vectorBatch->GetRowCount(); ++position) {
-        if ((pq.size() < n) || CompareVectorBatch(position, vectorBatch, 0, pq.top().GetVecBatch(), sortColCount,
-            sortCols, typeIds, sortAscendings, sortNullFirsts) < 0) {
-            VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
-            RowComparator *rowComparator =
-                new RowComparator(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, singleRowVecBatch);
-            pq.push(*rowComparator);
-            while (pq.size() > n) {
-                pq.pop();
-            }
-            singleRowVectorBatchList.push_back(singleRowVecBatch);
-            rowComparatorList.push_back(rowComparator);
+    int32_t position = 0;
+    for (; (pq.size() < n) && (position < vectorBatch->GetRowCount()); ++position) {
+        VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
+        pq.emplace(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, singleRowVecBatch);
+        singleRowVectorBatchList.push_back(singleRowVecBatch);
+    }
+    for (; position < vectorBatch->GetRowCount(); ++position) {
+        VectorBatch *top = pq.top().GetVecBatch();
+        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount,
+                               sortCols, typeIds, sortAscendings, sortNullFirsts) < 0) {
+            pq.pop();
+            UpdateSingleRowVectorBatch(vectorBatch, top, position);
+            pq.emplace(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, top);
         }
     }
     return 0;
@@ -80,6 +81,58 @@ void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch,
     int32_t position)
 {
     singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
+}
+
+template <typename T>
+void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+                                                 int32_t position)
+{
+    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))->SetValueNull(0, (static_cast<T *>(vector))->IsValueNull(
+            position));
+    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))->SetValue(0,
+                                                                       (static_cast<T *>(vector))->GetValue(position));
+}
+
+void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+                                                int32_t position)
+{
+    // we need to delete then re-allocate;
+    delete static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
+    singleRowVecBatch->SetVector(colIndex, (static_cast<VarcharVector *>(vector))->CopyRegion(position, 1));
+}
+
+void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch, int32_t position) const
+{
+    auto typeIds = sourceTypes.GetIds();
+    for (int i = 0; i < sourceTypesCount; ++i) {
+        int32_t originalPosition;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
+        switch (typeIds[i]) {
+            case OMNI_VEC_TYPE_BOOLEAN:
+                SetValueForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+                SetValueForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
+                SetValueForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            case OMNI_VEC_TYPE_DOUBLE:
+                SetValueForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR: {
+                SetVarCharForSingleRowVecBatch(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            }
+            case OMNI_VEC_TYPE_DECIMAL128:
+                SetValueForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, originalPosition);
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
