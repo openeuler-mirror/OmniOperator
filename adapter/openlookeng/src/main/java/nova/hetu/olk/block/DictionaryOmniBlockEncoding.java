@@ -85,7 +85,9 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
         // We always compact the dictionary before we send it. However, dictionaryBlock comes from sliceInput, which may over-retain memory.
         // As a result, setting dictionaryIsCompacted to true is not appropriate here.
         // TODO: fix DictionaryBlock so that dictionaryIsCompacted can be set to true when the underlying block over-retains memory.
-        return new DictionaryOmniBlock(positionCount, (Vec) dictionaryBlock.getValues(), ids, false,
+        DictionaryOmniBlock dictionaryOmniBlock = new DictionaryOmniBlock(positionCount, (Vec) dictionaryBlock.getValues(), ids, false,
             new DictionaryId(mostSignificantBits, leastSignificantBits, sequenceId));
+        dictionaryBlock.close();
+        return dictionaryOmniBlock;
     }
 }
