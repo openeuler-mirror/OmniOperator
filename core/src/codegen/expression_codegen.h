@@ -60,6 +60,8 @@ private:
     llvm::Value *nullBitmap;
     llvm::Value *offsets;
     llvm::Value *rowIdx;
+    // Boolean flag which contains 'OR' of nullBitmap[#xxx] utilized in expression evaluation
+    // If true, it means that at least one column_value is null when processing the row.
     llvm::Value *isResultNull;
     llvm::FunctionCallee print;
 };
