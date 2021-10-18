@@ -61,7 +61,7 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     private void loadIds(int idsCount) {
-        this.ids = new int[idsCount];
+        this.ids = new int[offset + idsCount];
         valuesBuf.getIntArray(0, ids, 0, ids.length * BYTES);
     }
 
