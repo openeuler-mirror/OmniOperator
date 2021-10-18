@@ -590,16 +590,23 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     auto resBatch = VectorHelper::ConcatVectorBatches(result1);
+    for (auto res : result1) {
+        VectorHelper::FreeVecBatch(res);
+    }
 
     groupByVarChar->Close();
     delete groupByVarChar;
-    std::string expectData1[3] = {"2", "0","1"};
+    std::string expectData1[3] = {"2", "1","0"};
     int64_t expectData2[3] = {2,3,3};
-    std::string expectData3[3] = {"2", "0","1"};
-    std::string expectData4[3] = {"4.4", "6.6","5.5"};
+    std::string expectData3[3] = {"2", "1","0"};
+    std::string expectData4[3] = {"4.4", "5.5","6.6"};
     VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(),VarcharVecType(1), VarcharVecType(3) }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
+    VectorHelper::PrintVecBatch(resBatch);
+    VectorHelper::PrintVecBatch(expectVecBatch);
     EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(resBatch);
 }
 
 TEST(HashAggregationOperatorTest, verify_null_correctness)
