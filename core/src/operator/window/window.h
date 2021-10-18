@@ -216,6 +216,9 @@ private:
     void ProcessData(int32_t positionCount, int finalOutputColsCount, int32_t maxRowCount,
         std::vector<vec::VecType> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&vecBatch,
         int32_t &rowCount);
+
+    void InitResultVectors(const std::vector<VecType> &outputTypes, VectorBatch *&vecBatch, const int32_t &rowCount,
+        const int32_t outputColsCount, const int finalOutputColsCount) const;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);
