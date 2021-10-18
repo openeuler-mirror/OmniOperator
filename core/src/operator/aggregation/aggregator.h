@@ -44,6 +44,10 @@ using GroupBySlot = union GroupBySlot {
     };
     void *val;
     int64_t count;
+    struct {
+        uint8_t *strVal;
+        int32_t strLen;
+    };
 };
 
 class AggregatorFactory;

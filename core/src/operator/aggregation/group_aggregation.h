@@ -6,7 +6,6 @@
 #define GROUP_AGGREGATION_H
 
 #include "aggregation.h"
-#include "robin_hood.h"
 #include "../../vector/vector_types.h"
 #include "../hash_util.h"
 
@@ -45,16 +44,16 @@ const int32_t DEFAULT_HASHTABLE_SIZE = 512;
 namespace omniruntime {
 namespace op {
 using namespace vec;
-using BucketIterator = robin_hood::unordered_flat_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>::iterator;
+using BucketIterator = std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>::iterator;
 using ChainIterator = std::vector<std::vector<GroupBySlot>>::iterator;
 
 class HashAggregationOperatorFactory;
 class HashAggregationOperator;
 
-using HashFunc = void (*)(Vector *vector, const uint32_t r, const int32_t *ri, int64_t *hashVal);
-using HashFuncVect = void (*)(Vector *vector, const uint32_t s, const uint32_t r, int64_t *hashVal);
-using DuplicateKeyValue = void *(*)(Vector *vector, const uint32_t offset);
-using IsSameNodeFunc = void(*)(Vector* vector, const uint32_t offset, void *val, bool &isSame);
+using HashFunc = void (*)(Vector *vector, const uint32_t r, const int32_t *ri, uint64_t *hashVal);
+using HashFuncVect = void (*)(Vector *vector, const uint32_t s, const uint32_t r, uint64_t *hashVal);
+using DuplicateKeyValue = void (*)(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset);
+using IsSameNodeFunc = void(*)(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
 using SetVector = void (*)(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 using FillValue = void (*)(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
@@ -75,21 +74,21 @@ using FunctionByDataType = struct {
 using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
 
 template <typename V, typename D>
-void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
-void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
-void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, int64_t *combinedHash);
+void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
+void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
+void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash);
 
 template <typename V, typename D>
-void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash);
-void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash);
-void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, int64_t *combinedHash);
+void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
+void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 
 template<typename V, typename D>
-void IsSameNodeFuncImpl(Vector* vector, const uint32_t offset, void *val, bool &isSame);
-void IsSameNodeFuncVarcharImpl(Vector* vector, const uint32_t offset, void *val, bool &isSame);
+void IsSameNodeFuncImpl(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
+void IsSameNodeFuncVarcharImpl(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
 
-template <typename V, typename D> void *DuplicateKeyValueImpl(Vector *vector, const uint32_t offset);
-void *DuplicateVarcharKeyValue(Vector *vector, const uint32_t offset);
+template <typename V, typename D> void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset);
+void DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset);
 
 template <typename V>
 void SetVectorImpl(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
@@ -109,6 +108,7 @@ void FillVarcharValue(HashAggregationOperator &hashOperator, VectorBatch *vecBat
                       ChainIterator &finalRowIterator, int colIndex);
 
 template <typename T> void ReleaseMemoryImpl(GroupBySlot& rowIterator, int32_t columnIndex, VecType& type);
+void ReleaseMemoryVarcharImpl(GroupBySlot &columnVal, int32_t columnIndex, VecType &type);
 
 class HashAggregationOperator : public AggregationCommonOperator {
 public:
@@ -138,7 +138,7 @@ public:
     void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
         int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);
     void PostLoop(VectorBatch *vecBatch) const;
-    robin_hood::unordered_flat_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>& GetStates()
+    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>& GetStates()
     {
         return groupedRows;
     }
@@ -181,7 +181,7 @@ public:
         {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
         {
             OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue,
-            ReleaseMemoryImpl<std::string>
+            ReleaseMemoryVarcharImpl
         },
         {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
         {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
@@ -214,7 +214,7 @@ private:
     friend void FillVarcharValue(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
                                  ChainIterator &tempRowIterator,
                                  ChainIterator &finalRowIterator, int colIndex);
-    robin_hood::unordered_flat_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> groupedRows;
+    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
 };

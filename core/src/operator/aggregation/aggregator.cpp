@@ -5,6 +5,7 @@
 #include "aggregator.h"
 
 #include <memory>
+#include <string.h>
 
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_helper.h"
@@ -178,8 +179,10 @@ void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, 
 {
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
-    auto val = std::make_unique<std::string>(reinterpret_cast<char *>(data), valLen);
-    groupSlot.val = val.release();
+    uint8_t *state = new uint8_t[valLen];
+    memcpy_s(state, valLen, data, valLen);
+    groupSlot.strVal = state;
+    groupSlot.strLen = valLen;
 }
 
 template <typename V, typename D>
@@ -200,11 +203,13 @@ void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t 
         MinInsertVarcharImpl(groupSlot, colPtr, type, offset);
         return;
     }
-    uint8_t *data = nullptr;
-    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &data);
-    std::string rowVal(reinterpret_cast<char *>(data), valLen);
-    auto leftVal = static_cast<std::string *>(groupSlot.val);
-    *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
+    uint8_t *rowVal = nullptr;
+    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &rowVal);
+    auto leftVal = reinterpret_cast<char *>(groupSlot.strVal);
+    if (memcmp(leftVal, (char*)rowVal, std::min(valLen, groupSlot.strLen)) > 0) {
+        memcpy_s(leftVal, valLen, rowVal, valLen);
+    }
+    return;
 }
 
 template <typename V, typename D>
@@ -260,8 +265,10 @@ void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, 
 {
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
-    auto val = std::make_unique<std::string>(reinterpret_cast<char *>(data), 0, valLen);
-    groupSlot.val = val.release();
+    uint8_t *state = new uint8_t[valLen];
+    memcpy_s(state, valLen, data, valLen);
+    groupSlot.strVal = state;
+    groupSlot.strLen = valLen;
 }
 
 template <typename V, typename D>
@@ -282,11 +289,13 @@ void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t 
         MaxInsertVarcharImpl(groupSlot, colPtr, type, offset);
         return;
     }
-    uint8_t *data = nullptr;
-    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &data);
-    std::string rowVal(reinterpret_cast<char *>(data), 0, valLen);
-    auto leftVal = static_cast<std::string *>(groupSlot.val);
-    *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
+    uint8_t *rowVal = nullptr;
+    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &rowVal);
+    auto leftVal = reinterpret_cast<char *>(groupSlot.strVal);
+    if (memcmp(leftVal, (char*)rowVal, std::min(valLen, groupSlot.strLen)) < 0) {
+        memcpy_s(leftVal, valLen, rowVal, valLen);
+    }
+    return;
 }
 
 template <typename V, typename D>
