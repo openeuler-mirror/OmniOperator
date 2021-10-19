@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
+import java.nio.ByteOrder;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import sun.misc.Unsafe;
@@ -20,7 +21,7 @@ import java.security.PrivilegedAction;
  *
  * @since 2021-08-05
  */
-final class JvmUtils {
+public final class JvmUtils {
     /**
      * jvm unsafe
      */
@@ -97,12 +98,11 @@ final class JvmUtils {
     /**
      * construct a director byte buffer by address and capacity
      *
-     * @param address the address of byte buffer
-     * @param capacity total size in byte of byte buffer
+     * @param omniBuf the address of byte buffer
      * @return director byte buffer
      */
-    public static ByteBuffer directBuffer(long address, int capacity) {
-        if (capacity < 0) {
+    public static ByteBuffer directBuffer(OmniBuf omniBuf) {
+        if (omniBuf.getCapacity() < 0) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
                     "Capacity is negative, has to be positive or 0");
         }
@@ -112,7 +112,7 @@ final class JvmUtils {
                     "DirectByteBuffer.<ini>(long, int) not available");
         }
         try {
-            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
+            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(), omniBuf.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }

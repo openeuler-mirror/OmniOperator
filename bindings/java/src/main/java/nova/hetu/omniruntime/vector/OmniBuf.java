@@ -192,9 +192,16 @@ public interface OmniBuf {
     void getDoubleArray(int index, double[] target, int targetIndex, int length);
 
     /**
-     * get data from omnibuf
+     * get data capacity from omnibuf
      *
-     * @return byte buffer
+     * @return capacity of omnibuf
      */
-    ByteBuffer getBuffer();
+    int getCapacity();
+
+    /**
+     * get data address from omnibuf
+     *
+     * @return data address of omnibuf
+     */
+    long getAddress();
 }

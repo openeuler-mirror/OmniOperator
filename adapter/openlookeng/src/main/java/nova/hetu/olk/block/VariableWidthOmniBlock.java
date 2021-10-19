@@ -16,6 +16,8 @@ import io.airlift.slice.Slices;
 import io.prestosql.spi.block.AbstractVariableWidthBlock;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.util.BloomFilter;
+import java.nio.ByteBuffer;
+import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.VarcharVec;
 
 import org.openjdk.jol.info.ClassLayout;
@@ -277,9 +279,10 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
     @Override
     protected Slice getRawSlice(int position) {
         // use slice wrapped byteBuffer for zero-copy data
-        values.getValues().position(0);
-        if (values.getValues().capacity() != 0) {
-            return Slices.wrappedBuffer(values.getValues());
+        ByteBuffer valuesBuf = JvmUtils.directBuffer(values.getValuesBuf());
+        valuesBuf.position(0);
+        if (valuesBuf.capacity() != 0) {
+            return Slices.wrappedBuffer(valuesBuf);
         }
 
         // empty values

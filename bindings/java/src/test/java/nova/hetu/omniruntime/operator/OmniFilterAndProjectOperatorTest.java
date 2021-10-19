@@ -12,6 +12,7 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -54,7 +55,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2500);
-        DoubleBuffer res1 = res.getVectors()[0].getValues().asDoubleBuffer();
+        DoubleBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asDoubleBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() < 1);
         }
@@ -82,7 +83,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
-        IntBuffer res1 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() < 2000);
         }
@@ -112,8 +113,8 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 800);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
-        LongBuffer res1 = res.getVectors()[1].getValues().asLongBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
+        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() > 20);
             assertEquals(res1.get(), 3000000000L);
@@ -145,8 +146,8 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 50);
-        DoubleBuffer res0 = res.getVectors()[1].getValues().asDoubleBuffer();
-        LongBuffer res1 = res.getVectors()[0].getValues().asLongBuffer();
+        DoubleBuffer res0 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asDoubleBuffer();
+        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asLongBuffer();
         while (res0.hasRemaining()) {
             assertEquals(res0.get(), 50.0);
             assertEquals(res1.get(), 50);
@@ -181,7 +182,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 834);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() >= 30);
         }
@@ -209,7 +210,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 4999);
-        DoubleBuffer res0 = res.getVectors()[0].getValues().asDoubleBuffer();
+        DoubleBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asDoubleBuffer();
         double cnt = 1;
         while (res0.hasRemaining()) {
             assertEquals(res0.get(), cnt++);
@@ -238,7 +239,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 20000);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res0.hasRemaining()) {
             assertEquals(res0.get(), 9348);
         }
@@ -269,7 +270,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 500);
 
-        IntBuffer res1 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() <= 4);
         }
@@ -281,7 +282,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         res = op.getOutput().next();
         assertEquals(res.getRowCount(), 668);
-        res1 = res.getVectors()[0].getValues().asIntBuffer();
+        res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() <= 4);
         }
@@ -321,8 +322,8 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 286);
-        IntBuffer res1 = res.getVectors()[0].getValues().asIntBuffer();
-        LongBuffer res2 = res.getVectors()[1].getValues().asLongBuffer();
+        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
+        LongBuffer res2 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
         while (res1.hasRemaining()) {
             assertTrue(res1.get() < 0);
             assertTrue(res2.get() < 0);
@@ -358,9 +359,9 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 1000);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
-        LongBuffer res1 = res.getVectors()[1].getValues().asLongBuffer();
-        DoubleBuffer res2 = res.getVectors()[2].getValues().asDoubleBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
+        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
+        DoubleBuffer res2 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).asDoubleBuffer();
         while (res1.hasRemaining()) {
             assertEquals(res0.get(), 0);
             assertEquals(res1.get(), (long) 3e9);
@@ -399,7 +400,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 100);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() < 24);
         }
@@ -443,10 +444,10 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 543);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
-        IntBuffer res2 = res.getVectors()[1].getValues().asIntBuffer();
-        DoubleBuffer res4 = res.getVectors()[2].getValues().asDoubleBuffer();
-        LongBuffer res5 = res.getVectors()[3].getValues().asLongBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
+        IntBuffer res2 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asIntBuffer();
+        DoubleBuffer res4 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).asDoubleBuffer();
+        LongBuffer res5 = JvmUtils.directBuffer(res.getVectors()[3].getValuesBuf()).asLongBuffer();
         while (res0.hasRemaining()) {
             assertTrue((res0.get() != 1 && res2.get() > 4800 && res4.get() < 50.8) || res5.get() >= 52);
         }
@@ -483,10 +484,10 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 3498);
-        LongBuffer res0 = res.getVectors()[0].getValues().asLongBuffer();
-        LongBuffer res1 = res.getVectors()[1].getValues().asLongBuffer();
-        IntBuffer res2 = res.getVectors()[2].getValues().asIntBuffer();
-        IntBuffer res3 = res.getVectors()[3].getValues().asIntBuffer();
+        LongBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asLongBuffer();
+        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
+        IntBuffer res2 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).asIntBuffer();
+        IntBuffer res3 = JvmUtils.directBuffer(res.getVectors()[3].getValuesBuf()).asIntBuffer();
         while (res0.hasRemaining()) {
             long v0 = res0.get();
             long v1 = res1.get();
@@ -534,7 +535,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 6);
-        IntBuffer fib = res.getVectors()[1].getValues().asIntBuffer();
+        IntBuffer fib = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asIntBuffer();
         assertEquals(fib.get(), 1);
         assertEquals(fib.get(), 2);
         assertEquals(fib.get(), 3);
@@ -566,7 +567,7 @@ public class OmniFilterAndProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
-        IntBuffer res0 = res.getVectors()[0].getValues().asIntBuffer();
+        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
         while (res0.hasRemaining()) {
             assertTrue(res0.get() + 1 > 4);
         }

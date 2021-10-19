@@ -17,6 +17,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,8 +81,9 @@ public class BenchmarkVector {
         affinityExecutor(benchmarkData -> {
             long[] sampleData = benchmarkData.sampleData;
             LongVec omnivec = benchmarkData.longVec;
+            LongBuffer longBuf = JvmUtils.directBuffer(omnivec.getValuesBuf()).asLongBuffer();
             for (int loopIdx = 0; loopIdx < SET_LOOP_COUNT; loopIdx++) {
-                omnivec.getValues().asLongBuffer().put(sampleData, 0, sampleData.length);
+                longBuf.put(sampleData, 0, sampleData.length);
             }
         }, data);
     }

@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.vector.serialize;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.nio.ByteBuffer;
 import nova.hetu.omniruntime.type.Date32VecType;
 import nova.hetu.omniruntime.type.Date64VecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
@@ -21,6 +22,7 @@ import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
@@ -141,19 +143,22 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             VariableWidthVec variableWidthVec = (VariableWidthVec) compactVec;
             // reset byteBuffer position, avoid serializing the samge vector,
             // the serialized data length is 0.
-            variableWidthVec.getOffsetsBuf().position(0);
-            protoVecBuilder.setOffsets(ByteString.copyFrom((variableWidthVec).getOffsetsBuf()));
+            ByteBuffer buffer = JvmUtils.directBuffer(variableWidthVec.getOffsetsBuf());
+            buffer.position(0);
+            protoVecBuilder.setOffsets(ByteString.copyFrom(buffer));
         }
 
         // reset byteBuffer position, avoid serializing the samge vector,
         // the serialized data length is 0.
-        compactVec.getValues().position(0);
-        compactVec.getValueNulls().position(0);
+        ByteBuffer valueBuf = JvmUtils.directBuffer(compactVec.getValuesBuf());
+        ByteBuffer valueNullsBuf = JvmUtils.directBuffer(compactVec.getValueNullsBuf());
+        valueBuf.position(0);
+        valueNullsBuf.position(0);
         VecBatchSerde.Vec protoVec = protoVecBuilder.setTypeExt(protoVecTypeExtBuild.build())
             .setSize(compactVec.getSize())
             .setOffset(compactVec.getOffset())
-            .setValues(ByteString.copyFrom(compactVec.getValues()))
-            .setNulls(ByteString.copyFrom(compactVec.getValueNulls()))
+            .setValues(ByteString.copyFrom(valueBuf))
+            .setNulls(ByteString.copyFrom(valueNullsBuf))
             .build();
 
         if (compactVec != vec) {

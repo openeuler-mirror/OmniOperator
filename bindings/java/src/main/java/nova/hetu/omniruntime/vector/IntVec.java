@@ -28,6 +28,10 @@ public class IntVec extends FixedWidthVec {
         super(nativeVector, IntVecType.INTEGER);
     }
 
+    public IntVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, IntVecType.INTEGER);
+    }
+
     private IntVec(IntVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }

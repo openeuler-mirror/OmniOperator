@@ -9,7 +9,6 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.nio.ByteBuffer;
-import java.nio.LongBuffer;
 
 /**
  * date32 vec type
@@ -46,6 +45,13 @@ public class ContainerVec extends FixedWidthVec {
      */
     public ContainerVec(long nativeVector) {
         super(nativeVector, ContainerVecType.CONTAINER);
+        // get other attributes from native
+        this.positionCount = getPositionNative(nativeVector);
+        this.vecTypes = VecTypeSerializer.deserialize(getVecTypesNative(nativeVector));
+    }
+
+    public ContainerVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, ContainerVecType.CONTAINER);
         // get other attributes from native
         this.positionCount = getPositionNative(nativeVector);
         this.vecTypes = VecTypeSerializer.deserialize(getVecTypesNative(nativeVector));
@@ -92,17 +98,15 @@ public class ContainerVec extends FixedWidthVec {
     private static native String getVecTypesNative(long nativeVector);
 
     public long get(int index) {
-        return getValues().getLong((index + getOffset()) * BYTES);
+        return valuesBuf.getLong((index + getOffset()) * BYTES);
     }
 
     public void set(int index, long value) {
-        getValues().putLong((index + getOffset()) * BYTES, value);
+        valuesBuf.setLong((index + getOffset()) * BYTES, value);
     }
 
     public void put(long[] values, int offset, int start, int length) {
-        LongBuffer buffer = getValues().asLongBuffer();
-        buffer.position(offset);
-        buffer.put(values, start, length);
+        valuesBuf.setLongArray(offset, values, start, length * BYTES);
     }
 
     public int getPositionCount() {

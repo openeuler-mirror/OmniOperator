@@ -53,11 +53,38 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         int32_t vecCount = vecBatch->GetVectorCount();
         // set vector addresses parameter to vector batch construct.
         jlongArray jVecAddresses = env->NewLongArray(vecCount);
-        env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *)vecBatch->GetVectors());
+        env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *) vecBatch->GetVectors());
+
+        long allocators[vecCount];
+        int32_t capacityInBytes[vecCount];
+        int32_t sizes[vecCount];
+        int32_t offsets[vecCount];
+        for (int i = 0; i < vecCount; ++i) {
+            Vector *vector = vecBatch->GetVector(i);
+            allocators[i] = (long) vector->GetAllocator();
+            capacityInBytes[i] = vector->GetCapacityInBytes();
+            sizes[i] = vector->GetSize();
+            offsets[i] = vector->GetPositionOffset();
+        }
+        // set vector allocators parameter to vector batch construct.
+        jlongArray jVecAllocatorAddresses = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecAllocatorAddresses, 0, vecCount, allocators);
+
+        // set vector capacityInBytes parameter to vector batch construct.
+        jintArray jVecCapacityInBytes = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecCapacityInBytes, 0, vecCount, capacityInBytes);
+
+        // set vector sizes parameter to vector batch construct.
+        jintArray jVecSizes = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecSizes, 0, vecCount, sizes);
+
+        // set vector offsets ids parameter to vector batch construct.
+        jintArray jVecOffsets = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecOffsets, 0, vecCount, offsets);
 
         // set vector type ids parameter to vector batch construct.
         jintArray jVecTypeIds = env->NewIntArray(vecCount);
-        env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *)vecBatch->GetVectorTypeIds());
+        env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *) vecBatch->GetVectorTypeIds());
 
         // create vector batch java object.
         jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), jVecAddresses,
@@ -86,7 +113,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 {
     JNI_DEBUG_LOG("get output starting.");
     auto start = START();
-    Operator *nativeOperator = (Operator *)jOperatorAddr;
+    Operator *nativeOperator = (Operator *) jOperatorAddr;
     std::vector<VectorBatch *> outputVecBatches;
     int32_t errNo = nativeOperator->GetOutput(outputVecBatches);
     RECORD_OUTPUT_VECTORS_STACK(outputVecBatches, env);
@@ -102,11 +129,10 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
  * Signature: (J)[Lnova/hetu/omniruntime/operator/void;
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative(JNIEnv *env, jobject jObj,
-    jlong jOperatorAddr)
-{
+                                                                                    jlong jOperatorAddr) {
     JNI_DEBUG_LOG("close starting.");
     auto start = START();
-    Operator *nativeOperator = (Operator *)jOperatorAddr;
+    Operator *nativeOperator = (Operator *) jOperatorAddr;
     nativeOperator->Close();
     delete nativeOperator;
     JNI_DEBUG_LOG("close finished, elapsed time: %ld ms.", END(start));

@@ -28,6 +28,10 @@ public class DoubleVec extends FixedWidthVec {
         super(nativeVector, DoubleVecType.DOUBLE);
     }
 
+    public DoubleVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, DoubleVecType.DOUBLE);
+    }
+
     private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }

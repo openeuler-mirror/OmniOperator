@@ -32,6 +32,10 @@ public class VarcharVec extends VariableWidthVec {
         super(nativeVector, VarcharVecType.VARCHAR);
     }
 
+    public VarcharVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, VarcharVecType.VARCHAR);
+    }
+
     /**
      * get the specified bytes at the specified absolute
      *

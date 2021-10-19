@@ -5,9 +5,6 @@
 package nova.hetu.omniruntime.vector;
 
 import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
-
-import java.nio.ByteBuffer;
 
 /**
  * jdk8 unsafe interface implementation
@@ -15,12 +12,12 @@ import java.nio.ByteBuffer;
  * @since 2021-08-10
  */
 public class OmniBufUnsafeV8 implements OmniBuf {
-    private final ByteBuffer base;
     private final long address;
+    private final int capacity;
 
-    public OmniBufUnsafeV8(ByteBuffer buffer) {
-        base = buffer;
-        address = buffer instanceof DirectBuffer ? ((DirectBuffer) buffer).address() : 0;
+    public OmniBufUnsafeV8(long address, int capacity) {
+        this.address = address;
+        this.capacity = capacity;
     }
 
     @Override
@@ -134,8 +131,13 @@ public class OmniBufUnsafeV8 implements OmniBuf {
     }
 
     @Override
-    public ByteBuffer getBuffer() {
-        return base;
+    public int getCapacity() {
+        return capacity;
+    }
+
+    @Override
+    public long getAddress() {
+        return address;
     }
 
     private long addr(long offsetInBytes) {

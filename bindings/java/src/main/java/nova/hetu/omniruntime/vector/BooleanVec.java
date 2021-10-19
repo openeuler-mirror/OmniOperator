@@ -26,6 +26,10 @@ public class BooleanVec extends FixedWidthVec {
         super(nativeVector, BooleanVecType.BOOLEAN);
     }
 
+    public BooleanVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, BooleanVecType.BOOLEAN);
+    }
+
     private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }

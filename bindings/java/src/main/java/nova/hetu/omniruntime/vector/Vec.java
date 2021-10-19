@@ -10,9 +10,8 @@ import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import javax.annotation.concurrent.NotThreadSafe;
+
 import java.io.Closeable;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static nova.hetu.omniruntime.vector.VecAllocator.GLOBAL_VECTOR_ALLOCATOR;
@@ -80,17 +79,15 @@ public abstract class Vec implements Closeable {
     private AtomicBoolean isClosed = new AtomicBoolean(false);
 
     private Vec(VecAllocator allocator, long nativeVector, int capacityInBytes, int size, int offset, VecType type,
-            boolean isWritable) {
+                boolean isWritable) {
         this.allocator = allocator;
         this.capacityInBytes = capacityInBytes;
         this.size = size;
         this.type = type;
         this.offset = offset;
         this.nativeVector = nativeVector;
-        this.valuesBuf = OmniBufFactory.create(
-                JvmUtils.directBuffer(getValuesNative(nativeVector), capacityInBytes).order(ByteOrder.LITTLE_ENDIAN));
-        this.nullsBuf = OmniBufFactory.create(
-                JvmUtils.directBuffer(getValueNullsNative(nativeVector), size).order(ByteOrder.LITTLE_ENDIAN));
+        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
+        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector), size);
         this.isWritable = isWritable;
     }
 
@@ -108,8 +105,8 @@ public abstract class Vec implements Closeable {
      * @param allocator       the specialized vector allocator.
      */
     public Vec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
-        this(allocator, newVectorNative(allocator.getNativeAllocator(), capacityInBytes, size,
-                type.getId().ordinal()), capacityInBytes, size, 0, type, true);
+        this(allocator, newVectorNative(allocator.getNativeAllocator(), capacityInBytes, size, type.getId().ordinal()),
+            capacityInBytes, size, 0, type, true);
     }
 
     /**
@@ -133,13 +130,10 @@ public abstract class Vec implements Closeable {
      * @param isSlice Whether the current vector is sliced
      */
     protected Vec(Vec vec, int offset, int length, boolean isSlice) {
-        this(vec.allocator,
-                isSlice ? sliceVectorNative(vec.nativeVector, offset, length) :
-                        copyRegionNative(vec.nativeVector, offset, length),
-                length,
-                isSlice ? offset + vec.offset : 0,
-                vec.type,
-                !isSlice);
+        this(vec.allocator, isSlice
+                ? sliceVectorNative(vec.nativeVector, offset, length)
+                : copyRegionNative(vec.nativeVector, offset, length), length, isSlice ? offset + vec.offset : 0, vec.type,
+            !isSlice);
     }
 
     /**
@@ -151,18 +145,18 @@ public abstract class Vec implements Closeable {
      * @param length    number of elements copied
      */
     protected Vec(Vec vec, int[] positions, int offset, int length) {
-        this(vec.allocator, copyPositionsNative(vec.nativeVector, positions, offset, length), length, 0,
-                vec.type, true);
+        this(vec.allocator, copyPositionsNative(vec.nativeVector, positions, offset, length), length, 0, vec.type,
+            true);
     }
 
     protected Vec(long nativeVector, VecType type) {
-        this(new VecAllocator(getAllocatorNative(nativeVector)),
-                nativeVector,
-                getCapacityInBytesNative(nativeVector),
-                getSizeNative(nativeVector),
-                getOffsetNative(nativeVector),
-                type,
-                true);
+        this(new VecAllocator(getAllocatorNative(nativeVector)), nativeVector, getCapacityInBytesNative(nativeVector),
+            getSizeNative(nativeVector), getOffsetNative(nativeVector), type, true);
+    }
+
+    protected Vec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
+                  VecType type) {
+        this(new VecAllocator(nativeVectorAllocator), nativeVector, capacityInBytes, size, offset, type, true);
     }
 
     private static native long newVectorNative(long allocator, int capacityInBytes, int size, int typeId);
@@ -206,7 +200,7 @@ public abstract class Vec implements Closeable {
      * @param length           the number of element
      */
     protected static native void appendVectorNative(long destNativeVector, int positionOffset, long srcNativeVector,
-            int length);
+                                                    int length);
 
     /**
      * get native vector
@@ -268,8 +262,8 @@ public abstract class Vec implements Closeable {
      *
      * @return values buffer
      */
-    public ByteBuffer getValues() {
-        return valuesBuf.getBuffer();
+    public OmniBuf getValuesBuf() {
+        return valuesBuf;
     }
 
     /**
@@ -286,8 +280,8 @@ public abstract class Vec implements Closeable {
      *
      * @return nulls value buffer
      */
-    public ByteBuffer getValueNulls() {
-        return nullsBuf.getBuffer();
+    public OmniBuf getValueNullsBuf() {
+        return nullsBuf;
     }
 
     /**
@@ -312,10 +306,10 @@ public abstract class Vec implements Closeable {
     /**
      * set nulls in batch
      *
-     * @param index the offset of the element
+     * @param index   the offset of the element
      * @param isNulls array of null values, true is null otherwise non-null.
-     * @param start array offset
-     * @param length number of elements
+     * @param start   array offset
+     * @param length  number of elements
      */
     public void setNulls(int index, boolean[] isNulls, int start, int length) {
         byte[] values = transformBooleanToByte(isNulls, start, length);
@@ -357,7 +351,7 @@ public abstract class Vec implements Closeable {
      * transform boolean array to byte array
      *
      * @param values nulls array
-     * @param start array offset
+     * @param start  array offset
      * @param length number of elements
      * @return byte array
      */
@@ -378,7 +372,7 @@ public abstract class Vec implements Closeable {
      * transform byte array to boolean array
      *
      * @param values byte array, 1 means null, 0 means non-null
-     * @param start array offset
+     * @param start  array offset
      * @param length number of elements
      * @return boolean array
      */
@@ -394,7 +388,6 @@ public abstract class Vec implements Closeable {
      * return null value array from 0 to size + offset length
      *
      * @return raw value nulls
-     *
      * @return raw nulls array
      */
     public boolean[] getRawValueNulls() {
@@ -408,7 +401,7 @@ public abstract class Vec implements Closeable {
     /**
      * get the specified nulls array at the specified absolute
      *
-     * @param index the offset of element in vec
+     * @param index  the offset of element in vec
      * @param length the number of element
      * @return boolean array
      */
@@ -482,8 +475,9 @@ public abstract class Vec implements Closeable {
         if (isClosed.compareAndSet(false, true)) {
             freeVectorNative(this.allocator.getNativeAllocator(), this.nativeVector);
         } else {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE, "vec has been closed:" + this +
-                    ",threadName:" + Thread.currentThread().getName() + ",native:" + nativeVector);
+            throw new OmniRuntimeException(OmniErrorType.OMNI_DOUBLE_FREE,
+                "vec has been closed:" + this + ",threadName:" + Thread.currentThread().getName() + ",native:"
+                    + nativeVector);
         }
     }
 
@@ -505,8 +499,7 @@ public abstract class Vec implements Closeable {
         this.isCloseable = isCloseable;
     }
 
-    public VecAllocator getAllocator()
-    {
+    public VecAllocator getAllocator() {
         return allocator;
     }
 }

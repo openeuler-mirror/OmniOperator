@@ -55,4 +55,41 @@ public class VecFactory {
         }
         return vector;
     }
+
+    public static Vec create(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType vecType) {
+        Vec vector;
+        switch (vecType.getId()) {
+            case OMNI_VEC_TYPE_INT:
+                vector = new IntVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
+                vector = new LongVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_DOUBLE:
+                vector = new DoubleVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_SHORT:
+                vector = new ShortVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_BOOLEAN:
+                vector = new BooleanVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_VARCHAR:
+                vector = new VarcharVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_DECIMAL128:
+                vector = new Decimal128Vec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, vecType);
+                break;
+            case OMNI_VEC_TYPE_DICTIONARY:
+                vector = new DictionaryVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            case OMNI_VEC_TYPE_CONTAINER:
+                vector = new ContainerVec(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset);
+                break;
+            default:
+                throw new IllegalArgumentException("Not Support Vec Type " + vecType.getId());
+        }
+        return vector;
+    }
 }

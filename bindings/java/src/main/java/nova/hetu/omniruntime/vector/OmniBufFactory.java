@@ -4,8 +4,6 @@
 
 package nova.hetu.omniruntime.vector;
 
-import java.nio.ByteBuffer;
-
 /**
  * Responsible for creating different type of omniBuf
  *
@@ -18,11 +16,12 @@ public class OmniBufFactory {
     /**
      * create a new omnibuf object
      *
-     * @param buffer buffer object
+     * @param address the address of buffer object
+     * @param capacity the capacity of buffer object
      * @return omnibuf object
      */
-    public static OmniBuf create(ByteBuffer buffer) {
+    public static OmniBuf create(long address, int capacity) {
         // todo:: version above jdk8 need to be considered
-        return new OmniBufUnsafeV8(buffer);
+        return new OmniBufUnsafeV8(address, capacity);
     }
 }
