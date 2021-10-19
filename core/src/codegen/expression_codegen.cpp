@@ -711,7 +711,7 @@ Function *ExpressionCodeGen::CreateFunction()
     return func;
 }
 
-    Value* ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, llvm::Value *elementAddr)
+Value* ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, llvm::Value *elementAddr)
 {
     Value *elementPtr = nullptr;
     DataExpr *dEx = &dExpr;
@@ -750,15 +750,15 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
     CodeGenValue *codeGenValue = nullptr;
     switch (dEx->GetExprDataType()) {
         case DataType::INT32D: {
-            codeGenValue = new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::INT64D: {
-            codeGenValue = new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::DOUBLED: {
-            codeGenValue = new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::STRINGD: {
@@ -766,11 +766,11 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
                     ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
             Constant *strLenConst =
                     ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
-            codeGenValue = new CodeGenValue(strValConst, this->CreateConstantBool(true), strLenConst);
+            codeGenValue = new CodeGenValue(strValConst, this->CreateConstantBool(false), strLenConst);
             break;
         }
         case DataType::BOOLD: {
-            codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::DECIMAL128D: {
@@ -783,12 +783,12 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
 
             Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE,
                                                               reinterpret_cast<int64_t>(decimal)));
-            codeGenValue = new CodeGenValue(addr, this->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(addr, this->CreateConstantBool(false));
             break;
         }
         default: {
             LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", dEx->GetExprDataType());
-            codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(false));
             break;
         }
     }
@@ -1070,32 +1070,41 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     Expr *value1Expr = cExpr.value1;
     Expr *value2Expr = cExpr.value2;
 
-    CodeGenValuePtr val1Cond = VisitExpr(*value1Expr);
+    CodeGenValuePtr value1 = VisitExpr(*value1Expr);
 
-    BasicBlock *isNullBlock = BasicBlock::Create(*context, "VAL1_NULL", func);
-    BasicBlock *isNotNullBlock = BasicBlock::Create(*context, "VAL1_NOT_NULL");
-    BasicBlock *mergeBlock = BasicBlock::Create(*context, "COALESCE_CONT");
+    BasicBlock *isNullBlock = BasicBlock::Create(*context, "coalesceVal1IsNull", func);
+    BasicBlock *isNotNullBlock = BasicBlock::Create(*context, "coalesceVal1IsNotNull");
+    BasicBlock *mergeBlock = BasicBlock::Create(*context, "coalesceCont");
 
     // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
-    builder->CreateCondBr(val1Cond->isNull, isNullBlock, isNotNullBlock);
+    builder->CreateCondBr(builder->CreateOr(builder->CreateLoad(this->codegenContext->isResultNull), value1->isNull),
+          isNullBlock, isNotNullBlock);
 
     builder->SetInsertPoint(isNullBlock);
-    auto evTrue = VisitExpr(*value2Expr);
-    Value *evTrueValue = evTrue->data;
-    Value *evTrueLength = evTrue->length;
+    auto value2 = VisitExpr(*value2Expr);
+    Value *value2Data = value2->data;
+    Value *value2Length = value2->length;
     builder->CreateBr(mergeBlock);
     // Codegen of 'true' can change the current block, update trueBlock for the PHI.
     isNullBlock = builder->GetInsertBlock();
 
     func->getBasicBlockList().push_back(isNotNullBlock);
     builder->SetInsertPoint(isNotNullBlock);
-    Value *evFalseValue = val1Cond->data;
-    Value *evFalseLength = val1Cond->length;
+    Value *value1Data = value1->data;
+    Value *value1Length = value1->length;
     builder->CreateBr(mergeBlock);
     // Codegen of 'false' can change the current block, update falseBlock for the PHI.
     isNotNullBlock = builder->GetInsertBlock();
     int32_t numReservedValues = 2;
+    if (value2Expr->GetExprDataType() == INT32D && value1Expr->GetExprDataType() == INT64D) {
+        value2Data = builder->CreateIntCast(value2Data, Type::getInt64Ty(*context), true);
+    }
+    if ((value2Expr->GetExprDataType() == INT32D || value2Expr->GetExprDataType() == INT64D) &&
+        value1Expr->GetExprDataType() == DOUBLED) {
+        value2Data = builder->CreateCast(Instruction::SIToFP, value2Data, Type::getDoubleTy(*context));
+    }
+
     // Emit merge block.
     Type *phiType = this->ToLlvmType(cExpr.GetExprDataType());
     func->getBasicBlockList().push_back(mergeBlock);
@@ -1105,12 +1114,12 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     PHINode *lengthPhi = nullptr;
     if (cExpr.GetExprDataType() == STRINGD) {
         lengthPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
-        lengthPhi->addIncoming(evTrueLength, isNullBlock);
-        lengthPhi->addIncoming(evFalseLength, isNotNullBlock);
+        lengthPhi->addIncoming(value1Length, isNotNullBlock);
+        lengthPhi->addIncoming(value2Length, isNullBlock);
     }
 
-    pn->addIncoming(evTrueValue, isNullBlock);
-    pn->addIncoming(evFalseValue, isNotNullBlock);
+    pn->addIncoming(value1Data, isNotNullBlock);
+    pn->addIncoming(value2Data, isNullBlock);
 
     this->value = make_shared<CodeGenValue>(pn, this->CreateConstantBool(false), lengthPhi);
 }
