@@ -20,7 +20,6 @@ import io.prestosql.SequencePageBuilder;
 import io.prestosql.Session;
 import io.prestosql.connector.CatalogName;
 import io.prestosql.execution.Lifespan;
-import io.prestosql.execution.TaskId;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.metadata.Split;
 import io.prestosql.operator.*;
@@ -44,12 +43,18 @@ import io.prestosql.sql.tree.Expression;
 import io.prestosql.testing.TestingMetadata.TestingColumnHandle;
 import io.prestosql.testing.TestingSession;
 import io.prestosql.testing.TestingTaskContext;
-import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
-import nova.hetu.olk.operator.filterandproject.OmniPageProcessor;
-import nova.hetu.olk.tool.OperatorUtils;
-import nova.hetu.omniruntime.operator.OmniOperatorFactory;
-import nova.hetu.omniruntime.vector.VecAllocator;
-import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -57,11 +62,13 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 import org.testng.annotations.Test;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -82,14 +89,14 @@ import static java.util.stream.Collectors.toList;
 import static org.openjdk.jmh.annotations.Scope.Thread;
 
 @SuppressWarnings({"PackageVisibleField", "FieldCanBeLocal"})
-@State(Thread)
+@State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
-@Warmup(iterations = 20)
-@Measurement(iterations = 20)
+@Warmup(iterations = 10)
+@Measurement(iterations = 10)
 @BenchmarkMode(Mode.AverageTime)
-public class BenchmarkScanFilterAndProjectOmniOperator {
-
+public class BenchmarkScanFilterAndProjectOperator
+{
     private static final Map<String, Type> TYPE_MAP = ImmutableMap.of("bigint", BIGINT, "varchar", VARCHAR);
 
     private static final Session TEST_SESSION = TestingSession.testSessionBuilder().build();
@@ -110,11 +117,9 @@ public class BenchmarkScanFilterAndProjectOmniOperator {
         private ScheduledExecutorService scheduledExecutor;
         private OperatorFactory operatorFactory;
 
-
-        @Param({"1024"})
+        @Param({"32", "1024"})
         int positionsPerPage = 32;
 
-//        @Param({"2", "4", "8", "16", "32"})
         @Param({"2", "4", "8"})
         int columnCount = 2;
 
@@ -122,7 +127,7 @@ public class BenchmarkScanFilterAndProjectOmniOperator {
         String type = "varchar";
 
         @Param({"false", "true"})
-        boolean dictionaryBlocks = true;
+        boolean dictionaryBlocks;
 
         @Setup
         public void setup()
@@ -145,11 +150,7 @@ public class BenchmarkScanFilterAndProjectOmniOperator {
                     .collect(toImmutableList());
 
             PageFunctionCompiler pageFunctionCompiler = new PageFunctionCompiler(METADATA, 0);
-//            PageProcessor pageProcessor = new ExpressionCompiler(METADATA, pageFunctionCompiler).compilePageProcessor(Optional.of(getFilter(type)), projections).get();
-
-            PageProcessor pageProcessor = new OmniExpressionCompiler(METADATA, pageFunctionCompiler).compilePageProcessor(Optional.of(getFilter(type)), projections, Optional.empty(),
-                    OptionalInt.empty(), types, new TaskId("test")).get();
-
+            PageProcessor pageProcessor = new ExpressionCompiler(METADATA, pageFunctionCompiler).compilePageProcessor(Optional.of(getFilter(type)), projections).get();
             CursorProcessor cursorProcessor = new ExpressionCompiler(METADATA, pageFunctionCompiler).compileCursorProcessor(Optional.of(getFilter(type)), projections, "key").get();
 
             createTaskContext();
@@ -202,8 +203,7 @@ public class BenchmarkScanFilterAndProjectOmniOperator {
             for (int i = 0; i < TOTAL_POSITIONS / positionsPerPage; ++i) {
                 inputPagesBuilder.add(createPage(types, positionsPerPage, dictionaryBlocks));
             }
-            List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, inputPagesBuilder.build());
-            return offHeapPages;
+            return inputPagesBuilder.build();
         }
 
         private RowExpression getFilter(Type type)
@@ -261,32 +261,31 @@ public class BenchmarkScanFilterAndProjectOmniOperator {
         }
     }
 
-
     @Benchmark
-    public List<Page> benchmarkColumnOriented(BenchmarkScanFilterAndProjectOmniOperator.Context context)
+    public List<Page> benchmarkColumnOriented(Context context)
     {
         DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
         SourceOperator operator = (SourceOperator) context.getOperatorFactory().createOperator(driverContext);
 
+//        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
         operator.addSplit(new Split(new CatalogName("test"), createLocalSplit(), Lifespan.taskWide()));
         operator.setNoMoreSplits();
 
+        int count = 0;
         for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
             Page outputPage = operator.getOutput();
-            if (outputPage != null) {
-                outputPage.close();
-            }
         }
+
+//        return outputPages.build();
         return null;
     }
 
     @Test
     public void testBenchmark()
     {
-        BenchmarkScanFilterAndProjectOmniOperator.Context context = new BenchmarkScanFilterAndProjectOmniOperator.Context();
+        Context context = new Context();
         context.setup();
         benchmarkColumnOriented(context);
-
         context.cleanup();
     }
 
@@ -295,7 +294,7 @@ public class BenchmarkScanFilterAndProjectOmniOperator {
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkScanFilterAndProjectOmniOperator.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkScanFilterAndProjectOperator.class.getSimpleName() + ".*")
                 .build();
 
         new Runner(options).run();

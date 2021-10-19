@@ -232,8 +232,6 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
 
-    module->print(errs(), nullptr);
-
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();

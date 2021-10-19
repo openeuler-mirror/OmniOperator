@@ -5,13 +5,10 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <memory>
 #include <vector>
-#include <cassert>
 #include <algorithm>
 #include <regex>
 #include "../../../thirdparty/huawei_secure_c/include/securec.h"
-
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -86,7 +83,7 @@ extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int
     }
 
     *outLen = strLen - startIdx;
-    auto ret = std::make_unique<char[]>(*outLen).release();
+    auto ret = new char[*outLen];
     memcpy_s(ret, *outLen, s + startIdx, *outLen);
 
     return (int64_t)(ret);
@@ -124,7 +121,7 @@ extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t star
     }
 
     *outLen = endIdx - startIdx;
-    auto ret = std::make_unique<char[]>(*outLen).release();
+    auto ret = new char[*outLen];
     memcpy_s(ret, *outLen, s + startIdx, *outLen);
 
     return (int64_t)(ret);
@@ -143,7 +140,7 @@ extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int32_t apLen, int64_t bp,
 
     }
 
-    auto ret = std::make_unique<char[]>(*outLen).release();
+    auto ret = new char[*outLen];
     memcpy_s(ret, *outLen, a, apLen);
     memcpy_s(ret + apLen, *outLen, b, bpLen);
 
