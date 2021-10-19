@@ -256,6 +256,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
     DataType outType = expr->GetExprDataType();
     std::unique_ptr<Vector> outVec;
+    int32_t avgStringlength = 200;
     switch (outType) {
         case INT32D:
             outVec = std::make_unique<IntVector>(vecAllocator, numSelectedRows);
@@ -269,7 +270,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case STRINGD:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
-            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * 200, numSelectedRows);
+            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringlength, numSelectedRows);
             break;
         case DECIMAL128D:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);

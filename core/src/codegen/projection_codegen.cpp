@@ -109,7 +109,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     std::vector<Value*> projFuncArgs;
     // projFuncArgs contains the values of the arguments to the projection function
     // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*
-    projFuncArgs.reserve(6);
+    int32_t argsSize = 6;
+    projFuncArgs.reserve(argsSize);
     Value *gep;
 
     CallInst *ret;

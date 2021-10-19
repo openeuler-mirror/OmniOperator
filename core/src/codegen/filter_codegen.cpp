@@ -62,7 +62,8 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
     // value*, bitmap*, offset*, rowIdx, isResultNull*, length*
-    filterFuncArgs.reserve(6);
+    int32_t argsSize = 6;
+    filterFuncArgs.reserve(argsSize);
 
     CallInst *ret;
     // pre loop body

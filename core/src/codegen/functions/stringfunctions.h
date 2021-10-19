@@ -10,9 +10,7 @@
 #include <cstring>
 #include <memory>
 #include <vector>
-#include <cassert>
 #include <algorithm>
-#include <regex>
 
 
 // All extern functions go here temporarily

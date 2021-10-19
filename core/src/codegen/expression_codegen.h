@@ -47,11 +47,14 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
 class CodegenContext {
 public:
-    explicit CodegenContext() :
-            data(nullptr), nullBitmap(nullptr), offsets(nullptr), rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
+    explicit CodegenContext() : data(nullptr), nullBitmap(nullptr), offsets(nullptr),
+                                rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
 
-    explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx, llvm::Value *isResultNull) :
-            data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull), print(nullptr) {}
+    explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
+                llvm::Value *isResultNull) : data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx),
+                                             isResultNull(isResultNull), print(nullptr) {}
+
+    ~CodegenContext() {}
 
     friend class ExpressionCodeGen;
 
@@ -79,7 +82,7 @@ public:
 
     // visitor methods
     void Visit(omniruntime::expressions::DataExpr &e) override;
-    void Visit(omniruntime::expressions::UnaryExpr &e) override;        
+    void Visit(omniruntime::expressions::UnaryExpr &e) override;
     void Visit(omniruntime::expressions::BinaryExpr &e) override;
     void Visit(omniruntime::expressions::InExpr &e) override;
     void Visit(omniruntime::expressions::BetweenExpr &e) override;
@@ -98,6 +101,7 @@ protected:
     llvm::Value* CreateConstantInt(int32_t n);
     llvm::Value* CreateConstantLong(int64_t n);
     llvm::Value* CreateConstantDouble(double n);
+    llvm::Value* GetIntToPtr(omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
     void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
@@ -106,14 +110,14 @@ protected:
     // Helper functions for generating IR for operators and special forms
     llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
-    
+
     // Helper functions and main function for parsing binary expressions
-    llvm::Value *BinaryExprIntHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value &leftVal, llvm::Value &leftLen,
-                                        llvm::Value &rightVal, llvm::Value &rightLen);
-    llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::Operator op, llvm::Value &left, llvm::Value &right);
-    
+    llvm::Value *BinaryExprIntHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
+    llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
+    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value *leftVal,
+                                        llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen);
+    llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
+
     // Helper functions and main function for parsing function expressions
     void FuncExprAbsHelper(
         omniruntime::expressions::FuncExpr &fExpr);
@@ -125,6 +129,9 @@ protected:
     void FuncExprExtHelper(omniruntime::expressions::FuncExpr &fExpr);
     void FuncExprCombineHashHelper(omniruntime::expressions::FuncExpr &fExpr);
 
+    // Helper functions and main function for parsing constant data expressions
+    CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);
+
     // Helper functions and main function for parsing if expressions
     llvm::Function* ConditionalHelper(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,
         omniruntime::expressions::Expr &ifTrue, omniruntime::expressions::Expr &ifFalse);
@@ -135,7 +142,6 @@ protected:
     llvm::Function *CreateCoalesceFuncHelper2(omniruntime::expressions::DataExpr &dExpr1,
         omniruntime::expressions::Expr &value2Expr, llvm::Function &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
     std::string funcName;

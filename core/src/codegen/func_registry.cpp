@@ -256,22 +256,22 @@ void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
     }
 }
 
-bool isMathFunction(const string& fn)
+bool IsMathFunction(const string& fn)
 {
     return fn == "abs_int32" || fn == "abs_int64" || fn == "abs_double" || fn == "abs_decimal128";
 }
 
-bool isStringFunction(const string& fn)
+bool IsStringFunction(const string& fn)
 {
     return fn == "substrExt" || fn == "substrWithStartExt" || fn == "concat" || fn == "LIKE";
 }
 
-bool isCastFunction(const string& fn)
+bool IsCastFunction(const string& fn)
 {
     return fn.size() > 5 && fn.substr(0, 5) == "CAST_";
 }
 
-bool isHashFunction(const string& fn)
+bool IsHashFunction(const string& fn)
 {
     return fn == "combine_hash";
 }
@@ -298,19 +298,19 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
 
     set<string> externalFuncNames = efr.GetAllExternalFunctionNames();
     for (const auto& fn : requiredFuncs) {
-        if (isMathFunction(fn)) {
+        if (IsMathFunction(fn)) {
             this->RegisterAbsFunctions(fn);
         }
 
-        if (isStringFunction(fn)) {
+        if (IsStringFunction(fn)) {
             this->RegisterStringFunctions(fn);
         }
 
-        if (isCastFunction(fn)) {
+        if (IsCastFunction(fn)) {
             this->RegisterCastFunctions(fn);
         }
 
-        if (isHashFunction(fn)) {
+        if (IsHashFunction(fn)) {
             vector<DataType> combineHashTypes {DataType::INT64D, DataType::INT64D};
             FunctionSignature combineHashSig (combineHashStr, combineHashTypes,
                                               DataType::INT64D, reinterpret_cast<void *>(CombineHash));

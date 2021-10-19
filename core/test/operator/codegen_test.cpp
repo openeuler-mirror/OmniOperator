@@ -1288,7 +1288,6 @@ TEST(CodeGenTest, StringWithOps)
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
-
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets));
     EXPECT_EQ(result, 1);
 
@@ -1298,10 +1297,8 @@ TEST(CodeGenTest, StringWithOps)
     vals[0] = (int64_t)v1;
     vals[1] = (int64_t)s1->c_str();
     vals[2] = (int64_t)s2->c_str();
-
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
-
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets));
     EXPECT_EQ(result, 0);
 
@@ -1664,7 +1661,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto cvecVals = static_cast<int64_t *>(vecVals);
     int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *);
     func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *))(intptr_t)lc->GetFunction();
-
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths);
     int64_t *result = reinterpret_cast<int64_t *>(oVec[0]);
