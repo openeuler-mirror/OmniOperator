@@ -73,6 +73,11 @@ TEST(CodeGenTest, SimpleFilter)
         EXPECT_FALSE(res);
     }
 
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete nullResult;
     delete[] col1;
     delete[] table;
     delete[] bitmap;
@@ -121,6 +126,11 @@ TEST(CodeGenTest, SimpleProject)
         EXPECT_EQ(res, i + 50);
     }
 
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete nullResult;
     delete[] col1;
     delete[] table;
     delete[] bitmap;
@@ -176,6 +186,11 @@ TEST(CodeGenTest, SingleProject)
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
 
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete nullResult;
     delete[] col1;
     delete[] col2;
     delete[] table;
@@ -234,6 +249,11 @@ TEST(CodeGenTest, ShortCircuitProject)
         EXPECT_EQ(res, i % 10);
     }
 
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete nullResult;
     delete[] col1;
     delete[] col2;
     delete[] table;
@@ -282,10 +302,15 @@ TEST(CodeGenTest, RowFilter)
         EXPECT_EQ(res, i % 2 == 0);
     }
 
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
     delete[] col1;
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
+    delete filter;
 }
 
 TEST (CodeGenTest, RowFilterString) {
@@ -350,6 +375,10 @@ TEST (CodeGenTest, RowFilterString) {
     res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0);;
     EXPECT_EQ(res, true);
 
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
     delete[] vals;
     delete[] bitmap;
     delete[] offsets;
@@ -404,6 +433,10 @@ TEST(CodeGenTest, Operators1)
 
     result = func(vals, 1, selected, ((int64_t *)(bitmap)));
     EXPECT_EQ(result, 0);
+
+    for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+    }
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
@@ -472,6 +505,7 @@ TEST(CodeGenTest, MathFunctions1)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -546,7 +580,9 @@ TEST(CodeGenTest, MathFunctions2)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -630,6 +666,7 @@ TEST(CodeGenTest, MathFunctions3)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -723,6 +760,7 @@ TEST(CodeGenTest, MathFunctions4)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -797,6 +835,7 @@ TEST(CodeGenTest, CastNumbers1)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -870,6 +909,7 @@ TEST(CodeGenTest, CastNumbers2)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -943,6 +983,7 @@ TEST(CodeGenTest, Like)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] offsets;
@@ -1033,6 +1074,7 @@ TEST(CodeGenTest, DateCast)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -1125,6 +1167,7 @@ TEST(CodeGenTest, SubstrIn)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -1218,6 +1261,7 @@ TEST(CodeGenTest, ConcatStr)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -1304,6 +1348,7 @@ TEST(CodeGenTest, StringWithOps)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -1361,6 +1406,7 @@ TEST(CodeGenTest, Coalesce)
 
     for (int i = 0; i < 3; i++) {
         delete[] bitmap[i];
+        delete[] offsets[i];
     }
     delete[] bitmap;
     delete[] vals;
@@ -1410,6 +1456,8 @@ TEST(CodeGenTest, IsNull)
 
     delete[] bitmap[0];
     delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -1456,6 +1504,8 @@ TEST(CodeGenTest, IsNotNull)
 
     delete[] bitmap[0];
     delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -1503,7 +1553,12 @@ TEST(CodeGenTest, DecimalOperators1)
     int32_t result = func(vals, 2, selected, (int64_t *)(bitmap), (int64_t *)(offsets));
     EXPECT_EQ(result, 1);
 
+    for (int i = 0; i < 1; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
     delete[] bitmap;
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -1558,7 +1613,12 @@ TEST(CodeGenTest, DecimalOperators2)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets));
     EXPECT_EQ(result, 0);
 
+    for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
     delete[] bitmap;
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -1614,7 +1674,12 @@ TEST(CodeGenTest, DecimalOperators3)
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets));
     EXPECT_EQ(result, 1);
 
+    for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
     delete[] bitmap;
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
     delete expr;
@@ -1675,7 +1740,12 @@ TEST(CodeGenTest, ProjectionCodeGen)
     EXPECT_EQ(*(result), 130);
     EXPECT_EQ(*(result + 1), 0);
 
+    for (int i = 0; i < 1; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
     delete[] bitmap;
+    delete[] offsets;
     delete[] vals;
     delete expr;
     delete lc;

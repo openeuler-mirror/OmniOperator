@@ -15,6 +15,7 @@ import nova.hetu.omniruntime.type.VecTypeSerializer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * The type Omni filter and project operator factory.
@@ -89,7 +90,8 @@ public class OmniFilterAndProjectOperatorFactory
             }
             JitContext that = (JitContext) obj;
             return Objects.equals(expression, that.expression) && Arrays.equals(inputTypes, that.inputTypes)
-                && Objects.equals(projections, that.projections);
+                && Objects.equals(projections.stream().sorted().collect(Collectors.toList()),
+                that.projections.stream().sorted().collect(Collectors.toList()));
         }
 
     }

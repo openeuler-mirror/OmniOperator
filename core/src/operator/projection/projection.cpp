@@ -196,10 +196,8 @@ void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRo
     data.push_back(reinterpret_cast<int64_t>(vcData.release()->data()));
 }
 
-// Helper function to return an array of data
-// Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
-std::vector<int64_t> GetProjData(VectorBatch &vecBatch, std::vector<unique_ptr<std::vector<int64_t>>> &vcdataVec,
-    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[], int64_t offsetsAddrs[],
+// Helper function to return data, null bitmap, offsets in vecBatch
+std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
     std::vector<Vector *> &dictionaryVecs)
 {
     uint32_t nCols = vecBatch.GetVectorCount();
@@ -367,21 +365,16 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
 
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
 {
-    // Contains arrays with addresses for varchar vecs
-    std::vector<unique_ptr<std::vector<int64_t>>> vcdataVec;
-    // Contains all strings created in VarcharVector::GetValue method which need to be freed
-    vector<unique_ptr<vector<uint8_t>>> stringvalVec;
-
-    vector<int64_t> bitmap(vecBatch->GetVectorCount());
-    vector<int64_t> offsets(vecBatch->GetVectorCount());
+    const int vectorCount = vecBatch->GetVectorCount();
+    vector<int64_t> bitmap(vectorCount);
+    vector<int64_t> offsets(vectorCount);
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
     vector<Vector *> dictionaryVecs;
 
     // contents of bitmap are modified in getProjData method
-    std::vector<int64_t> vecData = GetProjData(
-        *vecBatch, vcdataVec, stringvalVec, bitmap.data(), offsets.data(), dictionaryVecs);
+    std::vector<int64_t> vecData = GetProjData(*vecBatch, bitmap.data(), offsets.data(), dictionaryVecs);
 
     auto outBatch = std::make_unique<VectorBatch>(nProj);
     for (int32_t i = 0; i < nProj; i++) {

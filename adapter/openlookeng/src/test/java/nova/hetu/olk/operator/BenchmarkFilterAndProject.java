@@ -2,7 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
 
-package nova.hetu.olk.operator;
+package nova.hetu.olk.operator.filterandproject;
 
 import com.google.common.collect.ImmutableList;
 import io.prestosql.SessionTestUtils;
@@ -25,8 +25,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
-
-import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
 
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;

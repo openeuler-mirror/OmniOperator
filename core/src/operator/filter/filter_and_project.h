@@ -35,7 +35,7 @@ private:
 
 class Filter {
 public:
-    Filter(expressions::Expr &expression, int32_t inputTypes[], int32_t vecCount);
+    Filter(expressions::Expr &expression, int32_t inputVecTypes[], int32_t inputVecCount);
     ~Filter()
     {
         this->codeGen.reset();
@@ -90,8 +90,8 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(std::string expression, int32_t inputTypes[], int32_t vecCount,
-        std::string projections[], int32_t projectVecCount);
+    FilterAndProjectOperatorFactory(std::string expression, int32_t inputVecTypes[], int32_t inputVecCount,
+                                    std::string projections[], int32_t projectVecCount);
 
     ~FilterAndProjectOperatorFactory() override;
 
@@ -101,9 +101,8 @@ public:
 
 private:
     std::string expression;
-    int32_t *inputTypes;
-    int32_t vecCount;
-    int32_t *projectIndex;
+    int32_t *inputVecTypes;
+    int32_t inputVecCount;
     int32_t projectVecCount;
     std::unique_ptr<Filter> filter;
     std::vector<std::unique_ptr<Projection>> projections;

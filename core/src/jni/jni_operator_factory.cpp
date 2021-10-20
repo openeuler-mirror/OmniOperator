@@ -680,8 +680,9 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     auto *exprs = new std::string[jProjectLength];
     for (int32_t i = 0; i < jProjectLength; i++) {
         auto st = (jstring)(env->GetObjectArrayElement(jProjections, i));
-        auto rawString = env->GetStringUTFChars(st, nullptr);
-        exprs[i] = rawString;
+        auto exprStringPtr = env->GetStringUTFChars(st, JNI_FALSE);
+        exprs[i] = exprStringPtr;
+        env->ReleaseStringUTFChars(st, exprStringPtr);
     }
     auto projectLength = (int32_t)jProjectLength;
     auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(

@@ -1,17 +1,7 @@
 /*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
-package nova.hetu.olk.operator;
+package nova.hetu.olk.operator.filterandproject;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,6 +10,7 @@ import io.prestosql.SequencePageBuilder;
 import io.prestosql.Session;
 import io.prestosql.connector.CatalogName;
 import io.prestosql.execution.Lifespan;
+import io.prestosql.execution.TaskId;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.metadata.Split;
 import io.prestosql.operator.*;
@@ -43,18 +34,9 @@ import io.prestosql.sql.tree.Expression;
 import io.prestosql.testing.TestingMetadata.TestingColumnHandle;
 import io.prestosql.testing.TestingSession;
 import io.prestosql.testing.TestingTaskContext;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.BenchmarkMode;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.annotations.Warmup;
+import nova.hetu.olk.tool.OperatorUtils;
+import nova.hetu.omniruntime.vector.VecAllocator;
+import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -62,10 +44,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 import org.testng.annotations.Test;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -89,14 +68,14 @@ import static java.util.stream.Collectors.toList;
 import static org.openjdk.jmh.annotations.Scope.Thread;
 
 @SuppressWarnings({"PackageVisibleField", "FieldCanBeLocal"})
-@State(Scope.Thread)
+@State(Thread)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Warmup(iterations = 20)
+@Measurement(iterations = 20)
 @BenchmarkMode(Mode.AverageTime)
-public class BenchmarkScanFilterAndProjectOperator
-{
+public class BenchmarkScanFilterAndProjectOmniOperator {
+
     private static final Map<String, Type> TYPE_MAP = ImmutableMap.of("bigint", BIGINT, "varchar", VARCHAR);
 
     private static final Session TEST_SESSION = TestingSession.testSessionBuilder().build();
@@ -117,9 +96,11 @@ public class BenchmarkScanFilterAndProjectOperator
         private ScheduledExecutorService scheduledExecutor;
         private OperatorFactory operatorFactory;
 
-        @Param({"32", "1024"})
-        int positionsPerPage = 32;
 
+        @Param({"1024"})
+        int positionsPerPage = 1024;
+
+//        @Param({"2", "4", "8", "16", "32"})
         @Param({"2", "4", "8"})
         int columnCount = 2;
 
@@ -150,7 +131,11 @@ public class BenchmarkScanFilterAndProjectOperator
                     .collect(toImmutableList());
 
             PageFunctionCompiler pageFunctionCompiler = new PageFunctionCompiler(METADATA, 0);
-            PageProcessor pageProcessor = new ExpressionCompiler(METADATA, pageFunctionCompiler).compilePageProcessor(Optional.of(getFilter(type)), projections).get();
+//            PageProcessor pageProcessor = new ExpressionCompiler(METADATA, pageFunctionCompiler).compilePageProcessor(Optional.of(getFilter(type)), projections).get();
+
+            PageProcessor pageProcessor = new OmniExpressionCompiler(METADATA, pageFunctionCompiler).compilePageProcessor(Optional.of(getFilter(type)), projections, Optional.empty(),
+                    OptionalInt.empty(), types, new TaskId("test")).get();
+
             CursorProcessor cursorProcessor = new ExpressionCompiler(METADATA, pageFunctionCompiler).compileCursorProcessor(Optional.of(getFilter(type)), projections, "key").get();
 
             createTaskContext();
@@ -203,14 +188,15 @@ public class BenchmarkScanFilterAndProjectOperator
             for (int i = 0; i < TOTAL_POSITIONS / positionsPerPage; ++i) {
                 inputPagesBuilder.add(createPage(types, positionsPerPage, dictionaryBlocks));
             }
-            return inputPagesBuilder.build();
+            List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, inputPagesBuilder.build());
+            return offHeapPages;
         }
 
         private RowExpression getFilter(Type type)
         {
             if (type == VARCHAR) {
 //                return rowExpression("cast(varchar0 as bigint) % 2 = 0");
-                return rowExpression("substr(varchar0, 2, 1) = '1'");
+                return rowExpression("varchar0 = '100'");
             }
             if (type == BIGINT) {
                 return rowExpression("bigint0 % 2 = 0");
@@ -261,31 +247,32 @@ public class BenchmarkScanFilterAndProjectOperator
         }
     }
 
+
     @Benchmark
-    public List<Page> benchmarkColumnOriented(Context context)
+    public List<Page> benchmarkColumnOriented(BenchmarkScanFilterAndProjectOmniOperator.Context context)
     {
         DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
         SourceOperator operator = (SourceOperator) context.getOperatorFactory().createOperator(driverContext);
 
-//        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
         operator.addSplit(new Split(new CatalogName("test"), createLocalSplit(), Lifespan.taskWide()));
         operator.setNoMoreSplits();
 
-        int count = 0;
         for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
             Page outputPage = operator.getOutput();
+            if (outputPage != null) {
+                outputPage.close();
+            }
         }
-
-//        return outputPages.build();
         return null;
     }
 
     @Test
     public void testBenchmark()
     {
-        Context context = new Context();
+        BenchmarkScanFilterAndProjectOmniOperator.Context context = new BenchmarkScanFilterAndProjectOmniOperator.Context();
         context.setup();
         benchmarkColumnOriented(context);
+
         context.cleanup();
     }
 
@@ -294,7 +281,7 @@ public class BenchmarkScanFilterAndProjectOperator
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkScanFilterAndProjectOperator.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkScanFilterAndProjectOmniOperator.class.getSimpleName() + ".*")
                 .build();
 
         new Runner(options).run();

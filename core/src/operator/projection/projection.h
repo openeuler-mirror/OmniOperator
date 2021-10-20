@@ -75,7 +75,6 @@ private:
     int32_t nCols;
     omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
-    std::set<int32_t> expressionColumns;
     bool isSupported = true;
 
     // projector function is retrieved from ProjectionCodeGen
