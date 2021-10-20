@@ -101,6 +101,66 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
 }
 
 
+TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
+    using namespace omniruntime::op;
+    using namespace std;
+
+    // construct input data
+    const int32_t dataSize = 1000;
+    const int32_t expectedDataSize = 5;
+
+    // prepare data
+    VectorBatch *inputVecBatch = new VectorBatch(1);
+    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    for (int i = 0; i < dataSize; ++i) {
+        std::string str = std::to_string(i % 10);
+        column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    inputVecBatch->SetVector(0, column0);
+
+    std::vector<VecType> types = { VarcharVecType(3) };
+    VecTypes sourceTypes(types);
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols,
+                                                                     ascendings, nullFirsts, 1);
+    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    auto s=clock();
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+
+    auto e = clock();
+    cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
+
+    string expectData1[expectedDataSize] = {"0", "0", "0", "0", "0"};
+    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+    for (int i = 0; i < 5; ++i) {
+        string str = expectData1[i];
+        expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    VectorBatch *expectVecorBatch = new VectorBatch(1);
+    expectVecorBatch->SetVector(0, expectCol1);
+
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
+
+
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
 {
     using namespace omniruntime::op;
@@ -137,6 +197,63 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     int32_t expectData1[expectedDataSize] = {0, 1, 2, 2, 3};
     IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(1);
+    expectVecorBatch->SetVector(0, expectCol1);
+
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
+
+TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
+{
+    using namespace omniruntime::op;
+    using namespace std;
+
+    // construct input data
+    const int32_t dataSize = 7;
+    const int32_t expectedDataSize = 5;
+
+    // prepare data
+    string data0[dataSize] = {"0", "1", "2", "4", "5", "2", "3"};
+
+    VectorBatch *inputVecBatch = new VectorBatch(1);
+    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    for (int i = 0; i < dataSize; ++i) {
+        string str = data0[i];
+        column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    inputVecBatch->SetVector(0, column0);
+
+    std::vector<VecType> types = { VarcharVecType(3) };
+    VecTypes sourceTypes(types);
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
+    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize,
+                                                  expectedDataSize);
+    for (int i = 0; i < 5; ++i) {
+        string str = expectData1[i];
+        expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
     VectorBatch *expectVecorBatch = new VectorBatch(1);
     expectVecorBatch->SetVector(0, expectCol1);
 
@@ -201,6 +318,62 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
+TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
+{
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+    const int32_t expectedDataSize = 5;
+
+    // prepare data
+    std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
+    VectorBatch *inputVecBatch = new VectorBatch(1);
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VarcharVector *column0 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize, dataSize);
+    for (int i = 0; i < dataSize; ++i) {
+        std::string str = data0[i];
+        column0->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    inputVecBatch->SetVector(0, column0);
+
+    std::vector<VecType> types = { VarcharVecType(3) };
+    VecTypes sourceTypes(types);
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {false};
+    int32_t nullFirsts[1] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+
+    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator =static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
+    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize,
+                                                  expectedDataSize);
+    for (int i = 0; i < 5; ++i) {
+        std::string str = expectData1[i];
+        expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    VectorBatch *expectVecorBatch = new VectorBatch(1);
+    expectVecorBatch->SetVector(0, expectCol1);
+
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
+
 TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
 {
     using namespace omniruntime::op;
@@ -246,6 +419,77 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     int64_t expectData2[expectedDataSize] = {0, 3, 1, 4, 2};
     LongVector *expectCol2 = new LongVector(vecAllocator, expectedDataSize);
     expectCol2->SetValues(0, expectData2, expectedDataSize);
+    double expectData3[expectedDataSize] = {6.6, 3.3, 5.5, 2.2, 4.4};
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
+
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
+
+TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
+{
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorBatch *inputVecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    VarcharVector *column1 = new VarcharVector(vecAllocator, dataSize, dataSize);
+    for (int i = 0; i < dataSize; ++i) {
+        std::string str = data1[i];
+        column1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    DoubleVector *column2 = new DoubleVector(vecAllocator, dataSize);
+    column2->SetValues(0, data2, dataSize);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
+
+    std::vector<VecType> types = { IntVecType::Instance(), VarcharVecType(3), DoubleVecType::Instance() };
+    VecTypes sourceTypes(types);
+    int32_t sortCols[2] = {0, 1};
+    int32_t ascendings[2] = {true, true};
+    int32_t nullFirsts[2] = {false, false};
+    const int32_t expectedDataSize = 5;
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    std::string expectData2[expectedDataSize] = {"0", "3", "1", "4", "2"};
+    VarcharVector *expectCol2 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
+    for (int i = 0; i < expectedDataSize; ++i) {
+        std::string str = expectData2[i];
+        expectCol2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
     double expectData3[expectedDataSize] = {6.6, 3.3, 5.5, 2.2, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
@@ -329,6 +573,156 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
+TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar){
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorBatch *inputVecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    VarcharVector *column1 = new VarcharVector(vecAllocator, dataSize, dataSize);
+    for (int i = 0; i < dataSize; ++i) {
+        std::string str = data1[i];
+        column1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    DoubleVector *column2 = new DoubleVector(vecAllocator, dataSize);
+    column2->SetValues(0, data2, dataSize);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
+
+    std::vector<VecType> types = { IntVecType::Instance(), VarcharVecType(3), DoubleVecType::Instance() };
+    VecTypes sourceTypes(types);
+    int32_t sortCols[2] = {0, 1};
+    int32_t ascendings[2] = {true, false};
+    int32_t nullFirsts[2] = {false, false};
+    const int32_t expectedDataSize = 5;
+
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVecorBatchs;
+    topNOperator->GetOutput(outputVecorBatchs);
+    int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    std::string expectData2[expectedDataSize] = {"3", "0", "4", "1", "5"};
+    VarcharVector *expectCol2 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
+    for (int i = 0; i < expectedDataSize; ++i) {
+        std::string str = expectData2[i];
+        expectCol2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    double expectData3[expectedDataSize] = {3.3, 6.6, 2.2, 5.5, 1.1};
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
+
+    VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVecorBatchs);
+}
+
+TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVecVarChar)
+{
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    std::string data1[dataSize] = {"0", "1", "2", "3", "4", "5"};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+
+    VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorBatch *inputVecBatch = new VectorBatch(3);
+    IntVector *column0 = new IntVector(vecAllocator, dataSize);
+    column0->SetValues(0, data0, dataSize);
+    VarcharVector *column1 = new VarcharVector(vecAllocator, dataSize, dataSize);
+    for (int i = 0; i < dataSize; ++i) {
+        std::string str = data1[i];
+        column1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    DoubleVector *column2 = new DoubleVector(vecAllocator, dataSize);
+    column2->SetValues(0, data2, dataSize);
+    inputVecBatch->SetVector(0, column0);
+    inputVecBatch->SetVector(1, column1);
+    inputVecBatch->SetVector(2, column2);
+
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(3),DoubleVecType() }));
+
+    int32_t sortCols[2] = {0, 1};
+    int32_t ascendings[2] = {true, true};
+    int32_t nullFirsts[2] = {true, true};
+    const int32_t expectedDataSize = 5;
+    inputVecBatch->GetVector(0)->SetValueNull(dataSize - 1);
+    inputVecBatch->GetVector(1)->SetValueNull(dataSize -1);
+
+    int32_t ids[] = {0, 1, 2, 3, 4, 5};
+    VecType vecType = sourceTypes.Get()[2];
+    inputVecBatch->SetVector(2, CreateDictionaryVector(vecType, dataSize, ids, dataSize, data2));
+
+    TopNOperatorFactory *topNOperatorFactory =
+            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    topNOperatorFactory->SetJitContext(jitContext);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    std::vector<VectorBatch *> outputVectorBatches;
+    topNOperator->GetOutput(outputVectorBatches);
+    int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
+    IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
+    expectCol1->SetValues(0, expectData1, expectedDataSize);
+    std::string expectData2[expectedDataSize] = {"5", "0", "3", "1", "4"};
+    VarcharVector *expectCol2 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
+    for (int i = 0; i < expectedDataSize; ++i) {
+        std::string str = expectData2[i];
+        expectCol2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
+    }
+    double expectData3[expectedDataSize] = {1.1, 6.6, 3.3, 5.5, 2.2};
+    DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
+    expectCol3->SetValues(0, expectData3, expectedDataSize);
+    VectorBatch *expectVecorBatch = new VectorBatch(3);
+    expectVecorBatch->SetVector(0, expectCol1);
+    expectVecorBatch->SetVector(1, expectCol2);
+    expectVecorBatch->SetVector(2, expectCol3);
+    expectVecorBatch->GetVector(0)->SetValueNull(0);
+    expectVecorBatch->GetVector(1)->SetValueNull(0);
+
+    VectorHelper::PrintVecBatch(outputVectorBatches[0]);
+
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
+    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
+    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+
+    delete topNOperator;
+    delete topNOperatorFactory;
+    delete jitContext;
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatches(outputVectorBatches);
+}
+
 TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
 {
     using namespace omniruntime::op;
@@ -410,8 +804,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {true, true};
     const int32_t expectedDataSize = 5;
-    inputVecBatch->GetVector(0)->SetValueNull(dataSize - 1);
-    inputVecBatch->GetVector(1)->SetValueNull(dataSize -1);
+    static_cast<IntVector *>(inputVecBatch->GetVector(0))->SetValueNull(dataSize - 1);
+    static_cast<LongVector *>(inputVecBatch->GetVector(1))->SetValueNull(dataSize -1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VecType vecType = sourceTypes.Get()[2];
