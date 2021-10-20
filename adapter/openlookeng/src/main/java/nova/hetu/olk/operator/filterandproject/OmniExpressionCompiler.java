@@ -100,6 +100,7 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         } else {
             pageFilter = Optional.empty();
         }
-        return () -> new OmniPageProcessor(vecAllocator, pageFilter, proj, OptionalInt.empty(), new ExpressionProfiler());
+        return () -> new OmniPageProcessor(
+            vecAllocator, pageFilter, proj, OptionalInt.empty(), new ExpressionProfiler());
     }
 }

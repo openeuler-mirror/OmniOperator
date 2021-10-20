@@ -67,7 +67,8 @@ public class OmniPageFilter implements PageFilter {
         VecType[] vecTypes = toVecTypes(inputTypes);
         try {
             this.operatorFactory = new OmniFilterAndProjectOperatorFactory(expressionStringify(filterExpression),
-                vecTypes, projects.stream().map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList()));
+                vecTypes, projects.stream().map(OmniRowExpressionUtil::expressionStringify)
+                .collect(Collectors.toList()));
             this.isExpressionSupported = true;
         } catch (OmniRuntimeException e) {
             isExpressionSupported = false;
@@ -135,7 +136,8 @@ public class OmniPageFilter implements PageFilter {
          * @param inputTypes the input types
          * @param projects the projects
          */
-        public OmniPageFilterOperator(OmniOperator operator, List<Type> inputTypes, List<? extends RowExpression> projects) {
+        public OmniPageFilterOperator(OmniOperator operator, List<Type> inputTypes,
+            List<? extends RowExpression> projects) {
             this.operator = operator;
             this.inputTypes = inputTypes;
             this.projects = projects;

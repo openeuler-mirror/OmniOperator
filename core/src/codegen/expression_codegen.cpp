@@ -442,7 +442,7 @@ void ExpressionCodeGen::FuncExprLikeHelper(omniruntime::expressions::FuncExpr &f
 void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr)
 {
     llvm::Value *val = VisitExpr(*(fExpr.arguments[0]))->data;
-    std::vector<Value *> argVals{val};
+    std::vector<Value *> argVals { val };
     DataType from = fExpr.arguments[0]->dataType;
     DataType to = fExpr.GetExprDataType();
 
@@ -506,7 +506,8 @@ void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
         std::vector<Value*> argVals { str, strLen, startIdx, length, outputLenPtr};
         auto f = module->getFunction(fr->substrExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
-        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
+        this->value = make_shared<CodeGenValue>(
+            ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
         return;
     }
     if (fExpr.arguments.size() == FEXPR_VALUE2) {
@@ -518,7 +519,8 @@ void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
 
         auto f = module->getFunction(fr->substrWithStartExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrWithStartExtStr);
-        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
+        this->value = make_shared<CodeGenValue>(
+            ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
         return;
     }
     std::cout << "Error: Incorrect number of arguments used for substr" << std::endl;
@@ -758,7 +760,8 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
             break;
         }
         case DataType::DOUBLED: {
-            codeGenValue = new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(
+                this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::STRINGD: {
@@ -875,25 +878,31 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
     Value *rightLen = right->length;
 
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
-        this->value = make_shared<CodeGenValue>(builder->CreateAnd(leftValue, rightValue, "logical_and"), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(
+            builder->CreateAnd(leftValue, rightValue, "logical_and"), this->CreateConstantBool(false));
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
-        this->value = make_shared<CodeGenValue>(builder->CreateOr(leftValue, rightValue, "logical_or"), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(
+            builder->CreateOr(leftValue, rightValue, "logical_or"), this->CreateConstantBool(false));
         return;
     }
 
     if (bExpr->left->GetExprDataType() == DataType::INT32D || bExpr->left->GetExprDataType() == DataType::INT64D) {
-        this->value = make_shared<CodeGenValue>(this->BinaryExprIntHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(
+            this->BinaryExprIntHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
         return;
     } else if (bExpr->left->GetExprDataType() == DOUBLED) {
-        this->value = make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(
+            this->BinaryExprDoubleHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
         return;
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
-        this->value = make_shared<CodeGenValue>(this->BinaryExprStringHelper(bExpr->op, leftValue, leftLen, rightValue, rightLen), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(
+            this->BinaryExprStringHelper(bExpr->op, leftValue, leftLen, rightValue, rightLen), this->CreateConstantBool(false));
         return;
     } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
-        this->value = make_shared<CodeGenValue>(this->BinaryExprDecimalHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(
+            this->BinaryExprDecimalHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
         return;
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
@@ -1036,27 +1045,29 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
     llvm::Value *upperValLen = this->value->length;
 
     if (bExpr->value->GetExprDataType() == DataType::INT32D || bExpr->value->GetExprDataType() == DataType::INT64D) {
-        llvm::Value *cmpleft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
-        llvm::Value *cmpright = builder->CreateICmpSLE(val, upperVal, "between_cmpright");
-        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        llvm::Value *cmpLeft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
+        llvm::Value *cmpRight = builder->CreateICmpSLE(val, upperVal, "between_cmpright");
+        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
     } else if (bExpr->value->GetExprDataType() == DOUBLED) {
-        llvm::Value *cmpleft = builder->CreateFCmpULE(lowerVal, val, "between_cmpleft");
-        llvm::Value *cmpright = builder->CreateFCmpULE(val, upperVal, "between_cmpright");
-        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        llvm::Value *cmpLeft = builder->CreateFCmpULE(lowerVal, val, "between_cmpleft");
+        llvm::Value *cmpRight = builder->CreateFCmpULE(val, upperVal, "between_cmpright");
+        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
     } else if (bExpr->value->GetExprDataType() == STRINGD) {
-        llvm::Value *cmpleft = builder->CreateICmpSLE(this->StringCmp(lowerVal, lowerValLen, val, valLen), CreateConstantInt(0));
-        llvm::Value *cmpright = builder->CreateICmpSLE(this->StringCmp(val, valLen, upperVal, upperValLen), CreateConstantInt(0));
-        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        llvm::Value *cmpLeft =
+            builder->CreateICmpSLE(this->StringCmp(lowerVal, lowerValLen, val, valLen), CreateConstantInt(0));
+        llvm::Value *cmpRight =
+            builder->CreateICmpSLE(this->StringCmp(val, valLen, upperVal, upperValLen), CreateConstantInt(0));
+        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
     } else if (bExpr->value->GetExprDataType() == DECIMAL128D) {
-        llvm::Value *cmpleft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerVal, *val), CreateConstantInt(0));
-        llvm::Value *cmpright = builder->CreateICmpSLE(this->Decimal128Cmp(*val, *upperVal), CreateConstantInt(0));
-        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
+        llvm::Value *cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerVal, *val), CreateConstantInt(0));
+        llvm::Value *cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*val, *upperVal), CreateConstantInt(0));
+        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
     }
@@ -1079,7 +1090,7 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
     builder->CreateCondBr(builder->CreateOr(builder->CreateLoad(this->codegenContext->isResultNull), value1->isNull),
-          isNullBlock, isNotNullBlock);
+        isNullBlock, isNotNullBlock);
 
     builder->SetInsertPoint(isNullBlock);
     auto value2 = VisitExpr(*value2Expr);

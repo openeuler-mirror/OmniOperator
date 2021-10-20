@@ -152,7 +152,8 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     vector<Vector *> dictionaryVecs;
 
     // contents of bitmap are appropriately modified in GetData
-    std::vector<int64_t> data = GetData(vecBatch, vcdataVec, stringvalVec, bitmap.data(), offsets.data(), dictionaryVecs);
+    std::vector<int64_t> data = GetData(
+        vecBatch, vcdataVec, stringvalVec, bitmap.data(), offsets.data(), dictionaryVecs);
 
     int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap.data(), offsets.data());
 

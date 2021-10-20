@@ -156,14 +156,16 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
 void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 {
     if (fn == "substrExt") {
-        vector<DataType> substrExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
+        vector<DataType> substrExtTypes {
+            DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
         FunctionSignature substrExtSig (substrExtStr, substrExtTypes, DataType::INT64D,
                                         reinterpret_cast<void *>(SubstrExt));
         this->RegisterFunctionFromSignature(substrExtSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(substrExtStr, substrExtSig));
     }
     if (fn == "substrWithStartExt") {
-        vector <DataType> substrWithStartExtTypes{DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
+        vector <DataType> substrWithStartExtTypes{
+            DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
         FunctionSignature substrWithStartExtSig
                 (substrWithStartExtStr, substrWithStartExtTypes,
                  DataType::INT64D, reinterpret_cast<void *>(SubstrWithStartExt));
@@ -172,7 +174,8 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
                                                                       substrWithStartExtSig));
     }
     if (fn == "concat") {
-        vector<DataType> concatStrExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D, DataType::INT32PTRD};
+        vector<DataType> concatStrExtTypes {
+            DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D, DataType::INT32PTRD};
         FunctionSignature concatStrExtSig (concatStrExtStr, concatStrExtTypes,
                                            DataType::INT64D, reinterpret_cast<void *>(ConcatStrExt));
         this->RegisterFunctionFromSignature(concatStrExtSig);

@@ -42,7 +42,6 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class OmniPageProcessor extends PageProcessor {
-
     private final OmniProjection projection;
 
     private final VecAllocator vecAllocator;
@@ -89,7 +88,11 @@ public class OmniPageProcessor extends PageProcessor {
                 return WorkProcessor.of();
             }
             Iterator<Page> result = new VecBatchToPageIterator(ImmutableList.of(filteredVecBatch).iterator());
-            return WorkProcessor.of(result.next());
+            if (result.hasNext()) {
+                return WorkProcessor.of(result.next());
+            } else {
+                return WorkProcessor.of();
+            }
         }
         int[] neededCols = projection.getNeededCols();
         // Check for special case where excess columns are returned from nested query

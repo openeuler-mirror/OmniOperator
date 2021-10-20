@@ -33,7 +33,7 @@ namespace {
 
 vector<char *> g_stringsToFree;
 
-
+__attribute__((always_inline))
 extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int32_t apLen, int64_t bp, int32_t bpLen)
 {
     char *a = reinterpret_cast<char *>(static_cast<uintptr_t>(ap));
@@ -51,7 +51,7 @@ extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int32_t apLen, int64_t bp
     }
 }
 
-
+__attribute__((always_inline))
 extern "C" DLLEXPORT bool LikeExt(int64_t str, int32_t strLen, int64_t regexToMatch, int32_t regexLen)
 {
     string s = string(reinterpret_cast<char *>(str), strLen);
@@ -64,7 +64,7 @@ extern "C" DLLEXPORT bool LikeExt(int64_t str, int32_t strLen, int64_t regexToMa
     return regex_match(s, re);
 }
 
-
+__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t *outLen)
 {
     char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
@@ -89,7 +89,7 @@ extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int
     return (int64_t)(ret);
 }
 
-
+__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t length, int32_t *outLen)
 {
     char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
@@ -127,7 +127,7 @@ extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t star
     return (int64_t)(ret);
 }
 
-
+__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int32_t apLen, int64_t bp, int32_t bpLen, int32_t *outLen)
 {
     char *a = reinterpret_cast<char*>(static_cast<uintptr_t>(ap));
@@ -147,6 +147,7 @@ extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int32_t apLen, int64_t bp,
     return (int64_t)(ret);
 }
 
+__attribute__((always_inline))
 extern "C" DLLEXPORT int32_t CastString(int64_t str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
