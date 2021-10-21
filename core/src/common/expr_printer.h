@@ -17,4 +17,8 @@ public:
     void Visit(omniruntime::expressions::CoalesceExpr &e) override;
     void Visit(omniruntime::expressions::IsNullExpr &e) override;
     void Visit(omniruntime::expressions::FuncExpr &e) override;
+private:
+    std::string BinaryExprPrinterHelper(const omniruntime::expressions::Operator &op) const;
+    std::string GenerateIndentation() const;
+    int indentationDepth = 0;
 };
