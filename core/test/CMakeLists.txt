@@ -2,6 +2,7 @@ add_subdirectory(operator)
 add_subdirectory(util)
 add_subdirectory(vector)
 add_subdirectory(llvm)
+add_subdirectory(memory)
 
 # configure
 set(OM_TEST_TARGET omtest)
@@ -10,6 +11,7 @@ set(MY_LINK
         testutil
         vectest
         llvmtest
+        memtest
         )
 
 # find gtest package

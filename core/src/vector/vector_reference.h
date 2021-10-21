@@ -6,11 +6,12 @@
 #define __VECTOR_REFERENCE_H__
 
 #include <atomic>
-#include "chunk.h"
+#include "../memory/chunk.h"
 #include "vector_type.h"
 
 namespace omniruntime {
 namespace vec {
+    using Chunk = mem::Chunk;
 class VectorReference {
 public:
     VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets);

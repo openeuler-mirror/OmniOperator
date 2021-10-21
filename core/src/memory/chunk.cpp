@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 //
 // Created by root on 6/1/21.
@@ -9,12 +9,14 @@
 #include "../memory/memory_pool.h"
 
 namespace omniruntime {
-namespace vec {
-Chunk::Chunk(int64_t sizeInBytes) : sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes)) {}
+namespace mem {
+Chunk::Chunk(int64_t sizeInBytes)
+    :sizeInBytes(sizeInBytes), address(OmniAllocate(sizeInBytes))
+{}
 
 Chunk::~Chunk()
 {
-    OmniRelease((int64_t)address);
+    OmniRelease(reinterpret_cast<int64_t>(address));
 }
 
 void *Chunk::GetAddress() const
@@ -26,5 +28,5 @@ int64_t Chunk::GetSizeInBytes()
 {
     return sizeInBytes;
 }
-} // namespace vec
+} // namespace mem
 } // namespace omniruntime
