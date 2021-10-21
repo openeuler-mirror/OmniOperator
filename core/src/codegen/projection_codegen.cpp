@@ -257,11 +257,14 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
 
 /*
 Apply the row expression on a single row in the table.
-Returns the address of a function with the signature void* (*) (int64_t*, bool*, int32_t)
+Returns the address of a function with the signature void* (*) (int64_t*, bool*, int32_t, bool*, int64_t*)
 Takes the following arguments
 - An array of addresses representing the input table, where each address points to a vec column.
 - A 1D array of bools representing the null values in the table.
 - An integer representing the row index to select and perform the row expression for.
+- A Boolean pointer to represent the null status of the row expression output
+- A integer pointer to represent the length if the row expression output is a string
+
 In reality the function returns a pointer of appropriate type depending on the row expression
 and input types. For example if the expected output is an int32, the function will return int32_t*
 but since this type is not known at compile time it can be treated as void* or int64_t or any 8 byte
