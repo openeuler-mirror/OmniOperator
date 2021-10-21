@@ -21,7 +21,7 @@ public:
 
     virtual ~Vector();
 
-    int GetSize()
+    int GetSize() const
     {
         return size;
     }
@@ -34,6 +34,16 @@ public:
     int GetPositionOffset()
     {
         return positionOffset;
+    }
+
+    VectorReference *GetVectorReference()
+    {
+        return this->reference;
+    }
+
+    void SetVectorReference(VectorReference *vectorReference)
+    {
+        this->reference = vectorReference;
     }
 
     int64_t GetReference() const
@@ -130,6 +140,8 @@ public:
     virtual Vector *CopyRegion(int positionOffset, int length) = 0;
 
     virtual void Append(Vector *other, int positionOffset, int length) = 0;
+
+    void RecordStack(std::string &stack, VecOpType opType);
 
 protected:
     // this method is mainly used for vector slice

@@ -117,12 +117,5 @@ void VectorBatch::ReleaseAllVectors()
         vectors[vecIndex] = nullptr;
     }
 }
-
-void VectorBatch::TraceRecord(VectorLeakDetector &leakDetector, std::string opName, VecOpType opType)
-{
-    for (int i = 0; i < vectorCount; ++i) {
-        leakDetector.Record(vectors[i], opName, opType);
-    }
-}
 } // namespace vec
 } // namespace omniruntime

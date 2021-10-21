@@ -39,7 +39,8 @@ public class TestDoubleVec {
      */
     @Test
     public void testSlice() {
-        DoubleVec originalVec = new DoubleVec(10);
+        VecAllocator allocator = new VecAllocator("test");
+        DoubleVec originalVec = new DoubleVec(allocator, 10);
         for (int i = 0; i < originalVec.getSize(); i++) {
             originalVec.set(i, (double) i / 3);
         }
@@ -59,6 +60,7 @@ public class TestDoubleVec {
         originalVec.close();
         slice1.close();
         slice2.close();
+        allocator.close();
     }
 
     /**

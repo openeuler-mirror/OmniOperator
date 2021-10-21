@@ -39,6 +39,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
  * Signature: (JII)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyRegionNative(JNIEnv *, jclass, jlong, jint, jint);
+
 /*
  * Class:     nova_hetu_omniruntime_vector_Vec
  * Method:    freeVectorNative
@@ -137,8 +138,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
  * Method:    setDictionaryNative
  * Signature: (J)[I
  */
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictionaryNative(JNIEnv *, jclass,
-    jlong, jlong);
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictionaryNative(JNIEnv *, jclass, jlong,
+    jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_vector_VecAllocator

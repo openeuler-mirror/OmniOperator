@@ -3,22 +3,24 @@
  */
 
 #include <stdint.h>
+#include "../util/trace_util.h"
 #include "vector.h"
-#include "vector_allocator_factory.h"
 
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)
-    : allocator(allocator), size(size), positionOffset(0), capacityInBytes(capacityInBytes), type(type)
+    : allocator(allocator),
+      reference(nullptr),
+      size(size),
+      positionOffset(0),
+      capacityInBytes(capacityInBytes),
+      type(type)
 {
     ASSERT(allocator != nullptr);
-    reference = allocator->NewVector(capacityInBytes, size, type);
+    allocator->NewVector(this, capacityInBytes, size, type);
     valuesAddress = reference->GetValuesAddress();
     valueNullsAddress = reference->GetValueNullsAddress();
     valueOffsetsAddress = reference->GetValueOffsetsAddress();
-#ifdef DEBUG_VECTOR
-    allocator->GetLeakDetector().Record(this, "", VecOpType::NEW);
-#endif
 }
 
 Vector::Vector(Vector *vector, int size, int positionOffset)
@@ -29,27 +31,15 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
       capacityInBytes(vector->GetCapacityInBytes()),
       type(vector->type)
 {
-    reference->IncRef();
+    allocator->SliceVector(vector, this);
     valuesAddress = reference->GetValuesAddress();
     valueNullsAddress = reference->GetValueNullsAddress();
     valueOffsetsAddress = reference->GetValueOffsetsAddress();
-#ifdef DEBUG_VECTOR
-    allocator->GetLeakDetector().Record(this, "", VecOpType::NEW);
-#endif
 }
 
 Vector::~Vector()
 {
-#ifdef DEBUG_VECTOR
-    this->allocator->GetLeakDetector().Record(this, "", VecOpType::FREE);
-#endif
-    if (reference == nullptr) {
-        return;
-    }
-    if (0 == reference->DecRef()) {
-        delete reference;
-        reference = nullptr;
-    }
+    allocator->DeleteVector(this);
 }
 
 void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
@@ -69,6 +59,11 @@ void Vector::SetValueNullBitMap(int index)
         // std::cout << "set value null BitMap" << std::endl;
         BitMapUtil::Set(reinterpret_cast<uint8_t *>(valueNullsAddress), index);
     }
+}
+
+void Vector::RecordStack(std::string &stack, VecOpType opType)
+{
+    allocator->RecordVectorStack(this, stack, opType);
 }
 }
 }

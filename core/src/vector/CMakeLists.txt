@@ -1,4 +1,4 @@
-aux_source_directory(${CMAKE_CURRENT_LIST_DIR} VECTOR_LIST)
+file(GLOB_RECURSE VECTOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 set(VEC_TARGET omni_vector)
 
 find_package(nlohmann_json 3.9.1 REQUIRED)
