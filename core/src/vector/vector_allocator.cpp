@@ -6,10 +6,12 @@
 #include <sstream>
 #include "vector.h"
 #include "vector_allocator.h"
+#include "../memory/chunk.h"
 #include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 namespace omniruntime {
 namespace vec {
+    using Chunk = omniruntime::mem::Chunk;
 VectorTracer::VectorTracer(const std::string &scope, const Vector *vec) : scope(scope), vec(vec), closed(false) {}
 
 VectorTracer::~VectorTracer() {}

@@ -10,7 +10,6 @@
 #include <atomic>
 #include <mutex>
 #include <shared_mutex>
-#include "chunk.h"
 #include "vector_reference.h"
 #include "vector_type.h"
 #include "../util/compiler_util.h"
