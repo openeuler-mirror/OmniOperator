@@ -23,7 +23,7 @@ public class ContainerVec extends FixedWidthVec {
     private VecType[] vecTypes;
 
     public ContainerVec(VecAllocator allocator, int vectorCount, int positionCount, long[] vectorAddresses,
-            VecType[] vecTypes) {
+                        VecType[] vecTypes) {
         super(allocator, vectorCount * BYTES, vectorCount, ContainerVecType.CONTAINER);
         this.positionCount = positionCount;
         this.vecTypes = vecTypes;
@@ -50,8 +50,10 @@ public class ContainerVec extends FixedWidthVec {
         this.vecTypes = VecTypeSerializer.deserialize(getVecTypesNative(nativeVector));
     }
 
-    public ContainerVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, ContainerVecType.CONTAINER);
+    public ContainerVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                        long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, ContainerVecType.CONTAINER);
         // get other attributes from native
         this.positionCount = getPositionNative(nativeVector);
         this.vecTypes = VecTypeSerializer.deserialize(getVecTypesNative(nativeVector));
@@ -69,14 +71,14 @@ public class ContainerVec extends FixedWidthVec {
     }
 
     private ContainerVec(ContainerVec vector, int[] positions, int offset, int length, int positionCount,
-            VecType[] vecTypes) {
+                         VecType[] vecTypes) {
         super(vector, positions, offset, length);
         this.positionCount = positionCount;
         this.vecTypes = vecTypes;
     }
 
     private ContainerVec(ContainerVec vector, int offset, int length, boolean isSlice, int positionCount,
-            VecType[] vecTypes) {
+                         VecType[] vecTypes) {
         super(vector, offset, length, isSlice);
         this.positionCount = positionCount;
         this.vecTypes = vecTypes;

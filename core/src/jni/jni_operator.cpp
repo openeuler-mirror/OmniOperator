@@ -59,12 +59,20 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         int32_t capacityInBytes[vecCount];
         int32_t sizes[vecCount];
         int32_t offsets[vecCount];
+        long valueBufAddrs[vecCount];
+        long nullBufAddrs[vecCount];
+        long offsetBufAddrs[vecCount];
         for (int i = 0; i < vecCount; ++i) {
             Vector *vector = vecBatch->GetVector(i);
             allocators[i] = (long) vector->GetAllocator();
             capacityInBytes[i] = vector->GetCapacityInBytes();
             sizes[i] = vector->GetSize();
             offsets[i] = vector->GetPositionOffset();
+            // By default, all 3 buf arrays will have a value,
+            // if not, it will be 0, which means a null pointer.
+            valueBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValues());
+            nullBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValueNulls());
+            offsetBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValueOffsets());
         }
         // set vector allocators parameter to vector batch construct.
         jlongArray jVecAllocatorAddresses = env->NewLongArray(vecCount);
@@ -86,8 +94,22 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         jintArray jVecTypeIds = env->NewIntArray(vecCount);
         env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *) vecBatch->GetVectorTypeIds());
 
+        // set vector value buf address
+        jlongArray jVecValueBufAddrs = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecValueBufAddrs, 0, vecCount, valueBufAddrs);
+
+        // set vec null buf address
+        jlongArray jVecNullBufAddrs = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecNullBufAddrs, 0, vecCount, nullBufAddrs);
+
+        // set vec offset buf address
+        jlongArray jVecOffsetBufAddrs = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecOffsetBufAddrs, 0, vecCount, offsetBufAddrs);
+
         // create vector batch java object.
         jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), jVecAddresses,
+            jVecValueBufAddrs, jVecNullBufAddrs, jVecOffsetBufAddrs,
+            jVecAllocatorAddresses, jVecCapacityInBytes, jVecSizes, jVecOffsets,
             jVecTypeIds, vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }

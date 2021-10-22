@@ -184,8 +184,8 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                     break;
                 }
             }
-            long realCapacityInBytes = variableWidthVec.getValueOffset(lastSetIndex + 1) -
-                    variableWidthVec.getValueOffset(0);
+            long realCapacityInBytes = variableWidthVec.getValueOffset(lastSetIndex + 1)
+                - variableWidthVec.getValueOffset(0);
             if (newVec.getCapacityInBytes() / realCapacityInBytes >= 2) {
                 return newVec.copyRegion(0, newVec.getSize());
             }

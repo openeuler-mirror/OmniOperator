@@ -31,8 +31,8 @@ public final class JvmUtils {
 
     private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
         if (actualIndexScale != expectedIndexScale) {
-            throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " +
-                    actualIndexScale);
+            throw new IllegalStateException(
+                name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
         }
     }
 
@@ -60,8 +60,7 @@ public final class JvmUtils {
             long address = -1;
             final ByteBuffer direct = ByteBuffer.allocateDirect(1);
             try {
-                final Object directBufferConstructor = AccessController.doPrivileged(
-                        (PrivilegedAction<Object>) () -> {
+                final Object directBufferConstructor = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
                     final Constructor<?> constructor;
                     try {
                         constructor = direct.getClass().getDeclaredConstructor(long.class, int.class);
@@ -83,7 +82,7 @@ public final class JvmUtils {
                     }
                 } else {
                     throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                            "get the director byte buffer constructor failed.");
+                        "get the director byte buffer constructor failed.");
                 }
             } finally {
                 if (address != -1) {
@@ -104,15 +103,16 @@ public final class JvmUtils {
     public static ByteBuffer directBuffer(OmniBuf omniBuf) {
         if (omniBuf.getCapacity() < 0) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
-                    "Capacity is negative, has to be positive or 0");
+                "Capacity is negative, has to be positive or 0");
         }
 
         if (DIRECT_BUFFER_CONSTRUCTOR == null) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                    "DirectByteBuffer.<ini>(long, int) not available");
+                "DirectByteBuffer.<ini>(long, int) not available");
         }
         try {
-            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(), omniBuf.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
+            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(),
+                omniBuf.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }

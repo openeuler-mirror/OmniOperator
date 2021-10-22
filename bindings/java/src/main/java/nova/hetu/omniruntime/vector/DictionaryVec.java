@@ -24,8 +24,10 @@ public class DictionaryVec extends FixedWidthVec {
         loadDictionaryAndIds(size);
     }
 
-    public DictionaryVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, DictionaryVecType.DICTIONARY);
+    public DictionaryVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                         long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, DictionaryVecType.DICTIONARY);
         loadDictionaryAndIds(size);
     }
 

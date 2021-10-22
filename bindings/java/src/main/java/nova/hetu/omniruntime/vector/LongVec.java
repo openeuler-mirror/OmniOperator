@@ -28,8 +28,10 @@ public class LongVec extends FixedWidthVec {
         super(nativeVector, LongVecType.LONG);
     }
 
-    public LongVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, LongVecType.LONG);
+    public LongVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                   long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, LongVecType.LONG);
     }
 
     private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
@@ -64,7 +66,7 @@ public class LongVec extends FixedWidthVec {
     /**
      * get long values from the specified position
      *
-     * @param index the position of element
+     * @param index  the position of element
      * @param length the number of element
      * @return long value array
      */

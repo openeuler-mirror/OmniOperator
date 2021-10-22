@@ -28,8 +28,10 @@ public class DoubleVec extends FixedWidthVec {
         super(nativeVector, DoubleVecType.DOUBLE);
     }
 
-    public DoubleVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, DoubleVecType.DOUBLE);
+    public DoubleVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                     long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, DoubleVecType.DOUBLE);
     }
 
     private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice) {
@@ -53,7 +55,7 @@ public class DoubleVec extends FixedWidthVec {
     /**
      * get double values from the specified position
      *
-     * @param index the position of element
+     * @param index  the position of element
      * @param length the number of element
      * @return double value array
      */

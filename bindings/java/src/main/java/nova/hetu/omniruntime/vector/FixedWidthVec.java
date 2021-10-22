@@ -32,7 +32,9 @@ public abstract class FixedWidthVec extends Vec {
         super(nativeVector, type);
     }
 
-    public FixedWidthVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
-        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, type);
+    public FixedWidthVec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
+                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
+        super(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator,
+            capacityInBytes, size, offset, type);
     }
 }

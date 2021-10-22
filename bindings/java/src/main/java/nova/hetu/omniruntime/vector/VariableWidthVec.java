@@ -59,10 +59,12 @@ public abstract class VariableWidthVec extends Vec {
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
-    protected VariableWidthVec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
-                               VecType vecType) {
-        super(nativeVector, nativeVectorAllocator, capacityInBytes, size, offset, vecType);
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
+    protected VariableWidthVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                               long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes,
+                               int size, int offset, VecType vecType) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, vecType);
+        this.offsetsBuf = OmniBufFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
     }
 
     /**

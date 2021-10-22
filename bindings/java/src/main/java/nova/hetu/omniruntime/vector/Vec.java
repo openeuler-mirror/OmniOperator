@@ -91,6 +91,20 @@ public abstract class Vec implements Closeable {
         this.isWritable = isWritable;
     }
 
+    private Vec(VecAllocator allocator, long nativeVector, long nativeVectorValueBufAddress,
+                long nativeVectorNullBufAddress, int capacityInBytes, int size, int offset, VecType type,
+                boolean isWritable) {
+        this.allocator = allocator;
+        this.capacityInBytes = capacityInBytes;
+        this.size = size;
+        this.type = type;
+        this.offset = offset;
+        this.nativeVector = nativeVector;
+        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
+        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector), size);
+        this.isWritable = isWritable;
+    }
+
     private Vec(VecAllocator allocator, long nativeVector, int size, int offset, VecType type, boolean isWritable) {
         this(allocator, nativeVector, getCapacityInBytesNative(nativeVector), size, offset, type, isWritable);
     }
@@ -154,9 +168,10 @@ public abstract class Vec implements Closeable {
             getSizeNative(nativeVector), getOffsetNative(nativeVector), type, true);
     }
 
-    protected Vec(long nativeVector, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
-                  VecType type) {
-        this(new VecAllocator(nativeVectorAllocator), nativeVector, capacityInBytes, size, offset, type, true);
+    protected Vec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
+                  long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
+        this(new VecAllocator(nativeVectorAllocator), nativeVector, nativeVectorValueBufAddress,
+            nativeVectorNullBufAddress, capacityInBytes, size, offset, type, true);
     }
 
     private static native long newVectorNative(long allocator, int capacityInBytes, int size, int typeId);
