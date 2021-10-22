@@ -21,6 +21,15 @@ using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32
 namespace omniruntime {
 namespace op {
 using namespace vec;
+
+/**
+ * vector value addresses
+ * vector null value addresses
+ * vector offsets addresses
+ * row index
+ * boolean pointer to return if results is null
+ * int pointer to return length of varchar result
+ */
 using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, bool*, int32_t*);
 
 class RowProjection {
@@ -49,21 +58,21 @@ public:
     bool IsSupported();
 
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap,
-        std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
+        std::vector<int64_t> const &vecData, int64_t *bitmap,
+        int64_t *offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap,
-        std::vector<int64_t> const &offsets, omniruntime::vec::Vector *outVec,
+        std::vector<int64_t> const &vecData, int64_t *bitmap,
+        int64_t *offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
         int32_t numSelectedRows, std::vector<int64_t> const &vecData,
-        std::vector<int64_t> const &bitmap, std::vector<int64_t> const &offsets) const;
+        int64_t *bitmap, int64_t *offsets) const;
 
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch,
-        std::vector<int64_t> const &vecData, std::vector<int64_t> const &bitmap,
-        std::vector<int64_t> const &offsets) const;
+        std::vector<int64_t> const &vecData, int64_t *bitmap,
+        int64_t *offsets) const;
 
     omniruntime::expressions::DataType GetOutputType() const
     {

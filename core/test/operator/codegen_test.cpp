@@ -83,6 +83,7 @@ TEST(CodeGenTest, SimpleFilter)
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
+    delete[] dataLength;
 }
 // Simple project example using individual row processing.
 TEST(CodeGenTest, SimpleProject)
@@ -139,6 +140,7 @@ TEST(CodeGenTest, SimpleProject)
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
+    delete[] dataLength;
 }
 // A more complicated test for individual row projection
 TEST(CodeGenTest, SingleProject)
@@ -203,6 +205,7 @@ TEST(CodeGenTest, SingleProject)
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
+    delete[] dataLength;
 }
 
 // Test the short circuit functionality in the case that the projection is a column index.
@@ -263,12 +266,13 @@ TEST(CodeGenTest, ShortCircuitProject)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
-    delete nullResult;
+    delete[] nullResult;
     delete[] col1;
     delete[] col2;
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
+    delete[] dataLength;
 }
 
 // Test the row filter
@@ -389,9 +393,11 @@ TEST (CodeGenTest, RowFilterString) {
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] selected;
     delete[] vals;
     delete[] bitmap;
     delete[] offsets;
+    delete filter;
 }
 
 TEST(CodeGenTest, Operators1)
@@ -448,9 +454,6 @@ TEST(CodeGenTest, Operators1)
         delete[] bitmap[i];
     }
 
-    for (int i = 0; i < 3; i++) {
-        delete[] bitmap[i];
-    }
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -517,6 +520,7 @@ TEST(CodeGenTest, MathFunctions1)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -678,6 +682,7 @@ TEST(CodeGenTest, MathFunctions3)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -772,6 +777,7 @@ TEST(CodeGenTest, MathFunctions4)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -847,6 +853,7 @@ TEST(CodeGenTest, CastNumbers1)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -921,6 +928,7 @@ TEST(CodeGenTest, CastNumbers2)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -1086,6 +1094,7 @@ TEST(CodeGenTest, DateCast)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -1179,6 +1188,7 @@ TEST(CodeGenTest, SubstrIn)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -1273,6 +1283,7 @@ TEST(CodeGenTest, ConcatStr)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -1360,6 +1371,7 @@ TEST(CodeGenTest, StringWithOps)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
@@ -1418,6 +1430,7 @@ TEST(CodeGenTest, Coalesce)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
+    delete[] offsets;
     delete[] bitmap;
     delete[] vals;
     delete[] selected;

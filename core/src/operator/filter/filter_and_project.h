@@ -20,6 +20,12 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t
 
 namespace omniruntime {
 namespace op {
+/**
+ * vector value addresses
+ * vector null value addresses
+ * vector offsets addresses
+ * row index
+ */
 using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t);
 
 class RowFilter {

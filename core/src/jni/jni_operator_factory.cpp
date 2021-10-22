@@ -677,16 +677,16 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
     auto inputLength = (int32_t)jInputLength;
 
-    auto *exprs = new std::string[jProjectLength];
+    auto *projectExpressions = new std::string[jProjectLength];
     for (int32_t i = 0; i < jProjectLength; i++) {
         auto st = (jstring)(env->GetObjectArrayElement(jProjections, i));
         auto exprStringPtr = env->GetStringUTFChars(st, JNI_FALSE);
-        exprs[i] = exprStringPtr;
+        projectExpressions[i] = exprStringPtr;
         env->ReleaseStringUTFChars(st, exprStringPtr);
     }
     auto projectLength = (int32_t)jProjectLength;
     auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
-        filterExpression, inputTypeIds, inputLength, exprs, projectLength);
+        filterExpression, inputTypeIds, inputLength, projectExpressions, projectLength);
     if (!factory->isSupportedExpr) {
         return 0;
     }

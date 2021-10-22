@@ -36,8 +36,6 @@ public class OmniProjection {
 
     private final int projectLength;
 
-    private final int[] neededCols;
-
     // Replace all input reference columns with the rewritten value from newColMap
     private static RowExpression rewriteColumn(RowExpression re, Map<Integer, Integer> newColMap) {
         if (re instanceof CallExpression) {
@@ -89,12 +87,6 @@ public class OmniProjection {
         Optional<RowExpression> filter) {
         this.projectLength = expressions.size();
 
-        List<Integer> filterCols = new ArrayList<>();
-        if (filter.isPresent()) {
-            findColumns(filter.get(), filterCols);
-        }
-        Collections.sort(filterCols);
-
         String[] exprs = new String[expressions.size()];
         Set<Integer> projectColsSet = new HashSet<>();
         Map<Integer, Type> neededTypes = new HashMap<>();
@@ -102,9 +94,7 @@ public class OmniProjection {
         for (int i = 0; i < exprs.length; i++) {
             List<Integer> needed = new ArrayList<>();
             findColumns(expressions.get(i), needed);
-            for (int j : needed) {
-                projectColsSet.add(j);
-            }
+            projectColsSet.addAll(needed);
         }
 
         // psa[i] contains the number of columns not used by the projection expression
@@ -125,8 +115,7 @@ public class OmniProjection {
             exprs[i] = expressionStringify(fixed);
             List<Integer> channels = new ArrayList<>();
             findColumns(expressions.get(i), channels);
-            for (int j = 0; j < channels.size(); j++) {
-                int v = channels.get(j);
+            for (int v : channels) {
                 neededTypes.put(v, inputTypes.get(v));
             }
         }
@@ -137,12 +126,7 @@ public class OmniProjection {
             .sorted()
             .map(neededTypes::get)
             .collect(Collectors.toList());
-        neededCols = new int[projectColsSet.size()];
-        int cnt = 0;
-        for (int c : projectColsSet) {
-            neededCols[cnt++] = c;
-        }
-        Arrays.sort(neededCols);
+
         VecType[] convertedTypes = toVecTypes(sortedTypes);
         this.omniProjection = new OmniProjectOperatorFactory(exprs, convertedTypes);
     }
@@ -172,14 +156,5 @@ public class OmniProjection {
      */
     public int size() {
         return this.projectLength;
-    }
-
-    /**
-     * Get needed cols int [ ].
-     *
-     * @return the int [ ]
-     */
-    public int[] getNeededCols() {
-        return neededCols;
     }
 }

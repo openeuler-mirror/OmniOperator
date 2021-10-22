@@ -79,7 +79,6 @@ public class OmniPageProcessor extends PageProcessor {
             return WorkProcessor.of();
         }
         VecBatch inputVecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
-        VecBatch toProjectVecBatch = inputVecBatch;
         if (omniPageFilterOperator.isPresent()) {
             VecBatch filteredVecBatch = omniPageFilterOperator.get().filterAndProject(inputVecBatch);
             inputVecBatch.releaseAllVectors();
@@ -94,28 +93,10 @@ public class OmniPageProcessor extends PageProcessor {
                 return WorkProcessor.of();
             }
         }
-        int[] neededCols = projection.getNeededCols();
-        // Check for special case where excess columns are returned from nested query
-        int toProjectVecCount = toProjectVecBatch.getVectorCount();
-        if (toProjectVecCount != neededCols.length) {
-            Vec[] neededVecs = new Vec[neededCols.length];
-            boolean[] neededColFlags = new boolean[toProjectVecCount];
-            for (int i = 0; i < neededVecs.length; i++) {
-                neededVecs[i] = toProjectVecBatch.getVector(neededCols[i]);
-                neededColFlags[neededCols[i]] = true;
-            }
 
-            for (int i = 0; i < toProjectVecCount; i++) {
-                if (!neededColFlags[i]) {
-                    toProjectVecBatch.getVector(i).close();
-                }
-            }
-            toProjectVecBatch.close();
-            toProjectVecBatch = new VecBatch(neededVecs);
-        }
         return WorkProcessor.create(
-            new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext, toProjectVecBatch,
-                positionsRange(0, toProjectVecBatch.getRowCount())));
+            new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext, inputVecBatch,
+                positionsRange(0, inputVecBatch.getRowCount())));
     }
 
     private class OmniProjectSelectedPositions implements WorkProcessor.Process<Page> {

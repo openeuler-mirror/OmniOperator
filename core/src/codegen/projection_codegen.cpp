@@ -38,7 +38,6 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
 {
     Function *proj = &projFunc;
 
-    int32_t nArgs = this->datatypes.size();
     std::vector<Type*> args;
     /*
     For filter enabled:
@@ -257,7 +256,7 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
 
 /*
 Apply the row expression on a single row in the table.
-Returns the address of a function with the signature void* (*) (int64_t*, bool*, int32_t, bool*, int64_t*)
+Returns the address of a function with the signature void* (*) (int64_t*, bool*, int32_t, bool*, int32_t*)
 Takes the following arguments
 - An array of addresses representing the input table, where each address points to a vec column.
 - A 1D array of bools representing the null values in the table.

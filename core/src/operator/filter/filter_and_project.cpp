@@ -112,21 +112,13 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
             GetDecimal128Data(colVec, data, vecBatch->GetRowCount());
         } else {
             // data handling
-            auto dc = colVec->GetValues();
-            void *dataCol = &dc;
-            auto cdataCol = static_cast<int64_t *>(dataCol);
-            data.push_back(*cdataCol);
+            data.push_back(reinterpret_cast<int64_t>(colVec->GetValues()));
         }
         // bitmap handling
-        auto bc = colVec->GetValueNulls();
-        void *bitmapCol = &bc;
-        auto cbitmapCol = static_cast<int64_t *>(bitmapCol);
-        bitmap[i] = *cbitmapCol;
+        bitmap[i] = reinterpret_cast<int64_t>(colVec->GetValueNulls());
 
         // offsets handling
-        auto offsets = colVec->GetValueOffsets();
-        void *columnOffsets = &offsets;
-        offsetsAddrs[i] = *static_cast<int64_t *>(columnOffsets);
+        offsetsAddrs[i] = reinterpret_cast<int64_t>(colVec->GetValueOffsets());
     }
 
     return data;
@@ -136,17 +128,16 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
     const int rowCount = vecBatch->GetRowCount();
     int32_t selectedRows[rowCount];
-    vector<int64_t> bitmap(rowCount);
-    vector<int64_t> offsets(rowCount);
+    int64_t bitmap[rowCount];
+    int64_t offsets[rowCount];
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
     vector<Vector *> dictionaryVecs;
 
-    // contents of bitmap are appropriately modified in GetData
-    std::vector<int64_t> data = GetData(vecBatch, bitmap.data(), offsets.data(), dictionaryVecs);
+    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs);
 
-    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap.data(), offsets.data());
+    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets);
 
     if (numSelectedRows <= 0) {
         return 0;

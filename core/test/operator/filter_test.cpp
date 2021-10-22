@@ -412,8 +412,7 @@ TEST(FilterTest, AllPass) {
     VectorHelper::FreeVecBatch(in1);
     std::cout << "freed in1" << std::endl;
     // TODO: find out why freeing ret causes segfault
-    // VectorHelper::FreeVecBatches(ret);
-//    std::cout << "freed ret" << std::endl;
+    VectorHelper::FreeVecBatches(ret);
 
     delete[] inputTypes;
     delete[] col1;
