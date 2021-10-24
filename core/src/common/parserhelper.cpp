@@ -47,3 +47,23 @@ bool ParserHelper::FuncDeclMatch(string fnName, vector<Expr *> args, bool checkT
     }
     return false;
 }
+
+omniruntime::expressions::DataExpr *ParserHelper::GetDataExprCast(omniruntime::expressions::DataType destType)
+{
+    switch (destType) {
+        case DataType::INT32D:
+            return std::make_unique<DataExpr>(0).release();
+        case DataType::INT64D:
+            return std::make_unique<DataExpr>(0L).release();
+        case DataType::DOUBLED:
+            return std::make_unique<DataExpr>(0.000).release();
+        case DataType::BOOLD:
+            return std::make_unique<DataExpr>(true).release();
+        case DataType::STRINGD:
+            return std::make_unique<DataExpr>("NULL").release();
+        case DataType::DECIMAL128D:
+            return std::make_unique<DataExpr>(0L).release();
+        default:
+            return nullptr;
+    }
+}
