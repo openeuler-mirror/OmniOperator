@@ -85,6 +85,8 @@ private:
     omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
     bool isSupported = true;
+    bool isColumnProjection = false;
+    int columnProjectionIndex = -1;
 
     // projector function is retrieved from ProjectionCodeGen
     // projector(data, rowCount, selectedRows, numSelectedRows, bitmap)

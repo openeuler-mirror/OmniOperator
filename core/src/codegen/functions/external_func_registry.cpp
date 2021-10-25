@@ -77,8 +77,8 @@ ifstream ExternalFuncRegistry::FetchExternalFunctionInfo(int64_t handlePtr) cons
     readRegistration.open(EXTERNAL_FUNCTIONS_FILE_PATH);
     // Check if the file was found
     if (!readRegistration.is_open()) {
-        std::cout << "Could not find externalregistration.txt file" << std::endl;
-        std::cout << "Error occurred with external functions. No external functions will be registered" << std::endl;
+        LLVM_DEBUG_LOG("Could not find externalregistration.txt file\n");
+        LLVM_DEBUG_LOG("Error occurred with external functions. No external functions will be registered\n");
     }
 
     return readRegistration;

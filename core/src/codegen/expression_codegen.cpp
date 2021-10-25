@@ -447,7 +447,6 @@ void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr)
     DataType to = fExpr.GetExprDataType();
 
     std::string castFuncName = "Cast_" + DataTypeString(from) + "_" + DataTypeString(to);
-    std::cout << castFuncName << std::endl;
 
     AllocaInst *outputLenPtr = nullptr;
     Value *outputLen = nullptr;

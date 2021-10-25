@@ -83,7 +83,7 @@ TEST(CodeGenTest, SimpleFilter)
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
-    delete[] dataLength;
+    delete dataLength;
 }
 // Simple project example using individual row processing.
 TEST(CodeGenTest, SimpleProject)

@@ -138,6 +138,18 @@ bool Projection::Initialize(bool filter)
     for (int32_t i = 0; i < nCols; i++) {
         dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
     }
+
+    // short-circuit logic for column projections
+    // no need to go through codegen
+    if (expr->GetType() == DATA_E) {
+        auto dataExpr = static_cast<DataExpr *>(expr);
+        if (dataExpr->isColumn) {
+            this->isColumnProjection = true;
+            this->columnProjectionIndex = dataExpr->colVal;
+            return true;
+        }
+    }
+
     this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), dataTypes, filter);
 
     auto f = this->codegen->GetFunction();
@@ -229,17 +241,17 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
 Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
     int32_t numSelectedRows, vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets) const
 {
-    if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->GetType() == ExprType::DATA_E) {
-        auto *dEx = static_cast<DataExpr *>(expr);
-        if (dEx->isColumn) {
-            return vecBatch->GetVector(dEx->colVal)->Slice(0, numSelectedRows);
+    // short-circuit logic for column projections
+    if (this->isColumnProjection) {
+        // if no row gets filtered or without a filter
+        // we can just slice the whole vector
+        Vector *colVec = vecBatch->GetVector(this->columnProjectionIndex);
+        if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount()) {
+            return colVec->Slice(0, numSelectedRows);
         }
-    } else if (selectedRows != nullptr && numSelectedRows != 0 && expr->GetType() == ExprType::DATA_E) {
-        auto *dEx = static_cast<DataExpr *>(expr);
-
-        // TODO: optimize branches and extract common functions
-        if (dEx->isColumn) {
-            Vector *colVec = vecBatch->GetVector(dEx->colVal);
+        // if some rows get filtered,
+        // we can just copy the original vector
+        if (selectedRows != nullptr && numSelectedRows != 0) {
             if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
                 return static_cast<DictionaryVector *>(colVec)->ExtractDictionary(selectedRows, numSelectedRows);
             } else {
@@ -247,9 +259,10 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             }
         }
     }
+
     DataType outType = expr->GetExprDataType();
     std::unique_ptr<Vector> outVec;
-    int32_t avgStringlength = 200;
+    int32_t avgStringLength = 200;
     switch (outType) {
         case INT32D:
             outVec = std::make_unique<IntVector>(vecAllocator, numSelectedRows);
@@ -263,7 +276,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case STRINGD:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
-            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringlength, numSelectedRows);
+            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
         case DECIMAL128D:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
