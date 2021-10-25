@@ -3,3 +3,4 @@
 #cmakedefine DEBUG_OPERATOR
 #cmakedefine DEBUG_VECTOR
 #cmakedefine DEBUG_LLVM
+#cmakedefine DISABLE_JIT

@@ -61,3 +61,6 @@ message(STATUS "Option DEBUG_VECTOR: ${DEBUG_VECTOR}")
 
 option(DEBUG_LLVM "Using for debug into JIT and codegen code" OFF)
 message(STATUS "Option DEBUG_LLVM: ${DEBUG_LLVM}")
+
+option(DISABLE_JIT "Disable OmniJit to optimize operator" OFF)
+message(STATUS "Option DISABLE_JIT: ${DISABLE_JIT}")

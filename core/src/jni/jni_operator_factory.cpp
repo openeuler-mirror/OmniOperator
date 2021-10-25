@@ -43,7 +43,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_
     JitContext *jitContext = operatorFactory->GetJitContext();
     omniruntime::op::Operator *nativeOperator = nullptr;
 
-#ifdef DEBUG_OPERATOR
+#if defined(DEBUG_OPERATOR) || defined(DISABLE_JIT)
     nativeOperator = operatorFactory->CreateOperator();
     JNI_DEBUG_LOG("ORIGINAL create omni operator finished, elapsed time: %ld ms.", END(start));
 #else
