@@ -19,14 +19,16 @@ template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &r
 }
 
 template <typename V, typename D>
-void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     auto curVal = (static_cast<V *>(colPtr))->GetValue(offset);
-    auto val = std::make_unique<D>(curVal);
-    groupSlot.val = val.release();
+    int32_t len = sizeof(D);
+    auto ptr = context->getArena()->Allocate(len);
+    memcpy_s(ptr, len, &curVal, len);
+    groupSlot.val = ptr;
 }
 
-void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset)
+void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
     auto val = std::make_unique<Decimal128>(curVal);
@@ -34,19 +36,19 @@ void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type
 }
 
 template <typename V, typename D>
-void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        SumInsertImpl<V, D>(groupSlot, colPtr, type, offset);
+        SumInsertImpl<V, D>(groupSlot, colPtr, type, offset, context);
         return;
     }
     *(static_cast<D *>(groupSlot.val)) += (static_cast<V *>(colPtr))->GetValue(offset);
 }
 
-void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        SumInsertDecimalImpl(groupSlot, colPtr, type, offset);
+        SumInsertDecimalImpl(groupSlot, colPtr, type, offset, context);
         return;
     }
     auto val = (static_cast<LongVector *>(colPtr))->GetValue(offset);
@@ -91,14 +93,17 @@ void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32
 }
 
 template <typename V, typename D>
-void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
-    auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
-    groupSlot.avgVal = std::make_unique<D>(rowVal).release();
+    double rowVal = (static_cast<V *>(colPtr))->GetValue(offset) / 1.0;
+    int32_t len = sizeof(double);
+    auto ptr = context->getArena()->Allocate(len);
+    memcpy_s(ptr, len, &rowVal, len);
+    groupSlot.avgVal = reinterpret_cast<double *>(ptr);
     groupSlot.avgCnt = 1;
 }
 
-void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     auto containerVector = static_cast<ContainerVector *>(colPtr);
     DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
@@ -114,10 +119,10 @@ void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type
 }
 
 template <typename V, typename D>
-void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        AvgInsertImpl<V, D>(groupSlot, colPtr, type, offset);
+        AvgInsertImpl<V, D>(groupSlot, colPtr, type, offset, context);
         return;
     }
     auto currentVal = static_cast<D *>(groupSlot.avgVal);
@@ -125,10 +130,10 @@ void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, u
     *currentVal = sum / ++groupSlot.avgCnt;
 }
 
-void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        AvgInsertContainerImpl(groupSlot, colPtr, type, offset);
+        AvgInsertContainerImpl(groupSlot, colPtr, type, offset, context);
         return;
     }
     auto currentVal = static_cast<double *>(groupSlot.avgVal);
@@ -149,10 +154,11 @@ void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_
 template <typename V, typename D>
 void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
 {
-    auto val = std::make_unique<D>(0);
+    auto val = std::make_unique<double>(0);
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
     *val = rowVal;
-    groupSlot = { { val.release(), 1 } };
+    groupSlot.avgVal = val.release();
+    groupSlot.avgCnt = 1;
 }
 
 template <typename V, typename D>
@@ -168,28 +174,30 @@ void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type
 }
 
 template <typename V, typename D>
-void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     auto rowVal = static_cast<V *>(colPtr)->GetValue(offset);
-    auto val = std::make_unique<D>(rowVal);
-    groupSlot.val = val.release();
+    int32_t len = sizeof(D);
+    auto ptr = context->getArena()->Allocate(len);
+    memcpy_s(ptr, len, &rowVal, len);
+    groupSlot.val = ptr;
 }
 
-void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
-    uint8_t *state = new uint8_t[valLen];
+    uint8_t *state = context->getArena()->Allocate(valLen);
     memcpy_s(state, valLen, data, valLen);
     groupSlot.strVal = state;
     groupSlot.strLen = valLen;
 }
 
 template <typename V, typename D>
-void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        MinInsertImpl<V, D>(groupSlot, colPtr, type, offset);
+        MinInsertImpl<V, D>(groupSlot, colPtr, type, offset, context);
         return;
     }
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
@@ -197,10 +205,10 @@ void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, u
     *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
 }
 
-void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        MinInsertVarcharImpl(groupSlot, colPtr, type, offset);
+        MinInsertVarcharImpl(groupSlot, colPtr, type, offset, context);
         return;
     }
     uint8_t *rowVal = nullptr;
@@ -254,28 +262,30 @@ void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32
 }
 
 template <typename V, typename D>
-void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     auto rowVal = static_cast<V *>(colPtr)->GetValue(offset);
-    auto val = std::make_unique<D>(rowVal);
-    groupSlot.val = val.release();
+    int32_t len = sizeof(D);
+    auto ptr = context->getArena()->Allocate(len);
+    memcpy_s(ptr, len, &rowVal, len);
+    groupSlot.val = ptr;
 }
 
-void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
-    uint8_t *state = new uint8_t[valLen];
+    auto state = context->getArena()->Allocate(valLen);
     memcpy_s(state, valLen, data, valLen);
     groupSlot.strVal = state;
     groupSlot.strLen = valLen;
 }
 
 template <typename V, typename D>
-void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        MaxInsertImpl<V, D>(groupSlot, colPtr, type, offset);
+        MaxInsertImpl<V, D>(groupSlot, colPtr, type, offset, context);
         return;
     }
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
@@ -283,10 +293,10 @@ void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, u
     *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
 }
 
-void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
+void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context)
 {
     if (groupSlot.val == nullptr) {
-        MaxInsertVarcharImpl(groupSlot, colPtr, type, offset);
+        MaxInsertVarcharImpl(groupSlot, colPtr, type, offset, context);
         return;
     }
     uint8_t *rowVal = nullptr;
@@ -377,7 +387,7 @@ void SumAggregator::Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type,
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    SumAggregator::SUM_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset);
+    SumAggregator::SUM_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 void SumAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
@@ -386,7 +396,7 @@ void SumAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t
         return;
     }
     auto typeId = static_cast<VecTypeId>(type);
-    SumAggregator::SUM_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset);
+    SumAggregator::SUM_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 void SumAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
@@ -499,7 +509,7 @@ void AverageAggregator::Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t t
         return;
     }
     auto typeId = static_cast<VecTypeId>(type);
-    AverageAggregator::AVG_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset);
+    AverageAggregator::AVG_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 void ALWAYS_INLINE ProcessIntermediateAvg(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
@@ -526,7 +536,7 @@ void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    AverageAggregator::AVG_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset);
+    AverageAggregator::AVG_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 
@@ -536,7 +546,7 @@ void MinAggregator::Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type,
         return;
     }
     auto typeId = static_cast<VecTypeId>(type);
-    MinAggregator::MIN_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset);
+    MinAggregator::MIN_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 void MinAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
@@ -545,7 +555,7 @@ void MinAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t
         return;
     }
     auto typeId = static_cast<VecTypeId>(type);
-    MinAggregator::MIN_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset);
+    MinAggregator::MIN_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 void MinAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
@@ -580,7 +590,7 @@ void MaxAggregator::Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type,
         return;
     }
     auto typeId = static_cast<VecTypeId>(type);
-    MaxAggregator::MAX_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset);
+    MaxAggregator::MAX_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 void MaxAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
@@ -590,7 +600,7 @@ void MaxAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    MaxAggregator::MAX_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset);
+    MaxAggregator::MAX_FUNCTIONS[typeId].processGroupFunc(groupSlot, colPtr, type, offset, executionContext.get());
 }
 
 

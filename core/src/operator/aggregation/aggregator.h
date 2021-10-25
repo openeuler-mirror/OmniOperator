@@ -7,14 +7,15 @@
 
 #include <memory>
 
+#include "definitions.h"
 #include "../../vector/vector_type.h"
 #include "../../vector/vector.h"
 #include "../../vector/vector_common.h"
+#include "../execution_context.h"
 
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
-const int32_t AVG_VECTOR_COUNT = 2;
 
 using ColumnIndex = struct ColumnIndex {
     uint32_t idx;
@@ -38,12 +39,12 @@ using AggregateType = enum AggregateType {
 };
 
 using GroupBySlot = union GroupBySlot {
-    struct {
-        void *avgVal;
-        int64_t avgCnt;
-    };
     void *val;
     int64_t count;
+    struct {
+        double *avgVal;
+        int64_t avgCnt;
+    };
     struct {
         uint8_t *strVal;
         int32_t strLen;
@@ -58,11 +59,11 @@ public:
     // Initiate this aggregator, such as setting default values for states.
     Aggregator(AggregateType ty, int32_t input, bool inputRaw = true, bool outputParitial = false)
         : type(ty), inputType(input), outputType(input), initiated(false), inputRaw(inputRaw),
-        outputPartial(outputParitial), nonGroupState({ nullptr })
+        outputPartial(outputParitial), nonGroupState({ nullptr }), executionContext(std::make_unique<ExecutionContext>())
     {}
     Aggregator(AggregateType ty, int32_t input, int32_t output, bool inputRaw = true, bool outputParitial = false)
         : type(ty), inputType(input), outputType(output), initiated(false), inputRaw(inputRaw),
-        outputPartial(outputParitial), nonGroupState({ nullptr })
+        outputPartial(outputParitial), nonGroupState({ nullptr }), executionContext(std::make_unique<ExecutionContext>())
     {}
     virtual ~Aggregator()
     {}
@@ -107,11 +108,12 @@ protected:
     bool initiated;
     bool inputRaw;
     bool outputPartial;
+    std::unique_ptr<ExecutionContext> executionContext;
 };
 
-using ProcessGroupFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using ProcessGroupFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 using ProcessNonGroupFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-using InsertFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using InsertFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 using InitiateFunc = void(*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 using AggFunctionByType = struct {
     VecTypeId typeId;
@@ -122,11 +124,11 @@ using AggFunctionByType = struct {
 };
 
 template<typename V, typename D>
-void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
-void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
 void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
@@ -135,22 +137,22 @@ void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type
 void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
-void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
-void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
 void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
-void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
-void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
 void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
@@ -159,11 +161,11 @@ void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type
 void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 
 template<typename V, typename D>
-void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
-void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
+void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, ExecutionContext *context);
 template<typename V, typename D>
 void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
@@ -265,10 +267,9 @@ public:
             OMNI_VEC_TYPE_DECIMAL64, AvgInsertImpl<LongVector, double>, AvgProcessGroupImpl<LongVector, double>,
             AvgInitiateImpl<LongVector, double>, AvgProcessNonGroupImpl<LongVector, double>
         },
+        // TODO support decimal128 average
         {
-            OMNI_VEC_TYPE_DECIMAL128, AvgInsertImpl<Decimal128Vector, Decimal128>,
-            AvgProcessGroupImpl<Decimal128Vector, Decimal128>, AvgInitiateImpl<Decimal128Vector, Decimal128>,
-            AvgProcessNonGroupImpl<Decimal128Vector, Decimal128>
+            OMNI_VEC_TYPE_DECIMAL128, nullptr, nullptr, nullptr, nullptr
         },
         {
             OMNI_VEC_TYPE_DATE32, AvgInsertImpl<IntVector, double>, AvgProcessGroupImpl<IntVector, double>,

@@ -44,6 +44,7 @@ public:
 
     virtual OmniStatus Close()
     {
+        delete[] sourceTypes;
         return OMNI_STATUS_NORMAL;
     }
 

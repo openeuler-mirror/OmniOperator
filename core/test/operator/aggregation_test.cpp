@@ -478,6 +478,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
 
     std::vector<VectorBatch*> result1;
     int32_t vecBatchCount = groupBy1->GetOutput(result1);
+    groupBy1->Close();
     delete groupBy1;
     EXPECT_EQ(BATCH_COUNT, result1.size()); // 2 batches
     EXPECT_EQ(GROUP_PER_BATCH, result1[0]->GetRowCount());
@@ -509,6 +510,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
 
     std::vector<VectorBatch*> result2;
     int32_t tableCount2 = groupBy2->GetOutput(result2);
+    groupBy2->Close();
     delete groupBy2;
     EXPECT_EQ(BATCH_COUNT, result2.size()); // 2 batches
     EXPECT_EQ(GROUP_PER_BATCH, result2[0]->GetRowCount());
@@ -545,6 +547,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
 
     std::vector<VectorBatch*> result3;
     groupBy3->GetOutput(result3);
+    groupBy3->Close();
     delete groupBy3;
 
     EXPECT_EQ(result3[0]->GetVectorCount(), 7);
@@ -680,6 +683,8 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 1,
                                                     expectData1,expectData2,expectData3,
                                                     expectData4,expectData5,expectData6);
+    VectorHelper::PrintVecBatch(expectVecBatch);
+    VectorHelper::PrintVecBatch(result1[0]);
     EXPECT_TRUE(VecBatchMatch(result1[0], expectVecBatch));
 }
 
@@ -1238,7 +1243,6 @@ TEST(HashAggregationOperatorTest, compare_perf)
     for (int32_t i = 0; i < jittedResult.size(); ++i) {
         EXPECT_TRUE(VecBatchMatch(jittedResult[i], result[i]));
         VectorHelper::PrintVecBatch(result[i]);
-        VectorHelper::PrintVecBatch(jittedResult[i]);
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
@@ -1501,12 +1505,4 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     aggs.clear();
     result.clear();
     delete vectorBatch;
-}
-
-TEST(HashAggregationOperatorTest, output_more_than_one_page)
-{
-    using namespace omniruntime::op;
-    VecTypeId groupTypes[] = {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR};
-    VecTypeId aggTypes[] = {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR};
-
 }
