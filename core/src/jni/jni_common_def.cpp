@@ -8,8 +8,12 @@
 jclass bufCls;
 jclass vecBatchCls;
 jclass omniResultsCls;
+jclass traceUtilCls;
+
 jmethodID vecBatchInitMethodId;
 jmethodID omniResultsInitMethodId;
+jmethodID traceUtilStackMethodId;
+
 jint JNI_VERSION = JNI_VERSION_1_6;
 
 jclass createGlobalClassRef(JNIEnv *env, const char *className)
@@ -32,6 +36,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     omniResultsCls = createGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
     omniResultsInitMethodId =
         env->GetMethodID(omniResultsCls, "<init>", "([Lnova/hetu/omniruntime/vector/VecBatch;I)V");
+    traceUtilCls = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/TraceUtil");
+    traceUtilStackMethodId = env->GetStaticMethodID(traceUtilCls, "stack", "()Ljava/lang/String;");
     return JNI_VERSION;
 }
 
@@ -41,4 +47,6 @@ void JNI_OnUnload(JavaVM *vm, const void *reserved)
     vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
     env->DeleteGlobalRef(vecBatchCls);
     env->DeleteGlobalRef(bufCls);
+    env->DeleteGlobalRef(omniResultsCls);
+    env->DeleteGlobalRef(traceUtilCls);
 }

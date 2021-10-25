@@ -46,8 +46,6 @@ public:
 
     void ReleaseAllVectors();
 
-    void TraceRecord(VectorLeakDetector &leakDetector, std::string opName, VecOpType opType);
-
 private:
     void Init();
     Vector *NewContainerVec(VectorAllocator *vecAllocator);

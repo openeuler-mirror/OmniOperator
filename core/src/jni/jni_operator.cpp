@@ -9,10 +9,41 @@
 #include "jni_operator.h"
 #include "jni_common_def.h"
 #include "../operator/operator_factory.h"
-#include "../util/debug.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
+
+#ifdef DEBUG_VECTOR
+#define RECORD_INPUT_VECTORS_STACK(vecBatch, env)                                                    \
+    do {                                                                                             \
+        jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId); \
+        auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);                                 \
+        std::string stack(stackChars);                                                               \
+        for (int i = 0; i < vecBatch->GetVectorCount(); ++i) {                                       \
+            Vector *vector = vecBatch->GetVector(i);                                                 \
+            vector->RecordStack(stack, VecOpType::JNI_ADD_INPUT);                                    \
+        }                                                                                            \
+        env->ReleaseStringUTFChars(jstack, stackChars);                                              \
+    } while (0)
+
+#define RECORD_OUTPUT_VECTORS_STACK(vecBatches, env)                                                 \
+    do {                                                                                             \
+        jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId); \
+        auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);                                 \
+        std::string stack(stackChars);                                                               \
+        for (int i = 0; i < vecBatches.size(); ++i) {                                                \
+            VectorBatch *vecBatch = outputVecBatches[i];                                             \
+            for (int j = 0; j < vecBatch->GetVectorCount(); ++j) {                                   \
+                Vector *vector = vecBatch->GetVector(j);                                             \
+                vector->RecordStack(stack, VecOpType::JNI_GET_OUTPUT);                               \
+            }                                                                                        \
+        }                                                                                            \
+        env->ReleaseStringUTFChars(jstack, stackChars);                                              \
+    } while (0)
+#else
+#define RECORD_INPUT_VECTORS_STACK(vecBatch, env)
+#define RECORD_OUTPUT_VECTORS_STACK(vecBatch, env)
+#endif
 
 jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
 {
@@ -30,7 +61,7 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
 
         // create vector batch java object.
         jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), jVecAddresses,
-                                     jVecTypeIds, vecBatch->GetRowCount());
+            jVecTypeIds, vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }
     return res;
@@ -41,13 +72,8 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 {
     VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
     Operator *nativeOperator = (Operator *)jOperatorAddress;
-    int32_t ret = nativeOperator->AddInput(vecBatch);
-
-#ifdef DEBUG_VECTOR
-    auto &leakDetector = nativeOperator->GetVecAllocator()->GetLeakDetector();
-    vecBatch->TraceRecord(leakDetector, typeid(*nativeOperator).name(), VecOpType::ADD_INPUT);
-#endif
-    return ret;
+    RECORD_INPUT_VECTORS_STACK(vecBatch, env);
+    return nativeOperator->AddInput(vecBatch);
 }
 
 /*
@@ -63,16 +89,10 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     Operator *nativeOperator = (Operator *)jOperatorAddr;
     std::vector<VectorBatch *> outputVecBatches;
     int32_t errNo = nativeOperator->GetOutput(outputVecBatches);
+    RECORD_OUTPUT_VECTORS_STACK(outputVecBatches, env);
     JNI_DEBUG_LOG("getOutput finished, elapsed time: %ld ms.", END(start));
     jobjectArray result = transform(env, outputVecBatches);
     JNI_DEBUG_LOG("transform finished, elapsed time: %ld ms.", END(start));
-
-#ifdef DEBUG_VECTOR
-    auto &leakDetector = nativeOperator->GetVecAllocator()->GetLeakDetector();
-    for (int i = 0; i < outputVecBatches.size(); ++i) {
-        outputVecBatches[i]->TraceRecord(leakDetector, typeid(*nativeOperator).name(), VecOpType::GET_OUTPUT);
-    }
-#endif
     return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->GetStatus());
 }
 

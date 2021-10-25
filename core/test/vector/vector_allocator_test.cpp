@@ -2,6 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
+#include "../../config.h"
 #include <thread>
 #include "gtest/gtest.h"
 #include "long_vector.h"
@@ -11,7 +12,7 @@
 
 using namespace omniruntime::vec;
 
-#ifdef VECTOR_DEBUG
+#ifdef DEBUG_VECTOR
 
 TEST(VectorAllocatorManager, getOrCreateAllocator)
 {
@@ -58,6 +59,14 @@ TEST(VectorAllocator, newVector)
     EXPECT_TRUE(allocator == nullptr);
 }
 
+void TraceRecord(VectorBatch &vecBatch, std::string opName, VecOpType opType)
+{
+    for (int i = 0; i < vecBatch.GetVectorCount(); ++i) {
+        Vector *vector = vecBatch.GetVector(i);
+        vector->RecordStack(opName, opType);
+    }
+}
+
 void AddInput(VectorAllocator *allocator)
 {
     LongVector *vector1 = new LongVector(allocator, 1024);
@@ -66,11 +75,11 @@ void AddInput(VectorAllocator *allocator)
     vectorBatch.SetVector(0, vector1);
     vectorBatch.SetVector(1, vector2);
 
-    vectorBatch.TraceRecord(allocator->GetLeakDetector(), PROJECT, GET_OUTPUT);
-    vectorBatch.TraceRecord(allocator->GetLeakDetector(), HASH_AGG, ADD_INPUT);
-    vectorBatch.TraceRecord(allocator->GetLeakDetector(), HASH_AGG, GET_OUTPUT);
-    vectorBatch.TraceRecord(allocator->GetLeakDetector(), ORDER_BY, ADD_INPUT);
-    vectorBatch.TraceRecord(allocator->GetLeakDetector(), ORDER_BY, GET_OUTPUT);
+    TraceRecord(vectorBatch, "PROJECT", JNI_GET_OUTPUT);
+    TraceRecord(vectorBatch, "HASH_AGG", JNI_ADD_INPUT);
+    TraceRecord(vectorBatch, "HASH_AGG", JNI_GET_OUTPUT);
+    TraceRecord(vectorBatch, "ORDER_BY", JNI_ADD_INPUT);
+    TraceRecord(vectorBatch, "ORDER_BY", JNI_GET_OUTPUT);
 
     delete vector1;
     delete vector2;
@@ -87,7 +96,7 @@ TEST(VectorAllocator, multiAddInput)
     vectorBatch.SetVector(1, vector2);
 
     for (int i = 0; i < 1000; ++i) {
-        vectorBatch.TraceRecord(allocator->GetLeakDetector(), HASH_AGG, ADD_INPUT);
+        TraceRecord(vectorBatch, "HASH_AGG", JNI_ADD_INPUT);
     }
 
     delete vector1;
@@ -167,7 +176,8 @@ TEST(VectorAllocator, usedAfterReleased)
     EXPECT_EQ(vector->GetCapacityInBytes(), 2048);
     EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_LONG);
     delete vector;
-    allocator->GetLeakDetector().Record(vector, HASH_AGG, ADD_INPUT);
+    std::string stack = "HASH_AGG";
+    allocator->RecordVectorStack(vector, stack, JNI_ADD_INPUT);
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }

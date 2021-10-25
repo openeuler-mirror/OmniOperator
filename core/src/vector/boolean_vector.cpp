@@ -14,7 +14,7 @@ BooleanVector::BooleanVector(VectorAllocator *allocator, int size)
 
 void BooleanVector::SetValues(int startIndex, const bool *values, int length)
 {
-    if (!reference->IsWritable() || length > size) {
+    if (!reference->IsWritable() || startIndex + length > size) {
         return;
     }
     bool *startAddr = reinterpret_cast<bool *>(valuesAddress);
