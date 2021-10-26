@@ -128,7 +128,6 @@ public:
     OmniStatus Init() override;
 
     OmniStatus Close() override;
-    OmniStatus CloseAgg();
     void PreLoop(VectorBatch *vecBatch);
     void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
         int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);

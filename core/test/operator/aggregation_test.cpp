@@ -206,22 +206,16 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
 {
     using namespace omniruntime::jit;
     using namespace omniruntime::op;
-    uint32_t* groupCols = new uint32_t[2];
-    groupCols[0] = 0;
-    groupCols[1] = 1;
+    uint32_t groupCols[2] = {0, 1};
     std::vector<VecType> groupByTypeVec = {LongVecType::Instance(), LongVecType::Instance()};
     VecTypes groupByTypes(groupByTypeVec);
-    uint32_t* aggCols = new uint32_t[2];
-    aggCols[0] = 2;
-    aggCols[1] = 3;
+    uint32_t aggCols[2] = {2, 3};
     std::vector<VecType> aggInputTypeVec = {LongVecType::Instance(), LongVecType::Instance()};
     VecTypes aggInputTypes(aggInputTypeVec);
     std::vector<VecType> aggOutputTypeVec = {LongVecType::Instance(), LongVecType::Instance()};
     VecTypes aggOutputTypes(aggOutputTypeVec);
     // uint32_t aggFunType[] = {0, 0};
-    uint32_t* aggFunType = new uint32_t[2];
-    aggFunType[0] = OMNI_AGGREGATION_TYPE_SUM;
-    aggFunType[1] = OMNI_AGGREGATION_TYPE_AVG;
+    uint32_t aggFunType[2] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
     uint32_t retTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
     PrepareContext groupByColContext = {groupCols, 2};
     PrepareContext groupByTypeContext = {reinterpret_cast<uint32_t*>(const_cast<int32_t*>(groupByTypes.GetIds())), 2};
@@ -273,8 +267,8 @@ uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
         {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
     };
 
-    omniruntime::jit::Context *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext});
+    omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{groupAggregationContext});
     jit->Specialize(std::vector<Optimization>());
 
     JitContext* jitContext = new JitContext;
@@ -333,21 +327,15 @@ uintptr_t CreateHashFactoryWithoutJit(bool inputRaw, bool outputPartial)
 {
     using namespace omniruntime::jit;
     using namespace omniruntime::op;
-    uint32_t* groupCols = new uint32_t[2];
-    groupCols[0] = 0;
-    groupCols[1] = 1;
+    uint32_t groupCols[2] = {0, 1};
     std::vector<VecType> groupByTypeVec = {LongVecType::Instance(), LongVecType::Instance()};
     VecTypes groupByTypes(groupByTypeVec);
-    uint32_t* aggCols = new uint32_t[2];
-    aggCols[0] = 2;
-    aggCols[1] = 3;
+    uint32_t aggCols[2] = {2, 3};
     std::vector<VecType> aggInputTypeVec = {LongVecType::Instance(), LongVecType::Instance()};
     VecTypes aggInputTypes(aggInputTypeVec);
     std::vector<VecType> aggOutputTypeVec = {LongVecType::Instance(), LongVecType::Instance()};
     VecTypes aggOutputTypes(aggOutputTypeVec);
-    uint32_t* aggFunType = new uint32_t[2];
-    aggFunType[0] = OMNI_AGGREGATION_TYPE_SUM;
-    aggFunType[1] = OMNI_AGGREGATION_TYPE_AVG;
+    uint32_t aggFunType[2] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
     uint32_t retTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE};
     PrepareContext groupByColContext = {groupCols, 2};
     PrepareContext aggColContext = {aggCols, 2};
@@ -357,7 +345,6 @@ uintptr_t CreateHashFactoryWithoutJit(bool inputRaw, bool outputPartial)
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
     int32_t colNum = groupByColContext.len + aggColContext.len;
-    int32_t* colTypes = new int32_t[colNum];
 
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory =
             new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupByTypes, aggColContext, aggInputTypes, aggOutputTypes, aggFuncTypeContext, inputRaw, outputPartial);
@@ -387,6 +374,8 @@ void perfTestOriginal(int64_t moduleAddr, VectorBatch** input)
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
+    groupBy->Close();
+    delete groupBy;
 }
 
 void perfTest(int64_t moduleAddr, VectorBatch** input, int32_t vecBatchNum, int32_t* rowCount)
@@ -408,6 +397,8 @@ void perfTest(int64_t moduleAddr, VectorBatch** input, int32_t vecBatchNum, int3
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
+    groupBy->Close();
+    delete groupBy;
 }
 
 void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch** input, int32_t vecBatchNum, int32_t* rowCount)
@@ -664,13 +655,14 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         groupByNULL->AddInput(input[i]);
     }
-    std::vector<VectorBatch*> result1;
-    int32_t vecBatchCount = groupByNULL->GetOutput(result1);
+    std::vector<VectorBatch*> result;
+    int32_t vecBatchCount = groupByNULL->GetOutput(result);
 
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     for(auto &i:aggs1){
         delete i.release();
     }
+    groupByNULL->Close();
     delete groupByNULL;
 
     int64_t expectData1[1] = {0};
@@ -684,8 +676,10 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
                                                     expectData1,expectData2,expectData3,
                                                     expectData4,expectData5,expectData6);
     VectorHelper::PrintVecBatch(expectVecBatch);
-    VectorHelper::PrintVecBatch(result1[0]);
-    EXPECT_TRUE(VecBatchMatch(result1[0], expectVecBatch));
+    VectorHelper::PrintVecBatch(result[0]);
+    EXPECT_TRUE(VecBatchMatch(result[0], expectVecBatch));
+    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(expectVecBatch);
 }
 
 TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
@@ -728,6 +722,8 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
 
     std::vector<VectorBatch*> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
+    groupBy->Close();
+    delete groupBy;
 
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
 
@@ -737,6 +733,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
         // col->printColumn();
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(result);
 }
 
 TEST(HashAggregationOperatorTest, original_multiple_threads)
@@ -757,12 +754,8 @@ TEST(HashAggregationOperatorTest, original_multiple_threads)
         std::cerr << "Building input data failed!" << std::endl;
     }
 
-    uint32_t* groupCols = new uint32_t[2];
-    groupCols[0] = 0;
-    groupCols[1] = 1;
-    uint32_t* aggCols = new uint32_t[2];
-    aggCols[0] = 2;
-    aggCols[1] = 3;
+    uint32_t groupCols[2] = {0, 1};
+    uint32_t aggCols[2] = {2, 3};
     uint32_t retTypes[] = {1,1,1,1};
     PrepareContext groupByColContext = {groupCols, 2};
     PrepareContext aggColContext = {aggCols, 2};
@@ -800,7 +793,7 @@ TEST(HashAggregationOperatorTest, original_multiple_threads)
         std::cout << threadNum << " cpu_elapsed time: " << cpu_elapsed / processor_count * t_ << "s" << std::endl;
         std::this_thread::sleep_for(100ms);
     }
-
+    delete nativeOperatorFactory;
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
@@ -850,6 +843,7 @@ TEST(HashAggregationOperatorTest, perf_via_API_multiple_threads)
         std::cout << threadNum << " cpu_elapsed time: " << cpu_elapsed / processor_count * t_ << "s" << std::endl;
         std::this_thread::sleep_for(100ms);
     }
+    delete reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory*>(factoryObjAddr);
     delete[] rowCount;
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
@@ -1124,7 +1118,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     int32_t groupColNum = groupByColContext.len;
     int32_t aggColNum = aggColContext.len;
     int32_t colNum = groupByColContext.len + aggColContext.len;
-    int32_t* colTypes = new int32_t[colNum];
+    int32_t colTypes[colNum];
 
     for (int i = 0; i < groupColNum; ++i) {
         colTypes[groupByColContext.context[i]] = groupByTypeContext.context[i];
@@ -1142,34 +1136,35 @@ TEST(HashAggregationOperatorTest, compare_perf)
     ParamValue p_agg_data_type = ParamValue((int32_t*)aggTypeContext.context, aggColNum);
     ParamValue p_agg_types = ParamValue((int32_t*)aggFuncTypeContext.context, aggColNum);
 
-    auto *inloopSp = new Specialization();
-    inloopSp->AddSpecializedParam(3, &p_col_type);
-    inloopSp->AddSpecializedParam(4, &p_col_count);
-    inloopSp->AddSpecializedParam(5, &p_groupByColIdx);
-    inloopSp->AddSpecializedParam(6, &p_group_num);
-    inloopSp->AddSpecializedParam(7, &p_aggColIdx);
-    inloopSp->AddSpecializedParam(8, &p_agg_num);
-    inloopSp->AddSpecializedParam(9, &p_agg_types);
+    Specialization inloopSp;
+    inloopSp.AddSpecializedParam(3, &p_col_type);
+    inloopSp.AddSpecializedParam(4, &p_col_count);
+    inloopSp.AddSpecializedParam(5, &p_groupByColIdx);
+    inloopSp.AddSpecializedParam(6, &p_group_num);
+    inloopSp.AddSpecializedParam(7, &p_aggColIdx);
+    inloopSp.AddSpecializedParam(8, &p_agg_num);
+    inloopSp.AddSpecializedParam(9, &p_agg_types);
 
     std::map<std::string, Specialization> hashGroupbySps = {
-        {OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp},
+        {OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp},
     };
 
-    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context>{*groupAggregationContext});
-    jit->Specialize(
+//    auto *groupAggregationContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
+    omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
+    Jit jit(std::vector<omniruntime::jit::Context>{groupAggregationContext});
+    jit.Specialize(
             std::vector<Optimization>{Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE, Optimization::SROA, Optimization::AGGRESIVE_DCE},
             std::vector<ModuleOptimization>{ModuleOptimization::PRUNE_EH});
 
      // ------------------------------------------Create operator--------------------------------------------
-    JitContext* jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(jit->GetJitedFunction("CreateOperator"));
+    JitContext jitContext;
+    jitContext.func = reinterpret_cast<uintptr_t>(jit.GetJitedFunction("CreateOperator"));
     std::cout << "after JIT" << std::endl;
     omniruntime::op::HashAggregationOperatorFactory* nativeOperatorFactory =
             new omniruntime::op::HashAggregationOperatorFactory(groupByColContext, groupInputTypes, aggColContext, aggInput, aggOutput, aggFuncTypeContext,true, false);
     nativeOperatorFactory->Init();
      std::cout << "after create factory" << std::endl;
-     nativeOperatorFactory->SetJitContext(jitContext);
+     nativeOperatorFactory->SetJitContext(&jitContext);
      // create operator
     auto jitGroupBy = reinterpret_cast<HashAggModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
 
@@ -1237,7 +1232,14 @@ TEST(HashAggregationOperatorTest, compare_perf)
     cpu_elapsed = timer.getCpuElapse();
 
     std::cout << "wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
-    jitGroupBy->GetOutput(result);
+    groupBy->GetOutput(result);
+
+    jitGroupBy->Close();
+    groupBy->Close();
+    delete jitGroupBy;
+    delete groupBy;
+    delete nativeOperatorFactory;
+    delete nativeOperatorFactory2;
 
     EXPECT_EQ(jittedResult.size(), result.size());
     for (int32_t i = 0; i < jittedResult.size(); ++i) {
@@ -1245,6 +1247,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
         VectorHelper::PrintVecBatch(result[i]);
     }
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+    VectorHelper::FreeVecBatches(jittedResult);
+    VectorHelper::FreeVecBatches(result);
 }
 
 TEST(HashAggregationOperatorTest, multi_stage)
@@ -1293,10 +1297,21 @@ TEST(HashAggregationOperatorTest, multi_stage)
     std::vector<VectorBatch*> resultFromFinal;
     operator2->GetOutput(resultFromFinal);
 
+    partialOperator1->Close();
+    partialOperator2->Close();
+    operator2->Close();
+    delete partialOperator1;
+    delete partialOperator2;
+    delete operator2;
+    delete partialFactory1;
+    delete partialFactory2;
+    delete finalFactory;
+
     for (auto vecBatch : resultFromFinal) {
         VectorHelper::PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(resultFromFinal);
+    VectorHelper::FreeVecBatches(resultFromPartial);
 }
 
 TEST(HashAggregationOperatorTest, supported_type_test)
@@ -1493,16 +1508,14 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     vecBatchCount = groupBy->GetOutput(result);
     groupBy->Close();
     delete groupBy;
-    vectorBatch->ReleaseAllVectors();
+    VectorHelper::FreeVecBatch(vectorBatch);
 
     for (auto batch : result) {
         VectorHelper::PrintVecBatch(batch);
-        batch->ReleaseAllVectors();
-        delete batch;
     }
+    VectorHelper::FreeVecBatches(result);
     groupByColumns.clear();
     aggregateColumns.clear();
     aggs.clear();
     result.clear();
-    delete vectorBatch;
 }

@@ -426,38 +426,10 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     return expectedBatchSize;
 }
 
-OmniStatus HashAggregationOperator::CloseAgg()
-{
-//    auto groupByColSize = groupByCols.size();
-//    auto aggColSize = aggCols.size();
-//    for (auto bucket = groupedRows.begin(); bucket != groupedRows.end(); ++bucket) {
-//        for (auto node = bucket->second.begin(); node != bucket->second.end(); ++node) {
-//            for (int32_t idx = 0; idx < aggColSize; ++idx) {
-//                if (aggregators[idx]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
-//                    continue;
-//                }
-//                if (aggregators[idx]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
-//                    delete static_cast<double *>(node->at(idx).avgVal);
-//                    continue;
-//                }
-//                auto typeId = aggCols[idx].output.GetId();
-//                HashAggregationOperator::FUNCTIONS[typeId]
-//                        .releaseMemory(node->at(groupByColSize + idx), groupByColSize + idx, aggCols[idx].output);
-//            }
-//        }
-//    }
-    return OMNI_STATUS_NORMAL;
-}
-
 OmniStatus HashAggregationOperator::Close()
 {
     delete[] sourceTypes;
-    OmniStatus ret = CloseAgg();
-    if (ret == OMNI_STATUS_NORMAL) {
-        return OMNI_STATUS_NORMAL;
-    } else {
-        return OMNI_STATUS_ERROR;
-    }
+    return OMNI_STATUS_NORMAL;
 }
 
 template<typename V, typename D>
