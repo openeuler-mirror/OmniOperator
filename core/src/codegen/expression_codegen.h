@@ -165,6 +165,7 @@ protected:
     llvm::orc::ResourceTrackerSP rt;
     FunctionRegistry *fr;
     llvm::Function *func = nullptr;
+    int numGlobalValues = 0;
 };
 
 #endif

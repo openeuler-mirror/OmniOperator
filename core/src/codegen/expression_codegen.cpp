@@ -119,7 +119,9 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     auto stringType = llvm::ArrayType::get(charType, chars.size());
 
     // Create the declaration statement
-    auto globalDeclaration = static_cast<llvm::GlobalVariable*>(module->getOrInsertGlobal(".str", stringType));
+    this->numGlobalValues++;
+    auto globalDeclaration = static_cast<llvm::GlobalVariable*>(
+        module->getOrInsertGlobal("string" + std::to_string(this->numGlobalValues), stringType));
     globalDeclaration->setInitializer(llvm::ConstantArray::get(stringType, chars));
     globalDeclaration->setConstant(true);
     globalDeclaration->setLinkage(llvm::GlobalValue::LinkageTypes::PrivateLinkage);

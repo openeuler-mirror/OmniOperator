@@ -210,12 +210,11 @@ void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRo
 
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
-    std::vector<Vector *> &dictionaryVecs)
+    std::vector<Vector *> &dictionaryVecs, int vectorCount)
 {
-    uint32_t nCols = vecBatch.GetVectorCount();
     std::vector<int64_t> data;
 
-    for (int32_t i = 0; i < nCols; i++) {
+    for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch.GetVector(i);
         // handle dictionary vec
         if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
@@ -380,7 +379,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     vector<Vector *> dictionaryVecs;
 
     // contents of bitmap are modified in getProjData method
-    std::vector<int64_t> vecData = GetProjData(*vecBatch, bitmap, offsets, dictionaryVecs);
+    std::vector<int64_t> vecData = GetProjData(*vecBatch, bitmap, offsets, dictionaryVecs, vectorCount);
 
     auto outBatch = std::make_unique<VectorBatch>(nProj);
     for (int32_t i = 0; i < nProj; i++) {

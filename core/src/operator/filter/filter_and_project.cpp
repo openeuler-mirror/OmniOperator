@@ -74,7 +74,7 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
     auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputVecTypes,
-                                                                          this->inputVecCount, this->projections, this->projectVecCount);
+        this->inputVecCount, this->projections, this->projectVecCount);
     return filterAndProjectOperator.release();
 }
 
@@ -96,12 +96,11 @@ void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
-    std::vector<omniruntime::vec::Vector *> &dictionaryVecs)
+    std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount)
 {
-    uint32_t nCols = vecBatch->GetVectorCount();
     std::vector<int64_t> data;
 
-    for (int32_t i = 0; i < nCols; i++) {
+    for (int32_t i = 0; i < vectorCount; i++) {
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
         // handle dictionary vec
         if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
@@ -127,15 +126,16 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
     const int rowCount = vecBatch->GetRowCount();
+    const int vectorCount = vecBatch->GetVectorCount();
     int32_t selectedRows[rowCount];
-    int64_t bitmap[rowCount];
-    int64_t offsets[rowCount];
+    int64_t bitmap[vectorCount];
+    int64_t offsets[vectorCount];
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
     vector<Vector *> dictionaryVecs;
 
-    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs);
+    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount);
 
     int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets);
 
