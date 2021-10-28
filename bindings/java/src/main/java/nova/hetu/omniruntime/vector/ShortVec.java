@@ -28,6 +28,12 @@ public class ShortVec extends FixedWidthVec {
         super(nativeVector, ShortVecType.SHORT);
     }
 
+    public ShortVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                    long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, ShortVecType.SHORT);
+    }
+
     private ShortVec(ShortVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }

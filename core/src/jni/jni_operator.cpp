@@ -53,14 +53,63 @@ jobjectArray transform(JNIEnv *env, std::vector<VectorBatch *> &result)
         int32_t vecCount = vecBatch->GetVectorCount();
         // set vector addresses parameter to vector batch construct.
         jlongArray jVecAddresses = env->NewLongArray(vecCount);
-        env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *)vecBatch->GetVectors());
+        env->SetLongArrayRegion(jVecAddresses, 0, vecCount, (const jlong *) vecBatch->GetVectors());
+
+        long allocators[vecCount];
+        int32_t capacityInBytes[vecCount];
+        int32_t sizes[vecCount];
+        int32_t offsets[vecCount];
+        long valueBufAddrs[vecCount];
+        long nullBufAddrs[vecCount];
+        long offsetBufAddrs[vecCount];
+        for (int i = 0; i < vecCount; ++i) {
+            Vector *vector = vecBatch->GetVector(i);
+            allocators[i] = (long) vector->GetAllocator();
+            capacityInBytes[i] = vector->GetCapacityInBytes();
+            sizes[i] = vector->GetSize();
+            offsets[i] = vector->GetPositionOffset();
+            // By default, all 3 buf arrays will have a value,
+            // if not, it will be 0, which means a null pointer.
+            valueBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValues());
+            nullBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValueNulls());
+            offsetBufAddrs[i] = reinterpret_cast<uintptr_t>(vector->GetValueOffsets());
+        }
+        // set vector allocators parameter to vector batch construct.
+        jlongArray jVecAllocatorAddresses = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecAllocatorAddresses, 0, vecCount, allocators);
+
+        // set vector capacityInBytes parameter to vector batch construct.
+        jintArray jVecCapacityInBytes = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecCapacityInBytes, 0, vecCount, capacityInBytes);
+
+        // set vector sizes parameter to vector batch construct.
+        jintArray jVecSizes = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecSizes, 0, vecCount, sizes);
+
+        // set vector offsets ids parameter to vector batch construct.
+        jintArray jVecOffsets = env->NewIntArray(vecCount);
+        env->SetIntArrayRegion(jVecOffsets, 0, vecCount, offsets);
 
         // set vector type ids parameter to vector batch construct.
         jintArray jVecTypeIds = env->NewIntArray(vecCount);
-        env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *)vecBatch->GetVectorTypeIds());
+        env->SetIntArrayRegion(jVecTypeIds, 0, vecCount, (const jint *) vecBatch->GetVectorTypeIds());
+
+        // set vector value buf address
+        jlongArray jVecValueBufAddrs = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecValueBufAddrs, 0, vecCount, valueBufAddrs);
+
+        // set vec null buf address
+        jlongArray jVecNullBufAddrs = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecNullBufAddrs, 0, vecCount, nullBufAddrs);
+
+        // set vec offset buf address
+        jlongArray jVecOffsetBufAddrs = env->NewLongArray(vecCount);
+        env->SetLongArrayRegion(jVecOffsetBufAddrs, 0, vecCount, offsetBufAddrs);
 
         // create vector batch java object.
         jobject obj = env->NewObject(vecBatchCls, vecBatchInitMethodId, (jlong)((int64_t)vecBatch), jVecAddresses,
+            jVecValueBufAddrs, jVecNullBufAddrs, jVecOffsetBufAddrs,
+            jVecAllocatorAddresses, jVecCapacityInBytes, jVecSizes, jVecOffsets,
             jVecTypeIds, vecBatch->GetRowCount());
         env->SetObjectArrayElement(res, idx++, obj);
     }
@@ -86,7 +135,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 {
     JNI_DEBUG_LOG("get output starting.");
     auto start = START();
-    Operator *nativeOperator = (Operator *)jOperatorAddr;
+    Operator *nativeOperator = (Operator *) jOperatorAddr;
     std::vector<VectorBatch *> outputVecBatches;
     int32_t errNo = nativeOperator->GetOutput(outputVecBatches);
     RECORD_OUTPUT_VECTORS_STACK(outputVecBatches, env);
@@ -102,11 +151,10 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
  * Signature: (J)[Lnova/hetu/omniruntime/operator/void;
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative(JNIEnv *env, jobject jObj,
-    jlong jOperatorAddr)
-{
+                                                                                    jlong jOperatorAddr) {
     JNI_DEBUG_LOG("close starting.");
     auto start = START();
-    Operator *nativeOperator = (Operator *)jOperatorAddr;
+    Operator *nativeOperator = (Operator *) jOperatorAddr;
     nativeOperator->Close();
     delete nativeOperator;
     JNI_DEBUG_LOG("close finished, elapsed time: %ld ms.", END(start));

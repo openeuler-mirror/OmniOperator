@@ -29,6 +29,12 @@ public class Decimal128Vec extends DecimalVec {
         super(nativeVector, BYTES, type);
     }
 
+    public Decimal128Vec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, BYTES, type);
+    }
+
     private Decimal128Vec(Decimal128Vec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }

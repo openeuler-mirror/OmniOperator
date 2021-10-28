@@ -5,9 +5,6 @@
 package nova.hetu.omniruntime.vector;
 
 import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
-
-import java.nio.ByteBuffer;
 
 /**
  * jdk8 unsafe interface implementation
@@ -15,12 +12,13 @@ import java.nio.ByteBuffer;
  * @since 2021-08-10
  */
 public class OmniBufUnsafeV8 implements OmniBuf {
-    private final ByteBuffer base;
     private final long address;
 
-    public OmniBufUnsafeV8(ByteBuffer buffer) {
-        base = buffer;
-        address = buffer instanceof DirectBuffer ? ((DirectBuffer) buffer).address() : 0;
+    private final int capacity;
+
+    public OmniBufUnsafeV8(long address, int capacity) {
+        this.address = address;
+        this.capacity = capacity;
     }
 
     @Override
@@ -35,14 +33,13 @@ public class OmniBufUnsafeV8 implements OmniBuf {
 
     @Override
     public void setBytes(int index, byte[] src, int srcStart, int length) {
-        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_BYTE_BASE_OFFSET + srcStart,
-                null, addr(index), length);
+        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_BYTE_BASE_OFFSET + srcStart, null, addr(index), length);
     }
 
     @Override
     public byte[] getBytes(int index, int length) {
         byte[] target = new byte[length];
-        getBytes(index, target, 0 , length);
+        getBytes(index, target, 0, length);
         return target;
     }
 
@@ -58,8 +55,7 @@ public class OmniBufUnsafeV8 implements OmniBuf {
 
     @Override
     public void setShortArray(int index, short[] src, int srcIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_LONG_BASE_OFFSET + srcIndex,
-                null, addr(index), length);
+        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_LONG_BASE_OFFSET + srcIndex, null, addr(index), length);
     }
 
     @Override
@@ -79,14 +75,13 @@ public class OmniBufUnsafeV8 implements OmniBuf {
 
     @Override
     public void setIntArray(int index, int[] src, int srcIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_INT_BASE_OFFSET + srcIndex,
-                null, addr(index), length);
+        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_INT_BASE_OFFSET + srcIndex, null, addr(index), length);
     }
 
     @Override
     public void getIntArray(int index, int[] target, int targetIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(null, addr((long) index),
-                target, Unsafe.ARRAY_INT_BASE_OFFSET + targetIndex, length);
+        JvmUtils.UNSAFE.copyMemory(null, addr((long) index), target, Unsafe.ARRAY_INT_BASE_OFFSET + targetIndex,
+            length);
     }
 
     @Override
@@ -101,14 +96,12 @@ public class OmniBufUnsafeV8 implements OmniBuf {
 
     @Override
     public void setLongArray(int index, long[] src, int srcIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_LONG_BASE_OFFSET + srcIndex,
-                null, addr(index), length);
+        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_LONG_BASE_OFFSET + srcIndex, null, addr(index), length);
     }
 
     @Override
     public void getLongArray(int index, long[] target, int targetIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(null, addr(index), target,
-                Unsafe.ARRAY_LONG_BASE_OFFSET + targetIndex, length);
+        JvmUtils.UNSAFE.copyMemory(null, addr(index), target, Unsafe.ARRAY_LONG_BASE_OFFSET + targetIndex, length);
     }
 
     @Override
@@ -123,19 +116,22 @@ public class OmniBufUnsafeV8 implements OmniBuf {
 
     @Override
     public void setDoubleArray(int index, double[] src, int srcIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_DOUBLE_BASE_OFFSET + srcIndex,
-                null, addr(index), length);
+        JvmUtils.UNSAFE.copyMemory(src, Unsafe.ARRAY_DOUBLE_BASE_OFFSET + srcIndex, null, addr(index), length);
     }
 
     @Override
     public void getDoubleArray(int index, double[] target, int targetIndex, int length) {
-        JvmUtils.UNSAFE.copyMemory(null, addr(index),
-                target, Unsafe.ARRAY_LONG_BASE_OFFSET + targetIndex, length);
+        JvmUtils.UNSAFE.copyMemory(null, addr(index), target, Unsafe.ARRAY_LONG_BASE_OFFSET + targetIndex, length);
     }
 
     @Override
-    public ByteBuffer getBuffer() {
-        return base;
+    public int getCapacity() {
+        return capacity;
+    }
+
+    @Override
+    public long getAddress() {
+        return address;
     }
 
     private long addr(long offsetInBytes) {

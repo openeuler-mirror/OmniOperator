@@ -32,6 +32,14 @@ public abstract class DecimalVec extends FixedWidthVec {
         this.typeWidth = getTypeWidth(typeLength);
     }
 
+    public DecimalVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                      long nativeVectorAllocator, int capacityInBytes, int size, int offset, int typeLength,
+                      VecType type) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, type);
+        this.typeWidth = getTypeWidth(typeLength);
+    }
+
     protected DecimalVec(DecimalVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
         this.typeWidth = vector.typeWidth;

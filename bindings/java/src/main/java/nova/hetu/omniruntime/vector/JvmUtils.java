@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
+import java.nio.ByteOrder;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import sun.misc.Unsafe;
@@ -20,7 +21,7 @@ import java.security.PrivilegedAction;
  *
  * @since 2021-08-05
  */
-final class JvmUtils {
+public final class JvmUtils {
     /**
      * jvm unsafe
      */
@@ -30,8 +31,8 @@ final class JvmUtils {
 
     private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale) {
         if (actualIndexScale != expectedIndexScale) {
-            throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " +
-                    actualIndexScale);
+            throw new IllegalStateException(
+                name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
         }
     }
 
@@ -59,8 +60,7 @@ final class JvmUtils {
             long address = -1;
             final ByteBuffer direct = ByteBuffer.allocateDirect(1);
             try {
-                final Object directBufferConstructor = AccessController.doPrivileged(
-                        (PrivilegedAction<Object>) () -> {
+                final Object directBufferConstructor = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
                     final Constructor<?> constructor;
                     try {
                         constructor = direct.getClass().getDeclaredConstructor(long.class, int.class);
@@ -82,7 +82,7 @@ final class JvmUtils {
                     }
                 } else {
                     throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                            "get the director byte buffer constructor failed.");
+                        "get the director byte buffer constructor failed.");
                 }
             } finally {
                 if (address != -1) {
@@ -97,22 +97,22 @@ final class JvmUtils {
     /**
      * construct a director byte buffer by address and capacity
      *
-     * @param address the address of byte buffer
-     * @param capacity total size in byte of byte buffer
+     * @param omniBuf the address of byte buffer
      * @return director byte buffer
      */
-    public static ByteBuffer directBuffer(long address, int capacity) {
-        if (capacity < 0) {
+    public static ByteBuffer directBuffer(OmniBuf omniBuf) {
+        if (omniBuf.getCapacity() < 0) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
-                    "Capacity is negative, has to be positive or 0");
+                "Capacity is negative, has to be positive or 0");
         }
 
         if (DIRECT_BUFFER_CONSTRUCTOR == null) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT,
-                    "DirectByteBuffer.<ini>(long, int) not available");
+                "DirectByteBuffer.<ini>(long, int) not available");
         }
         try {
-            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
+            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(),
+                omniBuf.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }

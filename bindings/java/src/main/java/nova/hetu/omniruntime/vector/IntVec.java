@@ -28,6 +28,12 @@ public class IntVec extends FixedWidthVec {
         super(nativeVector, IntVecType.INTEGER);
     }
 
+    public IntVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+                  long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
+            size, offset, IntVecType.INTEGER);
+    }
+
     private IntVec(IntVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
     }
@@ -49,7 +55,7 @@ public class IntVec extends FixedWidthVec {
     /**
      * get int values from the specified position
      *
-     * @param index the position of element
+     * @param index  the position of element
      * @param length the number of element
      * @return int value array
      */

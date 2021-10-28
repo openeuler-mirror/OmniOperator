@@ -53,13 +53,18 @@ public class VecBatch implements Closeable {
      *
      * @param nativeVecBatch
      */
-    public VecBatch(long nativeVecBatch, long[] nativeVectors, int[] vecTypeIds, int rowCount) {
+    public VecBatch(long nativeVecBatch, long[] nativeVectors, long[] nativeVectorValueBufAddresses,
+                    long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses,
+                    long[] nativeVectorAllocators, int[] capacityInBytes, int[] sizes, int[] offsets, int[] vecTypeIds,
+                    int rowCount) {
         int vecCount = nativeVectors.length;
         Vec[] newVectors = new Vec[vecCount];
         for (int idx = 0; idx < vecCount; idx++) {
             long nativeVector = nativeVectors[idx];
             VecType vecType = VecType.create(vecTypeIds[idx]);
-            newVectors[idx] = VecFactory.create(nativeVector, vecType);
+            newVectors[idx] = VecFactory.create(nativeVector, nativeVectorValueBufAddresses[idx],
+                nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], nativeVectorAllocators[idx],
+                capacityInBytes[idx], sizes[idx], offsets[idx], vecType);
         }
         this.rowCount = rowCount;
         this.nativeVectorBatch = nativeVecBatch;
@@ -70,7 +75,7 @@ public class VecBatch implements Closeable {
      * create vector batch based on the number of vectors
      *
      * @param nativeVectors native vector array.
-     * @param rowCount the row count of vector batch
+     * @param rowCount      the row count of vector batch
      * @return vector batch address
      */
     public static native long newVectorBatchNative(long[] nativeVectors, int rowCount);

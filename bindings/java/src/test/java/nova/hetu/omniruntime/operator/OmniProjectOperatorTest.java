@@ -10,6 +10,7 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -56,7 +57,7 @@ public class OmniProjectOperatorTest {
         VecBatch res = op.getOutput().next();
         assertFalse(vecBatchIterator.hasNext());
         assertEquals(res.getRowCount(), numRows);
-        IntBuffer res1 = res.getVectors()[0].getValues().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         for (int i = 0; i < numRows; i++) {
             assertEquals(res1.get(), i + 5);
         }
@@ -87,8 +88,8 @@ public class OmniProjectOperatorTest {
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), numRows);
-        IntBuffer res1 = res.getVectors()[0].getValues().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        LongBuffer res2 = res.getVectors()[1].getValues().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        LongBuffer res2 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
         for (int i = 0; i < numRows; i++) {
             assertEquals(res1.get(), (i + 1) * (i - 100));
             assertEquals(res2.get(), (i + 1) < 500 ? 4000000000L : i + 3000000000L);
@@ -121,9 +122,9 @@ public class OmniProjectOperatorTest {
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), numRows);
         assertEquals(res.getVectors().length, exprs.length);
-        IntBuffer res1 = res.getVectors()[0].getValues().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        IntBuffer res2 = res.getVectors()[1].getValues().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-        IntBuffer res3 = res.getVectors()[2].getValues().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res2 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer res3 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
         assertEquals(res1.get(), 723455942);
         assertEquals(res2.get(), -508695674);
         assertEquals(res3.get(), 613818021);
