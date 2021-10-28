@@ -13,15 +13,6 @@
  */
 package nova.hetu.olk.operator.benchmark;
 
-import io.prestosql.block.BlockAssertions;
-import io.prestosql.spi.Page;
-import io.prestosql.spi.block.Block;
-import io.prestosql.spi.type.DecimalType;
-import io.prestosql.spi.type.Type;
-import io.prestosql.spi.type.VarcharType;
-
-import java.util.List;
-
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.spi.type.BooleanType.BOOLEAN;
 import static io.prestosql.spi.type.DateType.DATE;
@@ -32,9 +23,17 @@ import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.RealType.REAL;
 import static io.prestosql.spi.type.TimestampType.TIMESTAMP;
 
+import io.prestosql.block.BlockAssertions;
+import io.prestosql.spi.Page;
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.type.DecimalType;
+import io.prestosql.spi.type.Type;
+import io.prestosql.spi.type.VarcharType;
+
+import java.util.List;
+
 public final class PageBuilderUtil {
-    private PageBuilderUtil() {
-    }
+    private PageBuilderUtil() {}
 
     public static Page createSequencePage(List<? extends Type> types, int length) {
         return createSequencePage(types, length, new int[types.size()]);
@@ -55,7 +54,8 @@ public final class PageBuilderUtil {
             } else if (type.equals(DOUBLE)) {
                 blocks[i] = BlockAssertions.createDoubleSequenceBlock(initialValue, initialValue + length);
             } else if (type instanceof VarcharType) {
-                blocks[i] = BlockUtil.createStringSequenceBlock(initialValue, initialValue + length, (VarcharType) type);
+                blocks[i] =
+                        BlockUtil.createStringSequenceBlock(initialValue, initialValue + length, (VarcharType) type);
             } else if (type.equals(BOOLEAN)) {
                 blocks[i] = BlockAssertions.createBooleanSequenceBlock(initialValue, initialValue + length);
             } else if (type.equals(DATE)) {
@@ -63,9 +63,13 @@ public final class PageBuilderUtil {
             } else if (type.equals(TIMESTAMP)) {
                 blocks[i] = BlockAssertions.createTimestampSequenceBlock(initialValue, initialValue + length);
             } else if (isShortDecimal(type)) {
-                blocks[i] = BlockAssertions.createShortDecimalSequenceBlock(initialValue, initialValue + length, (DecimalType) type);
+                blocks[i] =
+                        BlockAssertions.createShortDecimalSequenceBlock(
+                                initialValue, initialValue + length, (DecimalType) type);
             } else if (isLongDecimal(type)) {
-                blocks[i] = BlockAssertions.createLongDecimalSequenceBlock(initialValue, initialValue + length, (DecimalType) type);
+                blocks[i] =
+                        BlockAssertions.createLongDecimalSequenceBlock(
+                                initialValue, initialValue + length, (DecimalType) type);
             } else {
                 throw new IllegalStateException("Unsupported type " + type);
             }
@@ -78,7 +82,8 @@ public final class PageBuilderUtil {
         return createSequencePageWithDictionaryBlocks(types, length, new int[types.size()]);
     }
 
-    public static Page createSequencePageWithDictionaryBlocks(List<? extends Type> types, int length, int... initialValues) {
+    public static Page createSequencePageWithDictionaryBlocks(
+            List<? extends Type> types, int length, int... initialValues) {
         Block[] blocks = new Block[initialValues.length];
         for (int i = 0; i < blocks.length; i++) {
             Type type = types.get(i);
@@ -92,7 +97,8 @@ public final class PageBuilderUtil {
             } else if (type.equals(DOUBLE)) {
                 blocks[i] = BlockUtil.createDoubleDictionaryBlock(initialValue, initialValue + length);
             } else if (type instanceof VarcharType) {
-                blocks[i] = BlockUtil.createStringDictionaryBlock(initialValue, initialValue + length, (VarcharType) type);
+                blocks[i] =
+                        BlockUtil.createStringDictionaryBlock(initialValue, initialValue + length, (VarcharType) type);
             } else if (type.equals(BOOLEAN)) {
                 blocks[i] = BlockUtil.createBooleanDictionaryBlock(initialValue, initialValue + length);
             } else if (type.equals(DATE)) {
@@ -100,9 +106,78 @@ public final class PageBuilderUtil {
             } else if (type.equals(TIMESTAMP)) {
                 blocks[i] = BlockUtil.createTimestampDictionaryBlock(initialValue, initialValue + length);
             } else if (isShortDecimal(type)) {
-                blocks[i] = BlockUtil.createShortDecimalDictionaryBlock(initialValue, initialValue + length, (DecimalType) type);
+                blocks[i] =
+                        BlockUtil.createShortDecimalDictionaryBlock(
+                                initialValue, initialValue + length, (DecimalType) type);
             } else if (isLongDecimal(type)) {
-                blocks[i] = BlockUtil.createLongDecimalDictionaryBlock(initialValue, initialValue + length, (DecimalType) type);
+                blocks[i] =
+                        BlockUtil.createLongDecimalDictionaryBlock(
+                                initialValue, initialValue + length, (DecimalType) type);
+            } else {
+                throw new IllegalStateException("Unsupported type " + type);
+            }
+        }
+
+        return new Page(blocks);
+    }
+
+    public static Page createPage(List<? extends Type> types, String prefix, List<List<Integer>> columnValues) {
+        Block[] blocks = new Block[types.size()];
+        for (int i = 0; i < blocks.length; i++) {
+            Type type = types.get(i);
+            if (type.equals(INTEGER)) {
+                blocks[i] = BlockUtil.createIntegerBlock(columnValues.get(i));
+            } else if (type.equals(BIGINT)) {
+                blocks[i] = BlockUtil.createLongBlock(columnValues.get(i));
+            } else if (type.equals(REAL)) {
+                blocks[i] = BlockUtil.createRealBlock(columnValues.get(i));
+            } else if (type.equals(DOUBLE)) {
+                blocks[i] = BlockUtil.createDoubleBlock(columnValues.get(i));
+            } else if (type instanceof VarcharType) {
+                blocks[i] = BlockUtil.createStringBlock(prefix, columnValues.get(i), (VarcharType) type);
+            } else if (type.equals(BOOLEAN)) {
+                blocks[i] = BlockUtil.createBooleanBlock(columnValues.get(i));
+            } else if (type.equals(DATE)) {
+                blocks[i] = BlockUtil.createDateBlock(columnValues.get(i));
+            } else if (type.equals(TIMESTAMP)) {
+                blocks[i] = BlockUtil.createTimestampBlock(columnValues.get(i));
+            } else if (isShortDecimal(type)) {
+                blocks[i] = BlockUtil.createShortDecimalBlock(columnValues.get(i), (DecimalType) type);
+            } else if (isLongDecimal(type)) {
+                blocks[i] = BlockUtil.createLongDecimalBlock(columnValues.get(i), (DecimalType) type);
+            } else {
+                throw new IllegalStateException("Unsupported type " + type);
+            }
+        }
+
+        return new Page(blocks);
+    }
+
+    public static Page createPageWithDictionaryBlocks(
+            List<? extends Type> types, String prefix, List<List<Integer>> columnValues) {
+        Block[] blocks = new Block[types.size()];
+        for (int i = 0; i < blocks.length; i++) {
+            Type type = types.get(i);
+            if (type.equals(INTEGER)) {
+                blocks[i] = BlockUtil.createIntegerDictionaryBlock(columnValues.get(i));
+            } else if (type.equals(BIGINT)) {
+                blocks[i] = BlockUtil.createLongDictionaryBlock(columnValues.get(i));
+            } else if (type.equals(REAL)) {
+                blocks[i] = BlockUtil.createRealDictionaryBlock(columnValues.get(i));
+            } else if (type.equals(DOUBLE)) {
+                blocks[i] = BlockUtil.createDoubleDictionaryBlock(columnValues.get(i));
+            } else if (type instanceof VarcharType) {
+                blocks[i] = BlockUtil.createStringDictionaryBlock(prefix, columnValues.get(i), (VarcharType) type);
+            } else if (type.equals(BOOLEAN)) {
+                blocks[i] = BlockUtil.createBooleanDictionaryBlock(columnValues.get(i));
+            } else if (type.equals(DATE)) {
+                blocks[i] = BlockUtil.createDateDictionaryBlock(columnValues.get(i));
+            } else if (type.equals(TIMESTAMP)) {
+                blocks[i] = BlockUtil.createTimestampDictionaryBlock(columnValues.get(i));
+            } else if (isShortDecimal(type)) {
+                blocks[i] = BlockUtil.createShortDecimalDictionaryBlock(columnValues.get(i), (DecimalType) type);
+            } else if (isLongDecimal(type)) {
+                blocks[i] = BlockUtil.createLongDecimalDictionaryBlock(columnValues.get(i), (DecimalType) type);
             } else {
                 throw new IllegalStateException("Unsupported type " + type);
             }

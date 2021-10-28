@@ -345,7 +345,7 @@ public class TestHashJoinOmniOperator
         // probe factory
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
-        OperatorFactory joinOperatorFactory = LookupJoinOmniOperator.innerJoin(
+        OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.innerJoin(
                 0,
                 new PlanNodeId("test"),
                 lookupSourceFactoryManager,
@@ -389,7 +389,7 @@ public class TestHashJoinOmniOperator
         List<Page> probeInput = probePages.build();
         List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, probeInput);
 
-        OperatorFactory joinOperatorFactory =LookupJoinOmniOperator.innerJoin(
+        OperatorFactory joinOperatorFactory =LookupJoinOmniOperators.innerJoin(
                 0,
                 new PlanNodeId("test"),
                 lookupSourceFactoryManager,
@@ -428,7 +428,7 @@ public class TestHashJoinOmniOperator
                 .addSequencePage(15, 20, 1020, 2020)
                 .build();
         List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, probeInput);
-        OperatorFactory joinOperatorFactory = LookupJoinOmniOperator.probeOuterJoin(
+        OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(
                 0,
                 new PlanNodeId("test"),
                 lookupSourceFactoryManager,
@@ -485,7 +485,7 @@ public class TestHashJoinOmniOperator
                 .row("c")
                 .build();
 
-        OperatorFactory joinOperatorFactory = LookupJoinOmniOperator.probeOuterJoin(
+        OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(
                 0,
                 new PlanNodeId("test"),
                 lookupSourceFactoryManager,
@@ -529,7 +529,7 @@ public class TestHashJoinOmniOperator
 
     private OperatorFactory innerJoinOperatorFactory(JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager, RowPagesBuilder probePages, OperatorFactory operatorFactory)
     {
-        return LookupJoinOmniOperator.innerJoin(
+        return LookupJoinOmniOperators.innerJoin(
                 0,
                 new PlanNodeId("test"),
                 lookupSourceFactoryManager,

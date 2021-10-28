@@ -167,7 +167,7 @@ import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
 import nova.hetu.olk.operator.HashBuilderOmniOperator;
 import nova.hetu.olk.operator.LocalMergeSourceOmniOperator;
-import nova.hetu.olk.operator.LookupJoinOmniOperator;
+import nova.hetu.olk.operator.LookupJoinOmniOperators;
 import nova.hetu.olk.operator.MergeOmniOperator;
 import nova.hetu.olk.operator.PartitionedOutputOmniOperator;
 import nova.hetu.olk.operator.TopNOmniOperator;
@@ -1452,22 +1452,22 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             switch (node.getType()) {
                 case INNER:
-                    return LookupJoinOmniOperator.innerJoin(context.getNextOperatorId(), node.getId(),
+                    return LookupJoinOmniOperators.innerJoin(context.getNextOperatorId(), node.getId(),
                         lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                         Optional.of(probeOutputChannels), totalOperatorsCount,
                         (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 case LEFT:
-                    return LookupJoinOmniOperator.probeOuterJoin(context.getNextOperatorId(), node.getId(),
+                    return LookupJoinOmniOperators.probeOuterJoin(context.getNextOperatorId(), node.getId(),
                         lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                         Optional.of(probeOutputChannels), totalOperatorsCount,
                         (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 case RIGHT:
-                    return LookupJoinOmniOperator.lookupOuterJoin(context.getNextOperatorId(), node.getId(),
+                    return LookupJoinOmniOperators.lookupOuterJoin(context.getNextOperatorId(), node.getId(),
                         lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                         Optional.of(probeOutputChannels), totalOperatorsCount,
                         (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 case FULL:
-                    return LookupJoinOmniOperator.fullOuterJoin(context.getNextOperatorId(), node.getId(),
+                    return LookupJoinOmniOperators.fullOuterJoin(context.getNextOperatorId(), node.getId(),
                         lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                         Optional.of(probeOutputChannels), totalOperatorsCount,
                         (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
