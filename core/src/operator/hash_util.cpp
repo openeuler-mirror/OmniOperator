@@ -5,15 +5,23 @@
 #include "hash_util.h"
 #include <stdint.h>
 #include <math.h>
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 namespace {
-const int64_t PRIME64_1 = 0x9E3779B185EBCA87L;
-const int64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
-const int64_t PRIME64_3 = 0x165667B19E3779F9L;
-const int64_t PRIME64_4 = 0x85EBCA77C2b2AE63L;
-const int64_t PRIME64_5 = 0x27D4EB2F165667C5L;
-const int32_t MAX_ARRAY_SIZE = 1073741824;
-const int32_t UPDATE_BODY_LENGTH = 32;
+constexpr int64_t PRIME64_1 = 0x9E3779B185EBCA87L;
+constexpr int64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
+constexpr int64_t PRIME64_3 = 0x165667B19E3779F9L;
+constexpr int64_t PRIME64_4 = 0x85EBCA77C2b2AE63L;
+constexpr int64_t PRIME64_5 = 0x27D4EB2F165667C5L;
+constexpr int32_t MAX_ARRAY_SIZE = 1073741824;
+constexpr int32_t UPDATE_BODY_LENGTH = 32;
+constexpr int32_t UINT8_STEP_4 = 4;
+constexpr int32_t UINT8_STEP_8 = 8;
+constexpr int32_t UINT8_STEP_32 = 32;
+constexpr int32_t PTR_STEP_1 = 1;
+constexpr int32_t PTR_STEP_2 = 2;
+constexpr int32_t PTR_STEP_3 = 3;
+constexpr int32_t PTR_STEP_4 = 4;
 }
 
 int64_t NextPowerOfTwo(int64_t x);
@@ -99,8 +107,21 @@ ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int8_t value)
 
 ALWAYS_INLINE int64_t XxHash64UpdateTail(int64_t hash, int8_t *address, int index, int length)
 {
+    auto ptr64 = reinterpret_cast<int64_t *>(address + index);
+    while (index <= length - UINT8_STEP_8) {
+        hash = XxHash64UpdateTail(hash, *ptr64);
+        index += UINT8_STEP_8;
+        ptr64 = ptr64 + 1;
+    }
+
+    auto ptr32 = reinterpret_cast<int32_t *>(address + index);
+    if (index <= length - UINT8_STEP_4) {
+        hash = XxHash64UpdateTail(hash, *ptr32);
+        index += UINT8_STEP_4;
+    }
+
     while (index < length) {
-        hash = XxHash64UpdateTail(hash, address[index]);
+        hash = XxHash64UpdateTail(hash, *(address + index));
         index++;
     }
     hash = XxHash64FinalShuffle(hash);
@@ -119,6 +140,18 @@ int64_t XxHash64UpdateBody(int64_t seed, int8_t *address, int32_t length)
     int64_t v2 = seed + PRIME64_2;
     int64_t v3 = seed;
     int64_t v4 = seed - PRIME64_1;
+
+    int32_t remaining = length;
+    auto ptr = reinterpret_cast<int64_t *>(address);
+    while (remaining >= UINT8_STEP_32) {
+        v1 = XxHash64Mix(v1, *(ptr));
+        v2 = XxHash64Mix(v2, *(ptr + PTR_STEP_1));
+        v3 = XxHash64Mix(v3, *(ptr + PTR_STEP_2));
+        v4 = XxHash64Mix(v4, *(ptr + PTR_STEP_3));
+
+        ptr = ptr + PTR_STEP_4;
+        remaining = remaining - UINT8_STEP_32;
+    }
 
     int64_t hash = RotateLeft(v1, ROTATE_DISTANCE_1) + RotateLeft(v2, ROTATE_DISTANCE_7) +
         RotateLeft(v3, ROTATE_DISTANCE_12) + RotateLeft(v4, ROTATE_DISTANCE_18);
@@ -169,7 +202,14 @@ ALWAYS_INLINE int64_t HashUtil::HashValue(int64_t value)
 
 ALWAYS_INLINE int64_t DoubleToLongBits(double value)
 {
-    return static_cast<int64_t>(value);
+    uint64_t bits;
+    memcpy_s(&bits, sizeof(bits), &value, sizeof(value));
+    int64_t var2 = bits;
+    if ((var2 & 9218868437227405312L) == 9218868437227405312L && (var2 & 4503599627370495L) != 0L) {
+        var2 = 9221120237041090560L;
+    }
+
+    return var2;
 }
 
 ALWAYS_INLINE int64_t HashUtil::HashValue(double value)
