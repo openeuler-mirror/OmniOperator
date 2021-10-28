@@ -13,15 +13,8 @@
  */
 package nova.hetu.olk.operator.benchmark;
 
-import io.prestosql.spi.block.Block;
-import io.prestosql.spi.block.BlockBuilder;
-import io.prestosql.spi.block.DictionaryBlock;
-import io.prestosql.spi.type.DecimalType;
-import io.prestosql.spi.type.VarcharType;
-
-import java.math.BigInteger;
-
 import static com.google.common.base.Preconditions.checkArgument;
+
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.spi.type.BooleanType.BOOLEAN;
 import static io.prestosql.spi.type.DateType.DATE;
@@ -30,11 +23,20 @@ import static io.prestosql.spi.type.DoubleType.DOUBLE;
 import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.RealType.REAL;
 import static io.prestosql.spi.type.TimestampType.TIMESTAMP;
+
 import static java.lang.Float.floatToRawIntBits;
 
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.BlockBuilder;
+import io.prestosql.spi.block.DictionaryBlock;
+import io.prestosql.spi.type.DecimalType;
+import io.prestosql.spi.type.VarcharType;
+
+import java.math.BigInteger;
+import java.util.List;
+
 public final class BlockUtil {
-    private BlockUtil() {
-    }
+    private BlockUtil() {}
 
     public static Block createStringSequenceBlock(int start, int end, VarcharType type) {
         BlockBuilder builder = type.createBlockBuilder(null, 100);
@@ -208,5 +210,166 @@ public final class BlockUtil {
             ids[i] = i % dictionarySize;
         }
         return new DictionaryBlock(builder.build(), ids);
+    }
+
+    public static Block createIntegerBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = INTEGER.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            INTEGER.writeLong(builder, values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createLongBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = BIGINT.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            BIGINT.writeLong(builder, values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createRealBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = REAL.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            REAL.writeLong(builder, floatToRawIntBits((float) values.get(i)));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createDoubleBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = DOUBLE.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            DOUBLE.writeDouble(builder, (double) values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createStringBlock(String prefix, List<Integer> values, VarcharType type) {
+        int positionCount = values.size();
+        BlockBuilder builder = type.createBlockBuilder(null, positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            type.writeString(builder, prefix + values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createBooleanBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = BOOLEAN.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            BOOLEAN.writeBoolean(builder, values.get(i) == 0);
+        }
+
+        return builder.build();
+    }
+
+    public static Block createDateBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = DATE.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            DATE.writeLong(builder, values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createTimestampBlock(List<Integer> values) {
+        int positionCount = values.size();
+        BlockBuilder builder = TIMESTAMP.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            TIMESTAMP.writeLong(builder, values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createShortDecimalBlock(List<Integer> values, DecimalType type) {
+        int positionCount = values.size();
+        long base = BigInteger.TEN.pow(type.getScale()).longValue();
+        BlockBuilder builder = type.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            type.writeLong(builder, base * values.get(i));
+        }
+
+        return builder.build();
+    }
+
+    public static Block createLongDecimalBlock(List<Integer> values, DecimalType type) {
+        int positionCount = values.size();
+        BigInteger base = BigInteger.TEN.pow(type.getScale());
+        BlockBuilder builder = type.createFixedSizeBlockBuilder(positionCount);
+        for (int i = 0; i < positionCount; i++) {
+            type.writeSlice(builder, encodeUnscaledValue(BigInteger.valueOf(values.get(i)).multiply(base)));
+        }
+
+        return builder.build();
+    }
+
+    private static Block createDictionaryBlock(Block block) {
+        int dictionarySize = block.getPositionCount();
+        int[] ids = new int[dictionarySize];
+        for (int i = 0; i < dictionarySize; i++) {
+            ids[i] = i;
+        }
+        return new DictionaryBlock(block, ids);
+    }
+
+    public static Block createIntegerDictionaryBlock(List<Integer> values) {
+        Block block = createIntegerBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createLongDictionaryBlock(List<Integer> values) {
+        Block block = createLongBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createRealDictionaryBlock(List<Integer> values) {
+        Block block = createRealBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createDoubleDictionaryBlock(List<Integer> values) {
+        Block block = createDoubleBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createStringDictionaryBlock(String prefix, List<Integer> values, VarcharType type) {
+        Block block = createStringBlock(prefix, values, type);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createBooleanDictionaryBlock(List<Integer> values) {
+        Block block = createBooleanBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createDateDictionaryBlock(List<Integer> values) {
+        Block block = createDateBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createTimestampDictionaryBlock(List<Integer> values) {
+        Block block = createTimestampBlock(values);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createShortDecimalDictionaryBlock(List<Integer> values, DecimalType type) {
+        Block block = createShortDecimalBlock(values, type);
+        return createDictionaryBlock(block);
+    }
+
+    public static Block createLongDecimalDictionaryBlock(List<Integer> values, DecimalType type) {
+        Block block = createLongDecimalBlock(values, type);
+        return createDictionaryBlock(block);
     }
 }
