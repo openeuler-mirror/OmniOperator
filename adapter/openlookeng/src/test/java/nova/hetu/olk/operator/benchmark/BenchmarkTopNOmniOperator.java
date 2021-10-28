@@ -130,10 +130,6 @@ public class BenchmarkTopNOmniOperator
                 .build();
 
 
-
-//        private static final Map<String, List<SortOrder>> SORT_ORDERS= ImmutableMap.of(
-//                "group1", ImmutableList.of(DESC_NULLS_LAST, ASC_NULLS_FIRST,DESC_NULLS_LAST, ASC_NULLS_FIRST),
-//                "group2", ImmutableList.of(DESC_NULLS_LAST, ASC_NULLS_FIRST,DESC_NULLS_LAST, ASC_NULLS_FIRST));
         @Setup
         public void setup()
         {
