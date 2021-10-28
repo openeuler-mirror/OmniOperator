@@ -13,7 +13,9 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.type.VecTypeSerializer;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * The type Omni filter and project operator factory.
@@ -27,14 +29,14 @@ public class OmniFilterAndProjectOperatorFactory
      *
      * @param expression the expression
      * @param inputTypes the input types
-     * @param projectIndices the project indices
+     * @param projections the projections
      */
-    public OmniFilterAndProjectOperatorFactory(String expression, VecType[] inputTypes, int[] projectIndices) {
-        super(new FactoryContext(new JitContext(expression, inputTypes, projectIndices)));
+    public OmniFilterAndProjectOperatorFactory(String expression, VecType[] inputTypes, List<String> projections) {
+        super(new FactoryContext(new JitContext(expression, inputTypes, projections)));
     }
 
     private static native long createFilterAndProjectOperatorFactory(String inputTypes, int inputLength,
-        String expression, int[] projectIndices, int projectLength, long jitContext);
+        String expression, Object[] projections, int projectLength, long jitContext);
 
     private static native long createFilterAndProjectJitContext(String inputTypes, int inputLength, String expression,
         int[] projectIndices, int projectLength);
@@ -44,7 +46,7 @@ public class OmniFilterAndProjectOperatorFactory
         // long nativeOperatorFactory is 0 if operations/data-types are unsupported
         JitContext context = factoryContext.getJitContext();
         return createFilterAndProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes),
-            context.inputTypes.length, context.expression, context.projectIndices, context.projectIndices.length,
+            context.inputTypes.length, context.expression, context.projections.toArray(), context.projections.size(),
             factoryContext.getNativeJitContext());
     }
 
@@ -58,24 +60,24 @@ public class OmniFilterAndProjectOperatorFactory
 
         private final String expression;
 
-        private final int[] projectIndices;
+        private final List<String> projections;
 
         /**
          * Instantiates a new Context.
          *
          * @param expression the expression
          * @param inputTypes the input types
-         * @param projectIndices the project indices
+         * @param projections the projections
          */
-        public JitContext(String expression, VecType[] inputTypes, int[] projectIndices) {
+        public JitContext(String expression, VecType[] inputTypes, List<String> projections) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expression = requireNonNull(expression, "Expression is null.");
-            this.projectIndices = requireNonNull(projectIndices, "Project indices is null.");
+            this.projections = requireNonNull(projections, "Project indices is null.");
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(expression, Arrays.hashCode(inputTypes), Arrays.hashCode(projectIndices));
+            return Objects.hash(expression, Arrays.hashCode(inputTypes), Objects.hashCode(projections));
         }
 
         @Override
@@ -88,7 +90,8 @@ public class OmniFilterAndProjectOperatorFactory
             }
             JitContext that = (JitContext) obj;
             return Objects.equals(expression, that.expression) && Arrays.equals(inputTypes, that.inputTypes)
-                && Arrays.equals(projectIndices, that.projectIndices);
+                && Objects.equals(projections.stream().sorted().collect(Collectors.toList()),
+                that.projections.stream().sorted().collect(Collectors.toList()));
         }
 
     }

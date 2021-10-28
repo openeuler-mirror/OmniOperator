@@ -68,20 +68,13 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         if (filter.isPresent()) {
             RowExpression re = filter.get();
             PageFieldsToInputParametersRewriter.Result result = rewritePageFieldsToInputParameters(re);
-            int[] projects = result.getInputChannels()
-                .getInputChannels()
-                .stream()
-                .mapToInt(Integer::intValue)
-                .toArray();
             pageFilter = Optional.of(
                 new OmniPageFilter(re, determinismEvaluator.isDeterministic(re), result.getInputChannels(), inputTypes,
-                    proj.getNeededCols()));
+                    projections));
         } else {
             pageFilter = Optional.empty();
         }
-        return () -> {
-            return new OmniPageProcessor(vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler());
-        };
+        return () -> new OmniPageProcessor(vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler());
     }
 
     /**
@@ -101,19 +94,13 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         if (filter.isPresent()) {
             RowExpression re = filter.get();
             PageFieldsToInputParametersRewriter.Result result = rewritePageFieldsToInputParameters(re);
-            int[] projects = result.getInputChannels()
-                .getInputChannels()
-                .stream()
-                .mapToInt(Integer::intValue)
-                .toArray();
             pageFilter = Optional.of(
                 new OmniPageFilter(re, determinismEvaluator.isDeterministic(re), result.getInputChannels(), inputTypes,
-                    proj.getNeededCols()));
+                    projections));
         } else {
             pageFilter = Optional.empty();
         }
-        return () -> {
-            return new OmniPageProcessor(vecAllocator, pageFilter, proj, OptionalInt.empty(), new ExpressionProfiler());
-        };
+        return () -> new OmniPageProcessor(
+            vecAllocator, pageFilter, proj, OptionalInt.empty(), new ExpressionProfiler());
     }
 }

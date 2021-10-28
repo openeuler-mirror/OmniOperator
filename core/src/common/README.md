@@ -3,9 +3,9 @@
 ### Parser Specifications
 The current parser must take in a `string` as input, and return a `Expr*` in a method with the following signature: 
 ```c++
-Expr *parseRowExpression(string input, DataType *inputTypes, int32_t veccount);
+Expr *parseRowExpression(string input, DataType *inputVecTypes, int32_t veccount);
 ```
-`DataType` is an enum which is defined in `core/src/common/expressions.h`, and covers all the possible types for a column. These are: `STRINGD`, `INT32D`, `INT64D`, `DOUBLED`, `BOOLD`. The `inputTypes` array contains the type of each column in order, and there are `veccount` columns in total. 
+`DataType` is an enum which is defined in `core/src/common/expressions.h`, and covers all the possible types for a column. These are: `STRINGD`, `INT32D`, `INT64D`, `DOUBLED`, `BOOLD`. The `inputVecTypes` array contains the type of each column in order, and there are `veccount` columns in total. 
 
  All the different kinds of `Expr*` are listed in `core/src/common/expressions.h`. When parsing, each `Expr*` must have its `dataType` member set correctly (usually with the constructor for the `Expr` which takes in a data type. The different types of `Expr` are: 
  `DataExpr`: Holds a piece of literal data or a column index. 

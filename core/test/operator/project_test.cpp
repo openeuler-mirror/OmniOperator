@@ -46,7 +46,7 @@ VectorBatch* CreateInput(const int32_t numRows,
                     std::string s ((char *)(addr));
                     // std::cout << "s: " << s << std::endl;
                     ((VarcharVector *)vecBatch->GetVector(i))->SetValue(j, reinterpret_cast<const uint8_t *>(s.c_str()),
-                                                                        s.length() + 1);
+                                                                        s.length());
                 }
                 break;
             }
@@ -150,6 +150,40 @@ TEST (ProjectTest, Simple) {
 
     delete[] col;
 
+    delete op;
+    delete factory;
+}
+
+TEST (ProjectTest, WithNullValues) {
+    const int32_t numRows = 1000;
+    int32_t* col = MakeInts(numRows, -5);
+    const int32_t numCols = 1;
+    string exprs[numCols] = {"$operator$abs:int(#0)"};
+    int32_t inputTypes[numCols] = {1};
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    for (int i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            t->GetVector(0)->SetValueNull(i);
+        }
+    }
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        if (i % 2 == 0) {
+            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
+        } else {
+            EXPECT_FALSE(ret[0]->GetVector(0)->IsValueNull(i));
+            int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
+            EXPECT_EQ(val0, abs(i - 5));
+        }
+    }
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col;
     delete op;
     delete factory;
 }
@@ -268,6 +302,84 @@ TEST (ProjectTest, MultipleColumns) {
    delete factory;
 }
 
+TEST (ProjectTest, BenchmarkMultipleColumns) {
+    const int32_t numRows = 1000;
+    int32_t* col1 = MakeInts(numRows);
+    int32_t* col2 = MakeInts(numRows, -100);
+    int64_t* col3 = MakeLongs(numRows, -10);
+    int64_t* col4 = new int64_t[numRows];
+
+    vector<string*> strings;
+    for (int32_t i = 0; i < numRows; i++) {
+        std::string *s;
+        if (i % 2 == 0) {
+            s = new std::string("hello");
+        }
+        else if (i % 3 == 0) {
+            s = new std::string("world");
+        } else {
+            s = new std::string("!!!!!");
+        }
+        col4[i] = (int64_t)(s->c_str());
+        strings.push_back(s);
+    }
+
+    const int32_t numProject = 2;
+    string exprs[numProject] = {"$operator$SUBTRACT:int(#0, 10)", "$operator$ADD:long(#2, 1)"};
+    const int32_t numCols = 4;
+    int32_t inputTypes[numCols] = {1, 1, 2, 15};
+    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+
+    std::cout << "[BenchmarkMultipleColumns Project without varchar]\n\n";
+    for (int i = 0; i < 10; i++) {
+        auto start = std::chrono::system_clock::now();
+
+        op->AddInput(t);
+        vector<VectorBatch *> ret;
+        int32_t numReturned = op->GetOutput(ret);
+        VectorHelper::FreeVecBatches(ret);
+
+        auto end = std::chrono::system_clock::now();
+        auto elapsed =
+                std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::cout << "BenchmarkMultipleColumns round " << i << " elapsed " << elapsed.count() << " ms\n";
+    }
+
+    delete op;
+    delete factory;
+
+    std::cout << "\n\n\n[BenchmarkMultipleColumns Project with varchar]\n\n";
+    exprs[1] = "substr:varchar(#3, 1, 3)";
+    factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    op = factory->CreateOperator();
+
+    for (int i = 0; i < 10; i++) {
+        auto start = std::chrono::system_clock::now();
+
+        op->AddInput(t);
+        vector<VectorBatch *> ret;
+        int32_t numReturned = op->GetOutput(ret);
+        VectorHelper::FreeVecBatches(ret);
+
+        auto end = std::chrono::system_clock::now();
+        auto elapsed =
+                std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::cout << "BenchmarkMultipleColumns round " << i << " elapsed " << elapsed.count() << " ms\n";
+    }
+
+    VectorHelper::FreeVecBatch(t);
+
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+
+    delete op;
+    delete factory;
+}
+
 TEST (ProjectTest, DependOtherColumn) {
    const int32_t numRows = 1000;
    int32_t* col1 = MakeInts(numRows);
@@ -347,7 +459,6 @@ TEST(ProjectTest, ProjectString1) {
         void *charArr = &actualChar;
         auto charArrCasted = static_cast<char **>(charArr);
         string actualStr (*charArrCasted, 0, len);
-        std::cout << "string " << i << ": '" << actualStr << "' has length " << len << std::endl;
     }
 
 
@@ -446,7 +557,6 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     op->AddInput(batch);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
-    VectorHelper::PrintVecBatch(ret[0]);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i) + 1);
@@ -526,6 +636,75 @@ TEST (ProjectTest, MultipleDecimal128Columns) {
     delete[] col1;
     delete[] col2;
 
+    delete op;
+    delete factory;
+}
+
+TEST (ProjectTest, StringSubstr) {
+    vector<string*> strings;
+
+    const int32_t numCols = 1;
+    int32_t* inputTypes = new int32_t[numCols];
+    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+
+    const int32_t numRows = 100;
+    int64_t* col1 = new int64_t[numRows];
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            std::string *s = new std::string("helloasdf");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+        else {
+            std::string *s = new std::string("Bonjour");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+    }
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+
+
+    const int32_t numProject = 2;
+    std::string exprs[numProject] = {"concat:varchar(substr:varchar(#0, 1, 5), ' world')", "#0"};
+
+    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(t);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    string expected1 = "hello world";
+    string expected2 = "Bonjo world";
+    for (int32_t i = 0; i < numReturned; i += 20) {
+        VarcharVector *vcVec = ((VarcharVector*) ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+
+        // Truncate the resulting string
+        void *charArr = &actualChar;
+        auto charArrCasted = static_cast<char **>(charArr);
+        string actualStr (*charArrCasted, 0, len);
+        if (i % 2 == 0) {
+            EXPECT_EQ(actualStr, expected1);
+        } else {
+            EXPECT_EQ(actualStr, expected2);
+        }
+        std::cout << "string " << i << ": '" << actualStr << "' has length " << len << std::endl;
+    }
+
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypes;
+    delete[] col1;
     delete op;
     delete factory;
 }

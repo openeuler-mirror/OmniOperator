@@ -213,7 +213,13 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     if (opStr == "BETWEEN") return std::make_unique<BetweenExpr>(args[0], args[1], args[ARG2]).release();
     if (opStr == "IN") return std::make_unique<InExpr>(args).release();
     if (opStr == "COALESCE") return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
-    if (opStr == "IF") return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
+    if (opStr == "IF") {
+        if (args[ARG2]->GetExprDataType() == STRINGD && args[ARG2]->GetType() == ExprType::DATA_E &&
+            static_cast<DataExpr*>(args[ARG2])->stringVal->compare("null") == 0) {
+            return std::make_unique<IfExpr>(args[0], args[1], ph.GetDataExprCast(args[1]->dataType)).release();
+        }
+        return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
+    }
     if (opStr == "IS_NULL") return std::make_unique<IsNullExpr>(args[0]).release();
     if (opStr == "IS_NOT_NULL") {
         auto isNullExpr =  std::make_unique<IsNullExpr>(args[0]).release();

@@ -138,6 +138,18 @@ bool Projection::Initialize(bool filter)
     for (int32_t i = 0; i < nCols; i++) {
         dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
     }
+
+    // short-circuit logic for column projections
+    // no need to go through codegen
+    if (expr->GetType() == DATA_E) {
+        auto dataExpr = static_cast<DataExpr *>(expr);
+        if (dataExpr->isColumn) {
+            this->isColumnProjection = true;
+            this->columnProjectionIndex = dataExpr->colVal;
+            return true;
+        }
+    }
+
     this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), dataTypes, filter);
 
     auto f = this->codegen->GetFunction();
@@ -180,57 +192,6 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool fil
     }
 }
 
-unique_ptr<vector<uint8_t>> GetProjDataHelper(const uint8_t actualChar[], int32_t len)
-{
-    auto accStr = make_unique<Uint8vec>(len + 1);
-    for (int32_t k = 0; k < len; k++) {
-        (*accStr)[k] = actualChar[k];
-    }
-    (*accStr)[len] = '\0';
-    return move(accStr);
-}
-
-void GetProjVarcharData(Vector *col, vector<unique_ptr<vector<int64_t>>> &vcdataVec,
-                        vector<unique_ptr<vector<uint8_t>>> &stringvalVec, std::vector<int64_t> &data, uint32_t nRows)
-{
-    auto *vcVec = static_cast<omniruntime::vec::VarcharVector *>(col);
-    // Create array to hold addresses
-    unique_ptr<vec64> vcData = make_unique<vec64>();
-
-    for (int32_t j = 0; j < nRows; j++) {
-        // get data
-        uint8_t *actualChar = nullptr;
-        int32_t len = vcVec->GetValue(j, &actualChar);
-
-        // len is -1 only when the value is null
-        // treat it as an empty string for now, need to handle null value properly
-        if (len < 0) {
-            len = 0;
-        }
-
-        // Truncate the resulting string
-        unique_ptr<Uint8vec> accStr = GetProjDataHelper(actualChar, len);
-
-        actualChar = accStr->data();
-
-        // add to vector so it can be freed later
-        stringvalVec.push_back(move(accStr));
-
-        // add to subarray of data
-        auto ac = actualChar;
-        void *accChar = &ac;
-        auto caccChar = static_cast<int64_t *>(accChar);
-        vcData->push_back(*caccChar);
-    }
-    // data handling
-    auto dc = vcData->data();
-    void *dataCol = &dc;
-    auto cdataCol = static_cast<int64_t *>(dataCol);
-    data.push_back(*cdataCol);
-
-    vcdataVec.push_back(move(vcData));
-}
-
 void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 {
     int32_t longs = 2;
@@ -247,57 +208,49 @@ void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRo
     data.push_back(reinterpret_cast<int64_t>(vcData.release()->data()));
 }
 
-// Helper function to return an array of data
-// Modifies bitmap array, also adds to vcdataVec and stringvalVec so that the values can be freed
-std::vector<int64_t> GetProjData(VectorBatch &vecBatch, std::vector<unique_ptr<std::vector<int64_t>>> &vcdataVec,
-    vector<unique_ptr<vector<uint8_t>>> &stringvalVec, int64_t bitmap[], std::vector<Vector *> &dictionaryVecs)
+// Helper function to return data, null bitmap, offsets in vecBatch
+std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
+    std::vector<Vector *> &dictionaryVecs, int vectorCount)
 {
-    uint32_t nCols = vecBatch.GetVectorCount();
     std::vector<int64_t> data;
 
-    for (int32_t i = 0; i < nCols; i++) {
+    for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch.GetVector(i);
         // handle dictionary vec
         if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
             colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
             dictionaryVecs.push_back(colVec);
         }
-        // varchar vec GetValues is different from the rest
-        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_VARCHAR) {
-            GetProjVarcharData(colVec, vcdataVec, stringvalVec, data, vecBatch.GetRowCount());
-        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetProjDecimal128Data(colVec, data, vecBatch.GetRowCount());
         } else {
             // data handling
-            auto dc = colVec->GetValues();
-            void *dataCol = &dc;
-            auto cdataCol = static_cast<int64_t *>(dataCol);
-            data.push_back(*cdataCol);
+            data.push_back(reinterpret_cast<int64_t>(colVec->GetValues()));
         }
         // bitmap handling
-        auto bc = colVec->GetValueNulls();
-        void *bitmapCol = &bc;
-        auto cbitmapCol = static_cast<int64_t *>(bitmapCol);
-        bitmap[i] = *cbitmapCol;
+        bitmap[i] = reinterpret_cast<int64_t>(colVec->GetValueNulls());
+
+        // offsets handling
+        offsetsAddrs[i] = reinterpret_cast<int64_t>(colVec->GetValueOffsets());
     }
 
     return data;
 }
 
 Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-    int32_t numSelectedRows, vector<int64_t> const &vecData, vector<int64_t> const &bitmap) const
+    int32_t numSelectedRows, vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets) const
 {
-    if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount() && expr->GetType() == ExprType::DATA_E) {
-        auto *dEx = static_cast<DataExpr *>(expr);
-        if (dEx->isColumn) {
-            return vecBatch->GetVector(dEx->colVal)->Slice(0, numSelectedRows);
+    // short-circuit logic for column projections
+    if (this->isColumnProjection) {
+        // if no row gets filtered or without a filter
+        // we can just slice the whole vector
+        Vector *colVec = vecBatch->GetVector(this->columnProjectionIndex);
+        if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount()) {
+            return colVec->Slice(0, numSelectedRows);
         }
-    } else if (selectedRows != nullptr && numSelectedRows != 0 && expr->GetType() == ExprType::DATA_E) {
-        auto *dEx = static_cast<DataExpr *>(expr);
-
-        // TODO: optimize branches and extract common functions
-        if (dEx->isColumn) {
-            Vector *colVec = vecBatch->GetVector(dEx->colVal);
+        // if some rows get filtered,
+        // we can just copy the original vector
+        if (selectedRows != nullptr && numSelectedRows != 0) {
             if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
                 return static_cast<DictionaryVector *>(colVec)->ExtractDictionary(selectedRows, numSelectedRows);
             } else {
@@ -305,8 +258,10 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             }
         }
     }
+
     DataType outType = expr->GetExprDataType();
     std::unique_ptr<Vector> outVec;
+    int32_t avgStringLength = 200;
     switch (outType) {
         case INT32D:
             outVec = std::make_unique<IntVector>(vecAllocator, numSelectedRows);
@@ -320,7 +275,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case STRINGD:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
-            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * 200, numSelectedRows);
+            outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
         case DECIMAL128D:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
@@ -332,20 +287,24 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
     const int vecSize = outVec->GetSize();
     bool newNullValues[vecSize];
+    int32_t newLengthValues[vecSize];
     Vector *projectedVec = nullptr;
     if (outType == STRINGD) {
         projectedVec = ProjectHelperVarWidth(
-            *vecBatch, vecData, bitmap, outVec.release(), numSelectedRows, selectedRows, newNullValues);
+            *vecBatch, vecData, bitmap, offsets, outVec.release(),
+            numSelectedRows, selectedRows, newNullValues, newLengthValues);
     } else {
         projectedVec = ProjectHelperFixedWidth(
-            *vecBatch, vecData, bitmap, outVec.release(), numSelectedRows, selectedRows, newNullValues);
+            *vecBatch, vecData, bitmap, offsets, outVec.release(),
+            numSelectedRows, selectedRows, newNullValues, newLengthValues);
     }
     return projectedVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-    std::vector<int64_t> const &vecData, vector<int64_t> const &bitmap, omniruntime::vec::Vector *outVec,
-    int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const
+    std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets,
+    omniruntime::vec::Vector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
+    bool *newNullValues, int32_t *newLengthValues) const
 {
     // using projector
     vector<int64_t> oVec(numSelectedRows);
@@ -353,7 +312,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     this->projector(vecData.data(), vecBatch.GetRowCount(),
-        *cvecVals, selectedRows, numSelectedRows, bitmap.data(), newNullValues);
+        *cvecVals, selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues);
 
     auto *outVarcharVec = static_cast<VarcharVector *>(outVec);
     for (int i = 0; i < numSelectedRows; i++) {
@@ -363,19 +322,16 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
         }
         auto charArr = reinterpret_cast<uint8_t *>(ov[i]);
 
-        int j = 0;
-        while (charArr[j] != '\0') {
-            j++;
-        }
-        outVarcharVec->SetValue(i, charArr, j);
+        outVarcharVec->SetValue(i, charArr, newLengthValues[i]);
     }
 
     return outVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-    std::vector<int64_t> const &vecData, vector<int64_t> const &bitmap, omniruntime::vec::Vector *outVec,
-    int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues) const
+    std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets,
+    omniruntime::vec::Vector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
+    bool *newNullValues, int32_t *newLengthValues) const
 {
     if (outVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
         vector<int64_t> oVec(numSelectedRows);
@@ -383,7 +339,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals,
-                        selectedRows, numSelectedRows, bitmap.data(), newNullValues);
+                        selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues);
         auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
         for (int i = 0; i < numSelectedRows; i++) {
             auto *value = reinterpret_cast<int64_t *>(ov[i]);
@@ -394,7 +350,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals,
-                                            selectedRows, numSelectedRows, bitmap.data(), newNullValues);
+            selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues);
     }
 
     // set null
@@ -407,30 +363,27 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
 }
 
 Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch,
-    vector<int64_t> const &vecData, vector<int64_t> const &bitmap) const
+    vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets) const
 {
-    return this->Project(vecAllocator, vecBatch, nullptr, vecBatch->GetRowCount(), vecData, bitmap);
+    return this->Project(vecAllocator, vecBatch, nullptr, vecBatch->GetRowCount(), vecData, bitmap, offsets);
 }
 
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
 {
-    // Contains arrays with addresses for varchar vecs
-    std::vector<unique_ptr<std::vector<int64_t>>> vcdataVec;
-    // Contains all strings created in VarcharVector::GetValue method which need to be freed
-    vector<unique_ptr<vector<uint8_t>>> stringvalVec;
-
-    vector<int64_t> bitmap(vecBatch->GetVectorCount());
+    const int vectorCount = vecBatch->GetVectorCount();
+    int64_t offsets[vectorCount];
+    int64_t bitmap[vectorCount];
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
     vector<Vector *> dictionaryVecs;
 
     // contents of bitmap are modified in getProjData method
-    std::vector<int64_t> vecData = GetProjData(*vecBatch, vcdataVec, stringvalVec, bitmap.data(), dictionaryVecs);
+    std::vector<int64_t> vecData = GetProjData(*vecBatch, bitmap, offsets, dictionaryVecs, vectorCount);
 
     auto outBatch = std::make_unique<VectorBatch>(nProj);
     for (int32_t i = 0; i < nProj; i++) {
-        Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap);
+        Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap, offsets);
         outBatch->SetVector(i, outCol);
     }
     this->mutated = outBatch.release();
