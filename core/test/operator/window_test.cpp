@@ -124,6 +124,13 @@ JitContext *GetContext(const omniruntime::jit::Specialization *compareToSp,
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete compareToSp;
+    delete getOutputSp;
+    delete windowContext;
+    delete pagesIndexContext;
+    delete jit;
+
     return jitContext;
 }
 
@@ -1233,6 +1240,8 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
         CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         DictionaryVector *dictionaryVector = new DictionaryVector(vecBatch->GetVector(i), ids, DATA_SIZE);
+        // dictionary will slice the vector, we should release original vector
+        delete vecBatch->GetVector(i);
         vecBatch->SetVector(i, dictionaryVector);
     }
 
