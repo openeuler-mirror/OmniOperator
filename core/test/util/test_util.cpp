@@ -171,7 +171,9 @@ DictionaryVector *CreateDictionaryVector(VecType &vecType, int32_t rowCount, int
     va_start(args, idsCount);
     Vector *dictionary = CreateVector(vecType, rowCount, args);
     va_end(args);
-    return std::make_unique<DictionaryVector>(dictionary, ids, idsCount).release();
+    auto vec = std::make_unique<DictionaryVector>(dictionary, ids, idsCount).release();
+    delete dictionary;
+    return vec;
 }
 
 VectorBatch *CreateVectorBatch(VecTypes &types, int32_t rowCount, ...)
