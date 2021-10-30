@@ -14,9 +14,10 @@
 #include "../projection/projection.h"
 #include "../../codegen/filter_codegen.h"
 #include "../../common/expressions.h"
+#include "../execution_context.h"
 
 using vec64 = std::vector<int64_t>;
-using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *);
+using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
 
 namespace omniruntime {
 namespace op {
@@ -26,7 +27,7 @@ namespace op {
  * vector offsets addresses
  * row index
  */
-using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t);
+using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t, int64_t);
 
 class RowFilter {
 public:
@@ -54,27 +55,32 @@ private:
     std::unique_ptr<FilterCodeGen> codeGen;
     expressions::Expr *expr;
     // Filter function is retrieved from FilterCodeGen
-    // arguments to func are (data, numSelectedRows, rowCount, bitmap, offsets)
+    // arguments to func are (data, numSelectedRows, rowCount, bitmap, offsets, allocator)
     // data: 2D array containing vector values
     // selectedRows: array of row numbers which pass the Filter; is modified in func
     // rowCount: number of rows in data
     // bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
     // value offsets
+    // address to an allocator
 };
 
 class FilterAndProjectOperator : public Operator {
 public:
     FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t inputTypes[], int32_t vecCount,
-        const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount)
+        const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount, ExecutionContext *context)
         : filter(filter),
           inputTypes(inputTypes),
           vecCount(vecCount),
           projections(projections),
           projectVecCount(projectVecCount),
-          projectedVecs(nullptr)
+          projectedVecs(nullptr),
+          context(context)
     {}
 
-    ~FilterAndProjectOperator() override = default;
+    ~FilterAndProjectOperator() override
+    {
+        delete context;
+    }
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
@@ -91,6 +97,7 @@ private:
     int32_t projectVecCount;
     int32_t *inputTypes;
     int32_t vecCount;
+    ExecutionContext *context;
     std::unique_ptr<omniruntime::vec::VectorBatch> projectedVecs;
 };
 

@@ -9,6 +9,7 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
+using namespace omniruntime::mem;
 using namespace std;
 
 using Uint8vec = std::vector<uint8_t>;
@@ -74,7 +75,7 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
     auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputVecTypes,
-        this->inputVecCount, this->projections, this->projectVecCount);
+        this->inputVecCount, this->projections, this->projectVecCount, new ExecutionContext());
     return filterAndProjectOperator.release();
 }
 
@@ -137,7 +138,8 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 
     std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount);
 
-    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets);
+    int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets,
+                                                  reinterpret_cast<int64_t>(context));
 
     if (numSelectedRows <= 0) {
         return 0;
@@ -147,7 +149,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection
         Vector *col = this->projections[i]->Project(
-            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data, bitmap, offsets);
+            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data, bitmap, offsets, context);
         projectedData->SetVector(i, col);
     }
     this->projectedVecs = std::move(projectedData);
@@ -156,7 +158,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         delete dictionaryVec;
     }
     data.clear();
-
+    context->getArena()->Reset();
     return numSelectedRows;
 }
 
@@ -170,7 +172,6 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     data.push_back(this->projectedVecs.release());
 
     // need to cleanup memory in old vecBatches
-    FreeStrings();
     FreeDecimalArrays();
     return rowCount;
 }
