@@ -292,41 +292,33 @@ int32_t HashAggregationOperator::GetRowSize(std::vector<VecType> &types, int32_t
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_HASH_COLUMN)
 void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
-                                                 ChainIterator &rowIterator,
-                                                 ChainIterator &finalIterator, int32_t rowCount)
+                                                 ChainIterator &rowIterator, int32_t rowIndex)
 {
-    ChainIterator tempRowIterator = rowIterator;
     for (int colIndex = startIndex, groupByIndex = 0; colIndex < endIndex; ++colIndex, ++groupByIndex) {
-        tempRowIterator = rowIterator;
         auto typeId = vecBatch->GetVector(colIndex)->GetTypeId();
-        HashAggregationOperator::FUNCTIONS[typeId].fillValue(*this, vecBatch, rowCount, tempRowIterator, finalIterator, colIndex);
+        HashAggregationOperator::FUNCTIONS[typeId].fillValue(vecBatch, rowIndex, rowIterator, colIndex);
     }
 }
 
-void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex, int32_t rowCount,
-                                         ChainIterator &rowIterator,
-                                         ChainIterator &finalIterator)
+void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex,
+                                         ChainIterator &rowIterator, int32_t rowIndex)
 {
     // TODO support average value type which is decimal
     if (outputPartial) {
         ContainerVector *vector = static_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
-        for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != finalIterator; ++rIdx, rowIterator++) {
-            if ((*rowIterator)[colIndex].avgCnt == 0) {
-                LogError("Divisor is zero!");
-            }
-            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
-            doubleVector->SetValue(rIdx, *(reinterpret_cast<double *>((*rowIterator)[colIndex].avgVal)));
-            LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
-            longVector->SetValue(rIdx, (*rowIterator)[colIndex].avgCnt);
+        if ((*rowIterator)[colIndex].avgCnt == 0) {
+            LogError("Divisor is zero!");
         }
+        DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
+        doubleVector->SetValue(rowIndex, *(reinterpret_cast<double *>((*rowIterator)[colIndex].avgVal)));
+        LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
+        longVector->SetValue(rowIndex, (*rowIterator)[colIndex].avgCnt);
     } else {
         DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
-        for (int32_t rIdx = 0; rIdx < rowCount && rowIterator != finalIterator; ++rIdx, rowIterator++) {
-            if ((*rowIterator)[colIndex].avgCnt == 0) {
-                LogError("Divisor is zero!");
-            }
-            vector->SetValue(rIdx, *(reinterpret_cast<double *>((*rowIterator)[colIndex].avgVal)));
+        if ((*rowIterator)[colIndex].avgCnt == 0) {
+            LogError("Divisor is zero!");
         }
+        vector->SetValue(rowIndex, *(reinterpret_cast<double *>((*rowIterator)[colIndex].avgVal)));
     }
 }
 
@@ -334,34 +326,27 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex
 // The overhead need to be optimized.
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
 void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
-                                             ChainIterator &rowIterator,
-                                             ChainIterator &finalIterator, int32_t rowCount)
+                                             ChainIterator &rowIterator, int32_t rowIndex)
 {
-    auto resultIterator = rowIterator;
     for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex) {
-        resultIterator = rowIterator;
         AggregateType aggType = this->aggregators[aggIndex]->GetType();
         switch (aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
             case OMNI_AGGREGATION_TYPE_MAX: {
                 auto typeId = vecBatch->GetVector(colIndex)->GetTypeId();
-                HashAggregationOperator::FUNCTIONS[typeId].fillValue(*this, vecBatch, rowCount, resultIterator,
-                                                                     finalIterator, colIndex);
+                HashAggregationOperator::FUNCTIONS[typeId].fillValue(vecBatch, rowIndex, rowIterator, colIndex);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {
                 LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
-                for (int32_t rIdx = 0; rIdx < rowCount && resultIterator != finalIterator;
-                    ++rIdx, resultIterator++) {
-                    vector->SetValue(rIdx, (*resultIterator)[colIndex].count);
-                }
+                vector->SetValue(rowIndex, (*rowIterator)[colIndex].count);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: { // TODO process intermediate vectors
                 // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise
                 // double vector.
-                FillAvgAgg(vecBatch, aggIndex, colIndex, rowCount, resultIterator, finalIterator);
+                FillAvgAgg(vecBatch, aggIndex, colIndex, rowIterator, rowIndex);
                 break;
             }
             default: {
@@ -370,7 +355,6 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
             }
         }
     }
-    rowIterator = resultIterator;
 }
 
 void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<VecType> &types,
@@ -388,33 +372,56 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t aggColSize = aggCols.size();
     uint32_t colCount = groupByColSize + aggColSize;
     std::vector<VecType> types;
-    int32_t vecBatchCount;
-    int32_t rowSize = GetRowSize(types, colCount);
-    for (auto it = groupedRows.begin(); it != groupedRows.end(); ++it) {
-        if (rowSize <= 0) {
-            // TODO define our exception class
-            LogError("Output row size is less than 0!");
-        }
-        int32_t maxRowNum = MAX_TABLE_SIZE_IN_BYTES / rowSize;
-        vecBatchCount = std::ceil(static_cast<double>(it->second.size()) / static_cast<double>(maxRowNum));
-        int32_t currentPosition = 0;
+    int32_t rowByteSize = GetRowSize(types, colCount);
 
-        ChainIterator rowIterator = it->second.begin();
-        ChainIterator finalIterator = it->second.end();
-        for (int32_t i = 0; i < vecBatchCount; ++i) {
-            int32_t rowCount = std::min(maxRowNum, static_cast<int32_t>((it->second.size() - currentPosition)));
-            auto vecBatch = std::make_unique<VectorBatch>(colCount);
-            SetVectors(this->vecAllocator, vecBatch.get(), types, rowCount);
-            FillGroupByVectors(vecBatch.get(), 0, groupByColSize, rowIterator, finalIterator, rowCount);
-            FillAggVectors(vecBatch.get(), groupByColSize, colCount, rowIterator, finalIterator, rowCount);
-            result.push_back(vecBatch.release());
-            currentPosition += maxRowNum;
+    // accumulate whole row count first
+    int32_t totalRowCount = 0;
+    for (auto it = groupedRows.begin(); it != groupedRows.end(); ++it) {
+        totalRowCount += it->second.size();
+    }
+
+    if (totalRowCount == 0) {
+        return 0;
+    }
+
+    int32_t rowsPerBatch = std::ceil(MAX_TABLE_SIZE_IN_BYTES / static_cast<double>(rowByteSize));
+    int32_t expectedBatchSize = std::ceil(totalRowCount / static_cast<double>(rowsPerBatch));
+    int32_t leftRowCount = totalRowCount;
+
+    // create all output vector batches
+    for (int32_t batchId = 0; batchId < expectedBatchSize; ++batchId) {
+        auto vecBatch = new VectorBatch(colCount);
+        SetVectors(this->vecAllocator, vecBatch, types, std::min(rowsPerBatch, leftRowCount));
+        result.push_back(vecBatch);
+        leftRowCount -= rowsPerBatch;
+    }
+
+    // collect all groups
+    std::vector<ChainIterator> allGroups(totalRowCount);
+    int32_t groupCount = 0;
+    for (auto bucket = groupedRows.begin(); bucket != groupedRows.end(); ++bucket) {
+        for (auto group = bucket->second.begin(); group != bucket->second.end(); ++group) {
+            allGroups[groupCount++] = group;
         }
     }
 
+    // fill groups to vecbatch
+    int32_t filledRowSize = 0;
+    VectorBatch *batchToFill = result[0];
+    int32_t batchIndex = 0;
+    for (auto &group : allGroups) {
+        if (filledRowSize >= rowsPerBatch) {
+            batchIndex++;
+            batchToFill = result[batchIndex];
+            filledRowSize = 0;
+        }
+        FillGroupByVectors(batchToFill, 0, groupByColSize, group, filledRowSize);
+        FillAggVectors(batchToFill, groupByColSize, colCount, group, filledRowSize);
+        filledRowSize++;
+    }
     // set finished.
     SetStatus(OMNI_STATUS_FINISHED);
-    return vecBatchCount;
+    return expectedBatchSize;
 }
 
 OmniStatus HashAggregationOperator::CloseGroupBy()
@@ -635,34 +642,26 @@ void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnInde
 }
 
 template <typename V, typename D>
-void FillValueImpl(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                   ChainIterator &tempRowIterator,
-                   ChainIterator &finalRowIterator, int colIndex)
+void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex,
+                   ChainIterator &tempRowIterator, int colIndex)
 {
     auto vector = static_cast<V *>(vecBatch->GetVector(colIndex));
-    for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != finalRowIterator;
-        ++rowIndex, ++tempRowIterator) {
-        if ((*tempRowIterator)[colIndex].val == nullptr) {
-            vector->SetValueNull(rowIndex);
-            continue;
-        }
-        vector->SetValue(rowIndex, *static_cast<D *>((*tempRowIterator)[colIndex].val));
+    if ((*tempRowIterator)[colIndex].val == nullptr) {
+        vector->SetValueNull(rowIndex);
+        return;
     }
+    vector->SetValue(rowIndex, *static_cast<D *>((*tempRowIterator)[colIndex].val));
 }
 
-void FillVarcharValue(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                      ChainIterator &tempRowIterator,
-                      ChainIterator &finalRowIterator, int colIndex)
+void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex,
+                      ChainIterator &tempRowIterator, int colIndex)
 {
     auto vector = static_cast<VarcharVector *>(vecBatch->GetVector(colIndex));
-    for (int rowIndex = 0; rowIndex < rowCount && tempRowIterator != finalRowIterator;
-        ++rowIndex, ++tempRowIterator) {
-        if ((*tempRowIterator)[colIndex].val == nullptr) {
-            vector->SetValueNull(rowIndex);
-            continue;
-        }
-        vector->SetValue(rowIndex, reinterpret_cast<uint8_t *>( (*tempRowIterator)[colIndex].strVal), (*tempRowIterator)[colIndex].strLen);
+    if ((*tempRowIterator)[colIndex].val == nullptr) {
+        vector->SetValueNull(rowIndex);
+        return;
     }
+    vector->SetValue(rowIndex, reinterpret_cast<uint8_t *>((*tempRowIterator)[colIndex].strVal), (*tempRowIterator)[colIndex].strLen);
 }
 
 template<typename T>

@@ -2,7 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
 
-package nova.hetu.olk.operator;
+package nova.hetu.olk.operator.benchmark;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +26,7 @@ import io.prestosql.sql.gen.JoinCompiler;
 import io.prestosql.sql.planner.plan.AggregationNode;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import io.prestosql.testing.TestingTaskContext;
+import nova.hetu.olk.operator.HashAggregationOmniOperator;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.omniruntime.constants.AggType;
@@ -448,6 +449,7 @@ public class BenchmarkHashAggregationOmniOperator
         context.operators.add(operator);
 
         Iterator<Page> input = context.getPages().iterator();
+        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
 
         boolean finishing = false;
         for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
@@ -464,11 +466,15 @@ public class BenchmarkHashAggregationOmniOperator
 
             Page outputPage = operator.getOutput();
             if (outputPage != null) {
-                context.outputPages.add(outputPage);
+                outputPages.add(outputPage);
             }
         }
 
-        return context.outputPages;
+        List<Page> pages = outputPages.build();
+        for (Page page : pages) {
+            page.close();
+        }
+        return pages;
     }
 
     @Test
