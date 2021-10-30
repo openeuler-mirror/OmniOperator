@@ -375,6 +375,10 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
     delete[] col1;
     delete[] col2;
     delete[] col3;
+    for (int32_t i = 0; i < numRows; i++) {
+        delete strings[i];
+    }
+    delete[] col4;
 
     delete op;
     delete factory;
@@ -520,6 +524,9 @@ TEST (ProjectTest, DictionaryVecTest) {
     VectorHelper::FreeVecBatches(ret);
 
     delete col3;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, DictionaryVecNestedTest) {
@@ -571,6 +578,9 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
 
     delete col3;
     delete dictionaryVector;
+
+    delete op;
+    delete factory;
 }
 
 TEST (ProjectTest, Decimal128Arithmetic) {

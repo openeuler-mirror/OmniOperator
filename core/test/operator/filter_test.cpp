@@ -1800,6 +1800,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
 
+    delete col2;
     delete op;
     delete factory;
 }
@@ -2009,6 +2010,8 @@ TEST(FilterTest, FilterStringWithNull) {
 
     VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
+
+    delete[] inputTypeIds;
 
     delete op;
     delete factory;
