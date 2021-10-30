@@ -56,8 +56,7 @@ using DuplicateKeyValue = void (*)(GroupBySlot &groupBySlot, Vector *vector, con
 using IsSameNodeFunc = void(*)(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
 using SetVector = void (*)(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
-using FillValue = void (*)(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                           ChainIterator &tempRowIterator, ChainIterator &finalRowIterator, int colIndex);
+using FillValue = void (*)(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
 using ReleaseMemory = void (*)(GroupBySlot &rowIterator, int32_t columnIndex, VecType &type);
 
 using FunctionByDataType = struct {
@@ -99,13 +98,11 @@ void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnInde
     int32_t rowCount);
 
 template <typename V, typename D>
-void FillValueImpl(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                   ChainIterator &tempRowIterator,
-                   ChainIterator &finalRowIterator, int colIndex);
+void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex,
+                   ChainIterator &tempRowIterator, int colIndex);
 
-void FillVarcharValue(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                      ChainIterator &tempRowIterator,
-                      ChainIterator &finalRowIterator, int colIndex);
+void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex,
+                      ChainIterator &tempRowIterator, int colIndex);
 
 template <typename T> void ReleaseMemoryImpl(GroupBySlot& rowIterator, int32_t columnIndex, VecType& type);
 void ReleaseMemoryVarcharImpl(GroupBySlot &columnVal, int32_t columnIndex, VecType &type);
@@ -191,29 +188,25 @@ private:
     std::vector<BucketIterator> FindBuckets(uint64_t* hash, int32_t blockSize);
     int32_t GetRowSize(std::vector<VecType> &types, int32_t columnCount);
 
-    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator, ChainIterator &finalRowIterator,
-        int32_t rowCount);
+    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
+                            ChainIterator &rowIterator, int32_t rowIndex);
 
     void FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
-                        ChainIterator &finalIterator,
-        int32_t rowCount);
+                        int32_t rowCount);
 
     void FillNormalAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex, int32_t rowCount,
                        BucketIterator &rowIterator);
 
-    void FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex, int32_t rowCount,
-                    ChainIterator& tempIterator,
-                    ChainIterator& finalIterator);
+    void FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex, ChainIterator &rowIterator,
+                    int32_t rowIndex);
 
 private:
     friend class HashAggregationOperatorFactory;
     template <typename V, typename D>
-    friend void FillValueImpl(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                              ChainIterator &tempRowIterator,
-                              ChainIterator &finalRowIterator, int colIndex);
-    friend void FillVarcharValue(HashAggregationOperator &hashOperator, VectorBatch *vecBatch, int32_t rowCount,
-                                 ChainIterator &tempRowIterator,
-                                 ChainIterator &finalRowIterator, int colIndex);
+    friend void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex,
+                              ChainIterator &tempRowIterator, int colIndex);
+    friend void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex,
+                                 ChainIterator &tempRowIterator, int colIndex);
     std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
