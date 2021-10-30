@@ -60,6 +60,8 @@ enum DataType {
     DECIMAL128D = 7,
     STRINGD = 15,
     INT32PTRD,
+    INT8PTRD,
+    VOIDD,
     INVALIDDATAD
 };
 

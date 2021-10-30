@@ -14,6 +14,7 @@ namespace {
     const int ARGUMENT_TWO = 2;
     const int ARGUMENT_THREE = 3;
     const int OFFSETS_INDEX = 4;
+    const int EXECUTION_CONTEXT_IDX = 5;
     const int ROW_FILTER_OFFSETS_INDEX = 2;
     const int ROW_FILTER_ROW_IDX_INDEX = 3;
 }
@@ -38,6 +39,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     Type *bitmapArg = Type::getInt64PtrTy(*context); // record nullk values
     args.push_back(bitmapArg);
     args.push_back(Type::getInt64PtrTy(*context)); // offsets
+    args.push_back(Type::getInt64Ty(*context)); // execution_context address
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -56,13 +58,15 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     bitmap->setName("BITMAP");
     Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
     offsets->setName("OFFSETS");
+    Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
+    offsets->setName("EXECUTION_CONTEXT_ADDRESS");
 
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, length*
-    int32_t argsSize = 6;
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, length*, execution_context_ptr
+    int32_t argsSize = 7;
     filterFuncArgs.reserve(argsSize);
 
     CallInst *ret;
@@ -91,21 +95,20 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     builder->SetInsertPoint(loopBody);
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
+    // Create a boolean pointer to store result null value
+    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
+    // Create a int pointer to store data length
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
+    builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
 
     filterFuncArgs.push_back(data);
     filterFuncArgs.push_back(bitmap);
     filterFuncArgs.push_back(offsets);
     filterFuncArgs.push_back(curIndexVal);
-
-    // Create a boolean pointer to store result null value
-    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
-    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
     filterFuncArgs.push_back(isResultNullStore);
-
-    // Create a int pointer to store data length
-    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
-    builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
     filterFuncArgs.push_back(lengthAllocaInst);
+    filterFuncArgs.push_back(executionContext);
 
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
@@ -154,7 +157,8 @@ std::vector<Type*> GetSingleFilterArguments(LLVMContext &context)
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
-        Type::getInt32Ty(context)
+        Type::getInt32Ty(context),
+        Type::getInt64Ty(context)
     };
     return args;
 }
@@ -177,6 +181,9 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     offsets->setName("OFFSETS");
     Argument *rowIndex = funcDecl->getArg(ROW_FILTER_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
+    const int EXECUTION_CONTEXT_IDX = 4;
+    Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
+    rowIndex->setName("EXECUTION_CONTEXT_ADDRESS");
 
     std::vector<Value*> funcArgs;
     funcArgs.push_back(inputData);
@@ -193,6 +200,7 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "LENGTH_PTR");
     builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
     funcArgs.push_back(lengthAllocaInst);
+    funcArgs.push_back(executionContext);
 
     builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
 #ifdef DEBUG

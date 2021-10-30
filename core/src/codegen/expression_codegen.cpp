@@ -67,7 +67,7 @@ Type *ExpressionCodeGen::ToLlvmType(DataType t)
         case DataType::BOOLD:
             return Type::getInt1Ty(*context);
         case DataType::STRINGD:
-            return Type::getInt64Ty(*context);
+            return Type::getInt8PtrTy(*context);
         case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
         default:
@@ -92,6 +92,15 @@ Type *ExpressionCodeGen::ToPointerType(DataType type)
         default:
             LLVM_DEBUG_LOG("Unsupported column data type %d", type);
             return Type::getInt64PtrTy(*context);
+    }
+}
+
+Type *ExpressionCodeGen::GetFunctionReturnType(DataType type)
+{
+    if (type == DataType::STRINGD) {
+        return Type::getInt64Ty(*context);
+    } else {
+        return this->ToLlvmType(expr->GetExprDataType());
     }
 }
 
@@ -488,7 +497,7 @@ void ExpressionCodeGen::FuncExprConcatHelper(omniruntime::expressions::FuncExpr 
     Value *str2 = str2Value->data;
     Value *str2Len = str2Value->length;
     AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-    std::vector<Value *> argVals { str1, str1Len, str2, str2Len, outputLenPtr };
+    std::vector<Value *> argVals { str1, str1Len, str2, str2Len, outputLenPtr, this->codegenContext->executionContext };
 
     auto f = module->getFunction(fr->concatStrExtStr);
     Value *ret = builder->CreateCall(f, argVals, fr->concatStrExtStr);
@@ -504,7 +513,9 @@ void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
         Value *length = VisitExpr(*(fExpr.arguments[LENGTH_LOC]))->data;
         AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-        std::vector<Value*> argVals { str, strLen, startIdx, length, outputLenPtr};
+        std::vector<Value*> argVals {
+            str, strLen, startIdx, length, outputLenPtr, this->codegenContext->executionContext
+        };
         auto f = module->getFunction(fr->substrExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
         this->value = make_shared<CodeGenValue>(
@@ -516,7 +527,7 @@ void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
         Value *strLen = this->value->length;
         Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
         AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-        std::vector<Value *> argVals { str, strLen, startIdx, outputLenPtr};
+        std::vector<Value *> argVals { str, strLen, startIdx, outputLenPtr, this->codegenContext->executionContext};
 
         auto f = module->getFunction(fr->substrWithStartExtStr);
         Value *ret = builder->CreateCall(f, argVals, fr->substrWithStartExtStr);
@@ -641,6 +652,8 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
             codegenContext->isResultNull = &arg;
         } else if (argName == "dataLength") {
             continue;;
+        } else if (argName == "executionContext") {
+            codegenContext->executionContext = &arg;
         } else {
             LLVM_DEBUG_LOG("Invalid argument %s", argName.c_str());
             return false;
@@ -660,24 +673,26 @@ Function *ExpressionCodeGen::CreateFunction()
     std::vector<Type *> args;
     args.reserve(argsSize);
     // Values in args vector follow the format:
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*, executionContext
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt32Ty(*context));
     args.push_back(Type::getInt1PtrTy(*context));
     args.push_back(Type::getInt32PtrTy(*context));
-
+    args.push_back(Type::getInt64Ty(*context));
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
     ExprPrinter p;
     expr->Accept(p);
     std::cout << std::endl;
 #endif
-    FunctionType *prototype = FunctionType::get(this->ToLlvmType(expr->GetExprDataType()), args, false);
+    FunctionType *prototype = FunctionType::get(GetFunctionReturnType(expr->GetExprDataType()), args, false);
     func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
-    std::string argNames[] = {"data", "nullBitmap", "offsets", "rowIdx", "isResultNull", "dataLength"};
+    std::string argNames[] = {
+            "data", "nullBitmap", "offsets", "rowIdx", "isResultNull", "dataLength", "executionContext"
+    };
     int32_t idx = 0;
     for (auto &arg : func->args()) {
         arg.setName(argNames[idx]);
@@ -701,6 +716,10 @@ Function *ExpressionCodeGen::CreateFunction()
         builder->CreateStore(result->length, lengthGep);
     }
 
+    // cast char* to int64 for output
+    if (expr->GetExprDataType() == DataType::STRINGD) {
+        result->data = builder->CreatePtrToInt(result->data, Type::getInt64Ty(*context));
+    }
     // Return value
     builder->CreateRet(result->data);
     verifyFunction(*func);
@@ -768,9 +787,10 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
         case DataType::STRINGD: {
             Constant *strValConst =
                     ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
+            Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, Type::getInt8PtrTy(*context));
             Constant *strLenConst =
                     ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
-            codeGenValue = new CodeGenValue(strValConst, this->CreateConstantBool(false), strLenConst);
+            codeGenValue = new CodeGenValue(strValPtr, this->CreateConstantBool(true), strLenConst);
             break;
         }
         case DataType::BOOLD: {
@@ -830,9 +850,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
             auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
             Value *startOffset = builder->CreateLoad(colOffsetGEP);
             // Find the address of the row to be processed.
-            gep = builder->CreateGEP(elementPtr, startOffset);
-            elementValue = builder->CreatePtrToInt(gep, Type::getInt64Ty(*context));
-
+            elementValue = builder->CreateGEP(elementPtr, startOffset);
             colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, CreateConstantInt(1)));
             Value *endOffset = builder->CreateLoad(colOffsetGEP);
             // Get length for varchar

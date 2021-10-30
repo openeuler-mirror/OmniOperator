@@ -6,17 +6,17 @@
 #include <string>
 #include <cstring>
 #include <vector>
-#include <algorithm>
 #include <regex>
 #include "../../../thirdparty/huawei_secure_c/include/securec.h"
+#include "context_helper.h"
 
 #ifdef _WIN32
-#define DLLEXPORT __declspec(dllexport)
 #else
 #define DLLEXPORT
 #endif
 
 using namespace std;
+
 namespace {
     const int THOUSANDS  = 1000;
     const int HUNDREDS = 100;
@@ -28,23 +28,17 @@ namespace {
     const int HUN = 1;
     const int TEN = 2;
     const int ONE = 3;
-
-    int g_currStrNum = 0;
 }
 
-vector<char *> g_stringsToFree;
-
 __attribute__((always_inline))
-extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int32_t apLen, int64_t bp, int32_t bpLen)
+extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {
-    char *a = reinterpret_cast<char *>(static_cast<uintptr_t>(ap));
-    char *b = reinterpret_cast<char *>(static_cast<uintptr_t>(bp));
     int min = bpLen;
     if (apLen < min) {
         min = apLen;
     }
 
-    int32_t result = memcmp(a, b, min);
+    int32_t result = memcmp(ap, bp, min);
     if (result != 0) {
         return result;
     } else {
@@ -53,10 +47,10 @@ extern "C" DLLEXPORT int32_t StrCompareExt(int64_t ap, int32_t apLen, int64_t bp
 }
 
 __attribute__((always_inline))
-extern "C" DLLEXPORT bool LikeExt(int64_t str, int32_t strLen, int64_t regexToMatch, int32_t regexLen)
+extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
 {
-    string s = string(reinterpret_cast<char *>(str), strLen);
-    string r = string(reinterpret_cast<char *>(regexToMatch), regexLen);
+    string s = string(str, strLen);
+    string r = string(regexToMatch, regexLen);
     // Using re2 library
     // return RE2::FullMatch(S, R);
 
@@ -66,14 +60,12 @@ extern "C" DLLEXPORT bool LikeExt(int64_t str, int32_t strLen, int64_t regexToMa
 }
 
 __attribute__((always_inline))
-extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t *outLen)
+extern "C" DLLEXPORT const char *SubstrWithStartExt(const char *str, int32_t strLen, int32_t startIdx,
+                                                    int32_t *outLen, int64_t contextPtr)
 {
-    char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
-
     if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
         *outLen = 0;
-        const char *ret = "";
-        return reinterpret_cast<int64_t>(ret);
+        return "";
     }
 
     if (startIdx > 0) {
@@ -84,23 +76,22 @@ extern "C" DLLEXPORT int64_t SubstrWithStartExt(int64_t str, int32_t strLen, int
     }
 
     *outLen = strLen - startIdx;
-    auto ret = new char[*outLen];
-    errno_t res = memcpy_s(ret, *outLen, s + startIdx, *outLen);
+
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
     if (res != EOK) {
         std::cerr << "Substring failed" << std::endl;
     }
-    return (int64_t)(ret);
+    return ret;
 }
 
 __attribute__((always_inline))
-extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t startIdx, int32_t length, int32_t *outLen)
+extern "C" DLLEXPORT const char *SubstrExt(const char *str, int32_t strLen, int32_t startIdx, int32_t length,
+                                           int32_t *outLen, int64_t contextPtr)
 {
-    char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
-
     if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
         *outLen = 0;
-        const char *ret = "";
-        return reinterpret_cast<int64_t>(ret);
+        return "";
     }
     int endIdx;
     if (startIdx > 0) {
@@ -124,63 +115,48 @@ extern "C" DLLEXPORT int64_t SubstrExt(int64_t str, int32_t strLen, int32_t star
     }
 
     *outLen = endIdx - startIdx;
-    auto ret = new char[*outLen];
-    errno_t res = memcpy_s(ret, *outLen, s + startIdx, *outLen);
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
     if (res != EOK) {
         std::cerr << "Substring failed" << std::endl;
     }
-    return (int64_t)(ret);
+    return ret;
 }
 
 __attribute__((always_inline))
-extern "C" DLLEXPORT int64_t ConcatStrExt(int64_t ap, int32_t apLen, int64_t bp, int32_t bpLen, int32_t *outLen)
+extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
+                                              int32_t *outLen, int64_t contextPtr)
 {
-    char *a = reinterpret_cast<char*>(static_cast<uintptr_t>(ap));
-    char *b = reinterpret_cast<char*>(static_cast<uintptr_t>(bp));
     *outLen = apLen + bpLen;
     if (*outLen <= 0) {
         *outLen = 0;
-        const char *ret = "";
-        return reinterpret_cast<int64_t>(ret);
-
+        return "";
     }
-
-    auto ret = new char[*outLen];
-    errno_t res1 = memcpy_s(ret, *outLen, a, apLen);
-    errno_t res2 = memcpy_s(ret + apLen, *outLen, b, bpLen);
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
+    errno_t res2 = memcpy_s(ret + apLen, *outLen, bp, bpLen);
     if (res1 != EOK || res2 != EOK) {
         std::cerr << "Concat failed" << std::endl;
     }
 
-    return (int64_t)(ret);
+    return ret;
 }
 
 __attribute__((always_inline))
-extern "C" DLLEXPORT int32_t CastString(int64_t str, int32_t strLen)
+extern "C" DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
     int32_t i1 = 5;
     int32_t i2 = 8;
-    char *s = reinterpret_cast<char*>(static_cast<uintptr_t>(str));
-    int yr = THOUSANDS * (s[THOU] - '0') + HUNDREDS * (s[HUN] - '0') + TENS * (s[TEN] - '0') + (s[ONE] - '0');
-    int mnth = TENS * (s[i1] - '0') + (s[i1 + 1] - '0'); // compute mnth
-    int day = TENS * (s[i2] - '0') + (s[i2 + 1] - '0'); // compute day
+    int yr = THOUSANDS * (str[THOU] - '0') + HUNDREDS * (str[HUN] - '0') + TENS * (str[TEN] - '0') + (str[ONE] - '0');
+    int mnth = TENS * (str[i1] - '0') + (str[i1 + 1] - '0'); // compute mnth
+    int day = TENS * (str[i2] - '0') + (str[i2 + 1] - '0'); // compute day
 
     struct std::tm epoch = {0, 0, 0, 1, 1, 70};
     struct std::tm t = {0, 0, 0, day, mnth, yr - BASE_YEAR};
     std::time_t epochTime = std::mktime(&epoch);
     std::time_t desiredTime = std::mktime(&t);
     return static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
-}
-
-
-void FreeStrings()
-{
-    for (int i = g_currStrNum; i < g_stringsToFree.size(); i++) {
-        delete[] g_stringsToFree[i];
-        g_stringsToFree[i] = nullptr;
-        g_currStrNum++;
-    }
 }

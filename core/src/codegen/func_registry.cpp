@@ -9,6 +9,7 @@
 #include "./functions/stringfunctions.h"
 #include "./functions/murmur3_hash.h"
 #include "./functions/decimalfunctions.h"
+#include "./functions/context_helper.h"
 #include "func_registry.h"
 
 using namespace std;
@@ -20,6 +21,8 @@ using namespace llvm;
 Type* ToLlvmType(DataType t, LLVMContext* context)
 {
     switch (t) {
+        case DataType::VOIDD:
+            return Type::getVoidTy(*context);
         case DataType::INT32D:
             return Type::getInt32Ty(*context);
         case DataType::INT64D:
@@ -34,6 +37,8 @@ Type* ToLlvmType(DataType t, LLVMContext* context)
             return Type::getInt64Ty(*context);
         case DataType::INT32PTRD:
             return Type::getInt32PtrTy(*context);
+        case DataType::INT8PTRD:
+            return Type::getInt8PtrTy(*context);
         default:
             std::cout << "Error: Unknown argument datatype " << t << endl;
             return nullptr;
@@ -145,7 +150,7 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64ToDoubleStr, signature));
     }
     if (fn == "CAST_string_int32") {
-        vector<DataType> castStringTypes {DataType::INT64D, DataType::INT32D};
+        vector<DataType> castStringTypes {DataType::INT8PTRD, DataType::INT32D};
         FunctionSignature signature (castStringStr, castStringTypes, DataType::INT32D,
                                      reinterpret_cast<void *>(CastString));
         this->RegisterFunctionFromSignature(signature);
@@ -157,34 +162,38 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 {
     if (fn == "substrExt") {
         vector<DataType> substrExtTypes {
-            DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
-        FunctionSignature substrExtSig (substrExtStr, substrExtTypes, DataType::INT64D,
+            DataType::INT8PTRD, DataType::INT32D, DataType::INT32D, DataType::INT32D,
+            DataType::INT32PTRD, DataType::INT64D
+        };
+        FunctionSignature substrExtSig (substrExtStr, substrExtTypes, DataType::INT8PTRD,
                                         reinterpret_cast<void *>(SubstrExt));
         this->RegisterFunctionFromSignature(substrExtSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(substrExtStr, substrExtSig));
     }
     if (fn == "substrWithStartExt") {
-        vector <DataType> substrWithStartExtTypes{
-            DataType::INT64D, DataType::INT32D, DataType::INT32D, DataType::INT32PTRD};
+        vector <DataType> substrWithStartExtTypes {
+            DataType::INT8PTRD, DataType::INT32D, DataType::INT32D,
+            DataType::INT32PTRD, DataType::INT64D
+        };
         FunctionSignature substrWithStartExtSig
                 (substrWithStartExtStr, substrWithStartExtTypes,
-                 DataType::INT64D, reinterpret_cast<void *>(SubstrWithStartExt));
+                 DataType::INT8PTRD, reinterpret_cast<void *>(SubstrWithStartExt));
         this->RegisterFunctionFromSignature(substrWithStartExtSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(substrWithStartExtStr,
                                                                       substrWithStartExtSig));
     }
     if (fn == "concat") {
-        vector<DataType> concatStrExtTypes {
-            DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D, DataType::INT32PTRD};
+        vector<DataType> concatStrExtTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D,
+                                            DataType::INT32PTRD, DataType::INT64D};
         FunctionSignature concatStrExtSig (concatStrExtStr, concatStrExtTypes,
-                                           DataType::INT64D, reinterpret_cast<void *>(ConcatStrExt));
+                                           DataType::INT8PTRD, reinterpret_cast<void *>(ConcatStrExt));
         this->RegisterFunctionFromSignature(concatStrExtSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(concatStrExtStr, concatStrExtSig));
     }
 
 
     if (fn == "LIKE") {
-        vector<DataType> likeExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D};
+        vector<DataType> likeExtTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D};
         FunctionSignature likeExtSig (likeExtStr, likeExtTypes, DataType::BOOLD,
                                       reinterpret_cast<void *>(LikeExt));
         this->RegisterFunctionFromSignature(likeExtSig);
@@ -284,13 +293,28 @@ bool IsMm3HashFunction(const string& fn)
     return fn == "mm3hash_int32" || fn == "mm3hash_int64" || fn == "mm3hash_double" || fn == "mm3hash_string";
 }
 
+void FunctionRegistry::ContextHelperFuncs()
+{
+    vector<DataType> contextAllocatorTypes {DataType::INT64D, DataType::INT32D};
+    FunctionSignature contextAllocatorSig (contextMalloc, contextAllocatorTypes, DataType::INT8PTRD,
+                                       reinterpret_cast<void*>(ArenaAllocatorMalloc));
+    this->RegisterFunctionFromSignature(contextAllocatorSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(contextMalloc, contextAllocatorSig));
+
+    vector<DataType> contextResetTypes {DataType::INT64D};
+    FunctionSignature contextResetSig (contextReset, contextResetTypes, DataType::VOIDD,
+                                           reinterpret_cast<void*>(ArenaAllocatorReset));
+    this->RegisterFunctionFromSignature(contextResetSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(contextReset, contextResetSig));
+}
+
 // Only registers necessary functions
 void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFuncs)
 {
     // TODO: remove hard-coded strings
 
     // Always register string comparison
-    vector<DataType> strCompareExtTypes {DataType::INT64D, DataType::INT32D, DataType::INT64D, DataType::INT32D};
+    vector<DataType> strCompareExtTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D};
     FunctionSignature strCompareExtSig(strCompareExtStr, strCompareExtTypes, DataType::INT32D,
                                        reinterpret_cast<void*>(StrCompareExt));
     this->RegisterFunctionFromSignature(strCompareExtSig);
@@ -298,7 +322,7 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
 
     // Always register Decimal Binary and Arithmetic Functions
     this->RegisterDecimalFuncs();
-
+    this->ContextHelperFuncs();
     set<string> externalFuncNames = efr.GetAllExternalFunctionNames();
     for (const auto& fn : requiredFuncs) {
         if (IsMathFunction(fn)) {
@@ -333,4 +357,3 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
         }
     }
 }
-

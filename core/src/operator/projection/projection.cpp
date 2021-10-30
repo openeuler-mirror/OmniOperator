@@ -238,7 +238,8 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
 }
 
 Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-    int32_t numSelectedRows, vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets) const
+    int32_t numSelectedRows, vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets,
+    ExecutionContext *context) const
 {
     // short-circuit logic for column projections
     if (this->isColumnProjection) {
@@ -292,19 +293,20 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     if (outType == STRINGD) {
         projectedVec = ProjectHelperVarWidth(
             *vecBatch, vecData, bitmap, offsets, outVec.release(),
-            numSelectedRows, selectedRows, newNullValues, newLengthValues);
+            numSelectedRows, selectedRows, newNullValues, newLengthValues, context);
     } else {
         projectedVec = ProjectHelperFixedWidth(
             *vecBatch, vecData, bitmap, offsets, outVec.release(),
-            numSelectedRows, selectedRows, newNullValues, newLengthValues);
+            numSelectedRows, selectedRows, newNullValues, newLengthValues, context);
     }
+    context->getArena()->Reset();
     return projectedVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
     std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets,
     omniruntime::vec::Vector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
-    bool *newNullValues, int32_t *newLengthValues) const
+    bool *newNullValues, int32_t *newLengthValues, ExecutionContext *context) const
 {
     // using projector
     vector<int64_t> oVec(numSelectedRows);
@@ -312,7 +314,8 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     this->projector(vecData.data(), vecBatch.GetRowCount(),
-        *cvecVals, selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues);
+        *cvecVals, selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues,
+        reinterpret_cast<int64_t>(context));
 
     auto *outVarcharVec = static_cast<VarcharVector *>(outVec);
     for (int i = 0; i < numSelectedRows; i++) {
@@ -331,7 +334,7 @@ omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::Ve
 omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
     std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets,
     omniruntime::vec::Vector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
-    bool *newNullValues, int32_t *newLengthValues) const
+    bool *newNullValues, int32_t *newLengthValues, ExecutionContext *context) const
 {
     if (outVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
         vector<int64_t> oVec(numSelectedRows);
@@ -339,7 +342,8 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals,
-                        selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues);
+                        selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues,
+                        reinterpret_cast<int64_t>(context));
         auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
         for (int i = 0; i < numSelectedRows; i++) {
             auto *value = reinterpret_cast<int64_t *>(ov[i]);
@@ -350,7 +354,8 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
         int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals,
-            selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues);
+            selectedRows, numSelectedRows, bitmap, offsets, newNullValues, newLengthValues,
+            reinterpret_cast<int64_t>(context));
     }
 
     // set null
@@ -363,9 +368,9 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
 }
 
 Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch,
-    vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets) const
+    vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, ExecutionContext *context) const
 {
-    return this->Project(vecAllocator, vecBatch, nullptr, vecBatch->GetRowCount(), vecData, bitmap, offsets);
+    return this->Project(vecAllocator, vecBatch, nullptr, vecBatch->GetRowCount(), vecData, bitmap, offsets, context);
 }
 
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
@@ -383,7 +388,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
 
     auto outBatch = std::make_unique<VectorBatch>(nProj);
     for (int32_t i = 0; i < nProj; i++) {
-        Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap, offsets);
+        Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap, offsets, context);
         outBatch->SetVector(i, outCol);
     }
     this->mutated = outBatch.release();
@@ -402,7 +407,6 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     }
     int rowCount = this->mutated->GetRowCount();
     data.push_back(this->mutated);
-    FreeStrings();
     FreeDecimalArrays();
     this->mutated = nullptr;
     return rowCount;
@@ -444,7 +448,8 @@ ProjectionOperatorFactory::~ProjectionOperatorFactory()
 omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 {
     auto projectionOperator =
-        std::make_unique<ProjectionOperator>(this->proj, this->inputTypes, this->nCols, this->nProj);
+        std::make_unique<ProjectionOperator>(this->proj, this->inputTypes, this->nCols, this->nProj,
+                                             new ExecutionContext());
     return projectionOperator.release();
 }
 

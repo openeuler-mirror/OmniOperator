@@ -13,15 +13,15 @@
 #include "../../vector/vector_allocator_factory.h"
 #include "../../common/expressions.h"
 #include "projection.h"
+#include "../execution_context.h"
 
 using vec64 = std::vector<int64_t>;
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t,
-    int64_t const *, int64_t const *, bool *, int32_t *);
+    int64_t const *, int64_t const *, bool *, int32_t *, int64_t);
 
 namespace omniruntime {
 namespace op {
 using namespace vec;
-
 /**
  * vector value addresses
  * vector null value addresses
@@ -30,7 +30,7 @@ using namespace vec;
  * boolean pointer to return if results is null
  * int pointer to return length of varchar result
  */
-using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, bool*, int32_t*);
+using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, bool*, int32_t*, int64_t);
 
 class RowProjection {
 public:
@@ -60,19 +60,21 @@ public:
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap,
         int64_t *offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const;
+        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues,
+        ExecutionContext *context) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap,
         int64_t *offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues) const;
+        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues,
+        ExecutionContext *context) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
         int32_t numSelectedRows, std::vector<int64_t> const &vecData,
-        int64_t *bitmap, int64_t *offsets) const;
+        int64_t *bitmap, int64_t *offset, ExecutionContext *context) const;
 
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap,
-        int64_t *offsets) const;
+        int64_t *offsets, ExecutionContext *context) const;
 
     omniruntime::expressions::DataType GetOutputType() const
     {
@@ -103,13 +105,16 @@ private:
 class ProjectionOperator : public Operator {
 public:
     ProjectionOperator(std::vector<std::unique_ptr<Projection>> const & proj, int32_t inputTypes[], int32_t nCols,
-        int32_t nProj)
-        : proj(proj), nCols(nCols), nProj(nProj)
+        int32_t nProj, ExecutionContext *context)
+        : proj(proj), nCols(nCols), nProj(nProj), context(context)
     {
         this->sourceTypes = inputTypes;
         this->mutated = nullptr;
     }
-    ~ProjectionOperator() override = default;
+    ~ProjectionOperator() override
+    {
+        delete context;
+    }
 
     int32_t AddInput(VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<VectorBatch *> &ret) override;
@@ -119,6 +124,7 @@ private:
     const std::vector<std::unique_ptr<Projection>> &proj;
     int32_t nCols = 0;
     int32_t nProj = 0;
+    ExecutionContext *context;
     VectorBatch *mutated = nullptr;
 };
 

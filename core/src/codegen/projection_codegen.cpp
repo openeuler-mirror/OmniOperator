@@ -18,10 +18,12 @@ namespace {
     const int BITMAP = 5;
     const int NEW_NULL_VALUES_INDEX = 7;
     const int NEW_LENGTHS_VALUES_INDEX = 8;
+    const int EXECUTION_CONTEXT_IDX = 9;
     const int OFFSETS_INDEX = 6;
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
     const int ARGUMENT_TWO = 2;
+    const int ARGUMENT_SIX = 6;
     const int ROW_PROJ_OFFSETS_INDEX = 2;
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
     const int ROW_PROJ_NULL_INDEX = 4;
@@ -65,6 +67,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     args.push_back(Type::getInt1PtrTy(*context));
     // int array to hold output values
     args.push_back(Type::getInt32PtrTy(*context));
+    // execution context with allocator to allocate, free and track memory
+    args.push_back(Type::getInt64Ty(*context));
 
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
@@ -103,12 +107,15 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Argument *outputLengthsAddress = funcDecl->getArg(NEW_LENGTHS_VALUES_INDEX);
     outputLengthsAddress->setName("NEW_LENGTH_VALUES_ADDRESS");
 
+    Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
+    outputLengthsAddress->setName("EXECUTION_CONTEXT_ADDRESS");
+
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> projFuncArgs;
     // projFuncArgs contains the values of the arguments to the projection function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*
-    int32_t argsSize = 6;
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*, executionContext
+    int32_t argsSize = 7;
     projFuncArgs.reserve(argsSize);
     Value *gep;
 
@@ -190,6 +197,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
     projFuncArgs.push_back(outputLenPtr);
 
+    projFuncArgs.push_back(executionContext);
+
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
     ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");
@@ -249,7 +258,8 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
         Type::getInt64PtrTy(context),
         Type::getInt32Ty(context),
         Type::getInt1PtrTy(context),
-        Type::getInt32PtrTy(context)
+        Type::getInt32PtrTy(context),
+        Type::getInt64Ty(context)
     };
     return args;
 }
@@ -290,6 +300,8 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     nullIndex->setName("NULL_INDEX");
     Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
     lengthPtr->setName("LENGTH_PTR");
+    Argument *executionContext = funcDecl->getArg(ARGUMENT_SIX);
+    lengthPtr->setName("EXECUTION_CONTEXT_ADDRESS");
 
     std::vector<Value*> funcArgs;
     funcArgs.push_back(inputData);
@@ -298,6 +310,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(rowIndex);
     funcArgs.push_back(nullIndex);
     funcArgs.push_back(lengthPtr);
+    funcArgs.push_back(executionContext);
 
     // Store the result
     AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");

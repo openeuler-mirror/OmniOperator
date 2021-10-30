@@ -51,8 +51,9 @@ public:
                                 rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
 
     explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
-                llvm::Value *isResultNull) : data(data), nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx),
-                                             isResultNull(isResultNull), print(nullptr) {}
+                            llvm::Value *isResultNull, llvm::Value *executionContext) : data(data),
+                            nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull),
+                            executionContext(executionContext), print(nullptr) {}
 
     ~CodegenContext() {}
 
@@ -66,6 +67,7 @@ private:
     // Boolean flag which contains 'OR' of nullBitmap[#xxx] utilized in expression evaluation
     // If true, it means that at least one column_value is null when processing the row.
     llvm::Value *isResultNull;
+    llvm::Value *executionContext;
     llvm::FunctionCallee print;
 };
 
@@ -103,6 +105,7 @@ protected:
     llvm::Value* CreateConstantDouble(double n);
     llvm::Value* GetIntToPtr(omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
+    llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
     void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
     llvm::Function* CreateFunction();
