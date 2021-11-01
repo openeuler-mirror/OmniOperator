@@ -34,7 +34,7 @@ using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, bool*, i
 
 class RowProjection {
 public:
-    RowProjection(std::string &expression, std::vector<expressions::DataType> &inputType);
+    RowProjection(const std::string &expression, const std::vector<expressions::DataType> &inputType);
     ~RowProjection();
     RowProjFunc Create(std::vector<expressions::DataType> &inputTypes);
     expressions::DataType GetReturnType();

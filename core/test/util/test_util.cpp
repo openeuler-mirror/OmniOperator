@@ -404,3 +404,63 @@ void ToVectorTypes(int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecTyp
         vecTypes.push_back(VecType(vecTypeIds[i]));
     }
 }
+
+const std::map<std::string, int32_t> TEST_RETURN_TYPE_MAP = {
+    { "boolean", OMNI_VEC_TYPE_BOOLEAN },    { "int", OMNI_VEC_TYPE_INT },
+    { "long", OMNI_VEC_TYPE_LONG },          { "double", OMNI_VEC_TYPE_DOUBLE },
+    { "decimal", OMNI_VEC_TYPE_DECIMAL128 }, { "char", OMNI_VEC_TYPE_VARCHAR },
+    { "varchar", OMNI_VEC_TYPE_VARCHAR }
+};
+
+int32_t GetTestProjectCol(std::string &expression)
+{
+    // #0 or #5 is not expression
+    if (expression.data()[0] == '#') {
+        return std::stoi(std::string(expression.data() + 1));
+    } else {
+        return -1;
+    }
+}
+
+int32_t GetTestExprReturnType(std::string &expression)
+{
+    const char *chars = expression.data();
+    int32_t length = expression.size();
+    int32_t start = -1;
+    int32_t end;
+    for (int32_t i = 0; i < length; i++) {
+        if (start == -1 && chars[i] == ':') {
+            start = i;
+        }
+        if (start != -1 && chars[i] == '(') {
+            end = i;
+            break;
+        }
+    }
+
+    std::string returnType(chars + start + 1, chars + end);
+    if (TEST_RETURN_TYPE_MAP.count(returnType) == 0) {
+        std::cout << "Unsupported return type: " + returnType << std::endl;
+        return OMNI_VEC_TYPE_INVALID;
+    }
+    return TEST_RETURN_TYPE_MAP.at(returnType);
+}
+
+void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
+    std::vector<int32_t> &typeIds, int32_t *projectCols)
+{
+    int32_t *inputTypeIds = const_cast<int32_t *>(inputTypes.GetIds());
+    int32_t inputTypesCount = inputTypes.GetSize();
+    typeIds.insert(typeIds.end(), inputTypeIds, inputTypeIds + inputTypesCount);
+
+    int32_t newProjectCol = inputTypesCount;
+    for (int32_t i = 0; i < projectKeysCount; i++) {
+        int32_t projectCol = GetTestProjectCol(projectKeys[i]);
+        projectCols[i] = projectCol;
+        if (projectCol == -1) {
+            int32_t returnType = GetTestExprReturnType(projectKeys[i]);
+            typeIds.push_back(returnType);
+            projectCols[i] = newProjectCol++;
+        }
+    }
+}
