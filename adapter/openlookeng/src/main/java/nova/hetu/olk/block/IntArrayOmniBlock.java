@@ -262,19 +262,11 @@ public class IntArrayOmniBlock implements Block<Integer> {
     @Override
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
-
         byte[] newValueIsNull = null;
-        if (valueIsNull != null) {
-            newValueIsNull = new byte[length];
-        }
-        for (int i = 0; i < length; i++) {
-            int position = positions[offset + i];
-            checkReadablePosition(position);
-            if (valueIsNull != null) {
-                newValueIsNull[i] = valueIsNull[position + arrayOffset];
-            }
-        }
         IntVec newValues = values.copyPositions(positions, offset, length);
+        if (valueIsNull != null) {
+            newValueIsNull = newValues.getRawValueNulls();
+        }
         return new IntArrayOmniBlock(0, length, newValueIsNull, newValues);
     }
 
