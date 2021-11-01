@@ -40,6 +40,7 @@ public:
     void RegisterMm3HashFunctions(const std::string& fnName);
     void RegisterNecessaryFuncs(const std::set<std::string>& requiredFuncs);
     void RegisterDecimalFuncs();
+    void RegisterDictionaryFuncs();
     void ContextHelperFuncs();
     llvm::orc::LLJIT *jit;
     llvm::LLVMContext *frContext;
@@ -75,5 +76,11 @@ public:
     const std::string divDec128Str = "Div_decimal128";
     const std::string contextMalloc = "ArenaAllocatorMalloc";
     const std::string contextReset = "ArenaAllocatorReset";
+
+    const std::string dictionaryGetIntStr = "DictionaryGetInt";
+    const std::string dictionaryGetLongStr = "DictionaryGetLong";
+    const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";
+    const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
+    const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
 };
 #endif

@@ -17,7 +17,7 @@
 
 using vec64 = std::vector<int64_t>;
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t,
-    int64_t const *, int64_t const *, bool *, int32_t *, int64_t);
+    int64_t const *, int64_t const *, bool *, int32_t *, int64_t, int64_t *);
 
 namespace omniruntime {
 namespace op {
@@ -61,20 +61,20 @@ public:
         std::vector<int64_t> const &vecData, int64_t *bitmap,
         int64_t *offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues,
-        ExecutionContext *context) const;
+        ExecutionContext *context, int64_t *dictionaryVectors) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap,
         int64_t *offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues,
-        ExecutionContext *context) const;
+        ExecutionContext *context, int64_t *dictionaryVectors) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
         int32_t numSelectedRows, std::vector<int64_t> const &vecData,
-        int64_t *bitmap, int64_t *offset, ExecutionContext *context) const;
+        int64_t *bitmap, int64_t *offset, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
     Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap,
-        int64_t *offsets, ExecutionContext *context) const;
+        int64_t *offsets, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
     omniruntime::expressions::DataType GetOutputType() const
     {

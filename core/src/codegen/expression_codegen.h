@@ -50,9 +50,9 @@ public:
                                 rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
 
     explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
-                            llvm::Value *isResultNull, llvm::Value *executionContext) : data(data),
+                            llvm::Value *isResultNull, llvm::Value *executionContext, llvm::Value *dictionaryVectors) : data(data),
                             nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull),
-                            executionContext(executionContext), print(nullptr) {}
+                            executionContext(executionContext), dictionaryVectors(dictionaryVectors), print(nullptr) {}
 
     ~CodegenContext() {}
 
@@ -67,6 +67,7 @@ private:
     // If true, it means that at least one column_value is null when processing the row.
     llvm::Value *isResultNull;
     llvm::Value *executionContext;
+    llvm::Value *dictionaryVectors;
     llvm::FunctionCallee print;
 };
 
