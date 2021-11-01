@@ -13,15 +13,19 @@ import static java.util.Arrays.fill;
 
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.orc.OrcColumn;
+import io.prestosql.orc.OrcCorruptionException;
 import io.prestosql.orc.reader.SliceDictionaryColumnReader;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
+import io.prestosql.spi.block.VariableWidthBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.omniruntime.vector.VarcharVec;
 
 import java.io.IOException;
 import java.util.Optional;
+
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
@@ -50,7 +54,56 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         super(column, systemMemoryContext, maxCodePointCount, isCharType);
         this.vecAllocator = vecAllocator;
         this.dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, 1,
-                wrappedBuffer(EMPTY_DICTIONARY_DATA), EMPTY_DICTIONARY_OFFSETS, Optional.of(new boolean[] {true}));
+                wrappedBuffer(EMPTY_DICTIONARY_DATA), EMPTY_DICTIONARY_OFFSETS, Optional.of(new byte[] {Vec.NULL}));
+    }
+
+    @Override
+    public Block readBlock()
+            throws IOException {
+        if (!rowGroupOpen) {
+            openRowGroup();
+        }
+
+        if (readOffset > 0) {
+            if (presentStream != null) {
+                // skip ahead the present bit reader, but count the set bits
+                // and use this as the skip size for the length reader
+                readOffset = presentStream.countBitsSet(readOffset);
+            }
+            if (readOffset > 0) {
+                if (dataStream == null) {
+                    throw new OrcCorruptionException(column.getOrcDataSourceId(),
+                            "Value is not null but data stream is missing");
+                }
+                dataStream.skip(readOffset);
+            }
+        }
+
+        Block block;
+        if (dataStream == null) {
+            if (presentStream == null) {
+                throw new OrcCorruptionException(column.getOrcDataSourceId(),
+                        "Value is null but present stream is missing");
+            }
+            presentStream.skip(nextBatchSize);
+            block = readAllNullsBlock();
+        } else if (presentStream == null) {
+            block = readNonNullBlock();
+        } else {
+            byte[] isNull = new byte[nextBatchSize];
+            int nullCount = presentStream.getUnsetBits(nextBatchSize, isNull);
+            if (nullCount == 0) {
+                block = readNonNullBlock();
+            } else if (nullCount != nextBatchSize) {
+                block = readNullBlock(isNull, nextBatchSize - nullCount);
+            } else {
+                block = readAllNullsBlock();
+            }
+        }
+
+        readOffset = 0;
+        nextBatchSize = 0;
+        return block;
     }
 
     @Override
@@ -65,8 +118,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
             values);
     }
 
-    @Override
-    public Block readNullBlock(boolean[] isNull, int nonNullCount) throws IOException {
+    private Block readNullBlock(byte[] isNull, int nonNullCount) throws IOException {
         verify(dataStream != null);
         int minNonNullValueSize = minNonNullValueSize(nonNullCount);
         if (nonNullValueTemp.length < minNonNullValueSize) {
@@ -80,7 +132,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         int nonNullPosition = 0;
         for (int i = 0; i < isNull.length; i++) {
             nonNullPositionList[nonNullPosition] = i;
-            if (!isNull[i]) {
+            if (isNull[i] != Vec.NULL) {
                 nonNullPosition++;
             }
         }
@@ -103,8 +155,8 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         // only update the block if the array changed to prevent creation of new Block objects, since
         // the engine currently uses identity equality to test if dictionaries are the same
         if (currentDictionaryData != dictionaryData) {
-            boolean[] isNullVector = new boolean[positionCount];
-            isNullVector[positionCount - 1] = true;
+            byte[] isNullVector = new byte[positionCount];
+            isNullVector[positionCount - 1] = 1;
             dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
             dictionaryBlock.close();
             dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, positionCount, wrappedBuffer(dictionaryData),
@@ -115,7 +167,8 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
 
     private RunLengthEncodedBlock readAllNullsBlock() {
         return new RunLengthEncodedBlock(
-            new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
+                new VariableWidthBlock(1, EMPTY_SLICE, new int[2],
+                        Optional.of(new boolean[] {true})), nextBatchSize);
     }
 
     @Override

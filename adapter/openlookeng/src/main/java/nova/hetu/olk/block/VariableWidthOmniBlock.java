@@ -18,6 +18,7 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.util.BloomFilter;
 import nova.hetu.omniruntime.vector.VarcharVec;
 
+import nova.hetu.omniruntime.vector.Vec;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.Optional;
@@ -44,7 +45,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
     private final int[] offsets;
 
     @Nullable
-    private final boolean[] valueIsNull;
+    private final byte[] valueIsNull;
 
     private final long retainedSizeInBytes;
 
@@ -59,7 +60,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param offsets the offsets
      * @param valueIsNull the value is null
      */
-    public VariableWidthOmniBlock(VecAllocator vecAllocator, int positionCount, Slice slice, int[] offsets, Optional<boolean[]> valueIsNull) {
+    public VariableWidthOmniBlock(VecAllocator vecAllocator, int positionCount, Slice slice, int[] offsets, Optional<byte[]> valueIsNull) {
         this(vecAllocator, 0, positionCount, slice, offsets, valueIsNull.orElse(null));
     }
 
@@ -73,7 +74,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param offsets the offsets
      * @param valueIsNull the value is null
      */
-    VariableWidthOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, Slice slice, int[] offsets, boolean[] valueIsNull) {
+    VariableWidthOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, Slice slice, int[] offsets, byte[] valueIsNull) {
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -136,7 +137,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param valuesIsNull the values is null
      */
     public VariableWidthOmniBlock(int positionCount, VarcharVec values, int[] offsets,
-        Optional<boolean[]> valuesIsNull) {
+        Optional<byte[]> valuesIsNull) {
         this(values.getOffset(), positionCount, values, offsets, valuesIsNull.orElse(null));
     }
 
@@ -150,7 +151,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param valueIsNull the value is null
      */
     public VariableWidthOmniBlock(int arrayOffset, int positionCount, VarcharVec values, int[] offsets,
-        boolean[] valueIsNull) {
+        byte[] valueIsNull) {
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -206,7 +207,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
 
     @Override
     protected boolean isEntryNull(int position) {
-        return valueIsNull != null && valueIsNull[position + arrayOffset];
+        return valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL;
     }
 
     @Override
@@ -258,15 +259,15 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
         checkArrayRange(positions, offset, length);
 
         int[] newOffsets = new int[length + 1];
-        boolean[] newValueIsNull = null;
+        byte[] newValueIsNull = null;
         if (valueIsNull != null) {
-            newValueIsNull = new boolean[length];
+            newValueIsNull = new byte[length];
         }
 
         for (int i = 0; i < length; i++) {
             int position = positions[offset + i];
             if (newValueIsNull != null && isEntryNull(position)) {
-                newValueIsNull[i] = true;
+                newValueIsNull[i] = Vec.NULL;
             }
             newOffsets[i + 1] = newOffsets[i] + getSliceLength(position);
         }
@@ -299,7 +300,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
 
         int[] newOffsets = compactOffsets(offsets, positionOffset + arrayOffset, length);
         VarcharVec newValues = compactVec(values, positionOffset, length);
-        boolean[] newValueIsNull = valueIsNull == null ? null : compactArray(valueIsNull, positionOffset, length);
+        byte[] newValueIsNull = valueIsNull == null ? null : compactArray(valueIsNull, positionOffset, length);
 
         if (newOffsets == offsets && newValues == values && newValueIsNull == valueIsNull) {
             return this;
@@ -331,7 +332,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
     public int filter(int[] positions, int positionCount, int[] matchedPositions, Function<Object, Boolean> test) {
         int matchCount = 0;
         for (int i = 0; i < positionCount; i++) {
-            if (valueIsNull != null && valueIsNull[positions[i] + arrayOffset]) {
+            if (valueIsNull != null && valueIsNull[positions[i] + arrayOffset] == Vec.NULL) {
                 if (test.apply(null)) {
                     matchedPositions[matchCount++] = positions[i];
                 }
@@ -349,7 +350,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
 
     @Override
     public byte[] get(int position) {
-        if (valueIsNull != null && valueIsNull[position + arrayOffset]) {
+        if (valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL) {
             return null;
         }
         return values.getData(offsets[position + arrayOffset],

@@ -8,11 +8,11 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.prestosql.orc.reader.ReaderUtils.convertLengthVectorToOffsetVector;
-import static io.prestosql.orc.reader.ReaderUtils.unpackLengthNulls;
 import static io.prestosql.orc.reader.SliceColumnReader.computeTruncatedLength;
 import static io.prestosql.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
+import static nova.hetu.olk.tool.ReaderUtils.unpackLengthNulls;
 
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
@@ -26,6 +26,8 @@ import nova.hetu.olk.block.VariableWidthOmniBlock;
 
 import java.io.IOException;
 import java.util.Optional;
+
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
@@ -89,7 +91,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
         }
 
         // create new isNullVector and offsetVector for VariableWidthBlock
-        boolean[] isNullVector = null;
+        byte[] isNullVector = null;
 
         // We will use the offsetVector as the buffer to read the length values from lengthStream,
         // and the length values will be converted in-place to an offset vector.
@@ -98,7 +100,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
         if (presentStream == null) {
             lengthStream.next(offsetVector, nextBatchSize);
         } else {
-            isNullVector = new boolean[nextBatchSize];
+            isNullVector = new byte[nextBatchSize];
             int nullCount = presentStream.getUnsetBits(nextBatchSize, isNullVector);
             if (nullCount == nextBatchSize) {
                 // all nulls
@@ -160,7 +162,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
             offsetVector[0] = 0;
             for (int i = 1; i <= currentBatchSize; i++) {
                 int nextLength = offsetVector[i];
-                if (isNullVector != null && isNullVector[i - 1]) {
+                if (isNullVector != null && isNullVector[i - 1] == Vec.NULL) {
                     checkState(currentLength == 0,
                         "Corruption in slice direct stream: length is non-zero for null entry");
                     offsetVector[i] = offsetVector[i - 1];
@@ -188,6 +190,6 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
 
     private RunLengthEncodedBlock readAllNullsBlock() {
         return new RunLengthEncodedBlock(
-            new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new boolean[] {true})), nextBatchSize);
+            new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new byte[] {Vec.NULL})), nextBatchSize);
     }
 }

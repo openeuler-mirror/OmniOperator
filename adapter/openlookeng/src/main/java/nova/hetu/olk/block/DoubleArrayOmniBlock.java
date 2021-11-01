@@ -40,7 +40,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     private final int positionCount;
 
     @Nullable
-    private final boolean[] valueIsNull;
+    private final byte[] valueIsNull;
 
     private final DoubleVec values;
 
@@ -55,7 +55,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public DoubleArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<boolean[]> valueIsNull, double[] values) {
+    public DoubleArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull, double[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -66,7 +66,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public DoubleArrayOmniBlock(int positionCount, Optional<boolean[]> valueIsNull, DoubleVec values) {
+    public DoubleArrayOmniBlock(int positionCount, Optional<byte[]> valueIsNull, DoubleVec values) {
         this(values.getOffset(), positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -88,7 +88,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    DoubleArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, boolean[] valueIsNull, double[] values) {
+    DoubleArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull, double[] values) {
         this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -130,7 +130,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    DoubleArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, DoubleVec values) {
+    DoubleArrayOmniBlock(int arrayOffset, int positionCount, byte[] valueIsNull, DoubleVec values) {
         this.vecAllocator = values.getAllocator();
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -237,7 +237,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     @Override
     public boolean isNull(int position) {
         checkReadablePosition(position);
-        return valueIsNull != null && valueIsNull[position];
+        return valueIsNull != null && valueIsNull[position] == Vec.NULL;
     }
 
     @Override
@@ -250,7 +250,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new DoubleArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new boolean[] {true} : null,
+        return new DoubleArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null,
             new double[] {values.get(position)});
     }
 
@@ -258,9 +258,9 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
 
-        boolean[] newValueIsNull = null;
+        byte[] newValueIsNull = null;
         if (valueIsNull != null) {
-            newValueIsNull = new boolean[length];
+            newValueIsNull = new byte[length];
         }
         for (int i = 0; i < length; i++) {
             int position = positions[offset + i];
@@ -286,7 +286,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
         checkValidRegion(getPositionCount(), positionOffset, length);
 
         DoubleVec newValues = compactVec(values, positionOffset, length);
-        boolean[] newValueIsNull = valueIsNull == null
+        byte[] newValueIsNull = valueIsNull == null
             ? null
             : compactArray(valueIsNull, positionOffset + arrayOffset, length);
 
@@ -317,7 +317,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     @Override
     public Double get(int position) {
-        if (valueIsNull != null && valueIsNull[position + arrayOffset]) {
+        if (valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL) {
             return null;
         }
 

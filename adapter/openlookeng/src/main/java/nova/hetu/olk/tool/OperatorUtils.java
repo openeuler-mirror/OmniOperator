@@ -252,13 +252,13 @@ public final class OperatorUtils {
         if (block.isExtensionBlock()) {
             return block;
         }
-        boolean[] valueIsNull = new boolean[positionCount];
+        byte[] valueIsNull = new byte[positionCount];
         switch (type) {
             case "IntArrayBlock": {
                 int[] ints = new int[positionCount];
                 for (int j = 0; j < positionCount; j++) {
                     if (block.isNull(j)) {
-                        valueIsNull[j] = true;
+                        valueIsNull[j] = Vec.NULL;
                     } else {
                         ints[j] = (int) block.get(j);
                     }
@@ -269,7 +269,7 @@ public final class OperatorUtils {
                 long[] longs = new long[positionCount];
                 for (int j = 0; j < positionCount; j++) {
                     if (block.isNull(j)) {
-                        valueIsNull[j] = true;
+                        valueIsNull[j] = Vec.NULL;
                     } else {
                         longs[j] = (long) block.get(j);
                     }
@@ -280,7 +280,7 @@ public final class OperatorUtils {
                 double[] doubles = new double[positionCount];
                 for (int j = 0; j < positionCount; j++) {
                     if (block.isNull(j)) {
-                        valueIsNull[j] = true;
+                        valueIsNull[j] = Vec.NULL;
                     } else {
                         doubles[j] = (double) block.get(j);
                     }
@@ -291,7 +291,7 @@ public final class OperatorUtils {
                 long[] longs = new long[positionCount * 2];
                 for (int j = 0; j < positionCount; j++) {
                     if (block.isNull(j)) {
-                        valueIsNull[j] = true;
+                        valueIsNull[j] = Vec.NULL;
                     } else {
                         long[] data = (long[]) block.get(j);
                         longs[j * 2] = data[0];
@@ -322,7 +322,7 @@ public final class OperatorUtils {
                 RowBlock rowBlock = (RowBlock) block;
                 for (int j = 0; j < positionCount; j++) {
                     if (rowBlock.isNull(j)) {
-                        valueIsNull[j] = true;
+                        valueIsNull[j] = Vec.NULL;
                     }
                 }
                 return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(), Optional.of(valueIsNull),
@@ -335,14 +335,14 @@ public final class OperatorUtils {
     }
 
     private static VariableWidthOmniBlock getVariableWidthOmniBlock(VecAllocator vecAllocator, Block block,
-        int positionCount, boolean[] valueIsNull) {
+        int positionCount, byte[] valueIsNull) {
         if (block instanceof RunLengthEncodedBlock) {
             VariableWidthBlock variableWidthBlock = (VariableWidthBlock) ((RunLengthEncodedBlock) block).getValue();
             VarcharVec vec = new VarcharVec(vecAllocator,variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
 
             for (int i = 0; i < positionCount; i++) {
                 if (block.isNull(i)) {
-                    valueIsNull[i] = true;
+                    valueIsNull[i] = Vec.NULL;
                     vec.setNull(i);
                 } else {
                     vec.set(i, (byte[]) block.get(i));
@@ -354,7 +354,7 @@ public final class OperatorUtils {
         int[] offsets = ((VariableWidthBlock) block).getOffsets();
         for (int j = 0; j < positionCount; j++) {
             if (block.isNull(j)) {
-                valueIsNull[j] = true;
+                valueIsNull[j] = Vec.NULL;
             }
         }
 
