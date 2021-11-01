@@ -219,11 +219,12 @@ VectorBatch *ConstructSimpleExpectedData()
 
     Vector *expectedVec0 = CreateVector<LongVector, int64_t>(expectedData0, originalDataSize);
     int32_t ids[expectedDataSize] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
-    expectedVec0 = new DictionaryVector(expectedVec0, ids, expectedDataSize);
+    auto expectedDictVec0 = new DictionaryVector(expectedVec0, ids, expectedDataSize);
+    delete expectedVec0;
     Vector *expectedVec1 = CreateVector<LongVector, int64_t>(expectedData1, expectedDataSize);
 
     VectorBatch *vectorBatch = new VectorBatch(2, expectedDataSize);
-    vectorBatch->SetVector(0, expectedVec0);
+    vectorBatch->SetVector(0, expectedDictVec0);
     vectorBatch->SetVector(1, expectedVec1);
     return vectorBatch;
 }
@@ -347,6 +348,7 @@ struct HashJoinThreadArgs {
     int64_t lookupJoinFactoryAddr;
     VectorBatch **probeVecBatches;
     int32_t probeVecBatchCount;
+    std::vector<HashBuilderOperator *> buildOperators;
 };
 
 VectorBatch **ConstructHashBuilderTestData(int32_t tableCount, int32_t columnCount)
@@ -450,6 +452,7 @@ void TestHashBuilder(struct HashJoinThreadArgs *hashJoinThreadArgs)
     std::vector<VectorBatch *> buildOutputTables;
     hashBuilderOperator->GetOutput(buildOutputTables);
     VectorHelper::FreeVecBatches(buildOutputTables);
+    hashJoinThreadArgs->buildOperators.push_back(hashBuilderOperator);
 }
 
 void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
@@ -461,7 +464,6 @@ void TestLookupJoin(struct HashJoinThreadArgs *hashJoinThreadArgs)
         lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinOperatorFactory->CreateOperator());
     } else {
         lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinOperatorFactory));
-        ;
     }
     const int32_t maxLoopCount = 1000;
     for (int loop = 0; loop < maxLoopCount; loop++) {
@@ -512,6 +514,9 @@ TEST(NativeOmniJoinTest, TestHashBuilderOriginalMultiThreads)
         std::cout << "testHashBuilderOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
             cpuElapsed / processorCount * t << "s" << std::endl;
 
+        for (int32_t i = 0; i < hashJoinThreadArgs.buildOperators.size(); i++) {
+            delete hashJoinThreadArgs.buildOperators[i];
+        }
         DeleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
@@ -556,6 +561,9 @@ TEST(NativeOmniJoinTest, TestHashBuilderJITMultiThreads)
         std::cout << "testHashBuilderJITMultiThreads " << threadNum << " cpuElapsed time: " <<
             cpuElapsed / processorCount * t << "s" << std::endl;
 
+        for (int32_t i = 0; i < hashJoinThreadArgs.buildOperators.size(); i++) {
+            delete hashJoinThreadArgs.buildOperators[i];
+        }
         DeleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
@@ -607,13 +615,8 @@ VectorBatch **ConstructProbeTestData(const int32_t *numbers, int32_t numberCount
     return vecBatches;
 }
 
-HashBuilderOperatorFactory *TestHashBuilderMultiThreads(VectorBatch ***buildVecBatches, int32_t threadNum,
-    int32_t index, bool isOriginal)
+void TestHashBuilderMultiThreads(struct HashJoinThreadArgs &hashBuilderThreadArgs, int32_t threadNum)
 {
-    HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(threadNum, isOriginal);
-    struct HashJoinThreadArgs hashBuilderThreadArgs;
-    SetHashJoinThreadArgs(&hashBuilderThreadArgs, isOriginal, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
-        buildVecBatches[index], threadNum, 0, nullptr, 0);
     std::vector<std::thread> vecOfThreads;
     for (int32_t i = 0; i < threadNum; ++i) {
         hashBuilderThreadArgs.partitionIndex = i;
@@ -625,7 +628,6 @@ HashBuilderOperatorFactory *TestHashBuilderMultiThreads(VectorBatch ***buildVecB
             th.join();
         }
     }
-    return hashBuilderOperatorFactory;
 }
 
 LookupJoinOperatorFactory *TestLookupJoinMultiThreads(VectorBatch ***probeVecBatches, int32_t threadNum, int32_t index,
@@ -679,8 +681,12 @@ TEST(NativeOmniJoinTest, TestLookupJoinOriginalMultiThreads)
         auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
         int32_t threadNum = threadNums[i];
 
-        HashBuilderOperatorFactory *hashBuilderOperatorFactory =
-            TestHashBuilderMultiThreads(buildVecBatches, threadNum, i, true);
+        HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(threadNum, true);
+        struct HashJoinThreadArgs hashBuilderThreadArgs;
+        SetHashJoinThreadArgs(&hashBuilderThreadArgs, true, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
+                              buildVecBatches[i], threadNum, 0, nullptr, 0);
+        TestHashBuilderMultiThreads(hashBuilderThreadArgs, threadNum);
+
         double wallElapsed = 0;
         double cpuElapsed = 0;
         LookupJoinOperatorFactory *lookupJoinOperatorFactory = TestLookupJoinMultiThreads(probeVecBatches, threadNum, i,
@@ -690,6 +696,9 @@ TEST(NativeOmniJoinTest, TestLookupJoinOriginalMultiThreads)
             "s" << std::endl;
         std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
             cpuElapsed / processorCount * t << "s" << std::endl;
+        for (int32_t i = 0; i < hashBuilderThreadArgs.buildOperators.size(); i++) {
+            delete hashBuilderThreadArgs.buildOperators[i];
+        }
         DeleteJoinOperatorFactory(hashBuilderOperatorFactory, lookupJoinOperatorFactory);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
@@ -726,8 +735,12 @@ TEST(NativeOmniJoinTest, TestLookupJoinJITMultiThreads)
         auto t = threadNums[i] < processorCount ? processorCount / threadNums[i] : 1;
         int32_t threadNum = threadNums[i];
 
-        HashBuilderOperatorFactory *hashBuilderOperatorFactory =
-            TestHashBuilderMultiThreads(buildVecBatches, threadNum, i, false);
+        HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(threadNum, false);
+        struct HashJoinThreadArgs hashBuilderThreadArgs;
+        SetHashJoinThreadArgs(&hashBuilderThreadArgs, false, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
+                              buildVecBatches[i], threadNum, 0, nullptr, 0);
+        TestHashBuilderMultiThreads(hashBuilderThreadArgs, threadNum);
+
         double wallElapsed = 0;
         double cpuElapsed = 0;
         LookupJoinOperatorFactory *lookupJoinOperatorFactory = TestLookupJoinMultiThreads(probeVecBatches, threadNum, i,
@@ -736,6 +749,9 @@ TEST(NativeOmniJoinTest, TestLookupJoinJITMultiThreads)
             "s" << std::endl;
         std::cout << "testLookupJoinOriginalMultiThreads " << threadNum << " cpuElapsed time: " <<
             cpuElapsed / processorCount * t << "s" << std::endl;
+        for (int32_t i = 0; i < hashBuilderThreadArgs.buildOperators.size(); i++) {
+            delete hashBuilderThreadArgs.buildOperators[i];
+        }
         DeleteJoinOperatorFactory(hashBuilderOperatorFactory, lookupJoinOperatorFactory);
         std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
     }
@@ -1224,12 +1240,17 @@ TEST(NativeOmniJoinTest, TestLookupEqualityJoinHasOutputNulls)
     Vector *expectedVector0 = CreateVector<LongVector, int64_t>(expectedData0, ORIGINAL_DATA_SIZE);
     expectedVector0->SetValueNull(0);
     expectedVector0->SetValueNull(2);
-    expectedVecBatch->SetVector(0, std::make_unique<DictionaryVector>(expectedVector0, ids, 2).release());
+    auto expectedDictVec0 = std::make_unique<DictionaryVector>(expectedVector0, ids, 2).release();
+    delete expectedVector0;
     Vector *expectedVector1 = CreateVarcharVector(VarcharVecType(2), expectedData1, ORIGINAL_DATA_SIZE);
-    expectedVecBatch->SetVector(1, std::make_unique<DictionaryVector>(expectedVector1, ids, 2).release());
+    auto expectedDictVec1 = std::make_unique<DictionaryVector>(expectedVector1, ids, 2).release();
+    delete expectedVector1;
     Vector *expectedVector2 = CreateVector<LongVector, int64_t>(expectedData2, EXPECTED_DATA_SIZE);
     expectedVector2->SetValueNull(0);
     expectedVector2->SetValueNull(1);
+
+    expectedVecBatch->SetVector(0, expectedDictVec0);
+    expectedVecBatch->SetVector(1, expectedDictVec1);
     expectedVecBatch->SetVector(2, expectedVector2);
     expectedVecBatch->SetVector(3, CreateVarcharVector(VarcharVecType(3), expectedData3, EXPECTED_DATA_SIZE));
     EXPECT_TRUE(VecBatchMatch(output[0], expectedVecBatch));
