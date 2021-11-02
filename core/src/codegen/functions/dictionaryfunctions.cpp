@@ -9,27 +9,33 @@
 using namespace omniruntime::vec;
 using namespace std;
 
+__attribute__((always_inline))
 extern "C" DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     return dictionaryVectorPtr->GetInt(index);
 }
 
+__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     return dictionaryVectorPtr->GetLong(index);
 }
 
+__attribute__((always_inline))
 extern "C" DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     return dictionaryVectorPtr->GetDouble(index);
 }
 
+__attribute__((always_inline))
 extern "C" DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     return dictionaryVectorPtr->GetBoolean(index);
 }
 
-extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr) {
+__attribute__((always_inline))
+extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(
+    int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     uint8_t *result = nullptr;
     int32_t length = dictionaryVectorPtr->GetVarchar(index, &result);

@@ -221,9 +221,11 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
             data.push_back(0);
         } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetProjDecimal128Data(colVec, data, vecBatch.GetRowCount());
+            dictionaries[i] = 0;
         } else {
             // data handling
             data.push_back(reinterpret_cast<int64_t>(colVec->GetValues()));
+            dictionaries[i] = 0;
         }
         // bitmap handling
         bitmap[i] = reinterpret_cast<int64_t>(colVec->GetValueNulls());

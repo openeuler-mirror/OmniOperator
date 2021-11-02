@@ -47,12 +47,12 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 class CodegenContext {
 public:
     explicit CodegenContext() : data(nullptr), nullBitmap(nullptr), offsets(nullptr),
-                                rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
+        rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
 
     explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
-                            llvm::Value *isResultNull, llvm::Value *executionContext, llvm::Value *dictionaryVectors) : data(data),
-                            nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull),
-                            executionContext(executionContext), dictionaryVectors(dictionaryVectors), print(nullptr) {}
+        llvm::Value *isResultNull, llvm::Value *executionContext, llvm::Value *dictionaryVectors) : data(data),
+        nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull),
+        executionContext(executionContext), dictionaryVectors(dictionaryVectors), print(nullptr) {}
 
     ~CodegenContext() {}
 
@@ -135,15 +135,6 @@ protected:
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);
 
-    // Helper functions and main function for parsing if expressions
-    llvm::Function* ConditionalHelper(omniruntime::expressions::DataType retType, omniruntime::expressions::Expr &cond,
-        omniruntime::expressions::Expr &ifTrue, omniruntime::expressions::Expr &ifFalse);
-
-    // Helper functions and main function for parsing coalesce expressions
-    llvm::Function* CreateCoalesceFuncHelper(omniruntime::expressions::DataType retType,
-        omniruntime::expressions::DataExpr &dExpr1, omniruntime::expressions::Expr &value2Expr);
-    llvm::Function *CreateCoalesceFuncHelper2(omniruntime::expressions::DataExpr &dExpr1,
-        omniruntime::expressions::Expr &value2Expr, llvm::Function &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
@@ -169,6 +160,10 @@ protected:
     FunctionRegistry *fr;
     llvm::Function *func = nullptr;
     int numGlobalValues = 0;
+
+    private:
+    llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
+        llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *lengthAllocaInst);
 };
 
 #endif

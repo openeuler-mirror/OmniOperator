@@ -97,7 +97,7 @@ void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
-                             std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
+    std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
 {
     std::vector<int64_t> data;
 
@@ -105,15 +105,15 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
         // handle dictionary vec
         if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
-//            colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
-//            dictionaryVecs.push_back(colVec);
             dictionaries[i] = reinterpret_cast<int64_t>(colVec);
             data.push_back(0);
         } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetDecimal128Data(colVec, data, vecBatch->GetRowCount());
+            dictionaries[i] = 0;
         } else {
             // data handling
             data.push_back(reinterpret_cast<int64_t>(colVec->GetValues()));
+            dictionaries[i] = 0;
         }
         // bitmap handling
         bitmap[i] = reinterpret_cast<int64_t>(colVec->GetValueNulls());
@@ -151,7 +151,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection
         Vector *col = this->projections[i]->Project(
-            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data, bitmap, offsets, context, nullptr);
+            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data, bitmap, offsets, context, dictionaries);
         projectedData->SetVector(i, col);
     }
     this->projectedVecs = std::move(projectedData);

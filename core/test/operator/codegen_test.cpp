@@ -68,15 +68,16 @@ TEST(CodeGenTest, SimpleFilter)
 
     bool *nullResult = new bool(false);
     int32_t *dataLength = new int32_t(0);
+    int64_t dictionaries[numCols] = {};
 
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < 50; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context)));
+        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
         EXPECT_TRUE(res);
     }
     context->getArena()->Reset();
     for (int32_t i = 50; i < 100; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context)));
+        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
         EXPECT_FALSE(res);
     }
     context->getArena()->Reset();
@@ -132,9 +133,10 @@ TEST(CodeGenTest, SimpleProject)
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < 100; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context)));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
         EXPECT_EQ(res, i + 50);
     }
     context->getArena()->Reset();
@@ -197,9 +199,10 @@ TEST(CodeGenTest, SingleProject)
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context)));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
     context->getArena()->Reset();
@@ -265,9 +268,10 @@ TEST(CodeGenTest, ShortCircuitProject)
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
+    int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context)));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
         EXPECT_EQ(res, i % 10);
     }
     context->getArena()->Reset();
@@ -507,14 +511,15 @@ TEST(CodeGenTest, MathFunctions1)
 
     string testname = "simpleTest2";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
 
+    int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
     context->getArena()->Reset();
 
@@ -528,7 +533,7 @@ TEST(CodeGenTest, MathFunctions1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
 
     context->getArena()->Reset();
@@ -580,14 +585,15 @@ TEST(CodeGenTest, MathFunctions2)
 
     string testname = "simpleTest2";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -599,7 +605,7 @@ TEST(CodeGenTest, MathFunctions2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -610,7 +616,7 @@ TEST(CodeGenTest, MathFunctions2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -662,15 +668,15 @@ TEST(CodeGenTest, MathFunctions3)
 
     string testname = "simpleTest2";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
-
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -681,7 +687,7 @@ TEST(CodeGenTest, MathFunctions3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -692,7 +698,7 @@ TEST(CodeGenTest, MathFunctions3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -703,7 +709,7 @@ TEST(CodeGenTest, MathFunctions3)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -754,15 +760,15 @@ TEST(CodeGenTest, MathFunctions4)
 
     string testname = "simpleTest2";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
-
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -773,7 +779,7 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -784,7 +790,7 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -795,7 +801,7 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -806,7 +812,7 @@ TEST(CodeGenTest, MathFunctions4)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -857,15 +863,15 @@ TEST(CodeGenTest, CastNumbers1)
 
     string testname = "simpleTest3";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
-
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -876,7 +882,7 @@ TEST(CodeGenTest, CastNumbers1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -887,7 +893,7 @@ TEST(CodeGenTest, CastNumbers1)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -939,14 +945,14 @@ TEST(CodeGenTest, CastNumbers2)
     string testname = "simpleTest3";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr, typeVec);
-
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -957,7 +963,7 @@ TEST(CodeGenTest, CastNumbers2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -968,7 +974,7 @@ TEST(CodeGenTest, CastNumbers2)
     vals[1] = (int64_t)v2;
     vals[2] = (int64_t)v3;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1026,15 +1032,15 @@ TEST(CodeGenTest, Like)
 
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
-
+    auto lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1047,7 +1053,7 @@ TEST(CodeGenTest, Like)
 
     offsets[2][1] = s2->length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1107,14 +1113,15 @@ TEST(CodeGenTest, DateCast)
 
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1128,7 +1135,7 @@ TEST(CodeGenTest, DateCast)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1142,7 +1149,7 @@ TEST(CodeGenTest, DateCast)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1202,14 +1209,15 @@ TEST(CodeGenTest, SubstrIn)
 
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -1224,7 +1232,7 @@ TEST(CodeGenTest, SubstrIn)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1238,7 +1246,7 @@ TEST(CodeGenTest, SubstrIn)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1297,14 +1305,15 @@ TEST(CodeGenTest, ConcatStr)
 
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
@@ -1319,7 +1328,7 @@ TEST(CodeGenTest, ConcatStr)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1333,7 +1342,7 @@ TEST(CodeGenTest, ConcatStr)
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1394,13 +1403,14 @@ TEST(CodeGenTest, StringWithOps)
 
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1413,7 +1423,7 @@ TEST(CodeGenTest, StringWithOps)
 
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1425,7 +1435,7 @@ TEST(CodeGenTest, StringWithOps)
     vals[2] = (int64_t)s2->c_str();
     offsets[1][1] = s1[0].length();
     offsets[2][1] = s2[0].length();
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1475,20 +1485,21 @@ TEST(CodeGenTest, Coalesce)
 
     string testname = "coalesceTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
     context->getArena()->Reset();
 
@@ -1532,19 +1543,20 @@ TEST(CodeGenTest, IsNull)
     string testName = "isNullTest";
     vector<DataType> typeVec = vector<DataType>(types, types + 1);
     auto *lc = new FilterCodeGen(testName, *expr, typeVec);
+    int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, false);
     context->getArena()->Reset();
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
@@ -1585,19 +1597,20 @@ TEST(CodeGenTest, IsNotNull)
     string testName = "isNotNullTest";
     vector<DataType> typeVec = vector<DataType>(types, types + 1);
     auto *lc = new FilterCodeGen(testName, *expr, typeVec);
+    int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
     bitmap[0][0] = true;
 
-    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, false);
     context->getArena()->Reset();
 
@@ -1645,14 +1658,15 @@ TEST(CodeGenTest, DecimalOperators1)
 
     string testname = "DecimalTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 1);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1709,13 +1723,14 @@ TEST(CodeGenTest, DecimalOperators2)
 
     string testname = "DecimalBetweenTest";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
 
     for (int i = 0; i < 3; i++) {
@@ -1772,14 +1787,15 @@ TEST(CodeGenTest, DecimalOperators3)
 
     string testname = "DecimalBetweenTest";
     vector<DataType> typeVec = vector<DataType>(types, types + 3);
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr, typeVec);
+    auto *lc = new FilterCodeGen(testname, *expr, typeVec);
+    int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();;
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t))(intptr_t)lc->GetFunction();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
 
-    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context));
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
     context->getArena()->Reset();
 
@@ -1882,9 +1898,10 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     int64_t valueOffsets[1] = {(int64_t)(vector->GetValueOffsets())};
     bool isNull;
     int32_t length;
+    int64_t dictionaries[1] = {};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < vector->GetSize(); i++) {
-        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &isNull, &length, reinterpret_cast<int64_t>(context));
+        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &isNull, &length, reinterpret_cast<int64_t>(context), dictionaries);
         uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
         std::string result(value, value + length);
         EXPECT_EQ(result, values[i]);

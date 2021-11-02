@@ -19,7 +19,6 @@ namespace {
 
     const int ROW_FILTER_OFFSETS_INDEX = 2;
     const int ROW_FILTER_ROW_IDX_INDEX = 3;
-
 }
 
 int64_t FilterCodeGen::GetFunction()
@@ -149,7 +148,6 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
 
-//    module->print(outs(), nullptr);
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
