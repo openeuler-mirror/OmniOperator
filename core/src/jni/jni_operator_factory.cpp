@@ -676,6 +676,13 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete compareToSp;
+    delete getOutputSp;
+    delete windowContext;
+    delete pagesIndexContext;
+    delete jit;
+
     return jitContext;
 }
 
