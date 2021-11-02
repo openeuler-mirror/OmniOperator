@@ -22,6 +22,7 @@ import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.function.Signature;
 import io.prestosql.spi.type.Type;
+import io.prestosql.spi.type.VarcharType;
 import io.prestosql.sql.gen.JoinCompiler;
 import io.prestosql.sql.planner.plan.AggregationNode;
 import io.prestosql.sql.planner.plan.PlanNodeId;
@@ -90,6 +91,7 @@ import static org.testng.Assert.assertEquals;
 public class BenchmarkHashAggregationOmniOperator
 {
     private static final Metadata metadata = createTestMetadataManager();
+    private static final VarcharType FIXED_WIDTH_VARCHAR = VarcharType.createVarcharType(200);
 
     private static final InternalAggregationFunction LONG_SUM = metadata.getAggregateFunctionImplementation(
             new Signature("sum", AGGREGATE, BIGINT.getTypeSignature(), BIGINT.getTypeSignature()));
@@ -97,11 +99,11 @@ public class BenchmarkHashAggregationOmniOperator
             new Signature("count", AGGREGATE, BIGINT.getTypeSignature()));
 
     private static final Map<String, List<Type>> allTypes = new ImmutableMap.Builder<String, List<Type>>()
-            .put("sql2", ImmutableList.of(VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, INTEGER, BIGINT))
-            .put("sql4", ImmutableList.of(VARCHAR, INTEGER, INTEGER, INTEGER, BIGINT))
+            .put("sql2", ImmutableList.of(FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, INTEGER, INTEGER, BIGINT))
+            .put("sql4", ImmutableList.of(FIXED_WIDTH_VARCHAR, INTEGER, INTEGER, INTEGER, BIGINT))
             .put("sql6", ImmutableList.of(INTEGER, INTEGER, BIGINT))
-            .put("sql7", ImmutableList.of(VARCHAR, VARCHAR, VARCHAR, BIGINT, BIGINT, BIGINT, BIGINT, BIGINT))
-            .put("sql9", ImmutableList.of(BIGINT, BIGINT, BIGINT, VARCHAR, BIGINT, BIGINT))
+            .put("sql7", ImmutableList.of(FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, BIGINT, BIGINT, BIGINT, BIGINT, BIGINT))
+            .put("sql9", ImmutableList.of(BIGINT, BIGINT, BIGINT, FIXED_WIDTH_VARCHAR, BIGINT, BIGINT))
             .build();
     private static final Map<String, List<Integer>> channels = new ImmutableMap.Builder<String, List<Integer>>()
             .put("sql2", ImmutableList.of(0, 1, 2, 3, 4, 5, 6))
@@ -118,11 +120,11 @@ public class BenchmarkHashAggregationOmniOperator
             .put("sql9", ImmutableList.of(0, 1, 2, 3))
             .build();
     private static final Map<String, List<Type>> hashTypes = new ImmutableMap.Builder<String, List<Type>>()
-            .put("sql2", ImmutableList.of(VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, INTEGER))
-            .put("sql4", ImmutableList.of(VARCHAR, INTEGER, INTEGER, INTEGER))
+            .put("sql2", ImmutableList.of(FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, INTEGER, INTEGER))
+            .put("sql4", ImmutableList.of(FIXED_WIDTH_VARCHAR, INTEGER, INTEGER, INTEGER))
             .put("sql6", ImmutableList.of(INTEGER, INTEGER))
-            .put("sql7", ImmutableList.of(VARCHAR, VARCHAR, VARCHAR))
-            .put("sql9", ImmutableList.of(BIGINT, BIGINT, BIGINT, VARCHAR))
+            .put("sql7", ImmutableList.of(FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR, FIXED_WIDTH_VARCHAR))
+            .put("sql9", ImmutableList.of(BIGINT, BIGINT, BIGINT, FIXED_WIDTH_VARCHAR))
             .build();
     private static final Map<String, List<Integer>> aggChannels = new ImmutableMap.Builder<String, List<Integer>>()
             .put("sql2", ImmutableList.of(6))
@@ -208,7 +210,7 @@ public class BenchmarkHashAggregationOmniOperator
                     switch (types.get(j).getDisplayName()) {
                         case "varchar":
                             if (!isDictionary) {
-                                blockBuilder = VARCHAR.createBlockBuilder(null, ROWS_PER_PAGE);
+                                blockBuilder = VARCHAR.createBlockBuilder(null, ROWS_PER_PAGE, 200);
                                 for (int k = 0; k < groupsPerPage; k++) {
                                     String groupKey = format(prefix + "%s", i * groupsPerPage + k);
                                     repeatToStringBlock(groupKey, rowsPerGroup, blockBuilder);
