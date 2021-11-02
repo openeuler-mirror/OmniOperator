@@ -39,6 +39,9 @@ JitContext *CreateTestTopNJitContext(VecTypes &sourceTypes, int32_t *sortCols, i
 
             JitContext *jitContext = new JitContext;
     jitContext->func = createOperatorFunc;
+    delete jit;
+    delete topNContext;
+    delete topNCompareSp;
     return jitContext;
 }
 
@@ -149,9 +152,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     auto e = clock();
     cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
 
-    TopNOperatorFactory *topNOperatorFactory2=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
-                                                                     1);
-    auto topNOp=topNOperatorFactory2->CreateOperator();
+    TopNOperatorFactory *topNOperatorFactoryWithoutJit=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
+                                                                               1);
+    auto topNOp=topNOperatorFactoryWithoutJit->CreateOperator();
     perfUtil->Init();
     perfUtil->Reset();
     perfUtil->Start();
@@ -161,8 +164,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     if (instCount != -1) {
         printf("TopN without OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
-    vector<VectorBatch *> outputVecorBatchs2;
-    topNOp->GetOutput(outputVecorBatchs2);
+    vector<VectorBatch *> outputVecorBatchsWithoutJit;
+    topNOp->GetOutput(outputVecorBatchsWithoutJit);
     auto e2 = clock();
     cout<<"topn performance takes: "<<(double)(e2-s)/CLOCKS_PER_SEC<<endl;
 
@@ -176,10 +179,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
 
     delete topNOperator;
     delete topNOperatorFactory;
+    delete topNOperatorFactoryWithoutJit;
     delete jitContext;
+    delete topNOp;
+    delete perfUtil;
     VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatches(outputVecorBatchsWithoutJit);
 }
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
     using namespace omniruntime::op;
