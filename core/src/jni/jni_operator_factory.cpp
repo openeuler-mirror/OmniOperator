@@ -585,6 +585,9 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNJitCo
     jitContext->func = createOperatorFunc;
 
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    delete topNCompareSp;
+    delete jit;
+    delete topNContext;
     return (int64_t)jitContext;
 }
 
