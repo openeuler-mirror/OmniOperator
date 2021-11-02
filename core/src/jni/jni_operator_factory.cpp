@@ -438,6 +438,12 @@ JitContext *CreateSortJitContext(const int32_t *sourceTypes, int32_t typesCount,
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    delete compareToSp;
+    delete getOutputSp;
+    delete sortContext;
+    delete pagesIndexContext;
+    delete jit;
+
     JNI_DEBUG_LOG("create sort JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
