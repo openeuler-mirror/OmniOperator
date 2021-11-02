@@ -131,7 +131,7 @@ TEST(Decimal128Vector, SetValuesWithoutOffset)
     EXPECT_TRUE(allocator != nullptr);
 
     Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
-    long *value = new long[256];
+    long *value = new long[256 * 2];
     for (int i = 0; i < 256; i++) {
         value[i * 2] = 12;
         value[i * 2 + 1] = i * 2;
