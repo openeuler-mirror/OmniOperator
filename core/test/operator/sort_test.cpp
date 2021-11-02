@@ -68,6 +68,12 @@ JitContext *CreateTestSortJitContext(const int32_t *sourceTypes, int32_t typesCo
     JitContext *jitContext = new JitContext;
     jitContext->func = static_cast<uintptr_t>(createOperatorFunc);
 
+    delete compareToSp;
+    delete getOutputSp;
+    delete sortContext;
+    delete pagesIndexContext;
+    delete jit;
+
     return jitContext;
 }
 
