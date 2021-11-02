@@ -17,7 +17,7 @@
 #include "../execution_context.h"
 
 using vec64 = std::vector<int64_t>;
-using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t);
+using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 
 namespace omniruntime {
 namespace op {
