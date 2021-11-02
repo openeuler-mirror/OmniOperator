@@ -363,6 +363,8 @@ JoinProbe::JoinProbe(VectorBatch *input, int32_t allColsCount, int32_t *hashCols
 
 JoinProbe::~JoinProbe()
 {
+    delete[] probeAllColumns;
+    delete[] probeHashColumns;
     delete[] hashes;
     delete[] nulls;
 }
