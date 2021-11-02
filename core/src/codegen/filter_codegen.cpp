@@ -15,8 +15,11 @@ namespace {
     const int ARGUMENT_THREE = 3;
     const int OFFSETS_INDEX = 4;
     const int EXECUTION_CONTEXT_IDX = 5;
+    const int DICTIONARY_VECTORS_IDX = 6;
+
     const int ROW_FILTER_OFFSETS_INDEX = 2;
     const int ROW_FILTER_ROW_IDX_INDEX = 3;
+
 }
 
 int64_t FilterCodeGen::GetFunction()
@@ -40,6 +43,8 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     args.push_back(bitmapArg);
     args.push_back(Type::getInt64PtrTy(*context)); // offsets
     args.push_back(Type::getInt64Ty(*context)); // execution_context address
+    args.push_back(Type::getInt64PtrTy(*context)); // dictionary vectors
+
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -60,13 +65,15 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     offsets->setName("OFFSETS");
     Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
     offsets->setName("EXECUTION_CONTEXT_ADDRESS");
+    Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
+    offsets->setName("DICTIONARY_VECTORS");
 
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, length*, execution_context_ptr
-    int32_t argsSize = 7;
+    // value*, bitmap*, offset*, rowIdx, isResultNull*, length*, execution_context_ptr, dictionary_vectors*
+    int32_t argsSize = 8;
     filterFuncArgs.reserve(argsSize);
 
     CallInst *ret;
@@ -109,6 +116,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     filterFuncArgs.push_back(isResultNullStore);
     filterFuncArgs.push_back(lengthAllocaInst);
     filterFuncArgs.push_back(executionContext);
+    filterFuncArgs.push_back(dictionaryVectors);
 
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
@@ -140,6 +148,8 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
 
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
+
+//    module->print(outs(), nullptr);
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();

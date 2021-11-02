@@ -97,7 +97,7 @@ void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
 
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
-    std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount)
+                             std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
 {
     std::vector<int64_t> data;
 
@@ -105,10 +105,11 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
         // handle dictionary vec
         if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
-            colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
-            dictionaryVecs.push_back(colVec);
-        }
-        if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+//            colVec = static_cast<DictionaryVector *>(colVec)->ExtractDictionary();
+//            dictionaryVecs.push_back(colVec);
+            dictionaries[i] = reinterpret_cast<int64_t>(colVec);
+            data.push_back(0);
+        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
             GetDecimal128Data(colVec, data, vecBatch->GetRowCount());
         } else {
             // data handling
@@ -131,15 +132,16 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     int32_t selectedRows[rowCount];
     int64_t bitmap[vectorCount];
     int64_t offsets[vectorCount];
+    int64_t dictionaries[vectorCount];
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
-    vector<Vector *> dictionaryVecs;
+    vector<Vector *> dictionaryVecs; // not used
 
-    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount);
+    std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
 
     int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets,
-                                                  reinterpret_cast<int64_t>(context));
+                                                  reinterpret_cast<int64_t>(context), dictionaries);
 
     if (numSelectedRows <= 0) {
         return 0;
