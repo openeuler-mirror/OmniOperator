@@ -28,6 +28,16 @@ public abstract class Vec implements Closeable {
     }
 
     /**
+     * indicates a null value in a nulls buffer
+     */
+    public static final byte NULL = 1;
+
+    /**
+     * indicates a not null value in a nulls buffer
+     */
+    public static final byte NOT_NULL = 0;
+
+    /**
      * When a vector has been sliced,
      * this value will point to where is the new slice {@link Vec} start.
      */
@@ -331,6 +341,19 @@ public abstract class Vec implements Closeable {
         nullsBuf.setBytes(index, values, 0, length);
     }
 
+
+    /**
+     * set nulls in batch
+     *
+     * @param index the offset of the element
+     * @param isNulls array of null values, true is null otherwise non-null.
+     * @param start array offset
+     * @param length number of elements
+     */
+    public void setNulls(int index, byte[] isNulls, int start, int length) {
+        nullsBuf.setBytes(index, isNulls, start, length);
+    }
+
     /**
      * set nulls buffer
      *
@@ -405,12 +428,12 @@ public abstract class Vec implements Closeable {
      * @return raw value nulls
      * @return raw nulls array
      */
-    public boolean[] getRawValueNulls() {
+    public byte[] getRawValueNulls() {
         // the length of the array is size + offset, so that the caller
         // and vec can have the same offset.
         byte[] rawValueNulls = new byte[size + offset];
         nullsBuf.getBytes(0, rawValueNulls, 0, rawValueNulls.length);
-        return transformByteToBoolean(rawValueNulls, 0, rawValueNulls.length);
+        return rawValueNulls;
     }
 
     /**

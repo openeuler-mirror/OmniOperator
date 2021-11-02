@@ -7,7 +7,8 @@ package nova.hetu.olk.reader;
 import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.prestosql.orc.reader.ReaderUtils.minNonNullValueSize;
-import static io.prestosql.orc.reader.ReaderUtils.unpackDoubleNulls;
+import static io.prestosql.spi.type.DoubleType.DOUBLE;
+import static nova.hetu.olk.tool.ReaderUtils.unpackDoubleNulls;
 import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromExtensionProperties;
 
 import io.prestosql.memory.context.LocalMemoryContext;
@@ -15,6 +16,7 @@ import io.prestosql.orc.OrcColumn;
 import io.prestosql.orc.OrcCorruptionException;
 import io.prestosql.orc.reader.DoubleColumnReader;
 import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.type.Type;
 import java.util.Map;
 import nova.hetu.olk.block.DoubleArrayOmniBlock;
@@ -51,6 +53,56 @@ public class OmniDoubleColumnReader extends DoubleColumnReader {
     }
 
     @Override
+    public Block readBlock()
+            throws IOException {
+        if (!rowGroupOpen) {
+            openRowGroup();
+        }
+
+        if (readOffset > 0) {
+            if (presentStream != null) {
+                // skip ahead the present bit reader, but count the set bits
+                // and use this as the skip size for the data reader
+                readOffset = presentStream.countBitsSet(readOffset);
+            }
+            if (readOffset > 0) {
+                if (dataStream == null) {
+                    throw new OrcCorruptionException(column.getOrcDataSourceId(),
+                            "Value is not null but data stream is missing");
+                }
+                dataStream.skip(readOffset);
+            }
+        }
+
+        Block block;
+        if (dataStream == null) {
+            if (presentStream == null) {
+                throw new OrcCorruptionException(column.getOrcDataSourceId(),
+                        "Value is null but present stream is missing");
+            }
+            presentStream.skip(nextBatchSize);
+            block = RunLengthEncodedBlock.create(DOUBLE, null, nextBatchSize);
+        } else if (presentStream == null) {
+            block = readNonNullBlock();
+        } else {
+            byte[] isNull = new byte[nextBatchSize];
+            int nullCount = presentStream.getUnsetBits(nextBatchSize, isNull);
+            if (nullCount == 0) {
+                block = readNonNullBlock();
+            } else if (nullCount != nextBatchSize) {
+                block = readNullBlock(isNull, nextBatchSize - nullCount);
+            } else {
+                block = RunLengthEncodedBlock.create(DOUBLE, null, nextBatchSize);
+            }
+        }
+
+        readOffset = 0;
+        nextBatchSize = 0;
+
+        return block;
+    }
+
+    @Override
     public Block readNonNullBlock() throws IOException {
         verify(dataStream != null);
         double[] values = new double[nextBatchSize];
@@ -58,8 +110,7 @@ public class OmniDoubleColumnReader extends DoubleColumnReader {
         return new DoubleArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), values);
     }
 
-    @Override
-    public Block readNullBlock(boolean[] isNull, int nonNullCount) throws IOException {
+    private Block readNullBlock(byte[] isNull, int nonNullCount) throws IOException {
         verify(dataStream != null);
         int minNonNullValueSize = minNonNullValueSize(nonNullCount);
         if (nonNullValueTemp.length < minNonNullValueSize) {

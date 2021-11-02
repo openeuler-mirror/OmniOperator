@@ -43,7 +43,7 @@ public class LongArrayOmniBlock implements Block<Long> {
     private final int positionCount;
 
     @Nullable
-    private final boolean[] valueIsNull;
+    private final byte[] valueIsNull;
 
     private final LongVec values;
 
@@ -59,7 +59,7 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<boolean[]> valueIsNull, long[] values) {
+    public LongArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull, long[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -80,7 +80,7 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(int positionCount, Optional<boolean[]> valueIsNull, LongVec values) {
+    public LongArrayOmniBlock(int positionCount, Optional<byte[]> valueIsNull, LongVec values) {
         this(values.getOffset(), positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -93,7 +93,7 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, boolean[] valueIsNull, long[] values) {
+    public LongArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull, long[] values) {
         this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -135,7 +135,7 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(int arrayOffset, int positionCount, boolean[] valueIsNull, LongVec values) {
+    public LongArrayOmniBlock(int arrayOffset, int positionCount, byte[] valueIsNull, LongVec values) {
         vecAllocator = values.getAllocator();
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -231,7 +231,7 @@ public class LongArrayOmniBlock implements Block<Long> {
     }
 
     public Long get(int position) {
-        if (valueIsNull != null && valueIsNull[position + arrayOffset]) {
+        if (valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL) {
             return null;
         }
         return values.get(position);
@@ -256,7 +256,7 @@ public class LongArrayOmniBlock implements Block<Long> {
     @Override
     public boolean isNull(int position) {
         checkReadablePosition(position);
-        return valueIsNull != null && valueIsNull[position + arrayOffset];
+        return valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL;
     }
 
     @Override
@@ -269,7 +269,7 @@ public class LongArrayOmniBlock implements Block<Long> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new LongArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new boolean[] {true} : null,
+        return new LongArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null,
             new long[] {values.get(position)});
     }
 
@@ -277,9 +277,9 @@ public class LongArrayOmniBlock implements Block<Long> {
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
 
-        boolean[] newValueIsNull = null;
+        byte[] newValueIsNull = null;
         if (valueIsNull != null) {
-            newValueIsNull = new boolean[length];
+            newValueIsNull = new byte[length];
         }
         for (int i = 0; i < length; i++) {
             int position = positions[offset + i];
@@ -304,7 +304,7 @@ public class LongArrayOmniBlock implements Block<Long> {
         checkValidRegion(getPositionCount(), positionOffset, length);
 
         LongVec newValues = compactVec(values, positionOffset, length);
-        boolean[] newValueIsNull = valueIsNull == null
+        byte[] newValueIsNull = valueIsNull == null
             ? null
             : compactArray(valueIsNull, positionOffset + arrayOffset, length);
 
@@ -347,7 +347,7 @@ public class LongArrayOmniBlock implements Block<Long> {
     public int filter(int[] positions, int positionCount, int[] matchedPositions, Function<Object, Boolean> test) {
         int matchCount = 0;
         for (int i = 0; i < positionCount; i++) {
-            if (valueIsNull != null && valueIsNull[positions[i] + arrayOffset]) {
+            if (valueIsNull != null && valueIsNull[positions[i] + arrayOffset] == Vec.NULL) {
                 if (test.apply(null)) {
                     matchedPositions[matchCount++] = positions[i];
                 }

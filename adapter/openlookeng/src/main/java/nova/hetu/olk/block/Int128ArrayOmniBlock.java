@@ -18,6 +18,7 @@ import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.block.Int128ArrayBlockEncoding;
 import io.prestosql.spi.util.BloomFilter;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
@@ -47,7 +48,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
     private final int positionCount;
 
     @Nullable
-    private final boolean[] valueIsNull;
+    private final byte[] valueIsNull;
 
     private final Decimal128Vec values;
 
@@ -63,7 +64,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public Int128ArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<boolean[]> valueIsNull, long[] values) {
+    public Int128ArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull, long[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -84,7 +85,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public Int128ArrayOmniBlock(int positionCount, Optional<boolean[]> valueIsNull, Decimal128Vec values) {
+    public Int128ArrayOmniBlock(int positionCount, Optional<byte[]> valueIsNull, Decimal128Vec values) {
         this(values.getOffset(), positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -97,7 +98,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    Int128ArrayOmniBlock(VecAllocator vecAllocator, int positionOffset, int positionCount, boolean[] valueIsNull, long[] values) {
+    Int128ArrayOmniBlock(VecAllocator vecAllocator, int positionOffset, int positionCount, byte[] valueIsNull, long[] values) {
         this.vecAllocator = vecAllocator;
         if (positionOffset < 0) {
             throw new IllegalArgumentException("positionOffset is negative");
@@ -140,7 +141,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    Int128ArrayOmniBlock(int positionOffset, int positionCount, boolean[] valueIsNull, Decimal128Vec values) {
+    Int128ArrayOmniBlock(int positionOffset, int positionCount, byte[] valueIsNull, Decimal128Vec values) {
         this.vecAllocator = values.getAllocator();
         if (positionOffset < 0) {
             throw new IllegalArgumentException("positionOffset is negative");
@@ -224,7 +225,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
     @Override
     public boolean isNull(int position) {
         checkReadablePosition(position);
-        return valueIsNull != null && valueIsNull[position + positionOffset];
+        return valueIsNull != null && valueIsNull[position + positionOffset] == Vec.NULL;
     }
 
     @Override
@@ -238,16 +239,16 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new Int128ArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new boolean[] {true} : null, values.get(position));
+        return new Int128ArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null, values.get(position));
     }
 
     @Override
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
 
-        boolean[] newValueIsNull = null;
+        byte[] newValueIsNull = null;
         if (valueIsNull != null) {
-            newValueIsNull = new boolean[length];
+            newValueIsNull = new byte[length];
             for (int i = 0; i < length; i++) {
                 int position = positions[offset + i];
                 checkReadablePosition(position);
@@ -273,7 +274,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
         checkValidRegion(getPositionCount(), positionOffset, length);
 
         Decimal128Vec newValues = compactVec(values, positionOffset, length);
-        boolean[] newValueIsNull = valueIsNull == null
+        byte[] newValueIsNull = valueIsNull == null
             ? null
             : compactArray(valueIsNull, positionOffset + positionOffset, length);
         if (newValueIsNull == valueIsNull && newValues == values) {
@@ -315,7 +316,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
         int matchCount = 0;
         long[] val;
         for (int i = 0; i < positionCount; i++) {
-            if (valueIsNull != null && valueIsNull[positions[i] + positionOffset]) {
+            if (valueIsNull != null && valueIsNull[positions[i] + positionOffset] == Vec.NULL) {
                 if (test.apply(null)) {
                     matchedPositions[matchCount++] = positions[i];
                 }
@@ -332,7 +333,7 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
 
     @Override
     public long[] get(int position) {
-        if (valueIsNull != null && valueIsNull[position + positionOffset]) {
+        if (valueIsNull != null && valueIsNull[position + positionOffset] == Vec.NULL) {
             return null;
         }
         return values.get(position);

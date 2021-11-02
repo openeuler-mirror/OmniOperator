@@ -4,14 +4,15 @@
 
 package nova.hetu.olk.block;
 
-import static io.prestosql.spi.block.EncoderUtil.decodeNullBits;
 import static io.prestosql.spi.block.EncoderUtil.encodeNullsAsBits;
+import static nova.hetu.olk.tool.EncoderUtil.decodeNullBits;
 
 import io.airlift.slice.SliceInput;
 import io.airlift.slice.SliceOutput;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncoding;
 import io.prestosql.spi.block.BlockEncodingSerde;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
@@ -54,11 +55,11 @@ public class DoubleArrayOmniBlockEncoding implements BlockEncoding {
     public Block readBlock(BlockEncodingSerde blockEncodingSerde, SliceInput sliceInput) {
         int positionCount = sliceInput.readInt();
 
-        boolean[] valueIsNull = decodeNullBits(sliceInput, positionCount).orElse(null);
+        byte[] valueIsNull = decodeNullBits(sliceInput, positionCount).orElse(null);
 
         double[] values = new double[positionCount];
         for (int position = 0; position < positionCount; position++) {
-            if (valueIsNull == null || !valueIsNull[position]) {
+            if (valueIsNull == null || valueIsNull[position] == Vec.NOT_NULL) {
                 values[position] = sliceInput.readDouble();
             }
         }

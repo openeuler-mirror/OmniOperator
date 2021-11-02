@@ -5,12 +5,12 @@
 package nova.hetu.olk.block;
 
 import static io.airlift.slice.Slices.wrappedIntArray;
-import static io.prestosql.spi.block.RowBlock.validateConstructorArguments;
+import static nova.hetu.olk.block.RowOmniBlock.validateConstructorArguments;
+import static nova.hetu.olk.tool.EncoderUtil.decodeNullBits;
 
 import io.airlift.slice.SliceInput;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
-import io.prestosql.spi.block.EncoderUtil;
 import io.prestosql.spi.block.RowBlockEncoding;
 import nova.hetu.omniruntime.vector.VecAllocator;
 
@@ -39,8 +39,8 @@ public class RowOmniBlockEncoding extends RowBlockEncoding {
         int positionCount = sliceInput.readInt();
         int[] fieldBlockOffsets = new int[positionCount + 1];
         sliceInput.readBytes(wrappedIntArray(fieldBlockOffsets));
-        boolean[] rowIsNull = EncoderUtil.decodeNullBits(sliceInput, positionCount)
-            .orElseGet(() -> new boolean[positionCount]);
+        byte[] rowIsNull = decodeNullBits(sliceInput, positionCount)
+            .orElseGet(() -> new byte[positionCount]);
         return createRowBlockInternal(0, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
     }
 
@@ -54,7 +54,7 @@ public class RowOmniBlockEncoding extends RowBlockEncoding {
      * @param fieldBlocks the field blocks
      * @return the row omni block
      */
-    static RowOmniBlock createRowBlockInternal(int startOffset, int positionCount, @Nullable boolean[] rowIsNull,
+    static RowOmniBlock createRowBlockInternal(int startOffset, int positionCount, @Nullable byte[] rowIsNull,
         int[] fieldBlockOffsets, Block[] fieldBlocks) {
         validateConstructorArguments(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
         return new RowOmniBlock(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);

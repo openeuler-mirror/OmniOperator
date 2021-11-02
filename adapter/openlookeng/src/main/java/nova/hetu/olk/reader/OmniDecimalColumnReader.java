@@ -7,8 +7,9 @@ package nova.hetu.olk.reader;
 import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.prestosql.orc.reader.ReaderUtils.minNonNullValueSize;
-import static io.prestosql.orc.reader.ReaderUtils.unpackInt128Nulls;
-import static io.prestosql.orc.reader.ReaderUtils.unpackLongNulls;
+import static io.prestosql.spi.type.DoubleType.DOUBLE;
+import static nova.hetu.olk.tool.ReaderUtils.unpackInt128Nulls;
+import static nova.hetu.olk.tool.ReaderUtils.unpackLongNulls;
 import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromExtensionProperties;
 
 import io.airlift.slice.Slice;
@@ -18,6 +19,7 @@ import io.prestosql.orc.OrcColumn;
 import io.prestosql.orc.OrcCorruptionException;
 import io.prestosql.orc.reader.DecimalColumnReader;
 import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.type.Decimals;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.UnscaledDecimal128Arithmetic;
@@ -49,6 +51,45 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
         throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
         vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
+    }
+
+    @Override
+    public Block readBlock()
+            throws IOException {
+        if (!rowGroupOpen) {
+            openRowGroup();
+        }
+
+        seekToOffset();
+
+        Block block;
+        if (decimalStream == null && scaleStream == null) {
+            if (presentStream == null) {
+                throw new OrcCorruptionException(column.getOrcDataSourceId(),
+                        "Value is null but present stream is missing");
+            }
+            presentStream.skip(nextBatchSize);
+            block = RunLengthEncodedBlock.create(type, null, nextBatchSize);
+        } else if (presentStream == null) {
+            checkDataStreamsArePresent();
+            block = readNonNullBlock();
+        } else {
+            checkDataStreamsArePresent();
+            byte[] isNull = new byte[nextBatchSize];
+            int nullCount = presentStream.getUnsetBits(nextBatchSize, isNull);
+            if (nullCount == 0) {
+                block = readNonNullBlock();
+            } else if (nullCount != nextBatchSize) {
+                block = readNullBlock(isNull, nextBatchSize - nullCount);
+            } else {
+                block = RunLengthEncodedBlock.create(DOUBLE, null, nextBatchSize);
+            }
+        }
+
+        readOffset = 0;
+        nextBatchSize = 0;
+
+        return block;
     }
 
     @Override
@@ -96,8 +137,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
         return new Int128ArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), data);
     }
 
-    @Override
-    protected Block readNullBlock(boolean[] isNull, int nonNullCount) throws IOException {
+    private Block readNullBlock(byte[] isNull, int nonNullCount) throws IOException {
         Block block;
         if (type.isShort()) {
             block = readShortNullBlock(isNull, nonNullCount);
@@ -107,7 +147,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
         return block;
     }
 
-    private Block readShortNullBlock(boolean[] isNull, int nonNullCount) throws IOException {
+    private Block readShortNullBlock(byte[] isNull, int nonNullCount) throws IOException {
         verify(decimalStream != null);
         verify(scaleStream != null);
 
@@ -131,7 +171,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
         return new LongArrayOmniBlock(vecAllocator, nextBatchSize, Optional.of(isNull), result);
     }
 
-    private Block readLongNullBlock(boolean[] isNull, int nonNullCount) throws IOException {
+    private Block readLongNullBlock(byte[] isNull, int nonNullCount) throws IOException {
         verify(decimalStream != null);
         verify(scaleStream != null);
 

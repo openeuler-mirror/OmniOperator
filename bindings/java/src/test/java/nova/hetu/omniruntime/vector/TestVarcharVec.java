@@ -169,7 +169,8 @@ public class TestVarcharVec {
         VarcharVec varcharVec = new VarcharVec(1024, size);
         varcharVec.setNulls(0, isNulls, 0, isNulls.length);
         assertTrue(varcharVec.hasNullValue());
-        assertEquals(isNulls, varcharVec.getRawValueNulls());
+        byte[] result = varcharVec.getRawValueNulls();
+        assertEquals(isNulls, varcharVec.transformByteToBoolean(result, 0, result.length));
         assertEquals(varcharVec.getValuesNulls(0, size) ,isNulls);
         int offset = 3;
         boolean[] acutal = varcharVec.getValuesNulls(offset, size / 2);
