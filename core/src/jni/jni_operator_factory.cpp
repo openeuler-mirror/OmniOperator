@@ -22,6 +22,7 @@
 #include "../operator/partitionedoutput/partitionedoutput.h"
 #include "../operator/union/union.h"
 #include "../operator/optimization.h"
+#include "../operator/window/window_expr.h"
 #include "config.h"
 
 using omniruntime::jit::Context;
@@ -1443,4 +1444,183 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_DEBUG_LOG("create lookup join with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
     return (int64_t)operatorFactory;
+}
+
+JitContext *CreateWindowWithExprJitContext(VecTypes &sourceTypes, int32_t typesCount, int32_t *outputCols,
+    int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
+    int32_t *sortNullFirsts, int32_t sortColsCount, VecTypes &outputTypes, string* argumentKeys,
+    int argumentKeysCount);
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_createWindowWithExprJitContext(
+    JNIEnv *env, jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
+    jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
+    jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jobjectArray jArgumentKeys,
+    jstring jWindowFunctionReturnType)
+{
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+    jint *windowFunction = env->GetIntArrayElements(jWindowFunction, JNI_FALSE);
+    jint *partitionChannels = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
+    jint *preGroupedChannels = env->GetIntArrayElements(JPreGroupedChannels, JNI_FALSE);
+    jint *sortChannels = env->GetIntArrayElements(jSortChannels, JNI_FALSE);
+    jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
+    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    auto argumentKeysCount = env->GetArrayLength(jArgumentKeys);
+    std::string argumentKeysArr[argumentKeysCount];
+    GetExpressions(env, jArgumentKeys, argumentKeysArr, argumentKeysCount);
+    auto windowFunctionReturnTypeCharPtr = env->GetStringUTFChars(jWindowFunctionReturnType, JNI_FALSE);
+
+    auto inputVecTypes = Deserialize(sourceTypesCharPtr);
+    auto outputVecTypes = Deserialize(windowFunctionReturnTypeCharPtr);
+
+    jint inputTypesCount = inputVecTypes.GetSize();
+    jint outputColsCount = env->GetArrayLength(jOutputChannels);
+    jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
+    jint partitionCount = env->GetArrayLength(jPartitionChannels);
+    jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
+    jint sortColCount = env->GetArrayLength(jSortChannels);
+    jint outputTypesCount = outputVecTypes.GetSize();
+
+    JitContext *jitContext = CreateWindowWithExprJitContext(inputVecTypes,
+        inputVecTypes.GetSize(), outputChannels, outputColsCount, partitionChannels, partitionCount, sortChannels,
+        sortOrder, sortNullFirsts, sortColCount, outputVecTypes, argumentKeysArr, argumentKeysCount);
+
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
+    return (int64_t)jitContext;
+}
+
+JitContext *CreateWindowWithExprJitContext(VecTypes &sourceTypes, int32_t typesCount, int32_t *outputCols,
+    int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
+    int32_t *sortNullFirsts, int32_t sortColsCount, VecTypes &outputTypes, string* argumentKeys,
+    int argumentKeysCount)
+{
+    using namespace omniruntime::jit;
+    std::vector<VecType> allTypesVec;
+    allTypesVec.insert(allTypesVec.end(), sourceTypes.Get().begin(), sourceTypes.Get().end());
+    allTypesVec.insert(allTypesVec.end(), outputTypes.Get().begin(), outputTypes.Get().end());
+
+    VecTypes allTypes(allTypesVec);
+    int32_t finalSortColsCount = sortColsCount + partitionCount;
+    int32_t finalSortCols[finalSortColsCount];
+    int32_t finalSortAscendings[finalSortColsCount];
+    int32_t finalSortNullFirsts[finalSortColsCount];
+    for (int32_t i = 0; i < partitionCount; i++) {
+        finalSortCols[i] = partitionCols[i];
+        finalSortAscendings[i] = true;
+        finalSortNullFirsts[i] = false;
+    }
+    for (int32_t i = partitionCount; i < partitionCount + sortColsCount; i++) {
+        finalSortCols[i] = sortCols[i - partitionCount];
+        finalSortAscendings[i] = sortAscendings[i - partitionCount];
+        finalSortNullFirsts[i] = sortNullFirsts[i - partitionCount];
+    }
+
+    auto inputTypes = const_cast<int32_t *>(sourceTypes.GetIds());
+    int32_t finalSortColTypes[finalSortColsCount];
+    for (int32_t i = 0; i < finalSortColsCount; i++) {
+        finalSortColTypes[i] = inputTypes[finalSortCols[i]];
+    }
+    auto allCount = allTypes.GetSize();
+    int32_t finalOutputCols[allCount];
+    int32_t finalOutputColsCount = 0;
+    for (int32_t i = 0; i < outputColsCount; i++) {
+        finalOutputCols[finalOutputColsCount] = outputCols[i];
+        finalOutputColsCount++;
+    }
+    for (int32_t i = typesCount; i < allCount; i++) {
+        finalOutputCols[finalOutputColsCount] = i;
+        finalOutputColsCount++;
+    }
+
+    ParamValue pSortCols = ParamValue(finalSortCols, finalSortColsCount);
+    ParamValue pSortColTypes = ParamValue(finalSortColTypes, finalSortColsCount);
+    ParamValue pSortAscendings = ParamValue(finalSortAscendings, finalSortColsCount);
+    ParamValue pSortNullFirsts = ParamValue(finalSortNullFirsts, finalSortColsCount);
+    ParamValue pSortColCount = ParamValue(&finalSortColsCount);
+
+    ParamValue pSourceTypes = ParamValue(inputTypes, typesCount);
+    ParamValue pOutputCols = ParamValue(outputCols, outputColsCount);
+    ParamValue pOutputColCount = ParamValue(&outputColsCount);
+
+    auto *compareToSp = new Specialization();
+    compareToSp->AddSpecializedParam(0, &pSortCols);
+    compareToSp->AddSpecializedParam(1, &pSortColTypes);
+    compareToSp->AddSpecializedParam(2, &pSortAscendings);
+    compareToSp->AddSpecializedParam(3, &pSortNullFirsts);
+    compareToSp->AddSpecializedParam(4, &pSortColCount);
+    auto *getOutputSp = new Specialization();
+    getOutputSp->AddSpecializedParam(1, &pOutputCols);
+    getOutputSp->AddSpecializedParam(2, &pOutputColCount);
+    getOutputSp->AddSpecializedParam(4, &pSourceTypes);
+    std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
+        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
+    auto *windowWithExprContext =
+        new omniruntime::jit::Context(GenerateOperatorTemplatePath("window_expr"),
+            std::map<std::string, Specialization>());
+    auto *windowContext =
+        new omniruntime::jit::Context(GenerateOperatorTemplatePath("window"), std::map<std::string, Specialization>());
+    auto *pagesIndexContext =
+        new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
+    Jit *jit =
+        new Jit(std::vector<omniruntime::jit::Context> { *windowWithExprContext, *windowContext, *pagesIndexContext });
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete compareToSp;
+    delete getOutputSp;
+    delete windowWithExprContext;
+    delete windowContext;
+    delete pagesIndexContext;
+    delete jit;
+
+    return jitContext;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_createWindowWithExprOperatorFactory(
+    JNIEnv *env, jobject jObj, jstring jSourceTypes, jintArray jOutputChannels, jintArray jWindowFunction,
+    jintArray jPartitionChannels, jintArray JPreGroupedChannels, jintArray jSortChannels, jintArray jSortOrder,
+    jintArray jSortNullFirsts, jint preSortedChannelPrefix, jint expectedPositions, jobjectArray jArgumentKeys,
+    jstring jWindowFunctionReturnType, jlong jitContext)
+{
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    jint *outputChannels = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+    jint *windowFunction = env->GetIntArrayElements(jWindowFunction, JNI_FALSE);
+    jint *partitionChannels = env->GetIntArrayElements(jPartitionChannels, JNI_FALSE);
+    jint *preGroupedChannels = env->GetIntArrayElements(JPreGroupedChannels, JNI_FALSE);
+    jint *sortChannels = env->GetIntArrayElements(jSortChannels, JNI_FALSE);
+    jint *sortOrder = env->GetIntArrayElements(jSortOrder, JNI_FALSE);
+    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    auto argumentKeysArrCount = env->GetArrayLength(jArgumentKeys);
+    std::string argumentKeysArr[argumentKeysArrCount];
+    GetExpressions(env, jArgumentKeys, argumentKeysArr, argumentKeysArrCount);
+    auto windowFunctionReturnTypeCharPtr = env->GetStringUTFChars(jWindowFunctionReturnType, JNI_FALSE);
+
+    auto inputVecTypes = Deserialize(sourceTypesCharPtr);
+    auto outputVecTypes = Deserialize(windowFunctionReturnTypeCharPtr);
+
+    jint inputTypesCount = inputVecTypes.GetSize();
+    jint outputColsCount = env->GetArrayLength(jOutputChannels);
+    jint windowFunctionCount = env->GetArrayLength(jWindowFunction);
+    jint partitionCount = env->GetArrayLength(jPartitionChannels);
+    jint preGroupedCount = env->GetArrayLength(JPreGroupedChannels);
+    jint sortColCount = env->GetArrayLength(jSortChannels);
+    jint argumentKeysCount = env->GetArrayLength(jArgumentKeys);
+    jint outputTypesCount = outputVecTypes.GetSize();
+
+    omniruntime::op::WindowWithExprOperatorFactory *windowWithExprOperatorFactory =
+        omniruntime::op::WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputVecTypes,
+            outputChannels, outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount,
+            preGroupedChannels, preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount,
+            preSortedChannelPrefix, expectedPositions, outputVecTypes, argumentKeysArr, argumentKeysCount);
+
+    windowWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
+
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
+    return (int64_t)windowWithExprOperatorFactory;
 }

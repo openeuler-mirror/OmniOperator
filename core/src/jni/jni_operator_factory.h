@@ -233,6 +233,16 @@ JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_createLookupJoinWithExprOperatorFactory(
     JNIEnv *, jclass, jstring, jintArray, jobjectArray, jintArray, jstring, jint, jlong, jlong);
 
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_createWindowWithExprJitContext(
+    JNIEnv *, jobject, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray,
+    jint, jint, jobjectArray, jstring);
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_createWindowWithExprOperatorFactory(
+    JNIEnv *, jobject, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint,
+    jint, jobjectArray, jstring, jlong);
+
 #ifdef __cplusplus
 }
 #endif
