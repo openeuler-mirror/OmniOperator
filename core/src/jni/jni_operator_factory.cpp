@@ -835,6 +835,13 @@ JitContext *CreateHashBuilderJitContext(const int32_t *buildTypes, int32_t build
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    delete hashPositionSp;
+    delete positionEqualsPositionIgnoreNullsSp;
+    delete hashBuilderContext;
+    delete joinHashTableContext;
+    delete pagesHashStrategyContext;
+    delete jit;
+
     JNI_DEBUG_LOG("create hash builder JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
@@ -1001,8 +1008,17 @@ JitContext *CreateLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-    JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
 
+    delete buildBuildColumnsSp;
+    delete populateHashesSp;
+    delete hashRowSp;
+    delete positionEqualsRowIgnoreNullsSp;
+    delete lookupJoinContext;
+    delete joinHashTableContext;
+    delete pagesHashStrategyContext;
+    delete jit;
+
+    JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
     return jitContext;
 }
 
@@ -1143,6 +1159,13 @@ JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outp
     auto jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    delete compareToSp;
+    delete getOutputSp;
+    delete sortWithExprContext;
+    delete sortContext;
+    delete pagesIndexContext;
+    delete jit;
+
     return jitContext;
 }
 
@@ -1235,6 +1258,14 @@ JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes, string 
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete hashPositionSp;
+    delete positionEqualsPositionIgnoreNullsSp;
+    delete hashBuilderWithExprContext;
+    delete hashBuilderContext;
+    delete joinHashTableContext;
+    delete pagesHashStrategyContext;
+    delete jit;
 
     return jitContext;
 }
@@ -1342,6 +1373,16 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete buildBuildColumnsSp;
+    delete populateHashesSp;
+    delete hashRowSp;
+    delete positionEqualsRowIgnoreNullsSp;
+    delete lookupJoinWithExprContext;
+    delete lookupJoinContext;
+    delete joinHashTableContext;
+    delete pagesHashStrategyContext;
+    delete jit;
 
     return jitContext;
 }

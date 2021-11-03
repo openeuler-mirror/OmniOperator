@@ -52,17 +52,17 @@ JitContext *CreateTestHashBuilderExprJitContext(VecTypes &buildVecTypes, string 
         hashColTypes[i] = buildTypes[buildHashCols[i]];
     }
 
-    ParamValue p_hashColTypes = ParamValue(hashColTypes, buildHashKeysCount);
-    ParamValue p_hashColCount = ParamValue(&buildHashKeysCount);
+    ParamValue pHashColTypes = ParamValue(hashColTypes, buildHashKeysCount);
+    ParamValue pHashColCount = ParamValue(&buildHashKeysCount);
 
     auto hashPositionSp = new Specialization();
-    hashPositionSp->AddSpecializedParam(3, &p_hashColTypes);
-    hashPositionSp->AddSpecializedParam(4, &p_hashColCount);
+    hashPositionSp->AddSpecializedParam(3, &pHashColTypes);
+    hashPositionSp->AddSpecializedParam(4, &pHashColCount);
     map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp } };
 
     auto positionEqualsPositionIgnoreNullsSp = new Specialization();
-    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
-    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
+    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
+    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &pHashColCount);
 
     map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS,
         *positionEqualsPositionIgnoreNullsSp } };
@@ -80,6 +80,14 @@ JitContext *CreateTestHashBuilderExprJitContext(VecTypes &buildVecTypes, string 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
+    delete hashPositionSp;
+    delete positionEqualsPositionIgnoreNullsSp;
+    delete hashBuilderWithExprContext;
+    delete hashBuilderContext;
+    delete joinHashTableContext;
+    delete pagesHashStrategyContext;
+    delete jit;
+
     return jitContext;
 }
 
@@ -96,33 +104,33 @@ JitContext *CreateTestLookupJoinExprJitContext(VecTypes &probeVecTypes, int32_t 
         hashColTypes[i] = probeTypes[probeHashCols[i]];
     }
 
-    ParamValue p_probeOutputColsCount = ParamValue(&probeOutputColsCount);
-    ParamValue p_buildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
-    ParamValue p_buildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
-    ParamValue p_buildOutputColsCount = ParamValue(&buildOutputColsCount);
-    ParamValue p_hashColTypes = ParamValue(hashColTypes, probeHashKeysCount);
-    ParamValue p_hashColCount = ParamValue(&probeHashKeysCount);
+    ParamValue pProbeOutputColsCount = ParamValue(&probeOutputColsCount);
+    ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
+    ParamValue pBuildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
+    ParamValue pBuildOutputColsCount = ParamValue(&buildOutputColsCount);
+    ParamValue pHashColTypes = ParamValue(hashColTypes, probeHashKeysCount);
+    ParamValue pHashColCount = ParamValue(&probeHashKeysCount);
 
     auto buildBuildColumnsSp = new Specialization();
-    buildBuildColumnsSp->AddSpecializedParam(3, &p_buildOutputTypes);
-    buildBuildColumnsSp->AddSpecializedParam(4, &p_buildOutputCols);
-    buildBuildColumnsSp->AddSpecializedParam(5, &p_buildOutputColsCount);
-    buildBuildColumnsSp->AddSpecializedParam(6, &p_probeOutputColsCount);
+    buildBuildColumnsSp->AddSpecializedParam(3, &pBuildOutputTypes);
+    buildBuildColumnsSp->AddSpecializedParam(4, &pBuildOutputCols);
+    buildBuildColumnsSp->AddSpecializedParam(5, &pBuildOutputColsCount);
+    buildBuildColumnsSp->AddSpecializedParam(6, &pProbeOutputColsCount);
 
     auto populateHashesSp = new Specialization();
-    populateHashesSp->AddSpecializedParam(2, &p_hashColTypes);
-    populateHashesSp->AddSpecializedParam(3, &p_hashColCount);
+    populateHashesSp->AddSpecializedParam(2, &pHashColTypes);
+    populateHashesSp->AddSpecializedParam(3, &pHashColCount);
     map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
         { OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
 
     auto hashRowSp = new Specialization();
-    hashRowSp->AddSpecializedParam(2, &p_hashColTypes);
-    hashRowSp->AddSpecializedParam(3, &p_hashColCount);
+    hashRowSp->AddSpecializedParam(2, &pHashColTypes);
+    hashRowSp->AddSpecializedParam(3, &pHashColCount);
     map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
 
     auto positionEqualsRowIgnoreNullsSp = new Specialization();
-    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &p_hashColTypes);
-    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(6, &p_hashColCount);
+    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
+    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(6, &pHashColCount);
     map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
         *positionEqualsRowIgnoreNullsSp } };
 
@@ -138,6 +146,16 @@ JitContext *CreateTestLookupJoinExprJitContext(VecTypes &probeVecTypes, int32_t 
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete buildBuildColumnsSp;
+    delete populateHashesSp;
+    delete hashRowSp;
+    delete positionEqualsRowIgnoreNullsSp;
+    delete lookupJoinWithExprContext;
+    delete lookupJoinContext;
+    delete joinHashTableContext;
+    delete pagesHashStrategyContext;
+    delete jit;
 
     return jitContext;
 }
