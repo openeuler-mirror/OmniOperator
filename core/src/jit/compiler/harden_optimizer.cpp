@@ -27,7 +27,7 @@ namespace omniruntime {
 
         void HardenOptimizer::populatePass(legacy::FunctionPassManager &FPM, legacy::PassManager &MPM)
         {
-            conf.populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
+            conf->populate(FPM, MPM, this->optimizations, this->moduleOptimizations);
         }
 
         Expected<ThreadSafeModule> HardenOptimizer::operator()(ThreadSafeModule TSM,

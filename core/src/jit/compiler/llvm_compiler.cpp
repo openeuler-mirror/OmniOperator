@@ -35,7 +35,7 @@ namespace omniruntime {
 namespace jit {
 LLVMCompiler::LLVMCompiler()
 {
-    this->config = std::make_unique<Config>();
+    this->config = Config::GetConf();
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
@@ -47,7 +47,13 @@ LLVMCompiler::LLVMCompiler()
     LoadExtraLibraries();
 }
 
-LLVMCompiler::~LLVMCompiler() {}
+LLVMCompiler::~LLVMCompiler()
+{
+    this->context.reset();
+    this->layout.reset();
+    this->builder.reset();
+    delete this->config;
+}
 
 bool LLVMCompiler::LoadModule(std::string templatePath)
 {
@@ -106,7 +112,6 @@ bool LLVMCompiler::SpecializeAndCompile(const std::vector<Optimization> &optimiz
     } else {
         llvm::errs() << "Error: Unable to compile the modules\n";
     }
-
     return false;
 }
 
@@ -223,7 +228,7 @@ std::unique_ptr<llvm::orc::LLJIT> LLVMCompiler::compileModules(map<string, set<s
                                 .create());
 
     JITTER->getIRTransformLayer().setTransform(
-        HardenOptimizer(CodeGenOpt::Default, optimizations, moduleOptimizations, specializedModules));
+        HardenOptimizer(CodeGenOpt::Default, optimizations, moduleOptimizations, *config, specializedModules));
 
     // enable loading common libraries available in the current process
     JITTER->getMainJITDylib().addGenerator(
