@@ -34,7 +34,7 @@ public:
     uint64_t GetJitedFunction(std::string functionName, bool isNameMangled = false) override;
 
 private:
-    std::unique_ptr<Config> config;
+    Config* config;
     std::unique_ptr<llvm::StringRef> layout;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::LLVMContext> context;

@@ -22,7 +22,7 @@ public:
         std::map<std::string, std::set<std::string>> &specializedModules)
     {
         pmb.OptLevel = optLevel;
-        conf = *Config::GetConf();
+        conf = Config::GetConf();
         this->specializedModules = specializedModules;
 
         this->optimizations = optimizations;
@@ -36,11 +36,11 @@ public:
     }
 
     HardenOptimizer(unsigned optLevel, const std::vector<Optimization> &optimizations,
-        const std::vector<ModuleOptimization> &moduleOptimizations, const Config &optConfig,
+        const std::vector<ModuleOptimization> &moduleOptimizations, Config &optConfig,
         std::map<std::string, std::set<std::string>> &specializedModules)
     {
         pmb.OptLevel = optLevel;
-        conf = optConfig;
+        conf = &optConfig;
         this->specializedModules = specializedModules;
 
         this->optimizations = optimizations;
@@ -60,7 +60,7 @@ public:
 
 private:
     llvm::PassManagerBuilder pmb;
-    Config conf;
+    Config *conf;
     std::map<std::string, std::set<std::string>> specializedModules;
     std::vector<Optimization> optimizations;
     std::vector<ModuleOptimization> moduleOptimizations;
