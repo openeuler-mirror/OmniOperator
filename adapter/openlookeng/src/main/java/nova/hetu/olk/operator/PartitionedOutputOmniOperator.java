@@ -466,7 +466,7 @@ public class PartitionedOutputOmniOperator
         public void partitionPage(VecAllocator vecAllocator, Page page) {
             requireNonNull(page, "page is null");
 
-            VecBatch originalVecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
+            VecBatch originalVecBatch = buildVecBatch(vecAllocator, page, this);
             VecBatch originalAndPartitionArgVecBatch = addPartitionFunctionArguments(originalVecBatch);
 
             omniOperator.addInput(originalAndPartitionArgVecBatch);

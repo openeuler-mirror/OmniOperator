@@ -142,7 +142,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
         lastInputPage = page;
 
         VecAllocator vecAllocator = getVecAllocatorFromBlocks(page.getBlocks());
-        VecBatch vecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(vecAllocator, page, this);
 
         totalPositions += page.getPositionCount();
         updatePageSize(page);

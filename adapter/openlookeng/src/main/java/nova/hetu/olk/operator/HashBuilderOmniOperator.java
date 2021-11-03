@@ -345,7 +345,7 @@ public class HashBuilderOmniOperator implements Operator {
             return;
         }
 
-        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
 
         operatorContext.recordOutput(page.getSizeInBytes(), positionCount);

@@ -377,7 +377,7 @@ public final class OperatorUtils {
      * @param operatorName the operator name
      * @return the vec batch
      */
-    public static VecBatch buildVecBatch(VecAllocator vecAllocator, Page page, String operatorName) {
+    public static VecBatch buildVecBatch(VecAllocator vecAllocator, Page page, Object object) {
         List<Vec> vecList = new ArrayList<>();
 
         for (int i = 0; i < page.getChannelCount(); i++) {
@@ -388,7 +388,7 @@ public final class OperatorUtils {
                 // since we dont implement RunLengthEncodeBlock yet, so the transfer of RunLengthEncodeBlock
                 // is regarded as normal at present.
                 if (!(block instanceof RunLengthEncodedBlock)) {
-                    log.warn("transfer the onheap pages to offheap pages in %s for %s with %s rows", operatorName,
+                    log.debug("transfer the onheap pages to offheap pages in %s for %s with %s rows", object.getClass().getSimpleName(),
                         block.getClass().getSimpleName(), page.getPositionCount());
                 }
             } else {
