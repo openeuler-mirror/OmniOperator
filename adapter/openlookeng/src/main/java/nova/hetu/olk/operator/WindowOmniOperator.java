@@ -115,7 +115,7 @@ public class WindowOmniOperator implements Operator {
         checkState(!finishing, "Operator is already finishing");
         requireNonNull(page, "page is null");
 
-        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
         inputVecBatchs.add(vecBatch);
     }

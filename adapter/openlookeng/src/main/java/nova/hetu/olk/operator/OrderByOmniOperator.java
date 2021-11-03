@@ -268,7 +268,7 @@ public class OrderByOmniOperator implements Operator {
             return;
         }
 
-        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
         inputVecBatchs.add(vecBatch);
     }

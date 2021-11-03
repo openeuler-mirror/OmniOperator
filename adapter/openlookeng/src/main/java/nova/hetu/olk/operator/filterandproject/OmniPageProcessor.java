@@ -77,7 +77,7 @@ public class OmniPageProcessor extends PageProcessor {
             page.close();
             return WorkProcessor.of();
         }
-        VecBatch inputVecBatch = buildVecBatch(vecAllocator, page, getClass().getSimpleName());
+        VecBatch inputVecBatch = buildVecBatch(vecAllocator, page, this);
         if (omniPageFilterOperator.isPresent()) {
             VecBatch filteredVecBatch = omniPageFilterOperator.get().filterAndProject(inputVecBatch);
             inputVecBatch.releaseAllVectors();

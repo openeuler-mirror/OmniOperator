@@ -180,7 +180,7 @@ public class LookupJoinOmniOperator implements Operator {
         if (positionCount == 0) {
             return;
         }
-        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
         result = new VecBatchToPageIterator(omniOperator.getOutput());
         if (!result.hasNext()) {

@@ -188,7 +188,7 @@ public class OmniMergingPageOutput extends MergingPageOutput{
         if (this.vecAllocator == null) {
             this.vecAllocator = getVecAllocatorFromBlocks(page.getBlocks());
         }
-        VecBatch vecBatch = buildVecBatch(this.vecAllocator, page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(this.vecAllocator, page, this);
 
         bufferSize += page.getPositionCount();
         bufferedPages.add(vecBatch);

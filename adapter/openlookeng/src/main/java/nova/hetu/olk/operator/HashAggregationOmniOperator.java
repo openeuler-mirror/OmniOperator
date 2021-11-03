@@ -98,7 +98,7 @@ public class HashAggregationOmniOperator implements Operator {
     public void addInput(Page page) {
         checkState(!finishing, "Operator is already finishing");
         requireNonNull(page, "page is null");
-        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
+        VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
         vecBatch.releaseAllVectors();
         vecBatch.close();
