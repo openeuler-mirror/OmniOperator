@@ -73,6 +73,13 @@ JitContext *CreateTestSortExprJitContext(VecTypes &sourceTypes, int32_t *outputC
     JitContext *jitContext = new JitContext;
     jitContext->func = static_cast<uintptr_t>(createOperatorFunc);
 
+    delete compareToSp;
+    delete getOutputSp;
+    delete sortExprContext;
+    delete sortContext;
+    delete pagesIndexContext;
+    delete jit;
+
     return jitContext;
 }
 
