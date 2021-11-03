@@ -28,7 +28,7 @@ namespace {
     // Initialized in external_func_registry.cpp
     static bool g_hasInitialized;
 
-    const std::string EXTERNAL_FUNCTIONS_FILE_PATH = "/etc/externalfunctions/externalregistration.conf";
+    const std::string EXTERNAL_FUNCTIONS_FILE_PATH = GetConfPath() + "externalfunctions/externalregistration.conf";
     const std::string EXTERNAL_FUNCTIONS_LIB_PATH = GetLibPath() + "externalfunctions.so";
     const int32_t PAREN_LENGTH = 1;
 }
