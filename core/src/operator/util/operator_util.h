@@ -216,7 +216,7 @@ public:
 private:
     static void ProjectVectors(const VecTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-        int32_t rowCount, VectorBatch *newVecBatch);
+        int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch);
 };
 }
 }

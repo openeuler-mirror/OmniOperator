@@ -60,7 +60,7 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
 
 template <typename T, typename V>
 T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,
-    int32_t rowCount)
+    int64_t *dictVectorAddrs, int32_t rowCount)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     T *result = std::make_unique<T>(vecAllocator, rowCount).release();
@@ -68,8 +68,10 @@ T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls
     int32_t length = 0;
     auto context = std::make_unique<ExecutionContext>();
     for (int32_t i = 0; i < rowCount; i++) {
+        isNull = false;
+        length = 0;
         void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &isNull, &length,
-            reinterpret_cast<int64_t>(context.get()));
+            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs);
         if (!isNull) {
             V value = *(static_cast<V *>(valuePtr));
             result->SetValue(i, value);
@@ -81,7 +83,7 @@ T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls
 }
 
 VarcharVector *ProjectVarcharVector(VecType &type, const RowProjFunc func, int64_t *valuesAddresses,
-    int64_t *valueNulls, int64_t *valueOffsets, int32_t rowCount)
+    int64_t *valueNulls, int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount)
 {
     VectorAllocator *vectorAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     VarcharVecType vecType = static_cast<VarcharVecType &>(type);
@@ -92,8 +94,10 @@ VarcharVector *ProjectVarcharVector(VecType &type, const RowProjFunc func, int64
     int32_t length = 0;
     auto context = std::make_unique<ExecutionContext>();
     for (int32_t i = 0; i < rowCount; i++) {
+        isNull = false;
+        length = 0;
         void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &isNull, &length,
-            reinterpret_cast<int64_t>(context.get()));
+            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs);
         if (!isNull) {
             uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
             result->SetValue(i, value, length);
@@ -106,7 +110,7 @@ VarcharVector *ProjectVarcharVector(VecType &type, const RowProjFunc func, int64
 
 void OperatorUtil::ProjectVectors(const VecTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
     const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-    int32_t rowCount, VectorBatch *newVecBatch)
+    int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch)
 {
     int32_t originalVecCount = newInputTypes.GetSize() - projectFuncs.size();
     int32_t projectColsCount = projectCols.size();
@@ -124,24 +128,24 @@ void OperatorUtil::ProjectVectors(const VecTypes &newInputTypes, const std::vect
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
                 newVecBatch->SetVector(projectCol, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64:
                 newVecBatch->SetVector(projectCol, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
                 newVecBatch->SetVector(projectCol, ProjectVector<DoubleVector, double>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_BOOLEAN:
                 newVecBatch->SetVector(projectCol, ProjectVector<BooleanVector, bool>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, rowCount));
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
                 newVecBatch->SetVector(projectCol, ProjectVarcharVector(vecTypes[projectCol],
-                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, rowCount));
+                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
                 // TODO: codegen does not support decimal128 current.
@@ -167,22 +171,25 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const VecT
     int64_t valueAddresses[vecCount];
     int64_t valueNulls[vecCount];
     int64_t valueOffsets[vecCount];
+    int64_t dictVectorAddrs[vecCount];
 
     for (int32_t i = 0; i < vecCount; i++) {
         Vector *inputVector = inputVecBatch->GetVector(i);
-        Vector *newInputVec = nullptr;
-        if (inputVector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
-            newInputVec = inputVector->Slice(0, rowCount);
-        } else {
-            newInputVec = static_cast<DictionaryVector *>(inputVector)->ExtractDictionary();
-        }
+        Vector *newInputVec = inputVector->Slice(0, rowCount);
         newInputVecBatch->SetVector(i, newInputVec);
-        valueAddresses[i] = reinterpret_cast<int64_t>(newInputVec->GetValues());
+
+        if (newInputVec->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+            valueAddresses[i] = reinterpret_cast<int64_t>(newInputVec->GetValues());
+            dictVectorAddrs[i] = 0;
+        } else {
+            valueAddresses[i] = 0;
+            dictVectorAddrs[i] = reinterpret_cast<int64_t>(newInputVec);
+        }
         valueNulls[i] = reinterpret_cast<int64_t>(newInputVec->GetValueNulls());
         valueOffsets[i] = reinterpret_cast<int64_t>(newInputVec->GetValueOffsets());
     }
 
-    ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, rowCount,
-        newInputVecBatch);
+    ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
+        rowCount, newInputVecBatch);
     return newInputVecBatch;
 }
