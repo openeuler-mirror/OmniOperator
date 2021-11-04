@@ -19,6 +19,8 @@ namespace {
 
     const int ROW_FILTER_OFFSETS_INDEX = 2;
     const int ROW_FILTER_ROW_IDX_INDEX = 3;
+    const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
+    const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
 }
 
 int64_t FilterCodeGen::GetFunction()
@@ -166,7 +168,8 @@ std::vector<Type*> GetSingleFilterArguments(LLVMContext &context)
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
         Type::getInt32Ty(context),
-        Type::getInt64Ty(context)
+        Type::getInt64Ty(context),
+        Type::getInt64PtrTy(context)
     };
     return args;
 }
@@ -189,9 +192,10 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     offsets->setName("OFFSETS");
     Argument *rowIndex = funcDecl->getArg(ROW_FILTER_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
-    const int EXECUTION_CONTEXT_IDX = 4;
-    Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
-    rowIndex->setName("EXECUTION_CONTEXT_ADDRESS");
+    Argument *executionContext = funcDecl->getArg(ROW_FILTER_EXECUTION_CONTEXT_INDEX);
+    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
+    Argument *dictionaryVectors = funcDecl->getArg(ROW_FILTER_DICT_VECTORS_INDEX);
+    dictionaryVectors->setName("DICTIONARY_VECTOR_ADDRESSES");
 
     std::vector<Value*> funcArgs;
     funcArgs.push_back(inputData);
@@ -209,6 +213,7 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
     funcArgs.push_back(lengthAllocaInst);
     funcArgs.push_back(executionContext);
+    funcArgs.push_back(dictionaryVectors);
 
     builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
 #ifdef DEBUG

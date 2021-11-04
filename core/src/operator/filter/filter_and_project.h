@@ -27,7 +27,7 @@ namespace op {
  * vector offsets addresses
  * row index
  */
-using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t, int64_t);
+using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t, int64_t, int64_t *);
 
 class RowFilter {
 public:

@@ -62,7 +62,7 @@ public:
     const std::string concatStrExtStr = "ConcatStrExt";
     const std::string castInt32ToDoubleStr = "Cast_int32_double";
     const std::string castInt64ToDoubleStr = "Cast_int64_double";
-    const std::string castInt64ToInt32Str = "Cast_int32_int64";
+    const std::string castInt32ToInt64Str = "Cast_int32_int64";
     const std::string castStringStr = "Cast_string_int32";
     const std::string combineHashStr = "CombineHash";
     const std::string mm3Int32Str = "Mm3_int32";

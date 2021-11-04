@@ -30,7 +30,7 @@ RowFilter::~RowFilter()
 // Return nullptr if expression is unsupported
 RowFilterFunc RowFilter::Create(std::vector<DataType> &inputTypes)
 {
-    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *this->expression, inputTypes);
+    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *this->expression);
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fAddr;
     auto castedRef = static_cast<RowFilterFunc *>(refFunc);
@@ -185,7 +185,7 @@ Filter::Filter(expressions::Expr &expression, int32_t inputVecTypes[], int32_t i
     for (int32_t i = 0; i < inputVecCount; i++) {
         dataTypes.push_back(expressions::ColTypeTrans(inputVecTypes[i]));
     }
-    auto codeGenObj = make_unique<FilterCodeGen>("filterFunc", expression, dataTypes);
+    auto codeGenObj = make_unique<FilterCodeGen>("filterFunc", expression);
 
     this->codeGen = std::move(codeGenObj);
     this->expr = &expression;

@@ -9,9 +9,8 @@
 
 class FilterCodeGen : public ExpressionCodeGen {
 public:
-    FilterCodeGen(std::string name, omniruntime::expressions::Expr &expression,
-                  std::vector<omniruntime::expressions::DataType> &datatypes)
-        : ExpressionCodeGen(name, expression, datatypes) {}
+    FilterCodeGen(std::string name, omniruntime::expressions::Expr &expression)
+        : ExpressionCodeGen(name, expression) {}
     ~FilterCodeGen() {}
     int64_t GetFunction() override;
 

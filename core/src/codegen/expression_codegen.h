@@ -75,8 +75,7 @@ private:
 class ExpressionCodeGen : public ExprVisitor {
 
 public:
-    ExpressionCodeGen(std::string name, omniruntime::expressions::Expr &expr,
-                      std::vector<omniruntime::expressions::DataType> &datatypes);
+    ExpressionCodeGen(std::string name, omniruntime::expressions::Expr &expr);
     ~ExpressionCodeGen() override;
 
     std::string DumpCode();
@@ -140,8 +139,6 @@ protected:
     std::unique_ptr<CodegenContext> codegenContext;
     std::string funcName;
     omniruntime::expressions::Expr *expr = nullptr;
-    std::vector<omniruntime::expressions::DataType> &datatypes;
-
 
     // Returns a set of all the required functions for a given row expression
     // Currently a separate function
@@ -161,9 +158,9 @@ protected:
     llvm::Function *func = nullptr;
     int numGlobalValues = 0;
 
-    private:
+private:
     llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
-        llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *lengthAllocaInst);
+        llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
 };
 
 #endif

@@ -9,9 +9,8 @@
 
 class ProjectionCodeGen : public ExpressionCodeGen {
 public:
-    ProjectionCodeGen(std::string name, omniruntime::expressions::Expr &expr,
-                      std::vector <omniruntime::expressions::DataType> &datatypes, bool filter)
-        : ExpressionCodeGen(name, expr, datatypes), filter(filter) {}
+    ProjectionCodeGen(std::string name, omniruntime::expressions::Expr &expr, bool filter)
+        : ExpressionCodeGen(name, expr), filter(filter) {}
     ~ProjectionCodeGen() {}
     int64_t GetFunction() override;
     bool IsFilterEnabled() const

@@ -766,7 +766,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
         omniruntime::op::HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildVecTypes, buildHashColsArr,
         buildHashColsCount, jOperatorCount);
 
-    hashBuilderOperatorFactory->SetJitContext(nullptr);
+    hashBuilderOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hash builder operator factory finished, elapsed time: %ld ms.", END(start));
     env->ReleaseStringUTFChars(jBuildTypes, buildTypesCharPtr);
     return (int64_t)hashBuilderOperatorFactory;
@@ -775,7 +775,6 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
 JitContext *CreateHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount, int32_t *buildHashCols,
     int32_t buildHashColsCount, int32_t operatorCount)
 {
-    return nullptr;
     JNI_DEBUG_LOG("create hash builder JIT context starting.");
     auto start = START();
 
@@ -879,7 +878,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
         probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr, buildOutputVecTypes,
         (JoinType)jJoinType, jHashBuilderOperatorFactory);
 
-    lookupJoinOperatorFactory->SetJitContext(nullptr);
+    lookupJoinOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create lookup join operator factory finished, elapsed time: %ld ms.", END(start));
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesCharPtr);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesCharPtr);
@@ -934,7 +933,6 @@ JitContext *CreateLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     const int32_t *buildOutputTypes, int32_t buildOutputColsCount)
 {
-    return nullptr;
     if (probeHashColsCount <= 0) {
         std::cerr << "Memory allocation size is illegal!" << std::endl;
         return nullptr;

@@ -147,12 +147,10 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     builder->CreateCall(codegenContext->print, args, "printfCall");
 }
 
-ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr, std::vector<DataType> &datatypes)
-    : datatypes(datatypes)
+ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr)
 {
     funcName = name;
     expr = &cpExpr;
-    this->datatypes = datatypes;
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
@@ -824,13 +822,16 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
 }
 
 Value *ExpressionCodeGen::GetDictionaryVectorValue(
-    DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr, AllocaInst *lengthAllocaInst)
+    DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr, AllocaInst *&lengthAllocaInst)
 {
     Function *dictionaryFunc = nullptr;
     switch (vectorType) {
         case omniruntime::expressions::INT32D:
             dictionaryFunc = module->getFunction(fr->dictionaryGetIntStr);
             break;
+        // need to handle decimal properly in the future
+        case omniruntime::expressions::DECIMAL64D:
+        case omniruntime::expressions::DECIMAL128D:
         case omniruntime::expressions::INT64D:
             dictionaryFunc = module->getFunction(fr->dictionaryGetLongStr);
             break;
@@ -892,7 +893,8 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         builder->SetInsertPoint(trueBlock);
 
         AllocaInst *lengthAllocaInst = nullptr;
-        Value *dictionaryValue = this->GetDictionaryVectorValue(dExpr.GetExprDataType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
+        Value *dictionaryValue = this->GetDictionaryVectorValue(
+            dExpr.GetExprDataType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
         if (dictionaryValue == nullptr) {
             return;
         }
