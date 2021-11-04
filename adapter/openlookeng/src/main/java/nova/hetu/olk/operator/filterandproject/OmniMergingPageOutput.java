@@ -5,13 +5,12 @@
 package nova.hetu.olk.operator.filterandproject;
 
 import com.google.common.collect.ImmutableList;
-import io.prestosql.operator.project.MergingPageOutput;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
+import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 import org.openjdk.jol.info.ClassLayout;
@@ -28,11 +27,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.prestosql.spi.block.PageBuilderStatus.DEFAULT_MAX_PAGE_SIZE_IN_BYTES;
 import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.olk.tool.OperatorUtils.createBlankVectors;
 import static nova.hetu.olk.tool.OperatorUtils.merge;
 import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
-import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_VARCHAR;
 
 /**
  * This class is intended to be used right after the PageProcessor to ensure
@@ -55,12 +52,12 @@ import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_VARCHAR
  *
  * @since 20210930
  */
-public class OmniMergingPageOutput extends MergingPageOutput{
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(MergingPageOutput.class).instanceSize();
+public class OmniMergingPageOutput {
+    private static final int INSTANCE_SIZE = ClassLayout.parseClass(OmniMergingPageOutput.class).instanceSize();
     private static final int MAX_MIN_PAGE_SIZE = 1024 * 1024;
 
     private final VecType[] vecTypes;
-    private final List<VecBatch> bufferedPages;
+    private final List<Page> bufferedPages;
     private final Queue<Page> outputQueue = new LinkedList<>();
 
     private final long maxPageSizeInBytes;
@@ -70,7 +67,7 @@ public class OmniMergingPageOutput extends MergingPageOutput{
     @Nullable
     private Iterator<Optional<Page>> currentInput;
     private boolean finishing;
-    private int bufferSize;
+    private int totalPositions;
     private long currentPageSizeInBytes;
     private long retainedSizeInBytes;
     private VecAllocator vecAllocator;
@@ -81,7 +78,6 @@ public class OmniMergingPageOutput extends MergingPageOutput{
 
     public OmniMergingPageOutput(
         Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount, int maxPageSizeInBytes) {
-        super(types,minPageSizeInBytes,minRowCount,maxPageSizeInBytes);
         List<Type> blockTypes = ImmutableList.copyOf(requireNonNull(types, "types is null"));
         this.vecTypes = blockTypes.stream().map(OperatorUtils::toVecType).toArray(VecType[]::new);
         checkArgument(minPageSizeInBytes >= 0, "minPageSizeInBytes must be greater or equal than zero");
@@ -188,14 +184,12 @@ public class OmniMergingPageOutput extends MergingPageOutput{
         if (this.vecAllocator == null) {
             this.vecAllocator = getVecAllocatorFromBlocks(page.getBlocks());
         }
-        VecBatch vecBatch = buildVecBatch(this.vecAllocator, page, this);
-
-        bufferSize += page.getPositionCount();
-        bufferedPages.add(vecBatch);
+        totalPositions += page.getPositionCount();
+        bufferedPages.add(page);
         currentPageSizeInBytes = currentPageSizeInBytes + page.getSizeInBytes();
         retainedSizeInBytes = retainedSizeInBytes + page.getRetainedSizeInBytes();
 
-        if (currentPageSizeInBytes >= maxPageSizeInBytes) {
+        if (isFull()) {
             flush();
         }
     }
@@ -205,17 +199,15 @@ public class OmniMergingPageOutput extends MergingPageOutput{
             return;
         }
 
-        VecBatch resultVecBatch = new VecBatch(createBlankVectors(
-            this.vecAllocator, this.vecTypes, bufferSize));
-        merge(resultVecBatch, this.bufferedPages);
+        VecBatch resultVecBatch = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions));
+        merge(resultVecBatch, bufferedPages, vecAllocator);
         outputQueue.add(new VecBatchToPageIterator(ImmutableList.of(resultVecBatch).iterator()).next());
 
         // reset buffers
-        bufferedPages.forEach(VecBatch::close);
         bufferedPages.clear();
         currentPageSizeInBytes = 0;
         retainedSizeInBytes = 0;
-        bufferSize = 0;
+        totalPositions = 0;
     }
 
     /**
@@ -229,5 +221,9 @@ public class OmniMergingPageOutput extends MergingPageOutput{
             retainedSize += page.getRetainedSizeInBytes();
         }
         return retainedSize;
+    }
+
+    private boolean isFull() {
+        return totalPositions == Integer.MAX_VALUE || currentPageSizeInBytes >= maxPageSizeInBytes;
     }
 }

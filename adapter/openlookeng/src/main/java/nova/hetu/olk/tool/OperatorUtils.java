@@ -374,7 +374,7 @@ public final class OperatorUtils {
      *
      * @param vecAllocator VecAllocator to create vectors
      * @param page the page
-     * @param operatorName the operator name
+     * @param object the operator
      * @return the vec batch
      */
     public static VecBatch buildVecBatch(VecAllocator vecAllocator, Page page, Object object) {
@@ -414,50 +414,23 @@ public final class OperatorUtils {
      *
      * @param resultVecBatch Stores final resulting vectors
      */
-    public static void merge(VecBatch resultVecBatch, List<VecBatch> vecBatchesToMerge) {
-        int index = 0;
-        for (Vec dest : resultVecBatch.getVectors()) {
-            int offSet = 0;
-            for (VecBatch batch : vecBatchesToMerge) {
-                Vec src = batch.getVector(index);
-
-                int positionCount = src.getSize();
-                if (src instanceof DictionaryVec) {
-                    appendDictionaryValues(src, dest, offSet);
+    public static void merge(VecBatch resultVecBatch, List<Page> pages, VecAllocator vecAllocator) {
+        for (int channel = 0; channel < resultVecBatch.getVectorCount(); channel++) {
+            int offset = 0;
+            for (Page page : pages) {
+                int positionCount = page.getPositionCount();
+                Block block = page.getBlock(channel);
+                Vec src;
+                if (!block.isExtensionBlock()) {
+                    src = (Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues();
                 } else {
-                    dest.append(src, offSet, positionCount);
+                    src = (Vec) block.getValues();
                 }
-                offSet += positionCount;
-                src.close();
-            }
-            index++;
-        }
-    }
+                Vec dest = resultVecBatch.getVector(channel);
+                dest.append(src, offset, positionCount);
 
-    private static void appendDictionaryValues(Vec src, Vec dest, int offSet) {
-        for (int index = 0; index < src.getSize(); index++) {
-            VecType.VecTypeId id = ((DictionaryVec) src).getDictionary().getType().getId();
-            switch (id) {
-                case OMNI_VEC_TYPE_DICTIONARY:
-                    appendDictionaryValues(((DictionaryVec) src).getDictionary(), dest, offSet);
-                    break;
-                case OMNI_VEC_TYPE_INT:
-                    ((IntVec) dest).set(offSet + index, ((DictionaryVec) src).getInt(index));
-                    break;
-                case OMNI_VEC_TYPE_LONG:
-                    ((LongVec) dest).set(offSet + index, ((DictionaryVec) src).getLong(index));
-                    break;
-                case OMNI_VEC_TYPE_DOUBLE:
-                    ((DoubleVec) dest).set(offSet + index, ((DictionaryVec) src).getDouble(index));
-                    break;
-                case OMNI_VEC_TYPE_BOOLEAN:
-                    ((BooleanVec) dest).set(offSet + index, ((DictionaryVec) src).getBoolean(index));
-                    break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                    ((VarcharVec) dest).set(offSet + index, ((DictionaryVec) src).getBytes(index));
-                    break;
-                default:
-                    throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + src.getType());
+                offset += positionCount;
+                src.close();
             }
         }
     }
