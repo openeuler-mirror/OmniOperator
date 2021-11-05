@@ -180,7 +180,7 @@ public class TestMergePagesOmni
         omni.appendPage(page);
         omni.appendPage(page1);
         omni.appendPage(page2);
-        Page actualPage = omni.getOutput();
+        Page actualPage = omni.flush();
         assertEquals(actualPage.getPositionCount(), 60);
     }
 

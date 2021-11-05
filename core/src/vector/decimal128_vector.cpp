@@ -4,6 +4,7 @@
 
 #include "decimal128_vector.h"
 #include "vector_type.h"
+#include "dictionary_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -56,12 +57,25 @@ void Decimal128Vector::Append(Vector *other, int32_t positionOffset, int32_t len
     if (positionOffset + length > size) {
         return;
     }
-
-    int32_t otherPositionOffset = other->GetPositionOffset();
-    int64_t *otherValues = static_cast<int64_t *>(other->GetValues()) + otherPositionOffset * DECIMAL128_TYPE_WIDTH;
-    bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
-    SetValues(positionOffset, otherValues, length);
-    SetValueNulls(positionOffset, otherValueNulls, length);
+    if (other->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        int32_t otherPositionOffset = other->GetPositionOffset();
+        int64_t *otherValues = static_cast<int64_t *>(other->GetValues()) + otherPositionOffset * DECIMAL128_TYPE_WIDTH;
+        bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
+        SetValues(positionOffset, otherValues, length);
+        SetValueNulls(positionOffset, otherValueNulls, length);
+    } else {
+        DictionaryVector *src = static_cast<DictionaryVector *>(other);
+        int32_t originalIds[length];
+        Decimal128Vector *dictionary =
+            static_cast<Decimal128Vector *>(src->ExtractDictionaryAndIds(0, length, originalIds));
+        for (int32_t i = 0; i < length; i++) {
+            if (dictionary->IsValueNull(originalIds[i])) {
+                SetValueNull(positionOffset + i);
+            } else {
+                SetValue(positionOffset + i, dictionary->GetValue(originalIds[i]));
+            }
+        }
+    }
 }
 }
 }

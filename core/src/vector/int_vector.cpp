@@ -5,6 +5,7 @@
 #include "debug.h"
 #include <cstring>
 #include "int_vector.h"
+#include "dictionary_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -56,12 +57,24 @@ void IntVector::Append(Vector *other, int positionOffset, int length)
     if (positionOffset + length > size) {
         return;
     }
-
-    int32_t otherPositionOffset = other->GetPositionOffset();
-    int32_t *otherValues = static_cast<int32_t *>(other->GetValues()) + otherPositionOffset;
-    bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
-    SetValues(positionOffset, otherValues, length);
-    SetValueNulls(positionOffset, otherValueNulls, length);
+    if (other->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        int32_t otherPositionOffset = other->GetPositionOffset();
+        int32_t *otherValues = static_cast<int32_t *>(other->GetValues()) + otherPositionOffset;
+        bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset;
+        SetValues(positionOffset, otherValues, length);
+        SetValueNulls(positionOffset, otherValueNulls, length);
+    } else {
+        DictionaryVector *src = static_cast<DictionaryVector *>(other);
+        int32_t originalIds[length];
+        IntVector *dictionary = static_cast<IntVector *>(src->ExtractDictionaryAndIds(0, length, originalIds));
+        for (int32_t i = 0; i < length; i++) {
+            if (dictionary->IsValueNull(originalIds[i])) {
+                SetValueNull(positionOffset + i);
+            } else {
+                SetValue(positionOffset + i, dictionary->GetValue(originalIds[i]));
+            }
+        }
+    }
 }
 } // namespace vec
 } // namespace omniruntime

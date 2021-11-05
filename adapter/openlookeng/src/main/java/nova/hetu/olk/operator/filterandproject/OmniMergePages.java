@@ -8,7 +8,6 @@ import static io.prestosql.operator.WorkProcessor.TransformationState.finished;
 import static io.prestosql.operator.WorkProcessor.TransformationState.needsMoreData;
 import static io.prestosql.operator.WorkProcessor.TransformationState.ofResult;
 import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.olk.tool.OperatorUtils.createBlankVectors;
 import static nova.hetu.olk.tool.OperatorUtils.merge;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
@@ -19,12 +18,12 @@ import com.google.common.collect.Lists;
 
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.WorkProcessor;
-import io.prestosql.operator.project.MergePageStatus;
 import io.prestosql.operator.project.MergePages;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -39,10 +38,7 @@ import java.util.List;
 public class OmniMergePages extends MergePages.MergePagesTransformation {
     private final VecType[] vecTypes;
 
-    /**
-     * The Vec batches.
-     */
-    List<VecBatch> vecBatches;
+    List<Page> pages;
 
     private long currentPageSizeInBytes;
 
@@ -50,9 +46,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
 
     private int totalPositions;
 
-    private Page lastInputPage;
-
-    private MergePageStatus status;
+    private VecAllocator vecAllocator;
 
     /**
      * Instantiates a new Omni merge pages.
@@ -66,20 +60,9 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
     public OmniMergePages(Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount,
         int maxPageSizeInBytes, LocalMemoryContext memoryContext) {
         super(types, minPageSizeInBytes, minRowCount, maxPageSizeInBytes, memoryContext);
-
         List<Type> inputTypes = Lists.newArrayList(requireNonNull(types, "types is null"));
-        this.vecBatches = new ArrayList<>();
+        this.pages = new ArrayList<>();
         this.vecTypes = toVecTypes(inputTypes);
-        this.status = MergePageStatus.EMPTY;
-    }
-
-    /**
-     * Gets status.
-     *
-     * @return the status
-     */
-    public MergePageStatus getStatus() {
-        return status;
     }
 
     /**
@@ -102,20 +85,20 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
 
         boolean inputFinished = inputPage == null;
         if (inputFinished) {
-            if (getStatus() == MergePageStatus.EMPTY) {
+            if (pages.isEmpty()) {
                 memoryContext.close();
                 return finished();
             }
 
-            return ofResult(getOutput(), false);
+            return ofResult(flush(), false);
         }
 
         if (inputPage.getPositionCount() >= minRowCount || inputPage.getSizeInBytes() >= minPageSizeInBytes) {
-            if (getStatus() == MergePageStatus.EMPTY) {
+            if (pages.isEmpty()) {
                 return ofResult(inputPage);
             }
 
-            Page output = getOutput();
+            Page output = flush();
             // inputPage is preserved until next process(...) call
             queuedPage = inputPage;
             memoryContext.setBytes(getRetainedSizeInBytes() + inputPage.getRetainedSizeInBytes());
@@ -124,8 +107,8 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
 
         appendPage(inputPage);
 
-        if (getStatus() == MergePageStatus.FULL) {
-            return ofResult(getOutput());
+        if (isFull()) {
+            return ofResult(flush());
         }
 
         memoryContext.setBytes(getRetainedSizeInBytes());
@@ -139,28 +122,12 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      * @param page A Page to be merged.
      */
     public void appendPage(Page page) {
-        lastInputPage = page;
-
-        VecAllocator vecAllocator = getVecAllocatorFromBlocks(page.getBlocks());
-        VecBatch vecBatch = buildVecBatch(vecAllocator, page, this);
-
-        totalPositions += page.getPositionCount();
-        updatePageSize(page);
-        vecBatches.add(vecBatch);
-
-        if (isFull()) {
-            this.status = MergePageStatus.FULL;
-        } else {
-            this.status = MergePageStatus.MORE_DATA;
+        // VecAllocator is only created once
+        if (this.vecAllocator == null) {
+            this.vecAllocator = getVecAllocatorFromBlocks(page.getBlocks());
         }
-    }
-
-    /**
-     * Update page size.
-     *
-     * @param page the page
-     */
-    public void updatePageSize(Page page) {
+        pages.add(page);
+        totalPositions += page.getPositionCount();
         currentPageSizeInBytes = currentPageSizeInBytes + page.getSizeInBytes();
         retainedSizeInBytes = retainedSizeInBytes + page.getRetainedSizeInBytes();
     }
@@ -171,7 +138,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      * @return the boolean
      */
     public boolean isFull() {
-        return currentPageSizeInBytes >= maxPageSizeInBytes || totalPositions == Integer.MAX_VALUE;
+        return totalPositions == Integer.MAX_VALUE || currentPageSizeInBytes >= maxPageSizeInBytes;
     }
 
     /**
@@ -179,28 +146,14 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      *
      * @return Page output
      */
-    public Page getOutput() {
-        Page finalPage;
-        if (vecBatches.isEmpty()) {
-            finalPage = new Page(lastInputPage.getPositionCount());
-        } else {
-            VecBatch mergeResult = new VecBatch(
-                createBlankVectors(getVecAllocatorFromBlocks(lastInputPage.getBlocks()), vecTypes, totalPositions));
-            merge(mergeResult, this.vecBatches);
-            finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
-        }
-        resetStatus();
-        return finalPage;
-    }
-
-    /**
-     * Reset status.
-     */
-    public void resetStatus() {
+    public Page flush() {
+        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions));
+        merge(mergeResult, pages, vecAllocator);
+        Page finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
         currentPageSizeInBytes = 0;
         retainedSizeInBytes = 0;
         totalPositions = 0;
-        vecBatches.clear();
-        this.status = MergePageStatus.EMPTY;
+        pages.clear();
+        return finalPage;
     }
 }

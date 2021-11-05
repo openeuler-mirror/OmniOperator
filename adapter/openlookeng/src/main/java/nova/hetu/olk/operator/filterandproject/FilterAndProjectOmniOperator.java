@@ -49,12 +49,12 @@ public class FilterAndProjectOmniOperator implements Operator {
 
     private final PageProcessor processor;
 
-    private final MergingPageOutput mergingOutput;
+    private final OmniMergingPageOutput mergingOutput;
 
     private boolean finishing;
 
     public FilterAndProjectOmniOperator(OperatorContext operatorContext, PageProcessor processor,
-                                        MergingPageOutput mergingOutput) {
+                                        OmniMergingPageOutput mergingOutput) {
         this.processor = requireNonNull(processor, "processor is null");
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.pageProcessorMemoryContext = newSimpleAggregatedMemoryContext().newLocalMemoryContext(
@@ -149,7 +149,7 @@ public class FilterAndProjectOmniOperator implements Operator {
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                 FilterAndProjectOmniOperator.class.getSimpleName());
             return new FilterAndProjectOmniOperator(operatorContext, processor.get(),
-                new MockMergingPageOutput(types, minOutputPageSize.toBytes(), minOutputPageRowCount));
+                new OmniMergingPageOutput(types, minOutputPageSize.toBytes(), minOutputPageRowCount));
         }
 
         @Override

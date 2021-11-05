@@ -3,7 +3,7 @@
  */
 #include "debug.h"
 #include "varchar_vector.h"
-#include <cstring>
+#include "dictionary_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -103,28 +103,31 @@ void VarcharVector::Append(Vector *other, int positionOffset, int length)
     if (positionOffset + length > size) {
         return;
     }
-    // set offset
-    int startOffset = GetValueOffset(positionOffset);
-    int otherPositionOffset = other->GetPositionOffset();
-    for (int i = 1; i <= length; i++) {
-        int newPosition = otherPositionOffset + i;
-        int originalDataLen = other->GetValueOffset(newPosition) - other->GetValueOffset(otherPositionOffset);
-        SetValueOffset(positionOffset + i, originalDataLen + startOffset);
-    }
 
-    // set nulls
-    SetValueNulls(positionOffset, static_cast<bool *>(other->GetValueNulls()) + otherPositionOffset, length);
-
-    int originalStartOffset = other->GetValueOffset(otherPositionOffset);
-    int dataLength = other->GetValueOffset(otherPositionOffset + length) - other->GetValueOffset(otherPositionOffset);
-    errno_t ret = EOK;
-    if (dataLength > 0) {
-        // set data
-        ret = memcpy_s((reinterpret_cast<uint8_t *>(valuesAddress)) + startOffset, capacityInBytes,
-            reinterpret_cast<uint8_t *>(other->GetValues()) + originalStartOffset, dataLength);
-    }
-    if (ret != EOK) {
-        std::cerr << "append varchar failed." << ret << std::endl;
+    uint8_t *value = nullptr;
+    int32_t valueLen = 0;
+    if (other->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+        VarcharVector *src = static_cast<VarcharVector *>(other);
+        for (int32_t i = 0; i < length; i++) {
+            if (other->IsValueNull(i)) {
+                SetValueNull(positionOffset + i);
+            } else {
+                valueLen = src->GetValue(i, &value);
+                SetValue(positionOffset + i, value, valueLen);
+            }
+        }
+    } else {
+        DictionaryVector *src = static_cast<DictionaryVector *>(other);
+        int32_t originalIds[length];
+        VarcharVector *dictionary = static_cast<VarcharVector *>(src->ExtractDictionaryAndIds(0, length, originalIds));
+        for (int32_t i = 0; i < length; i++) {
+            if (dictionary->IsValueNull(originalIds[i])) {
+                SetValueNull(positionOffset + i);
+            } else {
+                valueLen = dictionary->GetValue(originalIds[i], &value);
+                SetValue(positionOffset + i, value, valueLen);
+            }
+        }
     }
 }
 }
