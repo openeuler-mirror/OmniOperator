@@ -40,6 +40,7 @@ public:
     void RegisterMm3HashFunctions(const std::string& fnName);
     void RegisterNecessaryFuncs(const std::set<std::string>& requiredFuncs);
     void RegisterDecimalFuncs();
+    void RegisterDictionaryFuncs();
     void ContextHelperFuncs();
     llvm::orc::LLJIT *jit;
     llvm::LLVMContext *frContext;
@@ -61,7 +62,7 @@ public:
     const std::string concatStrExtStr = "ConcatStrExt";
     const std::string castInt32ToDoubleStr = "Cast_int32_double";
     const std::string castInt64ToDoubleStr = "Cast_int64_double";
-    const std::string castInt64ToInt32Str = "Cast_int32_int64";
+    const std::string castInt32ToInt64Str = "Cast_int32_int64";
     const std::string castStringStr = "Cast_string_int32";
     const std::string combineHashStr = "CombineHash";
     const std::string mm3Int32Str = "Mm3_int32";
@@ -75,5 +76,11 @@ public:
     const std::string divDec128Str = "Div_decimal128";
     const std::string contextMalloc = "ArenaAllocatorMalloc";
     const std::string contextReset = "ArenaAllocatorReset";
+
+    const std::string dictionaryGetIntStr = "DictionaryGetInt";
+    const std::string dictionaryGetLongStr = "DictionaryGetLong";
+    const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";
+    const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
+    const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
 };
 #endif

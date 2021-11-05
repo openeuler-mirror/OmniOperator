@@ -9,6 +9,7 @@
 #include "./functions/murmur3_hash.h"
 #include "./functions/decimalfunctions.h"
 #include "./functions/context_helper.h"
+#include "./functions/dictionaryfunctions.h"
 #include "func_registry.h"
 
 using namespace std;
@@ -143,10 +144,10 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
     }
     if (fn == "CAST_int32_int64") {
         vector<DataType> castInt32Types {DataType::INT32D};
-        FunctionSignature signature (castInt64ToInt32Str, castInt32Types, DataType::INT64D,
+        FunctionSignature signature (castInt32ToInt64Str, castInt32Types, DataType::INT64D,
                                      reinterpret_cast<void *>(CastInt32ToInt64));
         this->RegisterFunctionFromSignature(signature);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64ToDoubleStr, signature));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt32ToInt64Str, signature));
     }
     if (fn == "CAST_string_int32") {
         vector<DataType> castStringTypes {DataType::INT8PTRD, DataType::INT32D};
@@ -267,6 +268,36 @@ void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
     }
 }
 
+void FunctionRegistry::RegisterDictionaryFuncs()
+{
+    vector<DataType> params {DataType::INT64D, DataType::INT32D};
+    FunctionSignature dictionaryGetIntSig(dictionaryGetIntStr, params, DataType::INT32D,
+                                           reinterpret_cast<void *>(GetIntFromDictionaryVector));
+    this->RegisterFunctionFromSignature(dictionaryGetIntSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetIntStr, dictionaryGetIntSig));
+
+    FunctionSignature dictionaryGetLongSig(dictionaryGetLongStr, params, DataType::INT64D,
+                                       reinterpret_cast<void *>(GetLongFromDictionaryVector));
+    this->RegisterFunctionFromSignature(dictionaryGetLongSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetLongStr, dictionaryGetLongSig));
+
+    FunctionSignature dictionaryGetDoubleSig(dictionaryGetDoubleStr, params, DataType::DOUBLED,
+                                       reinterpret_cast<void *>(GetDoubleFromDictionaryVector));
+    this->RegisterFunctionFromSignature(dictionaryGetDoubleSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetDoubleStr, dictionaryGetDoubleSig));
+
+    FunctionSignature dictionaryGetBoolSig(dictionaryGetBooleanStr, params, DataType::BOOLD,
+                                       reinterpret_cast<void *>(GetBooleanFromDictionaryVector));
+    this->RegisterFunctionFromSignature(dictionaryGetBoolSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetBooleanStr, dictionaryGetBoolSig));
+
+    params.push_back(DataType::INT32PTRD);
+    FunctionSignature dictionaryGetVarcharSig(dictionaryGetVarcharStr, params, DataType::INT8PTRD,
+                                       reinterpret_cast<void *>(GetVarcharFromDictionaryVector));
+    this->RegisterFunctionFromSignature(dictionaryGetVarcharSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetVarcharStr, dictionaryGetVarcharSig));
+}
+
 bool IsMathFunction(const string& fn)
 {
     return fn == "abs_int32" || fn == "abs_int64" || fn == "abs_double" || fn == "abs_decimal128";
@@ -322,6 +353,7 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
     // Always register Decimal Binary and Arithmetic Functions
     this->RegisterDecimalFuncs();
     this->ContextHelperFuncs();
+    this->RegisterDictionaryFuncs();
     set<string> externalFuncNames = efr.GetAllExternalFunctionNames();
     for (const auto& fn : requiredFuncs) {
         if (IsMathFunction(fn)) {

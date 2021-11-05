@@ -19,6 +19,7 @@ namespace {
     const int NEW_NULL_VALUES_INDEX = 7;
     const int NEW_LENGTHS_VALUES_INDEX = 8;
     const int EXECUTION_CONTEXT_IDX = 9;
+    const int DICTIONARY_VECTORS_IDX = 10;
     const int OFFSETS_INDEX = 6;
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
@@ -28,6 +29,8 @@ namespace {
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
     const int ROW_PROJ_NULL_INDEX = 4;
     const int ROW_PROJ_LENGTH_INDEX = 5;
+    const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 6;
+    const int ROW_PROJ_DICT_VECTORS_INDEX = 7;
 }
 int64_t ProjectionCodeGen::GetFunction()
 {
@@ -69,6 +72,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     args.push_back(Type::getInt32PtrTy(*context));
     // execution context with allocator to allocate, free and track memory
     args.push_back(Type::getInt64Ty(*context));
+    // dictionary vectors
+    args.push_back(Type::getInt64PtrTy(*context));
 
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
@@ -109,6 +114,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
 
     Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
     outputLengthsAddress->setName("EXECUTION_CONTEXT_ADDRESS");
+
+    Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
+    outputLengthsAddress->setName("DICTIONARY_VECTORS");
 
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
@@ -198,6 +206,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     projFuncArgs.push_back(outputLenPtr);
 
     projFuncArgs.push_back(executionContext);
+    projFuncArgs.push_back(dictionaryVectors);
 
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
@@ -259,7 +268,8 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
         Type::getInt32Ty(context),
         Type::getInt1PtrTy(context),
         Type::getInt32PtrTy(context),
-        Type::getInt64Ty(context)
+        Type::getInt64Ty(context),
+        Type::getInt64PtrTy(context)
     };
     return args;
 }
@@ -300,8 +310,10 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     nullIndex->setName("NULL_INDEX");
     Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
     lengthPtr->setName("LENGTH_PTR");
-    Argument *executionContext = funcDecl->getArg(ARGUMENT_SIX);
-    lengthPtr->setName("EXECUTION_CONTEXT_ADDRESS");
+    Argument *executionContext = funcDecl->getArg(ROW_PROJ_EXECUTION_CONTEXT_INDEX);
+    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
+    Argument *dictionaryVectors = funcDecl->getArg(ROW_PROJ_DICT_VECTORS_INDEX);
+    dictionaryVectors->setName("DICTIONARY_VECTOR_ADDRESSES");
 
     std::vector<Value*> funcArgs;
     funcArgs.push_back(inputData);
@@ -311,6 +323,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(nullIndex);
     funcArgs.push_back(lengthPtr);
     funcArgs.push_back(executionContext);
+    funcArgs.push_back(dictionaryVectors);
 
     // Store the result
     AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");

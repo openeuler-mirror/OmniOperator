@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: registry dictionary functions
+ */
+
+#ifndef OMNI_RUNTIME_DICTIONARYFUNCTIONS_H
+#define OMNI_RUNTIME_DICTIONARYFUNCTIONS_H
+
+#ifdef _WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
+#include <cstdint>
+
+extern "C" DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
+extern "C" DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
+extern "C" DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
+extern "C" DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
+extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr);
+
+#endif //OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

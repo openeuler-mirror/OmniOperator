@@ -147,12 +147,10 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     builder->CreateCall(codegenContext->print, args, "printfCall");
 }
 
-ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr, std::vector<DataType> &datatypes)
-    : datatypes(datatypes)
+ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr)
 {
     funcName = name;
     expr = &cpExpr;
-    this->datatypes = datatypes;
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
@@ -651,9 +649,11 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
         } else if (argName == "isResultNull") {
             codegenContext->isResultNull = &arg;
         } else if (argName == "dataLength") {
-            continue;;
+            continue;
         } else if (argName == "executionContext") {
             codegenContext->executionContext = &arg;
+        } else if (argName == "dictionaryVectors") {
+            codegenContext->dictionaryVectors = &arg;
         } else {
             LLVM_DEBUG_LOG("Invalid argument %s", argName.c_str());
             return false;
@@ -669,7 +669,7 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
 
 Function *ExpressionCodeGen::CreateFunction()
 {
-    int32_t argsSize = 6;
+    int32_t argsSize = 8;
     std::vector<Type *> args;
     args.reserve(argsSize);
     // Values in args vector follow the format:
@@ -681,6 +681,7 @@ Function *ExpressionCodeGen::CreateFunction()
     args.push_back(Type::getInt1PtrTy(*context));
     args.push_back(Type::getInt32PtrTy(*context));
     args.push_back(Type::getInt64Ty(*context));
+    args.push_back(Type::getInt64PtrTy(*context));
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
     ExprPrinter p;
@@ -691,7 +692,8 @@ Function *ExpressionCodeGen::CreateFunction()
     func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
     std::string argNames[] = {
-            "data", "nullBitmap", "offsets", "rowIdx", "isResultNull", "dataLength", "executionContext"
+        "data", "nullBitmap", "offsets", "rowIdx", "isResultNull",
+        "dataLength", "executionContext", "dictionaryVectors"
     };
     int32_t idx = 0;
     for (auto &arg : func->args()) {
@@ -819,6 +821,45 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
     return codeGenValue;
 }
 
+Value *ExpressionCodeGen::GetDictionaryVectorValue(
+    DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr, AllocaInst *&lengthAllocaInst)
+{
+    Function *dictionaryFunc = nullptr;
+    switch (vectorType) {
+        case omniruntime::expressions::INT32D:
+            dictionaryFunc = module->getFunction(fr->dictionaryGetIntStr);
+            break;
+        // need to handle decimal properly in the future
+        case omniruntime::expressions::DECIMAL64D:
+        case omniruntime::expressions::DECIMAL128D:
+        case omniruntime::expressions::INT64D:
+            dictionaryFunc = module->getFunction(fr->dictionaryGetLongStr);
+            break;
+        case omniruntime::expressions::DOUBLED:
+            dictionaryFunc = module->getFunction(fr->dictionaryGetDoubleStr);
+            break;
+        case omniruntime::expressions::BOOLD:
+            dictionaryFunc = module->getFunction(fr->dictionaryGetBooleanStr);
+            break;
+        case omniruntime::expressions::STRINGD:
+            dictionaryFunc = module->getFunction(fr->dictionaryGetVarcharStr);
+            break;
+        default:
+            LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", vectorType);
+            return nullptr;
+    }
+    std::vector<Value*> funcArgs;
+    funcArgs.push_back(dictionaryVectorPtr);
+    funcArgs.push_back(rowIdx);
+
+    if (vectorType == DataType::STRINGD) {
+        lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "varchar_length");
+        builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
+        funcArgs.push_back(lengthAllocaInst);
+    }
+
+    return builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+}
 
 void ExpressionCodeGen::Visit(DataExpr &dExpr)
 {
@@ -830,18 +871,51 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         Value *bitmap = this->codegenContext->nullBitmap;
         Value *offsets = this->codegenContext->offsets;
         Value *isResultNull = this->codegenContext->isResultNull;
+        Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
 
         Value *colIdx = this->CreateConstantInt(dEx->colVal);
         // Find address of this column in the addresses array argument.
         Value *gep = builder->CreateGEP(vecBatch, colIdx);
+        Value *length = nullptr;
 
+        auto dictionaryVectorGEP = builder->CreateGEP(dictionaryVectors, colIdx);
+        Value *dictionaryVectorPtr = builder->CreateLoad(dictionaryVectorGEP);
+        auto condition = builder->CreateIsNotNull(dictionaryVectorPtr);
+
+        BasicBlock *trueBlock = BasicBlock::Create(*context, "DICTIONARY_NOT_NULL", func);
+        BasicBlock *falseBlock = BasicBlock::Create(*context, "DICTIONARY_IS_NULL");
+        BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
+
+        builder->CreateCondBr(condition, trueBlock, falseBlock);
+
+        // If dictionary vector is present, call DictionaryVector methods
+        // to get encoded values and length if varchar type
+        builder->SetInsertPoint(trueBlock);
+
+        AllocaInst *lengthAllocaInst = nullptr;
+        Value *dictionaryValue = this->GetDictionaryVectorValue(
+            dExpr.GetExprDataType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
+        if (dictionaryValue == nullptr) {
+            return;
+        }
+
+        Value *dictionaryLength = nullptr;
+        if (dEx->GetExprDataType() == DataType::STRINGD) {
+            dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
+        }
+
+        builder->CreateBr(mergeBlock);
+        trueBlock = builder->GetInsertBlock();
+        func->getBasicBlockList().push_back(falseBlock);
+
+        // If dictionary vector is not present, get vector values
+        // using valuesAddress and length using offsets if varchar type
+        builder->SetInsertPoint(falseBlock);
         // Load the address value.
         Value *elementAddr = builder->CreateLoad(gep);
 
         Value *elementPtr = GetIntToPtr(dExpr, elementAddr);
-
-        Value *elementValue = nullptr;
-        Value *length = nullptr;
+        Value *dataValue = nullptr;
         if (dEx->GetExprDataType() == DataType::STRINGD) {
             // Get offset for varchar
             auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
@@ -849,17 +923,38 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
             offsetPtr = builder->CreateIntToPtr(offsetPtr, Type::getInt32PtrTy(*context));
             auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
             Value *startOffset = builder->CreateLoad(colOffsetGEP);
-            // Find the address of the row to be processed.
-            elementValue = builder->CreateGEP(elementPtr, startOffset);
             colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, CreateConstantInt(1)));
             Value *endOffset = builder->CreateLoad(colOffsetGEP);
             // Get length for varchar
             length = builder->CreateSub(endOffset, startOffset);
+            // Find the address of the row to be processed.
+            dataValue = builder->CreateGEP(elementPtr, startOffset);
         } else {
             // Find the address of the row to be processed.
             gep = builder->CreateGEP(elementPtr, rowIdx);
             // Value to be processed.
-            elementValue = builder->CreateLoad(gep);
+            dataValue = builder->CreateLoad(gep);
+        }
+
+        builder->CreateBr(mergeBlock);
+        falseBlock = builder->GetInsertBlock();
+
+        // Get merged data value and length
+        int32_t numReservedValues = 2;
+        Type *phiType = this->ToLlvmType(dEx->GetExprDataType());
+        func->getBasicBlockList().push_back(mergeBlock);
+        builder->SetInsertPoint(mergeBlock);
+
+        PHINode *phiValue = builder->CreatePHI(phiType, numReservedValues, "iftmp");
+        phiValue->addIncoming(dictionaryValue, trueBlock);
+        phiValue->addIncoming(dataValue, falseBlock);
+
+        // Length is only valid for varchar type
+        PHINode *phiLength = nullptr;
+        if (dEx->GetExprDataType() == DataType::STRINGD) {
+            phiLength = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
+            phiLength->addIncoming(dictionaryLength, trueBlock);
+            phiLength->addIncoming(length, falseBlock);
         }
 
         // Get isNull value
@@ -873,7 +968,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         isResultNull = builder->CreateOr(isResultNull, bitmapValue);
         builder->CreateStore(isResultNull, this->codegenContext->isResultNull);
 
-        this->value.reset(new CodeGenValue(elementValue, bitmapValue, length));
+        this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
         return;
     }
 
