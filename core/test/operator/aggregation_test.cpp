@@ -1311,7 +1311,8 @@ TEST(HashAggregationOperatorTest, multi_stage)
         VectorHelper::PrintVecBatch(vecBatch);
     }
     VectorHelper::FreeVecBatches(resultFromFinal);
-    VectorHelper::FreeVecBatches(resultFromPartial);
+    VectorHelper::FreeVecBatches(resultFromPartial1);
+    VectorHelper::FreeVecBatches(resultFromPartial2);
 }
 
 TEST(HashAggregationOperatorTest, supported_type_test)
