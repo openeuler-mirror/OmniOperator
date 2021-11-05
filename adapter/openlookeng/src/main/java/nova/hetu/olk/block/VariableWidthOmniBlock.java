@@ -259,21 +259,12 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
     @Override
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
-
-        int[] newOffsets = new int[length + 1];
         byte[] newValueIsNull = null;
-        if (valueIsNull != null) {
-            newValueIsNull = new byte[length];
-        }
-
-        for (int i = 0; i < length; i++) {
-            int position = positions[offset + i];
-            if (newValueIsNull != null && isEntryNull(position)) {
-                newValueIsNull[i] = Vec.NULL;
-            }
-            newOffsets[i + 1] = newOffsets[i] + getSliceLength(position);
-        }
         VarcharVec newValues = values.copyPositions(positions, offset, length);
+        if (valueIsNull != null) {
+            newValueIsNull = newValues.getRawValueNulls();
+        }
+        int[] newOffsets = newValues.getRawValueOffset();
         return new VariableWidthOmniBlock(0, length, newValues, newOffsets, newValueIsNull);
     }
 

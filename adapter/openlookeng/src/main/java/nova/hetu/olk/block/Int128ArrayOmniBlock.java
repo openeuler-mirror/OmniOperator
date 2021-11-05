@@ -245,20 +245,11 @@ public class Int128ArrayOmniBlock implements Block<long[]> {
     @Override
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
-
         byte[] newValueIsNull = null;
-        if (valueIsNull != null) {
-            newValueIsNull = new byte[length];
-            for (int i = 0; i < length; i++) {
-                int position = positions[offset + i];
-                checkReadablePosition(position);
-                if (valueIsNull != null) {
-                    newValueIsNull[i] = valueIsNull[position + positionOffset];
-                }
-            }
-        }
-
         Decimal128Vec newValues = values.copyPositions(positions, offset, length);
+        if (valueIsNull != null) {
+            newValueIsNull = newValues.getRawValueNulls();
+        }
         return new Int128ArrayOmniBlock(0, length, newValueIsNull, newValues);
     }
 
