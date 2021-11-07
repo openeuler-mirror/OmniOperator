@@ -98,16 +98,19 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     Value *selectedAddress;
     // Temp value for next selected index.
     Value *nextSelectedIndexVal;
+
+    // Create a boolean pointer to store result null value
+    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+    // Create a int pointer to store data length
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
+
     builder->CreateBr(loopBody);
     // loop body
     builder->SetInsertPoint(loopBody);
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
-    // Create a boolean pointer to store result null value
-    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+
     builder->CreateStore(CreateConstantBool(false), isResultNullStore);
-    // Create a int pointer to store data length
-    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
     builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
 
     filterFuncArgs.push_back(data);

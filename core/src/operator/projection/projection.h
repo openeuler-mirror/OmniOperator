@@ -60,15 +60,11 @@ public:
     bool IsSupported();
 
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const &vecData, int64_t *bitmap,
-        int64_t *offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues,
-        ExecutionContext *context, int64_t *dictionaryVectors) const;
+        std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
+        int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-        std::vector<int64_t> const &vecData, int64_t *bitmap,
-        int64_t *offsets, omniruntime::vec::Vector *outVec,
-        int32_t numSelectedRows, int32_t selectedRows[], bool *newNullValues, int32_t *newLengthValues,
-        ExecutionContext *context, int64_t *dictionaryVectors) const;
+        std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
+        int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
 
     Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
         int32_t numSelectedRows, std::vector<int64_t> const &vecData,

@@ -17,14 +17,13 @@ namespace {
     const int NUM_SELECTED = 4;
     const int BITMAP = 5;
     const int NEW_NULL_VALUES_INDEX = 7;
-    const int NEW_LENGTHS_VALUES_INDEX = 8;
+    const int OUTPUT_OFFSETS_INDEX = 8;
     const int EXECUTION_CONTEXT_IDX = 9;
     const int DICTIONARY_VECTORS_IDX = 10;
     const int OFFSETS_INDEX = 6;
     const int ARGUMENT_ZERO = 0;
     const int ARGUMENT_ONE = 1;
     const int ARGUMENT_TWO = 2;
-    const int ARGUMENT_SIX = 6;
     const int ROW_PROJ_OFFSETS_INDEX = 2;
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
     const int ROW_PROJ_NULL_INDEX = 4;
@@ -109,14 +108,14 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Argument *nullValuesAddress = funcDecl->getArg(NEW_NULL_VALUES_INDEX);
     nullValuesAddress->setName("NULL_VALUES_ADDRESS");
 
-    Argument *outputLengthsAddress = funcDecl->getArg(NEW_LENGTHS_VALUES_INDEX);
-    outputLengthsAddress->setName("NEW_LENGTH_VALUES_ADDRESS");
+    Argument *outputOffsetsAddress = funcDecl->getArg(OUTPUT_OFFSETS_INDEX);
+    outputOffsetsAddress->setName("OUTPUT_OFFSETS_ADDRESS");
 
     Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
-    outputLengthsAddress->setName("EXECUTION_CONTEXT_ADDRESS");
+    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
 
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
-    outputLengthsAddress->setName("DICTIONARY_VECTORS");
+    dictionaryVectors->setName("DICTIONARY_VECTORS");
 
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
@@ -135,6 +134,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     AllocaInst *indexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "INDEX_COUNTER");
     // Initialize row index to 0.
     builder->CreateStore(zero, indexStore);
+    AllocaInst *offsetStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "CURRENT_OFFSET");
+    // Initialize offset to 0.
+    builder->CreateStore(zero, offsetStore);
     // Counter variable value.
     // i32 counter
     Value *curIndexVal;
@@ -163,7 +165,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
             outPtrType = Type::getDoublePtrTy(*context);
             break;
         case DataType::STRINGD:
-            outPtrType = Type::getInt64PtrTy(*context);
+            outPtrType = Type::getInt8PtrTy(*context);
             break;
         case DataType::DECIMAL128D:
             outPtrType = Type::getInt64PtrTy(*context);
@@ -173,6 +175,10 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
             break;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
+    // Create a boolean pointer to store result null value
+    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
+    // Create a integer pointer to store output length value
+    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
 
     builder->CreateBr(loopBody);
     // loop body
@@ -196,13 +202,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     projFuncArgs.push_back(offsets);
     projFuncArgs.push_back(rowIndexVal);
 
-    // Create a boolean pointer to store result null value
-    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
     builder->CreateStore(CreateConstantBool(false), isResultNullStore);
     projFuncArgs.push_back(isResultNullStore);
 
-    // Create a integer pointer to store output length value
-    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
     projFuncArgs.push_back(outputLenPtr);
 
     projFuncArgs.push_back(executionContext);
@@ -215,20 +217,36 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     builder->CreateBr(addToOutput);
     // Add row index to results array
     builder->SetInsertPoint(addToOutput);
-    // x* gep = gep x* outColPtr, i32 counter
-    gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
-    // *gep = ret
-    builder->CreateStore(ret, gep);
+
+    if (expr->GetExprDataType() == STRINGD) {
+        auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
+        auto currOffset = builder->CreateLoad(offsetStore);
+
+        // memcpy returned varchar to result vector
+        gep = builder->CreateGEP(outColPtr, currOffset, "OUTPUT_ADDRESS");
+        auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
+        auto stringGEP = builder->CreateGEP(stringPtr, CreateConstantInt(0));
+        builder->CreateMemCpy(gep, MaybeAlign(1), stringGEP, MaybeAlign(1), outputLen);
+
+        // update offsets for varchar type
+        Value *newOffset = builder->CreateAdd(currOffset, outputLen);
+        gep = builder->CreateGEP(outputOffsetsAddress, builder->CreateAdd(
+            curIndexVal, CreateConstantInt(1)), "OUTPUT_OFFSETS_POINTER_ADDRESS");
+        builder->CreateStore(newOffset, gep);
+
+        // update offset counter
+        builder->CreateStore(newOffset, offsetStore);
+    } else {
+        // x* gep = gep x* outColPtr, i32 counter
+        gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
+        // *gep = ret
+        builder->CreateStore(ret, gep);
+    }
 
     auto isResultNull = builder->CreateLoad(isResultNullStore, "isResultNull");
     // update null values
     gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
     builder->CreateStore(isResultNull, gep);
-
-    auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
-    // update length values
-    gep = builder->CreateGEP(outputLengthsAddress, curIndexVal, "OUTPUT_LENGTHS_POINTER_ADDRESS");
-    builder->CreateStore(outputLen, gep);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter
