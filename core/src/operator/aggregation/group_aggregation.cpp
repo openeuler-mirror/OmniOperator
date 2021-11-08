@@ -489,13 +489,12 @@ HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, 
 void ALWAYS_INLINE
 HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
-    std::hash<std::string> hashVarChar;
     uint8_t *data = nullptr;
     for (int32_t i = 0; i < rowCount; ++i) {
         int idx = i + start;
         int valLen = static_cast<VarcharVector *>(vector)->GetValue(idx, &data);
-        std::string val(reinterpret_cast<char *>(data), valLen);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * hashVarChar(val));
+        auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(data), valLen);
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * val);
     }
 }
 
@@ -527,13 +526,12 @@ void ALWAYS_INLINE HashFuncImpl(Vector *vector, const uint32_t rowCount, const i
 void ALWAYS_INLINE HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash)
 {
-    std::hash<std::string> hashVarChar;
     uint8_t *data = nullptr;
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t idx = rowIndexes[i];
         int valLen = static_cast<VarcharVector *>(vector)->GetValue(idx, &data);
-        std::string val(reinterpret_cast<char *>(data), valLen);
-        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * hashVarChar(val));
+        auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(data), valLen);
+        combinedHash[i] = HashUtil::CombineHash(combinedHash[i], !vector->IsValueNull(idx) * val);
     }
 }
 
