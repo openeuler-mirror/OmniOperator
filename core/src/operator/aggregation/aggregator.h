@@ -42,7 +42,7 @@ using GroupBySlot = union GroupBySlot {
     void *val;
     int64_t count;
     struct {
-        double *avgVal;
+        void *avgVal;
         int64_t avgCnt;
     };
     struct {
@@ -139,14 +139,17 @@ void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32
 template<typename V, typename D>
 void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
 void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void AvgInsertDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D>
 void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
 void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void AvgProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D>
 void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void AvgInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-
+void AvgProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
 template<typename V, typename D>
 void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
 void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
@@ -269,7 +272,8 @@ public:
         },
         // TODO support decimal128 average
         {
-            OMNI_VEC_TYPE_DECIMAL128, nullptr, nullptr, nullptr, nullptr
+            OMNI_VEC_TYPE_DECIMAL128, nullptr, nullptr,
+            AvgInitiateImpl<Decimal128Vector, Decimal128>, AvgProcessNonGroupImpl<Decimal128Vector, Decimal128>
         },
         {
             OMNI_VEC_TYPE_DATE32, AvgInsertImpl<IntVector, double>, AvgProcessGroupImpl<IntVector, double>,

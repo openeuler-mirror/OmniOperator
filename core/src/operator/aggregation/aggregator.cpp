@@ -154,7 +154,7 @@ void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_
 template <typename V, typename D>
 void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
 {
-    auto val = std::make_unique<double>(0);
+    auto val = std::make_unique<D>(0);
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
     *val = rowVal;
     groupSlot.avgVal = val.release();
