@@ -17,34 +17,33 @@ const size_t ALIGNMENT = 64;
 
 class JemallocAllocator {
 public:
-    static int Allocate(int64_t size, uint8_t** buffer)
+    static int Allocate(int64_t size, uint8_t **buffer)
     {
         if (size < 0) {
             std::cout << "allocate size is negative." << std::endl;
             return -1;
         }
         // jemalloc alloc
-        *buffer = reinterpret_cast<uint8_t*>(mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(ALIGNMENT)));
+        *buffer = reinterpret_cast<uint8_t *>(mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(ALIGNMENT)));
         return 0;
     }
-    static int Release(uint8_t* buffer)
+    static int Release(uint8_t *buffer)
     {
         // jemalloc free
-        dallocx(reinterpret_cast<void*>(buffer), MALLOCX_ALIGN(ALIGNMENT));
+        dallocx(reinterpret_cast<void *>(buffer), MALLOCX_ALIGN(ALIGNMENT));
         return 0;
     }
 };
 
-template <typename Allocator>
-class BaseMemoryPoolImpl : public MemoryPool {
+template <typename Allocator> class BaseMemoryPoolImpl : public MemoryPool {
 public:
-   int Allocate(int64_t size, uint8_t** buffer) override
-   {
-       Allocator::Allocate(size, buffer);
-       return 0;
-   }
+    int Allocate(int64_t size, uint8_t **buffer) override
+    {
+        Allocator::Allocate(size, buffer);
+        return 0;
+    }
 
-    int Release(uint8_t* buffer) override
+    int Release(uint8_t *buffer) override
     {
         Allocator::Release(buffer);
         return 0;
@@ -53,9 +52,7 @@ public:
 };
 
 
-class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {
-};
-
+class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {};
 
 
 static JemallocMemoryPool g_jemallocMemoryPool;
@@ -65,10 +62,30 @@ MemoryPool *GetMemoryPool()
     return &g_jemallocMemoryPool;
 }
 
-void* OmniAllocate(uint64_t size)
+uint64_t GetPreferredSize(uint64_t size)
 {
-    uint8_t* buf = nullptr;
-    g_jemallocMemoryPool.Allocate(size, &buf);
+    if (size < 8) {
+        return 8;
+    }
+    int32_t bits = 63 - __builtin_clzll(size);
+    size_t lower = 1U << bits;
+    // Size is a power of 2.
+    if (lower == size) {
+        return size;
+    }
+    // If size is below 1.5 * previous power of two, return 1.5 *
+    // the previous power of two, else the next power of 2.
+    if (lower + (lower / 2) >= size) {
+        return lower + (lower / 2);
+    }
+    return lower * 2;
+}
+
+void *OmniAllocate(uint64_t size)
+{
+    uint8_t *buf = nullptr;
+    uint64_t preferredSize = GetPreferredSize(size);
+    g_jemallocMemoryPool.Allocate(preferredSize, &buf);
 #ifdef DEBUG
     g_allocateCount += 1;
 #endif
@@ -88,9 +105,9 @@ void OmniRelease(unsigned long address)
 void printStatistics()
 {
     while (true) {
-        std::cout << "Allocate Count=" << g_allocateCount <<
-        ", Release Count=" << g_releaseCount << ", Leak Count=" << (g_allocateCount - g_releaseCount) << std::endl;
-        sleep(10);  // sleep for 10 ms
+        std::cout << "Allocate Count=" << g_allocateCount << ", Release Count=" << g_releaseCount << ", Leak Count=" <<
+            (g_allocateCount - g_releaseCount) << std::endl;
+        sleep(10); // sleep for 10 ms
     }
 }
 

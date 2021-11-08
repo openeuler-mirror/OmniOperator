@@ -12,6 +12,7 @@ import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_NATIVE_ERROR;
 
 import com.google.common.collect.ImmutableList;
+
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.DriverYieldSignal;
 import io.prestosql.operator.WorkProcessor;
@@ -20,8 +21,11 @@ import io.prestosql.operator.project.PageFilter;
 import io.prestosql.operator.project.PageProcessor;
 import io.prestosql.operator.project.SelectedPositions;
 import io.prestosql.spi.Page;
+import io.prestosql.spi.block.Block;
+import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.connector.ConnectorSession;
 import io.prestosql.sql.gen.ExpressionProfiler;
+import java.util.List;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
@@ -70,6 +74,28 @@ public class OmniPageProcessor extends PageProcessor {
         return this.projection;
     }
 
+    private Page preloadNeedFilterLazyBlock(Page page) {
+        if (!omniPageFilterOperator.isPresent()) {
+            return page;
+        }
+        List<Integer> inputChannels = omniPageFilterOperator.get().getInputChannels().getInputChannels();
+        if (inputChannels.isEmpty()) {
+            return page;
+        }
+
+        int blockSize = page.getBlocks().length;
+        Block[] blocks = new Block[blockSize];
+        for (int i = 0; i < blockSize; i++) {
+            Block block = page.getBlock(i);
+            if (block instanceof LazyBlock && inputChannels.contains(i)) {
+                blocks[i] = block.getLoadedBlock();
+            } else {
+                blocks[i] = block;
+            }
+        }
+        return new Page(blocks);
+    }
+
     @Override
     public WorkProcessor<Page> createWorkProcessor(ConnectorSession session, DriverYieldSignal yieldSignal,
                                                    LocalMemoryContext memoryContext, Page page) {
@@ -77,7 +103,9 @@ public class OmniPageProcessor extends PageProcessor {
             page.close();
             return WorkProcessor.of();
         }
-        VecBatch inputVecBatch = buildVecBatch(vecAllocator, page, this);
+
+        Page preloadPage = preloadNeedFilterLazyBlock(page);
+        VecBatch inputVecBatch = buildVecBatch(vecAllocator, preloadPage, this);
         if (omniPageFilterOperator.isPresent()) {
             VecBatch filteredVecBatch = omniPageFilterOperator.get().filterAndProject(inputVecBatch);
             inputVecBatch.releaseAllVectors();

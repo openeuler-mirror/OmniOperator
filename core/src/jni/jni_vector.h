@@ -142,6 +142,12 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictio
     jlong);
 
 /*
+ * Class:     nova_hetu_omniruntime_vector_LazyVec
+ * Method:    setDictionaryNative
+ * Signature: (J)[I
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *, jclass, jlong, jobject);
+/*
  * Class:     nova_hetu_omniruntime_vector_VecAllocator
  * Method:    newAllocatorNative
  * Signature: (Ljava/lang/String;)J

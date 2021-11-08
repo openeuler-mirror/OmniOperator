@@ -18,6 +18,7 @@
 #include "decimal128_vector.h"
 #include "container_vector.h"
 #include "dictionary_vector.h"
+#include "lazy_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -150,6 +151,10 @@ public:
             }
             case OMNI_VEC_TYPE_DICTIONARY: {
                 vector = new DictionaryVector(allocator, size);
+                break;
+            }
+            case OMNI_VEC_TYPE_LAZY: {
+                vector = new LazyVector(allocator, size);
                 break;
             }
             default: {

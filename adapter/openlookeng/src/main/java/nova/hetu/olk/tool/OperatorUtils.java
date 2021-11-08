@@ -26,6 +26,7 @@ import nova.hetu.olk.block.DictionaryOmniBlock;
 import nova.hetu.olk.block.DoubleArrayOmniBlock;
 import nova.hetu.olk.block.Int128ArrayOmniBlock;
 import nova.hetu.olk.block.IntArrayOmniBlock;
+import nova.hetu.olk.block.LazyOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
@@ -154,8 +155,8 @@ public final class OperatorUtils {
     /**
      * Create blank vectors for given size and types.
      *
-     * @param vecAllocator VecAllocator used to create vectors
-     * @param vecTypes Vec types
+     * @param vecAllocator   VecAllocator used to create vectors
+     * @param vecTypes       Vec types
      * @param totalPositions Size for all the vectors
      * @return List contains blank vectors
      */
@@ -196,7 +197,7 @@ public final class OperatorUtils {
      * Transfer to off heap pages list.
      *
      * @param vecAllocator vector allocator
-     * @param pages the pages
+     * @param pages        the pages
      * @return the list
      */
     public static List<Page> transferToOffHeapPages(VecAllocator vecAllocator, List<Page> pages) {
@@ -212,7 +213,7 @@ public final class OperatorUtils {
      * Transfer to off heap pages page.
      *
      * @param vecAllocator vector allocator
-     * @param page the page
+     * @param page         the page
      * @return the page
      */
     public static Page transferToOffHeapPages(VecAllocator vecAllocator, Page page) {
@@ -232,7 +233,7 @@ public final class OperatorUtils {
      * Gets off heap block.
      *
      * @param vecAllocator vector allocator
-     * @param block the block
+     * @param block        the block
      * @return the off heap block
      */
     public static Block buildOffHeapBlock(VecAllocator vecAllocator, Block block) {
@@ -242,9 +243,9 @@ public final class OperatorUtils {
     /**
      * Gets off heap block.
      *
-     * @param vecAllocator vector allocator
-     * @param block the block
-     * @param type the actual block type, e.g. RunLengthEncodedBlock or DictionaryBlock
+     * @param vecAllocator  vector allocator
+     * @param block         the block
+     * @param type          the actual block type, e.g. RunLengthEncodedBlock or DictionaryBlock
      * @param positionCount the position count of the block
      * @return the off heap block
      */
@@ -305,8 +306,7 @@ public final class OperatorUtils {
             }
             case "DictionaryBlock": {
                 Block dicBlock = buildOffHeapBlock(vecAllocator, ((DictionaryBlock) block).getDictionary());
-                Block dictionaryOmniBlock = new DictionaryOmniBlock(
-                    (Vec)dicBlock.getValues(),
+                Block dictionaryOmniBlock = new DictionaryOmniBlock((Vec) dicBlock.getValues(),
                     ((DictionaryBlock) block).getIdsArray());
                 dicBlock.close();
                 return dictionaryOmniBlock;
@@ -316,7 +316,7 @@ public final class OperatorUtils {
                     ((RunLengthEncodedBlock) block).getValue().getClass().getSimpleName(), block.getPositionCount());
             }
             case "LazyBlock": {
-                return buildOffHeapBlock(vecAllocator, block.getLoadedBlock());
+                return new LazyOmniBlock(vecAllocator, (LazyBlock) block);
             }
             case "RowBlock": {
                 RowBlock rowBlock = (RowBlock) block;
@@ -335,10 +335,11 @@ public final class OperatorUtils {
     }
 
     private static VariableWidthOmniBlock getVariableWidthOmniBlock(VecAllocator vecAllocator, Block block,
-        int positionCount, byte[] valueIsNull) {
+                                                                    int positionCount, byte[] valueIsNull) {
         if (block instanceof RunLengthEncodedBlock) {
             VariableWidthBlock variableWidthBlock = (VariableWidthBlock) ((RunLengthEncodedBlock) block).getValue();
-            VarcharVec vec = new VarcharVec(vecAllocator,variableWidthBlock.getSliceLength(0) * positionCount, positionCount);
+            VarcharVec vec = new VarcharVec(vecAllocator, variableWidthBlock.getSliceLength(0) * positionCount,
+                positionCount);
 
             for (int i = 0; i < positionCount; i++) {
                 if (block.isNull(i)) {
@@ -370,11 +371,32 @@ public final class OperatorUtils {
     }
 
     /**
+     * Build a vector from block.
+     *
+     * @param vecAllocator vector allocator.
+     * @param block block
+     * @return vector instance.
+     */
+    public static Vec buildVec(VecAllocator vecAllocator, Block block) {
+        if (!block.isExtensionBlock()) {
+            return (Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues();
+        } else {
+            if (block instanceof DictionaryBlock) {
+                return buildDictionaryVec((DictionaryBlock<?>) block);
+            } else if (block instanceof RowBlock) {
+                return buildContainerVec(vecAllocator, (RowBlock) block);
+            } else {
+                return (Vec) block.getValues();
+            }
+        }
+    }
+
+    /**
      * Build a vector by {@link Block}
      *
      * @param vecAllocator VecAllocator to create vectors
-     * @param page the page
-     * @param object the operator
+     * @param page         the page
+     * @param object       the operator
      * @return the vec batch
      */
     public static VecBatch buildVecBatch(VecAllocator vecAllocator, Page page, Object object) {
@@ -382,26 +404,8 @@ public final class OperatorUtils {
 
         for (int i = 0; i < page.getChannelCount(); i++) {
             Block block = page.getBlock(i);
-            if (!block.isExtensionBlock()) {
-                vecList.add((Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues());
-
-                // since we dont implement RunLengthEncodeBlock yet, so the transfer of RunLengthEncodeBlock
-                // is regarded as normal at present.
-                if (!(block instanceof RunLengthEncodedBlock)) {
-                    log.debug("transfer the onheap pages to offheap pages in %s for %s with %s rows", object.getClass().getSimpleName(),
-                        block.getClass().getSimpleName(), page.getPositionCount());
-                }
-            } else {
-                if (block instanceof LazyBlock) {
-                    vecList.add(buildVecInLazyBlock((LazyBlock) block));
-                } else if (block instanceof DictionaryBlock) {
-                    vecList.add(buildDictionaryVec((DictionaryBlock<?>) block));
-                } else if (block instanceof RowBlock) {
-                    vecList.add(buildContainerVec(vecAllocator, (RowBlock) block));
-                } else {
-                    vecList.add((Vec) block.getValues());
-                }
-            }
+            Vec vec = buildVec(vecAllocator, block);
+            vecList.add(vec);
         }
 
         return new VecBatch(vecList);
@@ -433,13 +437,6 @@ public final class OperatorUtils {
                 src.close();
             }
         }
-    }
-
-    private static Vec buildVecInLazyBlock(LazyBlock block) {
-        if (block.getLoadedBlock() instanceof DictionaryBlock) {
-            return buildDictionaryVec((DictionaryBlock<?>) block.getLoadedBlock());
-        }
-        return (Vec) block.getLoadedBlock().getValues();
     }
 
     private static Vec buildContainerVec(VecAllocator vecAllocator, RowBlock block) {
