@@ -80,11 +80,12 @@ LookupJoinOperator::LookupJoinOperator(const VecTypes &probeTypes, std::vector<i
         probeOutputCols.size(), buildOutputCols.data(), buildOutputTypes, outputRowSize);
 }
 
-LookupJoinOperator::~LookupJoinOperator() {}
+LookupJoinOperator::~LookupJoinOperator() {
+}
 
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
-    this->joinProbe = std::make_unique<JoinProbe>(vecBatch, probeTypes.GetSize(), probeHashCols.data(),
+    this->joinProbe = new JoinProbe(vecBatch, probeTypes.GetSize(), probeHashCols.data(),
         probeHashColTypes.data(), probeHashCols.size());
     this->partitionedJoinPosition = -1;
 
@@ -96,8 +97,10 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
     // build output data
-    outputBuilder->BuildOutput(vecAllocator, joinProbe.get(), hashTables, outputPages);
+    outputBuilder->BuildOutput(vecAllocator, joinProbe, hashTables, outputPages);
     SetStatus(OMNI_STATUS_FINISHED);
+    delete joinProbe;
+    joinProbe = nullptr;
     return 0;
 }
 
@@ -524,7 +527,7 @@ void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probe
 
     for (int32_t columnIdx = 0; columnIdx < probeOutputColsCount; columnIdx++) {
         column = probeAllColumns[probeOutputCols[columnIdx]];
-        probeColumn = std::make_unique<DictionaryVector>(column, &probeIndex[position], rowCount).release();
+        probeColumn = new DictionaryVector(column, &probeIndex[position], rowCount);
         vectorBatch->SetVector(outputColumnIdx++, probeColumn);
     }
 }
