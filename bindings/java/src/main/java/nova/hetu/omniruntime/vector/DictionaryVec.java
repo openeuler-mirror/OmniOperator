@@ -44,7 +44,12 @@ public class DictionaryVec extends FixedWidthVec {
 
     private DictionaryVec(DictionaryVec vector, int offset, int length, boolean isSlice) {
         super(vector, offset, length, isSlice);
-        loadDictionaryAndIds(isSlice == true ? vector.getSize() : length);
+        if (isSlice) {
+            ids = vector.getIds();
+            loadDictionary();
+        } else {
+            loadDictionaryAndIds(length);
+        }
     }
 
     private DictionaryVec(DictionaryVec vector, int[] positions, int offset, int length) {
