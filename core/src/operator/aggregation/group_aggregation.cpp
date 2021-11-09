@@ -552,7 +552,6 @@ template <typename V, typename D> void ALWAYS_INLINE DuplicateKeyValueImpl(Group
     if (vector->IsValueNull(offset)) {
         return;
     }
-//    groupBySlot.val = std::make_unique<D>(static_cast<V *>(vector)->GetValue(offset)).release();
     int32_t len = sizeof(D);
     uint8_t *ptr = context->getArena()->Allocate(len);
     D data = static_cast<V *>(vector)->GetValue(offset);
@@ -567,7 +566,6 @@ void ALWAYS_INLINE DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *ve
     }
     uint8_t *tmp = nullptr;
     int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
-    //    uint8_t *data = new uint8_t[valLen];
     uint8_t *data = context->getArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, valLen);
     groupBySlot.strVal = data;
