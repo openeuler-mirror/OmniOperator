@@ -5,6 +5,7 @@
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Vectorize.h>
 
 namespace omniruntime {
 namespace jit {
@@ -57,6 +58,9 @@ void Config::InitFuncPass()
     func_pass[static_cast<int>(Optimization::STRUCTURIZE_CFG)] = (Pass* (*)()) &llvm::createStructurizeCFGPass;
     func_pass[static_cast<int>(Optimization::DEAD_CODE_ELIMINATION)] =
         (Pass* (*)()) &llvm::createDeadCodeEliminationPass;
+    func_pass[static_cast<int>(Optimization::LOOP_VECTORIZE)] =
+            (Pass* (*)()) &llvm::createLoopVectorizePass;
+
     // find a way to add createInstructionCombiningPass
 }
 
