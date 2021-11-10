@@ -77,7 +77,7 @@ private:
     bool probeOnOuterSide;
     bool currentProbePositionProducedRow;
     JoinHashTables *hashTables;
-    std::unique_ptr<JoinProbe> joinProbe;
+    JoinProbe *joinProbe;
     int32_t partitionedJoinPosition; // the addressIndex combined partition for build, it is encoded by ((addressIndex
     // << shiftSize) | partition)
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
