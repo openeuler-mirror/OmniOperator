@@ -79,6 +79,7 @@ private:
         Optimization::IND_VAR_SIMPLIFY,
         Optimization::LOOP_INST_SIMPLIFY,
         Optimization::LOOP_SIMPLIFY_CFG,
+        Optimization::LOOP_VECTORIZE,
         Optimization::MERGED_LOAD_STORE_MOTION,
         Optimization::MERGE_ICMPS_LEGACY,
         Optimization::AGGRESIVE_DCE,

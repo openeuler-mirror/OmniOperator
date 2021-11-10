@@ -43,7 +43,8 @@ enum class Optimization {
     MERGE_ICMPS_LEGACY,
     DEAD_STORE_ELIMINATION,
     STRUCTURIZE_CFG,
-    DEAD_CODE_ELIMINATION
+    DEAD_CODE_ELIMINATION,
+    LOOP_VECTORIZE
 };
 
 enum class ModuleOptimization {
@@ -88,7 +89,7 @@ public:
     };
 
 private:
-    static const int NUM_FUNC_OPTIMIZATIONS = 34;
+    static const int NUM_FUNC_OPTIMIZATIONS = 35;
     static const int NUM_MODULE_OPTIMIZATIONS = 20;
     static const int DEFAULT_OPT_LEVEL = 2;
     static const int DEFAULT_LOOP_UNROLL_COUNT = 10;
