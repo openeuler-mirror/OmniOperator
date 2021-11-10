@@ -177,6 +177,11 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     env->ReleaseStringUTFChars(jAggType, aggTypesCharPtr);
     env->ReleaseStringUTFChars(jOutPutTye, outTypesCharPtr);
 
+    delete inloopSp;
+    delete processAggSp;
+    delete groupAggregationContext;
+    delete jit;
+
     return reinterpret_cast<uint64_t>(jitContext);
 }
 

@@ -101,6 +101,8 @@ OmniStatus HashAggregationOperator::Init()
     for (auto &c : aggCols) {
         sourceTypes[c.idx] = static_cast<int32_t>(c.input.GetId());
     }
+    executionContext = std::make_unique<ExecutionContext>();
+    executionContext->getArena()->Allocate(DEFAULT_TEMP_MEM_SIZE);
     return OMNI_STATUS_NORMAL;
 }
 
@@ -139,12 +141,12 @@ std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t* hash,
     return bucktes;
 }
 
-void ALWAYS_INLINE DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset)
+void ALWAYS_INLINE DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset, ExecutionContext *context)
 {
     int32_t originalRowIndex;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, offset, originalRowIndex);
     HashAggregationOperator::FUNCTIONS[originalVector->GetTypeId()].duplicateKey(groupBySlot, originalVector,
-        originalRowIndex);
+        originalRowIndex, context);
 }
 
 int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t colNum,
@@ -203,7 +205,7 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
             if (isSamePos == -1) {
                 std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
                 for (int32_t i = 0; i < groupByColNum; ++i) {
-                    DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualOffset);
+                    DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualOffset, executionContext.get());
                 }
                 bucket.push_back(groupByTuple);
                 size_t chainLength = bucket.size();
@@ -424,53 +426,10 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     return expectedBatchSize;
 }
 
-OmniStatus HashAggregationOperator::CloseGroupBy()
-{
-    auto groupByColSize = groupByCols.size();
-    for (auto bucket = groupedRows.begin(); bucket != groupedRows.end(); ++bucket) {
-        for (auto node = bucket->second.begin(); node != bucket->second.end(); ++node) {
-            for (int32_t idx = 0; idx < groupByColSize; ++idx) {
-                HashAggregationOperator::FUNCTIONS[groupByCols[idx].input.GetId()]
-                        .releaseMemory(node->at(idx), idx, groupByCols[idx].input);
-            }
-        }
-    }
-    return OMNI_STATUS_NORMAL;
-}
-
-OmniStatus HashAggregationOperator::CloseAgg()
-{
-    auto groupByColSize = groupByCols.size();
-    auto aggColSize = aggCols.size();
-    for (auto bucket = groupedRows.begin(); bucket != groupedRows.end(); ++bucket) {
-        for (auto node = bucket->second.begin(); node != bucket->second.end(); ++node) {
-            for (int32_t idx = 0; idx < aggColSize; ++idx) {
-                if (aggregators[idx]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
-                    continue;
-                }
-                if (aggregators[idx]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
-                    delete static_cast<double *>(node->at(idx).avgVal);
-                    continue;
-                }
-                auto typeId = aggCols[idx].output.GetId();
-                HashAggregationOperator::FUNCTIONS[typeId]
-                        .releaseMemory(node->at(groupByColSize + idx), groupByColSize + idx, aggCols[idx].output);
-            }
-        }
-    }
-    return OMNI_STATUS_NORMAL;
-}
-
 OmniStatus HashAggregationOperator::Close()
 {
     delete[] sourceTypes;
-    OmniStatus ret = CloseGroupBy();
-    ret = CloseAgg();
-    if (ret == OMNI_STATUS_NORMAL) {
-        return OMNI_STATUS_NORMAL;
-    } else {
-        return OMNI_STATUS_ERROR;
-    }
+    return OMNI_STATUS_NORMAL;
 }
 
 template<typename V, typename D>
@@ -588,22 +547,26 @@ void IsSameNodeFuncVarcharImpl(Vector* vector, const uint32_t offset, GroupBySlo
     return;
 }
 
-template <typename V, typename D> void ALWAYS_INLINE DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset)
+template <typename V, typename D> void ALWAYS_INLINE DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset, ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
         return;
     }
-    groupBySlot.val = std::make_unique<D>(static_cast<V *>(vector)->GetValue(offset)).release();
+    int32_t len = sizeof(D);
+    uint8_t *ptr = context->getArena()->Allocate(len);
+    D data = static_cast<V *>(vector)->GetValue(offset);
+    memcpy_s(ptr, len, &data, len);
+    groupBySlot.val = ptr;
 }
 
-void ALWAYS_INLINE DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset)
+void ALWAYS_INLINE DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset, ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
         return;
     }
     uint8_t *tmp = nullptr;
     int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
-    uint8_t *data = new uint8_t[valLen];
+    uint8_t *data = context->getArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, valLen);
     groupBySlot.strVal = data;
     groupBySlot.strLen = valLen;

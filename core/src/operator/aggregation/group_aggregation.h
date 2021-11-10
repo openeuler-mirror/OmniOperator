@@ -5,12 +5,11 @@
 #ifndef GROUP_AGGREGATION_H
 #define GROUP_AGGREGATION_H
 
+#include "definitions.h"
 #include "aggregation.h"
 #include "../../vector/vector_types.h"
 #include "../hash_util.h"
-
-const int32_t MAX_TABLE_SIZE_IN_BYTES = 1024 * 1024;
-const int32_t DEFAULT_HASHTABLE_SIZE = 512;
+#include "../execution_context.h"
 
 #ifdef DEBUG_OPERATOR
 #define VERIFY_INPUT_TYPES(vector_batch, group_by_idx, group_by_num, agg_idx, agg_num, operator_types)               \
@@ -52,8 +51,9 @@ class HashAggregationOperator;
 
 using HashFunc = void (*)(Vector *vector, const uint32_t r, const int32_t *ri, uint64_t *hashVal);
 using HashFuncVect = void (*)(Vector *vector, const uint32_t s, const uint32_t r, uint64_t *hashVal);
-using DuplicateKeyValue = void (*)(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset);
-using IsSameNodeFunc = void(*)(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
+using DuplicateKeyValue = void (*)(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
+    ExecutionContext *context);
+using IsSameNodeFunc = void (*)(Vector *vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
 using SetVector = void (*)(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 using FillValue = void (*)(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
@@ -82,12 +82,14 @@ void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCo
 void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash);
 
-template<typename V, typename D>
-void IsSameNodeFuncImpl(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
-void IsSameNodeFuncVarcharImpl(Vector* vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
+template <typename V, typename D>
+void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
+void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
 
-template <typename V, typename D> void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset);
-void DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset);
+template <typename V, typename D>
+void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset, ExecutionContext *context);
+void DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
+    ExecutionContext *context);
 
 template <typename V>
 void SetVectorImpl(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
@@ -98,13 +100,11 @@ void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnInde
     int32_t rowCount);
 
 template <typename V, typename D>
-void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex,
-                   ChainIterator &tempRowIterator, int colIndex);
+void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
 
-void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex,
-                      ChainIterator &tempRowIterator, int colIndex);
+void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
 
-template <typename T> void ReleaseMemoryImpl(GroupBySlot& rowIterator, int32_t columnIndex, VecType& type);
+template <typename T> void ReleaseMemoryImpl(GroupBySlot &rowIterator, int32_t columnIndex, VecType &type);
 void ReleaseMemoryVarcharImpl(GroupBySlot &columnVal, int32_t columnIndex, VecType &type);
 
 class HashAggregationOperator : public AggregationCommonOperator {
@@ -129,13 +129,11 @@ public:
     OmniStatus Init() override;
 
     OmniStatus Close() override;
-    OmniStatus CloseGroupBy();
-    OmniStatus CloseAgg();
     void PreLoop(VectorBatch *vecBatch);
     void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
         int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);
     void PostLoop(VectorBatch *vecBatch) const;
-    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>& GetStates()
+    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> &GetStates()
     {
         return groupedRows;
     }
@@ -185,31 +183,30 @@ public:
     };
 
 private:
-    std::vector<BucketIterator> FindBuckets(uint64_t* hash, int32_t blockSize);
+    std::vector<BucketIterator> FindBuckets(uint64_t *hash, int32_t blockSize);
     int32_t GetRowSize(std::vector<VecType> &types, int32_t columnCount);
 
-    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex,
-                            ChainIterator &rowIterator, int32_t rowIndex);
+    void FillGroupByVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
+        int32_t rowIndex);
 
     void FillAggVectors(VectorBatch *vecBatch, int startIndex, int endIndex, ChainIterator &rowIterator,
-                        int32_t rowCount);
+        int32_t rowCount);
 
     void FillNormalAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex, int32_t rowCount,
-                       BucketIterator &rowIterator);
+        BucketIterator &rowIterator);
 
     void FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex, ChainIterator &rowIterator,
-                    int32_t rowIndex);
+        int32_t rowIndex);
 
 private:
     friend class HashAggregationOperatorFactory;
     template <typename V, typename D>
-    friend void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex,
-                              ChainIterator &tempRowIterator, int colIndex);
-    friend void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex,
-                                 ChainIterator &tempRowIterator, int colIndex);
+    friend void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
+    friend void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
     std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil> groupedRows;
     std::vector<ColumnIndex> groupByCols;
     std::vector<ColumnIndex> aggCols;
+    std::unique_ptr<ExecutionContext> executionContext;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
