@@ -19,13 +19,8 @@ using namespace omniruntime::vec;
 using std::make_shared;
 
 namespace {
-const int INT32_VALUE = 32;
-const int INT64_VALUE = 64;
-const int FEXPR_VALUE3 = 3;
-const int FEXPR_VALUE2 = 2;
-const int LENGTH_LOC = 2;
-const int STARTEXT_VALUE = 2;
-const int SUBSTREXT_VALUE = 3;
+    const int INT32_VALUE = 32;
+    const int INT64_VALUE = 64;
 }
 
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(omniruntime::expressions::Expr &e)
@@ -182,24 +177,15 @@ void ExpressionCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::s
 {
     auto *fExpr = static_cast<FuncExpr *>(&funcExpr);
     std::string fn = fExpr->funcName;
-
-    if (fn == "CAST") {
-        s.insert(fn + "_" + DataTypeString(fExpr->arguments[0]->GetExprDataType()) + "_" +
-            DataTypeString(fExpr->GetExprDataType()));
-    } else if (fn == "abs") {
-        s.insert(fn + "_" + DataTypeString(fExpr->GetExprDataType()));
-    } else if (fn == "substr") {
-        if (fExpr->arguments.size() == STARTEXT_VALUE) {
-            s.insert("substrWithStartExt");
+    ExternalFuncRegistry efr;
+    std::set<std::string> externalFuncNames = efr.GetAllExternalFunctionNames();
+    if (externalFuncNames.find(fExpr->funcName) == externalFuncNames.end()) {
+        for (int i = 0; i < fExpr->arguments.size(); i++) {
+            fn += "_" + DataTypeString(fExpr->arguments[i]->GetExprDataType());
         }
-        if (fExpr->arguments.size() == SUBSTREXT_VALUE) {
-            s.insert("substrExt");
-        }
-    } else if (fn == "mm3hash") {
-        s.insert(fn + "_" + DataTypeString(fExpr->arguments[0]->GetExprDataType()));
-    } else {
-        s.insert(fExpr->funcName);
+        fn += "_" + DataTypeString(fExpr->GetExprDataType());
     }
+    s.insert(fn);
     // Recurse on the arguments
     for (auto arg : fExpr->arguments) {
         RequiredFunctionsHelper(*arg, s);
@@ -418,184 +404,6 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(
             std::cout << "Unsupported string binary operator " << op << std::endl;
             return this->CreateConstantBool(false);
     }
-}
-
-// Helper functions for parsing functions
-void ExpressionCodeGen::FuncExprAbsHelper(FuncExpr &fExpr)
-{
-    std::string absFuncName = "Abs_" + DataTypeString(fExpr.dataType);
-    std::vector<Value *> argVals { VisitExpr(*(fExpr.arguments[0]))->data };
-    auto f = module->getFunction(absFuncName);
-    Value *ret = nullptr;
-    if (f) {
-        ret = builder->CreateCall(f, argVals, absFuncName);
-    } else {
-        std::cout << "Unable to parse function " << absFuncName << std::endl;
-        ret = CreateConstantInt(0);
-    }
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
-}
-
-void ExpressionCodeGen::FuncExprLikeHelper(omniruntime::expressions::FuncExpr &fExpr)
-{
-    Value *str = VisitExpr(*(fExpr.arguments[0]))->data;
-    Value *strLen = this->value->length;
-    Value *regex = VisitExpr(*(fExpr.arguments[1]))->data;
-    Value *regexLen = this->value->length;
-    std::vector<Value *> argVals { str, strLen, regex, regexLen };
-    auto f = module->getFunction(fr->likeExtStr);
-    Value *ret = builder->CreateCall(f, argVals, fr->likeExtStr);
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
-}
-
-void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr)
-{
-    DataType from = fExpr.arguments[0]->dataType;
-    DataType to = fExpr.GetExprDataType();
-
-    auto codegenValue = VisitExpr(*(fExpr.arguments[0]));
-    std::vector<Value *> argVals { codegenValue->data };
-
-    std::string castFuncName = "Cast_" + DataTypeString(from) + "_" + DataTypeString(to);
-
-    AllocaInst *outputLenPtr = nullptr;
-    Value *outputLen = nullptr;
-    Value *ret = nullptr;
-    // if casting to same type, treat it as constant
-    if (from == to) {
-        this->value = make_shared<CodeGenValue>(
-            codegenValue->data, this->CreateConstantBool(codegenValue->isNull), codegenValue->length);
-        return;
-    } else if (from == DataType::STRINGD) {
-        argVals.push_back(codegenValue->length);
-    } else if (to == DataType::STRINGD) {
-        AllocaInst *outputLengthPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-        argVals.push_back(outputLengthPtr);
-    }
-
-    auto f = module->getFunction(castFuncName);
-    if (f) {
-        ret = builder->CreateCall(f, argVals, castFuncName);
-        outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
-    } else {
-        LLVM_DEBUG_LOG("Unable to parse function %s", castFuncName.c_str());
-        ret = CreateConstantInt(0);
-        outputLen = nullptr;
-    }
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), outputLen);
-}
-
-void ExpressionCodeGen::FuncExprConcatHelper(omniruntime::expressions::FuncExpr &fExpr)
-{
-    auto str1Value = VisitExpr(*(fExpr.arguments[0]));
-    Value *str1 = str1Value->data;
-    Value *str1Len = str1Value->length;
-    auto str2Value = VisitExpr(*(fExpr.arguments[1]));
-    Value *str2 = str2Value->data;
-    Value *str2Len = str2Value->length;
-    AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-    std::vector<Value *> argVals { str1, str1Len, str2, str2Len, outputLenPtr, this->codegenContext->executionContext };
-
-    auto f = module->getFunction(fr->concatStrExtStr);
-    Value *ret = builder->CreateCall(f, argVals, fr->concatStrExtStr);
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
-}
-
-void ExpressionCodeGen::FuncExprSubstrHelper(FuncExpr &fExpr)
-{
-    if (fExpr.arguments.size() == FEXPR_VALUE3) {
-        auto strValue = VisitExpr(*(fExpr.arguments[0]));
-        Value *str = strValue->data;
-        Value *strLen = strValue->length;
-        Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
-        Value *length = VisitExpr(*(fExpr.arguments[LENGTH_LOC]))->data;
-        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-        std::vector<Value*> argVals {
-            str, strLen, startIdx, length, outputLenPtr, this->codegenContext->executionContext
-        };
-        auto f = module->getFunction(fr->substrExtStr);
-        Value *ret = builder->CreateCall(f, argVals, fr->substrExtStr);
-        this->value = make_shared<CodeGenValue>(
-            ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
-        return;
-    }
-    if (fExpr.arguments.size() == FEXPR_VALUE2) {
-        Value *str = VisitExpr(*(fExpr.arguments[0]))->data;
-        Value *strLen = this->value->length;
-        Value *startIdx = VisitExpr(*(fExpr.arguments[1]))->data;
-        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-        std::vector<Value *> argVals { str, strLen, startIdx, outputLenPtr, this->codegenContext->executionContext};
-
-        auto f = module->getFunction(fr->substrWithStartExtStr);
-        Value *ret = builder->CreateCall(f, argVals, fr->substrWithStartExtStr);
-        this->value = make_shared<CodeGenValue>(
-            ret, this->CreateConstantBool(false), builder->CreateLoad(outputLenPtr));
-        return;
-    }
-    std::cout << "Error: Incorrect number of arguments used for substr" << std::endl;
-    this->value = make_shared<CodeGenValue>(CreateConstantLong(0), this->CreateConstantBool(false));
-}
-
-void ExpressionCodeGen::FuncExprExtHelper(FuncExpr &fExpr)
-{
-    FunctionSignature fs = funcNameToSignature[fExpr.funcName];
-
-    std::vector<Value *> argVals;
-    for (int i = 0; i < fExpr.arguments.size(); i++) {
-        // Cast arguments to the correct type
-        DataType desiredType = fs.GetParams()[i];
-        DataType currType = fExpr.arguments[i]->GetExprDataType();
-        if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
-            Value *argDouble = builder->CreateCast(Instruction::SIToFP,
-                VisitExpr(*(fExpr.arguments[i]))->data, Type::getDoubleTy(*(context)));
-            argVals.push_back(argDouble);
-        } else if (desiredType == INT64D && currType == INT32D) {
-            Value *argInt64 =
-                builder->CreateIntCast(VisitExpr(*(fExpr.arguments[i]))->data, Type::getInt64Ty(*context), true);
-            argVals.push_back(argInt64);
-        } else {
-            argVals.push_back(VisitExpr(*(fExpr.arguments[i]))->data);
-        }
-    }
-    // Assume that the function name of the fExpr and in the module are matching
-    auto f = module->getFunction(fExpr.funcName);
-    Value *ret = builder->CreateCall(f, argVals, "call_" + fExpr.funcName);
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
-}
-
-void ExpressionCodeGen::FuncExprMm3HashHelper(FuncExpr &fExpr)
-{
-    llvm::Value *val = VisitExpr(*(fExpr.arguments[0]))->data;
-    llvm::Value *seed = VisitExpr(*(fExpr.arguments[1]))->data;
-    std::string mm3FuncName = "Mm3_" + DataTypeString(fExpr.arguments[0]->dataType);
-    std::vector<Value*> argVals {val, seed};
-
-    auto f = module->getFunction(mm3FuncName);
-    Value *ret = nullptr;
-    if (f) {
-        ret = builder->CreateCall(f, argVals, mm3FuncName);
-    } else {
-        LLVM_DEBUG_LOG("Unable to parse function %s", mm3FuncName.c_str());
-        ret = CreateConstantInt(0);
-    }
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
-}
-
-void ExpressionCodeGen::FuncExprCombineHashHelper(FuncExpr &fExpr)
-{
-    Value *prevHashVal = VisitExpr(*(fExpr.arguments[0]))->data;
-    Value *val = VisitExpr(*(fExpr.arguments[1]))->data;
-    if (fExpr.arguments[0]->GetExprDataType() == INT32D) {
-        prevHashVal = builder->CreateIntCast(prevHashVal, Type::getInt64Ty(*context), true);
-    }
-    if (fExpr.arguments[1]->GetExprDataType() == INT32D) {
-        val = builder->CreateIntCast(val, Type::getInt64Ty(*context), true);
-    }
-    std::vector<Value *> argVals { prevHashVal, val };
-    auto f = module->getFunction(fr->combineHashStr);
-    Value *ret = builder->CreateCall(f, argVals, fr->combineHashStr);
-    DumpCode();
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false));
 }
 
 std::string ExpressionCodeGen::DumpCode()
@@ -1261,39 +1069,53 @@ void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
 // Only calls them; registration is done in function registry
 void ExpressionCodeGen::Visit(FuncExpr &fExpr)
 {
-    if (fExpr.funcName == "abs") {
-        this->FuncExprAbsHelper(fExpr);
-        return;
+    std::vector<Value *> argVals;
+    std::string funcName = fExpr.funcName;
+    int numArgs = fExpr.arguments.size();
+    for (int i = 0; i < numArgs; i++) {
+        if (funcNameToSignature.count(fExpr.funcName)) {
+            FunctionSignature fs = funcNameToSignature[fExpr.funcName];
+            DataType desiredType = fs.GetParams()[i];
+            DataType currType = fExpr.arguments[i]->GetExprDataType();
+            if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
+                Value *argDouble =
+                        builder->CreateCast(Instruction::SIToFP, VisitExpr(*(fExpr.arguments[i]))->data,
+                                            Type::getDoubleTy(*(context)));
+                argVals.push_back(argDouble);
+            } else if (desiredType == INT64D && currType == INT32D) {
+                Value *argInt64 =
+                        builder->CreateIntCast(VisitExpr(*(fExpr.arguments[i]))->data,
+                                               Type::getInt64Ty(*context), true);
+                argVals.push_back(argInt64);
+            } else {
+                argVals.push_back(VisitExpr(*(fExpr.arguments[i]))->data);
+            }
+        } else {
+            argVals.push_back(VisitExpr(*(fExpr.arguments[i]))->data);
+            if (fExpr.arguments[i]->dataType == DataType::STRINGD && fExpr.funcName != fr->mm3hashStr) {
+                argVals.push_back(this->value->length);
+            }
+            funcName += "_" + DataTypeString(fExpr.arguments[i]->dataType);
+            if (i == numArgs - 1) {
+                funcName += "_" + DataTypeString(fExpr.dataType);
+            }
+        }
     }
-    if (fExpr.funcName == "substr") {
-        this->FuncExprSubstrHelper(fExpr);
-        return;
+    Value *ret = nullptr;
+    Value *outputLen = nullptr;
+    AllocaInst *outputLenPtr = nullptr;
+    if (fExpr.GetExprDataType() == DataType::STRINGD) {
+        outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
+        argVals.push_back(outputLenPtr);
+        argVals.push_back(this->codegenContext->executionContext);
     }
-    if (fExpr.funcName == "concat") {
-        this->FuncExprConcatHelper(fExpr);
-        return;
+    auto f = module->getFunction(funcName);
+    if (f) {
+        ret = builder->CreateCall(f, argVals, funcName);
+        outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
+    } else {
+        std::cout << "Unable to parse function " << funcName.c_str() << std::endl;
     }
-    if (fExpr.funcName == "CAST") {
-        this->FuncExprCastHelper(fExpr);
-        return;
-    }
-    if (fExpr.funcName == "LIKE") {
-        this->FuncExprLikeHelper(fExpr);
-        return;
-    }
-    if (fExpr.funcName == "combine_hash") {
-        this->FuncExprCombineHashHelper(fExpr);
-        return;
-    }
-    if (fExpr.funcName == "mm3hash") {
-        this->FuncExprMm3HashHelper(fExpr);
-        return;
-    }
-    // external functions
-    if (IsFunctionName(fExpr.funcName)) {
-        this->FuncExprExtHelper(fExpr);
-        return;
-    }
-    LLVM_DEBUG_LOG("No function found with name %s", fExpr.funcName.c_str());
-    this->value = make_shared<CodeGenValue>(CreateConstantInt(0), this->CreateConstantBool(false));
+    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), outputLen);
 }
+

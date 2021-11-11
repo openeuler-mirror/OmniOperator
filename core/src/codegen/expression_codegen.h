@@ -13,6 +13,7 @@
 #include "./functions/stringfunctions.h"
 #include "./functions/murmur3_hash.h"
 #include "./functions/decimalfunctions.h"
+#include "./functions/external_func_registry.h"
 #include "./func_registry.h"
 #include "../util/debug.h"
 
@@ -119,17 +120,6 @@ protected:
     llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value *leftVal,
                                         llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen);
     llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
-
-    // Helper functions and main function for parsing function expressions
-    void FuncExprAbsHelper(
-        omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprSubstrHelper(omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprCastHelper(omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprConcatHelper(omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprLikeHelper(omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprMm3HashHelper(omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprExtHelper(omniruntime::expressions::FuncExpr &fExpr);
-    void FuncExprCombineHashHelper(omniruntime::expressions::FuncExpr &fExpr);
 
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);

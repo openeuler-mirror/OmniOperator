@@ -15,7 +15,10 @@
 using namespace std;
 using namespace omniruntime::expressions;
 using namespace llvm;
-
+namespace {
+    const int STARTEXT_VALUE = 2;
+    const int SUBSTREXT_VALUE = 3;
+}
 
 // Helper function to find the corresponding llvm type of a DataType
 Type* ToLlvmType(DataType t, LLVMContext* context)
@@ -92,64 +95,74 @@ void FunctionRegistry::RegisterFunctionFromSignature(const FunctionSignature& fu
     FunctionCallee callee = module->getOrInsertFunction(funcSignature.GetName(), ft);
 }
 
+std::string GetAbsType(const std::string& str)
+{
+    int pos = 0;
+    int prev = 0;
+    while ((pos = str.find('_', prev)) != std::string::npos) {
+        prev = pos + 1;
+    }
+    return str.substr(prev);
+}
 
 void FunctionRegistry::RegisterAbsFunctions(const std::string& fn)
 {
+    std::string type = GetAbsType(fn);
     // Math functions
-    if (fn == "abs_int32") {
+    if (type == int32TypeStr) {
         vector<DataType> absInt32Types {DataType::INT32D};
-        FunctionSignature absInt32Sig (absInt32Str, absInt32Types, DataType::INT32D,
+        FunctionSignature absInt32Sig (fn, absInt32Types, DataType::INT32D,
                                        reinterpret_cast<void *>(AbsInt32));
         this->RegisterFunctionFromSignature(absInt32Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(absInt32Str, absInt32Sig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, absInt32Sig));
     }
-    if (fn == "abs_int64") {
+    if (type == int64TypeStr) {
         vector<DataType> absInt64Types {DataType::INT64D};
-        FunctionSignature absInt64Sig (absInt64Str, absInt64Types, DataType::INT64D,
+        FunctionSignature absInt64Sig (fn, absInt64Types, DataType::INT64D,
                                        reinterpret_cast<void *>(AbsInt64));
         this->RegisterFunctionFromSignature(absInt64Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(absInt64Str, absInt64Sig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, absInt64Sig));
     }
-    if (fn == "abs_double") {
+    if (type == doubleTypeStr) {
         vector<DataType> absDoubleTypes {DataType::DOUBLED};
-        FunctionSignature absDoubleSig (absDoubleStr, absDoubleTypes, DataType::DOUBLED,
+        FunctionSignature absDoubleSig (fn, absDoubleTypes, DataType::DOUBLED,
                                         reinterpret_cast<void *>(AbsDouble));
         this->RegisterFunctionFromSignature(absDoubleSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(absDoubleStr, absDoubleSig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, absDoubleSig));
     }
-    if (fn == "abs_decimal128") {
+    if (type == decimal128Str) {
         vector<DataType> absDecimal128Types {DataType::INT64D};
-        FunctionSignature absDecimal128Sig (absDecimal128Str, absDecimal128Types, DataType::INT64D,
+        FunctionSignature absDecimal128Sig (fn, absDecimal128Types, DataType::INT64D,
                                        reinterpret_cast<void *>(AbsDecimal128));
         this->RegisterFunctionFromSignature(absDecimal128Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(absDecimal128Str, absDecimal128Sig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, absDecimal128Sig));
     }
 }
 
 void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
 {
-    if (fn == "CAST_int32_double") {
+    if (fn == castInt32ToDoubleStr) {
         vector<DataType> castInt32Types {DataType::INT32D};
         FunctionSignature signature (castInt32ToDoubleStr, castInt32Types, DataType::DOUBLED,
                                      reinterpret_cast<void *>(CastInt32ToDouble));
         this->RegisterFunctionFromSignature(signature);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt32ToDoubleStr, signature));
     }
-    if (fn == "CAST_int64_double") {
+    if (fn == castInt64ToDoubleStr) {
         vector<DataType> castInt64Types {DataType::INT64D};
         FunctionSignature signature (castInt64ToDoubleStr, castInt64Types, DataType::DOUBLED,
                                      reinterpret_cast<void *>(CastInt64ToDouble));
         this->RegisterFunctionFromSignature(signature);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64ToDoubleStr, signature));
     }
-    if (fn == "CAST_int32_int64") {
+    if (fn == castInt32ToInt64Str) {
         vector<DataType> castInt32Types {DataType::INT32D};
         FunctionSignature signature (castInt32ToInt64Str, castInt32Types, DataType::INT64D,
                                      reinterpret_cast<void *>(CastInt32ToInt64));
         this->RegisterFunctionFromSignature(signature);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt32ToInt64Str, signature));
     }
-    if (fn == "CAST_string_int32") {
+    if (fn == castStringStr) {
         vector<DataType> castStringTypes {DataType::INT8PTRD, DataType::INT32D};
         FunctionSignature signature (castStringStr, castStringTypes, DataType::INT32D,
                                      reinterpret_cast<void *>(CastString));
@@ -158,46 +171,59 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
     }
 }
 
+bool IsSubstrFunc(const std::string& fn)
+{
+    return (fn.size() > 7 && fn.substr(0,7) == "substr_");
+}
+
 void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 {
-    if (fn == "substrExt") {
-        vector<DataType> substrExtTypes {
-            DataType::INT8PTRD, DataType::INT32D, DataType::INT32D, DataType::INT32D,
-            DataType::INT32PTRD, DataType::INT64D
-        };
-        FunctionSignature substrExtSig (substrExtStr, substrExtTypes, DataType::INT8PTRD,
-                                        reinterpret_cast<void *>(SubstrExt));
-        this->RegisterFunctionFromSignature(substrExtSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(substrExtStr, substrExtSig));
+    if (IsSubstrFunc(fn)) {
+        int numArgs = -1;
+        for (int i = 0; i < fn.size(); i++) {
+            if (fn[i] == '_') {
+                numArgs++;
+            }
+        }
+        if (numArgs == SUBSTREXT_VALUE) {
+            vector<DataType> substrExtTypes {
+                    DataType::INT8PTRD, DataType::INT32D, DataType::INT32D, DataType::INT32D,
+                    DataType::INT32PTRD, DataType::INT64D
+            };
+            FunctionSignature substrExtSig(fn, substrExtTypes, DataType::INT8PTRD,
+                                           reinterpret_cast<void *>(SubstrExt));
+            this->RegisterFunctionFromSignature(substrExtSig);
+            funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, substrExtSig));
+        }
+        if (numArgs == STARTEXT_VALUE) {
+            vector<DataType> substrWithStartExtTypes {
+                    DataType::INT8PTRD, DataType::INT32D, DataType::INT32D,
+                    DataType::INT32PTRD, DataType::INT64D
+            };
+            FunctionSignature substrWithStartExtSig
+                    (fn, substrWithStartExtTypes,
+                     DataType::INT8PTRD, reinterpret_cast<void *>(SubstrWithStartExt));
+            this->RegisterFunctionFromSignature(substrWithStartExtSig);
+            funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn,
+                                                                          substrWithStartExtSig));
+        }
     }
-    if (fn == "substrWithStartExt") {
-        vector <DataType> substrWithStartExtTypes {
-            DataType::INT8PTRD, DataType::INT32D, DataType::INT32D,
-            DataType::INT32PTRD, DataType::INT64D
-        };
-        FunctionSignature substrWithStartExtSig
-                (substrWithStartExtStr, substrWithStartExtTypes,
-                 DataType::INT8PTRD, reinterpret_cast<void *>(SubstrWithStartExt));
-        this->RegisterFunctionFromSignature(substrWithStartExtSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(substrWithStartExtStr,
-                                                                      substrWithStartExtSig));
-    }
-    if (fn == "concat") {
+
+    if (fn.find(concatStrExtStr) != std::string::npos) {
         vector<DataType> concatStrExtTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D,
                                             DataType::INT32PTRD, DataType::INT64D};
-        FunctionSignature concatStrExtSig (concatStrExtStr, concatStrExtTypes,
+        FunctionSignature concatStrExtSig (fn, concatStrExtTypes,
                                            DataType::INT8PTRD, reinterpret_cast<void *>(ConcatStrExt));
         this->RegisterFunctionFromSignature(concatStrExtSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(concatStrExtStr, concatStrExtSig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, concatStrExtSig));
     }
 
-
-    if (fn == "LIKE") {
+    if (fn.find(likeExtStr) != std::string::npos) {
         vector<DataType> likeExtTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D};
-        FunctionSignature likeExtSig (likeExtStr, likeExtTypes, DataType::BOOLD,
+        FunctionSignature likeExtSig (fn, likeExtTypes, DataType::BOOLD,
                                       reinterpret_cast<void *>(LikeExt));
         this->RegisterFunctionFromSignature(likeExtSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(likeExtStr, likeExtSig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, likeExtSig));
     }
 }
 
@@ -238,33 +264,34 @@ void FunctionRegistry::RegisterDecimalFuncs()
 void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
 {
     // Mm3Hash functions
-    if (fn == "mm3hash_int32") {
+    if (fn.find(mm3hashInt32Str) != std::string::npos) {
+        std::cout << fn << std::endl;
         vector<DataType> mm3Int32Types {DataType::INT32D, DataType::INT32D};
-        FunctionSignature mm3Int32Sig (mm3Int32Str, mm3Int32Types, DataType::INT32D,
+        FunctionSignature mm3Int32Sig (fn, mm3Int32Types, DataType::INT32D,
                                        reinterpret_cast<void *>(Mm3Int32));
         this->RegisterFunctionFromSignature(mm3Int32Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3Int32Str, mm3Int32Sig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3Int32Sig));
     }
-    if (fn == "mm3hash_int64") {
+    if (fn.find(mm3hashInt64Str) != std::string::npos) {
         vector<DataType> mm3Int64Types {DataType::INT64D, DataType::INT32D};
-        FunctionSignature mm3Int64Sig (mm3Int64Str, mm3Int64Types, DataType::INT32D,
+        FunctionSignature mm3Int64Sig (fn, mm3Int64Types, DataType::INT32D,
                                        reinterpret_cast<void *>(Mm3Int64));
         this->RegisterFunctionFromSignature(mm3Int64Sig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3Int64Str, mm3Int64Sig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3Int64Sig));
     }
-    if (fn == "mm3hash_double") {
+    if (fn.find(mm3hashDoubleStr) != std::string::npos) {
         vector<DataType> mm3DoubleTypes {DataType::DOUBLED, DataType::INT32D};
-        FunctionSignature mm3DoubleSig (mm3DoubleStr, mm3DoubleTypes, DataType::INT32D,
+        FunctionSignature mm3DoubleSig (fn, mm3DoubleTypes, DataType::INT32D,
                                         reinterpret_cast<void *>(Mm3Double));
         this->RegisterFunctionFromSignature(mm3DoubleSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3DoubleStr, mm3DoubleSig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3DoubleSig));
     }
-    if (fn == "mm3hash_string") {
+    if (fn.find(mm3hashStringStr) != std::string::npos) {
         vector<DataType> mm3StringTypes {DataType::INT64D, DataType::INT32D};
-        FunctionSignature mm3StringSig (mm3StringStr, mm3StringTypes, DataType::INT32D,
+        FunctionSignature mm3StringSig (fn, mm3StringTypes, DataType::INT32D,
                                         reinterpret_cast<void *>(Mm3String));
         this->RegisterFunctionFromSignature(mm3StringSig);
-        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(mm3StringStr, mm3StringSig));
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3StringSig));
     }
 }
 
@@ -298,29 +325,13 @@ void FunctionRegistry::RegisterDictionaryFuncs()
     funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetVarcharStr, dictionaryGetVarcharSig));
 }
 
-bool IsMathFunction(const string& fn)
+void FunctionRegistry::RegisterCombineHashFunctions()
 {
-    return fn == "abs_int32" || fn == "abs_int64" || fn == "abs_double" || fn == "abs_decimal128";
-}
-
-bool IsStringFunction(const string& fn)
-{
-    return fn == "substrExt" || fn == "substrWithStartExt" || fn == "concat" || fn == "LIKE";
-}
-
-bool IsCastFunction(const string& fn)
-{
-    return fn.size() > 5 && fn.substr(0, 5) == "CAST_";
-}
-
-bool IsHashFunction(const string& fn)
-{
-    return fn == "combine_hash";
-}
-
-bool IsMm3HashFunction(const string& fn)
-{
-    return fn == "mm3hash_int32" || fn == "mm3hash_int64" || fn == "mm3hash_double" || fn == "mm3hash_string";
+    vector<DataType> combineHashTypes {DataType::INT64D, DataType::INT64D};
+    FunctionSignature combineHashSig (combineHashInt64Str, combineHashTypes,
+                                      DataType::INT64D, reinterpret_cast<void *>(CombineHash));
+    this->RegisterFunctionFromSignature(combineHashSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(combineHashInt64Str, combineHashSig));
 }
 
 void FunctionRegistry::ContextHelperFuncs()
@@ -356,27 +367,24 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
     this->RegisterDictionaryFuncs();
     set<string> externalFuncNames = efr.GetAllExternalFunctionNames();
     for (const auto& fn : requiredFuncs) {
-        if (IsMathFunction(fn)) {
+        if (fn.size() > absPrefixStr.length() && fn.substr(0, absPrefixStr.length()) == absPrefixStr) {
             this->RegisterAbsFunctions(fn);
         }
 
-        if (IsStringFunction(fn)) {
+        if (IsSubstrFunc(fn) || (fn.find(concatStrExtStr) != std::string::npos) ||
+            (fn.find(likeExtStr) != std::string::npos)) {
             this->RegisterStringFunctions(fn);
         }
 
-        if (IsCastFunction(fn)) {
+        if (fn.size() > castPrefixStr.length() && fn.substr(0, castPrefixStr.length()) == castPrefixStr) {
             this->RegisterCastFunctions(fn);
         }
 
-        if (IsHashFunction(fn)) {
-            vector<DataType> combineHashTypes {DataType::INT64D, DataType::INT64D};
-            FunctionSignature combineHashSig (combineHashStr, combineHashTypes,
-                                              DataType::INT64D, reinterpret_cast<void *>(CombineHash));
-            this->RegisterFunctionFromSignature(combineHashSig);
-            funcNameToSignatureMap.insert(pair<string, FunctionSignature>(combineHashStr, combineHashSig));
+        if (fn == combineHashInt32Str || fn == combineHashInt64Str) {
+            this->RegisterCombineHashFunctions();
         }
 
-        if (IsMm3HashFunction(fn)) {
+        if (fn.size() > mm3hashStr.length() && fn.substr(0, mm3hashStr.length()) == mm3hashStr) {
             this->RegisterMm3HashFunctions(fn);
         }
 
