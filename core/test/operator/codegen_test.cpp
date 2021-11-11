@@ -120,16 +120,16 @@ TEST(CodeGenTest, SimpleProject)
 
     auto **offsets = new int32_t *[numCols];
     for (int col = 0; col < numCols; col++) {
-            offsets[col] = new int32_t[numRows];
-        }
+        offsets[col] = new int32_t[numRows];
+    }
 
-        std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
+    std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
-        RowProjection lc(unparsed, vecTypes);
-        RowProjFunc func = lc.Create(vecTypes);
-        EXPECT_EQ(lc.GetReturnType(), INT32D);
+    RowProjection lc(unparsed, vecTypes);
+    RowProjFunc func = lc.Create(vecTypes);
+    EXPECT_EQ(lc.GetReturnType(), INT32D);
 
-        bool *nullResult = new bool(false);
+    bool *nullResult = new bool(false);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -194,7 +194,7 @@ TEST(CodeGenTest, SingleProject)
     RowProjection lc(unparsed, vecTypes);
     RowProjFunc func = lc.Create(vecTypes);
     EXPECT_EQ(lc.GetReturnType(), INT32D);
-    
+
     bool *nullResult = new bool(false);
 
     int32_t *dataLength = new int32_t[1];
@@ -404,7 +404,7 @@ TEST (CodeGenTest, RowFilterString) {
     filterFunc = filter->Create(typeVec);
     EXPECT_FALSE(filter == nullptr);
 
-    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);;
+    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(res, true);
     context->getArena()->Reset();
     for (int i = 0; i < numCols; i++) {
@@ -422,7 +422,7 @@ TEST (CodeGenTest, RowFilterString) {
 TEST(CodeGenTest, Operators1)
 {
     string unparsed = "AND:boolean($operator$GREATER_THAN_OR_EQUAL:boolean(ADD:int(#0, 2), 4), "
-        "AND:boolean($operator$LESS_THAN:boolean(#1, 4), $operator$EQUAL:boolean(#2, 2)))";
+                      "AND:boolean($operator$LESS_THAN:boolean(#1, 4), $operator$EQUAL:boolean(#2, 2)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -455,7 +455,6 @@ TEST(CodeGenTest, Operators1)
     auto context = new ExecutionContext();
 
     string testname = "simpleTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
 
 
@@ -495,7 +494,7 @@ TEST(CodeGenTest, Operators1)
 TEST(CodeGenTest, MathFunctions1)
 {
     string unparsed = "AND:boolean($operator$EQUAL:boolean(abs:int(#0), abs:int(#2)), "
-        "$operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
+                      "$operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -525,11 +524,10 @@ TEST(CodeGenTest, MathFunctions1)
     }
 
     string testname = "simpleTest2";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
 
     int64_t dictionaries[3] = {};
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -599,11 +597,10 @@ TEST(CodeGenTest, MathFunctions2)
     }
 
     string testname = "simpleTest2";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -652,7 +649,7 @@ TEST(CodeGenTest, MathFunctions2)
 TEST(CodeGenTest, MathFunctions3)
 {
     string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
-        "$operator$LESS_THAN:boolean(#0, 0))";
+                      "$operator$LESS_THAN:boolean(#0, 0))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -682,11 +679,10 @@ TEST(CodeGenTest, MathFunctions3)
     }
 
     string testname = "simpleTest2";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -774,11 +770,10 @@ TEST(CodeGenTest, MathFunctions4)
     }
 
     string testname = "simpleTest2";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -877,11 +872,10 @@ TEST(CodeGenTest, CastNumbers1)
     }
 
     string testname = "simpleTest3";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -958,11 +952,10 @@ TEST(CodeGenTest, CastNumbers2)
     }
 
     string testname = "simpleTest3";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1046,11 +1039,10 @@ TEST(CodeGenTest, Like)
     offsets[2][1] = s2[0].length();
 
     string testname = "stringTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1127,11 +1119,10 @@ TEST(CodeGenTest, DateCast)
     offsets[2][1] = s2[0].length();
 
     string testname = "stringTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1223,11 +1214,10 @@ TEST(CodeGenTest, SubstrIn)
     offsets[2][1] = s2[0].length();
 
     string testname = "stringTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1319,11 +1309,10 @@ TEST(CodeGenTest, ConcatStr)
     offsets[2][1] = s2[0].length();
 
     string testname = "stringTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1417,10 +1406,9 @@ TEST(CodeGenTest, StringWithOps)
 
 
     string testname = "stringTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1499,11 +1487,10 @@ TEST(CodeGenTest, Coalesce)
     }
 
     string testname = "coalesceTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1556,11 +1543,10 @@ TEST(CodeGenTest, IsNull)
     }
 
     string testName = "isNullTest";
-    vector<DataType> typeVec = vector<DataType>(types, types + 1);
     auto *lc = new FilterCodeGen(testName, *expr);
     int64_t dictionaries[1] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1610,11 +1596,10 @@ TEST(CodeGenTest, IsNotNull)
         offsets[col] = new int32_t[1];
     }
     string testName = "isNotNullTest";
-    vector<DataType> typeVec = vector<DataType>(types, types + 1);
     auto *lc = new FilterCodeGen(testName, *expr);
     int64_t dictionaries[1] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1672,11 +1657,10 @@ TEST(CodeGenTest, DecimalOperators1)
     }
 
     string testname = "DecimalTest1";
-    vector<DataType> typeVec = vector<DataType>(types, types + 1);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[1] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1737,10 +1721,9 @@ TEST(CodeGenTest, DecimalOperators2)
     }
 
     string testname = "DecimalBetweenTest";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1764,7 +1747,7 @@ TEST(CodeGenTest, DecimalOperators2)
 TEST(CodeGenTest, DecimalOperators3)
 {
     string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
-        "$operator$LESS_THAN:boolean(#0, 0))";
+                      "$operator$LESS_THAN:boolean(#0, 0))";
 
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
     Parser parser {};
@@ -1801,11 +1784,10 @@ TEST(CodeGenTest, DecimalOperators3)
     }
 
     string testname = "DecimalBetweenTest";
-    vector<DataType> typeVec = vector<DataType>(types, types + 3);
     auto *lc = new FilterCodeGen(testname, *expr);
     int64_t dictionaries[3] = {};
 
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1858,7 +1840,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     int newLengths[3];
 
     string testname = "DecimalProjectTest";
-    vector<DataType> typeVec = vector<DataType>(types, types + 1);
     auto *lc = new ProjectionCodeGen(testname, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
@@ -1866,7 +1847,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto ov = oVec.data();
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
-    auto context = new ExecutionContext();;
+    auto context = new ExecutionContext();
 
     int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
     func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
@@ -1926,4 +1907,252 @@ TEST(CodeGenTest, TestRowProjectVarchar)
 
     delete vector;
     delete context;
+}
+
+TEST(CodeGenTest, CastNumbers3)
+{
+    string unparsed = "$operator$LESS_THAN:boolean(CAST:double(#1), #2)";
+
+    DataType types[3] = {DataType::INT32D, DataType::DOUBLED, DataType::DOUBLED};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+    cout << endl;
+
+    int32_t v1[1] = {10000};
+    double v2[1] = {9.01};
+    double v3[1] = {12.34};
+    int64_t *vals = new int64_t[3];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = true;
+    }
+    auto **offsets = new int32_t *[3];
+    for (int col = 0; col < 3; col++) {
+        offsets[col] = new int32_t[1];
+    }
+
+    string testname = "castTest3";
+    auto *lc = new FilterCodeGen(testname, *expr);
+    int64_t dictionaries[3] = {};
+
+    auto context = new ExecutionContext();
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 1);
+    context->getArena()->Reset();
+
+    v1[0] = 2000000000;
+    v2[0] = -100.22;
+    v3[0] = -234.2142;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
+
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 0);
+    context->getArena()->Reset();
+
+    v1[0] = -1000000;
+    v2[0] = 12;
+    v3[0] = 12;
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
+
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 0);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+
+    delete[] offsets;
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete lc;
+    delete expr;
+    delete context;
+}
+
+TEST (CodeGenTest, Substr) {
+    DataType types[2] = {DataType::STRINGD, DataType::STRINGD};
+    const int32_t numCols = 2;
+    const int32_t numRows = 1;
+
+    string s1[1];
+    string s2[1];
+    s1[0] = "SUBSTR Function";
+    s2[0] = "Function SUBSTR";
+
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t) s1->c_str();
+    vals[1] = (int64_t) s2->c_str();
+
+    int32_t *selected = new int32_t[1];
+    bool **bitmap = new bool *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        bitmap[col] = new bool[numRows];
+        for (int i = 0; i < numRows; i++) {
+            bitmap[col][i] = false;
+        }
+    }
+
+    auto context = new ExecutionContext();
+    auto **offsets = new int32_t *[numCols];
+    for (int col = 0; col < numCols; col++) {
+        offsets[col] = new int32_t[numRows + 1];
+        offsets[col][0] = 0;
+        offsets[col][1] = 15;
+    }
+
+    string testname = "stringTest";
+    vector<DataType> typeVec = vector<DataType>(types, types + 2);
+    std::string expr = "$operator$EQUAL:boolean(substr:varchar(#0, -5, 5), 'ction')";
+    int64_t dictionaries[numCols] = {};
+
+    auto filter = new RowFilter(expr, typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    auto filterFunc = filter->Create(typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    bool res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(res, true);
+    delete filter;
+
+    expr = "$operator$EQUAL:boolean(substr:varchar(#1, -5), 'UBSTR')";
+
+    filter = new RowFilter(expr, typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    filterFunc = filter->Create(typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(res, true);
+    delete filter;
+
+    expr = "$operator$EQUAL:boolean(substr:varchar(#0, 4), 'STR Function')";
+
+    filter = new RowFilter(expr, typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    filterFunc = filter->Create(typeVec);
+    EXPECT_FALSE(filter == nullptr);
+    res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(res, true);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < numCols; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+
+    delete[] selected;
+    delete[] vals;
+    delete[] bitmap;
+    delete[] offsets;
+    delete filter;
+    delete context;
+}
+
+TEST(CodeGenTest, Mm3Hash)
+{
+    string unparsed = "$operator$EQUAL:boolean(mm3hash:int(#0, 42), 723455942)";
+
+    DataType types[1] = {DataType::INT32D};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 1);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int64_t v1[1] = {-2147483648};
+    auto *vals = new int64_t[1];
+    vals[0] = (int64_t)v1;
+    auto *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+
+    string testName = "mm3hashTest";
+    auto *lc = new FilterCodeGen(testName, *expr);
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, true);
+    context->getArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
+}
+
+TEST(CodeGenTest, CombineHash)
+{
+    string unparsed = "$operator$EQUAL:boolean(combine_hash:int(#0, #1), #2)";
+
+    DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int64_t v1[1] = {12};
+    int64_t v2[1] = {123};
+    int64_t v3[1] = {495};
+    int64_t* vals = new int64_t[3];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
+
+    auto *selected = new int32_t[1];
+    bool **bitmap = new bool *[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+    int32_t **offsets = new int32_t *[3];
+    for (int i = 0; i < 3; i++) {
+        offsets[i] = new int32_t[1];
+        offsets[i][0] = false;
+    }
+
+    string testName = "CombineHashTest";
+    auto *lc = new FilterCodeGen(testName, *expr);
+    int64_t dictionaries[3] = {};
+    auto context = new ExecutionContext();
+
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, true);
+    context->getArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    delete lc;
 }

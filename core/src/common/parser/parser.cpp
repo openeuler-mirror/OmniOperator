@@ -225,6 +225,11 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         auto isNullExpr =  std::make_unique<IsNullExpr>(args[0]).release();
         return std::make_unique<UnaryExpr>(Operator::NOT, isNullExpr, type).release();
     }
+    // When casting to the same type, the result is the argument itself
+    // Treat argument as constant DataExpr instead of returning FuncExpr
+    if (opStr == "CAST" && args.size() == 1 && (type == args[0]->dataType)) {
+        return static_cast<DataExpr *>(args[0]);
+    }
 
     // Function
     // Check that the signature matches
