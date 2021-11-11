@@ -243,6 +243,44 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     JNIEnv *, jobject, jstring, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jintArray, jint,
     jint, jobjectArray, jstring, jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory
+ * Method:    createHashAggregationWithExprJitContext
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprJitContext(
+    JNIEnv *, jclass, jobjectArray, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory
+ * Method:    createHashAggregationWithExprOperatorFactory
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[ILjava/lang/String;ZZ)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
+    JNIEnv *, jclass, jobjectArray, jobjectArray, jstring, jintArray, jstring, jboolean, jboolean, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory
+ * Method:    createTopNWithExprOperatorFactory
+ * Signature: (Ljava/lang/String;I[Ljava/lang/String;[I[I)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc,
+    jintArray jSortNullFirsts, jlong jitContext);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory
+ * Method:    createTopNWithExprJitContext
+ * Signature: (Ljava/lang/String;I[Ljava/lang/String;[I[I)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprJitContext(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc,
+    jintArray jSortNullFirsts);
+
 #ifdef __cplusplus
 }
 #endif
