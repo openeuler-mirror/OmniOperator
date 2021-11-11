@@ -34,10 +34,10 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const vec::VecTypes &probeT
     this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
         buildOutputCols + buildOutputTypes.GetSize());
     this->buildOutputTypes = std::make_unique<VecTypes>(buildOutputTypes);
-    this->joinType = joinType;
-    this->hashTables = hashTables;
     this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
     this->rowSize += OperatorUtil::GetRowSize(buildOutputTypes.Get());
+    this->hashTables->SetProbeTypes(this->probeTypes.get());
+    this->hashTables->JoinFilterCodeGen();
 }
 
 LookupJoinOperatorFactory::~LookupJoinOperatorFactory() {}
@@ -80,13 +80,12 @@ LookupJoinOperator::LookupJoinOperator(const VecTypes &probeTypes, std::vector<i
         probeOutputCols.size(), buildOutputCols.data(), buildOutputTypes, outputRowSize);
 }
 
-LookupJoinOperator::~LookupJoinOperator() {
-}
+LookupJoinOperator::~LookupJoinOperator() {}
 
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
-    this->joinProbe = new JoinProbe(vecBatch, probeTypes.GetSize(), probeHashCols.data(),
-        probeHashColTypes.data(), probeHashCols.size());
+    this->joinProbe = new JoinProbe(vecBatch, probeTypes.GetSize(), probeHashCols.data(), probeHashColTypes.data(),
+        probeHashCols.size());
     this->partitionedJoinPosition = -1;
 
     // start probe
@@ -111,45 +110,36 @@ const int32_t *LookupJoinOperator::GetSourceTypes()
 
 void LookupJoinOperator::ProcessProbe()
 {
-    if (joinProbe == nullptr) {
+    if (!AdvanceProbePosition()) {
         return;
     }
 
-    while (true) {
-        if (joinProbe->GetPosition() >= 0) {
-            if (!ProbeOnePosition()) {
+    if (hashTables->GetSimpleFilter()) {
+        // the join has filter expression
+        while (joinProbe->GetPosition() >= 0) {
+            JoinCurrentPositionWithFilter();
+            currentProbePositionProducedRow = false;
+            // advance to next probe postition
+            if (!AdvanceProbePosition()) {
                 break;
             }
         }
-        currentProbePositionProducedRow = false;
-
-        // advance to next probe postition
-        if (!AdvanceProbePosition()) {
-            break;
+    } else {
+        // the join does not have filter expression
+        while (joinProbe->GetPosition() >= 0) {
+            JoinCurrentPosition();
+            currentProbePositionProducedRow = false;
+            // advance to next probe postition
+            if (!AdvanceProbePosition()) {
+                break;
+            }
         }
     }
 }
 
-bool LookupJoinOperator::ProbeOnePosition()
+void LookupJoinOperator::JoinCurrentPosition()
 {
     // match in hash table
-    if (!JoinCurrentPosition()) {
-        return false;
-    }
-
-    // do not match in hash table
-    if (!currentProbePositionProducedRow) {
-        currentProbePositionProducedRow = true;
-        if (!OuterJoinCurrentPosition()) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool LookupJoinOperator::JoinCurrentPosition()
-{
     while (partitionedJoinPosition >= 0) {
         // handle data of build
         currentProbePositionProducedRow = true;
@@ -157,15 +147,35 @@ bool LookupJoinOperator::JoinCurrentPosition()
         partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition, joinProbe->GetPosition());
     }
 
-    return true;
+    // do not match in hash table
+    if (!currentProbePositionProducedRow) {
+        currentProbePositionProducedRow = true;
+        if (probeOnOuterSide && partitionedJoinPosition < 0) {
+            outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
+        }
+    }
 }
 
-bool LookupJoinOperator::OuterJoinCurrentPosition()
+void LookupJoinOperator::JoinCurrentPositionWithFilter()
 {
-    if (probeOnOuterSide && partitionedJoinPosition < 0) {
-        outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
+    while (partitionedJoinPosition >= 0) {
+        // match in hash table
+        if (hashTables->IsJoinPositionEligible(partitionedJoinPosition, joinProbe->GetPosition(),
+            joinProbe->GetProbeAllColumns(), joinProbe->GetProbeAllColsCount())) {
+            // handle data of build
+            currentProbePositionProducedRow = true;
+            outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);
+        }
+        partitionedJoinPosition = GetNextJoinPosition(partitionedJoinPosition, joinProbe->GetPosition());
     }
-    return true;
+
+    // do not match in hash table
+    if (!currentProbePositionProducedRow) {
+        currentProbePositionProducedRow = true;
+        if (probeOnOuterSide && partitionedJoinPosition < 0) {
+            outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
+        }
+    }
 }
 
 bool LookupJoinOperator::AdvanceProbePosition()

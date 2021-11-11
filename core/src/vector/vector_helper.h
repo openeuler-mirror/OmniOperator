@@ -221,6 +221,41 @@ public:
         }
     }
 
+    static int64_t GetValuePtrAndLength(Vector *vector, int32_t rowIndex, int32_t *length)
+    {
+        int32_t positionOffset = vector->GetPositionOffset();
+        int32_t finalIndex = positionOffset + rowIndex;
+        void *values = vector->GetValues();
+        switch (vector->GetTypeId()) {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + finalIndex);
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + finalIndex);
+            case OMNI_VEC_TYPE_DOUBLE:
+                return reinterpret_cast<int64_t>(reinterpret_cast<double *>(values) + finalIndex);
+            case OMNI_VEC_TYPE_BOOLEAN:
+                return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(values) + finalIndex);
+            case OMNI_VEC_TYPE_DECIMAL128:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * finalIndex);
+            case OMNI_VEC_TYPE_VARCHAR: {
+                uint8_t *value = nullptr;
+                *length = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &value);
+                return reinterpret_cast<int64_t>(value);
+            }
+            case OMNI_VEC_TYPE_DICTIONARY: {
+                auto dictionaryVector = static_cast<DictionaryVector *>(vector);
+                int32_t originalRowIndex;
+                auto dictionary = dictionaryVector->ExtractDictionaryAndId(rowIndex, originalRowIndex);
+                return GetValuePtrAndLength(dictionary, originalRowIndex, length);
+            }
+            default:
+                LogError("Do not support such vector type %d", vector->GetTypeId());
+                return 0;
+        }
+    }
+
     static int64_t GetNullsAddr(Vector *vector)
     {
         return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(vector->GetValueNulls()) +

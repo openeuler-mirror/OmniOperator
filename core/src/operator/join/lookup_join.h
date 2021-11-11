@@ -62,9 +62,8 @@ public:
 
 private:
     void ProcessProbe();
-    bool ProbeOnePosition();
-    bool JoinCurrentPosition();
-    bool OuterJoinCurrentPosition();
+    void JoinCurrentPositionWithFilter();
+    void JoinCurrentPosition();
     bool AdvanceProbePosition();
     int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
 
@@ -88,14 +87,22 @@ public:
     JoinProbe(omniruntime::vec::VectorBatch *input, int32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
         int32_t hashColsCount);
     ~JoinProbe();
+
     int32_t GetPosition() const
     {
         return position;
     }
+
     omniruntime::vec::Vector **GetProbeAllColumns() const
     {
         return probeAllColumns;
     }
+
+    int32_t GetProbeAllColsCount() const
+    {
+        return probeAllColsCount;
+    }
+
     bool AdvanceNextPosition();
     int64_t GetCurrentJoinPosition(const JoinHashTables *hashTables) const;
 

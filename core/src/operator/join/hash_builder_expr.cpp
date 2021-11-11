@@ -29,7 +29,7 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const Vec
         this->buildHashCols, this->projectFuncs);
     this->buildTypes = std::make_unique<VecTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes.get()),
-        this->buildHashCols.data(), buildHashKeysCount, hashTableCount);
+        this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);
 }
 
 HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()

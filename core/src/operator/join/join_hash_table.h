@@ -6,6 +6,8 @@
 #define __JOIN_HASH_TABLE_H__
 
 #include "../../vector/vector.h"
+#include "../../vector/vector_types.h"
+#include "../filter/filter_and_project.h"
 
 #include <stdint.h>
 
@@ -53,9 +55,32 @@ public:
         return static_cast<int32_t>(result);
     }
 
+    void SetBuildTypes(omniruntime::vec::VecTypes *buildTypes)
+    {
+        this->buildTypes = buildTypes;
+    }
+
+    void SetProbeTypes(omniruntime::vec::VecTypes *probeTypes)
+    {
+        this->probeTypes = probeTypes;
+    }
+
+    void SetFilterExpression(std::string &filterExpression)
+    {
+        this->filterExpression = filterExpression;
+    }
+
+    void JoinFilterCodeGen();
+
+    SimpleFilter *GetSimpleFilter()
+    {
+        return simpleFilter;
+    }
+
     void AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable);
     JoinHashTable *GetHashTable(int32_t partitionIndex) const;
-    bool IsJoinPositionEligible() const;
+    bool IsJoinPositionEligible(int64_t partitionedJoinPosition, int32_t probePosition,
+        omniruntime::vec::Vector **probeColumns, int32_t probeColsCount) const;
     int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
     int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t *joinColumnTypes,
         int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns, int32_t allColumnsCount,
@@ -69,6 +94,10 @@ private:
     std::atomic_int32_t hashTableSize;
     int32_t partitionMask;
     int32_t shiftSize;
+    omniruntime::vec::VecTypes *probeTypes;
+    omniruntime::vec::VecTypes *buildTypes;
+    std::string filterExpression;
+    SimpleFilter *simpleFilter = nullptr;
 };
 
 class JoinHashTable {

@@ -45,6 +45,7 @@ import static io.prestosql.sql.planner.plan.JoinNode.Type.FULL;
 import static io.prestosql.sql.planner.plan.JoinNode.Type.RIGHT;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.operator.OrderByOmniOperator.OrderByOmniOperatorFactory.createOrderByOmniOperatorFactory;
+import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
 import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_AVG;
 import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_COUNT;
 import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_MAX;
@@ -77,7 +78,7 @@ import io.prestosql.operator.DynamicFilterSourceOperator;
 import io.prestosql.operator.ExchangeClientSupplier;
 import io.prestosql.operator.ExchangeOperator;
 import io.prestosql.operator.HashAggregationOperator;
-import io.prestosql.operator.HashBuilderOperator;
+import io.prestosql.operator.HashBuilderOperator.HashBuilderOperatorFactory;
 import io.prestosql.operator.JoinBridgeManager;
 import io.prestosql.operator.LocalPlannerAware;
 import io.prestosql.operator.LookupJoinOperators;
@@ -133,6 +134,7 @@ import io.prestosql.sql.ExpressionUtils;
 import io.prestosql.sql.gen.ExpressionCompiler;
 import io.prestosql.sql.gen.JoinCompiler;
 import io.prestosql.sql.gen.JoinFilterFunctionCompiler;
+import io.prestosql.sql.gen.JoinFilterFunctionCompiler.JoinFilterFunctionFactory;
 import io.prestosql.sql.gen.OrderingCompiler;
 import io.prestosql.sql.gen.PageFunctionCompiler;
 import io.prestosql.sql.planner.LocalDynamicFiltersCollector;
@@ -180,7 +182,7 @@ import java.util.stream.IntStream;
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
 import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
-import nova.hetu.olk.operator.HashBuilderOmniOperator;
+import nova.hetu.olk.operator.HashBuilderOmniOperator.HashBuilderOmniOperatorFactory;
 import nova.hetu.olk.operator.LocalMergeSourceOmniOperator;
 import nova.hetu.olk.operator.LookupJoinOmniOperators;
 import nova.hetu.olk.operator.MergeOmniOperator;
@@ -1298,26 +1300,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             boolean buildOuter = node.getType() == RIGHT || node.getType() == FULL;
             int taskCount = buildContext.getDriverInstanceCount().orElse(1);
 
-            Optional<JoinFilterFunctionCompiler.JoinFilterFunctionFactory> filterFunctionFactory = node.getFilter()
-                    .map(filterExpression -> compileJoinFilterFunction(filterExpression, probeSource.getLayout(),
-                            buildSource.getLayout(), context.getTypes(), context.getSession()));
-
-            Optional<SortExpressionContext> sortExpressionContext = node.getSortExpressionContext();
-
-            Optional<Integer> sortChannel = sortExpressionContext.map(SortExpressionContext::getSortExpression)
-                    .map(Symbol::from)
-                    .map(sortSymbol -> createJoinSourcesLayout(buildSource.getLayout(), probeSource.getLayout())
-                            .get(sortSymbol));
-
-            List<JoinFilterFunctionCompiler.JoinFilterFunctionFactory> searchFunctionFactories = sortExpressionContext
-                    .map(SortExpressionContext::getSearchExpressions)
-                    .map(searchExpressions -> searchExpressions.stream()
-                            .map(searchExpression -> compileJoinFilterFunction(searchExpression,
-                                    probeSource.getLayout(), buildSource.getLayout(), context.getTypes(),
-                                    context.getSession()))
-                            .collect(toImmutableList()))
-                    .orElse(ImmutableList.of());
-
             ImmutableList<Type> buildOutputTypes = buildOutputChannels.stream().map(buildSource.getTypes()::get)
                     .collect(toImmutableList());
             JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager = new JoinBridgeManager<>(
@@ -1345,14 +1327,53 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         filterBuildChannels, getDynamicFilteringMaxPerDriverValueCount(buildContext.getSession()),
                         getDynamicFilteringMaxPerDriverSize(buildContext.getSession())));
             });
+
             if (getOmniJoinEnabled(context.getSession())) {
-                HashBuilderOmniOperator.HashBuilderOmniOperatorFactory hashBuilderOmniOperatorFactory = new HashBuilderOmniOperator.HashBuilderOmniOperatorFactory(
+                Optional<String> filterFunction = node.getFilter()
+                        .map(filterExpression -> getTranslatedExpression(context, buildSource, probeSource,
+                                filterExpression));
+                Optional<SortExpressionContext> sortExpressionContext = node.getSortExpressionContext();
+
+                Optional<Integer> sortChannel = sortExpressionContext.map(SortExpressionContext::getSortExpression)
+                        .map(Symbol::from)
+                        .map(sortSymbol -> createJoinSourcesLayout(buildSource.getLayout(), probeSource.getLayout())
+                                .get(sortSymbol));
+
+                List<String> searchFunctions = sortExpressionContext
+                        .map(SortExpressionContext::getSearchExpressions).map(
+                                searchExpressions -> searchExpressions.stream()
+                                        .map(searchExpression -> getTranslatedExpression(context, buildSource,
+                                                probeSource, searchExpression))
+                                        .collect(toImmutableList()))
+                        .orElse(ImmutableList.of());
+
+                HashBuilderOmniOperatorFactory hashBuilderOmniOperatorFactory = new HashBuilderOmniOperatorFactory(
                         buildContext.getNextOperatorId(), node.getId(), lookupSourceFactoryManager,
-                        buildSource.getTypes(), buildOutputChannels, buildChannels, buildHashChannel,
-                        filterFunctionFactory, sortChannel, searchFunctionFactories, taskCount);
+                        buildSource.getTypes(), buildOutputChannels, buildChannels, buildHashChannel, filterFunction,
+                        sortChannel, searchFunctions, taskCount);
                 factoriesBuilder.add(hashBuilderOmniOperatorFactory);
             } else {
-                HashBuilderOperator.HashBuilderOperatorFactory hashBuilderOperatorFactory = new HashBuilderOperator.HashBuilderOperatorFactory(
+                Optional<JoinFilterFunctionFactory> filterFunctionFactory = node.getFilter()
+                        .map(filterExpression -> compileJoinFilterFunction(filterExpression, probeSource.getLayout(),
+                                buildSource.getLayout(), context.getTypes(), context.getSession()));
+
+                Optional<SortExpressionContext> sortExpressionContext = node.getSortExpressionContext();
+
+                Optional<Integer> sortChannel = sortExpressionContext.map(SortExpressionContext::getSortExpression)
+                        .map(Symbol::from)
+                        .map(sortSymbol -> createJoinSourcesLayout(buildSource.getLayout(), probeSource.getLayout())
+                                .get(sortSymbol));
+
+                List<JoinFilterFunctionFactory> searchFunctionFactories = sortExpressionContext
+                        .map(SortExpressionContext::getSearchExpressions)
+                        .map(searchExpressions -> searchExpressions.stream()
+                                .map(searchExpression -> compileJoinFilterFunction(searchExpression,
+                                        probeSource.getLayout(), buildSource.getLayout(), context.getTypes(),
+                                        context.getSession()))
+                                .collect(toImmutableList()))
+                        .orElse(ImmutableList.of());
+
+                HashBuilderOperatorFactory hashBuilderOperatorFactory = new HashBuilderOperatorFactory(
                         buildContext.getNextOperatorId(), node.getId(), lookupSourceFactoryManager, buildOutputChannels,
                         buildChannels, buildHashChannel, filterFunctionFactory, sortChannel, searchFunctionFactories,
                         10_000, pagesIndexFactory, spillEnabled && !buildOuter && taskCount > 1,
@@ -1365,6 +1386,24 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     buildContext.getDriverInstanceCount(), buildSource.getPipelineExecutionStrategy());
 
             return lookupSourceFactoryManager;
+        }
+
+        private String getTranslatedExpression(LocalExecutionPlanContext context, PhysicalOperation buildSource,
+                PhysicalOperation probeSource, Expression expression) {
+            // In omni runtime, the join layout is probeLayout + buildLayout
+            ImmutableMap.Builder<Symbol, Integer> joinSourcesLayout = ImmutableMap.builder();
+            Map<Symbol, Integer> probeSourceLayout = probeSource.getLayout();
+            Map<Symbol, Integer> buildSourceLayout = buildSource.getLayout();
+            joinSourcesLayout.putAll(probeSourceLayout);
+            for (Map.Entry<Symbol, Integer> buildLayoutEntry : buildSourceLayout.entrySet()) {
+                joinSourcesLayout.put(buildLayoutEntry.getKey(),
+                        buildLayoutEntry.getValue() + probeSourceLayout.size());
+            }
+
+            RowExpression translatedExpression = toRowExpression(expression,
+                    typeAnalyzer.getTypes(context.getSession(), context.getTypes(), expression),
+                    joinSourcesLayout.build());
+            return expressionStringify(translatedExpression);
         }
 
         @Override
@@ -1445,22 +1484,22 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     return LookupJoinOmniOperators.innerJoin(context.getNextOperatorId(), node.getId(),
                             lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                             Optional.of(probeOutputChannels), totalOperatorsCount,
-                            (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
+                            (HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 case LEFT :
                     return LookupJoinOmniOperators.probeOuterJoin(context.getNextOperatorId(), node.getId(),
                             lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                             Optional.of(probeOutputChannels), totalOperatorsCount,
-                            (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
+                            (HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 case RIGHT :
                     return LookupJoinOmniOperators.lookupOuterJoin(context.getNextOperatorId(), node.getId(),
                             lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                             Optional.of(probeOutputChannels), totalOperatorsCount,
-                            (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
+                            (HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 case FULL :
                     return LookupJoinOmniOperators.fullOuterJoin(context.getNextOperatorId(), node.getId(),
                             lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
                             Optional.of(probeOutputChannels), totalOperatorsCount,
-                            (HashBuilderOmniOperator.HashBuilderOmniOperatorFactory) buildOperatorFactory);
+                            (HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 default :
                     throw new UnsupportedOperationException("Unsupported join type: " + node.getType());
             }

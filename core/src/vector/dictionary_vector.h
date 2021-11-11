@@ -8,6 +8,7 @@
 #include "fixed_width_vector.h"
 #include "vector_allocator.h"
 #include "decimal128.h"
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 namespace omniruntime {
 namespace vec {
@@ -90,6 +91,13 @@ public:
     void SetDictionary(Vector *dictionary)
     {
         this->dictionary = dictionary;
+        // set nulls
+        bool *nulls = new bool[size];
+        for (int32_t i = 0; i < size; i++) {
+            nulls[i] = dictionary->IsValueNull(GetId(i));
+        }
+        memcpy_s(valueNullsAddress, size * sizeof(bool), nulls, size * sizeof(bool));
+        delete[] nulls;
     }
 
 private:

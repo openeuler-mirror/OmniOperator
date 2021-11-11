@@ -114,21 +114,16 @@ public class LookupJoinOmniOperator implements Operator {
     /**
      * Instantiates a new Lookup join omni operator.
      *
-     * @param operatorContext     the operator context
-     * @param probeTypes          the probe types
-     * @param joinType            the join type
+     * @param operatorContext the operator context
+     * @param probeTypes the probe types
+     * @param joinType the join type
      * @param lookupSourceFactory the lookup source factory
-     * @param afterClose          the after close
-     * @param lookupJoinsCount    the lookup joins count
-     * @param omniOperator        the omni operator
+     * @param afterClose the after close
+     * @param lookupJoinsCount the lookup joins count
+     * @param omniOperator the omni operator
      */
-    public LookupJoinOmniOperator(
-            OperatorContext operatorContext,
-            List<Type> probeTypes,
-            JoinType joinType,
-            LookupSourceFactory lookupSourceFactory,
-            Runnable afterClose,
-            OptionalInt lookupJoinsCount,
+    public LookupJoinOmniOperator(OperatorContext operatorContext, List<Type> probeTypes, JoinType joinType,
+            LookupSourceFactory lookupSourceFactory, Runnable afterClose, OptionalInt lookupJoinsCount,
             OmniOperator omniOperator) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.probeTypes = ImmutableList.copyOf(requireNonNull(probeTypes, "probeTypes is null"));
@@ -191,7 +186,8 @@ public class LookupJoinOmniOperator implements Operator {
         omniOperator.addInput(vecBatch);
         result = new VecBatchToPageIterator(omniOperator.getOutput());
 
-        // here we get nothing from the native join, we can just keep the state and go on
+        // here we get nothing from the native join, we can just keep the state and go
+        // on
         if (!result.hasNext()) {
             result = null;
             vecBatch.releaseAllVectors();
@@ -209,9 +205,8 @@ public class LookupJoinOmniOperator implements Operator {
                 return false;
             }
             lookupSourceProvider = requireNonNull(getDone(lookupSourceProviderFuture));
-            statisticsCounter.updateLookupSourcePositions(
-                    lookupSourceProvider.withLease(
-                            lookupSourceLease -> lookupSourceLease.getLookupSource().getJoinPositionCount()));
+            statisticsCounter.updateLookupSourcePositions(lookupSourceProvider
+                    .withLease(lookupSourceLease -> lookupSourceLease.getLookupSource().getJoinPositionCount()));
         }
         return true;
     }
@@ -269,7 +264,8 @@ public class LookupJoinOmniOperator implements Operator {
 
         try (Closer closer = Closer.create()) {
             // `afterClose` must be run last.
-            // Closer is documented to mimic try-with-resource, which implies close will happen in reverse order.
+            // Closer is documented to mimic try-with-resource, which implies close will
+            // happen in reverse order.
             closer.register(afterClose::run);
 
             closer.register(() -> Optional.ofNullable(lookupSourceProvider).ifPresent(LookupSourceProvider::close));
@@ -305,29 +301,22 @@ public class LookupJoinOmniOperator implements Operator {
         /**
          * Instantiates a new Lookup join omni operator factory.
          *
-         * @param operatorId                     the operator id
-         * @param planNodeId                     the plan node id
-         * @param lookupSourceFactoryManager     the lookup source factory manager
-         * @param probeTypes                     the probe types
-         * @param probeOutputChannels            the probe output channels
-         * @param probeOutputChannelTypes        the probe output channel types
-         * @param joinType                       the join type
-         * @param totalOperatorsCount            the total operators count
-         * @param probeJoinChannel               the probe join channel
-         * @param probeHashChannel               the probe hash channel
+         * @param operatorId the operator id
+         * @param planNodeId the plan node id
+         * @param lookupSourceFactoryManager the lookup source factory manager
+         * @param probeTypes the probe types
+         * @param probeOutputChannels the probe output channels
+         * @param probeOutputChannelTypes the probe output channel types
+         * @param joinType the join type
+         * @param totalOperatorsCount the total operators count
+         * @param probeJoinChannel the probe join channel
+         * @param probeHashChannel the probe hash channel
          * @param hashBuilderOmniOperatorFactory the hash builder omni operator factory
          */
-        public LookupJoinOmniOperatorFactory(
-                int operatorId,
-                PlanNodeId planNodeId,
-                JoinBridgeManager<? extends LookupSourceFactory> lookupSourceFactoryManager,
-                List<Type> probeTypes,
-                List<Integer> probeOutputChannels,
-                List<Type> probeOutputChannelTypes,
-                JoinType joinType,
-                OptionalInt totalOperatorsCount,
-                List<Integer> probeJoinChannel,
-                OptionalInt probeHashChannel,
+        public LookupJoinOmniOperatorFactory(int operatorId, PlanNodeId planNodeId,
+                JoinBridgeManager<? extends LookupSourceFactory> lookupSourceFactoryManager, List<Type> probeTypes,
+                List<Integer> probeOutputChannels, List<Type> probeOutputChannelTypes, JoinType joinType,
+                OptionalInt totalOperatorsCount, List<Integer> probeJoinChannel, OptionalInt probeHashChannel,
                 HashBuilderOmniOperator.HashBuilderOmniOperatorFactory hashBuilderOmniOperatorFactory) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
@@ -343,16 +332,10 @@ public class LookupJoinOmniOperator implements Operator {
             if (joinType == INNER || joinType == PROBE_OUTER) {
                 this.outerOperatorFactoryResult = Optional.empty();
             } else {
-                this.outerOperatorFactoryResult =
-                        Optional.of(
-                                new OuterOperatorFactoryResult(
-                                        new LookupOuterOperator.LookupOuterOperatorFactory(
-                                                operatorId,
-                                                planNodeId,
-                                                probeOutputChannelTypes,
-                                                buildOutputTypes,
-                                                lookupSourceFactoryManager),
-                                        lookupSourceFactoryManager.getBuildExecutionStrategy()));
+                this.outerOperatorFactoryResult = Optional.of(new OuterOperatorFactoryResult(
+                        new LookupOuterOperator.LookupOuterOperatorFactory(operatorId, planNodeId,
+                                probeOutputChannelTypes, buildOutputTypes, lookupSourceFactoryManager),
+                        lookupSourceFactoryManager.getBuildExecutionStrategy()));
             }
             this.totalOperatorsCount = requireNonNull(totalOperatorsCount, "totalOperatorsCount is null");
 
@@ -360,34 +343,29 @@ public class LookupJoinOmniOperator implements Operator {
 
             VecType[] types = OperatorUtils.toVecTypes(probeTypes);
             VecType[] buildOutputVecTypes = OperatorUtils.toVecTypes(buildOutputTypes);
-
-            this.omniLookupJoinOperatorFactory =
-                    new OmniLookupJoinOperatorFactory(
-                            types,
-                            Ints.toArray(probeOutputChannels),
-                            createExpressions(probeJoinChannel),
-                            Ints.toArray(buildOutputChannels),
-                            buildOutputVecTypes,
-                            getOmniJoinType(joinType),
-                            hashBuilderOmniOperatorFactory.getOmniHashBuilderOperatorFactory());
+            int[] omniHashChannels = probeJoinChannel.stream().mapToInt(Integer::valueOf).toArray();
+            this.omniLookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(types,
+                    Ints.toArray(probeOutputChannels), omniHashChannels, Ints.toArray(buildOutputChannels),
+                    buildOutputVecTypes, getOmniJoinType(joinType),
+                    hashBuilderOmniOperatorFactory.getOmniHashBuilderOperatorFactory());
         }
 
         private nova.hetu.omniruntime.constants.JoinType getOmniJoinType(JoinType joinType) {
             nova.hetu.omniruntime.constants.JoinType omniJoinType;
             switch (joinType) {
-                case INNER:
+                case INNER :
                     omniJoinType = OMNI_JOIN_TYPE_INNER;
                     break;
-                case PROBE_OUTER:
+                case PROBE_OUTER :
                     omniJoinType = OMNI_JOIN_TYPE_LEFT;
                     break;
-                case LOOKUP_OUTER:
+                case LOOKUP_OUTER :
                     omniJoinType = OMNI_JOIN_TYPE_RIGHT;
                     break;
-                case FULL_OUTER:
+                case FULL_OUTER :
                     omniJoinType = OMNI_JOIN_TYPE_FULL;
                     break;
-                default:
+                default :
                     throw new UnsupportedOperationException("unsupported join type : " + joinType);
             }
             return omniJoinType;
@@ -422,27 +400,20 @@ public class LookupJoinOmniOperator implements Operator {
         @Override
         public Operator createOperator(DriverContext driverContext) {
             checkState(!closed, "Factory is already closed");
-            VecAllocator vecAllocator =
-                    VecAllocatorHelper.getVecAllocatorFromTaskContext(
-                            driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
 
             LookupSourceFactory lookupSourceFactory = joinBridgeManager.getJoinBridge(driverContext.getLifespan());
 
-            OperatorContext operatorContext =
-                    driverContext.addOperatorContext(
-                            operatorId, planNodeId, LookupJoinOmniOperator.class.getSimpleName());
+            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
+                    LookupJoinOmniOperator.class.getSimpleName());
 
             lookupSourceFactory.setTaskContext(driverContext.getPipelineContext().getTaskContext());
 
             joinBridgeManager.probeOperatorCreated(driverContext.getLifespan());
             OmniOperator omniOperator = omniLookupJoinOperatorFactory.createOperator(vecAllocator);
-            return new LookupJoinOmniOperator(
-                    operatorContext,
-                    probeTypes,
-                    joinType,
-                    lookupSourceFactory,
-                    () -> joinBridgeManager.probeOperatorClosed(driverContext.getLifespan()),
-                    totalOperatorsCount,
+            return new LookupJoinOmniOperator(operatorContext, probeTypes, joinType, lookupSourceFactory,
+                    () -> joinBridgeManager.probeOperatorClosed(driverContext.getLifespan()), totalOperatorsCount,
                     omniOperator);
         }
 

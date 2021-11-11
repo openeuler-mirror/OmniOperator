@@ -9,7 +9,7 @@
 #include "boolean_vector.h"
 #include "varchar_vector.h"
 #include "decimal128_vector.h"
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
+
 namespace omniruntime {
 namespace vec {
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t idsCount)
