@@ -77,7 +77,7 @@ Operator OpTrans(string op)
         return Operator::MOD;
     } else {
         return Operator::INVALIDOP;
-}
+    }
 }
 
 OperatorReturnType GetBinaryOperatorType(string opStr)
@@ -367,18 +367,13 @@ DataExpr *Parser::GenerateDataHelper(const string& dataStr, DataType currDataTyp
 
 DataExpr *Parser::GenerateData(string dataStr, int32_t inputTypes[], int32_t vecCount)
 {
-#ifdef DEBUG
-    std::cout << "generating data:::" << dataStr << std::endl;
-#endif
     // Case with boolean true/false
     if (dataStr == "true") return std::make_unique<DataExpr>(true).release();
     if (dataStr == "false") return std::make_unique<DataExpr>(false).release();
 
     // Other cases
     DataType currDataType = GetDataType(dataStr, inputTypes, vecCount);
-#ifdef DEBUG
-    cout << "currDataType: " << currDataType << endl;
-#endif
+
     // Case with normal string format (ex. 'hello')
     if (currDataType == STRINGD && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
         return std::make_unique<DataExpr>

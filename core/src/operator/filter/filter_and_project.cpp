@@ -129,7 +129,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
     const int rowCount = vecBatch->GetRowCount();
     const int vectorCount = vecBatch->GetVectorCount();
-    int32_t selectedRows[rowCount];
+    int32_t *selectedRows = new int32_t[rowCount];
     int64_t bitmap[vectorCount];
     int64_t offsets[vectorCount];
     int64_t dictionaries[vectorCount];
@@ -160,6 +160,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         delete dictionaryVec;
     }
     data.clear();
+    delete[] selectedRows;
     context->getArena()->Reset();
     return numSelectedRows;
 }

@@ -450,10 +450,11 @@ void ExpressionCodeGen::FuncExprLikeHelper(omniruntime::expressions::FuncExpr &f
 
 void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr)
 {
-    llvm::Value *val = VisitExpr(*(fExpr.arguments[0]))->data;
-    std::vector<Value *> argVals { val };
     DataType from = fExpr.arguments[0]->dataType;
     DataType to = fExpr.GetExprDataType();
+
+    auto codegenValue = VisitExpr(*(fExpr.arguments[0]));
+    std::vector<Value *> argVals { codegenValue->data };
 
     std::string castFuncName = "Cast_" + DataTypeString(from) + "_" + DataTypeString(to);
 
@@ -462,16 +463,14 @@ void ExpressionCodeGen::FuncExprCastHelper(FuncExpr &fExpr)
     Value *ret = nullptr;
     // if casting to same type, treat it as constant
     if (from == to) {
-        auto *dataExpr = static_cast<DataExpr *>(fExpr.arguments[0]);
-        Value *ret = VisitExpr(*dataExpr)->data;
-        Value *length = this->value->length;
-        this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), length);
+        this->value = make_shared<CodeGenValue>(
+            codegenValue->data, this->CreateConstantBool(codegenValue->isNull), codegenValue->length);
         return;
     } else if (from == DataType::STRINGD) {
-        argVals.push_back(this->value->length);
+        argVals.push_back(codegenValue->length);
     } else if (to == DataType::STRINGD) {
-        AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
-        argVals.push_back(outputLenPtr);
+        AllocaInst *outputLengthPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
+        argVals.push_back(outputLengthPtr);
     }
 
     auto f = module->getFunction(castFuncName);

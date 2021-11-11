@@ -693,10 +693,7 @@ TEST (ProjectTest, StringSubstr) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
 
-        // Truncate the resulting string
-        void *charArr = &actualChar;
-        auto charArrCasted = static_cast<char **>(charArr);
-        string actualStr (*charArrCasted, 0, len);
+        string actualStr ((char*)actualChar, 0, len);
         if (i % 2 == 0) {
             EXPECT_EQ(actualStr, expected1);
         } else {
