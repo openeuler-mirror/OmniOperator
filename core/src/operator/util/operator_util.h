@@ -210,11 +210,23 @@ public:
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
         std::vector<RowProjFunc> &projectFuncs);
 
+    static void CreateRequiredProjectFuncs(const VecTypes &intputTypes, const std::string *projectKeys,
+        int32_t projectKeysCount, std::vector<VecType> &newIntputTypes,
+        std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
+        std::vector<int32_t> &hashAggCols, std::vector<RowProjFunc> &projectFuncs);
+
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const VecTypes &inputTypes,
+        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols);
+
+    static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const VecTypes &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols);
 
 private:
     static void ProjectVectors(const VecTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+        const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
+        int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch);
+
+    static void ProjectRequiredVectors(const VecTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch);
 };

@@ -125,7 +125,9 @@ LibraryLoader::LibraryLoader() : neededLibs()
             {"sort_expr", CoreLibrary("libsort_expr.so", "sort_expr", 11)},
             {"hash_builder_expr", CoreLibrary("libhash_builder_expr.so", "hash_builder_expr", 11)},
             {"lookup_join_expr", CoreLibrary("liblookup_join_expr.so", "lookup_join_expr", 11)},
-            { "window_expr", CoreLibrary("libwindow_expr.so", "window_expr", 11)}
+            { "window_expr", CoreLibrary("libwindow_expr.so", "window_expr", 11)},
+            {"group_aggregation_expr", CoreLibrary("libgroup_aggregation_expr.so", "group_aggregation_expr", 11)},
+            {"topn_expr", CoreLibrary("libtopn_expr.so", "topn_expr", 11)}
     };
 
     ParseExtraDependencies(baseLibs, neededLibs);

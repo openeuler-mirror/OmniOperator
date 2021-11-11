@@ -58,6 +58,47 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
     }
 }
 
+void OperatorUtil::CreateRequiredProjectFuncs(const omniruntime::vec::VecTypes &inputTypes,
+    const std::string *projectKeys, int32_t projectKeysCount, std::vector<omniruntime::vec::VecType> &newInputTypes,
+    std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
+    std::vector<int32_t> &hashAggCols, std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
+{
+    int32_t inputTypesCount = inputTypes.GetSize();
+    const int32_t *inputTypeIds = inputTypes.GetIds();
+    std::vector<DataType> inputDataTypes;
+    for (int32_t i = 0; i < inputTypesCount; i++) {
+        inputDataTypes.push_back(static_cast<const DataType>(inputTypeIds[i]));
+    }
+
+    std::vector<VecType> inputTypeVec = inputTypes.Get();
+    int32_t newProjectCol = 0;
+    std::map<int32_t, int32_t> colIdMap;
+    for (int32_t i = 0; i < projectKeysCount; i++) {
+        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputDataTypes);
+        int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
+        if (projectCol != -1) {
+            if (colIdMap.find(projectCol) != colIdMap.end()) {
+                // already exists
+                hashAggCols.push_back(colIdMap[projectCol]);
+            } else {
+                projectCols.push_back(projectCol);
+                hashAggCols.push_back(newProjectCol);
+                colIdMap[projectCol] = newProjectCol++;
+                newInputTypes.push_back(inputTypeVec[projectCol]);
+            }
+        } else {
+            // expr col
+            projectCols.push_back(projectCol);
+            hashAggCols.push_back(newProjectCol++);
+            RowProjFunc func = rowProjection->Create(inputDataTypes);
+            projectFuncs.push_back(func);
+            DataType returnType = rowProjection->GetReturnType();
+            newInputTypes.push_back(CreateVecTypeFromDataType(returnType));
+        }
+        rowProjections.push_back(std::move(rowProjection));
+    }
+}
+
 template <typename T, typename V>
 T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,
     int64_t *dictVectorAddrs, int32_t rowCount)
@@ -157,6 +198,54 @@ void OperatorUtil::ProjectVectors(const VecTypes &newInputTypes, const std::vect
     }
 }
 
+void OperatorUtil::ProjectRequiredVectors(const VecTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
+    int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch)
+{
+    int32_t projectColsCount = projectCols.size();
+    int32_t projectFuncsIndex = 0;
+    const int32_t *typeIds = newInputTypes.GetIds();
+    std::vector<VecType> vecTypes = newInputTypes.Get();
+    for (int32_t i = 0; i < projectColsCount; i++) {
+        int32_t projectCol = projectCols[i];
+        // skip the project key which is not expression
+        if (projectCol > 0) {
+            continue;
+        }
+
+        switch (typeIds[i]) {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+                newVecBatch->SetVector(i, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                break;
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
+                newVecBatch->SetVector(i, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                break;
+            case OMNI_VEC_TYPE_DOUBLE:
+                newVecBatch->SetVector(i, ProjectVector<DoubleVector, double>(projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                break;
+            case OMNI_VEC_TYPE_BOOLEAN:
+                newVecBatch->SetVector(i, ProjectVector<BooleanVector, bool>(projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                break;
+            case OMNI_VEC_TYPE_VARCHAR:
+                newVecBatch->SetVector(i, ProjectVarcharVector(vecTypes[projectCol],
+                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                break;
+            case OMNI_VEC_TYPE_DECIMAL128:
+                // TODO: codegen does not support decimal128 current.
+                break;
+            default:
+                break;
+        }
+        projectFuncsIndex++;
+    }
+}
+
 VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const VecTypes &inputTypes,
     const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
 {
@@ -191,5 +280,50 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const VecT
 
     ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
         rowCount, newInputVecBatch);
+    return newInputVecBatch;
+}
+
+VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, const VecTypes &inputTypes,
+    const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
+{
+    int32_t vecCount = projectCols.size();
+    int32_t rowCount = inputVecBatch->GetRowCount();
+    VectorBatch *newInputVecBatch = std::make_unique<VectorBatch>(vecCount, rowCount).release();
+
+    for (int32_t i = 0; i < vecCount; i++) {
+        int32_t sourceColId = projectCols[i];
+        if (sourceColId >= 0) {
+            // source col
+            Vector *inputVector = inputVecBatch->GetVector(sourceColId);
+            Vector *newInputVec = inputVector->Slice(0, rowCount);
+            newInputVecBatch->SetVector(i, newInputVec);
+        }
+    }
+
+    int32_t projectFuncsCount = projectFuncs.size();
+    if (projectFuncsCount <= 0) {
+        return newInputVecBatch;
+    }
+
+    int32_t originVecCount = inputVecBatch->GetVectorCount();
+    int64_t valueAddresses[vecCount];
+    int64_t valueNulls[vecCount];
+    int64_t valueOffsets[vecCount];
+    int64_t dictVectorAddrs[vecCount];
+    for (int32_t i = 0; i < originVecCount; i++) {
+        Vector *inputVector = inputVecBatch->GetVector(i);
+        if (inputVector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
+            valueAddresses[i] = reinterpret_cast<int64_t>(inputVector->GetValues());
+            dictVectorAddrs[i] = 0;
+        } else {
+            valueAddresses[i] = 0;
+            dictVectorAddrs[i] = reinterpret_cast<int64_t>(inputVector);
+        }
+        valueNulls[i] = reinterpret_cast<int64_t>(inputVector->GetValueNulls());
+        valueOffsets[i] = reinterpret_cast<int64_t>(inputVector->GetValueOffsets());
+    }
+
+    ProjectRequiredVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets,
+        dictVectorAddrs, rowCount, newInputVecBatch);
     return newInputVecBatch;
 }

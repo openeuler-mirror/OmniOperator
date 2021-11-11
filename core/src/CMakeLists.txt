@@ -63,6 +63,8 @@ add_library(sort_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort_expr.c
 add_library(hash_builder_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder_expr.cpp)
 add_library(lookup_join_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp)
 add_library(window_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_expr.cpp)
+add_library(group_aggregation_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation_expr.cpp)
+add_library(topn_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp)
 
 set(EXTERNAL_FUNCTIONS
         ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/external_func_registry.cpp
@@ -102,6 +104,8 @@ install(TARGETS
         hash_builder_expr
         lookup_join_expr
         window_expr
+        group_aggregation_expr
+        topn_expr
         DESTINATION ${CMAKE_INSTALL_PREFIX}/jit_libs)
 
 install(TARGETS
@@ -150,6 +154,8 @@ set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_expr.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation_expr.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp
         )
 foreach (SOURCE_FILE ${SOURCE_FILES})
     compile_ir(${SOURCE_FILE})

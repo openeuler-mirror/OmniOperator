@@ -11,6 +11,7 @@
 #include "../operator/sort/sort.h"
 #include "../operator/sort/sort_expr.h"
 #include "../operator/aggregation/group_aggregation.h"
+#include "../operator/aggregation/group_aggregation_expr.h"
 #include "../operator/aggregation/non_group_aggregation.h"
 #include "../operator/filter/filter_and_project.h"
 #include "../operator/window/window.h"
@@ -19,6 +20,7 @@
 #include "../operator/join/hash_builder_expr.h"
 #include "../operator/join/lookup_join_expr.h"
 #include "../operator/topn/topn.h"
+#include "../operator/topn/topn_expr.h"
 #include "../operator/partitionedoutput/partitionedoutput.h"
 #include "../operator/union/union.h"
 #include "../operator/optimization.h"
@@ -1114,6 +1116,33 @@ void GetTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectK
     }
 }
 
+void GetRequiredTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
+    std::vector<int32_t> &typeIds, int32_t *projectCols)
+{
+    auto inputTypeIds = const_cast<int32_t *>(inputTypes.GetIds());
+
+    int32_t newProjectCol = 0;
+    std::map<int32_t, int32_t> colIdMap;
+    for (int32_t i = 0; i < projectKeysCount; i++) {
+        int32_t projectCol = GetProjectCol(projectKeys[i]);
+        if (projectCol == -1) {
+            // expression col
+            int32_t returnType = GetExprReturnType(projectKeys[i]);
+            typeIds.push_back(returnType);
+            projectCols[i] = newProjectCol++;
+        } else {
+            typeIds.push_back(inputTypeIds[projectCol]);
+            if (colIdMap.find(projectCol) != colIdMap.end()) {
+                // already exists
+                projectCols[i] = colIdMap[projectCol];
+            } else {
+                projectCols[i] = newProjectCol++;
+                colIdMap[projectCol] = projectCols[i];
+            }
+        }
+    }
+}
+
 JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
     string *sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount)
 {
@@ -1628,4 +1657,221 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jWindowFunctionReturnType, windowFunctionReturnTypeCharPtr);
     return (int64_t)windowWithExprOperatorFactory;
+}
+
+JitContext *CreateHashAggregationWithExprJitContext(std::string *projectKeys, int32_t groupByNum, int32_t aggNum,
+    int32_t *projectCols, std::vector<int32_t> projectTypes, uint32_t *aggFuncTypes)
+{
+    int32_t groupByCols[groupByNum];
+    std::copy(projectCols, projectCols + groupByNum, groupByCols);
+    int32_t aggCols[aggNum];
+    std::copy(projectCols + groupByNum, projectCols + groupByNum + aggNum, aggCols);
+
+    int32_t groupByTypeIds[groupByNum];
+    std::copy(projectTypes.begin(), projectTypes.begin() + groupByNum, groupByTypeIds);
+    int32_t aggTypeIds[aggNum];
+    std::copy(projectTypes.begin() + groupByNum, projectTypes.begin() + groupByNum + aggNum, aggTypeIds);
+
+    PrepareContext groupByColContext = { (uint32_t *)groupByCols, static_cast<size_t>(groupByNum) };
+    PrepareContext groupByTypeContext = { (uint32_t *)groupByTypeIds, static_cast<size_t>(groupByNum) };
+    PrepareContext aggColContext = { (uint32_t *)aggCols, static_cast<size_t>(aggNum) };
+    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, static_cast<size_t>(aggNum) };
+    PrepareContext aggFuncTypeContext = { aggFuncTypes, static_cast<size_t>(aggNum) };
+
+    using namespace omniruntime::jit;
+    int32_t aggColNum = aggColContext.len;
+    int32_t colNum = groupByNum + aggNum;
+    ParamValue pColType = ParamValue(projectTypes.data(), colNum);
+    ParamValue pColCount = ParamValue(&colNum);
+    ParamValue pGroupNum = ParamValue(&groupByNum);
+    ParamValue pAggNum = ParamValue(&aggColNum);
+    ParamValue pAggTypes = ParamValue((int32_t *)aggFuncTypeContext.context, aggColNum);
+    auto *inloopSp = new Specialization();
+    inloopSp->AddSpecializedParam(3, &pColType);
+    inloopSp->AddSpecializedParam(4, &pColCount);
+    inloopSp->AddSpecializedParam(6, &pGroupNum);
+    inloopSp->AddSpecializedParam(8, &pAggNum);
+    inloopSp->AddSpecializedParam(9, &pAggTypes);
+
+    auto *processAggSp = new Specialization();
+    processAggSp->AddSpecializedParam(2, &pAggNum);
+    processAggSp->AddSpecializedParam(3, &pColType);
+
+    std::map<std::string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp },
+        { OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp } };
+
+    auto *groupAggWithExprContext = new omniruntime::jit::Context(
+        GenerateOperatorTemplatePath("group_aggregation_expr"), map<string, Specialization>());
+    auto *groupAggContext = new Context(GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *groupAggWithExprContext, *groupAggContext });
+    jit->Specialize(std::vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
+        Optimization::SROA, Optimization::AGGRESIVE_DCE },
+        std::vector<ModuleOptimization> { ModuleOptimization::PRUNE_EH });
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete groupAggWithExprContext;
+    delete groupAggContext;
+    delete inloopSp;
+    delete processAggSp;
+    delete jit;
+
+    return jitContext;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprJitContext(
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
+    jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial)
+{
+    size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
+    std::string groupByKeys[groupByNum];
+    GetExpressions(env, jGroupByChannel, groupByKeys, groupByNum);
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceType, JNI_FALSE);
+    size_t aggNum = static_cast<size_t>(env->GetArrayLength(jAggChannel));
+    std::string aggKeys[aggNum];
+    GetExpressions(env, jAggChannel, aggKeys, aggNum);
+    jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    auto outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
+    auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
+    auto outVecTypes = Deserialize(outTypesCharPtr);
+
+    size_t colNum = aggNum + groupByNum;
+    std::string projectKeys[groupByNum + aggNum];
+    std::copy(groupByKeys, groupByKeys + groupByNum, projectKeys);
+    std::copy(aggKeys, aggKeys + aggNum, projectKeys + groupByNum);
+
+    std::vector<int32_t> projectTypes;
+    int32_t projectCols[colNum];
+    GetRequiredTypeIds(sourceVecTypes, projectKeys, colNum, projectTypes, projectCols);
+
+    JitContext *jitContext = CreateHashAggregationWithExprJitContext(projectKeys, groupByNum, aggNum, projectCols,
+        projectTypes, reinterpret_cast<uint32_t *>(aggFuncTypes));
+
+    env->ReleaseStringUTFChars(jSourceType, sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jOutPutTye, outTypesCharPtr);
+
+    return reinterpret_cast<uint64_t>(jitContext);
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperatorFactory_createHashAggregationWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jobjectArray jAggChannel, jstring jSourceType,
+    jintArray jAggFuncType, jstring jOutPutTye, jboolean inputRaw, jboolean outputPartial, jlong jitContext)
+{
+    JNI_DEBUG_LOG("create hashagg operator factory starting.");
+    auto start = START();
+    // groupby channel and id
+    size_t groupByNum = (size_t)env->GetArrayLength(jGroupByChannel);
+    std::string groupByKeys[groupByNum];
+    GetExpressions(env, jGroupByChannel, groupByKeys, groupByNum);
+    size_t aggNum = static_cast<size_t>(env->GetArrayLength(jAggChannel));
+    std::string aggKeys[aggNum];
+    GetExpressions(env, jAggChannel, aggKeys, aggNum);
+
+    jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+
+    auto outTypesCharPtr = env->GetStringUTFChars(jOutPutTye, JNI_FALSE);
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceType, JNI_FALSE);
+
+    auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
+    auto outVecTypes = Deserialize(outTypesCharPtr);
+
+    omniruntime::op::HashAggregationWithExprOperatorFactory *nativeOperatorFactory =
+        new omniruntime::op::HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum,
+        sourceVecTypes, outVecTypes, (uint32_t *)aggFuncTypes, inputRaw, outputPartial);
+    nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
+    JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
+
+    env->ReleaseStringUTFChars(jSourceType, sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jOutPutTye, outTypesCharPtr);
+
+    return reinterpret_cast<uint64_t>(nativeOperatorFactory);
+}
+
+JitContext *CreateTopNWithExprJitContext(std::vector<int32_t> sourceTypes, int32_t sortKeyCount, int32_t *sortCols)
+{
+    ParamValue pSourceTypes = ParamValue(sourceTypes.data(), sourceTypes.size());
+    ParamValue pSortKeyCount = ParamValue(&sortKeyCount);
+    ParamValue pSortCols = ParamValue(sortCols, sortKeyCount);
+
+    auto *topNCompareSp = new Specialization();
+    topNCompareSp->AddSpecializedParam(4, &pSortKeyCount); // 4teh parameter
+    topNCompareSp->AddSpecializedParam(5, &pSortCols);     // 5teh parameter
+    topNCompareSp->AddSpecializedParam(6, &pSourceTypes);  // 6teh parameter
+
+    std::map<std::string, Specialization> topNCompareSps = { { OMNIJIT_TOPN_COMPARE, *topNCompareSp } };
+
+    auto *topNWithExprContext =
+            new Context(GenerateOperatorTemplatePath("topn_expr"), map<string, Specialization>());
+    auto *topNContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("topn"), topNCompareSps);
+
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *topNWithExprContext, *topNContext });
+
+    jit->Specialize();
+    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
+    JitContext *jitContext = new JitContext;
+    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
+
+    delete topNWithExprContext;
+    delete topNContext;
+    delete topNCompareSp;
+    delete jit;
+
+    return jitContext;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprJitContext(JNIEnv *env,
+    jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts)
+{
+    using namespace omniruntime::jit;
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    jint sortKeyCount = env->GetArrayLength(jSortKeys);
+
+    std::string sortKeysArr[sortKeyCount];
+    GetExpressions(env, jSortKeys, sortKeysArr, sortKeyCount);
+    jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
+    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    int32_t n = (int32_t)jN;
+
+    auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
+
+    std::vector<int32_t> sourceTypes;
+    int32_t sortCols[sortKeyCount];
+    GetTypeIds(sourceVecTypes, sortKeysArr, sortKeyCount, sourceTypes, sortCols);
+
+    JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, reinterpret_cast<int32_t>(sortKeyCount),
+        sortCols);
+
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+
+    return reinterpret_cast<uint64_t>(jitContext);
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortKeys, jintArray jSortAsc,
+    jintArray jSortNullFirsts, jlong jitContext)
+{
+    using namespace omniruntime::jit;
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    jint sortKeyCount = env->GetArrayLength(jSortKeys);
+    std::string sortKeysArr[sortKeyCount];
+    GetExpressions(env, jSortKeys, sortKeysArr, sortKeyCount);
+
+    jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
+    jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    int32_t n = (int32_t)jN;
+
+    auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
+    omniruntime::op::TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
+        new omniruntime::op::TopNWithExprOperatorFactory(sourceVecTypes, n, sortKeysArr, sortAsc, sortNullFirsts,
+        sortKeyCount);
+    topNWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
+
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
+
+    return (int64_t)topNWithExprOperatorFactory;
 }
