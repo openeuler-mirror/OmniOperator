@@ -11,6 +11,7 @@ import static io.prestosql.spi.block.BlockUtil.checkValidPositions;
 import static io.prestosql.spi.block.BlockUtil.checkValidRegion;
 import static io.prestosql.spi.block.BlockUtil.countUsedPositions;
 import static io.prestosql.spi.block.DictionaryId.randomDictionaryId;
+
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
@@ -45,8 +46,9 @@ import java.util.function.Function;
  * @since 20210630
  */
 public class DictionaryOmniBlock<T> implements Block<T> {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(DictionaryOmniBlock.class).instanceSize()
-        + ClassLayout.parseClass(DictionaryId.class).instanceSize();
+    private static final int INSTANCE_SIZE =
+            ClassLayout.parseClass(DictionaryOmniBlock.class).instanceSize()
+                    + ClassLayout.parseClass(DictionaryId.class).instanceSize();
 
     private final int positionCount;
 
@@ -110,8 +112,12 @@ public class DictionaryOmniBlock<T> implements Block<T> {
      * @param dictionaryIsCompacted the dictionary is compacted
      * @param dictionarySourceId    the dictionary source id
      */
-    public DictionaryOmniBlock(int positionCount, Vec dictionary, int[] ids, boolean dictionaryIsCompacted,
-                               DictionaryId dictionarySourceId) {
+    public DictionaryOmniBlock(
+            int positionCount,
+            Vec dictionary,
+            int[] ids,
+            boolean dictionaryIsCompacted,
+            DictionaryId dictionarySourceId) {
         this(0, positionCount, dictionary, ids, dictionaryIsCompacted, dictionarySourceId);
     }
 
@@ -125,8 +131,13 @@ public class DictionaryOmniBlock<T> implements Block<T> {
      * @param dictionaryIsCompacted the dictionary is compacted
      * @param dictionarySourceId    the dictionary source id
      */
-    public DictionaryOmniBlock(int idsOffset, int positionCount, Vec dictionary, int[] ids,
-                               boolean dictionaryIsCompacted, DictionaryId dictionarySourceId) {
+    public DictionaryOmniBlock(
+            int idsOffset,
+            int positionCount,
+            Vec dictionary,
+            int[] ids,
+            boolean dictionaryIsCompacted,
+            DictionaryId dictionarySourceId) {
         requireNonNull(dictionary, "dictionary is null");
         requireNonNull(ids, "ids is null");
 
@@ -155,11 +166,55 @@ public class DictionaryOmniBlock<T> implements Block<T> {
     /**
      * Instantiates a new Dictionary omni block.
      *
+     * @param idsOffset             the ids offset
+     * @param positionCount         the position count
+     * @param dictionaryVec         the dictionary vector
+     * @param dictionary            the dictionary
+     * @param ids                   the ids
      * @param dictionaryIsCompacted the dictionary is compacted
      * @param dictionarySourceId    the dictionary source id
      */
-    public DictionaryOmniBlock(DictionaryVec dictionaryVec, boolean dictionaryIsCompacted,
-                               DictionaryId dictionarySourceId) {
+    public DictionaryOmniBlock(
+            int idsOffset,
+            int positionCount,
+            DictionaryVec dictionaryVec,
+            int[] ids,
+            Block dictionary,
+            boolean dictionaryIsCompacted,
+            DictionaryId dictionarySourceId) {
+        requireNonNull(dictionaryVec, "dictionaryVec is null");
+        requireNonNull(ids, "ids is null");
+
+        if (positionCount < 0) {
+            throw new IllegalArgumentException("positionCount is negative");
+        }
+
+        this.idsOffset = idsOffset;
+        if (ids.length - idsOffset < positionCount) {
+            throw new IllegalArgumentException("ids length is less than positionCount");
+        }
+
+        this.positionCount = positionCount;
+        this.dictionaryVec = dictionaryVec.slice(0, dictionaryVec.getSize());
+        this.dictionary = dictionary.getRegion(0, dictionary.getPositionCount());
+        this.ids = ids;
+        this.dictionarySourceId = requireNonNull(dictionarySourceId, "dictionarySourceId is null");
+        this.retainedSizeInBytes = INSTANCE_SIZE + this.dictionary.getRetainedSizeInBytes() + sizeOf(ids);
+
+        if (dictionaryIsCompacted) {
+            this.sizeInBytes = this.retainedSizeInBytes;
+            this.uniqueIds = this.dictionary.getPositionCount();
+        }
+    }
+
+    /**
+     * Instantiates a new Dictionary omni block.
+     *
+     * @param dictionaryIsCompacted the dictionary is compacted
+     * @param dictionarySourceId    the dictionary source id
+     */
+    public DictionaryOmniBlock(
+            DictionaryVec dictionaryVec, boolean dictionaryIsCompacted, DictionaryId dictionarySourceId) {
         this.positionCount = dictionaryVec.getSize();
         this.idsOffset = dictionaryVec.getOffset();
         this.dictionary = buildBlock(dictionaryVec.getDictionary());
@@ -286,10 +341,16 @@ public class DictionaryOmniBlock<T> implements Block<T> {
     }
 
     @Override
-    public int compareTo(int leftPosition, int leftOffset, int leftLength, Block rightBlock, int rightPosition,
-                         int rightOffset, int rightLength) {
-        return dictionary.compareTo(getId(leftPosition), leftOffset, leftLength, rightBlock, rightPosition, rightOffset,
-            rightLength);
+    public int compareTo(
+            int leftPosition,
+            int leftOffset,
+            int leftLength,
+            Block rightBlock,
+            int rightPosition,
+            int rightOffset,
+            int rightLength) {
+        return dictionary.compareTo(
+                getId(leftPosition), leftOffset, leftLength, rightBlock, rightPosition, rightOffset, rightLength);
     }
 
     @Override
@@ -413,8 +474,8 @@ public class DictionaryOmniBlock<T> implements Block<T> {
     @Override
     public Block getRegion(int positionOffset, int length) {
         checkValidRegion(positionCount, positionOffset, length);
-        return new DictionaryOmniBlock(idsOffset + positionOffset, length, (Vec) dictionary.getValues(), ids, false,
-            dictionarySourceId);
+        return new DictionaryOmniBlock(
+                idsOffset + positionOffset, length, dictionaryVec, ids, dictionary, false, dictionarySourceId);
     }
 
     @Override
@@ -449,8 +510,8 @@ public class DictionaryOmniBlock<T> implements Block<T> {
         for (int i = 0; i < dictionary.getPositionCount() && isCompact; i++) {
             isCompact &= seen[i];
         }
-        return new DictionaryOmniBlock(newIds.length, (Vec) dictionary.getValues(), newIds, isCompact,
-            getDictionarySourceId());
+        return new DictionaryOmniBlock(
+                newIds.length, (Vec) dictionary.getValues(), newIds, isCompact, getDictionarySourceId());
     }
 
     @Override
@@ -468,8 +529,8 @@ public class DictionaryOmniBlock<T> implements Block<T> {
         if (loadedDictionary == dictionary) {
             return this;
         }
-        return new DictionaryOmniBlock(idsOffset, getPositionCount(), (Vec) loadedDictionary.getValues(), ids, false,
-            randomDictionaryId());
+        return new DictionaryOmniBlock(
+                idsOffset, getPositionCount(), (Vec) loadedDictionary.getValues(), ids, false, randomDictionaryId());
     }
 
     /**
@@ -563,10 +624,10 @@ public class DictionaryOmniBlock<T> implements Block<T> {
             newIds[i] = newId;
         }
         try {
-            Block compactDictionary = dictionary.copyPositions(dictionaryPositionsToCopy.elements(), 0,
-                dictionaryPositionsToCopy.size());
-            DictionaryOmniBlock dictionaryOmniBlock = new DictionaryOmniBlock(positionCount,
-                (Vec) compactDictionary.getValues(), newIds, true);
+            Block compactDictionary =
+                    dictionary.copyPositions(dictionaryPositionsToCopy.elements(), 0, dictionaryPositionsToCopy.size());
+            DictionaryOmniBlock dictionaryOmniBlock =
+                    new DictionaryOmniBlock(positionCount, (Vec) compactDictionary.getValues(), newIds, true);
             compactDictionary.close();
             return dictionaryOmniBlock;
         } catch (UnsupportedOperationException e) {
