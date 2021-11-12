@@ -40,6 +40,9 @@ Vector::Vector(Vector *vector, int size, int positionOffset)
 Vector::~Vector()
 {
     allocator->DeleteVector(this);
+    valuesAddress = nullptr;
+    valueNullsAddress = nullptr;
+    valueOffsetsAddress = nullptr;
 }
 
 void Vector::SetValueNulls(int startIndex, bool *nulls, int length)

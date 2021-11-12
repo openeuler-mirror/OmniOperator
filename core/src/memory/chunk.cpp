@@ -16,7 +16,12 @@ Chunk::Chunk(int64_t sizeInBytes)
 
 Chunk::~Chunk()
 {
+    if (address == nullptr) {
+        std::cerr << "address is null in chunk." << std::endl;
+        return;
+    }
     OmniRelease(reinterpret_cast<int64_t>(address));
+    address = nullptr;
 }
 
 void *Chunk::GetAddress() const
