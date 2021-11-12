@@ -527,7 +527,13 @@ void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probe
 
     for (int32_t columnIdx = 0; columnIdx < probeOutputColsCount; columnIdx++) {
         column = probeAllColumns[probeOutputCols[columnIdx]];
-        probeColumn = new DictionaryVector(column, &probeIndex[position], rowCount);
+        // we want to keep only one level dictionary vector here
+        // if the data is non-dictionary, we build dictionary to avoid data copy
+        if (column->GetTypeId() != vec::OMNI_VEC_TYPE_DICTIONARY) {
+            probeColumn = new DictionaryVector(column, &probeIndex[position], rowCount);
+        } else {
+            probeColumn = column->CopyPositions(&probeIndex[position], 0, rowCount);
+        }
         vectorBatch->SetVector(outputColumnIdx++, probeColumn);
     }
 }
