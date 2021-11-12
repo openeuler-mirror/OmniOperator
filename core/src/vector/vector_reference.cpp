@@ -34,8 +34,7 @@ void VectorReference::IncRef()
 
 int64_t VectorReference::DecRef()
 {
-    --reference;
-    return reference;
+    return --reference;
 }
 
 int64_t VectorReference::GetRef()
