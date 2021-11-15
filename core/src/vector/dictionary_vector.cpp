@@ -122,11 +122,12 @@ DictionaryVector *DictionaryVector::Slice(int32_t positionOffset, int32_t length
 
 DictionaryVector *DictionaryVector::CopyPositions(const int *positions, int offset, int length)
 {
-    DictionaryVector *vector = new DictionaryVector(this->dictionary, length);
+    auto *id = new int32_t [length];
     for (int i = 0; i < length; ++i) {
-        int position = positions[offset + i];
-        vector->SetId(i, GetId(position));
+        id[i] = GetId(positions[offset + i]);
     }
+    auto *vector = new DictionaryVector(this->dictionary, id, length);
+    delete[] id;
     return vector;
 }
 
