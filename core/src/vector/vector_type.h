@@ -33,6 +33,7 @@ enum VecTypeId {
     OMNI_VEC_TYPE_VARCHAR = 15,
     OMNI_VEC_TYPE_DICTIONARY = 16,
     OMNI_VEC_TYPE_CONTAINER = 17,
+    OMNI_VEC_TYPE_LAZY = 18,
     OMNI_VEC_TYPE_INVALID
 };
 
@@ -355,6 +356,19 @@ public:
     const static DictionaryVecType &Instance()
     {
         static DictionaryVecType type;
+        return type;
+    }
+};
+
+class LazyVecType : public VecType {
+public:
+    LazyVecType() : VecType(VecTypeId::OMNI_VEC_TYPE_LAZY) {}
+
+    ~LazyVecType() override {}
+
+    const static LazyVecType &Instance()
+    {
+        static LazyVecType type;
         return type;
     }
 };

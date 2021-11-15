@@ -1,8 +1,11 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ */
+
 package nova.hetu.omniruntime.vector;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 public class VecAllocatorFactory {
 

@@ -20,5 +20,6 @@
 #include "vector_allocator.h"
 #include "boolean_vector.h"
 #include "dictionary_vector.h"
+#include "lazy_vector.h"
 
 #endif // OMNI_RUNTIME_VECTOR_COMMON_H

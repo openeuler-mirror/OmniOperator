@@ -9,10 +9,12 @@ jclass bufCls;
 jclass vecBatchCls;
 jclass omniResultsCls;
 jclass traceUtilCls;
+jclass lazyVectorCls;
 
 jmethodID vecBatchInitMethodId;
 jmethodID omniResultsInitMethodId;
 jmethodID traceUtilStackMethodId;
+jmethodID lazyVectorLoaderMethodId;
 
 jint JNI_VERSION = JNI_VERSION_1_6;
 
@@ -38,6 +40,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
         env->GetMethodID(omniResultsCls, "<init>", "([Lnova/hetu/omniruntime/vector/VecBatch;I)V");
     traceUtilCls = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/TraceUtil");
     traceUtilStackMethodId = env->GetStaticMethodID(traceUtilCls, "stack", "()Ljava/lang/String;");
+    lazyVectorCls = createGlobalClassRef(env, "nova/hetu/omniruntime/vector/LazyVec");
+    lazyVectorLoaderMethodId = env->GetStaticMethodID(lazyVectorCls, "load", "(Ljava/lang/Object;)J");
     return JNI_VERSION;
 }
 
@@ -49,4 +53,5 @@ void JNI_OnUnload(JavaVM *vm, const void *reserved)
     env->DeleteGlobalRef(bufCls);
     env->DeleteGlobalRef(omniResultsCls);
     env->DeleteGlobalRef(traceUtilCls);
+    env->DeleteGlobalRef(lazyVectorCls);
 }

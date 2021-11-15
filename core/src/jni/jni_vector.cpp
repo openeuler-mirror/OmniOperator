@@ -10,6 +10,7 @@
 #include "../vector/vector_type_serializer.h"
 #include "../vector/vector_helper.h"
 #include "jni_common_def.h"
+#include "jni_vector_loader.h"
 
 using namespace omniruntime::vec;
 
@@ -224,6 +225,14 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_setDictio
     DictionaryVector *nativeVector = reinterpret_cast<DictionaryVector *>(jNativeVector);
     Vector *nativeDictionary = TransformVector(jNativeDictionary);
     nativeVector->SetDictionary(nativeDictionary->Slice(0, nativeDictionary->GetSize()));
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_LazyVec_setLazyLoaderNative(JNIEnv *env, jclass jcls,
+    jlong jNativeVector, jobject jLazyLoader)
+{
+    LazyVector * lazyVector = reinterpret_cast<LazyVector *>(jNativeVector);
+    JniVectorLoader *loader = new JniVectorLoader(env, jLazyLoader);
+    lazyVector->SetLoader(loader);
 }
 
 Vector *TransformVector(long vectorAddr)

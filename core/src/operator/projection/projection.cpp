@@ -215,6 +215,9 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
 
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch.GetVector(i);
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
+        }
         // handle dictionary vec
         if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
             dictionaries[i] = reinterpret_cast<int64_t>(colVec);
@@ -246,6 +249,9 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         // if no row gets filtered or without a filter
         // we can just slice the whole vector
         Vector *colVec = vecBatch->GetVector(this->columnProjectionIndex);
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
+        }
         if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount()) {
             return colVec->Slice(0, numSelectedRows);
         }

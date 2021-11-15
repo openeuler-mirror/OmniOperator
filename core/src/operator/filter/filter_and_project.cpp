@@ -103,6 +103,9 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
 
     for (int32_t i = 0; i < vectorCount; i++) {
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
+        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_LAZY) {
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
+        }
         // handle dictionary vec
         if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
             dictionaries[i] = reinterpret_cast<int64_t>(colVec);
@@ -144,6 +147,10 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
                                                   reinterpret_cast<int64_t>(context), dictionaries);
 
     if (numSelectedRows <= 0) {
+        for (auto &dictionaryVec : dictionaryVecs) {
+            delete dictionaryVec;
+        }
+        context->getArena()->Reset();
         return 0;
     }
     auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
