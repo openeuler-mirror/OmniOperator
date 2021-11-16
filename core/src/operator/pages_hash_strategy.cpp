@@ -43,24 +43,26 @@ PagesHashStrategy::~PagesHashStrategy()
     }
 }
 
-template <typename T>
-ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(const T *leftData, int32_t leftIndex, const T *rightData,
+template <typename V>
+ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
     int32_t rightIndex)
 {
-    return (leftData[leftIndex] == rightData[rightIndex]);
+    return static_cast<V *>(leftVector)->GetValue(leftIndex) == static_cast<V *>(rightVector)->GetValue(rightIndex);
 }
 
-ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(const double *leftData, int32_t leftIndex, const double *rightData,
+ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
     int32_t rightIndex)
 {
-    if (std::abs(leftData[leftIndex] - rightData[rightIndex]) < __DBL_EPSILON__) {
+    double leftValue = static_cast<DoubleVector *>(leftVector)->GetValue(leftIndex);
+    double rightValue = static_cast<DoubleVector *>(rightVector)->GetValue(rightIndex);
+    if (std::abs(leftValue - rightValue) < __DBL_EPSILON__) {
         return true;
     } else {
         return false;
     }
 }
 
-bool VarcharValueEqualsValueIgnoreNulls(VarcharVector *leftVector, int32_t leftIndex, VarcharVector *rightVector,
+ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
     int32_t rightIndex)
 {
     uint8_t *leftValue = nullptr;
@@ -68,8 +70,8 @@ bool VarcharValueEqualsValueIgnoreNulls(VarcharVector *leftVector, int32_t leftI
     int32_t leftLength = 0;
     int32_t rightLength = 0;
 
-    leftLength = leftVector->GetValue(leftIndex, &leftValue);
-    rightLength = rightVector->GetValue(rightIndex, &rightValue);
+    leftLength = static_cast<VarcharVector *>(leftVector)->GetValue(leftIndex, &leftValue);
+    rightLength = static_cast<VarcharVector *>(rightVector)->GetValue(rightIndex, &rightValue);
     if (leftLength != rightLength) {
         return false;
     }
@@ -86,24 +88,18 @@ ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVect
     switch (vecType) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32:
-            return ValueEqualsValueIgnoreNulls((int32_t *)leftVector->GetValues(), leftRowIndex,
-                (int32_t *)rightVector->GetValues(), rightRowIndex);
+            return ValueEqualsValueIgnoreNulls<IntVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64:
-            return ValueEqualsValueIgnoreNulls((int64_t *)leftVector->GetValues(), leftRowIndex,
-                (int64_t *)rightVector->GetValues(), rightRowIndex);
+            return ValueEqualsValueIgnoreNulls<LongVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_DOUBLE:
-            return DoubleValueEqualsValueIgnoreNulls((double *)leftVector->GetValues(), leftRowIndex,
-                (double *)rightVector->GetValues(), rightRowIndex);
+            return DoubleValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_BOOLEAN:
-            return ValueEqualsValueIgnoreNulls((bool *)leftVector->GetValues(), leftRowIndex,
-                (bool *)rightVector->GetValues(), rightRowIndex);
+            return ValueEqualsValueIgnoreNulls<BooleanVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_VARCHAR:
-            return VarcharValueEqualsValueIgnoreNulls(static_cast<VarcharVector *>(leftVector), leftRowIndex,
-                static_cast<VarcharVector *>(rightVector), rightRowIndex);
+            return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_DECIMAL128:
-            return ValueEqualsValueIgnoreNulls((Decimal128 *)leftVector->GetValues(), leftRowIndex,
-                (Decimal128 *)rightVector->GetValues(), rightRowIndex);
+            return ValueEqualsValueIgnoreNulls<Decimal128Vector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         default:
             return false;
     }
@@ -116,19 +112,13 @@ bool PositionEqualsPositionIgnoreNulls(int32_t leftTableIndex, int32_t leftRowIn
     Vector *leftColumn = nullptr;
     Vector *rightColumn = nullptr;
     bool result = true;
-    bool isSame = leftTableIndex == rightTableIndex;
 
     int32_t originalLeftRowIndex, originalRightRowIndex;
     for (int32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftRowIndex, originalLeftRowIndex);
-        if (isSame) {
-            rightColumn = leftColumn;
-            originalRightRowIndex = rightRowIndex;
-        } else {
-            rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-            rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
-        }
+        rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+        rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
 
         result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, originalLeftRowIndex, rightColumn,
             originalRightRowIndex);
