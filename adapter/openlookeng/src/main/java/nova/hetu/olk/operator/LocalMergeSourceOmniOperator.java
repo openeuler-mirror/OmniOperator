@@ -203,6 +203,7 @@ public class LocalMergeSourceOmniOperator implements Operator {
     @Override
     public void close() throws IOException {
         sources.forEach(LocalExchangeSource::close);
+        orderByOmniOperator.close();
     }
 
     private boolean isSourceFinished() {

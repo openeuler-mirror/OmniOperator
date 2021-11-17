@@ -268,6 +268,7 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
         try {
             closer.close();
             closed = true;
+            orderByOmniOperator.close();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

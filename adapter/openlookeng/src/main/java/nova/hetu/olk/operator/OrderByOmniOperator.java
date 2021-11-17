@@ -322,7 +322,7 @@ public class OrderByOmniOperator implements Operator {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         omniOperator.close();
     }
 }
