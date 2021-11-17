@@ -51,11 +51,11 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 class CodegenContext {
 public:
     explicit CodegenContext() : data(nullptr), nullBitmap(nullptr), offsets(nullptr),
-        rowIdx(nullptr), isResultNull(nullptr), print(nullptr) {}
+        rowIdx(nullptr), print(nullptr) {}
 
     explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
-        llvm::Value *isResultNull, llvm::Value *executionContext, llvm::Value *dictionaryVectors) : data(data),
-        nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx), isResultNull(isResultNull),
+        llvm::Value *executionContext, llvm::Value *dictionaryVectors) : data(data),
+        nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx),
         executionContext(executionContext), dictionaryVectors(dictionaryVectors), print(nullptr) {}
 
     ~CodegenContext() {}
@@ -67,9 +67,6 @@ private:
     llvm::Value *nullBitmap;
     llvm::Value *offsets;
     llvm::Value *rowIdx;
-    // Boolean flag which contains 'OR' of nullBitmap[#xxx] utilized in expression evaluation
-    // If true, it means that at least one column_value is null when processing the row.
-    llvm::Value *isResultNull;
     llvm::Value *executionContext;
     llvm::Value *dictionaryVectors;
     llvm::FunctionCallee print;
@@ -117,12 +114,18 @@ protected:
     llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
 
     // Helper functions and main function for parsing binary expressions
-    llvm::Value *BinaryExprIntHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
-    llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
-    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::Operator op, llvm::Value *leftVal,
-                                        llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen);
-    llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::Operator op, llvm::Value *left, llvm::Value *right);
-
+    llvm::Value *BinaryExprIntHelper(omniruntime::expressions::BinaryExpr *binaryExpr,  llvm::Value *left,
+                                     llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+                                        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
+                                        llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen,
+                                        llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+                                         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    void BinaryExprNullHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,
+            llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi, llvm::PHINode **rightPhi,
+            llvm::Value **isNeitherNull);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);
 

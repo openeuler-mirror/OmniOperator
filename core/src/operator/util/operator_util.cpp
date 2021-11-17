@@ -111,8 +111,8 @@ T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls
     for (int32_t i = 0; i < rowCount; i++) {
         isNull = false;
         length = 0;
-        void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &isNull, &length,
-            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs);
+        void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &length,
+            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs, &isNull);
         if (!isNull) {
             V value = *(static_cast<V *>(valuePtr));
             result->SetValue(i, value);
@@ -137,8 +137,8 @@ VarcharVector *ProjectVarcharVector(VecType &type, const RowProjFunc func, int64
     for (int32_t i = 0; i < rowCount; i++) {
         isNull = false;
         length = 0;
-        void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &isNull, &length,
-            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs);
+        void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &length,
+            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs, &isNull);
         if (!isNull) {
             uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
             result->SetValue(i, value, length);

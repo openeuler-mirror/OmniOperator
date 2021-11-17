@@ -134,17 +134,14 @@ TEST (ProjectTest, Simple) {
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
-        EXPECT_EQ(val0, i + 5);
-    }
-
-    for (int32_t i = 0; i < numReturned; i++) {
         if (i % 2 == 0) {
+            EXPECT_EQ(val0, i + 5);
             EXPECT_FALSE(t->GetVector(0)->IsValueNull(i));
         } else {
+            EXPECT_EQ(val0, 0);
             EXPECT_TRUE(t->GetVector(0)->IsValueNull(i));
         }
     }
-
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 

@@ -64,27 +64,25 @@ TEST(CodeGenTest, SimpleFilter)
     RowProjFunc func = lc.Create();
     EXPECT_EQ(lc.GetReturnType(), BOOLD);
 
-    bool *nullResult = new bool(false);
     int32_t *dataLength = new int32_t(0);
     int64_t dictionaries[numCols] = {};
+    bool isNull;
 
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < 50; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
+        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_TRUE(res);
     }
     context->getArena()->Reset();
     for (int32_t i = 50; i < 100; i++) {
-        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
+        bool res = *((bool *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_FALSE(res);
     }
     context->getArena()->Reset();
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
-    }
-    delete nullResult;
-    delete[] col1;
+    }    delete[] col1;
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
@@ -126,15 +124,13 @@ TEST(CodeGenTest, SimpleProject)
     RowProjection lc(unparsed, vecTypes);
     RowProjFunc func = lc.Create();
     EXPECT_EQ(lc.GetReturnType(), INT32D);
-
-    bool *nullResult = new bool(false);
-
+    bool isNull = false;
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < 100; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i + 50);
     }
     context->getArena()->Reset();
@@ -142,7 +138,6 @@ TEST(CodeGenTest, SimpleProject)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
-    delete nullResult;
     delete[] col1;
     delete[] table;
     delete[] bitmap;
@@ -193,14 +188,13 @@ TEST(CodeGenTest, SingleProject)
     RowProjFunc func = lc.Create();
     EXPECT_EQ(lc.GetReturnType(), INT32D);
 
-    bool *nullResult = new bool(false);
-
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
+    bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 2 ? i + 10 : -i);
     }
     context->getArena()->Reset();
@@ -208,7 +202,6 @@ TEST(CodeGenTest, SingleProject)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
-    delete nullResult;
     delete[] col1;
     delete[] col2;
     delete[] table;
@@ -261,15 +254,14 @@ TEST(CodeGenTest, ShortCircuitProject)
     EXPECT_TRUE(lc.IsColumnProjection());
     EXPECT_EQ(lc.GetIndexIfColumnProjection(), 1);
 
-    bool *nullResult = new bool[1];
-    nullResult[0] = false;
-
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
     int64_t dictionaries[numCols] = {};
     auto context = new ExecutionContext();
+    bool isNull = false;
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, nullResult, dataLength, reinterpret_cast<int64_t>(context), dictionaries));
+        isNull = false;
+        int32_t res = *((int32_t *)func(table, (int64_t*) bitmap, (int64_t*) offsets, i, dataLength, reinterpret_cast<int64_t>(context), dictionaries, &isNull));
         EXPECT_EQ(res, i % 10);
     }
     context->getArena()->Reset();
@@ -277,7 +269,6 @@ TEST(CodeGenTest, ShortCircuitProject)
         delete[] bitmap[i];
         delete[] offsets[i];
     }
-    delete[] nullResult;
     delete[] col1;
     delete[] col2;
     delete[] table;
@@ -1515,6 +1506,139 @@ TEST(CodeGenTest, Coalesce)
     delete context;
 }
 
+TEST(CodeGenTest, ProjectionCoalesce)
+{
+    string unparsed = "$operator$EQUAL:4(COALESCE:2(#0, 100), 100)";
+
+    DataType types[1] = {DataType::INT64D};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int64_t c[3] = {100, 200, 300};
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t)c;
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = false;
+    }
+    auto **offsets = new int32_t *[1];
+    for (int col = 0; col < 1; col++) {
+        offsets[col] = new int32_t[3];
+    }
+    bool newNullValues[3];
+    int newLengths[3];
+
+    string testname = "CoalesceProjectTest";
+    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    int64_t dictionaryVectors[1] = {};
+
+    bool oVec[3];
+    auto context = new ExecutionContext();
+
+    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], false);
+    EXPECT_EQ(newNullValues[1], false);
+    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_EQ(oVec[0], true);
+    EXPECT_EQ(oVec[1], false);
+    EXPECT_EQ(oVec[2], false);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][0] = true;
+    }
+    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], false);
+    EXPECT_EQ(newNullValues[1], false);
+    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_EQ(oVec[0], true);
+    EXPECT_EQ(oVec[1], false);
+    EXPECT_EQ(oVec[2], false);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 1; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] vals;
+    delete expr;
+    delete lc;
+    delete context;
+}
+
+TEST(CodeGenTest, ProjectionIsNull)
+{
+//    string unparsed = "$operator$EQUAL:boolean(COALESCE:long(#0, 100), 100)";
+    string unparsed = "IS_NULL:boolean(#0)";
+
+    DataType types[1] = {DataType::INT64D};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int64_t c[3] = {100, 200, 300};
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t)c;
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = false;
+    }
+    auto **offsets = new int32_t *[1];
+    for (int col = 0; col < 1; col++) {
+        offsets[col] = new int32_t[3];
+    }
+    bool newNullValues[3];
+    int newLengths[3];
+
+    string testname = "IsNullProjectTest";
+    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    int64_t dictionaryVectors[1] = {};
+
+    bool oVec[3];
+    auto context = new ExecutionContext();
+
+    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], false);
+    EXPECT_EQ(newNullValues[1], false);
+    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_EQ(oVec[0], false);
+    EXPECT_EQ(oVec[1], false);
+    EXPECT_EQ(oVec[2], false);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = true;
+    }
+    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], false);
+    EXPECT_EQ(newNullValues[1], false);
+    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_EQ(oVec[0], true);
+    EXPECT_EQ(oVec[1], true);
+    EXPECT_EQ(oVec[2], true);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 1; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] vals;
+    delete expr;
+    delete lc;
+    delete context;
+}
+
 TEST(CodeGenTest, IsNull)
 {
     string unparsed = "IS_NULL:4(#0)";
@@ -1806,6 +1930,78 @@ TEST(CodeGenTest, DecimalOperators3)
     delete context;
 }
 
+TEST(CodeGenTest, ProjectionSubtractNulls)
+{
+    string unparsed = "$operator$SUBTRACT:2(#0, 100)";
+
+    DataType types[1] = {DataType::INT64D};
+    Parser parser {};
+    Expr *expr = parser.ParseRowExpression(unparsed, reinterpret_cast<int *>(types), 3);
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int64_t c[3] = {10, 20, 30};
+
+    int64_t *vals = new int64_t[1];
+    vals[0] = (int64_t)c;
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = false;
+    }
+    auto **offsets = new int32_t *[1];
+    for (int col = 0; col < 1; col++) {
+        offsets[col] = new int32_t[3];
+    }
+    bool newNullValues[3];
+    int newLengths[3];
+
+    string testname = "SubtractNullProjectTest";
+    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    int64_t dictionaryVectors[1] = {};
+
+    vector<int64_t> oVec(3);
+    auto ov = oVec.data();
+    void *vecVals = &ov;
+    auto cvecVals = static_cast<int64_t *>(vecVals);
+    auto context = new ExecutionContext();
+
+    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], false);
+    EXPECT_EQ(newNullValues[1], false);
+    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_EQ(oVec[0], -90);
+    EXPECT_EQ(oVec[1], -80);
+    EXPECT_EQ(oVec[2], -70);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = true;
+    }
+    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], true);
+    EXPECT_EQ(newNullValues[1], true);
+    EXPECT_EQ(newNullValues[2], true);
+    EXPECT_EQ(oVec[0], 0);
+    EXPECT_EQ(oVec[1], 0);
+    EXPECT_EQ(oVec[2], 0);
+    context->getArena()->Reset();
+    for (int i = 0; i < 1; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] bitmap;
+    delete[] offsets;
+    delete[] vals;
+    delete expr;
+    delete lc;
+    delete context;
+}
+
 TEST(CodeGenTest, ProjectionCodeGen)
 {
     string unparsed = "$operator$ADD:7(#0, 100)";
@@ -1851,6 +2047,10 @@ TEST(CodeGenTest, ProjectionCodeGen)
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     int64_t *result = reinterpret_cast<int64_t *>(oVec[0]);
+    EXPECT_EQ(newNullValues[0], false);
+    EXPECT_EQ(newNullValues[1], false);
+    EXPECT_EQ(newNullValues[2], false);
+
     EXPECT_EQ(*result, 110);
     EXPECT_EQ(*(result + 1), 0);
 
@@ -1860,6 +2060,26 @@ TEST(CodeGenTest, ProjectionCodeGen)
 
     result = reinterpret_cast<int64_t *>(oVec[2]);
     EXPECT_EQ(*(result), 130);
+    EXPECT_EQ(*(result + 1), 0);
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 3; i++) {
+        bitmap[0][i] = true;
+    }
+    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_EQ(newNullValues[0], true);
+    EXPECT_EQ(newNullValues[1], true);
+    EXPECT_EQ(newNullValues[2], true);
+
+    result = reinterpret_cast<int64_t *>(oVec[0]);
+    EXPECT_EQ(*result, 0);
+    EXPECT_EQ(*(result + 1), 0);
+    result = reinterpret_cast<int64_t *>(oVec[1]);
+    EXPECT_EQ(*(result), 0);
+    EXPECT_EQ(*(result + 1), 0);
+
+    result = reinterpret_cast<int64_t *>(oVec[2]);
+    EXPECT_EQ(*(result), 0);
     EXPECT_EQ(*(result + 1), 0);
 
     context->getArena()->Reset();
@@ -1900,7 +2120,8 @@ TEST(CodeGenTest, TestRowProjectLong)
     int64_t dictVecAddr[1] = {0};
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < slicedVector->GetSize(); i++) {
-        void *valuePtr = func(valuesAddr, nullsAddr, offsetsAddr, i, &isNull, &length, reinterpret_cast<int64_t>(context), dictVecAddr);
+        isNull = false;
+        void *valuePtr = func(valuesAddr, nullsAddr, offsetsAddr, i, &length, reinterpret_cast<int64_t>(context), dictVecAddr, &isNull);
         int64_t value = *((int64_t *)valuePtr);
         int64_t inputValue = slicedVector->GetValue(i);
         EXPECT_EQ(value, inputValue + 100);
@@ -1933,12 +2154,13 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     int64_t valuesAddr[1] = {(int64_t)(valueAddress)};
     int64_t valueNulls[1] = {(int64_t)(nullAddress)};
     int64_t valueOffsets[1] = {(int64_t)(offsetAddress)};
-    bool isNull;
     int32_t length;
     int64_t dictionaries[1] = {};
+    bool isNull;
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < slicedVector->GetSize(); i++) {
-        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &isNull, &length, reinterpret_cast<int64_t>(context), dictionaries);
+        isNull = false;
+        void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &length, reinterpret_cast<int64_t>(context), dictionaries, &isNull);
         uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
         std::string result(value, value + length);
 
@@ -1977,7 +2199,7 @@ TEST(CodeGenTest, CastNumbers3)
     bool **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
-        bitmap[i][0] = true;
+        bitmap[i][0] = false;
     }
     auto **offsets = new int32_t *[3];
     for (int col = 0; col < 3; col++) {

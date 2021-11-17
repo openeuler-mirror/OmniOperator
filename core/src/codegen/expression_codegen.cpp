@@ -21,8 +21,10 @@ using namespace omniruntime::vec;
 using std::make_shared;
 
 namespace {
-    const int INT32_VALUE = 32;
-    const int INT64_VALUE = 64;
+const int INT32_VALUE = 32;
+const int INT64_VALUE = 64;
+const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
+const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
 }
 
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(omniruntime::expressions::Expr &e)
@@ -104,12 +106,12 @@ Type *ExpressionCodeGen::GetFunctionReturnType(DataType type)
 }
 
 /**
- *  Usage example: std::vector<Value *> values;
- *  values.push_back(value1);
- *  values.push_back(value2);
- *  PrintValues("LLVM DEBUG: %d, %d\n", values);
+ * Usage example: std::vector<Value *> values;
+ * values.push_back(value1);
+ * values.push_back(value2);
+ * PrintValues("LLVM DEBUG: %d, %d\n", values);
  */
-void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value *>& values)
+void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value *> &values)
 {
     auto charType = Type::getInt8Ty(*context);
     std::vector<llvm::Constant *> chars(format.size());
@@ -121,16 +123,16 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
 
     // Create the declaration statement
     this->numGlobalValues++;
-    auto globalDeclaration = static_cast<llvm::GlobalVariable*>(
+    auto globalDeclaration = static_cast<llvm::GlobalVariable *>(
         module->getOrInsertGlobal("string" + std::to_string(this->numGlobalValues), stringType));
     globalDeclaration->setInitializer(llvm::ConstantArray::get(stringType, chars));
     globalDeclaration->setConstant(true);
     globalDeclaration->setLinkage(llvm::GlobalValue::LinkageTypes::PrivateLinkage);
-    globalDeclaration->setUnnamedAddr (llvm::GlobalValue::UnnamedAddr::Global);
+    globalDeclaration->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
     // Return a cast to an i8*
     auto formatPtr = llvm::ConstantExpr::getBitCast(globalDeclaration, charType->getPointerTo());
-    std::vector<Value*> args;
+    std::vector<Value *> args;
     args.push_back(formatPtr);
     for (auto v : values) {
         args.push_back(v);
@@ -175,7 +177,7 @@ ExpressionCodeGen::~ExpressionCodeGen()
 Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
 {
     // call function
-    std::vector<Value *> argVals {lhs, lLen, rhs, rLen};
+    std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
     auto f = module->getFunction(fr->strCompareExtStr);
     auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
@@ -187,116 +189,193 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
 Value *ExpressionCodeGen::Decimal128Cmp(const Value &lhs, const Value &rhs)
 {
     // call function
-    std::vector<Value*> argVals;
-    argVals.push_back(const_cast<Value*>(&lhs));
-    argVals.push_back(const_cast<Value*>(&rhs));
+    std::vector<Value *> argVals;
+    argVals.push_back(const_cast<Value *>(&lhs));
+    argVals.push_back(const_cast<Value *>(&rhs));
     auto f = module->getFunction(fr->decimal128CompareExtStr);
     Value *ret = builder->CreateCall(f, argVals, "call_decimal_cmp");
     return ret;
 }
 
+void ExpressionCodeGen::BinaryExprNullHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi, Value **isNeitherNull)
+{
+    BasicBlock *incomingBlock, *nullBlock, *nextInst;
+    Value *nullCond, *leftZero, *rightZero;
+    auto op = binaryExpr->op;
+
+    if (op == LT || op == GT || op == LTE || op == GTE || op == EQ || op == NEQ) {
+        *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
+    }
+    if (op == ADD || op == SUB || op == MUL || op == DIV || op == MOD) {
+        std::vector<Value *> argLeftVals { left, left, this->codegenContext->executionContext };
+        std::vector<Value *> argRightVals { right, right, this->codegenContext->executionContext };
+        incomingBlock = builder->GetInsertBlock();
+        nullBlock = BasicBlock::Create(*context, "nullBlock", builder->GetInsertBlock()->getParent());
+        nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
+        nullCond = builder->CreateOr(leftIsNull, rightIsNull);
+        builder->CreateCondBr(nullCond, nullBlock, nextInst);
+        builder->SetInsertPoint(nullBlock);
+        switch (binaryExpr->left->GetExprDataType()) {
+            case INT32D:
+            case INT64D:
+                leftZero = builder->CreateSub(left, left);
+                rightZero = builder->CreateSub(right, right);
+                break;
+            case DOUBLED:
+                leftZero = builder->CreateFSub(left, left);
+                rightZero = builder->CreateFSub(right, right);
+                break;
+            case DECIMAL128D:
+                leftZero = builder->CreateCall(module->getFunction(fr->subDec128Str), argLeftVals, fr->subDec128Str);
+                rightZero = builder->CreateCall(module->getFunction(fr->subDec128Str), argRightVals, fr->subDec128Str);
+                break;
+            default:
+                // Unsupported data-types left as-is
+                leftZero = left;
+                rightZero = right;
+        }
+        builder->CreateBr(nextInst);
+        builder->SetInsertPoint(nextInst);
+        int numberOfPaths = 2;
+        *leftPhi = builder->CreatePHI(left->getType(), numberOfPaths, "iftmp");
+        *rightPhi = builder->CreatePHI(right->getType(), numberOfPaths, "iftmp");
+        (*leftPhi)->addIncoming(leftZero, nullBlock);
+        (*leftPhi)->addIncoming(left, incomingBlock);
+        (*rightPhi)->addIncoming(rightZero, nullBlock);
+        (*rightPhi)->addIncoming(right, incomingBlock);
+    }
+}
+
 // Helper methods to parse binary expressions
-Value *ExpressionCodeGen::BinaryExprIntHelper(omniruntime::expressions::Operator op, Value *left, Value *right)
+Value *ExpressionCodeGen::BinaryExprIntHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull)
 {
-    switch (op) {
+    PHINode *leftPhi, *rightPhi;
+    Value *isNeitherNull;
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
+    switch (binaryExpr->op) {
         case LT:
-            return builder->CreateICmpSLT(left, right, "relational_lt");
+            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(left, right, "relational_lt"));
         case GT:
-            return builder->CreateICmpSGT(left, right, "relational_gt");
+            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(left, right, "relational_gt"));
         case LTE:
-            return builder->CreateICmpSLE(left, right, "relational_le");
+            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(left, right, "relational_le"));
         case GTE:
-            return builder->CreateICmpSGE(left, right, "relational_ge");
+            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(left, right, "relational_ge"));
         case EQ:
-            return builder->CreateICmpEQ(left, right, "relational_eq");
+            return builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(left, right, "relational_eq"));
         case NEQ:
-            return builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq");
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateNot(builder->CreateICmpEQ(left, right), "relational_neq"));
         case ADD:
-            return builder->CreateAdd(left, right, "arithmetic_add");
+            return builder->CreateAdd(leftPhi, rightPhi, "arithmetic_add");
         case SUB:
-            return builder->CreateSub(left, right, "arithmetic_sub");
+            return builder->CreateSub(leftPhi, rightPhi, "arithmetic_sub");
         case MUL:
-            return builder->CreateMul(left, right, "arithmetic_mul");
+            return builder->CreateMul(leftPhi, right, "arithmetic_mul");
         case DIV:
-            return builder->CreateSDiv(left, right, "arithmetic_div");
+            return builder->CreateSDiv(leftPhi, right, "arithmetic_div");
         case MOD:
-            return builder->CreateSRem(left, right, "arithmetic_mod");
+            return builder->CreateSRem(leftPhi, right, "arithmetic_mod");
         default:
-            std::cout << "Unsupported int/long binary operator " << op << std::endl;
+            std::cout << "Unsupported int/long binary operator " << binaryExpr->op << std::endl;
             return this->CreateConstantBool(false);
     }
 }
 
-Value *ExpressionCodeGen::BinaryExprDoubleHelper(omniruntime::expressions::Operator op,
-                                                 Value *left, Value *right)
+Value *ExpressionCodeGen::BinaryExprDoubleHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull)
 {
-    switch (op) {
+    PHINode *leftPhi, *rightPhi;
+    Value *isNeitherNull;
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
+    switch (binaryExpr->op) {
         case LT:
-            return builder->CreateFCmpULT(left, right, "frelational_lt");
+            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpULT(left, right, "frelational_lt"));
         case GT:
-            return builder->CreateFCmpUGT(left, right, "frelational_gt");
+            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpUGT(left, right, "frelational_gt"));
         case LTE:
-            return builder->CreateFCmpULE(left, right, "frelational_le");
+            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpULE(left, right, "frelational_le"));
         case GTE:
-            return builder->CreateFCmpUGE(left, right, "frelational_ge");
+            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpUGE(left, right, "frelational_ge"));
         case EQ:
-            return builder->CreateFCmpUEQ(left, right, "farithmetic_eq");
+            return builder->CreateAnd(isNeitherNull, builder->CreateFCmpUEQ(left, right, "farithmetic_eq"));
         case NEQ:
-            return builder->CreateNot(builder->CreateFCmpUEQ(left, right, "farithmetic_neq"));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateNot(builder->CreateFCmpUEQ(left, right, "farithmetic_neq")));
         case ADD:
-            return builder->CreateFAdd(left, right, "farithmetic_add");
+            return builder->CreateFAdd(leftPhi, rightPhi, "farithmetic_add");
         case SUB:
-            return builder->CreateFSub(left, right, "farithmetic_sub");
+            return builder->CreateFSub(leftPhi, rightPhi, "farithmetic_sub");
         case MUL:
-            return builder->CreateFMul(left, right, "farithmetic_mul");
+            return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
         case DIV:
-            return builder->CreateFDiv(left, right, "farithmetic_div");
+            return builder->CreateFDiv(leftPhi, right, "farithmetic_div");
         default:
-            std::cout << "Unsupported double binary operator " << op << std::endl;
+            std::cout << "Unsupported double binary operator " << binaryExpr->op << std::endl;
             return this->CreateConstantBool(false);
     }
 }
 
-Value *ExpressionCodeGen::BinaryExprStringHelper(omniruntime::expressions::Operator op,
-                                                 Value *leftVal, Value *leftLen, Value *rightVal, Value *rightLen)
+Value *ExpressionCodeGen::BinaryExprStringHelper(BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen,
+    Value *rightVal, Value *rightLen, Value *leftIsNull, Value *rightIsNull)
 {
-    switch (op) {
+    PHINode *leftPhi, *rightPhi;
+    Value *isNeitherNull;
+    BinaryExprNullHelper(binaryExpr, leftVal, rightVal, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
+    switch (binaryExpr->op) {
         case LT:
-            return builder->CreateICmpSLT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSLT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         case GT:
-            return builder->CreateICmpSGT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSGT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         case LTE:
-            return builder->CreateICmpSLE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSLE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         case GTE:
-            return builder->CreateICmpSGE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSGE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         case EQ:
-            return builder->CreateICmpEQ(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpEQ(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         case NEQ:
-            return builder->CreateICmpNE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpNE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         default:
-            std::cout << "Unsupported string binary operator " << op << std::endl;
+            std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
             return this->CreateConstantBool(false);
     }
 }
 
-Value *ExpressionCodeGen::BinaryExprDecimalHelper(
-    omniruntime::expressions::Operator op, Value *left, Value *right)
+Value *ExpressionCodeGen::BinaryExprDecimalHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull)
 {
-    std::vector<Value*> argVals {left, right, this->codegenContext->executionContext};
+    PHINode *leftPhi, *rightPhi;
+    Value *isNeitherNull;
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
+    std::vector<Value *> argVals { leftPhi, rightPhi, this->codegenContext->executionContext };
 
-    switch (op) {
+    switch (binaryExpr->op) {
         case LT:
-            return builder->CreateICmpSLT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSLT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case GT:
-            return builder->CreateICmpSGT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSGT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case LTE:
-            return builder->CreateICmpSLE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSLE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case GTE:
-            return builder->CreateICmpSGE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpSGE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case EQ:
-            return builder->CreateICmpEQ(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpEQ(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case NEQ:
-            return builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0));
+            return builder->CreateAnd(isNeitherNull,
+                builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case ADD:
             return builder->CreateCall(module->getFunction(fr->addDec128Str), argVals, fr->addDec128Str);
         case SUB:
@@ -306,7 +385,7 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(
         case DIV:
             return builder->CreateCall(module->getFunction(fr->divDec128Str), argVals, fr->divDec128Str);
         default:
-            std::cout << "Unsupported string binary operator " << op << std::endl;
+            std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
             return this->CreateConstantBool(false);
     }
 }
@@ -358,9 +437,7 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
             codegenContext->offsets = &arg;
         } else if (argName == "rowIdx") {
             codegenContext->rowIdx = &arg;
-        } else if (argName == "isResultNull") {
-            codegenContext->isResultNull = &arg;
-        } else if (argName == "dataLength") {
+        } else if (argName == "dataLength" || argName == "isNullPtr") {
             continue;
         } else if (argName == "executionContext") {
             codegenContext->executionContext = &arg;
@@ -373,8 +450,7 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
     }
 
     codegenContext->print = module->getOrInsertFunction("printf",
-        FunctionType::get(IntegerType::getInt32Ty(*context), PointerType::get(Type::getInt8Ty(*context), 0), true)
-    );
+        FunctionType::get(IntegerType::getInt32Ty(*context), PointerType::get(Type::getInt8Ty(*context), 0), true));
 
     return true;
 }
@@ -385,15 +461,15 @@ Function *ExpressionCodeGen::CreateFunction()
     std::vector<Type *> args;
     args.reserve(argsSize);
     // Values in args vector follow the format:
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*, executionContext
+    // value*, bitmap*, offset*, rowIdx, outputLength*, executionContext, isNullPtr
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt32Ty(*context));
-    args.push_back(Type::getInt1PtrTy(*context));
     args.push_back(Type::getInt32PtrTy(*context));
     args.push_back(Type::getInt64Ty(*context));
     args.push_back(Type::getInt64PtrTy(*context));
+    args.push_back(Type::getInt1PtrTy(*context));
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
     ExprPrinter p;
@@ -404,8 +480,8 @@ Function *ExpressionCodeGen::CreateFunction()
     func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
     std::string argNames[] = {
-        "data", "nullBitmap", "offsets", "rowIdx", "isResultNull",
-        "dataLength", "executionContext", "dictionaryVectors"
+        "data", "nullBitmap", "offsets", "rowIdx",
+        "dataLength", "executionContext", "dictionaryVectors", "isNullPtr"
     };
     int32_t idx = 0;
     for (auto &arg : func->args()) {
@@ -422,13 +498,15 @@ Function *ExpressionCodeGen::CreateFunction()
 
     // Generate code
     auto result = VisitExpr(*expr);
-    int32_t outputLengthIndex = 5;
+    int32_t outputLengthIndex = EXPRFUNC_OUT_LENGTH_ARG_INDEX;
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(outputLengthIndex);
         Value *lengthGep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
+
+    builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
 
     // cast char* to int64 for output
     if (expr->GetExprDataType() == DataType::STRINGD) {
@@ -446,13 +524,13 @@ Function *ExpressionCodeGen::CreateSimpleFunction()
     std::vector<Type *> args;
     args.reserve(argsSize);
     // Values in args vector follow the format:
-    // value*, bitmap*, length*, isResultNull*, outputLength*, executionContext
+    // value*, bitmap*, length*, outputLength*, executionContext, isNullPtr
     args.push_back(Type::getInt64PtrTy(*context));
     args.push_back(Type::getInt1PtrTy(*context));
     args.push_back(Type::getInt32PtrTy(*context));
-    args.push_back(Type::getInt1PtrTy(*context));
     args.push_back(Type::getInt32PtrTy(*context));
     args.push_back(Type::getInt64Ty(*context));
+    args.push_back(Type::getInt1PtrTy(*context));
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
     ExprPrinter p;
@@ -463,8 +541,8 @@ Function *ExpressionCodeGen::CreateSimpleFunction()
     func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
 
     std::string argNames[] = {
-        "data", "nullBitmap", "offsets", "isResultNull",
-        "dataLength", "executionContext"
+        "data", "nullBitmap", "offsets",
+        "dataLength", "executionContext", "isNullPtr"
     };
     int32_t idx = 0;
     for (auto &arg : func->args()) {
@@ -481,7 +559,7 @@ Function *ExpressionCodeGen::CreateSimpleFunction()
 
     // Generate code
     auto result = VisitExpr(*expr);
-    int32_t outputLengthIndex = 5;
+    int32_t outputLengthIndex = 4;
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(outputLengthIndex);
@@ -499,7 +577,7 @@ Function *ExpressionCodeGen::CreateSimpleFunction()
     return func;
 }
 
-Value* ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, llvm::Value *elementAddr)
+Value *ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, Value *elementAddr)
 {
     Value *elementPtr = nullptr;
     DataExpr *dEx = &dExpr;
@@ -549,17 +627,17 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
             break;
         }
         case DataType::DOUBLED: {
-            codeGenValue = new CodeGenValue(
-                this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
+            codeGenValue =
+                new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::STRINGD: {
             Constant *strValConst =
-                    ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
+                ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
             Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, Type::getInt8PtrTy(*context));
             Constant *strLenConst =
-                    ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
-            codeGenValue = new CodeGenValue(strValPtr, this->CreateConstantBool(true), strLenConst);
+                ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
+            codeGenValue = new CodeGenValue(strValPtr, this->CreateConstantBool(false), strLenConst);
             break;
         }
         case DataType::BOOLD: {
@@ -578,8 +656,7 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
             decimal[0] = decValue.LowBits();
             decimal[1] = decValue.HighBits();
 
-            Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE,
-                                                              reinterpret_cast<int64_t>(decimal)));
+            Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(decimal)));
             codeGenValue = new CodeGenValue(addr, this->CreateConstantBool(false));
             break;
         }
@@ -592,8 +669,8 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
     return codeGenValue;
 }
 
-Value *ExpressionCodeGen::GetDictionaryVectorValue(
-    DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr, AllocaInst *&lengthAllocaInst)
+Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr,
+    AllocaInst *&lengthAllocaInst)
 {
     Function *dictionaryFunc = nullptr;
     switch (vectorType) {
@@ -621,7 +698,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(
             LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", vectorType);
             return nullptr;
     }
-    std::vector<Value*> funcArgs;
+    std::vector<Value *> funcArgs;
     funcArgs.push_back(dictionaryVectorPtr);
     funcArgs.push_back(rowIdx);
 
@@ -648,7 +725,6 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         Value *vecBatch = this->codegenContext->data;
         Value *bitmap = this->codegenContext->nullBitmap;
         Value *offsets = this->codegenContext->offsets;
-        Value *isResultNull = this->codegenContext->isResultNull;
         Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
 
         Value *colIdx = this->CreateConstantInt(dEx->colVal);
@@ -671,8 +747,8 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         builder->SetInsertPoint(trueBlock);
 
         AllocaInst *lengthAllocaInst = nullptr;
-        Value *dictionaryValue = this->GetDictionaryVectorValue(
-            dExpr.GetExprDataType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
+        Value *dictionaryValue =
+            this->GetDictionaryVectorValue(dExpr.GetExprDataType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
         if (dictionaryValue == nullptr) {
             return;
         }
@@ -742,10 +818,6 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
         bitmapValue = builder->CreateLoad(bitmapGEP);
 
-        isResultNull = builder->CreateLoad(isResultNull);
-        isResultNull = builder->CreateOr(isResultNull, bitmapValue);
-        builder->CreateStore(isResultNull, this->codegenContext->isResultNull);
-
         this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
         return;
     }
@@ -765,36 +837,44 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
     CodeGenValuePtr left = VisitExpr(*(bExpr->left));
     Value *leftValue = left->data;
     Value *leftLen = left->length;
+    Value *leftNull = left->isNull;
     CodeGenValuePtr right = VisitExpr(*(bExpr->right));
     Value *rightValue = right->data;
     Value *rightLen = right->length;
+    Value *rightNull = right->isNull;
 
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
-        this->value = make_shared<CodeGenValue>(
-            builder->CreateAnd(leftValue, rightValue, "logical_and"), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(builder->CreateAnd(builder->CreateNot(leftNull), builder->CreateAnd(
+            builder->CreateNot(rightNull), builder->CreateAnd(leftValue, rightValue, "logical_and"))),
+            builder->CreateOr(leftNull, rightNull));
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
-        this->value = make_shared<CodeGenValue>(
-            builder->CreateOr(leftValue, rightValue, "logical_or"), this->CreateConstantBool(false));
+        this->value = make_shared<CodeGenValue>(builder->CreateAnd(builder->CreateNot(leftNull),
+            builder->CreateAnd(builder->CreateNot(rightNull), builder->CreateOr(leftValue, rightValue, "logical_or"))),
+            builder->CreateOr(leftNull, rightNull));
         return;
     }
 
     if (bExpr->left->GetExprDataType() == DataType::INT32D || bExpr->left->GetExprDataType() == DataType::INT64D) {
-        this->value = make_shared<CodeGenValue>(
-            this->BinaryExprIntHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
+        this->value =
+            make_shared<CodeGenValue>(this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
+            builder->CreateOr(leftNull, rightNull));
         return;
     } else if (bExpr->left->GetExprDataType() == DOUBLED) {
-        this->value = make_shared<CodeGenValue>(
-            this->BinaryExprDoubleHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
+        this->value =
+            make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
+            builder->CreateOr(leftNull, rightNull));
         return;
     } else if (bExpr->left->GetExprDataType() == STRINGD) {
         this->value = make_shared<CodeGenValue>(
-            this->BinaryExprStringHelper(bExpr->op, leftValue, leftLen, rightValue, rightLen), this->CreateConstantBool(false));
+            this->BinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull),
+            builder->CreateOr(leftNull, rightNull));
         return;
     } else if (bExpr->left->GetExprDataType() == DECIMAL128D || bExpr->left->GetExprDataType() == DECIMAL64D) {
-        this->value = make_shared<CodeGenValue>(
-            this->BinaryExprDecimalHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
+        this->value =
+            make_shared<CodeGenValue>(this->BinaryExprDecimalHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
+            builder->CreateOr(leftNull, rightNull));
         return;
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
@@ -803,16 +883,16 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
 
 void ExpressionCodeGen::Visit(UnaryExpr &uExpr)
 {
-    Value *val = VisitExpr(*(uExpr.exp))->data;
+    auto val = VisitExpr(*(uExpr.exp));
     switch (uExpr.op) {
         case NOT: {
-            Value *notValue = builder->CreateNot(val, "logical_not");
-            this->value = make_shared<CodeGenValue>(notValue, this->CreateConstantBool(false));
+            Value *notValue = builder->CreateNot(val->data, "logical_not");
+            this->value = make_shared<CodeGenValue>(notValue, val->isNull);
             break;
         }
         default: {
             // ignore the unary operator if it is invalid
-            this->value = make_shared<CodeGenValue>(val, this->CreateConstantBool(false));
+            this->value = make_shared<CodeGenValue>(val->data, val->isNull);
             break;
         }
     }
@@ -832,11 +912,12 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
 
     // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
-    builder->CreateCondBr(evCond->data, trueBlock, falseBlock);
+    builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data), trueBlock, falseBlock);
     builder->SetInsertPoint(trueBlock);
     auto evTrue = VisitExpr(*ifTrue);
     Value *evTrueValue = evTrue->data;
     Value *evTrueLength = evTrue->length;
+    Value *evTrueNull = evTrue->isNull;
     builder->CreateBr(mergeBlock);
     // Codegen of 'true' can change the current block, update trueBlock for the PHI.
     trueBlock = builder->GetInsertBlock();
@@ -846,6 +927,7 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
     auto evFalse = VisitExpr(*ifFalse);
     Value *evFalseValue = evFalse->data;
     Value *evFalseLength = evFalse->length;
+    Value *evFalseNull = evFalse->isNull;
     builder->CreateBr(mergeBlock);
     // Codegen of 'false' can change the current block, update falseBlock for the PHI.
     falseBlock = builder->GetInsertBlock();
@@ -855,9 +937,12 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
     PHINode *pn = builder->CreatePHI(phiType, numReservedValues, "iftmp");
+    PHINode *phiNull = builder->CreatePHI(evTrueNull->getType(), numReservedValues, "iftmpNull");
 
     pn->addIncoming(evTrueValue, trueBlock);
     pn->addIncoming(evFalseValue, falseBlock);
+    phiNull->addIncoming(evTrueNull, trueBlock);
+    phiNull->addIncoming(evFalseNull, falseBlock);
 
     PHINode *lengthPhi = nullptr;
     if (ifExpr.GetExprDataType() == STRINGD) {
@@ -866,58 +951,77 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
         lengthPhi->addIncoming(evFalseLength, falseBlock);
     }
 
-    this->value = make_shared<CodeGenValue>(pn, this->CreateConstantBool(false), lengthPhi);
+    this->value = make_shared<CodeGenValue>(pn, phiNull, lengthPhi);
 }
 
 void ExpressionCodeGen::Visit(InExpr &inExpr)
 {
     InExpr *iExpr = &inExpr;
     Expr *toCompare = iExpr->arguments[0];
-    llvm::Value *val = VisitExpr(*toCompare)->data;
-    llvm::Value *valLen = this->value->length;
-
-    llvm::Value *inArray = llvm::ConstantInt::get(*context, APInt(1, 0));
+    auto valueToCompare = VisitExpr(*toCompare);
+    CodeGenValuePtr argiValue;
+    Value *inArray = llvm::ConstantInt::get(*context, APInt(1, 0));
+    Value *isNull = llvm::ConstantInt::get(*context, APInt(1, 0));
     // Handle types correctly
     for (int i = 1; i < iExpr->arguments.size(); i++) {
-        // initialize tmpCmp
-        llvm::Value *tmpCmp = this->CreateConstantBool(false);
+        // initialize tmpCmpData
+        Value *tmpCmpData = this->CreateConstantBool(false);
+        Value *tmpCmpNull = this->CreateConstantBool(false);
 
         if (toCompare->GetExprDataType() == DataType::INT64D &&
             iExpr->arguments[i]->GetExprDataType() == DataType::INT32D) {
-            Value *argInt64 =
-                builder->CreateIntCast(VisitExpr(*(iExpr->arguments[i]))->data, Type::getInt64Ty(*context), true);
-            tmpCmp = builder->CreateICmpEQ(val, argInt64);
+            argiValue = VisitExpr(*(iExpr->arguments[i]));
+            Value *argInt64 = builder->CreateIntCast(argiValue->data, Type::getInt64Ty(*context), true);
+            tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
+                builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(valueToCompare->data, argInt64)));
+            tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
         } else if (toCompare->GetExprDataType() == DataType::INT32D &&
             iExpr->arguments[i]->GetExprDataType() == DataType::INT64D) {
-            Value *valInt64 = builder->CreateIntCast(val, Type::getInt64Ty(*context), true);
-            tmpCmp = builder->CreateICmpEQ(valInt64, VisitExpr(*(iExpr->arguments[i]))->data);
+            argiValue = VisitExpr(*(iExpr->arguments[i]));
+            Value *valInt64 = builder->CreateIntCast(valueToCompare->data, Type::getInt64Ty(*context), true);
+            tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
+                builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(valInt64, argiValue->data)));
+            tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
         } else {
             switch (iExpr->arguments[0]->dataType) {
                 case INT32D:
                 case INT64D: {
-                    tmpCmp = builder->CreateICmpEQ(val, VisitExpr(*(iExpr->arguments[i]))->data);
+                    argiValue = VisitExpr(*(iExpr->arguments[i]));
+                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+                        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+                        builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
+                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                     break;
                 }
                 case DOUBLED: {
-                    tmpCmp = builder->CreateFCmpOEQ(val, VisitExpr(*(iExpr->arguments[i]))->data);
+                    argiValue = VisitExpr(*(iExpr->arguments[i]));
+                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+                        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+                        builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
+                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                     break;
                 }
                 case STRINGD: {
-                    tmpCmp = builder->CreateICmpEQ(this->StringCmp(val, valLen, VisitExpr(*(iExpr->arguments[i]))->data,
-                                                                   this->value->length),
-                        CreateConstantInt(0));
+                    argiValue = VisitExpr(*(iExpr->arguments[i]));
+                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+                        builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
+                        valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
+                        CreateConstantInt(0))));
+                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                     break;
                 }
                 default: {
                     LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->dataType);
-                    tmpCmp = this->CreateConstantBool(false);
+                    tmpCmpData = this->CreateConstantBool(false);
+                    tmpCmpNull = this->CreateConstantBool(false);
                 }
             }
         }
 
-        inArray = builder->CreateOr(inArray, tmpCmp);
+        inArray = builder->CreateAnd(builder->CreateNot(tmpCmpNull), builder->CreateOr(inArray, tmpCmpData));
+        isNull = builder->CreateOr(isNull, tmpCmpNull);
     }
-    this->value = make_shared<CodeGenValue>(inArray, this->CreateConstantBool(false));
+    this->value = make_shared<CodeGenValue>(inArray, isNull);
 }
 
 void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
@@ -929,45 +1033,55 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
     bExpr->upperBound->dataType = biggerType;
     bExpr->value->dataType = biggerType;
 
-    llvm::Value *val = VisitExpr(*(bExpr->value))->data;
-    llvm::Value *valLen = this->value->length;
-    llvm::Value *lowerVal = VisitExpr(*(bExpr->lowerBound))->data;
-    llvm::Value *lowerValLen = this->value->length;
-    llvm::Value *upperVal = VisitExpr(*(bExpr->upperBound))->data;
-    llvm::Value *upperValLen = this->value->length;
+    auto val = VisitExpr(*(bExpr->value));
+    auto valData = val->data;
+    auto valLen = val->length;
+    auto valNull = val->isNull;
+    auto lowerVal = VisitExpr(*(bExpr->lowerBound));
+    auto lowerValData = lowerVal->data;
+    auto lowerValLen = lowerVal->length;
+    auto lowerValNull = lowerVal->isNull;
+    auto upperVal = VisitExpr(*(bExpr->upperBound));
+    auto upperValData = upperVal->data;
+    auto upperValLen = upperVal->length;
+    auto upperValNull = upperVal->isNull;
 
+    auto isAnyNull = builder->CreateOr(builder->CreateOr(valNull, lowerValNull), upperValNull);
+    auto isNeitherNull = builder->CreateNot(isAnyNull);
+    Value *cmpLeft, *cmpRight;
+    bool supportedType = false;
     if (bExpr->value->GetExprDataType() == DataType::INT32D || bExpr->value->GetExprDataType() == DataType::INT64D) {
-        llvm::Value *cmpLeft = builder->CreateICmpSLE(lowerVal, val, "between_cmpleft");
-        llvm::Value *cmpRight = builder->CreateICmpSLE(val, upperVal, "between_cmpright");
-        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
-        this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
-        return;
+        cmpLeft = builder->CreateICmpSLE(lowerValData, valData, "between_cmpleft");
+        cmpRight = builder->CreateICmpSLE(valData, upperValData, "between_cmpright");
+        supportedType = true;
     } else if (bExpr->value->GetExprDataType() == DOUBLED) {
-        llvm::Value *cmpLeft = builder->CreateFCmpULE(lowerVal, val, "between_cmpleft");
-        llvm::Value *cmpRight = builder->CreateFCmpULE(val, upperVal, "between_cmpright");
-        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
-        this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
-        return;
+        cmpLeft = builder->CreateFCmpULE(lowerValData, valData, "between_cmpleft");
+        cmpRight = builder->CreateFCmpULE(valData, upperValData, "between_cmpright");
+        supportedType = true;
     } else if (bExpr->value->GetExprDataType() == STRINGD) {
-        llvm::Value *cmpLeft =
-            builder->CreateICmpSLE(this->StringCmp(lowerVal, lowerValLen, val, valLen), CreateConstantInt(0));
-        llvm::Value *cmpRight =
-            builder->CreateICmpSLE(this->StringCmp(val, valLen, upperVal, upperValLen), CreateConstantInt(0));
-        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
-        this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
-        return;
+        cmpLeft =
+            builder->CreateICmpSLE(this->StringCmp(lowerValData, lowerValLen, valData, valLen), CreateConstantInt(0));
+        cmpRight =
+            builder->CreateICmpSLE(this->StringCmp(valData, valLen, upperValData, upperValLen), CreateConstantInt(0));
+        supportedType = true;
     } else if (bExpr->value->GetExprDataType() == DECIMAL64D) {
         // FIXME: Reusing function Decimal128Cmp; add and change to Decimal64Cmp if necessary
-        llvm::Value *cmpleft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerVal, *val), CreateConstantInt(0));
-        llvm::Value *cmpright = builder->CreateICmpSLE(this->Decimal128Cmp(*val, *upperVal), CreateConstantInt(0));
-        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
-        this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
-        return;
+        cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerValData, *valData), CreateConstantInt(0));
+        cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*valData, *upperValData), CreateConstantInt(0));
+        supportedType = true;
     } else if (bExpr->value->GetExprDataType() == DECIMAL128D) {
-        llvm::Value *cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerVal, *val), CreateConstantInt(0));
-        llvm::Value *cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*val, *upperVal), CreateConstantInt(0));
-        llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
-        this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
+        cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerValData, *valData), CreateConstantInt(0));
+        cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*valData, *upperValData), CreateConstantInt(0));
+        supportedType = true;
+    }
+
+    if (supportedType) {
+        std::vector<Value *> andValues;
+        andValues.push_back(isNeitherNull);
+        andValues.push_back(cmpLeft);
+        andValues.push_back(cmpRight);
+        Value *result = builder->CreateAnd(andValues);
+        this->value = make_shared<CodeGenValue>(result, isAnyNull);
         return;
     }
 
@@ -979,7 +1093,6 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
 {
     Expr *value1Expr = cExpr.value1;
     Expr *value2Expr = cExpr.value2;
-
     CodeGenValuePtr value1 = VisitExpr(*value1Expr);
 
     BasicBlock *isNullBlock = BasicBlock::Create(*context, "coalesceVal1IsNull", func);
@@ -988,8 +1101,7 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
 
     // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
-    builder->CreateCondBr(builder->CreateOr(builder->CreateLoad(this->codegenContext->isResultNull), value1->isNull),
-        isNullBlock, isNotNullBlock);
+    builder->CreateCondBr(value1->isNull, isNullBlock, isNotNullBlock);
 
     builder->SetInsertPoint(isNullBlock);
     auto value2 = VisitExpr(*value2Expr);
@@ -1020,6 +1132,7 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
     PHINode *pn = builder->CreatePHI(phiType, numReservedValues, "iftmp");
+    PHINode *pnNull = builder->CreatePHI(value1->isNull->getType(), numReservedValues, "iftmp");
 
     PHINode *lengthPhi = nullptr;
     if (cExpr.GetExprDataType() == STRINGD) {
@@ -1030,8 +1143,9 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
 
     pn->addIncoming(value1Data, isNotNullBlock);
     pn->addIncoming(value2Data, isNullBlock);
-
-    this->value = make_shared<CodeGenValue>(pn, this->CreateConstantBool(false), lengthPhi);
+    pnNull->addIncoming(value1->isNull, isNotNullBlock);
+    pnNull->addIncoming(value2->isNull, isNullBlock);
+    this->value = make_shared<CodeGenValue>(pn, pnNull, lengthPhi);
 }
 
 void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
@@ -1040,7 +1154,7 @@ void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
     Value *isNullValue = VisitExpr(*valueExpr)->isNull;
 
     Value *result = builder->CreateICmpEQ(isNullValue, CreateConstantBool(true), "isNullCompare");
-    this->value =  make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
+    this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
 }
 
 // Handles all functions
@@ -1050,26 +1164,33 @@ void ExpressionCodeGen::Visit(FuncExpr &fExpr)
     std::vector<Value *> argVals;
     std::string funcName = fExpr.funcName;
     int numArgs = fExpr.arguments.size();
+    CodeGenValuePtr resultPtr;
+    Value *isAnyNull = this->CreateConstantBool(false);
     for (int i = 0; i < numArgs; i++) {
         if (funcNameToSignature.count(fExpr.funcName)) {
             FunctionSignature fs = funcNameToSignature[fExpr.funcName];
             DataType desiredType = fs.GetParams()[i];
             DataType currType = fExpr.arguments[i]->GetExprDataType();
             if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
+                resultPtr = VisitExpr(*(fExpr.arguments[i]));
                 Value *argDouble =
-                        builder->CreateCast(Instruction::SIToFP, VisitExpr(*(fExpr.arguments[i]))->data,
-                                            Type::getDoubleTy(*(context)));
+                    builder->CreateCast(Instruction::SIToFP, resultPtr->data, Type::getDoubleTy(*(context)));
                 argVals.push_back(argDouble);
+                isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
             } else if (desiredType == INT64D && currType == INT32D) {
-                Value *argInt64 =
-                        builder->CreateIntCast(VisitExpr(*(fExpr.arguments[i]))->data,
-                                               Type::getInt64Ty(*context), true);
+                resultPtr = VisitExpr(*(fExpr.arguments[i]));
+                Value *argInt64 = builder->CreateIntCast(resultPtr->data, Type::getInt64Ty(*context), true);
                 argVals.push_back(argInt64);
+                isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
             } else {
-                argVals.push_back(VisitExpr(*(fExpr.arguments[i]))->data);
+                resultPtr = VisitExpr(*(fExpr.arguments[i]));
+                argVals.push_back(resultPtr->data);
+                isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
             }
         } else {
-            argVals.push_back(VisitExpr(*(fExpr.arguments[i]))->data);
+            resultPtr = VisitExpr(*(fExpr.arguments[i]));
+            argVals.push_back(resultPtr->data);
+            isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
             if (fExpr.arguments[i]->dataType == DataType::STRINGD && fExpr.funcName != fr->mm3hashStr) {
                 argVals.push_back(this->value->length);
             }
@@ -1094,12 +1215,12 @@ void ExpressionCodeGen::Visit(FuncExpr &fExpr)
     if (f) {
         ret = builder->CreateCall(f, argVals, funcName);
         InlineFunctionInfo inlineFunctionInfo;
-        auto inlinedFunction = llvm::InlineFunction(*((CallInst*)ret), inlineFunctionInfo);
+        auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
         outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
     } else {
         std::cout << "Unable to parse function " << funcName.c_str() << std::endl;
     }
-    this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), outputLen);
+    this->value = make_shared<CodeGenValue>(ret, isAnyNull, outputLen);
 }
 
 void ExpressionCodeGen::OptimizeFunctionsAndModule()
@@ -1131,4 +1252,3 @@ void ExpressionCodeGen::OptimizeFunctionsAndModule()
         fpm->run(F);
     mpm.run(*module);
 }
-

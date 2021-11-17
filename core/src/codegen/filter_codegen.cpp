@@ -22,6 +22,7 @@ namespace {
     const int ROW_FILTER_ROW_IDX_INDEX = 3;
     const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
     const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
+    const int ROW_FILTER_IS_NULL_INDEX = 6;
 }
 
 int64_t FilterCodeGen::GetFunction()
@@ -73,7 +74,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     Value *one = this->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, length*, execution_context_ptr, dictionary_vectors*
+    // value*, bitmap*, offset*, rowIdx, length*, execution_context_ptr, dictionary_vectors*, isNull
     int32_t argsSize = 8;
     filterFuncArgs.reserve(argsSize);
 
@@ -99,10 +100,9 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     // Temp value for next selected index.
     Value *nextSelectedIndexVal;
 
-    // Create a boolean pointer to store result null value
-    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
     // Create a int pointer to store data length
     AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
+    auto isNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_NULL_PTR");
 
     builder->CreateBr(loopBody);
     // loop body
@@ -110,17 +110,17 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
 
-    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
     builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
+    builder->CreateStore(CreateConstantBool(false), isNullPtr);
 
     filterFuncArgs.push_back(data);
     filterFuncArgs.push_back(bitmap);
     filterFuncArgs.push_back(offsets);
     filterFuncArgs.push_back(curIndexVal);
-    filterFuncArgs.push_back(isResultNullStore);
     filterFuncArgs.push_back(lengthAllocaInst);
     filterFuncArgs.push_back(executionContext);
     filterFuncArgs.push_back(dictionaryVectors);
+    filterFuncArgs.push_back(isNullPtr);
 
     // Get the boolean response for this row from the filter function.
     ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
@@ -154,6 +154,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     builder->CreateRet(nextSelectedIndexVal);
 
     OptimizeFunctionsAndModule();
+
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
@@ -208,16 +209,14 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(rowIndex);
 
     // Create a boolean pointer to store result null value
-    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
-    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
-    funcArgs.push_back(isResultNullStore);
-
-    // Create a boolean pointer to store result null value
     AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "LENGTH_PTR");
     builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
+    auto isNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_NULL_PTR");
+    builder->CreateStore(CreateConstantBool(false), isNullPtr);
     funcArgs.push_back(lengthAllocaInst);
     funcArgs.push_back(executionContext);
     funcArgs.push_back(dictionaryVectors);
+    funcArgs.push_back(isNullPtr);
 
     builder->CreateRet(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"));
 #ifdef DEBUG
