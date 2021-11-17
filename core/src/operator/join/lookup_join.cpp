@@ -636,6 +636,7 @@ void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const J
         outputTables.push_back(vectorBatch);
     }
 
+    isSequentialProbeIndices = true;
     probeIndex.clear();
     buildIndex.clear();
 }
