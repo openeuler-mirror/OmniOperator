@@ -32,6 +32,8 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
 
     private final long nativeOperatorFactory;
 
+    private OmniOperatorFactoryContext context;
+
     /**
      * Instantiates a new Omni operator factory.
      *
@@ -44,6 +46,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
             } else {
                 nativeOperatorFactory = createNativeOperatorFactory((T) context);
             }
+            this.context = context;
         } catch (ExecutionException e) {
             throw new RuntimeException("Get instance failed.");
         }
@@ -93,4 +96,19 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      * @return the long
      */
     protected abstract long createNativeOperatorFactory(T context);
+
+    /**
+     * release operator factory
+     *
+     */
+    public void close() {
+        if (context.isNeedCache()) {
+            // todo:: when the cache invalidate,need release the native factory
+            FACTORY_CACHE.invalidate(context);
+        } else {
+            closeNativeOperatorFactory(nativeOperatorFactory);
+        }
+    }
+
+    private static native void closeNativeOperatorFactory(long nativeOperatorFactory);
 }

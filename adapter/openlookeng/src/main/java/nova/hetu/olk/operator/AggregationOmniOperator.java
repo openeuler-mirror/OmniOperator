@@ -108,6 +108,11 @@ public class AggregationOmniOperator implements Operator {
         return state == State.FINISHED;
     }
 
+    @Override
+    public void close() {
+        omniOperator.close();
+    }
+
     private enum State {
         /**
          * Needs input state.

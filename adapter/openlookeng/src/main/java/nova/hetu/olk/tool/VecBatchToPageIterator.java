@@ -80,6 +80,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
                 blocks[i] = new DictionaryOmniBlock(dictionaryVec, false, randomDictionaryId());
             }
         }
+        vecBatch.close();
         return new Page(positionCount, blocks);
     }
 

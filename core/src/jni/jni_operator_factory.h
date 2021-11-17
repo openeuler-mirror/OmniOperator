@@ -281,6 +281,14 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc,
     jintArray jSortNullFirsts);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory
+ * Method:    closeNativeOperatorFactory
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_closeNativeOperatorFactory
+        (JNIEnv *, jclass, jlong);
+
 #ifdef __cplusplus
 }
 #endif

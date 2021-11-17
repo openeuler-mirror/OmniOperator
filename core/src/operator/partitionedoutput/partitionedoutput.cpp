@@ -47,7 +47,13 @@ PartitionedOutputOperatorFactory::PartitionedOutputOperatorFactory(const VecType
     }
 }
 
-PartitionedOutputOperatorFactory::~PartitionedOutputOperatorFactory() {}
+PartitionedOutputOperatorFactory::~PartitionedOutputOperatorFactory()
+{
+    delete[] partitionChannels;
+    delete[] bucketToPartition;
+    delete[] hashChannelTypes;
+    delete[] hashChannels;
+}
 
 PartitionedOutputOperatorFactory *PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
     const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow, int32_t nullChannel,
@@ -92,15 +98,7 @@ PartitionedOutputOperator::PartitionedOutputOperator(const VecTypes &sourceTypes
       hashChannelsCount(hashChannelsCount)
 {}
 
-PartitionedOutputOperator::~PartitionedOutputOperator()
-{
-    delete[] partitionChannels;
-    delete[] bucketToPartition;
-    delete[] hashChannelTypes;
-    delete[] hashChannels;
-
-    VectorHelper::FreeVecBatches(vectorBatches);
-}
+PartitionedOutputOperator::~PartitionedOutputOperator() {}
 
 void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
     int32_t currentRowIndex)
