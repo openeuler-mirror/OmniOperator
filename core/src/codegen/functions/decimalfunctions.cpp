@@ -4,10 +4,8 @@
  */
 
 
+#include "context_helper.h"
 #include "decimalfunctions.h"
-#include <vector>
-#include <memory>
-#include <mutex>
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -17,14 +15,7 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-mutex g_codegenMutex;
-
-vector<int64_t*>& GetArraysToFree()
-{
-    static vector<int64_t*> decimalArraysToFree;
-    return decimalArraysToFree;
-}
-
+__attribute__((always_inline))
 extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
 {
     auto *l = reinterpret_cast<int64_t*>(x);
@@ -40,8 +31,8 @@ extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
     }
     return 0;
 }
-
-extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y)
+__attribute__((always_inline))
+extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -51,18 +42,16 @@ extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y)
 
     lValue += rValue;
 
-    auto result = new int64_t[length];
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_codegenMutex.lock();
-    GetArraysToFree().push_back(result);
-    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y)
+__attribute__((always_inline))
+extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -72,18 +61,16 @@ extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y)
 
     lValue -= rValue;
 
-    auto result = new int64_t[length];
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_codegenMutex.lock();
-    GetArraysToFree().push_back(result);
-    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y)
+__attribute__((always_inline))
+extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -93,18 +80,16 @@ extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y)
 
     lValue /= rValue;
 
-    auto result = new int64_t[length];
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_codegenMutex.lock();
-    GetArraysToFree().push_back(result);
-    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y)
+__attribute__((always_inline))
+extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -114,44 +99,26 @@ extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y)
 
     lValue *= rValue;
 
-    auto result = new int64_t[length];
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
 
     result[0] = lValue.LowBits();
     result[1] = lValue.HighBits();
 
-    g_codegenMutex.lock();
-    GetArraysToFree().push_back(result);
-    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x)
+__attribute__((always_inline))
+extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr)
 {
     int32_t length = 2;
     auto *valueAdd = reinterpret_cast<int64_t*>(x);
     Decimal128 value(*(valueAdd + 1), *valueAdd);
 
     value.Abs();
-
-    auto result = new int64_t[length];
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
 
     result[0] = value.LowBits();
     result[1] = value.HighBits();
 
-    g_codegenMutex.lock();
-    GetArraysToFree().push_back(result);
-    g_codegenMutex.unlock();
     return reinterpret_cast<int64_t>(result);
-}
-
-
-void FreeDecimalArrays()
-{
-    g_codegenMutex.lock();
-    for (int i = 0; i < GetArraysToFree().size(); i++) {
-        delete[] GetArraysToFree()[i];
-        GetArraysToFree()[i] = nullptr;
-    }
-    GetArraysToFree().clear();
-    g_codegenMutex.unlock();
 }

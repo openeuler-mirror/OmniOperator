@@ -390,7 +390,6 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     }
     int rowCount = this->mutated->GetRowCount();
     data.push_back(this->mutated);
-    FreeDecimalArrays();
     this->mutated = nullptr;
     return rowCount;
 }

@@ -49,6 +49,11 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
 
     Parser parserObject;
     parsedExpr = parserObject.ParseRowExpression(expression, inputVecTypes, inputVecCount);
+#ifdef DEBUG
+    std::cout << "String expression in Filter: " << expression << std::endl;
+    ExprPrinter printExprTree;
+    parsedExpr->Accept(printExprTree);
+#endif
     if (parsedExpr != nullptr) {
         this->isSupportedExpr = true;
 
@@ -181,8 +186,6 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     int rowCount = this->projectedVecs->GetRowCount();
     data.push_back(this->projectedVecs.release());
 
-    // need to cleanup memory in old vecBatches
-    FreeDecimalArrays();
     return rowCount;
 }
 
