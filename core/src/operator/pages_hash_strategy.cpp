@@ -167,6 +167,10 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
         rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
         leftIsNull = leftColumn->IsValueNull(originalLeftRowIndex);
         rightIsNull = rightColumn->IsValueNull(originalRightRowIndex);
+
+        if (leftIsNull && rightIsNull) {
+            continue;
+        }
         if (leftIsNull || rightIsNull) {
             return false;
         }

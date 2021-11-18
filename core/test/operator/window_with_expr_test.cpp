@@ -522,8 +522,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
-    int64_t expectData4[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
-    int64_t expectData5[DATA_SIZE] = {1, 2, 1, 1, 1, 1};
+    int64_t expectData4[DATA_SIZE] = {1, 1, 1, 1, 1, 2};
+    int64_t expectData5[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
     expectVecBatch->GetVector(0)->SetValueNull(4);
