@@ -5,6 +5,7 @@
 
 #include "dictionaryfunctions.h"
 #include "../../vector/dictionary_vector.h"
+#include "context_helper.h"
 
 using namespace omniruntime::vec;
 using namespace std;
@@ -41,4 +42,15 @@ extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(
     int32_t length = dictionaryVectorPtr->GetVarchar(index, &result);
     *lengthPtr = length;
     return result;
+}
+
+__attribute__((always_inline))
+extern "C" DLLEXPORT int64_t GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index,
+                                                            int64_t contextPtr) {
+    auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
+    Decimal128 value = dictionaryVectorPtr->GetDecimal128(index);
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
+    result[0] = value.LowBits();
+    result[1] = value.HighBits();
+    return reinterpret_cast<int64_t>(result);
 }

@@ -377,7 +377,7 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(omniruntime::expressions::Opera
 Value *ExpressionCodeGen::BinaryExprDecimalHelper(
     omniruntime::expressions::Operator op, Value *left, Value *right)
 {
-    std::vector<Value*> argVals {left, right};
+    std::vector<Value*> argVals {left, right, this->codegenContext->executionContext};
 
     switch (op) {
         case LT:
@@ -638,9 +638,11 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(
             break;
         // need to handle decimal properly in the future
         case omniruntime::expressions::DECIMAL64D:
-        case omniruntime::expressions::DECIMAL128D:
         case omniruntime::expressions::INT64D:
             dictionaryFunc = module->getFunction(fr->dictionaryGetLongStr);
+            break;
+        case omniruntime::expressions::DECIMAL128D:
+            dictionaryFunc = module->getFunction(fr->dictionaryGetDecimalStr);
             break;
         case omniruntime::expressions::DOUBLED:
             dictionaryFunc = module->getFunction(fr->dictionaryGetDoubleStr);
@@ -663,6 +665,8 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(
         lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "varchar_length");
         builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
         funcArgs.push_back(lengthAllocaInst);
+    } else if (vectorType == DataType::DECIMAL128D) {
+        funcArgs.push_back(this->codegenContext->executionContext);
     }
 
     return builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
@@ -1107,6 +1111,9 @@ void ExpressionCodeGen::Visit(FuncExpr &fExpr)
     if (fExpr.GetExprDataType() == DataType::STRINGD) {
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         argVals.push_back(outputLenPtr);
+        argVals.push_back(this->codegenContext->executionContext);
+    }
+    if (fExpr.GetExprDataType() == DataType::DECIMAL128D && fExpr.funcName != fr->decimal128CompareExtStr) {
         argVals.push_back(this->codegenContext->executionContext);
     }
     auto f = module->getFunction(funcName);

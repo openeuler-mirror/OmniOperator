@@ -131,7 +131,7 @@ void FunctionRegistry::RegisterAbsFunctions(const std::string& fn)
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, absDoubleSig));
     }
     if (type == decimal128Str) {
-        vector<DataType> absDecimal128Types {DataType::INT64D};
+        vector<DataType> absDecimal128Types {DataType::INT64D, DataType::INT64D};
         FunctionSignature absDecimal128Sig (fn, absDecimal128Types, DataType::INT64D,
                                        reinterpret_cast<void *>(AbsDecimal128));
         this->RegisterFunctionFromSignature(absDecimal128Sig);
@@ -230,9 +230,9 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 void FunctionRegistry::RegisterDecimalFuncs()
 {
     // Decimal comparison operators
-    vector<DataType> decimalExtTypes {DataType::INT64D, DataType::INT64D};
-    FunctionSignature decimalCompareExtSig(decimal128CompareExtStr, decimalExtTypes, DataType::INT32D,
-                                           reinterpret_cast<void *>(Decimal128CompareExt));
+    vector<DataType> decimalExtTypes {DataType::INT64D, DataType::INT64D, DataType::INT64D};
+    FunctionSignature decimalCompareExtSig(decimal128CompareExtStr, {DataType::INT64D, DataType::INT64D},
+                                           DataType::INT32D, reinterpret_cast<void *>(Decimal128CompareExt));
     this->RegisterFunctionFromSignature(decimalCompareExtSig);
     funcNameToSignatureMap.insert(pair<string, FunctionSignature>(decimal128CompareExtStr, decimalCompareExtSig));
 
@@ -323,6 +323,12 @@ void FunctionRegistry::RegisterDictionaryFuncs()
                                        reinterpret_cast<void *>(GetVarcharFromDictionaryVector));
     this->RegisterFunctionFromSignature(dictionaryGetVarcharSig);
     funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetVarcharStr, dictionaryGetVarcharSig));
+
+    FunctionSignature dictionaryGetDecimalSig(dictionaryGetDecimalStr, {
+        DataType::INT64D, DataType::INT32D, DataType::INT64D
+        }, DataType::INT64D, reinterpret_cast<void *>(GetDecimalFromDictionaryVector));
+    this->RegisterFunctionFromSignature(dictionaryGetDecimalSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(dictionaryGetDecimalStr, dictionaryGetDecimalSig));
 }
 
 void FunctionRegistry::RegisterCombineHashFunctions()

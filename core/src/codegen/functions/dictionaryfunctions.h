@@ -24,4 +24,7 @@ extern "C" DLLEXPORT bool GetBooleanFromDictionaryVector(int64_t dictionaryVecto
 
 extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t *lengthPtr);
 
+extern "C" DLLEXPORT int64_t GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index,
+                                                            int64_t contextPtr);
+
 #endif //OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

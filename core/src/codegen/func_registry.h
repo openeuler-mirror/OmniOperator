@@ -85,5 +85,6 @@ public:
     const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";
     const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
     const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
+    const std::string dictionaryGetDecimalStr = "DictionaryGetDecimal";
 };
 #endif
