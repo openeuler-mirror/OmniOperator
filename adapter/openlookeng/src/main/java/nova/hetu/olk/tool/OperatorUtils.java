@@ -180,8 +180,8 @@ public final class OperatorUtils {
                     vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_VARCHAR:
-                    // FIXME: now the width is hardcode to 100, we should support to get the width from type
-                    vecsResult.add(new VarcharVec(vecAllocator, totalPositions * 100, totalPositions));
+                    vecsResult.add(new VarcharVec(vecAllocator,
+                            totalPositions * ((VarcharVecType) type).getWidth(), totalPositions));
                     break;
                 case OMNI_VEC_TYPE_DECIMAL128:
                     vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
