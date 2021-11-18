@@ -268,14 +268,14 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const VecT
         newInputVecBatch->SetVector(i, newInputVec);
 
         if (newInputVec->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
-            valueAddresses[i] = reinterpret_cast<int64_t>(newInputVec->GetValues());
+            valueAddresses[i] = VectorHelper::GetValuesAddr(newInputVec);
             dictVectorAddrs[i] = 0;
         } else {
             valueAddresses[i] = 0;
-            dictVectorAddrs[i] = reinterpret_cast<int64_t>(newInputVec);
+            dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(newInputVec));
         }
-        valueNulls[i] = reinterpret_cast<int64_t>(newInputVec->GetValueNulls());
-        valueOffsets[i] = reinterpret_cast<int64_t>(newInputVec->GetValueOffsets());
+        valueNulls[i] = VectorHelper::GetNullsAddr(newInputVec);
+        valueOffsets[i] = VectorHelper::GetOffsetsAddr(newInputVec);
     }
 
     ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
@@ -313,14 +313,14 @@ VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, co
     for (int32_t i = 0; i < originVecCount; i++) {
         Vector *inputVector = inputVecBatch->GetVector(i);
         if (inputVector->GetTypeId() != OMNI_VEC_TYPE_DICTIONARY) {
-            valueAddresses[i] = reinterpret_cast<int64_t>(inputVector->GetValues());
+            valueAddresses[i] = VectorHelper::GetValuesAddr(inputVector);
             dictVectorAddrs[i] = 0;
         } else {
             valueAddresses[i] = 0;
-            dictVectorAddrs[i] = reinterpret_cast<int64_t>(inputVector);
+            dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(inputVector));
         }
-        valueNulls[i] = reinterpret_cast<int64_t>(inputVector->GetValueNulls());
-        valueOffsets[i] = reinterpret_cast<int64_t>(inputVector->GetValueOffsets());
+        valueNulls[i] = VectorHelper::GetNullsAddr(inputVector);
+        valueOffsets[i] = VectorHelper::GetOffsetsAddr(inputVector);
     }
 
     ProjectRequiredVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets,

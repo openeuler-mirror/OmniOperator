@@ -1878,11 +1878,49 @@ TEST(CodeGenTest, ProjectionCodeGen)
     delete context;
 }
 
+TEST(CodeGenTest, TestRowProjectLong)
+{
+    int64_t values[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    omniruntime::vec::LongVector * vector = CreateVector<LongVector>(values, 10);
+    auto slicedVector = vector->Slice(4, 6);
+
+    std::string expr = "$operator$ADD:long(#0, 100)";
+    std::vector<DataType> types;
+    types.push_back(DataType::INT64D);
+    RowProjection rowProjection(expr, types);
+    RowProjFunc func = rowProjection.Create(types);
+
+    int32_t positionOffset = slicedVector->GetPositionOffset();
+    int64_t *valueAddress = (int64_t *)(slicedVector->GetValues()) + positionOffset;
+    bool *nullAddress = (bool *)(slicedVector->GetValueNulls()) + positionOffset;
+    int32_t *offsetAddress = (int32_t *)(slicedVector->GetValueOffsets()) + positionOffset;
+
+    int64_t valuesAddr[1] = {(int64_t)(valueAddress)};
+    int64_t nullsAddr[1] = {(int64_t)(nullAddress)};
+    int64_t offsetsAddr[1] = {(int64_t)(offsetAddress)};
+    bool isNull;
+    int32_t length;
+    int64_t dictVecAddr[1] = {0};
+    auto context = new ExecutionContext();
+    for (int32_t i = 0; i < slicedVector->GetSize(); i++) {
+        void *valuePtr = func(valuesAddr, nullsAddr, offsetsAddr, i, &isNull, &length, reinterpret_cast<int64_t>(context), dictVecAddr);
+        int64_t value = *((int64_t *)valuePtr);
+        int64_t inputValue = slicedVector->GetValue(i);
+        EXPECT_EQ(value, inputValue + 100);
+    }
+    context->getArena()->Reset();
+
+    delete slicedVector;
+    delete vector;
+    delete context;
+}
+
 TEST(CodeGenTest, TestRowProjectVarchar)
 {
     omniruntime::vec::VarcharVecType type(10);
     std::string values[2] = {"hello", "world"};
     omniruntime::vec::VarcharVector *vector = CreateVarcharVector(type, values, 2);
+    auto slicedVector = vector->Slice(1, 1);
 
     std::string expr = "substr:varchar(#0, 1, 5)";
     std::vector<DataType> types;
@@ -1890,21 +1928,31 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     RowProjection rowProjection(expr, types);
     RowProjFunc func = rowProjection.Create(types);
 
-    int64_t valuesAddr[1] = {(int64_t)(vector->GetValues())};
-    int64_t valueNulls[1] = {(int64_t)(vector->GetValueNulls())};
-    int64_t valueOffsets[1] = {(int64_t)(vector->GetValueOffsets())};
+    int32_t positionOffset = slicedVector->GetPositionOffset();
+    uint8_t *valueAddress = (uint8_t *)(slicedVector->GetValues());
+    bool *nullAddress = (bool *)(slicedVector->GetValueNulls()) + positionOffset;
+    int32_t *offsetAddress = (int32_t *)(slicedVector->GetValueOffsets()) + positionOffset;
+
+    int64_t valuesAddr[1] = {(int64_t)(valueAddress)};
+    int64_t valueNulls[1] = {(int64_t)(nullAddress)};
+    int64_t valueOffsets[1] = {(int64_t)(offsetAddress)};
     bool isNull;
     int32_t length;
     int64_t dictionaries[1] = {};
     auto context = new ExecutionContext();
-    for (int32_t i = 0; i < vector->GetSize(); i++) {
+    for (int32_t i = 0; i < slicedVector->GetSize(); i++) {
         void *valuePtr = func(valuesAddr, valueNulls, valueOffsets, i, &isNull, &length, reinterpret_cast<int64_t>(context), dictionaries);
         uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
         std::string result(value, value + length);
-        EXPECT_EQ(result, values[i]);
+
+        uint8_t *expectValue = nullptr;
+        int32_t expectLen = slicedVector->GetValue(i, &expectValue);
+        std::string expectResult(expectValue, expectValue + expectLen);
+        EXPECT_EQ(result, expectResult.substr(0, 5));
     }
     context->getArena()->Reset();
 
+    delete slicedVector;
     delete vector;
     delete context;
 }

@@ -2016,3 +2016,131 @@ TEST(FilterTest, FilterStringWithNull) {
     delete op;
     delete factory;
 }
+
+TEST(FilterTest, TestFilterSlicedDictionaryVec) {
+    const int32_t numCols = 3;
+    int32_t inputTypeIds[] = {1, 1, 1};
+
+    const int32_t numRows = 10;
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, numRows);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+        col3->SetValue(i, (i % 21) - 3);
+    }
+    int32_t ids[]= {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
+    delete col3;
+    auto slicedCol1 = col1->Slice(5, 5);
+    auto slicedCol2 = col2->Slice(5, 5);
+    auto slicedCol3 = dictionaryVector->Slice(5, 5);
+    delete col1;
+    delete col2;
+    delete dictionaryVector;
+
+    const int32_t projectCount = 3;
+    std::string projections[projectCount] = {"#0", "#1", "#2"};
+    VectorBatch *intput = new VectorBatch(numCols, slicedCol1->GetSize());
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    intput->NewVectors(vecAllocator, inputTypes);
+    intput->SetVector(0, slicedCol1);
+    intput->SetVector(1, slicedCol2);
+    intput->SetVector(2, slicedCol3);
+
+    std::string expr = "BETWEEN(#1, #0, #2)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
+                                                                   inputTypeIds,
+                                                                   numCols,
+                                                                   projections,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(intput);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 2);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, slicedCol1->GetValue(i));
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, slicedCol2->GetValue(i));
+        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, slicedCol3->GetInt(i));
+    }
+
+    VectorHelper::FreeVecBatch(intput);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull) {
+    const int32_t numCols = 3;
+    int32_t inputTypeIds[] = {1, 1, 1};
+
+    const int32_t numRows = 10;
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, numRows);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            col3->SetValueNull(i);
+        } else {
+            col3->SetValue(i, (i % 21) - 3);
+        }
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+    }
+    int32_t ids[]= {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
+    delete col3;
+    auto slicedCol1 = col1->Slice(4, 6);
+    auto slicedCol2 = col2->Slice(4, 6);
+    auto slicedCol3 = dictionaryVector->Slice(4, 6);
+    delete col1;
+    delete col2;
+    delete dictionaryVector;
+
+    const int32_t projectCount = 3;
+    std::string projections[projectCount] = {"#0", "#1", "#2"};
+    VectorBatch *intput = new VectorBatch(numCols, slicedCol1->GetSize());
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    intput->NewVectors(vecAllocator, inputTypes);
+    intput->SetVector(0, slicedCol1);
+    intput->SetVector(1, slicedCol2);
+    intput->SetVector(2, slicedCol3);
+
+    std::string expr = "$operator$EQUAL:boolean(#2, 6)";
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
+                                                                   inputTypeIds,
+                                                                   numCols,
+                                                                   projections,
+                                                                   projectCount);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    op->AddInput(intput);
+    std::vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    EXPECT_EQ(numReturned, 4);
+    for (int i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, slicedCol1->GetValue(i + 2));
+        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, slicedCol2->GetValue(i + 2));
+        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, slicedCol3->GetInt(i + 2));
+    }
+
+    VectorHelper::FreeVecBatch(intput);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
