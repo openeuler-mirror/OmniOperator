@@ -21,6 +21,8 @@ import java.util.Objects;
  * @since 20210630
  */
 public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectOperatorFactory.FactoryContext> {
+    private boolean isSupported;
+
     /**
      * Instantiates a new Omni project operator factory.
      *
@@ -40,8 +42,16 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
+        long factoryAddr = createProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
             context.expressions, context.expressions.length, factoryContext.getNativeJitContext());
+        if (factoryAddr != 0) {
+            isSupported = true;
+        }
+        return factoryAddr;
+    }
+
+    public boolean isSupported() {
+        return isSupported;
     }
 
     /**

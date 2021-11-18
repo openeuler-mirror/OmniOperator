@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
  */
 public class OmniFilterAndProjectOperatorFactory
     extends OmniOperatorFactory<OmniFilterAndProjectOperatorFactory.FactoryContext> {
+    private boolean isSupported;
+
     /**
      * Instantiates a new Omni filter and project operator factory.
      *
@@ -45,9 +47,17 @@ public class OmniFilterAndProjectOperatorFactory
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         // long nativeOperatorFactory is 0 if operations/data-types are unsupported
         JitContext context = factoryContext.getJitContext();
-        return createFilterAndProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes),
+        long factoryAddr = createFilterAndProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes),
             context.inputTypes.length, context.expression, context.projections.toArray(), context.projections.size(),
             factoryContext.getNativeJitContext());
+        if (factoryAddr != 0) {
+            isSupported = true;
+        }
+        return factoryAddr;
+    }
+
+    public boolean isSupported() {
+        return isSupported;
     }
 
     /**

@@ -698,17 +698,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             if (columns != null) {
                 // TODO: Need Support RecordCursor Filter And Project Omni Codegen
-
-                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler(metadata,
-                    pageFunctionCompiler);
-                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor(
-                    translatedFilter, translatedProjections, inputTypes, context.getTaskId());
-                OmniPageProcessor omniPageProcessor = oPageProcessor.get();
-                OmniOperatorFactory omniOperatorFactory = omniPageProcessor.getProjection().getFactory();
-                if (omniOperatorFactory.getNativeOperatorFactory() == 0) {
-                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
-                }
-
                 boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
                 int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024
                     * 1024; // convert from MB to bytes
@@ -716,6 +705,10 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
                     translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
                     inputTypes, context.getTaskId());
+                if (pageProcessor == null) {
+                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
+                }
+
                 Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(translatedFilter,
                     translatedProjections, sourceNode.getId());
                 SourceOperatorFactory operatorFactory
@@ -732,19 +725,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         ? GROUPED_EXECUTION
                         : UNGROUPED_EXECUTION);
             } else {
-                OmniExpressionCompiler omniExpressionCompiler = new OmniExpressionCompiler(metadata,
-                    pageFunctionCompiler);
-                Supplier<OmniPageProcessor> oPageProcessor = omniExpressionCompiler.getOmniPageProcessor(
-                    translatedFilter, translatedProjections, inputTypes, context.getTaskId());
-                OmniPageProcessor omniPageProcessor = oPageProcessor.get();
-                OmniOperatorFactory omniOperatorFactory = omniPageProcessor.getProjection().getFactory();
-                if (omniOperatorFactory.getNativeOperatorFactory() == 0) {
-                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
-                }
-
                 Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
                     translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
                     inputTypes, context.getTaskId());
+                if (pageProcessor == null) {
+                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
+                }
+
                 OperatorFactory operatorFactory = new FilterAndProjectOmniOperator.FilterAndProjectOmniOperatorFactory(
                     context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
                     getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session), session);
