@@ -1875,3 +1875,12 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     return (int64_t)topNWithExprOperatorFactory;
 }
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_closeNativeOperatorFactory
+        (JNIEnv *env, jclass jclz, jlong jNativeOperatorFactory)
+{
+    OperatorFactory *nativeOperatorFactory = reinterpret_cast<OperatorFactory *>(jNativeOperatorFactory);
+    if (nativeOperatorFactory != nullptr) {
+        delete nativeOperatorFactory;
+    }
+}

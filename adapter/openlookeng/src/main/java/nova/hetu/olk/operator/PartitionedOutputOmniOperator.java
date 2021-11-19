@@ -130,6 +130,11 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
         return finished && isBlocked().isDone();
     }
 
+    @Override
+    public void close() {
+        omniOperator.close();
+    }
+
     /**
      * get PartitionedOutputInfo
      *
