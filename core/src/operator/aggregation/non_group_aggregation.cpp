@@ -109,7 +109,7 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
     }
 }
 
-void ALWAYS_INLINE FillNormalAggregate(Vector* vector, GroupBySlot& state)
+static void ALWAYS_INLINE FillNormalAggregate(Vector* vector, GroupBySlot& state)
 {
     switch (vector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:

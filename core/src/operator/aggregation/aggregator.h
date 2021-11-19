@@ -126,7 +126,7 @@ using ProcessNonGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int
 using InsertFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 using InitiateFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-using AggFunctionByType = struct {
+using AggFunctionByType = struct AggFunctionByType {
     VecTypeId typeId;
     InsertFunc insertFunc;
     ProcessGroupFunc processGroupFunc;
@@ -235,45 +235,6 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, VecType type) override {}
-    static constexpr AggFunctionByType SUM_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
-        {   OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_INT, SumInsertImpl<IntVector, int64_t>, SumProcessGroupImpl<IntVector, int64_t>,
-            SumInitiateImpl<IntVector, int64_t>, SumProcessNonGroupImpl<IntVector, int64_t>
-        },
-        {
-            OMNI_VEC_TYPE_LONG, SumInsertImpl<LongVector, int64_t>, SumProcessGroupImpl<LongVector, int64_t>,
-            SumInitiateImpl<LongVector, int64_t>, SumProcessNonGroupImpl<LongVector, int64_t>
-        },
-        {
-            OMNI_VEC_TYPE_DOUBLE, SumInsertImpl<DoubleVector, double>, SumProcessGroupImpl<DoubleVector, double>,
-            SumInitiateImpl<DoubleVector, double>, SumProcessNonGroupImpl<DoubleVector, double>
-        },
-        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_DECIMAL64, SumInsertDecimalImpl, SumProcessGroupDecimalImpl,
-            SumInitiateDecimalImpl, SumProcessNonGroupDecimalImpl
-        },
-        {
-            OMNI_VEC_TYPE_DECIMAL128, SumInsertImpl<Decimal128Vector, Decimal128>,
-            SumProcessGroupImpl<Decimal128Vector, Decimal128>, SumInitiateImpl<Decimal128Vector, Decimal128>,
-            SumProcessNonGroupImpl<Decimal128Vector, Decimal128>
-        },
-        {
-            OMNI_VEC_TYPE_DATE32, SumInsertImpl<IntVector, int32_t>, SumProcessGroupImpl<IntVector, int32_t>,
-            SumInitiateImpl<IntVector, int32_t>, SumProcessNonGroupImpl<IntVector, int32_t>
-        },
-        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_VARCHAR, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_DICTIONARY, SumInsertDictionaryImpl, SumProcessGroupDictionaryImpl, nullptr, nullptr},
-        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
-    };
 };
 
 class AverageAggregator : public Aggregator {
@@ -291,45 +252,6 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, VecType type) override {}
-    static constexpr AggFunctionByType AVG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
-        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_INT, AvgInsertImpl<IntVector, double>, AvgProcessGroupImpl<IntVector, double>,
-            AvgInitiateImpl<IntVector, double>, AvgProcessNonGroupImpl<IntVector, double>
-        },
-        {
-            OMNI_VEC_TYPE_LONG, AvgInsertImpl<LongVector, double>, AvgProcessGroupImpl<LongVector, double>,
-            AvgInitiateImpl<LongVector, double>, AvgProcessNonGroupImpl<LongVector, double>
-        },
-        {
-            OMNI_VEC_TYPE_DOUBLE, AvgInsertImpl<DoubleVector, double>, AvgProcessGroupImpl<DoubleVector, double>,
-            AvgInitiateImpl<DoubleVector, double>, AvgProcessNonGroupImpl<DoubleVector, double>
-        },
-        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_DECIMAL64, AvgInsertImpl<LongVector, double>, AvgProcessGroupImpl<LongVector, double>,
-            AvgInitiateImpl<LongVector, double>, AvgProcessNonGroupImpl<LongVector, double>
-        },
-        // TODO support decimal128 average
-        {
-            OMNI_VEC_TYPE_DECIMAL128, nullptr, nullptr,
-            AvgInitiateImpl<Decimal128Vector, Decimal128>, AvgProcessNonGroupImpl<Decimal128Vector, Decimal128>
-        },
-        {
-            OMNI_VEC_TYPE_DATE32, AvgInsertImpl<IntVector, double>, AvgProcessGroupImpl<IntVector, double>,
-            AvgInitiateImpl<IntVector, double>, AvgProcessNonGroupImpl<IntVector, double>
-        },
-        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_VARCHAR, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_DICTIONARY, AvgInsertDictionaryImpl, AvgProcessGroupDictionaryImpl, nullptr, nullptr},
-        {OMNI_VEC_TYPE_CONTAINER, AvgInsertContainerImpl, AvgProcessGroupContainerImpl, nullptr, nullptr},
-    };
 };
 
 class CountAggregator : public Aggregator {

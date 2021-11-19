@@ -84,7 +84,7 @@ void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch,
 }
 
 template <typename T>
-void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
                                                  int32_t position)
 {
     static_cast<T *>(singleRowVecBatch->GetVector(colIndex))->SetValueNull(0, (static_cast<T *>(vector))->IsValueNull(
@@ -93,7 +93,7 @@ void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, 
                                                                        (static_cast<T *>(vector))->GetValue(position));
 }
 
-void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
+static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
                                                 int32_t position)
 {
     VarcharVector *single = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));

@@ -1196,7 +1196,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     perfUtil->Stop();
     long instCount = perfUtil->GetData();
     if (instCount != -1) {
-        printf("HashAgg with OmniJit, used %lld instructions\n", perfUtil->GetData());
+        printf("HashAgg with OmniJit,    used %lld instructions\n", perfUtil->GetData());
     }
 
     timer.calculateElapse();

@@ -50,7 +50,7 @@ ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftI
     return static_cast<V *>(leftVector)->GetValue(leftIndex) == static_cast<V *>(rightVector)->GetValue(rightIndex);
 }
 
-ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
+static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
     int32_t rightIndex)
 {
     double leftValue = static_cast<DoubleVector *>(leftVector)->GetValue(leftIndex);
@@ -62,7 +62,7 @@ ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t
     }
 }
 
-ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
+static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
     int32_t rightIndex)
 {
     uint8_t *leftValue = nullptr;
@@ -82,7 +82,7 @@ ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(Vector *leftVector, int32_
     }
 }
 
-ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex,
+static ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex,
     Vector *rightVector, int32_t rightRowIndex)
 {
     switch (vecType) {
