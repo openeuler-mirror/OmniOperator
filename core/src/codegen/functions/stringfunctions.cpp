@@ -30,7 +30,6 @@ namespace {
     const int ONE = 3;
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {
     int min = bpLen;
@@ -46,7 +45,6 @@ extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const 
     }
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
 {
     string s = string(str, strLen);
@@ -59,7 +57,6 @@ extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *r
     return regex_match(s, re);
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT const char *SubstrWithStartExt(const char *str, int32_t strLen, int32_t startIdx,
                                                     int32_t *outLen, int64_t contextPtr)
 {
@@ -85,7 +82,6 @@ extern "C" DLLEXPORT const char *SubstrWithStartExt(const char *str, int32_t str
     return ret;
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT const char *SubstrExt(const char *str, int32_t strLen, int32_t startIdx, int32_t length,
                                            int32_t *outLen, int64_t contextPtr)
 {
@@ -123,7 +119,6 @@ extern "C" DLLEXPORT const char *SubstrExt(const char *str, int32_t strLen, int3
     return ret;
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
                                               int32_t *outLen, int64_t contextPtr)
 {
@@ -142,8 +137,7 @@ extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, con
     return ret;
 }
 
-__attribute__((always_inline))
-extern "C" DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
+extern "C" DLLEXPORT  int32_t CastString(const char *str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings

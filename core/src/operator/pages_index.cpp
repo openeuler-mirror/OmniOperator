@@ -92,7 +92,7 @@ int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
     return 0;
 }
 
-int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
+static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
     Vector **columns, int32_t leftPosition, int32_t rightPosition, CompareFunc compareFunc)
 {
     int64_t leftValueAddress = valueAddresses[leftPosition];

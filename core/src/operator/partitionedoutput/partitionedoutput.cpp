@@ -6,6 +6,7 @@
 #include <map>
 #include "../util/operator_util.h"
 #include "../../vector/vector_helper.h"
+#include "../hash_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -100,7 +101,7 @@ PartitionedOutputOperator::PartitionedOutputOperator(const VecTypes &sourceTypes
 
 PartitionedOutputOperator::~PartitionedOutputOperator() {}
 
-void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
+static void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
     int32_t currentRowIndex)
 {
     ContainerVector *containerVec = static_cast<ContainerVector *>(origintVector);
@@ -115,7 +116,7 @@ void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex
     static_cast<LongVector *>(currentAvgCountVector)->SetValue(currentRowIndex, longValue);
 }
 
-void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
+static void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
     int32_t currentRowIndex)
 {
     uint8_t *value = nullptr;
@@ -123,7 +124,7 @@ void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, 
     static_cast<VarcharVector *>(currentVector)->SetValue(currentRowIndex, value, length);
 }
 
-void ALWAYS_INLINE Insert(Vector *origintVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex)
+static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *currentVector, int32_t currentRowIndex)
 {
     switch (origintVector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:

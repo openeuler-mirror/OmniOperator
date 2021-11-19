@@ -120,7 +120,7 @@ function(compile_ir SOURCE_FILE)
 
     # compile ir
     set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${COMPILE_OPTION} ${SOURCE_FILE} "-I/usr/lib/llvm-12/include")
+    execute_process(COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${SOURCE_FILE} "-I/usr/lib/llvm-12/include")
 
     # install ir
     install(FILES ${PROJECT_BINARY_DIR}/${SOURCE_NAME}.ll DESTINATION ${CMAKE_INSTALL_PREFIX}/ir)

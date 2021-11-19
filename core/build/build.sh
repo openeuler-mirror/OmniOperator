@@ -2,15 +2,23 @@
 
 # clean environment
 if [[ -z $OMNI_HOME ]]; then
-  lib_home=/opt/lib
-else
-  lib_home=/$OMNI_HOME/lib
+  echo "OMNI_HOME is empty"
+  OMNI_HOME=/opt
 fi
+
+lib_home=$OMNI_HOME/lib
+[ ! -d "lib_home" ] && echo mkdir -p $lib_home
+
+echo "lib_home = $lib_home, LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+
 rm -rf libomni_runtime.so $lib_home/libomni_vector.so $lib_home/libsecurec.so $lib_home/externalfunctions.so $lib_home/ir
 echo "-- Enter" $(dirname $(readlink -f $0))
 cd $(dirname $(readlink -f $0))
 rm -rf `ls | grep -v "build.sh"`
 
+print_gcc_lib() {
+  gcc -print-search-dirs | sed '/^lib/b 1;d;:1;s,/[^/.][^/]*/\.\./,/,;t 1;s,:[^=]*=,:;,;s,;,;  ,g' | tr \; \\012
+}
 #append_options
 append_options()
 {
@@ -56,9 +64,11 @@ if [ $# != 0 ] ; then
       options="$options -DDISABLE_JIT=ON"
     fi
   fi
+  print_gcc_lib
   cmake ../ $options
 else
   echo "-- Enable Release"
+  print_gcc_lib
   cmake ../ -DCMAKE_BUILD_TYPE=Release
 fi
 make clean

@@ -15,7 +15,6 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
 {
     auto *l = reinterpret_cast<int64_t*>(x);
@@ -31,7 +30,6 @@ extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
     }
     return 0;
 }
-__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
@@ -50,7 +48,6 @@ extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
@@ -69,7 +66,6 @@ extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
@@ -88,7 +84,6 @@ extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr)
 {
     int32_t length = 2;
@@ -107,7 +102,6 @@ extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-__attribute__((always_inline))
 extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr)
 {
     int32_t length = 2;
