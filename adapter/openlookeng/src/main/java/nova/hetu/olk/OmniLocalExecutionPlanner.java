@@ -193,6 +193,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -461,7 +463,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         PlanNode plan, List<Symbol> outputLayout, TypeProvider types, List<PlanNodeId> partitionedSourceOrder,
         List<PageProducer> outputStreams, OutputFactory outputOperatorFactory) {
         Session session = taskContext.getSession();
-        LocalExecutionPlanContext context = new LocalExecutionPlanContext(taskContext, types, metadata,
+        LocalExecutionPlanContext context = new OmniLocalExecutionPlanContext(taskContext, types, metadata,
             dynamicFilterCacheManager);
 
         PhysicalOperation physicalOperation;
@@ -696,18 +698,18 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 .map(expression -> toRowExpression(expression, expressionTypes, sourceLayout))
                 .collect(toImmutableList());
 
+            Supplier<PageProcessor> pageProcessor = ((OmniExpressionCompiler) expressionCompiler).compilePageProcessor(
+                    translatedFilter, translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
+                    OptionalInt.empty(), inputTypes, context.getTaskId(), (OmniLocalExecutionPlanContext) context);
+            if (pageProcessor == null) {
+                throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
+            }
+
             if (columns != null) {
                 // TODO: Need Support RecordCursor Filter And Project Omni Codegen
                 boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
                 int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024
                     * 1024; // convert from MB to bytes
-
-                Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
-                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
-                    inputTypes, context.getTaskId());
-                if (pageProcessor == null) {
-                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
-                }
 
                 Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(translatedFilter,
                     translatedProjections, sourceNode.getId());
@@ -725,13 +727,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         ? GROUPED_EXECUTION
                         : UNGROUPED_EXECUTION);
             } else {
-                Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter,
-                    translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(),
-                    inputTypes, context.getTaskId());
-                if (pageProcessor == null) {
-                    throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
-                }
-
                 OperatorFactory operatorFactory = new FilterAndProjectOmniOperator.FilterAndProjectOmniOperatorFactory(
                     context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
                     getFilterAndProjectMinOutputPageSize(session), getFilterAndProjectMinOutputPageRowCount(session), session);
@@ -1490,6 +1485,28 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 return lookupJoinOperators.fullOuterJoin(context.getNextOperatorId(), node.getId(), lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel, Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
             default:
                 throw new UnsupportedOperationException("Unsupported join type: " + node.getType());
+        }
+    }
+
+    /**
+     * LocalExecutionPlanContext for OmniRuntime
+     */
+    public static class OmniLocalExecutionPlanContext extends LocalExecutionPlanContext {
+        private final TaskContext taskContext;
+
+        public OmniLocalExecutionPlanContext(TaskContext taskContext, TypeProvider types, Metadata metadata,
+            DynamicFilterCacheManager dynamicFilterCacheManager) {
+            super(taskContext, types, metadata, dynamicFilterCacheManager);
+            this.taskContext = taskContext;
+        }
+
+        /**
+         * Register callback when task finishes
+         *
+         * @param taskFinishHandler callback function when task finishes
+         */
+        public void onTaskFinished(Consumer<Boolean> taskFinishHandler) {
+            taskContext.onTaskFinished(taskFinishHandler);
         }
     }
 }

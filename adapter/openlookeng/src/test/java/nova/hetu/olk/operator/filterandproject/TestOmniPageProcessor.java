@@ -54,7 +54,7 @@ public class TestOmniPageProcessor {
 
         VecAllocator vecAllocator = VecAllocatorFactory.create(TestOmniPageProcessor.class.getName(), null);
         PageProcessor pageProcessor = new OmniPageProcessor(vecAllocator, Optional.of(filter), projection,
-            OptionalInt.empty(), new ExpressionProfiler());
+            OptionalInt.empty(), new ExpressionProfiler(), null);
 
         // if channel 1 is loaded, test will fail
         int ROW_NUM = 20;

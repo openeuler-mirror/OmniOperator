@@ -26,6 +26,8 @@ import io.prestosql.sql.gen.PageFunctionCompiler;
 import io.prestosql.sql.planner.CompilerConfig;
 import io.prestosql.sql.relational.DeterminismEvaluator;
 import io.prestosql.sql.relational.RowExpression;
+import nova.hetu.olk.OmniLocalExecutionPlanner;
+import nova.hetu.olk.OmniLocalExecutionPlanner.OmniLocalExecutionPlanContext;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 
@@ -75,8 +77,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
                 .build(CacheLoader.from(cacheKey -> {
                     RowExpression re = cacheKey.filter.get();
                     PageFieldsToInputParametersRewriter.Result result = rewritePageFieldsToInputParameters(re);
-                    OmniPageFilter omniPageFilter = new OmniPageFilter(re, determinismEvaluator.isDeterministic(re), result.getInputChannels(), cacheKey.inputTypes,
-                            cacheKey.projections);
+                    OmniPageFilter omniPageFilter = new OmniPageFilter(re, determinismEvaluator.isDeterministic(re),
+                        result.getInputChannels(), cacheKey.inputTypes, cacheKey.projections);
                     return omniPageFilter;
                 }));
     }
@@ -96,10 +98,29 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
     public Supplier<PageProcessor> compilePageProcessor(Optional<RowExpression> filter,
             List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
             List<Type> inputTypes, TaskId taskId) {
+        return compilePageProcessor(filter, projections, classNameSuffix, initialBatchSize, inputTypes, taskId, null);
+    }
+
+    /**
+     * Instantiates a new PageProcessor.
+     *
+     * @param filter the row expression filter
+     * @param classNameSuffix (optional) class name suffix used for creating page processor
+     * @param projections the row expression projections
+     * @param inputTypes list of input types
+     * @param initialBatchSize initial batch size
+     * @param taskId the task identifier
+     * @param context LocalExecutionPlan context
+     * @return Supplier<PageProcessor> supplier page processor
+     */
+    public Supplier<PageProcessor> compilePageProcessor(Optional<RowExpression> filter,
+        List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
+        List<Type> inputTypes, TaskId taskId, OmniLocalExecutionPlanContext context) {
         VecAllocator vecAllocator = VecAllocatorFactory.get(taskId.getFullId());
         Optional<PageFilter> pageFilter;
         if (filter.isPresent()) {
-            OmniPageFilter omniPageFilter = filterCache.getUnchecked(new FilterCacheKey(filter, projections, inputTypes));
+            OmniPageFilter omniPageFilter = filterCache.getUnchecked(
+                new FilterCacheKey(filter, projections, inputTypes));
             if (!omniPageFilter.isSupported()) {
                 return null;
             }
@@ -113,31 +134,29 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
             return null;
         }
 
-        return () -> new OmniPageProcessor(vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler());
+        return () -> new OmniPageProcessor(
+            vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler(), context);
     }
 
-    private static final class FilterCacheKey
-    {
+    private static final class FilterCacheKey {
         private final Optional<RowExpression> filter;
         private final List<RowExpression> projections;
         private final List<Type> inputTypes;
 
-        private FilterCacheKey(Optional<RowExpression> filter, List<? extends RowExpression> projections, List<Type> inputTypes)
-        {
+        private FilterCacheKey(
+            Optional<RowExpression> filter, List<? extends RowExpression> projections, List<Type> inputTypes) {
             this.filter = filter;
             this.inputTypes = inputTypes;
             this.projections = ImmutableList.copyOf(projections);
         }
 
         @Override
-        public int hashCode()
-        {
+        public int hashCode() {
             return Objects.hash(filter, projections, inputTypes);
         }
 
         @Override
-        public boolean equals(Object obj)
-        {
+        public boolean equals(Object obj) {
             if (this == obj) {
                 return true;
             }
@@ -151,8 +170,7 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             return toStringHelper(this)
                     .add("filter", filter)
                     .add("projections", projections)
@@ -161,26 +179,22 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         }
     }
 
-    private static final class ProjectionsCacheKey
-    {
+    private static final class ProjectionsCacheKey {
         private final List<RowExpression> projections;
         private final List<Type> inputTypes;
 
-        private ProjectionsCacheKey(List<? extends RowExpression> projections, List<Type> inputTypes)
-        {
+        private ProjectionsCacheKey(List<? extends RowExpression> projections, List<Type> inputTypes) {
             this.inputTypes = inputTypes;
             this.projections = ImmutableList.copyOf(projections);
         }
 
         @Override
-        public int hashCode()
-        {
+        public int hashCode() {
             return Objects.hash(projections, inputTypes);
         }
 
         @Override
-        public boolean equals(Object obj)
-        {
+        public boolean equals(Object obj) {
             if (this == obj) {
                 return true;
             }
@@ -193,8 +207,7 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             return toStringHelper(this)
                     .add("projections", projections)
                     .add("inputTypes", inputTypes)

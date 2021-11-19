@@ -26,6 +26,9 @@ import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.connector.ConnectorSession;
 import io.prestosql.sql.gen.ExpressionProfiler;
 import java.util.List;
+
+import nova.hetu.olk.OmniLocalExecutionPlanner;
+import nova.hetu.olk.OmniLocalExecutionPlanner.OmniLocalExecutionPlanContext;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
@@ -48,8 +51,10 @@ public class OmniPageProcessor extends PageProcessor {
     private final OmniProjection projection;
 
     private final VecAllocator vecAllocator;
+    private final OmniLocalExecutionPlanContext context;
 
     private Optional<OmniPageFilter.OmniPageFilterOperator> omniPageFilterOperator = Optional.empty();
+    private Optional<OmniOperator> omniProjectionOperator = Optional.empty();
 
     /**
      * Instantiates a new Omni page processor.
@@ -60,14 +65,24 @@ public class OmniPageProcessor extends PageProcessor {
      * @param expressionProfiler the expression profiler
      */
     public OmniPageProcessor(VecAllocator vecAllocator, Optional<PageFilter> filter, OmniProjection proj,
-                             OptionalInt initialBatchSize, ExpressionProfiler expressionProfiler) {
+        OptionalInt initialBatchSize, ExpressionProfiler expressionProfiler, OmniLocalExecutionPlanContext context) {
         super(filter, initialBatchSize, expressionProfiler);
         this.vecAllocator = vecAllocator;
+        this.context = context;
+        this.projection = requireNonNull(proj, "projection is null");
+
         if (filter.isPresent()) {
             PageFilter pageFilter = filter.get();
             this.omniPageFilterOperator = Optional.of(((OmniPageFilter) pageFilter).getOperator(vecAllocator));
+            if (context != null) {
+                context.onTaskFinished(taskFinished -> this.omniPageFilterOperator.get().close());
+            }
+        } else {
+            this.omniProjectionOperator = Optional.of(projection.getFactory().createOperator(vecAllocator));
+            if (context != null) {
+                context.onTaskFinished(taskFinished -> this.omniProjectionOperator.get().close());
+            }
         }
-        this.projection = requireNonNull(proj, "projection is null");
     }
 
     public OmniProjection getProjection() {
@@ -123,7 +138,7 @@ public class OmniPageProcessor extends PageProcessor {
 
         return WorkProcessor.create(
             new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext, inputVecBatch,
-                positionsRange(0, inputVecBatch.getRowCount())));
+                positionsRange(0, inputVecBatch.getRowCount()), omniProjectionOperator.get()));
     }
 
     private class OmniProjectSelectedPositions implements WorkProcessor.Process<Page> {
@@ -140,6 +155,7 @@ public class OmniPageProcessor extends PageProcessor {
         private final SelectedPositions selectedPositions;
 
         private boolean isFinished;
+        private final OmniOperator omniProjectionOperator;
 
         /**
          * Instantiates a new Omni project selected positions.
@@ -152,9 +168,10 @@ public class OmniPageProcessor extends PageProcessor {
          * @param selectedPositions the selected positions
          */
         public OmniProjectSelectedPositions(VecAllocator vecAllocator, ConnectorSession session,
-                                            DriverYieldSignal yieldSignal, LocalMemoryContext memoryContext,
-                                            VecBatch vecBatch, SelectedPositions selectedPositions) {
+            DriverYieldSignal yieldSignal, LocalMemoryContext memoryContext,
+            VecBatch vecBatch, SelectedPositions selectedPositions, OmniOperator omniProjectionOperator) {
             this.vecAllocator = vecAllocator;
+            this.omniProjectionOperator = omniProjectionOperator;
             this.session = session;
             this.yieldSignal = yieldSignal;
             this.memoryContext = memoryContext;
@@ -168,10 +185,9 @@ public class OmniPageProcessor extends PageProcessor {
             if (isFinished) {
                 return finished();
             }
-            OmniOperator operator = projection.getFactory().createOperator(vecAllocator);
 
-            operator.addInput(vecBatch);
-            Iterator<Page> result = new VecBatchToPageIterator(operator.getOutput());
+            omniProjectionOperator.addInput(vecBatch);
+            Iterator<Page> result = new VecBatchToPageIterator(omniProjectionOperator.getOutput());
             if (!result.hasNext()) {
                 vecBatch.releaseAllVectors();
                 vecBatch.close();

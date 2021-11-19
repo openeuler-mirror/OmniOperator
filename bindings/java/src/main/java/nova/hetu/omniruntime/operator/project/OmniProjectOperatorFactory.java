@@ -42,7 +42,8 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        long factoryAddr = createProjectOperatorFactory(VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
+        long factoryAddr = createProjectOperatorFactory(
+            VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
             context.expressions, context.expressions.length, factoryContext.getNativeJitContext());
         if (factoryAddr != 0) {
             isSupported = true;
