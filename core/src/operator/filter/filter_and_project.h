@@ -86,7 +86,7 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
-    int32_t *GetSourceTypes() override
+    const int32_t *GetSourceTypes() override
     {
         return this->inputTypes;
     }

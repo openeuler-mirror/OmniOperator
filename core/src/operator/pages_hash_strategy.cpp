@@ -43,46 +43,7 @@ PagesHashStrategy::~PagesHashStrategy()
     }
 }
 
-template <typename V>
-ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
-    int32_t rightIndex)
-{
-    return static_cast<V *>(leftVector)->GetValue(leftIndex) == static_cast<V *>(rightVector)->GetValue(rightIndex);
-}
-
-static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
-    int32_t rightIndex)
-{
-    double leftValue = static_cast<DoubleVector *>(leftVector)->GetValue(leftIndex);
-    double rightValue = static_cast<DoubleVector *>(rightVector)->GetValue(rightIndex);
-    if (std::abs(leftValue - rightValue) < __DBL_EPSILON__) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(Vector *leftVector, int32_t leftIndex, Vector *rightVector,
-    int32_t rightIndex)
-{
-    uint8_t *leftValue = nullptr;
-    uint8_t *rightValue = nullptr;
-    int32_t leftLength = 0;
-    int32_t rightLength = 0;
-
-    leftLength = static_cast<VarcharVector *>(leftVector)->GetValue(leftIndex, &leftValue);
-    rightLength = static_cast<VarcharVector *>(rightVector)->GetValue(rightIndex, &rightValue);
-    if (leftLength != rightLength) {
-        return false;
-    }
-    if (memcmp(leftValue, rightValue, leftLength) == 0) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-static ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex,
+static bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int32_t leftRowIndex,
     Vector *rightVector, int32_t rightRowIndex)
 {
     switch (vecType) {

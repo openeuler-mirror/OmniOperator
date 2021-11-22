@@ -180,11 +180,6 @@ using namespace omniruntime::vec;
             {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
     };
 
-    template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
-{
-    return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
-}
-
 template <typename V, typename D>
 void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context)
@@ -832,7 +827,7 @@ void AverageAggregator::Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t t
     AGG_AVG_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, type, offset, executionContext);
 }
 
-void ALWAYS_INLINE ProcessIntermediateAvg(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void ProcessIntermediateAvg(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
 {
     auto currentVal = static_cast<double *>(groupSlot.avgVal);
     auto currentCnt = static_cast<int64_t>(groupSlot.avgCnt);

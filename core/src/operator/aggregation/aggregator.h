@@ -51,6 +51,11 @@ using GroupBySlot = union GroupBySlot {
     };
 };
 
+template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
+{
+    return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
+}
+
 class AggregatorFactory;
 
 // TODO check if it can merge subtype aggregators to one aggregator class.

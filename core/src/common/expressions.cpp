@@ -67,6 +67,7 @@ std::string DataTypeString(DataType dt)
         case DataType::INT8PTRD: return "int8ptr";
         case DataType::VOIDD: return "void";
         case DataType::INVALIDDATAD: return "invalid";
+        default: return "";
     }
 }
 

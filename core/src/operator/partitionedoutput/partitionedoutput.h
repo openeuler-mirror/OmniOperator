@@ -5,14 +5,40 @@
 #define __PARTITIONEDOUTPUT_H__
 
 #include "../operator_factory.h"
+#include "../../vector/vector_type_serializer.h"
+#include "../../vector/vector_helper.h"
+
 #include <vector>
 #include <map>
-#include "../../vector/vector_type_serializer.h"
 
 namespace omniruntime {
 namespace op {
 using namespace std;
 using namespace vec;
+
+static void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
+                                          int32_t currentRowIndex)
+{
+    ContainerVector *containerVec = static_cast<ContainerVector *>(origintVector);
+    auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->getValue(0));
+    auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->getValue(1));
+    int64_t longValue = static_cast<LongVector *>(avgCountVector)->GetValue(originRowIndex);
+    double doubleValue = static_cast<DoubleVector *>(avgValVector)->GetValue(originRowIndex);
+    ContainerVector *currentContainerVec = static_cast<ContainerVector *>(currentVector);
+    auto *currentAvgValVector = reinterpret_cast<DoubleVector *>(currentContainerVec->getValue(0));
+    auto *currentAvgCountVector = reinterpret_cast<LongVector *>(currentContainerVec->getValue(1));
+    static_cast<DoubleVector *>(currentAvgValVector)->SetValue(currentRowIndex, doubleValue);
+    static_cast<LongVector *>(currentAvgCountVector)->SetValue(currentRowIndex, longValue);
+}
+
+static void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
+                                        int32_t currentRowIndex)
+{
+    uint8_t *value = nullptr;
+    int32_t length = static_cast<VarcharVector *>(origintVector)->GetValue(originRowIndex, &value);
+    static_cast<VarcharVector *>(currentVector)->SetValue(currentRowIndex, value, length);
+}
+
 class PartitionedOutputOperatorFactory : public OperatorFactory {
 public:
     PartitionedOutputOperatorFactory(const VecTypes &sourceTypes, int32_t sourceTypeCount, bool replicatesAnyRow,

@@ -10,7 +10,7 @@ set(CMAKE_CXX_COMPILER "g++")
 
 # this is used to generate LLVM IR for jitting
 set(IR_COMPILER "clang++-12")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -fPIC -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC -finline-functions")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 

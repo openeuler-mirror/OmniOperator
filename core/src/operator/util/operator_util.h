@@ -102,7 +102,7 @@ public:
         return ((positionCount + maxRowCount - 1) / maxRowCount);
     }
 
-    static ALWAYS_INLINE int32_t CompareVectorAtPosition(int32_t colTypeId, Vector *leftColumn,
+    static int32_t CompareVectorAtPosition(int32_t colTypeId, Vector *leftColumn,
         int32_t leftColumnPosition, Vector *rightColumn, int32_t rightColumnPosition)
     {
         switch (colTypeId) {

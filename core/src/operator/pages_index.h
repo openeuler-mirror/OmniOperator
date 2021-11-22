@@ -12,8 +12,11 @@
 #include "../vector/vector_types.h"
 #include "operator.h"
 #include "operator_factory.h"
+#include "../vector/vector_helper.h"
+#include "util/operator_util.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::op;
 
 class PagesIndex {
 public:
@@ -73,4 +76,33 @@ inline int32_t DecodePosition(int64_t sliceAddress)
 }
 
 using CompareFunc = int32_t (*)(Vector *leftVector, int32_t leftPosition, Vector *rightVector, int32_t rightPosition);
+
+static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
+                                     Vector **columns, int32_t leftPosition, int32_t rightPosition, CompareFunc compareFunc)
+{
+    int64_t leftValueAddress = valueAddresses[leftPosition];
+    int32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
+    int32_t leftColumnPosition = DecodePosition(leftValueAddress);
+    int64_t rightValueAddress = valueAddresses[rightPosition];
+    int32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
+    int32_t rightColumnPosition = DecodePosition(rightValueAddress);
+
+    Vector *leftColumn = columns[leftColumnIndex];
+    Vector *rightColumn = columns[rightColumnIndex];
+    int32_t originalLeftColumnPosition, originalRightColumnPosition;
+    leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftColumnPosition, originalLeftColumnPosition);
+    rightColumn =
+            VectorHelper::ExpandVectorAndIndex(rightColumn, rightColumnPosition, originalRightColumnPosition);
+    int32_t compare = OperatorUtil::CompareNull(leftColumn, originalLeftColumnPosition, rightColumn,
+                                                originalRightColumnPosition, sortNullFirsts);
+    if (compare == OperatorUtil::COMPARE_STATUS_OTHER) {
+        // neither the left nor the right is NULL
+        compare = compareFunc(leftColumn, originalLeftColumnPosition, rightColumn, originalRightColumnPosition);
+
+        if (sortAscendings == 0) {
+            compare = -compare;
+        }
+    }
+    return compare;
+}
 #endif
