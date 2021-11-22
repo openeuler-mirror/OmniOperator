@@ -106,28 +106,28 @@ private:
         vec::VarcharVector *tmpVector) const;
 
     void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
-                                    int32_t position) const;
+        int32_t position) const;
 };
 
 template <typename T>
 void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
-                                                 int32_t position)
+    int32_t position)
 {
     singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
 }
 
 template <typename T>
 static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
-                                                       int32_t position)
+    int32_t position)
 {
-    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))->SetValueNull(0, (static_cast<T *>(vector))->IsValueNull(
-            position));
-    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))->SetValue(0,
-                                                                       (static_cast<T *>(vector))->GetValue(position));
+    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))
+        ->SetValueNull(0, (static_cast<T *>(vector))->IsValueNull(position));
+    static_cast<T *>(singleRowVecBatch->GetVector(colIndex))
+        ->SetValue(0, (static_cast<T *>(vector))->GetValue(position));
 }
 
-static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
-                                                         int32_t position)
+static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    Vector *vector, int32_t position)
 {
     VarcharVector *single = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
     // we just need to set value null
@@ -139,7 +139,6 @@ static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowV
     delete static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
     singleRowVecBatch->SetVector(colIndex, (static_cast<VarcharVector *>(vector))->CopyRegion(position, 1));
 }
-
 }
 }
 #endif // OMNI_RUNTIME_TOPN_H

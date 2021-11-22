@@ -62,8 +62,8 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto outputType = aggOutputTypes.Get()[i];
         ColumnIndex c = { static_cast<uint32_t>(i), inputType, outputType };
         aggIndex.push_back(c);
-        auto aggregator = aggregatorFactories[i]
-                ->CreateAggregator(inputType.GetId(), outputType.GetId(), inputRaw, outputPartial);
+        auto aggregator =
+            aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(), inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
@@ -79,8 +79,8 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     int32_t aggColNum = this->aggCols.size();
     if (vectorCount != aggColNum) {
         LogError("Doing pure aggregation needs column number to equal with aggregate column number, but vectorCount "
-                   "= %d aggColNum =%d",
-                 vectorCount, aggColNum);
+            "= %d aggColNum =%d",
+            vectorCount, aggColNum);
     }
 
     auto vectorTypeIds = vecBatch->GetVectorTypeIds();
@@ -109,7 +109,7 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
     }
 }
 
-static void FillNormalAggregate(Vector* vector, GroupBySlot& state)
+static void FillNormalAggregate(Vector *vector, GroupBySlot &state)
 {
     switch (vector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:
@@ -132,9 +132,8 @@ static void FillNormalAggregate(Vector* vector, GroupBySlot& state)
         }
         case OMNI_VEC_TYPE_VARCHAR: {
             static_cast<VarcharVector *>(vector)->SetValue(0,
-                                                            reinterpret_cast<const uint8_t *>(
-                                                                    (*(std::string *)(state.val)).c_str()),
-                                                            (*(std::string *)(state.val)).size());
+                reinterpret_cast<const uint8_t *>((*(std::string *)(state.val)).c_str()),
+                (*(std::string *)(state.val)).size());
             break;
         }
         default:

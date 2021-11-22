@@ -12,9 +12,6 @@
 #define DLLEXPORT
 #endif
 
-using namespace std;
-using namespace omniruntime::op;
-
 extern "C" DLLEXPORT {
 char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
 void ArenaAllocatorReset(int64_t contextPtr);
