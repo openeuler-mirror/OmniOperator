@@ -7,21 +7,11 @@ cmake_minimum_required(VERSION 3.10)
 # configure cmake
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-set(CMAKE_AR "gcc-ar")
-set(CMAKE_NM "gcc-nm")
-set(CMAKE_RANLIB "gcc-ranlib")
-set(CMAKE_C_COMPILER_AR "${CMAKE_AR}")
-set(CMAKE_CXX_COMPILER_AR "${CMAKE_AR}")
-set(CMAKE_C_COMPILER_RANLIB "${CMAKE_RANLIB}")
-set(CMAKE_CXX_COMPILER_RANLIB "${CMAKE_RANLIB}")
-set(CMAKE_C_COMPILER_NM "${CMAKE_NM}")
-set(CMAKE_CXX_COMPILER_NM "${CMAKE_NM}")
 
 # this is used to generate LLVM IR for jitting
 set(IR_COMPILER "clang++-12")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -flto -fno-fat-lto-objects -fPIC -finline-functions")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O2 -fPIC -finline-functions")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 if (EXISTS $ENV{OMNI_HOME})
