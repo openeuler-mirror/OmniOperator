@@ -176,7 +176,8 @@ TEST(FilterTest, LessThan) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN:boolean(#0, 2000)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$LESS_THAN:4(#0, 2000)",
                                                                    inputTypes, numCols,
                                                                    projections,
                                                                    projectCount);
@@ -221,7 +222,8 @@ TEST(FilterTest, GreaterThan) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN:boolean(#0, 20)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$GREATER_THAN:4(#0, 20)",
                                                                    inputTypes,
                                                                    numCols,
                                                                    projections,
@@ -267,7 +269,8 @@ TEST(FilterTest, EqualTo) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$EQUAL:boolean(#2, 50.0)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$EQUAL:4(#2, 50.0)",
                                                                    inputTypes,
                                                                    numCols,
                                                                    projections,
@@ -318,7 +321,8 @@ TEST(FilterTest, GreaterThanOrEqualTo) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN_OR_EQUAL:boolean(#1, 30)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$GREATER_THAN_OR_EQUAL:4(#1, 30)",
                                                                    inputTypes,
                                                                    numCols,
                                                                    projections,
@@ -357,7 +361,8 @@ TEST(FilterTest, NotEqualTo) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$NOT_EQUAL:boolean(#0, 0)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$NOT_EQUAL:4(#0, 0)",
                                                                    inputTypes,
                                                                    numCols,
                                                                    projections,
@@ -397,7 +402,8 @@ TEST(FilterTest, AllPass) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$EQUAL:boolean(#0, 9348)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$EQUAL:4(#0, 9348)",
                                                                    inputTypes,
                                                                    numCols,
                                                                    projections,
@@ -438,7 +444,8 @@ TEST(FilterTest, MultipleInputs) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN_OR_EQUAL:boolean(#0, 4)",
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory("$operator$LESS_THAN_OR_EQUAL:4(#0, 4)",
                                                                    inputTypes,
                                                                    numCols,
                                                                    projections,
@@ -495,12 +502,13 @@ TEST(FilterTest, NegativeValues) {
 
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("AND:boolean($operator$LESS_THAN_OR_EQUAL:boolean(#0, -1), "
-                                                                   "$operator$LESS_THAN_OR_EQUAL:boolean(#1, -1))",
-                                                                   inputTypes,
-                                                                   numCols,
-                                                                   projections,
-                                                                   projectCount);
+    OperatorFactory* factory =
+            new FilterAndProjectOperatorFactory(
+                    "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1))",
+                    inputTypes,
+                    numCols,
+                    projections,
+                    projectCount);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(in1);
     int32_t numReturned = op->GetOutput(ret);
@@ -542,8 +550,8 @@ TEST(FilterTest, AllTypes) {
     std::vector<VectorBatch*> ret;
 
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
-    std::string expr = "AND:boolean($operator$EQUAL:boolean(#0, 0), AND:boolean($operator$EQUAL:boolean(#1, 3000000000), "
-                       "$operator$GREATER_THAN_OR_EQUAL:boolean(#2, 0.4)))";
+    std::string expr = "AND:4($operator$EQUAL:4(#0, 0), AND:4($operator$EQUAL:4(#1, 3000000000), "
+                       "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -571,8 +579,9 @@ TEST(FilterTest, AllTypes) {
 
 TEST(FilterTest, Compile) {
     // TPCH 6
-    std::string filterExpression = "AND:boolean(AND:boolean($operator$GREATER_THAN:boolean(#3, 8766), $operator$LESS_THAN:boolean(#3, 9131)), "
-                                   "AND:boolean(BETWEEN:boolean(#2, 0.05, 0.07), $operator$LESS_THAN:boolean(#0, 24.0)))";
+    std::string filterExpression =
+            "AND:4(AND:4($operator$GREATER_THAN:4(#3, 8766), $operator$LESS_THAN:4(#3, 9131)), "
+            "AND:4(BETWEEN:4(#2, 0.05, 0.07), $operator$LESS_THAN:4(#0, 24.0)))";
 
     const int32_t numCols = 4;
     int32_t *inputTypes = new int32_t[numCols];
@@ -622,9 +631,9 @@ TEST(FilterTest, Compile) {
 }
 
 TEST(FilterTest, LogicalOperators1) {
-    std::string expr = "OR:boolean($operator$GREATER_THAN_OR_EQUAL:boolean(#5, 52), AND:boolean($operator$LESS_THAN:boolean(#4, 50.8), "
-                       "AND:boolean(AND:boolean($operator$GREATER_THAN:boolean(#2, 4800), $operator$LESS_THAN_OR_EQUAL:boolean(#1, 9990)), "
-                       "AND:boolean($operator$NOT_EQUAL:boolean(#0, 1), $operator$EQUAL:boolean(#3, 3000000000)))))";
+    std::string expr = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52), AND:4($operator$LESS_THAN:4(#4, 50.8), "
+                       "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990)), "
+                       "AND:4($operator$NOT_EQUAL:4(#0, 1), $operator$EQUAL:4(#3, 3000000000)))))";
 
     const int32_t numCols = 6;
     int32_t* inputTypes = new int32_t[numCols];
@@ -683,8 +692,9 @@ TEST(FilterTest, LogicalOperators1) {
 }
 
 TEST(FilterTest, LogicalOperators2) {
-    std::string expr = "AND:boolean(OR:boolean($operator$LESS_THAN:boolean(#0, 50), $operator$EQUAL:boolean(#1, -12)), "
-                       "OR:boolean($operator$LESS_THAN_OR_EQUAL:boolean(#2, -3000000000), $operator$GREATER_THAN_OR_EQUAL:boolean(#3, 0)))";
+    std::string expr = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50), $operator$EQUAL:4(#1, -12)), "
+                       "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000), "
+                       "$operator$GREATER_THAN_OR_EQUAL:4(#3, 0)))";
 
     const int32_t numCols = 4;
     int32_t* inputTypes = new int32_t[numCols];
@@ -733,9 +743,10 @@ TEST(FilterTest, LogicalOperators2) {
 }
 
 TEST(FilterTest, LogicalOperators3) {
-    std::string expr = "AND:boolean($operator$NOT_EQUAL:boolean(#1, 0), OR:boolean(OR:boolean(OR:boolean($operator$EQUAL:boolean(#0, 1), "
-                       "$operator$EQUAL:boolean(#0, 2)), $operator$EQUAL:boolean(#0, 3)), OR:boolean(OR:boolean(OR:boolean($operator$EQUAL:boolean(55, #0), "
-                       "$operator$EQUAL:boolean(5, #0)), $operator$EQUAL:boolean(#0, 8)), $operator$EQUAL:boolean(#0, 13))))";
+    std::string expr = "AND:4($operator$NOT_EQUAL:4(#1, 0), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1), "
+                       "$operator$EQUAL:4(#0, 2)), $operator$EQUAL:4(#0, 3)), OR:4(OR:4(OR:4("
+                       "$operator$EQUAL:4(55, #0), $operator$EQUAL:4(5, #0)), $operator$EQUAL:4(#0, 8)), "
+                       "$operator$EQUAL:4(#0, 13))))";
     const int32_t numCols = 2;
     int32_t* inputTypes = new int32_t[numCols];
     inputTypes[0] = 1;
@@ -803,11 +814,12 @@ TEST(FilterTest, ArithmeticAdd) {
     std::string projections[projectCount] = {"#0"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$GREATER_THAN:boolean($operator$ADD:int(#0, 1), 4)",
-                                                                   inputTypes,
-                                                                   numCols,
-                                                                   projections,
-                                                                   projectCount);
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(
+            "$operator$GREATER_THAN:4($operator$ADD:1(#0, 1), 4)",
+            inputTypes,
+            numCols,
+            projections,
+            projectCount);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch*> ret;
@@ -844,11 +856,12 @@ TEST(FilterTest, ArithmeticSubtract) {
     std::string projections[projectCount] = {"#0", "#1"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN:boolean(0, $operator$SUBTRACT:int(#0, 5))",
-                                                                   inputTypes,
-                                                                   numCols,
-                                                                   projections,
-                                                                   projectCount);
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(
+            "$operator$LESS_THAN:4(0, $operator$SUBTRACT:1(#0, 5))",
+            inputTypes,
+            numCols,
+            projections,
+            projectCount);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch*> ret;
@@ -887,8 +900,8 @@ TEST(FilterTest, ArithmeticMultiply) {
     std::string projections[projectCount] = {"#0", "#1"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "AND:boolean($operator$EQUAL:boolean(0, $operator$MULTIPLY:int(#0, #0)), "
-                       "$operator$GREATER_THAN:boolean(7, $operator$MULTIPLY:long(2, #1)))";
+    std::string expr = "AND:4($operator$EQUAL:4(0, $operator$MULTIPLY:1(#0, #0)), $operator$GREATER_THAN:4(7, "
+                       "$operator$MULTIPLY:2(2, #1)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -936,7 +949,7 @@ TEST(FilterTest, Conditional) {
     std::string projections[projectCount] = {"#0", "#1", "#2"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "$operator$EQUAL:boolean(IF:int($operator$EQUAL:boolean(#0, 0), $operator$ADD:int(#1, 5), #2), 55)";
+    std::string expr = "$operator$EQUAL:4(IF:1($operator$EQUAL:4(#0, 0), $operator$ADD:1(#1, 5), #2), 55)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -980,8 +993,8 @@ TEST(FilterTest, Conditional2) {
     std::string projections[projectCount] = {"#0", "#1", "#2"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "AND:boolean(IF:boolean($operator$EQUAL:boolean(#0, 0), $operator$LESS_THAN:boolean(#1, 3), "
-                       "$operator$EQUAL:boolean(#1, 4)), $operator$GREATER_THAN:boolean(#2, 3))";
+    std::string expr = "AND:4(IF:4($operator$EQUAL:4(#0, 0), $operator$LESS_THAN:4(#1, 3), "
+                       "$operator$EQUAL:4(#1, 4)), $operator$GREATER_THAN:4(#2, 3))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1074,7 +1087,7 @@ TEST(FilterTest, Between) {
     std::string projections[projectCount] = {"#0", "#1", "#2"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "BETWEEN:boolean(#1, #0, #2)";
+    std::string expr = "BETWEEN:4(#1, #0, #2)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1118,7 +1131,7 @@ TEST(FilterTest, NotEqualToAbs) {
     std::string projections[projectCount] = {"#0"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "$operator$NOT_EQUAL:boolean(abs:int(#0), 4)";
+    std::string expr = "$operator$NOT_EQUAL:4(abs:1(#0), 4)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1164,7 +1177,7 @@ TEST(FilterTest, MathFunctionFilter1) {
     std::string projections[projectCount] = {"#0", "#1", "#2"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "AND:boolean($operator$EQUAL:boolean(abs:int(#0), abs:int(#2)), $operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
+    std::string expr = "AND:4($operator$EQUAL:4(abs:1(#0), abs:1(#2)), $operator$EQUAL:4(abs:1(#0), abs:1(#1)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1220,7 +1233,7 @@ TEST(FilterTest, MathFunctionFilter2) {
     std::string projections[projectCount] = {"#0", "#1", "#2"};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
-    std::string expr = "$operator$EQUAL:boolean(abs:double(CAST:double(#0)), abs:double(CAST:double(#1)))";
+    std::string expr = "$operator$EQUAL:4(abs:3(CAST:3(#0)), abs:3(CAST:3(#1)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1273,7 +1286,7 @@ TEST(FilterTest, FilterString1) {
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
 
 
-    std::string expr = "$operator$EQUAL:boolean(#0, 'hello')";
+    std::string expr = "$operator$EQUAL:4(#0, 'hello')";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1345,7 +1358,7 @@ TEST(FilterTest, Coalesce1) {
         }
     }
 
-    std::string expr = "$operator$EQUAL:boolean(21, COALESCE:int(#1, #0))";
+    std::string expr = "$operator$EQUAL:4(21, COALESCE:1(#1, #0))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1400,7 +1413,7 @@ TEST(FilterTest, Coalesce2) {
         };
     }
 
-    std::string expr = "$operator$EQUAL:boolean(COALESCE(#0, 'bye'), 'hello')";
+    std::string expr = "$operator$EQUAL:4(COALESCE(#0, 'bye'), 'hello')";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypes,
                                                                    numCols,
@@ -1451,7 +1464,7 @@ TEST (FilterTest, DISABLED_ExternalMathFunc) {
     std::string projections[PROJECT_COUNT] = {"#0", "#1", "#2"};
     VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
-    std::string expr = "$operator$EQUAL:boolean(Add1Int32(Add1Int32(#0)), IdInt32(Add1Int32(IdInt32(#1))))";
+    std::string expr = "$operator$EQUAL:4(Add1Int32(Add1Int32(#0)), IdInt32(Add1Int32(IdInt32(#1))))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
@@ -1515,7 +1528,7 @@ TEST (FilterTest, DISABLED_ExternalStringFunc) {
     VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
 
-    std::string expr = "$operator$EQUAL:boolean(LengthStr(#0), 5)";
+    std::string expr = "$operator$EQUAL:4(LengthStr(#0), 5)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
@@ -1577,7 +1590,7 @@ TEST (FilterTest, DISABLED_ExternalStringFunc2) {
     VectorBatch* t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes, allData);
 
 
-    std::string expr = "$operator$EQUAL:boolean(FirstCharStr(#0), FirstCharStr('apple'))";
+    std::string expr = "$operator$EQUAL:4(FirstCharStr(#0), FirstCharStr('apple'))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
@@ -1653,13 +1666,13 @@ TEST (FilterTest, Multithreading) {
     // find wall clock time
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::string expr = "$operator$EQUAL:boolean(abs:double(CAST:double(#0)), abs:double(CAST:double(#1)))";
+    std::string expr = "$operator$EQUAL:4(abs:3(CAST:3(#0)), abs:3(CAST:3(#1)))";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator* op = factory->CreateOperator();
     std::thread thread1(process, op, t, ret, numReturned);
 
 
-    std::string expr2 = "$operator$EQUAL:boolean(#1, 4)";
+    std::string expr2 = "$operator$EQUAL:4(#1, 4)";
     OperatorFactory* factory2 = new FilterAndProjectOperatorFactory(expr2, inputTypes2, NUM_COLS, projections2, 3);
     omniruntime::op::Operator* op2 = factory2->CreateOperator();
     std::thread thread2(process, op2, t2, ret2, numReturned2);
@@ -1774,7 +1787,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     batch->SetVector(0, col1);
     batch->SetVector(1, dictionaryVector);
 
-    std::string expr = "$operator$LESS_THAN:boolean(#0, 6)";
+    std::string expr = "$operator$LESS_THAN:4(#0, 6)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypeIds,
                                                                    numCols,
@@ -1883,11 +1896,12 @@ TEST (FilterTest, DecimalFilterBinaryTest) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("$operator$LESS_THAN_OR_EQUAL:boolean(#0, 500000)",
-                                                                   inputTypes,
-                                                                   numCols,
-                                                                   projections,
-                                                                   projectCount);
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(
+            "$operator$LESS_THAN_OR_EQUAL:4(#0, 500000)",
+            inputTypes,
+            numCols,
+            projections,
+            projectCount);
     omniruntime::op::Operator* op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -1940,11 +1954,12 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     std::vector<VectorBatch*> ret;
     VectorBatch* in1 = CreateInput(numRows, numCols, inputTypes, allData);
 
-    OperatorFactory* factory = new FilterAndProjectOperatorFactory("AND:boolean($operator$EQUAL:boolean(abs:decimal(#0), abs:decimal(#2)), $operator$EQUAL:boolean(abs:decimal(#1), abs:decimal(#2)))",
-                                                                   inputTypes,
-                                                                   numCols,
-                                                                   projections,
-                                                                   projectCount);
+    OperatorFactory* factory = new FilterAndProjectOperatorFactory(
+            "AND:4($operator$EQUAL:4(abs:7(#0), abs:7(#2)), $operator$EQUAL:4(abs:7(#1), abs:7(#2)))",
+            inputTypes,
+            numCols,
+            projections,
+            projectCount);
     omniruntime::op::Operator* op = factory->CreateOperator();
 
     op->AddInput(in1);
@@ -1985,7 +2000,7 @@ TEST(FilterTest, FilterStringWithNull) {
     batch->SetVector(0, col0);
 
 
-    std::string expr = "$operator$EQUAL:boolean(#0, 'hello')";
+    std::string expr = "$operator$EQUAL:4(#0, 'hello')";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypeIds,
                                                                    numCols,

@@ -128,7 +128,7 @@ TEST(SortWithExprTest, TestOrderByOneExprColumns)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    std::string sortKeys[2] = {"#0", "ADD:long(#1, 50)"};
+    std::string sortKeys[2] = {"#0", "ADD:2(#1, 50)"};
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -164,7 +164,7 @@ TEST(SortWithExprTest, TestOrderByTwoExprColumns)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int outputCols[2] = {0, 1};
-    std::string sortKeys[2] = {"ADD:int(#0, 50)", "ADD:long(#1, 50)"};
+    std::string sortKeys[2] = {"ADD:1(#0, 50)", "ADD:2(#1, 50)"};
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
@@ -209,7 +209,7 @@ TEST(SortWithExprTest, TestOrderByTwoExprDictionaryColumns)
     }
 
     int32_t outputCols[2] = {1, 2};
-    std::string sortKeys[2] = {"ADD:int(#0, 50)", "ADD:long(50, #2)"};
+    std::string sortKeys[2] = {"ADD:1(#0, 50)", "ADD:2(50, #2)"};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
@@ -248,7 +248,7 @@ TEST(SortWithExprTest, TestOrderByOneVarcharExprColumn)
 
     VecTypes sourceTypes(std::vector<VecType>({type}));
     int32_t outputCols[vecCount] = {0};
-    std::string sortKeys[vecCount] = {"substr:varchar(#0, 1, 4)"};
+    std::string sortKeys[vecCount] = {"substr:15(#0, 1, 4)"};
     int32_t ascendings[vecCount] = {true};
     int32_t nullFirsts[vecCount] = {true};
 

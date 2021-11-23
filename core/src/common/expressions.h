@@ -52,10 +52,10 @@ enum OperatorReturnType {
 
 
 enum DataType {
-    BOOLD = 4,
     INT32D = 1,
     INT64D = 2,
     DOUBLED = 3,
+    BOOLD = 4,
     DECIMAL64D = 6,
     DECIMAL128D = 7,
     STRINGD = 15,

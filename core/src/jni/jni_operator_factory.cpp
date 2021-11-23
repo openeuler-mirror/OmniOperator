@@ -1056,13 +1056,6 @@ void GetExpressions(JNIEnv *env, jobjectArray jExpressions, std::string *express
     }
 }
 
-const std::map<string, int32_t> RETURN_TYPE_MAP = {
-    { "boolean", OMNI_VEC_TYPE_BOOLEAN },    { "int", OMNI_VEC_TYPE_INT },
-    { "long", OMNI_VEC_TYPE_LONG },          { "double", OMNI_VEC_TYPE_DOUBLE },
-    { "decimal", OMNI_VEC_TYPE_DECIMAL128 }, { "char", OMNI_VEC_TYPE_VARCHAR },
-    { "varchar", OMNI_VEC_TYPE_VARCHAR }
-};
-
 int32_t GetProjectCol(std::string &expression)
 {
     // #0 or #5 is not expression
@@ -1090,11 +1083,11 @@ int32_t GetExprReturnType(std::string &expression)
     }
 
     std::string returnType(chars + start + 1, chars + end);
-    if (RETURN_TYPE_MAP.count(returnType) == 0) {
-        std::cout << "Unsupported return type: " + returnType << std::endl;
-        return OMNI_VEC_TYPE_INVALID;
+    if (returnType.find_first_not_of("0123456789") == string::npos && stoi(returnType) < INT32_MAX) {
+        return static_cast<VecTypeId>(stoi(returnType));
     }
-    return RETURN_TYPE_MAP.at(returnType);
+    std::cout << "Unsupported return type: " + returnType << std::endl;
+    return OMNI_VEC_TYPE_INVALID;
 }
 
 void GetTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount, std::vector<int32_t> &typeIds,

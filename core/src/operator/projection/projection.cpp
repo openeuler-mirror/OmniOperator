@@ -284,6 +284,10 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
             outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
+        case DECIMAL64D:
+            // FIXME: Support Decimal64Vector in the future
+            outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
+            break;
         case DECIMAL128D:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
             break;

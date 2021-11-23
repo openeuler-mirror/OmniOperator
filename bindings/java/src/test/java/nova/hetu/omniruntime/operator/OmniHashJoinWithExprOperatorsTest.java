@@ -32,7 +32,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         };
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
-        String[] buildHashKeys = {"ADD:long(#0, 50)"};
+        String[] buildHashKeys = {"ADD:2(#0, 50)"};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory =
                 new OmniHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, Optional.empty(), operatorCount);
@@ -47,7 +47,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:long(#0, 50)"};
+        String[] probeHashKeys = {"ADD:2(#0, 50)"};
         int[] buildOutputCols = {1};
         VecType[] buildOutputTypes = {LongVecType.LONG};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory =
@@ -91,7 +91,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         buildVecs[1] = TestUtils.createDictionaryVec(buildTypes[1], buildDatas[1], ids);
         VecBatch buildVecBatch = new VecBatch(buildVecs);
 
-        String[] buildHashKeys = {"ADD:long(#0, 50)"};
+        String[] buildHashKeys = {"ADD:2(#0, 50)"};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory =
                 new OmniHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, Optional.empty(), operatorCount);
@@ -109,7 +109,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = new VecBatch(probeVecs);
 
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:long(#0, 50)"};
+        String[] probeHashKeys = {"ADD:2(#0, 50)"};
         int[] buildOutputCols = {1};
         VecType[] buildOutputTypes = {LongVecType.LONG};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory =

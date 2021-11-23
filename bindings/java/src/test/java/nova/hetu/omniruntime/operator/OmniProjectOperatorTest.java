@@ -39,7 +39,7 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void simpleTest() {
-        String[] exprs = {"$operator$ADD:int(#0, 5)"};
+        String[] exprs = {"$operator$ADD:1(#0, 5)"};
         VecType[] inputTypes = {IntVecType.INTEGER};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
@@ -68,7 +68,7 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void complexTest() {
-        String[] exprs = {"$operator$MULTIPLY:int(#0, #1)", "IF:long($operator$LESS_THAN:boolean(#0, 500), 4000000000, #2)"};
+        String[] exprs = {"$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500), 4000000000, #2)"};
         VecType[] inputTypes = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
@@ -101,7 +101,7 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void mm3HashTest() {
-        String[] exprs = {"mm3hash:int(#0, 42)", "mm3hash:int(#1, 42)", "mm3hash:int(#2, 42)"};
+        String[] exprs = {"mm3hash:1(#0, 42)", "mm3hash:1(#1, 42)", "mm3hash:1(#2, 42)"};
         VecType[] inputTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1;

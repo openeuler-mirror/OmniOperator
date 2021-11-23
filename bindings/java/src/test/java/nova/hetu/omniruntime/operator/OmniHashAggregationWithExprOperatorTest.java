@@ -26,8 +26,8 @@ public class OmniHashAggregationWithExprOperatorTest {
 
     @Test
     public void testHashAggWithPartialExpr() {
-        String[] groupByChanel = {"MODULUS:long(#0, 3)", "#2"};
-        String[] aggChannels = {"MULTIPLY:long(#1, 5)", "#3"};
+        String[] groupByChanel = {"MODULUS:2(#0, 3)", "#2"};
+        String[] aggChannels = {"MULTIPLY:2(#1, 5)", "#3"};
 
         AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
@@ -61,8 +61,8 @@ public class OmniHashAggregationWithExprOperatorTest {
 
     @Test
     public void testHashAggWithAllExpr() {
-        String[] groupByChanel = {"MODULUS:long(#0, 3)", "ADD:int(#2, 5)"};
-        String[] aggChannels = {"MULTIPLY:long(#1, 5)", "ADD:int(#3, 5)"};
+        String[] groupByChanel = {"MODULUS:2(#0, 3)", "ADD:1(#2, 5)"};
+        String[] aggChannels = {"MULTIPLY:2(#1, 5)", "ADD:1(#3, 5)"};
 
         AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};

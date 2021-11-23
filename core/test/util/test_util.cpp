@@ -405,13 +405,6 @@ void ToVectorTypes(int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecTyp
     }
 }
 
-const std::map<std::string, int32_t> TEST_RETURN_TYPE_MAP = {
-    { "boolean", OMNI_VEC_TYPE_BOOLEAN },    { "int", OMNI_VEC_TYPE_INT },
-    { "long", OMNI_VEC_TYPE_LONG },          { "double", OMNI_VEC_TYPE_DOUBLE },
-    { "decimal", OMNI_VEC_TYPE_DECIMAL128 }, { "char", OMNI_VEC_TYPE_VARCHAR },
-    { "varchar", OMNI_VEC_TYPE_VARCHAR }
-};
-
 int32_t GetTestProjectCol(std::string &expression)
 {
     // #0 or #5 is not expression
@@ -439,11 +432,11 @@ int32_t GetTestExprReturnType(std::string &expression)
     }
 
     std::string returnType(chars + start + 1, chars + end);
-    if (TEST_RETURN_TYPE_MAP.count(returnType) == 0) {
-        std::cout << "Unsupported return type: " + returnType << std::endl;
-        return OMNI_VEC_TYPE_INVALID;
+    if (returnType.find_first_not_of("0123456789") == std::string::npos && stoi(returnType) < INT32_MAX) {
+        return static_cast<VecTypeId>(stoi(returnType));
     }
-    return TEST_RETURN_TYPE_MAP.at(returnType);
+    std::cout << "Unsupported return type: " + returnType << std::endl;
+    return OMNI_VEC_TYPE_INVALID;
 }
 
 void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,

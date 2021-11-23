@@ -173,7 +173,7 @@ TEST(JoinWithExprTest, TestEqualityJoinOnDictionary)
     int32_t ids[] = {0, 1, 2, 3};
     buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
-    std::string buildHashKeys[1] = {"ADD:long(#1, 50)"};
+    std::string buildHashKeys[1] = {"ADD:2(#1, 50)"};
     int32_t hashKeysCount = 1;
     std::string filter = "";
     int32_t hashTableCount = 1;
@@ -198,7 +198,7 @@ TEST(JoinWithExprTest, TestEqualityJoinOnDictionary)
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
-    std::string probeHashKeys[1] = {"ADD:long(50, #1)"};
+    std::string probeHashKeys[1] = {"ADD:2(50, #1)"};
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
