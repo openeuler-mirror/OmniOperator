@@ -174,11 +174,11 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, const std::string &e
     this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
     if (this->expr == nullptr) {
         this->isSupported = false;
-    }
-
-    bool initialized = this->Initialize(filter);
-    if (!initialized) {
-        this->isSupported = false;
+    } else {
+        bool initialized = this->Initialize(filter);
+        if (!initialized) {
+            this->isSupported = false;
+        }
     }
 }
 

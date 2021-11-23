@@ -720,6 +720,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputTypeIds, inputLength,
         projectExpressions, projectLength);
     if (!factory->isSupportedExpr) {
+        delete factory;
         return 0;
     }
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
@@ -747,6 +748,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
 
     if (!factory->IsSupported()) {
+        delete factory;
         return 0;
     }
 

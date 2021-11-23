@@ -50,11 +50,11 @@ public class TestOmniPageProcessor {
         OmniPageFilter filter = new OmniPageFilter(filterExpression, true, new InputChannels(1),
             ImmutableList.of(INTEGER, INTEGER), ImmutableList.of(projectExpression));
         OmniProjection projection = new OmniProjection(ImmutableList.of(projectExpression),
-            ImmutableList.of(INTEGER, INTEGER), Optional.of(filterExpression));
+            ImmutableList.of(INTEGER, INTEGER));
 
         VecAllocator vecAllocator = VecAllocatorFactory.create(TestOmniPageProcessor.class.getName(), null);
         PageProcessor pageProcessor = new OmniPageProcessor(vecAllocator, Optional.of(filter), projection,
-            OptionalInt.empty(), new ExpressionProfiler());
+            OptionalInt.empty(), new ExpressionProfiler(), null);
 
         // if channel 1 is loaded, test will fail
         int ROW_NUM = 20;

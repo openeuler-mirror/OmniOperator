@@ -25,20 +25,20 @@ public class OmniProjection {
     private final OmniProjectOperatorFactory omniProjectionFactory;
 
     private final int projectLength;
+    private final boolean isSupported;
 
     /**
      * Instantiates a new Omni projection.
      *
      * @param expressions the expressions
      * @param inputTypes the input types
-     * @param filter the filter
      */
-    public OmniProjection(List<? extends RowExpression> expressions, List<Type> inputTypes,
-        Optional<RowExpression> filter) {
+    public OmniProjection(List<? extends RowExpression> expressions, List<Type> inputTypes) {
         this.projectLength = expressions.size();
         this.omniProjectionFactory = new OmniProjectOperatorFactory(
             expressions.stream().map(OmniRowExpressionUtil::expressionStringify)
             .toArray(String[]::new), toVecTypes(inputTypes));
+        this.isSupported = omniProjectionFactory.isSupported();
     }
 
     /**
@@ -66,5 +66,14 @@ public class OmniProjection {
      */
     public int size() {
         return this.projectLength;
+    }
+
+    /**
+     * Check if the projection is supported by OmniRuntime
+     *
+     * @return if the projection is supported
+     */
+    public boolean isSupported() {
+        return isSupported;
     }
 }

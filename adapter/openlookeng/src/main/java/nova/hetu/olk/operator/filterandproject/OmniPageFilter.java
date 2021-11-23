@@ -38,7 +38,7 @@ public class OmniPageFilter implements PageFilter {
 
     private final boolean isDeterministic;
 
-    private boolean isExpressionSupported;
+    private boolean isSupported;
 
     private final List<Type> inputTypes;
 
@@ -66,9 +66,9 @@ public class OmniPageFilter implements PageFilter {
             this.operatorFactory = new OmniFilterAndProjectOperatorFactory(expressionStringify(filterExpression),
                 vecTypes,
                 projects.stream().map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList()));
-            this.isExpressionSupported = true;
+            this.isSupported = this.operatorFactory.isSupported();
         } catch (OmniRuntimeException e) {
-            isExpressionSupported = false;
+            isSupported = false;
         }
     }
 
@@ -102,10 +102,10 @@ public class OmniPageFilter implements PageFilter {
     /**
      * Is expression supported boolean.
      *
-     * @return the boolean
+     * @return if the filter is supported by OmniRuntime
      */
-    public boolean isExpressionSupported() {
-        return isExpressionSupported;
+    public boolean isSupported() {
+        return isSupported;
     }
 
     /**
