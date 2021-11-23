@@ -189,6 +189,43 @@ public:
         return static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(offset, length, originalIndexes);
     }
 
+    static int64_t GetValuesAddr(Vector *vector)
+    {
+        int32_t positionOffset = vector->GetPositionOffset();
+        void *values = vector->GetValues();
+        switch (vector->GetTypeId()) {
+            case omniruntime::vec::OMNI_VEC_TYPE_INT:
+            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + positionOffset);
+            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
+            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + positionOffset);
+            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+                return reinterpret_cast<int64_t>(reinterpret_cast<double *>(values) + positionOffset);
+            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+                return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(values) + positionOffset);
+            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+                return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * positionOffset);
+            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+                return reinterpret_cast<int64_t>(values);
+            default:
+                LogError("Do not support such vector type %d", vector->GetTypeId());
+                return 0;
+        }
+    }
+
+    static int64_t GetNullsAddr(Vector *vector)
+    {
+        return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(vector->GetValueNulls()) +
+            vector->GetPositionOffset());
+    }
+
+    static int64_t GetOffsetsAddr(Vector *vector)
+    {
+        return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(vector->GetValueOffsets()) +
+            vector->GetPositionOffset());
+    }
+
     static void FreeVecBatch(VectorBatch *vecBatch);
 
     static void FreeVecBatches(VectorBatch **vecBatches, int32_t vecBatchCount);
@@ -199,7 +236,7 @@ public:
 
     static void PrintVectorValue(Vector *vector, int32_t rowIndex);
 
-    static VectorBatch* ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches);
+    static VectorBatch *ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches);
 
 private:
 };

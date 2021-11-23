@@ -17,6 +17,12 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
 {
     this->dictionary = dictionary->Slice(0, dictionary->GetSize());
     memcpy_s(valuesAddress, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
+    bool *nulls = new bool[idsCount];
+    for (int32_t i = 0; i < idsCount; i++) {
+        nulls[i] = dictionary->IsValueNull(ids[i]);
+    }
+    memcpy_s(valueNullsAddress, idsCount * sizeof(bool), nulls, idsCount * sizeof(bool));
+    delete[] nulls;
 }
 
 DictionaryVector::DictionaryVector(Vector *dictionary, int32_t idsCount)
@@ -122,7 +128,7 @@ DictionaryVector *DictionaryVector::Slice(int32_t positionOffset, int32_t length
 
 DictionaryVector *DictionaryVector::CopyPositions(const int *positions, int offset, int length)
 {
-    auto *id = new int32_t [length];
+    auto *id = new int32_t[length];
     for (int i = 0; i < length; ++i) {
         id[i] = GetId(positions[offset + i]);
     }
@@ -161,7 +167,7 @@ Vector *DictionaryVector::ExtractDictionary()
         int32_t *currentIds = dictionaryVector->GetIds();
         dictionary = dictionaryVector->GetDictionary();
         for (int32_t i = 0; i < size; i++) {
-            positions[i] = (preIds == nullptr) ? currentIds[i] : currentIds[preIds[i]];
+            positions[i] = (preIds == nullptr) ? currentIds[i + positionOffset] : currentIds[preIds[i]];
         }
         preIds = positions;
     } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
@@ -179,7 +185,7 @@ Vector *DictionaryVector::ExtractDictionary(const int32_t *positions, int32_t le
         int32_t *currentIds = dictionaryVector->GetIds();
         dictionary = dictionaryVector->GetDictionary();
         for (int32_t i = 0; i < length; i++) {
-            newPositions[i] = (preIds == nullptr) ? currentIds[positions[i]] : currentIds[preIds[i]];
+            newPositions[i] = (preIds == nullptr) ? currentIds[positions[i] + positionOffset] : currentIds[preIds[i]];
         }
         preIds = newPositions;
     } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
@@ -196,7 +202,8 @@ Vector *DictionaryVector::ExtractDictionaryAndIds(int32_t positionOffset, int32_
         int32_t *currentIds = dictionaryVector->GetIds();
         dictionary = dictionaryVector->GetDictionary();
         for (int32_t i = 0; i < length; i++) {
-            originalIds[i] = (preIds == nullptr) ? currentIds[i + positionOffset] : currentIds[preIds[i]];
+            originalIds[i] =
+                (preIds == nullptr) ? currentIds[i + positionOffset + this->positionOffset] : currentIds[preIds[i]];
         }
         preIds = originalIds;
     } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);

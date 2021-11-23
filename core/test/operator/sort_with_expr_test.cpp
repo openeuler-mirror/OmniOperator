@@ -246,16 +246,16 @@ TEST(SortWithExprTest, TestOrderByOneVarcharExprColumn)
     VectorBatch *vecBatch = new VectorBatch(vecCount, dataSize);
     vecBatch->SetVector(0, vector);
 
-    VecTypes sourceTypes(std::vector<VecType>({type}));
+    VecTypes sourceTypes(std::vector<VecType>({ type }));
     int32_t outputCols[vecCount] = {0};
     std::string sortKeys[vecCount] = {"substr:varchar(#0, 1, 4)"};
     int32_t ascendings[vecCount] = {true};
     int32_t nullFirsts[vecCount] = {true};
 
     SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-            sourceTypes, outputCols, vecCount, sortKeys, ascendings, nullFirsts, vecCount);
+        sourceTypes, outputCols, vecCount, sortKeys, ascendings, nullFirsts, vecCount);
     JitContext *jitContext =
-            CreateTestSortExprJitContext(sourceTypes, outputCols, vecCount, sortKeys, ascendings, nullFirsts, vecCount);
+        CreateTestSortExprJitContext(sourceTypes, outputCols, vecCount, sortKeys, ascendings, nullFirsts, vecCount);
     operatorFactory->SetJitContext(jitContext);
     SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -267,6 +267,73 @@ TEST(SortWithExprTest, TestOrderByOneVarcharExprColumn)
     VarcharVector *expectVector = CreateVarcharVector(type, expectValues, dataSize);
     VectorBatch *expectVecBatch = new VectorBatch(vecCount, dataSize);
     expectVecBatch->SetVector(0, expectVector);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sortOperator;
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(SortWithExprTest, TestOrderByTwoExprDictionaryWithNull)
+{
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
+
+    auto vec0 = CreateVector<IntVector>(data0, dataSize);
+    auto vec1 = CreateVector<LongVector>(data1, dataSize);
+    auto vec2 = CreateVector<LongVector>(data2, dataSize);
+    for (int i = 0; i < dataSize; i = i + 2) {
+        vec0->SetValueNull(i);
+        vec1->SetValueNull(i);
+        vec2->SetValueNull(i);
+    }
+
+    int32_t ids[] = {0, 1, 2, 3, 4, 5};
+    auto dictVec0 = new DictionaryVector(vec0, ids, dataSize);
+    auto dictVec2 = new DictionaryVector(vec2, ids, dataSize);
+    delete vec0;
+    delete vec2;
+    auto slicedVec0 = dictVec0->Slice(1, 5);
+    auto slicedVec1 = vec1->Slice(1, 5);
+    auto slicedVec2 = dictVec2->Slice(1, 5);
+    delete dictVec0;
+    delete vec1;
+    delete dictVec2;
+
+    auto vecBatch = new VectorBatch(3, 5);
+    vecBatch->SetVector(0, slicedVec0);
+    vecBatch->SetVector(1, slicedVec1);
+    vecBatch->SetVector(2, slicedVec2);
+
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
+    int32_t outputCols[2] = {1, 2};
+    std::string sortKeys[2] = {"ADD:int(#0, 50)", "ADD:long(50, #2)"};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
+    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
+        sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    JitContext *jitContext =
+        CreateTestSortExprJitContext(sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    operatorFactory->SetJitContext(jitContext);
+    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    std::vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+
+    int64_t expectData1[5] = {0, 0, 5, 1, 3};
+    int64_t expectData2[5] = {0, 0, 11, 55, 33};
+    VecTypes expectedTypes(std::vector<VecType> { LongVecType(), LongVecType() });
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
+    expectVecBatch->GetVector(0)->SetValueNull(0);
+    expectVecBatch->GetVector(0)->SetValueNull(1);
+    expectVecBatch->GetVector(1)->SetValueNull(0);
+    expectVecBatch->GetVector(1)->SetValueNull(1);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);

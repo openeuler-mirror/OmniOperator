@@ -17,8 +17,8 @@ RowFilter::RowFilter(std::string &expression, std::vector<expressions::DataType>
     : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
-    this->expression = parser.ParseRowExpression(
-        expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
+    this->expression =
+        parser.ParseRowExpression(expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
 }
 
 RowFilter::~RowFilter()
@@ -84,7 +84,7 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
     return filterAndProjectOperator.release();
 }
 
-void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
+int64_t GetDecimal128Data(Vector *col, uint32_t nRows)
 {
     int32_t longs = 2;
     int64_t *values = reinterpret_cast<int64_t *>(col->GetValues());
@@ -97,7 +97,7 @@ void GetDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
         vcData->push_back(reinterpret_cast<int64_t>(index));
     }
     // data handling
-    data.push_back(reinterpret_cast<int64_t>(vcData.release()->data()));
+    return reinterpret_cast<int64_t>(vcData.release()->data());
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
@@ -105,29 +105,34 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
     std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
 {
     std::vector<int64_t> data;
+    int64_t valuesAddress;
+    int64_t dictVecAddress;
 
     for (int32_t i = 0; i < vectorCount; i++) {
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
         if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_LAZY) {
             colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
-        // handle dictionary vec
-        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY) {
-            dictionaries[i] = reinterpret_cast<int64_t>(colVec);
-            data.push_back(0);
-        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
-            GetDecimal128Data(colVec, data, vecBatch->GetRowCount());
-            dictionaries[i] = 0;
+        dictVecAddress = 0;
+        valuesAddress = 0;
+        VecTypeId typeId = colVec->GetTypeId();
+        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
+            dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
+        } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
+            valuesAddress = GetDecimal128Data(colVec, vecBatch->GetRowCount());
         } else {
-            // data handling
-            data.push_back(reinterpret_cast<int64_t>(colVec->GetValues()));
-            dictionaries[i] = 0;
+            valuesAddress = VectorHelper::GetValuesAddr(colVec);
         }
+
+        // data handling
+        dictionaries[i] = dictVecAddress;
+        data.push_back(valuesAddress);
+
         // bitmap handling
-        bitmap[i] = reinterpret_cast<int64_t>(colVec->GetValueNulls());
+        bitmap[i] = VectorHelper::GetNullsAddr(colVec);
 
         // offsets handling
-        offsetsAddrs[i] = reinterpret_cast<int64_t>(colVec->GetValueOffsets());
+        offsetsAddrs[i] = VectorHelper::GetOffsetsAddr(colVec);
     }
 
     return data;
@@ -149,7 +154,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     std::vector<int64_t> data = GetData(vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
 
     int32_t numSelectedRows = this->filter->Apply(data.data(), rowCount, selectedRows, bitmap, offsets,
-                                                  reinterpret_cast<int64_t>(context), dictionaries);
+        reinterpret_cast<int64_t>(context), dictionaries);
 
     if (numSelectedRows <= 0) {
         for (auto &dictionaryVec : dictionaryVecs) {
@@ -162,8 +167,8 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection
-        Vector *col = this->projections[i]->Project(
-            this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data, bitmap, offsets, context, dictionaries);
+        Vector *col = this->projections[i]->Project(this->vecAllocator, vecBatch, selectedRows, numSelectedRows, data,
+            bitmap, offsets, context, dictionaries);
         projectedData->SetVector(i, col);
     }
     this->projectedVecs = std::move(projectedData);
@@ -205,6 +210,5 @@ Filter::Filter(expressions::Expr &expression, int32_t inputVecTypes[], int32_t i
     void *function = &f;
     this->Apply = *static_cast<FilterFunc *>(function);
 }
-
 } // end of op
 } // end of omniruntime

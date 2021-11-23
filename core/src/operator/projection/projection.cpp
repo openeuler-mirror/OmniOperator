@@ -191,7 +191,7 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool fil
     }
 }
 
-void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRows)
+int64_t GetProjDecimal128Data(Vector *col, uint32_t nRows)
 {
     int32_t longs = 2;
     auto *values = static_cast<int64_t *>(col->GetValues());
@@ -204,7 +204,7 @@ void GetProjDecimal128Data(Vector *col, std::vector<int64_t> &data, uint32_t nRo
         vcData->push_back(reinterpret_cast<int64_t>(index));
     }
     // data handling
-    data.push_back(reinterpret_cast<int64_t>(vcData.release()->data()));
+    return reinterpret_cast<int64_t>(vcData.release()->data());
 }
 
 // Helper function to return data, null bitmap, offsets in vecBatch
@@ -212,36 +212,41 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
     std::vector<Vector *> &dictionaryVecs, int vectorCount, int64_t dictionaries[])
 {
     std::vector<int64_t> data;
+    int64_t valuesAddress;
+    int64_t dictVecAddress;
 
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch.GetVector(i);
         if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
             colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
-        // handle dictionary vec
-        if (colVec->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY) {
-            dictionaries[i] = reinterpret_cast<int64_t>(colVec);
-            data.push_back(0);
-        } else if (colVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
-            GetProjDecimal128Data(colVec, data, vecBatch.GetRowCount());
-            dictionaries[i] = 0;
+        dictVecAddress = 0;
+        valuesAddress = 0;
+        VecTypeId typeId = colVec->GetTypeId();
+        if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
+            dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
+        } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
+            valuesAddress = GetProjDecimal128Data(colVec, vecBatch.GetRowCount());
         } else {
-            // data handling
-            data.push_back(reinterpret_cast<int64_t>(colVec->GetValues()));
-            dictionaries[i] = 0;
+            valuesAddress = VectorHelper::GetValuesAddr(colVec);
         }
+
+        // data handling
+        dictionaries[i] = dictVecAddress;
+        data.push_back(valuesAddress);
+
         // bitmap handling
-        bitmap[i] = reinterpret_cast<int64_t>(colVec->GetValueNulls());
+        bitmap[i] = VectorHelper::GetNullsAddr(colVec);
 
         // offsets handling
-        offsetsAddrs[i] = reinterpret_cast<int64_t>(colVec->GetValueOffsets());
+        offsetsAddrs[i] = VectorHelper::GetOffsetsAddr(colVec);
     }
 
     return data;
 }
 
 Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-    int32_t numSelectedRows, vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets,
+    int32_t numSelectedRows, vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets,
     ExecutionContext *context, int64_t *dictionaryVectors) const
 {
     // short-circuit logic for column projections
@@ -295,32 +300,30 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
 
     Vector *projectedVec = nullptr;
     if (outType == STRINGD) {
-        projectedVec = ProjectHelperVarWidth(
-            *vecBatch, vecData, bitmap, offsets, outVec.release(),
-            numSelectedRows, selectedRows, context, dictionaryVectors);
+        projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
+            selectedRows, context, dictionaryVectors);
     } else {
-        projectedVec = ProjectHelperFixedWidth(
-            *vecBatch, vecData, bitmap, offsets, outVec.release(),
-            numSelectedRows, selectedRows, context, dictionaryVectors);
+        projectedVec = ProjectHelperFixedWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
+            selectedRows, context, dictionaryVectors);
     }
     context->getArena()->Reset();
     return projectedVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
-    std::vector<int64_t> const &vecData,  int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
+    std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
     int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const
 {
     // using projector
-    ((int32_t*) outVec->GetValueOffsets())[0] = 0;
+    ((int32_t *)outVec->GetValueOffsets())[0] = 0;
     this->projector(vecData.data(), vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec->GetValues()),
         selectedRows, numSelectedRows, bitmap, offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
-        reinterpret_cast<int32_t*>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context), dictionaryVectors);
+        reinterpret_cast<int32_t *>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context), dictionaryVectors);
     return outVec;
 }
 
 omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
-    std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
+    std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
     int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const
 {
     if (outVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
@@ -329,9 +332,9 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
         auto ov = oVec.data();
         void *vecVals = &ov;
         auto cvecVals = static_cast<int64_t *>(vecVals);
-        this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals, selectedRows, numSelectedRows,
-            bitmap, offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
-            reinterpret_cast<int32_t*>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context),
+        this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals, selectedRows, numSelectedRows, bitmap,
+            offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
+            reinterpret_cast<int32_t *>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context),
             dictionaryVectors);
         auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
         for (int i = 0; i < numSelectedRows; i++) {
@@ -341,18 +344,17 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     } else {
         int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(),
             reinterpret_cast<int64_t>(outVec->GetValues()), selectedRows, numSelectedRows, bitmap, offsets,
-            reinterpret_cast<bool *>(outVec->GetValueNulls()), reinterpret_cast<int32_t*>(outVec->GetValueOffsets()),
+            reinterpret_cast<bool *>(outVec->GetValueNulls()), reinterpret_cast<int32_t *>(outVec->GetValueOffsets()),
             reinterpret_cast<int64_t>(context), dictionaryVectors);
     }
     return outVec;
 }
 
-Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch,
-    vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, ExecutionContext *context,
-    int64_t *dictionaryVectors) const
+Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, vector<int64_t> const & vecData,
+    int64_t *bitmap, int64_t *offsets, ExecutionContext *context, int64_t *dictionaryVectors) const
 {
-    return this->Project(vecAllocator, vecBatch, nullptr, vecBatch->GetRowCount(), vecData,
-        bitmap, offsets, context, dictionaryVectors);
+    return this->Project(vecAllocator, vecBatch, nullptr, vecBatch->GetRowCount(), vecData, bitmap, offsets, context,
+        dictionaryVectors);
 }
 
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
@@ -429,9 +431,8 @@ ProjectionOperatorFactory::~ProjectionOperatorFactory()
 
 omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 {
-    auto projectionOperator =
-        std::make_unique<ProjectionOperator>(this->proj, this->inputTypes, this->nCols, this->nProj,
-                                             new ExecutionContext());
+    auto projectionOperator = std::make_unique<ProjectionOperator>(this->proj, this->inputTypes, this->nCols,
+        this->nProj, new ExecutionContext());
     return projectionOperator.release();
 }
 

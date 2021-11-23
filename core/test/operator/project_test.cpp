@@ -715,4 +715,108 @@ TEST (ProjectTest, StringSubstr) {
     delete op;
     delete factory;
 }
+
+TEST (ProjectTest, SlicedDictionaryVecTest) {
+    const int32_t numCols = 3;
+    const int32_t numRows = 10;
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    IntVector *col2 = new IntVector(vecAllocator, numRows);
+    IntVector *col3 = new IntVector(vecAllocator, numRows);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        col1->SetValue(i, i % 5);
+        col2->SetValue(i, i % 11);
+        col3->SetValue(i, (i % 21) - 3);
+    }
+    int32_t ids[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+    DictionaryVector *dictionaryVector = new DictionaryVector(col3, ids, numRows);
+    delete col3;
+    auto slicedCol1 = col1->Slice(5, 5);
+    auto slicedCol2 = col2->Slice(5, 5);
+    auto slicedCol3 = dictionaryVector->Slice(5, 5);
+    delete col1;
+    delete col2;
+    delete dictionaryVector;
+
+    VectorBatch *input = new VectorBatch(numCols, slicedCol1->GetSize());
+    int32_t inputTypeIds[numCols] = {1, 1, 1};
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    input->NewVectors(vecAllocator, inputTypes);
+    input->SetVector(0, slicedCol1);
+    input->SetVector(1, slicedCol2);
+    input->SetVector(2, slicedCol3);
+
+    const int32_t numProject = 3;
+    string exprs[numProject] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)",
+                                "$operator$ADD:int(#2, 10)"};
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, slicedCol1->GetValue(i) + 1);
+        int32_t val1 = ((IntVector *) ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val1, slicedCol2->GetValue(i) + 2);
+        int32_t val2 = ((IntVector *) ret[0]->GetVector(2))->GetValue(i);
+        EXPECT_EQ(val2, slicedCol3->GetInt(i) + 10);
+    }
+    VectorHelper::FreeVecBatch(input);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
+
+TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
+    const int32_t numCols = 1;
+    const int32_t numRows = 10;
+
+    auto vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
+    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            col1->SetValueNull(i);
+        } else {
+            col1->SetValue(i, i % 5);
+        }
+    }
+    int32_t ids[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+    auto dictionaryVector = new DictionaryVector(col1, ids, numRows);
+    auto slicedCol1 = dictionaryVector->Slice(5, 5);
+    delete col1;
+    delete dictionaryVector;
+
+    VectorBatch *input = new VectorBatch(numCols, slicedCol1->GetSize());
+    int32_t inputTypeIds[numCols] = {1};
+    vector<VecType> inputTypes;
+    ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    input->NewVectors(vecAllocator, inputTypes);
+    input->SetVector(0, slicedCol1);
+
+    const int32_t numProject = 1;
+    string exprs[numProject] = {"$operator$ADD:long(#0, #0)"};
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    auto retVec = (LongVector *)(ret[0]->GetVector(0));
+    for (int32_t i = 0; i < numReturned; i++) {
+        if (i == 0) {
+            EXPECT_TRUE(retVec->IsValueNull(i));
+        } else {
+            int64_t val0 = retVec->GetValue(i);
+            EXPECT_EQ(val0, ((DictionaryVector *)slicedCol1)->GetInt(i) * 2);
+        }
+    }
+    VectorHelper::FreeVecBatch(input);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete op;
+    delete factory;
+}
 }
