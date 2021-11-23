@@ -20,15 +20,6 @@ namespace {
     const string OPERATOR_PREFIX = "$operator$";
     const int32_t SUBSTR_LEN = 10;
     const int32_t ARG2 = 2;
-    const map<string, DataType> DATA_TYPE_STRING_MAP = {
-        {"boolean", DataType::BOOLD},
-        {"int", DataType::INT32D},
-        {"long", DataType::INT64D},
-        {"double", DataType::DOUBLED},
-        {"decimal", DataType::DECIMAL128D},
-        {"char", DataType::STRINGD},
-        {"varchar", DataType::STRINGD}
-    };
 }
 
 // Helper function to remove operator prefix if it is there
@@ -133,11 +124,11 @@ string Parser::StripString(const string& input)
 
 DataType ParseReturnType(const string& typeString)
 {
-    if (DATA_TYPE_STRING_MAP.count(typeString) == 0) {
-        cout << "Unsupported return type: " + typeString << endl;
-        return INVALIDDATAD;
+    if (typeString.find_first_not_of("0123456789") == string::npos && stoi(typeString) < INT32_MAX) {
+        return static_cast<DataType>(stoi(typeString));
     }
-    return DATA_TYPE_STRING_MAP.at(typeString);
+    cout << "Unsupported return type: " + typeString << endl;
+    return INVALIDDATAD;
 }
 
 Expr *Parser::ParseRowExpression(const string& inputStr, int32_t *inputTypes, int32_t vecCount)

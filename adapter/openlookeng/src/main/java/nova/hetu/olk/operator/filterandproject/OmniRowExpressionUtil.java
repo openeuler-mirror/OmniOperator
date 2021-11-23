@@ -22,6 +22,8 @@ import io.prestosql.sql.relational.VariableReferenceExpression;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static nova.hetu.olk.tool.OperatorUtils.toVecType;
+
 /**
  * Util class for openLooKeng RowExpression
  *
@@ -41,16 +43,18 @@ public class OmniRowExpressionUtil {
             CallExpression callExpression = (CallExpression) rowExpression;
             List<String> args = callExpression.getArguments().stream()
                 .map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList());
-            return callExpression.getSignature().getName() + ":" + toStandardType(callExpression.getType()) +
-                "(" + Joiner.on(", ").join(args) + ")";
+            return callExpression.getSignature().getName() + ":" +
+                    toVecType(callExpression.getType().getTypeSignature()).getId().ordinal() +
+                    "(" + Joiner.on(", ").join(args) + ")";
         }
 
         if (rowExpression instanceof SpecialForm) {
             SpecialForm specialForm = (SpecialForm) rowExpression;
             List<String> args = specialForm.getArguments().stream()
                 .map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList());
-            return specialForm.getForm().name() + ":" + toStandardType(specialForm.getType()) +
-                "(" + Joiner.on(", ").join(args) + ")";
+            return specialForm.getForm().name() + ":" +
+                    toVecType(specialForm.getType().getTypeSignature()).getId().ordinal() +
+                    "(" + Joiner.on(", ").join(args) + ")";
         }
 
         if (rowExpression instanceof LambdaDefinitionExpression) {
@@ -81,12 +85,5 @@ public class OmniRowExpressionUtil {
             return String.valueOf(constantExpression.getValue());
         }
         return rowExpression.toString();
-    }
-
-    private static String toStandardType(Type type) {
-        if ("io.airlift.slice.Slice".equals(type.getJavaType().getName())) {
-            return type.getTypeSignature().getBase();
-        }
-        return type.getJavaType().getName();
     }
 }

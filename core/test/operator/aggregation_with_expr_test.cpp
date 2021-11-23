@@ -83,8 +83,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::string groupByKeys[] = {"MODULUS:long(#0, 3)", "#2"};
-    std::string aggKeys[] = {"MULTIPLY:long(#1, 5)", "#3"};
+    std::string groupByKeys[] = {"MODULUS:2(#0, 3)", "#2"};
+    std::string aggKeys[] = {"MULTIPLY:2(#1, 5)", "#3"};
 
     AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
@@ -145,8 +145,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::string groupByKeys[] = {"MODULUS:long(#0, 3)", "ADD:int(#2, 5)"};
-    std::string aggKeys[] = {"MULTIPLY:long(#1, 5)", "ADD:int(#3, 5)"};
+    std::string groupByKeys[] = {"MODULUS:2(#0, 3)", "ADD:1(#2, 5)"};
+    std::string aggKeys[] = {"MULTIPLY:2(#1, 5)", "ADD:1(#3, 5)"};
 
     AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 

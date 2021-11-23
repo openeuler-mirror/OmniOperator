@@ -167,6 +167,9 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         case DataType::STRINGD:
             outPtrType = Type::getInt8PtrTy(*context);
             break;
+        case DataType::DECIMAL64D:
+            outPtrType = Type::getInt64PtrTy(*context);
+            break;
         case DataType::DECIMAL128D:
             outPtrType = Type::getInt64PtrTy(*context);
             break;

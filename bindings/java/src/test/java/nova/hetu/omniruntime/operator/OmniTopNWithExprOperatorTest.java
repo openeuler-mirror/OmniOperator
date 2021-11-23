@@ -20,7 +20,7 @@ public class OmniTopNWithExprOperatorTest {
     @Test
     public void testTopNWithAllExpr() {
         VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
-        String[] sortKeys = {"ADD:int(#0, 5)", "MODULUS:long(#2, 3)"};
+        String[] sortKeys = {"ADD:1(#0, 5)", "MODULUS:2(#2, 3)"};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
 
@@ -55,7 +55,7 @@ public class OmniTopNWithExprOperatorTest {
     @Test
     public void testTopNWithPartialExpr() {
         VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
-        String[] sortKeys = {"#0", "MODULUS:long(#2, 3)"};
+        String[] sortKeys = {"#0", "MODULUS:2(#2, 3)"};
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
 

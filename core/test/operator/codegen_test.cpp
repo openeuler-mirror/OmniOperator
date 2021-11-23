@@ -31,7 +31,7 @@ using namespace omniruntime::op;
 // Check CodeGenTest.RowFilter for a dedicated test using the RowFilter class instead.
 TEST(CodeGenTest, SimpleFilter)
 {
-    string unparsed = "$operator$LESS_THAN:boolean(#0, 50)";
+    string unparsed = "$operator$LESS_THAN:4(#0, 50)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
@@ -96,7 +96,7 @@ TEST(CodeGenTest, SimpleFilter)
 // Simple project example using individual row processing.
 TEST(CodeGenTest, SimpleProject)
 {
-    string unparsed = "ADD:int(#0, 50)";
+    string unparsed = "ADD:1(#0, 50)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
@@ -155,7 +155,7 @@ TEST(CodeGenTest, SimpleProject)
 // A more complicated test for individual row projection
 TEST(CodeGenTest, SingleProject)
 {
-    string unparsed = "IF:int($operator$GREATER_THAN:boolean(#1, 3000000000), ADD:int(#0, 10), MULTIPLY:int(#0, -1))";
+    string unparsed = "IF:1($operator$GREATER_THAN:4(#1, 3000000000), ADD:1(#0, 10), MULTIPLY:1(#0, -1))";
 
     const int32_t numCols = 2;
     DataType types[numCols] = {DataType::INT32D, DataType::INT64D};
@@ -292,7 +292,7 @@ TEST(CodeGenTest, ShortCircuitProject)
 // Test the row filter
 TEST(CodeGenTest, RowFilter)
 {
-    string unparsed = "$operator$EQUAL:boolean(#0, 0)";
+    string unparsed = "$operator$EQUAL:4(#0, 0)";
 
     const int32_t numCols = 1;
     DataType types[numCols] = {DataType::INT32D};
@@ -378,7 +378,7 @@ TEST (CodeGenTest, RowFilterString) {
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 2);
 
-    std::string expr = "$operator$EQUAL:boolean(substr:varchar(#0, 1, 5), 'hello')";
+    std::string expr = "$operator$EQUAL:4(substr:15(#0, 1, 5), 'hello')";
     auto filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
     auto filterFunc = filter->Create(typeVec);
@@ -388,7 +388,7 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    expr = "$operator$EQUAL:boolean(substr:varchar(#1, 1, 5), 'hello')";
+    expr = "$operator$EQUAL:4(substr:15(#1, 1, 5), 'hello')";
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create(typeVec);
@@ -398,7 +398,7 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, false);
 
     delete filter;
-    expr = "$operator$EQUAL:boolean(substr:varchar(#0, 1, 5), substr:varchar(#1, 7, 11))";
+    expr = "$operator$EQUAL:4(substr:15(#0, 1, 5), substr:15(#1, 7, 11))";
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create(typeVec);
@@ -421,8 +421,8 @@ TEST (CodeGenTest, RowFilterString) {
 
 TEST(CodeGenTest, Operators1)
 {
-    string unparsed = "AND:boolean($operator$GREATER_THAN_OR_EQUAL:boolean(ADD:int(#0, 2), 4), "
-                      "AND:boolean($operator$LESS_THAN:boolean(#1, 4), $operator$EQUAL:boolean(#2, 2)))";
+    string unparsed = "AND:4($operator$GREATER_THAN_OR_EQUAL:4(ADD:1(#0, 2), 4), AND:4($operator$LESS_THAN:4(#1, 4), "
+                      "$operator$EQUAL:4(#2, 2)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -493,8 +493,7 @@ TEST(CodeGenTest, Operators1)
 
 TEST(CodeGenTest, MathFunctions1)
 {
-    string unparsed = "AND:boolean($operator$EQUAL:boolean(abs:int(#0), abs:int(#2)), "
-                      "$operator$EQUAL:boolean(abs:int(#0), abs:int(#1)))";
+    string unparsed = "AND:4($operator$EQUAL:4(abs:1(#0), abs:1(#2)), $operator$EQUAL:4(abs:1(#0), abs:1(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -566,7 +565,7 @@ TEST(CodeGenTest, MathFunctions1)
 
 TEST(CodeGenTest, MathFunctions2)
 {
-    string unparsed = "BETWEEN:boolean(#1, #0, #2)";
+    string unparsed = "BETWEEN:4(#1, #0, #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -648,8 +647,8 @@ TEST(CodeGenTest, MathFunctions2)
 
 TEST(CodeGenTest, MathFunctions3)
 {
-    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
-                      "$operator$LESS_THAN:boolean(#0, 0))";
+    string unparsed = "IF:4($operator$GREATER_THAN:4(#0, 100), $operator$GREATER_THAN:4(#0, 200), "
+                      "$operator$LESS_THAN:4(#0, 0))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -740,7 +739,7 @@ TEST(CodeGenTest, MathFunctions3)
 
 TEST(CodeGenTest, MathFunctions4)
 {
-    string unparsed = "IN:boolean(#0, 1, 2, 3, 4, 5)";
+    string unparsed = "IN:4(#0, 1, 2, 3, 4, 5)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT32D, DataType::INT32D};
     Parser parser {};
@@ -841,7 +840,7 @@ TEST(CodeGenTest, MathFunctions4)
 // For testing different types
 TEST(CodeGenTest, CastNumbers1)
 {
-    string unparsed = "$operator$EQUAL:boolean(abs:double(CAST:double(#0)), abs:double(CAST:double(#1)))";
+    string unparsed = "$operator$EQUAL:4(abs:3(CAST:3(#0)), abs:3(CAST:3(#1)))";
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser {};
@@ -921,7 +920,7 @@ TEST(CodeGenTest, CastNumbers1)
 
 TEST(CodeGenTest, CastNumbers2)
 {
-    string unparsed = "$operator$GREATER_THAN:boolean(CAST:double(#1), #2)";
+    string unparsed = "$operator$GREATER_THAN:4(CAST:3(#1), #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::INT64D, DataType::DOUBLED};
     Parser parser {};
@@ -1002,7 +1001,7 @@ TEST(CodeGenTest, CastNumbers2)
 
 TEST(CodeGenTest, Like)
 {
-    string unparsed = "LIKE:boolean(#2, '%hello%world%')";
+    string unparsed = "LIKE:4(#2, '%hello%world%')";
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
@@ -1080,7 +1079,7 @@ TEST(CodeGenTest, Like)
 
 TEST(CodeGenTest, DateCast)
 {
-    string unparsed = "$operator$GREATER_THAN:boolean(CAST:int(#2), #0)";
+    string unparsed = "$operator$GREATER_THAN:4(CAST:1(#2), #0)";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -1174,7 +1173,7 @@ TEST(CodeGenTest, DateCast)
 
 TEST(CodeGenTest, SubstrIn)
 {
-    string unparsed = "IN:boolean(substr:varchar(#2, 1, 2), '12', '21', '13', '31', '34', '43')";
+    string unparsed = "IN:4(substr:15(#2, 1, 2), '12', '21', '13', '31', '34', '43')";
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
@@ -1270,7 +1269,7 @@ TEST(CodeGenTest, SubstrIn)
 
 TEST(CodeGenTest, ConcatStr)
 {
-    string unparsed = "$operator$EQUAL:boolean(concat:varchar(#1, #2), 'helloworld')";
+    string unparsed = "$operator$EQUAL:4(concat:15(#1, #2), 'helloworld')";
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
     Parser parser {};
@@ -1365,7 +1364,7 @@ TEST(CodeGenTest, ConcatStr)
 
 TEST(CodeGenTest, StringWithOps)
 {
-    string unparsed = "OR:boolean($operator$EQUAL:boolean(#2, 'Sunday'), $operator$EQUAL:boolean(#2, 'Saturday'))";
+    string unparsed = "OR:4($operator$EQUAL:4(#2, 'Sunday'), $operator$EQUAL:4(#2, 'Saturday'))";
 
 
     DataType types[3] = {DataType::INT32D, DataType::STRINGD, DataType::STRINGD};
@@ -1457,7 +1456,7 @@ TEST(CodeGenTest, StringWithOps)
 
 TEST(CodeGenTest, Coalesce)
 {
-    string unparsed = "$operator$EQUAL:boolean(COALESCE:long(#0, 0), 123)";
+    string unparsed = "$operator$EQUAL:4(COALESCE:2(#0, 0), 123)";
 
     DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
     Parser parser {};
@@ -1520,7 +1519,7 @@ TEST(CodeGenTest, Coalesce)
 
 TEST(CodeGenTest, IsNull)
 {
-    string unparsed = "IS_NULL:boolean(#0)";
+    string unparsed = "IS_NULL:4(#0)";
 
     DataType types[1] = {DataType::INT64D};
     Parser parser {};
@@ -1574,7 +1573,7 @@ TEST(CodeGenTest, IsNull)
 
 TEST(CodeGenTest, IsNotNull)
 {
-    string unparsed = "IS_NOT_NULL:boolean(#0)";
+    string unparsed = "IS_NOT_NULL:4(#0)";
 
     DataType types[1] = {DataType::INT64D};
     Parser parser {};
@@ -1627,7 +1626,7 @@ TEST(CodeGenTest, IsNotNull)
 
 TEST(CodeGenTest, DecimalOperators1)
 {
-    string unparsed = "$operator$EQUAL:boolean(ADD:decimal(#0, 5), 15)";
+    string unparsed = "$operator$EQUAL:4(ADD:7(#0, 5), 15)";
 
     DataType types[1] = {DataType::DECIMAL128D};
     Parser parser {};
@@ -1684,7 +1683,7 @@ TEST(CodeGenTest, DecimalOperators1)
 
 TEST(CodeGenTest, DecimalOperators2)
 {
-    string unparsed = "BETWEEN:boolean(#0, #1, #2)";
+    string unparsed = "BETWEEN:4(#0, #1, #2)";
 
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
     Parser parser {};
@@ -1746,8 +1745,8 @@ TEST(CodeGenTest, DecimalOperators2)
 
 TEST(CodeGenTest, DecimalOperators3)
 {
-    string unparsed = "IF:boolean($operator$GREATER_THAN:boolean(#0, 100), $operator$GREATER_THAN:boolean(#0, 200), "
-                      "$operator$LESS_THAN:boolean(#0, 0))";
+    string unparsed = "IF:4($operator$GREATER_THAN:4(#0, 100), $operator$GREATER_THAN:4(#0, 200), "
+                      "$operator$LESS_THAN:4(#0, 0))";
 
     DataType types[3] = {DataType::DECIMAL128D, DataType::DECIMAL128D, DataType::DECIMAL128D};
     Parser parser {};
@@ -1811,7 +1810,7 @@ TEST(CodeGenTest, DecimalOperators3)
 
 TEST(CodeGenTest, ProjectionCodeGen)
 {
-    string unparsed = "$operator$ADD:decimal(#0, 100)";
+    string unparsed = "$operator$ADD:7(#0, 100)";
 
     DataType types[1] = {DataType::DECIMAL128D};
     Parser parser {};
@@ -1922,7 +1921,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     omniruntime::vec::VarcharVector *vector = CreateVarcharVector(type, values, 2);
     auto slicedVector = vector->Slice(1, 1);
 
-    std::string expr = "substr:varchar(#0, 1, 5)";
+    std::string expr = "substr:15(#0, 1, 5)";
     std::vector<DataType> types;
     types.push_back(DataType::STRINGD);
     RowProjection rowProjection(expr, types);
@@ -1959,7 +1958,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
 
 TEST(CodeGenTest, CastNumbers3)
 {
-    string unparsed = "$operator$LESS_THAN:boolean(CAST:double(#1), #2)";
+    string unparsed = "$operator$LESS_THAN:4(CAST:3(#1), #2)";
 
     DataType types[3] = {DataType::INT32D, DataType::DOUBLED, DataType::DOUBLED};
     Parser parser {};
@@ -2069,7 +2068,7 @@ TEST (CodeGenTest, Substr) {
 
     string testname = "stringTest";
     vector<DataType> typeVec = vector<DataType>(types, types + 2);
-    std::string expr = "$operator$EQUAL:boolean(substr:varchar(#0, -5, 5), 'ction')";
+    std::string expr = "$operator$EQUAL:4(substr:15(#0, -5, 5), 'ction')";
     int64_t dictionaries[numCols] = {};
 
     auto filter = new RowFilter(expr, typeVec);
@@ -2080,7 +2079,7 @@ TEST (CodeGenTest, Substr) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    expr = "$operator$EQUAL:boolean(substr:varchar(#1, -5), 'UBSTR')";
+    expr = "$operator$EQUAL:4(substr:15(#1, -5), 'UBSTR')";
 
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
@@ -2090,7 +2089,7 @@ TEST (CodeGenTest, Substr) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    expr = "$operator$EQUAL:boolean(substr:varchar(#0, 4), 'STR Function')";
+    expr = "$operator$EQUAL:4(substr:15(#0, 4), 'STR Function')";
 
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
@@ -2115,7 +2114,7 @@ TEST (CodeGenTest, Substr) {
 
 TEST(CodeGenTest, Mm3Hash)
 {
-    string unparsed = "$operator$EQUAL:boolean(mm3hash:int(#0, 42), 723455942)";
+    string unparsed = "$operator$EQUAL:4(mm3hash:1(#0, 42), 723455942)";
 
     DataType types[1] = {DataType::INT32D};
     Parser parser {};
@@ -2158,7 +2157,7 @@ TEST(CodeGenTest, Mm3Hash)
 
 TEST(CodeGenTest, CombineHash)
 {
-    string unparsed = "$operator$EQUAL:boolean(combine_hash:int(#0, #1), #2)";
+    string unparsed = "$operator$EQUAL:4(combine_hash:1(#0, #1), #2)";
 
     DataType types[3] = {DataType::INT64D, DataType::INT64D, DataType::INT64D};
     Parser parser {};

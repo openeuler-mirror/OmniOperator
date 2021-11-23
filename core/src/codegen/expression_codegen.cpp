@@ -63,6 +63,8 @@ Type *ExpressionCodeGen::ToLlvmType(DataType t)
             return Type::getInt1Ty(*context);
         case DataType::STRINGD:
             return Type::getInt8PtrTy(*context);
+        case DataType::DECIMAL64D:
+            return Type::getInt64Ty(*context);
         case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
         default:
@@ -563,6 +565,9 @@ Value* ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, llvm::Value *elementAddr)
         case DataType::STRINGD:
             elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt8PtrTy(*context));
             break;
+        case DataType::DECIMAL64D:
+            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+            break;
         case DataType::DECIMAL128D:
             elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
             break;
@@ -604,6 +609,10 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
         }
         case DataType::BOOLD: {
             codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(false));
+            break;
+        }
+        case DataType::DECIMAL64D: {
+            codeGenValue = new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(false));
             break;
         }
         case DataType::DECIMAL128D: {
@@ -825,7 +834,7 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
         this->value = make_shared<CodeGenValue>(
             this->BinaryExprStringHelper(bExpr->op, leftValue, leftLen, rightValue, rightLen), this->CreateConstantBool(false));
         return;
-    } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
+    } else if (bExpr->left->GetExprDataType() == DECIMAL128D || bExpr->left->GetExprDataType() == DECIMAL64D) {
         this->value = make_shared<CodeGenValue>(
             this->BinaryExprDecimalHelper(bExpr->op, leftValue, rightValue), this->CreateConstantBool(false));
         return;
@@ -987,6 +996,13 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
         llvm::Value *cmpRight =
             builder->CreateICmpSLE(this->StringCmp(val, valLen, upperVal, upperValLen), CreateConstantInt(0));
         llvm::Value *result = builder->CreateAnd(cmpLeft, cmpRight, "between_and");
+        this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
+        return;
+    } else if (bExpr->value->GetExprDataType() == DECIMAL64D) {
+        // FIXME: Reusing function Decimal128Cmp; add and change to Decimal64Cmp if necessary
+        llvm::Value *cmpleft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerVal, *val), CreateConstantInt(0));
+        llvm::Value *cmpright = builder->CreateICmpSLE(this->Decimal128Cmp(*val, *upperVal), CreateConstantInt(0));
+        llvm::Value *result = builder->CreateAnd(cmpleft, cmpright, "between_and");
         this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
         return;
     } else if (bExpr->value->GetExprDataType() == DECIMAL128D) {
