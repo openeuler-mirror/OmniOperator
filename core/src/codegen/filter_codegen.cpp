@@ -9,7 +9,7 @@ using namespace orc;
 using namespace omniruntime::expressions;
 
 namespace {
-    const int ARGUMENT_ZERO = 0;
+    const int INPUT_INDEX = 0;
     const int ARGUMENT_ONE = 1;
     const int ARGUMENT_TWO = 2;
     const int ARGUMENT_THREE = 3;
@@ -17,6 +17,7 @@ namespace {
     const int EXECUTION_CONTEXT_IDX = 5;
     const int DICTIONARY_VECTORS_IDX = 6;
 
+    const int ROW_FILTER_INPUT_INDEX = 0;
     const int ROW_FILTER_OFFSETS_INDEX = 2;
     const int ROW_FILTER_ROW_IDX_INDEX = 3;
     const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
@@ -28,7 +29,6 @@ int64_t FilterCodeGen::GetFunction()
     Function *func = this->CreateFunction();
     return this->CreateWrapper(*func);
 }
-
 
 int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
 {
@@ -54,7 +54,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     BasicBlock *incrementCounter = BasicBlock::Create(*context, "INCREMENT_COUNTER", funcDecl);
     BasicBlock *endBlock = BasicBlock::Create(*context, "END_BLOCK", funcDecl);
     // preprocessing
-    Argument *data = funcDecl->getArg(ARGUMENT_ZERO);
+    Argument *data = funcDecl->getArg(INPUT_INDEX);
     data->setName("ARGS_ARRAY");
     Argument *numRows = funcDecl->getArg(ARGUMENT_ONE);
     numRows->setName("NUM_ROWS");
@@ -153,6 +153,7 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
 
+    OptimizeFunctionsAndModule();
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
@@ -187,7 +188,7 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
     builder->SetInsertPoint(wrapperBody);
     // Name the arguments
-    Argument *inputData = funcDecl->getArg(ARGUMENT_ZERO);
+    Argument *inputData = funcDecl->getArg(ROW_FILTER_INPUT_INDEX);
     inputData->setName("INPUT_DATA");
     Argument *nulls = funcDecl->getArg(ARGUMENT_ONE);
     nulls->setName("NULLS");

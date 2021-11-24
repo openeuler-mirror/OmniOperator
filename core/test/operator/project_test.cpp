@@ -802,13 +802,13 @@ TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
     input->SetVector(0, slicedCol1);
 
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:2(#0, #0)"};
+    string exprs[numProject] = {"$operator$ADD:1(#0, #0)"};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
-    auto retVec = (LongVector *)(ret[0]->GetVector(0));
+    auto retVec = (IntVector *)(ret[0]->GetVector(0));
     for (int32_t i = 0; i < numReturned; i++) {
         if (i == 0) {
             EXPECT_TRUE(retVec->IsValueNull(i));

@@ -2,6 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: visitor class for expressions
  */
+#ifndef __EXPRESSION_VISITOR_H__
+#define __EXPRESSION_VISITOR_H__
+
 #include "expressions.h"
 
 class ExprVisitor {
@@ -17,3 +20,5 @@ public:
     virtual void Visit(omniruntime::expressions::IsNullExpr &e) = 0;
     virtual void Visit(omniruntime::expressions::FuncExpr &e) = 0;
 };
+
+#endif

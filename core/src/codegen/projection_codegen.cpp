@@ -16,17 +16,16 @@ namespace {
     const int SELECTED = 3;
     const int NUM_SELECTED = 4;
     const int BITMAP = 5;
+    const int OFFSETS_INDEX = 6;
     const int NEW_NULL_VALUES_INDEX = 7;
     const int OUTPUT_OFFSETS_INDEX = 8;
     const int EXECUTION_CONTEXT_IDX = 9;
     const int DICTIONARY_VECTORS_IDX = 10;
-    const int OFFSETS_INDEX = 6;
-    const int ARGUMENT_ZERO = 0;
-    const int ARGUMENT_ONE = 1;
-    const int ARGUMENT_TWO = 2;
+    const int ROW_PROJ_INPUT_INDEX = 0;
+    const int ROW_PROJ_NULL_BITMAP_INDEX = 1;
     const int ROW_PROJ_OFFSETS_INDEX = 2;
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
-    const int ROW_PROJ_NULL_INDEX = 4;
+    const int ROW_PROJ_OUTPUT_NULL_INDEX = 4;
     const int ROW_PROJ_LENGTH_INDEX = 5;
     const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 6;
     const int ROW_PROJ_DICT_VECTORS_INDEX = 7;
@@ -36,7 +35,6 @@ int64_t ProjectionCodeGen::GetFunction()
     Function *func = this->CreateFunction();
     return this->CreateWrapper(*func);
 }
-
 
 int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
 {
@@ -152,8 +150,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     Value *selectedAddress;
 
     // Type of output column
-    Type *outPtrType;
-
+    Type *outPtrType = nullptr;
     switch (this->expr->GetExprDataType()) {
         case DataType::INT32D:
             outPtrType = Type::getInt32PtrTy(*context);
@@ -216,6 +213,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
     ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");
+
     // Add the processed value to output column.
     builder->CreateBr(addToOutput);
     // Add row index to results array
@@ -270,6 +268,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
 
+    OptimizeFunctionsAndModule();
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
@@ -319,16 +318,16 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
-    Argument *inputData = funcDecl->getArg(ARGUMENT_ZERO);
+    Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);
     inputData->setName("INPUT_DATA");
-    Argument *nulls = funcDecl->getArg(ARGUMENT_ONE);
+    Argument *nulls = funcDecl->getArg(ROW_PROJ_NULL_BITMAP_INDEX);
     nulls->setName("NULLS");
     Argument *offsets = funcDecl->getArg(ROW_PROJ_OFFSETS_INDEX);
     offsets->setName("OFFSETS");
     Argument *rowIndex = funcDecl->getArg(ROW_PROJ_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
-    Argument *nullIndex = funcDecl->getArg(ROW_PROJ_NULL_INDEX);
-    nullIndex->setName("NULL_INDEX");
+    Argument *isResultNull = funcDecl->getArg(ROW_PROJ_OUTPUT_NULL_INDEX);
+    isResultNull->setName("IS_RESULT_NULL");
     Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
     lengthPtr->setName("LENGTH_PTR");
     Argument *executionContext = funcDecl->getArg(ROW_PROJ_EXECUTION_CONTEXT_INDEX);
@@ -341,7 +340,7 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(nulls);
     funcArgs.push_back(offsets);
     funcArgs.push_back(rowIndex);
-    funcArgs.push_back(nullIndex);
+    funcArgs.push_back(isResultNull);
     funcArgs.push_back(lengthPtr);
     funcArgs.push_back(executionContext);
     funcArgs.push_back(dictionaryVectors);
