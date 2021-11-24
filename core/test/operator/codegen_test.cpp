@@ -1883,7 +1883,7 @@ TEST(CodeGenTest, TestRowProjectLong)
     omniruntime::vec::LongVector * vector = CreateVector<LongVector>(values, 10);
     auto slicedVector = vector->Slice(4, 6);
 
-    std::string expr = "$operator$ADD:long(#0, 100)";
+    std::string expr = "$operator$ADD:2(#0, 100)";
     std::vector<DataType> types;
     types.push_back(DataType::INT64D);
     RowProjection rowProjection(expr, types);

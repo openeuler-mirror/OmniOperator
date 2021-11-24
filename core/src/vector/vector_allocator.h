@@ -37,10 +37,6 @@ public:
     void RecordVectorStack(const Vector *vector, std::string &stack, VecOpType opType);
 
 private:
-    bool IsVariableWidthType(int type);
-
-private:
-    VectorReference *NewVectorReference(int capacityInBytes, int size, VecType type);
     const std::string scope;
     VectorLeakDetector leakDetector;
     std::atomic<int64_t> allocatedBytes;

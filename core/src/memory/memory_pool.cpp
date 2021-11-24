@@ -5,14 +5,10 @@
 #include <iostream>
 #include "memory_pool.h"
 #include <jemalloc/jemalloc.h>
-#ifdef DEBUG
-#include <atomic>
-#include <thread>
-#include <unistd.h>
+#include "memory_statistic.h"
+#include "../../config.h"
 
-std::atomic_long g_allocateCount(0);
-std::atomic_long g_releaseCount(0);
-#endif
+using namespace std;
 const size_t ALIGNMENT = 64;
 
 class JemallocAllocator {
@@ -54,7 +50,6 @@ public:
 
 class JemallocMemoryPool : public BaseMemoryPoolImpl<JemallocAllocator> {};
 
-
 static JemallocMemoryPool g_jemallocMemoryPool;
 
 MemoryPool *GetMemoryPool()
@@ -81,14 +76,21 @@ uint64_t GetPreferredSize(uint64_t size)
     return lower * 2;
 }
 
+void RecordSize(int size)
+{
+    static MemoryStatistic statistic;
+    statistic.RecordSize(size);
+}
+
 void *OmniAllocate(uint64_t size)
 {
     uint8_t *buf = nullptr;
     uint64_t preferredSize = GetPreferredSize(size);
-    g_jemallocMemoryPool.Allocate(preferredSize, &buf);
 #ifdef DEBUG
-    g_allocateCount += 1;
+    RecordSize(preferredSize);
 #endif
+    g_jemallocMemoryPool.Allocate(preferredSize, &buf);
+
     return reinterpret_cast<void *>(buf);
 }
 
@@ -96,20 +98,4 @@ void OmniRelease(unsigned long address)
 {
     uintptr_t ptr = reinterpret_cast<uintptr_t>(address);
     g_jemallocMemoryPool.Release(reinterpret_cast<uint8_t *>(ptr));
-#ifdef DEBUG
-    g_releaseCount += 1;
-#endif
 }
-
-#ifdef DEBUG
-void printStatistics()
-{
-    while (true) {
-        std::cout << "Allocate Count=" << g_allocateCount << ", Release Count=" << g_releaseCount << ", Leak Count=" <<
-            (g_allocateCount - g_releaseCount) << std::endl;
-        sleep(10); // sleep for 10 ms
-    }
-}
-
-static std::thread g_backThread = std::thread(printStatistics);
-#endif

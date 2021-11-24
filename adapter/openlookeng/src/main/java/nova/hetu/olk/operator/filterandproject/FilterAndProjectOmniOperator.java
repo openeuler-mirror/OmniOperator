@@ -6,7 +6,6 @@ package nova.hetu.olk.operator.filterandproject;
 
 import com.google.common.collect.ImmutableList;
 
-import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.prestosql.Session;
 import io.prestosql.memory.context.LocalMemoryContext;
@@ -14,7 +13,6 @@ import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.Operator;
 import io.prestosql.operator.OperatorContext;
 import io.prestosql.operator.OperatorFactory;
-import io.prestosql.operator.project.MergePages;
 import io.prestosql.operator.project.MergingPageOutput;
 import io.prestosql.operator.project.PageProcessor;
 import io.prestosql.spi.Page;
@@ -161,143 +159,6 @@ public class FilterAndProjectOmniOperator implements Operator {
         public OperatorFactory duplicate() {
             return new FilterAndProjectOmniOperatorFactory(operatorId, planNodeId, processor, types, minOutputPageSize,
                 minOutputPageRowCount, session);
-        }
-    }
-
-    // FIXME: using {$link OmniMergingPageOutput} if its performance is reach requirement.
-    public static class MockMergingPageOutput extends MergingPageOutput {
-        private static final int INSTANCE_SIZE = ClassLayout.parseClass(MockMergingPageOutput.class).instanceSize();
-
-        private static final int MAX_MIN_PAGE_SIZE = 1024 * 1024;
-
-        private final List<Type> types;
-
-        private final PageBuilder pageBuilder;
-
-        private final Queue<Page> outputQueue = new LinkedList<>();
-
-        private final long minPageSizeInBytes;
-
-        private final int minRowCount;
-
-        @Nullable
-        private Iterator<Optional<Page>> currentInput;
-
-        private boolean finishing;
-
-        public MockMergingPageOutput(Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount) {
-            this(types, minPageSizeInBytes, minRowCount, DEFAULT_MAX_PAGE_SIZE_IN_BYTES);
-        }
-
-        public MockMergingPageOutput(Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount,
-                                     int maxPageSizeInBytes) {
-            super(types, minPageSizeInBytes, minRowCount, maxPageSizeInBytes);
-            this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
-            checkArgument(minPageSizeInBytes >= 0, "minPageSizeInBytes must be greater or equal than zero");
-            checkArgument(minRowCount >= 0, "minRowCount must be greater or equal than zero");
-            checkArgument(maxPageSizeInBytes > 0, "maxPageSizeInBytes must be greater than zero");
-            checkArgument(maxPageSizeInBytes >= minPageSizeInBytes,
-                "maxPageSizeInBytes must be greater or equal than minPageSizeInBytes");
-            checkArgument(minPageSizeInBytes <= MAX_MIN_PAGE_SIZE, "minPageSizeInBytes must be less or equal than %s",
-                MAX_MIN_PAGE_SIZE);
-            this.minPageSizeInBytes = minPageSizeInBytes;
-            this.minRowCount = minRowCount;
-            pageBuilder = PageBuilder.withMaxPageSize(maxPageSizeInBytes, this.types);
-        }
-
-        public boolean needsInput() {
-            return currentInput == null && !finishing && outputQueue.isEmpty();
-        }
-
-        public void addInput(Iterator<Optional<Page>> input) {
-            requireNonNull(input, "input is null");
-            checkState(!finishing, "output is in finishing state");
-            checkState(currentInput == null, "currentInput is present");
-            currentInput = input;
-        }
-
-        @Nullable
-        public Page getOutput() {
-            if (!outputQueue.isEmpty()) {
-                return outputQueue.poll();
-            }
-
-            while (currentInput != null) {
-                if (!currentInput.hasNext()) {
-                    currentInput = null;
-                    break;
-                }
-
-                if (!outputQueue.isEmpty()) {
-                    break;
-                }
-
-                Optional<Page> next = currentInput.next();
-                if (next.isPresent()) {
-                    process(next.get());
-                } else {
-                    break;
-                }
-            }
-
-            if (currentInput == null && finishing) {
-                flush();
-            }
-
-            return outputQueue.poll();
-        }
-
-        public void finish() {
-            finishing = true;
-        }
-
-        public boolean isFinished() {
-            return finishing && currentInput == null && outputQueue.isEmpty() && pageBuilder.isEmpty();
-        }
-
-        private void process(Page page) {
-            requireNonNull(page, "page is null");
-
-            // avoid memory copying for pages that are big enough
-            if (page.getPositionCount() >= minRowCount || page.getSizeInBytes() >= minPageSizeInBytes) {
-                flush();
-                outputQueue.add(page);
-                return;
-            }
-
-            buffer(page);
-        }
-
-        private void buffer(Page page) {
-            pageBuilder.declarePositions(page.getPositionCount());
-            for (int channel = 0; channel < types.size(); channel++) {
-                Type type = types.get(channel);
-                for (int position = 0; position < page.getPositionCount(); position++) {
-                    type.appendTo(page.getBlock(channel), position, pageBuilder.getBlockBuilder(channel));
-                }
-            }
-            // here to close off heap resource.
-            page.close();
-            if (pageBuilder.isFull()) {
-                flush();
-            }
-        }
-
-        private void flush() {
-            if (!pageBuilder.isEmpty()) {
-                Page output = pageBuilder.build();
-                pageBuilder.reset();
-                outputQueue.add(output);
-            }
-        }
-
-        public long getRetainedSizeInBytes() {
-            long retainedSizeInBytes = INSTANCE_SIZE;
-            retainedSizeInBytes += pageBuilder.getRetainedSizeInBytes();
-            for (Page page : outputQueue) {
-                retainedSizeInBytes += page.getRetainedSizeInBytes();
-            }
-            return retainedSizeInBytes;
         }
     }
 }

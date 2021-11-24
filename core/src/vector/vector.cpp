@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include "../util/trace_util.h"
 #include "vector.h"
-
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)

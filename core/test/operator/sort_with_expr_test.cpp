@@ -313,7 +313,7 @@ TEST(SortWithExprTest, TestOrderByTwoExprDictionaryWithNull)
 
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     int32_t outputCols[2] = {1, 2};
-    std::string sortKeys[2] = {"ADD:int(#0, 50)", "ADD:long(50, #2)"};
+    std::string sortKeys[2] = {"ADD:1(#0, 50)", "ADD:2(50, #2)"};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
     SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(

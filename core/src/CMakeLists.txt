@@ -52,7 +52,7 @@ add_library(window SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window.cpp $
 add_library(window_function SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_function.cpp)
 add_library(window_partition SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_partition.cpp)
 add_library(topn SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp)
-add_library(memory_pool SHARED ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp)
+add_library(memory_pool SHARED ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp ${CMAKE_CURRENT_LIST_DIR}/memory/memory_statistic.cpp)
 add_library(projection SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/projection/projection.cpp)
 add_library(operator_util SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp)
 add_library(expr_visitor SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_visitor.cpp)
@@ -143,6 +143,7 @@ set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_partition.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/union/union.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/memory/memory_statistic.cpp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/projection/projection.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp
