@@ -38,7 +38,7 @@ class RowProjection {
 public:
     RowProjection(const std::string &expression, const std::vector<expressions::DataType> &inputType);
     ~RowProjection();
-    RowProjFunc Create(std::vector<expressions::DataType> &inputTypes);
+    RowProjFunc Create();
     expressions::DataType GetReturnType();
     bool IsColumnProjection();
     int GetIndexIfColumnProjection();

@@ -6,16 +6,6 @@
 #define __EXPRESSION_CODEGEN_H__
 
 #include "./codegen_value.h"
-#include "../common/expressions.h"
-#include "../common/parser/parser.h"
-#include "../common/expr_printer.h"
-#include "./functions/mathfunctions.h"
-#include "./functions/stringfunctions.h"
-#include "./functions/murmur3_hash.h"
-#include "./functions/decimalfunctions.h"
-#include "./functions/external_func_registry.h"
-#include "./func_registry.h"
-#include "../util/debug.h"
 
 #include <iostream>
 #include <string>
@@ -34,6 +24,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -42,6 +33,18 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+
+#include "../common/expressions.h"
+#include "../common/parser/parser.h"
+#include "../common/expr_printer.h"
+#include "./functions/mathfunctions.h"
+#include "./functions/stringfunctions.h"
+#include "./functions/murmur3_hash.h"
+#include "./functions/decimalfunctions.h"
+#include "./functions/external_func_registry.h"
+#include "./func_registry.h"
+#include "../util/debug.h"
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -95,10 +98,11 @@ public:
 
     // returns llvm value ptr of codegen functions
     CodeGenValuePtr VisitExpr(omniruntime::expressions::Expr &e);
+    std::set<int32_t> vectorIndexes;
 
 // TODO: Figure out which of these can be private
 protected:
-    // Parse a generic expression by calling the helper functions below
+    // Util functions
     llvm::Value* CreateConstantBool(bool n);
     llvm::Value* CreateConstantInt(int32_t n);
     llvm::Value* CreateConstantLong(int64_t n);
@@ -108,8 +112,6 @@ protected:
     llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
     void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
-    llvm::Function* CreateFunction();
-
     // Helper functions for generating IR for operators and special forms
     llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
@@ -124,24 +126,17 @@ protected:
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);
 
-    bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    CodeGenValuePtr value = nullptr;
-    std::unique_ptr<CodegenContext> codegenContext;
-    std::string funcName;
+    llvm::Function* CreateFunction();
+    llvm::Function* CreateSimpleFunction();
+    void OptimizeFunctionsAndModule();
+
     omniruntime::expressions::Expr *expr = nullptr;
-
-    // Returns a set of all the required functions for a given row expression
-    // Currently a separate function
-    // Can be integrated with ParseRowExpression, but then the method declaration would need refactoring
-    std::set<std::string> RequiredFunctions(omniruntime::expressions::Expr &cpExpr);
-    void RequiredFunctionsHelper2(omniruntime::expressions::Expr &funcExpr, std::set<std::string> &s);
-    void RequiredFunctionsHelper(omniruntime::expressions::Expr &cpExpr, std::set<std::string> &s);
-    std::map<std::string, FunctionSignature> funcNameToSignature;
-
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::Module> module;
     llvm::ExitOnError eoe;
+    std::unique_ptr<llvm::legacy::FunctionPassManager> fpm = nullptr;
+    llvm::legacy::PassManager mpm;
     std::unique_ptr<llvm::orc::LLJIT> jit;
     llvm::orc::ResourceTrackerSP rt;
     FunctionRegistry *fr;
@@ -149,6 +144,12 @@ protected:
     int numGlobalValues = 0;
 
 private:
+    CodeGenValuePtr value = nullptr;
+    std::unique_ptr<CodegenContext> codegenContext;
+    std::string funcName;
+    std::map<std::string, FunctionSignature> funcNameToSignature;
+
+    bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
 };

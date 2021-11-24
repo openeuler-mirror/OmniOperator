@@ -49,7 +49,7 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
             projectCols.push_back(projectCol);
         } else {
             projectCols.push_back(inputTypesCount + projectFuncs.size());
-            RowProjFunc func = rowProjection->Create(inputDataTypes);
+            RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
             DataType returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(CreateVecTypeFromDataType(returnType));
@@ -90,7 +90,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const omniruntime::vec::VecTypes &
             // expr col
             projectCols.push_back(projectCol);
             hashAggCols.push_back(newProjectCol++);
-            RowProjFunc func = rowProjection->Create(inputDataTypes);
+            RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
             DataType returnType = rowProjection->GetReturnType();
             newInputTypes.push_back(CreateVecTypeFromDataType(returnType));

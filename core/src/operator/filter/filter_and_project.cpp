@@ -28,13 +28,56 @@ RowFilter::~RowFilter()
 }
 
 // Return nullptr if expression is unsupported
-RowFilterFunc RowFilter::Create(std::vector<DataType> &inputTypes)
+RowFilterFunc RowFilter::Create()
 {
     this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *this->expression);
     int64_t fAddr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fAddr;
     auto castedRef = static_cast<RowFilterFunc *>(refFunc);
     return *castedRef;
+}
+
+SimpleFilter::SimpleFilter(std::string &expression, std::vector<expressions::DataType> &inputTypes)
+    : codegen(nullptr), expression(nullptr)
+{
+    Parser parser;
+    this->expression = parser.ParseRowExpression(
+        expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
+}
+
+SimpleFilter::~SimpleFilter()
+{
+    delete this->expression;
+    this->codegen.reset();
+}
+
+bool SimpleFilter::Initialize()
+{
+    if (this->expression == nullptr) {
+        return false;
+    }
+    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *this->expression);
+    if (this->codegen == nullptr) {
+        return false;
+    }
+
+    int64_t fAddr = this->codegen->GetExpressionEvaluator();
+    void *refFunc = &fAddr;
+    auto castedRef = static_cast<RowFilterFunc *>(refFunc);
+    return true;
+}
+
+set<int32_t> SimpleFilter::GetVectorIndexes()
+{
+    if (this->codegen == nullptr) {
+        return set<int32_t> {};
+    }
+    return this->codegen->vectorIndexes;
+}
+
+bool SimpleFilter::Evaluate(int64_t *values, bool *isNull, int32_t *lengths)
+{
+
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputVecTypes,

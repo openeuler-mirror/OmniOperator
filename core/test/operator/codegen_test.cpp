@@ -11,9 +11,7 @@
 #include "../../src/codegen/expression_codegen.h"
 #include "../../src/codegen/filter_codegen.h"
 #include "../../src/codegen/projection_codegen.h"
-#include "../../src/codegen/func_registry.h"
 #include "../../src/operator/filter/filter_and_project.h"
-#include "../../src/operator/execution_context.h"
 #include "../util/test_util.h"
 
 using omniruntime::op::RowFilter;
@@ -63,7 +61,7 @@ TEST(CodeGenTest, SimpleFilter)
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
     RowProjection lc(unparsed, vecTypes);
-    RowProjFunc func = lc.Create(vecTypes);
+    RowProjFunc func = lc.Create();
     EXPECT_EQ(lc.GetReturnType(), BOOLD);
 
     bool *nullResult = new bool(false);
@@ -126,7 +124,7 @@ TEST(CodeGenTest, SimpleProject)
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
     RowProjection lc(unparsed, vecTypes);
-    RowProjFunc func = lc.Create(vecTypes);
+    RowProjFunc func = lc.Create();
     EXPECT_EQ(lc.GetReturnType(), INT32D);
 
     bool *nullResult = new bool(false);
@@ -192,7 +190,7 @@ TEST(CodeGenTest, SingleProject)
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
     RowProjection lc(unparsed, vecTypes);
-    RowProjFunc func = lc.Create(vecTypes);
+    RowProjFunc func = lc.Create();
     EXPECT_EQ(lc.GetReturnType(), INT32D);
 
     bool *nullResult = new bool(false);
@@ -258,7 +256,7 @@ TEST(CodeGenTest, ShortCircuitProject)
     std::vector<DataType> vecTypes = std::vector<DataType>(types, types + numCols);
 
     RowProjection lc(unparsed, vecTypes);
-    RowProjFunc func = lc.Create(vecTypes);
+    RowProjFunc func = lc.Create();
 
     EXPECT_TRUE(lc.IsColumnProjection());
     EXPECT_EQ(lc.GetIndexIfColumnProjection(), 1);
@@ -323,7 +321,7 @@ TEST(CodeGenTest, RowFilter)
 
     auto filter = new RowFilter(unparsed, vecTypes);
     EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create(vecTypes);
+    auto filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
     auto context = new ExecutionContext();
     for (int32_t i = 0; i < numRows; i++) {
@@ -381,7 +379,7 @@ TEST (CodeGenTest, RowFilterString) {
     std::string expr = "$operator$EQUAL:4(substr:15(#0, 1, 5), 'hello')";
     auto filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create(typeVec);
+    auto filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
 
     bool res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -391,7 +389,7 @@ TEST (CodeGenTest, RowFilterString) {
     expr = "$operator$EQUAL:4(substr:15(#1, 1, 5), 'hello')";
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create(typeVec);
+    filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
 
     res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -401,7 +399,7 @@ TEST (CodeGenTest, RowFilterString) {
     expr = "$operator$EQUAL:4(substr:15(#0, 1, 5), substr:15(#1, 7, 11))";
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create(typeVec);
+    filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
 
     res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -1887,7 +1885,7 @@ TEST(CodeGenTest, TestRowProjectLong)
     std::vector<DataType> types;
     types.push_back(DataType::INT64D);
     RowProjection rowProjection(expr, types);
-    RowProjFunc func = rowProjection.Create(types);
+    RowProjFunc func = rowProjection.Create();
 
     int32_t positionOffset = slicedVector->GetPositionOffset();
     int64_t *valueAddress = (int64_t *)(slicedVector->GetValues()) + positionOffset;
@@ -1925,7 +1923,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     std::vector<DataType> types;
     types.push_back(DataType::STRINGD);
     RowProjection rowProjection(expr, types);
-    RowProjFunc func = rowProjection.Create(types);
+    RowProjFunc func = rowProjection.Create();
 
     int32_t positionOffset = slicedVector->GetPositionOffset();
     uint8_t *valueAddress = (uint8_t *)(slicedVector->GetValues());
@@ -2073,7 +2071,7 @@ TEST (CodeGenTest, Substr) {
 
     auto filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
-    auto filterFunc = filter->Create(typeVec);
+    auto filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
     bool res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
@@ -2083,7 +2081,7 @@ TEST (CodeGenTest, Substr) {
 
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create(typeVec);
+    filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
     res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);
@@ -2093,7 +2091,7 @@ TEST (CodeGenTest, Substr) {
 
     filter = new RowFilter(expr, typeVec);
     EXPECT_FALSE(filter == nullptr);
-    filterFunc = filter->Create(typeVec);
+    filterFunc = filter->Create();
     EXPECT_FALSE(filter == nullptr);
     res = filterFunc(vals, (int64_t*) bitmap, (int64_t*) offsets, 0, reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(res, true);

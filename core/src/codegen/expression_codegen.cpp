@@ -3,10 +3,12 @@
  * Description: Expression code generator
  */
 #include "expression_codegen.h"
+#include "expr_info_extractor.h"
 
 #include <chrono>
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
@@ -101,13 +103,6 @@ Type *ExpressionCodeGen::GetFunctionReturnType(DataType type)
     }
 }
 
-// Tells whether or not a function is a valid name
-bool IsFunctionName(std::string fnName)
-{
-    // Either use a global string set to contain function names, or get function names from module
-    return true;
-}
-
 /**
  *  Usage example: std::vector<Value *> values;
  *  values.push_back(value1);
@@ -158,12 +153,16 @@ ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr)
     module->setDataLayout(jit->getDataLayout());
     // Create IR builder to create IR instructions
     builder = std::make_unique<IRBuilder<>>(*context);
+    fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
 
     fr = std::make_unique<FunctionRegistry>(jit, context, module).release();
     // Only register the necessary functions for the expression
     // Necessary functions are found using RequiredFunctions method
-    fr->RegisterNecessaryFuncs(RequiredFunctions(cpExpr));
+    ExprInfoExtractor exprInfoExtractor;
+    cpExpr.Accept(exprInfoExtractor);
+    fr->RegisterNecessaryFuncs(exprInfoExtractor.GetFunctions());
     funcNameToSignature = fr->funcNameToSignatureMap;
+    this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
 }
 
 ExpressionCodeGen::~ExpressionCodeGen()
@@ -172,111 +171,15 @@ ExpressionCodeGen::~ExpressionCodeGen()
     delete fr;
 }
 
-
-// Goes through the expression tree and determines which functions need to be registered
-// Helper function for requiredFunctions method
-void ExpressionCodeGen::RequiredFunctionsHelper2(Expr &funcExpr, std::set<std::string> &s)
-{
-    auto *fExpr = static_cast<FuncExpr *>(&funcExpr);
-    std::string fn = fExpr->funcName;
-    ExternalFuncRegistry efr;
-    std::set<std::string> externalFuncNames = efr.GetAllExternalFunctionNames();
-    if (externalFuncNames.find(fExpr->funcName) == externalFuncNames.end()) {
-        for (int i = 0; i < fExpr->arguments.size(); i++) {
-            fn += "_" + DataTypeString(fExpr->arguments[i]->GetExprDataType());
-        }
-        fn += "_" + DataTypeString(fExpr->GetExprDataType());
-    }
-    s.insert(fn);
-    // Recurse on the arguments
-    for (auto arg : fExpr->arguments) {
-        RequiredFunctionsHelper(*arg, s);
-    }
-}
-
-void ExpressionCodeGen::RequiredFunctionsHelper(Expr &cpExpression, std::set<std::string> &s)
-{
-    // For all types of Expr except for FuncExpr, recurse on the children
-    Expr *cpExpr = &cpExpression;
-    switch (cpExpr->GetType()) {
-        case ExprType::DATA_E: {
-            return;
-        }
-
-        case ExprType::BINARY_E: {
-            auto *bExpr = static_cast<BinaryExpr *>(cpExpr);
-            RequiredFunctionsHelper(*(bExpr->left), s);
-            RequiredFunctionsHelper(*(bExpr->right), s);
-            return;
-        }
-
-        case ExprType::UNARY_E: {
-            RequiredFunctionsHelper(*(static_cast<UnaryExpr *>(cpExpr)->exp), s);
-            return;
-        }
-
-        case ExprType::IF_E: {
-            auto *ifExpr = static_cast<IfExpr *>(cpExpr);
-            RequiredFunctionsHelper(*(ifExpr->condition), s);
-            RequiredFunctionsHelper(*(ifExpr->trueExpr), s);
-            RequiredFunctionsHelper(*(ifExpr->falseExpr), s);
-            return;
-        }
-
-        case ExprType::IN_E: {
-            for (auto arg : static_cast<InExpr *>(cpExpr)->arguments) {
-                RequiredFunctionsHelper(*arg, s);
-            }
-            return;
-        }
-
-        case ExprType::BETWEEN_E: {
-            auto *bExpr = static_cast<BetweenExpr *>(cpExpr);
-            RequiredFunctionsHelper(*(bExpr->value), s);
-            RequiredFunctionsHelper(*(bExpr->lowerBound), s);
-            RequiredFunctionsHelper(*(bExpr->upperBound), s);
-            return;
-        }
-
-        case ExprType::COALESCE_E: {
-            auto *cExpr = static_cast<CoalesceExpr *>(cpExpr);
-            RequiredFunctionsHelper(*(cExpr->value1), s);
-            RequiredFunctionsHelper(*(cExpr->value2), s);
-            return;
-        }
-
-        case ExprType::IS_NULL_E: {
-            auto *isNullExpr = static_cast<IsNullExpr *>(cpExpr);
-            RequiredFunctionsHelper(*(isNullExpr->value), s);
-            return;
-        }
-
-        // Add the name of the required extern function
-        case ExprType::FUNC_E: {
-            RequiredFunctionsHelper2(*cpExpr, s);
-            return;
-        }
-
-        default:
-            return;
-    }
-}
-
-// Returns a set of the names of required functions
-std::set<std::string> ExpressionCodeGen::RequiredFunctions(Expr &cpExpr)
-{
-    std::set<std::string> ret;
-    RequiredFunctionsHelper(cpExpr, ret);
-    return ret;
-}
-
 // Other operations which require externed functions
 Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
 {
     // call function
     std::vector<Value *> argVals {lhs, lLen, rhs, rLen};
     auto f = module->getFunction(fr->strCompareExtStr);
-    Value *ret = builder->CreateCall(f, argVals, "call_str_cmp");
+    auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
+    InlineFunctionInfo inlineFunctionInfo;
+    auto inlinedFunction = llvm::InlineFunction(*ret, inlineFunctionInfo);
     return ret;
 }
 
@@ -534,13 +437,65 @@ Function *ExpressionCodeGen::CreateFunction()
     // Return value
     builder->CreateRet(result->data);
     verifyFunction(*func);
-    auto fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
-    llvm::legacy::PassManager mpm;
-    AddOptimizationPasses(fpm.get(), mpm);
-    fpm->doInitialization();
-    for (auto &F : *module)
-        fpm->run(F);
-    mpm.run(*module);
+    return func;
+}
+
+Function *ExpressionCodeGen::CreateSimpleFunction()
+{
+    int32_t argsSize = 8;
+    std::vector<Type *> args;
+    args.reserve(argsSize);
+    // Values in args vector follow the format:
+    // value*, bitmap*, length*, isResultNull*, outputLength*, executionContext
+    args.push_back(Type::getInt64PtrTy(*context));
+    args.push_back(Type::getInt1PtrTy(*context));
+    args.push_back(Type::getInt32PtrTy(*context));
+    args.push_back(Type::getInt1PtrTy(*context));
+    args.push_back(Type::getInt32PtrTy(*context));
+    args.push_back(Type::getInt64Ty(*context));
+#ifdef DEBUG_LLVM
+    std::cout << "exprtree: ";
+    ExprPrinter p;
+    expr->Accept(p);
+    std::cout << std::endl;
+#endif
+    FunctionType *prototype = FunctionType::get(GetFunctionReturnType(expr->GetExprDataType()), args, false);
+    func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
+
+    std::string argNames[] = {
+        "data", "nullBitmap", "offsets", "isResultNull",
+        "dataLength", "executionContext"
+    };
+    int32_t idx = 0;
+    for (auto &arg : func->args()) {
+        arg.setName(argNames[idx]);
+        idx++;
+    }
+
+    BasicBlock *body = BasicBlock::Create(*context, "CREATED_FUNC_BODY", func);
+    builder->SetInsertPoint(body);
+
+    if (!InitializeCodegenContext(func->args())) {
+        return nullptr;
+    }
+
+    // Generate code
+    auto result = VisitExpr(*expr);
+    int32_t outputLengthIndex = 5;
+    // Update final output Length
+    if (result->length != nullptr) {
+        Argument *outputLength = func->getArg(outputLengthIndex);
+        Value *lengthGep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        builder->CreateStore(result->length, lengthGep);
+    }
+
+    // cast char* to int64 for output
+    if (expr->GetExprDataType() == DataType::STRINGD) {
+        result->data = builder->CreatePtrToInt(result->data, Type::getInt64Ty(*context));
+    }
+    // Return value
+    builder->CreateRet(result->data);
+    verifyFunction(*func);
     return func;
 }
 
@@ -678,7 +633,10 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(
         funcArgs.push_back(this->codegenContext->executionContext);
     }
 
-    return builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+    auto call = builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
+    InlineFunctionInfo inlineFunctionInfo;
+    auto inlinedFunction = llvm::InlineFunction(*call, inlineFunctionInfo);
+    return call;
 }
 
 void ExpressionCodeGen::Visit(DataExpr &dExpr)
@@ -1135,10 +1093,42 @@ void ExpressionCodeGen::Visit(FuncExpr &fExpr)
     auto f = module->getFunction(funcName);
     if (f) {
         ret = builder->CreateCall(f, argVals, funcName);
+        InlineFunctionInfo inlineFunctionInfo;
+        auto inlinedFunction = llvm::InlineFunction(*((CallInst*)ret), inlineFunctionInfo);
         outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
     } else {
         std::cout << "Unable to parse function " << funcName.c_str() << std::endl;
     }
     this->value = make_shared<CodeGenValue>(ret, this->CreateConstantBool(false), outputLen);
+}
+
+void ExpressionCodeGen::OptimizeFunctionsAndModule()
+{
+    fpm->add(createSCCPPass());
+    fpm->add(createNewGVNPass());
+    fpm->add(createInductiveRangeCheckEliminationPass());
+    fpm->add(createIndVarSimplifyPass());
+
+    fpm->add(createLICMPass());
+    fpm->add(createLoopUnrollPass());
+    fpm->add(createLoopUnswitchPass());
+
+    fpm->add(createLoopLoadEliminationPass());
+    fpm->add(createInductiveRangeCheckEliminationPass());
+    fpm->add(createIndVarSimplifyPass());
+    fpm->add(createLoopInstSimplifyPass());
+    fpm->add(createLoopSimplifyCFGPass());
+    fpm->add(createMergedLoadStoreMotionPass());
+    fpm->add(createMergeICmpsLegacyPass());
+    fpm->add(createAggressiveDCEPass());
+    fpm->add(createDeadStoreEliminationPass());
+
+    mpm.add(createFunctionInliningPass());
+    mpm.add(createPruneEHPass());
+
+    fpm->doInitialization();
+    for (auto &F : *module)
+        fpm->run(F);
+    mpm.run(*module);
 }
 

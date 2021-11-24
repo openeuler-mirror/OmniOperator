@@ -27,7 +27,7 @@ RowProjection::~RowProjection()
 }
 
 // Return nullptr if expression is unsupported
-RowProjFunc RowProjection::Create(std::vector<DataType> &inputTypes)
+RowProjFunc RowProjection::Create()
 {
     if (this->expression == nullptr) {
         return nullptr;
