@@ -194,19 +194,21 @@ public:
         int32_t positionOffset = vector->GetPositionOffset();
         void *values = vector->GetValues();
         switch (vector->GetTypeId()) {
-            case omniruntime::vec::OMNI_VEC_TYPE_INT:
-            case omniruntime::vec::OMNI_VEC_TYPE_DATE32:
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int32_t *>(values) + positionOffset);
-            case omniruntime::vec::OMNI_VEC_TYPE_LONG:
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + positionOffset);
-            case omniruntime::vec::OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_VEC_TYPE_DOUBLE:
                 return reinterpret_cast<int64_t>(reinterpret_cast<double *>(values) + positionOffset);
-            case omniruntime::vec::OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_VEC_TYPE_BOOLEAN:
                 return reinterpret_cast<int64_t>(reinterpret_cast<bool *>(values) + positionOffset);
-            case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_VEC_TYPE_DECIMAL128:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * positionOffset);
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_VARCHAR:
+                return reinterpret_cast<int64_t>(values);
+            case OMNI_VEC_TYPE_LAZY:
                 return reinterpret_cast<int64_t>(values);
             default:
                 LogError("Do not support such vector type %d", vector->GetTypeId());

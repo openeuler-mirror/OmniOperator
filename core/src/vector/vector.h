@@ -81,24 +81,9 @@ public:
         return valueNullsAddress;
     }
 
-    int GetValueNullsSizeInBytes() const
-    {
-        // for dictionary vector the value null chunk is null
-        if (reference != nullptr) {
-            return reference->GetValueNullChunk()->GetSizeInBytes();
-        } else {
-            return size;
-        }
-    }
-
     void *GetValueOffsets() const
     {
         return valueOffsetsAddress;
-    }
-
-    int GetValueOffsetsInBytes() const
-    {
-        return reference->GetValueOffsetChunk()->GetSizeInBytes();
     }
 
     bool IsValueNull(int index)

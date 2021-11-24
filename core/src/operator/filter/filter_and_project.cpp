@@ -110,9 +110,6 @@ std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t o
 
     for (int32_t i = 0; i < vectorCount; i++) {
         omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
-        if (colVec->GetTypeId() == omniruntime::vec::OMNI_VEC_TYPE_LAZY) {
-            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
-        }
         dictVecAddress = 0;
         valuesAddress = 0;
         VecTypeId typeId = colVec->GetTypeId();

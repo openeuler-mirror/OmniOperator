@@ -2133,7 +2133,7 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull) {
     intput->SetVector(1, slicedCol2);
     intput->SetVector(2, slicedCol3);
 
-    std::string expr = "$operator$EQUAL:boolean(#2, 6)";
+    std::string expr = "$operator$EQUAL:4(#2, 6)";
     OperatorFactory* factory = new FilterAndProjectOperatorFactory(expr,
                                                                    inputTypeIds,
                                                                    numCols,

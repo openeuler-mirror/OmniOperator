@@ -11,10 +11,11 @@
 
 namespace omniruntime {
 namespace vec {
-    using Chunk = mem::Chunk;
+using Chunk = mem::Chunk;
+
 class VectorReference {
 public:
-    VectorReference(Chunk *values, Chunk *valueNulls, Chunk *valueOffsets);
+    VectorReference(int capacityInBytes, int size, VecType type);
 
     ~VectorReference();
 
@@ -32,18 +33,15 @@ public:
 
     bool IsWritable();
 
-    Chunk *GetValueChunk() const;
-
-    Chunk *GetValueNullChunk() const;
-
-    Chunk *GetValueOffsetChunk() const;
-
 private:
-    Chunk *values;
-    Chunk *valueNulls;
-    Chunk *valueOffsets;
+    bool IsVariableWidthType(int type);
+    Chunk *chunk;
+    void *values;
+    void *nulls;
+    void *offsets;
     bool writable;
     std::atomic<int64_t> reference;
+    static Chunk *zeroChunk;
 };
 } // namespace vec
 } // namespace omniruntime

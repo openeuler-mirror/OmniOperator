@@ -27,7 +27,9 @@ TEST(DictionaryVector, appendVector)
         ids1[i] = i;
         ids2[i] = i + 5;
     }
-
+    for (int32_t i = 0; i < 10; i++) {
+        ids[i] = 0;
+    }
     DictionaryVector *src1 = new DictionaryVector(dictionary, ids1, 5);
     DictionaryVector *src2 = new DictionaryVector(dictionary, ids2, 5);
 

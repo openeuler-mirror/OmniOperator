@@ -753,8 +753,8 @@ TEST (ProjectTest, SlicedDictionaryVecTest) {
     input->SetVector(2, slicedCol3);
 
     const int32_t numProject = 3;
-    string exprs[numProject] = {"$operator$ADD:int(#0, 1)", "$operator$ADD:int(#1, 2)",
-                                "$operator$ADD:int(#2, 10)"};
+    string exprs[numProject] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)",
+                                "$operator$ADD:1(#2, 10)"};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
@@ -802,7 +802,7 @@ TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
     input->SetVector(0, slicedCol1);
 
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:long(#0, #0)"};
+    string exprs[numProject] = {"$operator$ADD:2(#0, #0)"};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);

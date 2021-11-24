@@ -13,7 +13,7 @@ namespace vec {
 class LazyVector : public FixedWidthVector<int64_t> {
 public:
     LazyVector(VectorAllocator *allocator, int32_t size)
-        : FixedWidthVector<int64_t>(allocator, sizeof(int64_t), size, LazyVecType::Instance()), loader(nullptr), loadedVector(nullptr)
+        : FixedWidthVector<int64_t>(allocator, -1, size, LazyVecType::Instance()), loader(nullptr), loadedVector(nullptr)
     {}
 
     void SetLoader(VectorLoader *loader)

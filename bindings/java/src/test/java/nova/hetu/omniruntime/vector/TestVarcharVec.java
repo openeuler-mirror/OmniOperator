@@ -138,7 +138,7 @@ public class TestVarcharVec {
      */
     @Test
     public void testValueNull() {
-        VarcharVec varcharVec = new VarcharVec(1024, 256);
+        VarcharVec varcharVec = new VarcharVec(4096, 256);
         for (int i = 0; i < varcharVec.getSize(); i++) {
             if (i % 5 == 0) {
                 varcharVec.setNull(i);

@@ -12,7 +12,7 @@ namespace omniruntime {
 namespace vec {
 using Chunk = omniruntime::mem::Chunk;
 #ifdef DEBUG_VECTOR
-#define RECORD_VECTOR_STACK(vector, opType)          \
+#define RECORD_VECTOR_STACK(vector, opType)        \
     do {                                           \
         std::string stack = TraceUtil::GetStack(); \
         RecordVectorStack(vector, stack, opType);  \
@@ -26,7 +26,7 @@ VectorAllocator::~VectorAllocator() {}
 
 void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, VecType type)
 {
-    VectorReference *reference = NewVectorReference(capacityInBytes, size, type);
+    VectorReference *reference = new VectorReference(capacityInBytes, size, type);
     vector->SetVectorReference(reference);
     RECORD_VECTOR_STACK(vector, NEW);
 }
@@ -52,32 +52,6 @@ void VectorAllocator::DeleteVector(Vector *vector)
     }
 }
 
-VectorReference *VectorAllocator::NewVectorReference(int capacityInBytes, int size, VecType type)
-{
-    Chunk *values = new Chunk(capacityInBytes);
-    Chunk *valueNulls = new Chunk(size);
-    if (memset_s(valueNulls->GetAddress(), size, 0, size) != EOK) {
-        std::cerr << "init value nulls failed." << std::endl;
-        delete values;
-        delete valueNulls;
-        return nullptr;
-    }
-    Chunk *valueOffsets = nullptr;
-    if (IsVariableWidthType(type.GetId())) {
-        // 4-byte length storage variable length type offset
-        int offsetSizeInBytes = (size + 1) * sizeof(int32_t);
-        valueOffsets = new Chunk(offsetSizeInBytes);
-        if (memset_s(valueOffsets->GetAddress(), offsetSizeInBytes, 0, offsetSizeInBytes) != EOK) {
-            std::cerr << "init value offsets failed." << std::endl;
-            delete values;
-            delete valueNulls;
-            delete valueOffsets;
-            return nullptr;
-        }
-    }
-    return new VectorReference(values, valueNulls, valueOffsets);
-}
-
 std::string VectorAllocator::GetScope() const
 {
     return scope;
@@ -86,16 +60,6 @@ std::string VectorAllocator::GetScope() const
 int64_t VectorAllocator::GetAllocatedBytes() const
 {
     return allocatedBytes;
-}
-
-bool VectorAllocator::IsVariableWidthType(int type)
-{
-    switch (type) {
-        case OMNI_VEC_TYPE_VARCHAR:
-            return true;
-        default:
-            return false;
-    }
 }
 
 void VectorAllocator::RecordVectorStack(const Vector *vector, std::string &stack, VecOpType opType)
