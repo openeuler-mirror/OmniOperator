@@ -156,7 +156,7 @@ void HashAggregationOperator::PreLoop(VectorBatch *vecBatch) {}
 
 void HashAggregationOperator::PostLoop(VectorBatch *vecBatch) const {}
 
-static void ALWAYS_INLINE GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t colNum,
+static void GenerateCombinedHashes(Vector **vectors, uint32_t start, uint32_t rowCount, const int32_t colNum,
     uint64_t *combinedHashVal)
 {
     Vector *vector = nullptr;
@@ -187,7 +187,7 @@ std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t *hash,
     return bucktes;
 }
 
-static void ALWAYS_INLINE DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset,
+static void DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset,
     ExecutionContext *context)
 {
     int32_t originalRowIndex;
@@ -196,7 +196,7 @@ static void ALWAYS_INLINE DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector
                                                                   originalRowIndex, context);
 }
 
-static int32_t ALWAYS_INLINE IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t colNum,
+static int32_t IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t colNum,
     std::vector<std::vector<GroupBySlot>> &sameBucket)
 {
     // early break
@@ -481,7 +481,7 @@ OmniStatus HashAggregationOperator::Close()
 }
 
 template <typename V, typename D>
-void ALWAYS_INLINE HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount,
+void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash)
 {
     uint64_t hash;
@@ -493,7 +493,7 @@ void ALWAYS_INLINE HashFuncVectImpl(Vector *vector, const uint32_t start, const 
     }
 }
 
-void ALWAYS_INLINE HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount,
+void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash)
 {
     uint8_t *data = nullptr;
@@ -505,7 +505,7 @@ void ALWAYS_INLINE HashVarcharVectFuncImpl(Vector *vector, const uint32_t start,
     }
 }
 
-void ALWAYS_INLINE HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount,
+void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash)
 {
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -517,7 +517,7 @@ void ALWAYS_INLINE HashDecimalVectFunc(Vector *vector, const uint32_t start, con
 }
 
 template <typename V, typename D>
-void ALWAYS_INLINE HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash)
 {
     uint64_t hash;
@@ -529,7 +529,7 @@ void ALWAYS_INLINE HashFuncImpl(Vector *vector, const uint32_t rowCount, const i
     }
 }
 
-void ALWAYS_INLINE HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash)
 {
     uint8_t *data = nullptr;
@@ -541,7 +541,7 @@ void ALWAYS_INLINE HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, 
     }
 }
 
-void ALWAYS_INLINE HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash)
 {
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -591,7 +591,7 @@ void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, GroupBySlo
 }
 
 template <typename V, typename D>
-void ALWAYS_INLINE DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
+void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
     ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
@@ -604,7 +604,7 @@ void ALWAYS_INLINE DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vecto
     groupBySlot.val = ptr;
 }
 
-void ALWAYS_INLINE DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
+void DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
     ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {

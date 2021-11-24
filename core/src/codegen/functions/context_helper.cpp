@@ -15,14 +15,12 @@ using namespace omniruntime::op;
 
 extern "C" DLLEXPORT {
 
-__attribute__((always_inline))
 char* ArenaAllocatorMalloc(int64_t contextPtr, int32_t size)
 {
     auto context = reinterpret_cast<ExecutionContext*>(contextPtr);
     return reinterpret_cast<char *>(context->getArena()->Allocate(size));
 }
 
-__attribute__((always_inline))
 void ArenaAllocatorReset(int64_t contextPtr)
 {
     auto context = reinterpret_cast<ExecutionContext*>(contextPtr);

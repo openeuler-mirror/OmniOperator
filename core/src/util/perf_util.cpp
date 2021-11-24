@@ -60,6 +60,8 @@ long long PerfUtil::GetData() const
     }
 
     long long count;
-    read(fd, &count, sizeof(long long));
-    return count;
+    if (!read(fd, &count, sizeof(long long))) {
+        return count;
+    }
+    return -1;
 }

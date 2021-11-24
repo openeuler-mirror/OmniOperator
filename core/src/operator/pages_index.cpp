@@ -5,8 +5,6 @@
 #include "pages_index.h"
 #include "optimization.h"
 #include "../jit/annotation.h"
-#include "../vector/vector_helper.h"
-#include "util/operator_util.h"
 
 #include <algorithm>
 
@@ -90,35 +88,6 @@ int32_t PagesIndex::AddVecBatches(std::vector<VectorBatch *> &vecBatches)
         }
     }
     return 0;
-}
-
-static int32_t ALWAYS_INLINE Compare(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
-    Vector **columns, int32_t leftPosition, int32_t rightPosition, CompareFunc compareFunc)
-{
-    int64_t leftValueAddress = valueAddresses[leftPosition];
-    int32_t leftColumnIndex = DecodeSliceIndex(leftValueAddress);
-    int32_t leftColumnPosition = DecodePosition(leftValueAddress);
-    int64_t rightValueAddress = valueAddresses[rightPosition];
-    int32_t rightColumnIndex = DecodeSliceIndex(rightValueAddress);
-    int32_t rightColumnPosition = DecodePosition(rightValueAddress);
-
-    Vector *leftColumn = columns[leftColumnIndex];
-    Vector *rightColumn = columns[rightColumnIndex];
-    int32_t originalLeftColumnPosition, originalRightColumnPosition;
-    leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftColumnPosition, originalLeftColumnPosition);
-    rightColumn =
-            VectorHelper::ExpandVectorAndIndex(rightColumn, rightColumnPosition, originalRightColumnPosition);
-    int32_t compare = OperatorUtil::CompareNull(leftColumn, originalLeftColumnPosition, rightColumn,
-        originalRightColumnPosition, sortNullFirsts);
-    if (compare == OperatorUtil::COMPARE_STATUS_OTHER) {
-        // neither the left nor the right is NULL
-        compare = compareFunc(leftColumn, originalLeftColumnPosition, rightColumn, originalRightColumnPosition);
-
-        if (sortAscendings == 0) {
-            compare = -compare;
-        }
-    }
-    return compare;
 }
 
 template <typename V>

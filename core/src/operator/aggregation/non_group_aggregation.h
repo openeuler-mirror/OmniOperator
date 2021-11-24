@@ -20,7 +20,7 @@ public:
     ~AggregationOperator() override {}
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
-    inline void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, int32_t colNum, const int32_t *aggDataType,
+    void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, int32_t colNum, const int32_t *aggDataType,
         const int32_t *aggFuncType);
     inline void PreLoop(omniruntime::vec::VectorBatch *vecBatch)
     {

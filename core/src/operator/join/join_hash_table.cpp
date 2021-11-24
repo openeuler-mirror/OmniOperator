@@ -113,7 +113,7 @@ int64_t JoinHashTables::GetNextJoinPosition(int64_t currentJoinPosition, int32_t
     }
 }
 
-static ALWAYS_INLINE int64_t ReadHash(int32_t vecType, omniruntime::vec::Vector *vector, int32_t rowIndex)
+static int64_t ReadHash(int32_t vecType, omniruntime::vec::Vector *vector, int32_t rowIndex)
 {
     switch (vecType) {
         case omniruntime::vec::OMNI_VEC_TYPE_INT:
@@ -272,7 +272,7 @@ void JoinHashTable::PrintHashTable(int32_t partitionIndex) const
     }
 }
 
-static ALWAYS_INLINE void ReadColumnIntHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnIntHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -312,7 +312,7 @@ static ALWAYS_INLINE void ReadColumnIntHashes(int32_t offset, int32_t addressesC
     }
 }
 
-static ALWAYS_INLINE void ReadColumnLongHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnLongHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -352,7 +352,7 @@ static ALWAYS_INLINE void ReadColumnLongHashes(int32_t offset, int32_t addresses
     }
 }
 
-static ALWAYS_INLINE void ReadColumnDoubleHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnDoubleHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -392,7 +392,7 @@ static ALWAYS_INLINE void ReadColumnDoubleHashes(int32_t offset, int32_t address
     }
 }
 
-static ALWAYS_INLINE void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+static void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
     Vector **columns, int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -432,7 +432,7 @@ static ALWAYS_INLINE void ReadColumnDecimal64Hashes(int32_t offset, int32_t addr
     }
 }
 
-static ALWAYS_INLINE void ReadColumnBooleanHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnBooleanHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -472,7 +472,7 @@ static ALWAYS_INLINE void ReadColumnBooleanHashes(int32_t offset, int32_t addres
     }
 }
 
-static ALWAYS_INLINE void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
+static void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
     Vector **columns, int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -514,7 +514,7 @@ static ALWAYS_INLINE void ReadColumnDecimal128Hashes(int32_t offset, int32_t add
     }
 }
 
-static ALWAYS_INLINE void ReadColumnVarCharHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+static void ReadColumnVarCharHashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
     int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
@@ -555,7 +555,7 @@ static ALWAYS_INLINE void ReadColumnVarCharHashes(int32_t offset, int32_t addres
     }
 }
 
-static ALWAYS_INLINE void ProcessColumns(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector ***columns,
+static void ProcessColumns(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector ***columns,
     int32_t *types, int32_t colCount, int64_t *hashes, bool *nullPositions)
 {
     for (int32_t columnIdx = 0; columnIdx < colCount; ++columnIdx) {
