@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "boolean_vector.h"
 #include "dictionary_vector.h"
-
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 namespace omniruntime {
 namespace vec {
 BooleanVector::BooleanVector(VectorAllocator *allocator, int size)

@@ -9,7 +9,7 @@
 
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_helper.h"
-
+#include "../../../thirdparty/huawei_secure_c/include/securec.h"
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;

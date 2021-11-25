@@ -5,7 +5,7 @@
 #include "debug.h"
 #include "long_vector.h"
 #include "dictionary_vector.h"
-
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 namespace omniruntime {
 namespace vec {
 LongVector::LongVector(VectorAllocator *allocator, int size)
