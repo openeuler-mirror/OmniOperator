@@ -5,10 +5,7 @@
 #include <iostream>
 #include "memory_statistic.h"
 
-MemoryStatistic::MemoryStatistic()
-{
-    thread = std::thread(&MemoryStatistic::Print, this);
-}
+MemoryStatistic::MemoryStatistic() {}
 
 void MemoryStatistic::RecordSize(int size)
 {
