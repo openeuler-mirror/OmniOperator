@@ -14,7 +14,7 @@ const int32_t VAR_LEN = 10;
 const int32_t ROUNDS = 10;
 
 const std::string STRING = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
+#define SIZE_OF_LONG 8
 static string getString(int32_t index, int32_t offset, int32_t width)
 {
     std::string str;

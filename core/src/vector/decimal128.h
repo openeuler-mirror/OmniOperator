@@ -9,7 +9,6 @@
 #include <iostream>
 #include "decimal_base.h"
 #include "op_result.h"
-#include "../operator/hash_util.h"
 
 namespace omniruntime {
 namespace vec {

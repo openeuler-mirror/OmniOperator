@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "varchar_vector.h"
 #include "dictionary_vector.h"
-
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 namespace omniruntime {
 namespace vec {
 VarcharVector::VarcharVector(VectorAllocator *allocator, int capacityInBytes, int size)

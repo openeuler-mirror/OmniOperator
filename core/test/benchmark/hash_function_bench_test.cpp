@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "../util/test_util.h"
+#include "../../src/operator/hash_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;

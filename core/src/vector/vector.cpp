@@ -2,9 +2,12 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include <stdint.h>
-#include "../util/trace_util.h"
 #include "vector.h"
+
+#include <stdint.h>
+#include "../util/bitmap_util.h"
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
+
 namespace omniruntime {
 namespace vec {
 Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, VecType type)

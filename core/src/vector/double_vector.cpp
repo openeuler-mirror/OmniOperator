@@ -6,7 +6,7 @@
 #include <cstring>
 #include "double_vector.h"
 #include "dictionary_vector.h"
-
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 namespace omniruntime {
 namespace vec {
 DoubleVector::DoubleVector(VectorAllocator *allocator, int size)

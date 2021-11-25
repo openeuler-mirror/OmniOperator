@@ -5,7 +5,7 @@
 #include "decimal128_vector.h"
 #include "vector_type.h"
 #include "dictionary_vector.h"
-
+#include "../../thirdparty/huawei_secure_c/include/securec.h"
 namespace omniruntime {
 namespace vec {
 Decimal128Vector::Decimal128Vector(VectorAllocator *allocator, int32_t size)
