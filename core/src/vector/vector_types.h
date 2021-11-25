@@ -7,7 +7,6 @@
 
 #include <memory>
 #include "vector_type.h"
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 namespace omniruntime {
 namespace vec {
