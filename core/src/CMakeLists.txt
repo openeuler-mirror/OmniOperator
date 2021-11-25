@@ -113,22 +113,12 @@ install(TARGETS
         DESTINATION ${CMAKE_INSTALL_PREFIX})
 message(STATUS "Install externalfunctions.so into ${CMAKE_INSTALL_PREFIX}")
 
-# compile lr file
-function(compile_ir SOURCE_FILE)
-    # get file name from path
-    string(REGEX REPLACE ".+/(.+)\\..*" "\\1" SOURCE_NAME ${SOURCE_FILE})
-
-    # compile ir
-    set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
-    execute_process(COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${SOURCE_FILE} "-I/usr/lib/llvm-12/include")
-
-    # install ir
-    install(FILES ${PROJECT_BINARY_DIR}/${SOURCE_NAME}.ll DESTINATION ${CMAKE_INSTALL_PREFIX}/ir)
-    message(STATUS "Install ${PROJECT_BINARY_DIR}/${SOURCE_NAME}.ll into ${CMAKE_INSTALL_PREFIX}/ir")
-endfunction()
+# compile IR files
+set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
+set(LLVM_INCLUDE -I/usr/lib/llvm-12/include)
 
 # add sources file, if you have new source need compile to ir file, pls add it here.
-set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
+set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp
@@ -156,8 +146,15 @@ set(SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation_expr.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp
-        )
-foreach (SOURCE_FILE ${SOURCE_FILES})
-    compile_ir(${SOURCE_FILE})
-endforeach ()
+        ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp)
+set(IR_COMPILE_COMMANDS "")
+foreach(IR_SOURCE_FILE ${IR_SOURCE_FILES})
+    list(APPEND IR_COMPILE_COMMANDS COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${IR_SOURCE_FILE} ${LLVM_INCLUDE})
+endforeach()
+message(STATUS "IRs Compiling...")
+execute_process(${IR_COMPILE_COMMANDS})
+message(STATUS "IRs Compiled")
+
+# install IR file
+file(GLOB_RECURSE LL_FILES ${PROJECT_BINARY_DIR}/*.ll)
+install(FILES ${LL_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/ir)
