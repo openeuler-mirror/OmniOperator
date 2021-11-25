@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 #include "test_util.h"
 #include "../../src/vector/vector_helper.h"
+#include <cstdarg>
 
 using namespace omniruntime::vec;
 
