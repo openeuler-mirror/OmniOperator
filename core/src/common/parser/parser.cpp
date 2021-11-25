@@ -3,6 +3,7 @@
  * Description: parser function
  */
 #include "parser.h"
+#include "../../vector/vector_type.h"
 #include <iostream>
 
 using namespace std;
@@ -125,9 +126,21 @@ string Parser::StripString(const string& input)
 DataType ParseReturnType(const string& typeString)
 {
     if (typeString.find_first_not_of("0123456789") == string::npos && stoi(typeString) < INT32_MAX) {
+        int typeOrdinal = stoi(typeString);
+        if (DECIMAL64D == typeOrdinal) {
+            return INT64D;
+        }
+        if (omniruntime::vec::OMNI_VEC_TYPE_DATE32 == typeOrdinal) {
+            return INT32D;
+        }
+        if (omniruntime::vec::OMNI_VEC_TYPE_SHORT == typeOrdinal ||
+            (omniruntime::vec::OMNI_VEC_TYPE_DATE64 <= typeOrdinal &&
+            omniruntime::vec::OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= typeOrdinal)) {
+            cout << "Unsupported return type: "<< static_cast<omniruntime::vec::VecTypeId>(typeOrdinal) << endl;
+        }
         return static_cast<DataType>(stoi(typeString));
     }
-    cout << "Unsupported return type: " + typeString << endl;
+    cout << "Unsupported return type: " << typeString << endl;
     return INVALIDDATAD;
 }
 
