@@ -434,6 +434,17 @@ int32_t GetTestExprReturnType(std::string &expression)
 
     std::string returnType(chars + start + 1, chars + end);
     if (returnType.find_first_not_of("0123456789") == std::string::npos && stoi(returnType) < INT32_MAX) {
+        int typeOrdinal = stoi(returnType);
+        if (OMNI_VEC_TYPE_DECIMAL64 == typeOrdinal) {
+            return OMNI_VEC_TYPE_LONG;
+        }
+        if (OMNI_VEC_TYPE_DATE32 == typeOrdinal) {
+            return OMNI_VEC_TYPE_INT;
+        }
+        if (OMNI_VEC_TYPE_SHORT == typeOrdinal ||
+            (OMNI_VEC_TYPE_DATE64 <= typeOrdinal && OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= typeOrdinal)) {
+            std::cout << "Unsupported return type: "<< static_cast<VecTypeId>(typeOrdinal) << std::endl;
+        }
         return static_cast<VecTypeId>(stoi(returnType));
     }
     std::cout << "Unsupported return type: " + returnType << std::endl;
