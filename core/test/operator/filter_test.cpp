@@ -2159,3 +2159,94 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull) {
     delete op;
     delete factory;
 }
+
+TEST(FilterTest, SimpleFilter) {
+    const int32_t numCols = 1;
+    auto inputTypes = new int32_t[numCols];
+    inputTypes[0] = 1;
+
+    const int32_t numRows = 5000;
+    auto col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i;
+    }
+    int64_t allData[numCols] = {(int64_t) col1};
+    const int32_t projectCount = 1;
+    std::string projections[projectCount] = {"#0"};
+    std::vector<VectorBatch*> ret;
+    VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes, allData);
+
+    auto types = vector<DataType> {INT32D};
+    string expr = "$operator$LESS_THAN:4(#0, 2000)";
+    auto filter = new SimpleFilter(expr, types);
+    bool initialized = filter->Initialize();
+    EXPECT_TRUE(initialized);
+
+    auto vector = (IntVector*) in1->GetVector(0);
+    auto values = new int64_t[1];
+    bool *isNulls = new bool[1];
+    for (int i = 0; i < numRows; i++) {
+        values[0] = VectorHelper::GetValuesAddr(vector) + i * sizeof(int32_t);
+        isNulls[0] = vector->IsValueNull(i);
+        bool result = filter->Evaluate(values, isNulls, nullptr);
+        if (i < 2000) {
+            EXPECT_TRUE(result);
+        } else {
+            EXPECT_FALSE(result);
+        }
+    }
+    delete filter;
+    delete[] values;
+    delete[] isNulls;
+    VectorHelper::FreeVecBatch(in1);
+    delete[] inputTypes;
+    delete[] col1;
+}
+
+TEST(FilterTest, SimpleFilterWithNulls) {
+    const int32_t numCols = 1;
+    auto inputTypes = new int32_t[numCols];
+    inputTypes[0] = 1;
+
+    const int32_t numRows = 5000;
+    auto col1 = new int32_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i;
+    }
+    int64_t allData[numCols] = {(int64_t) col1};
+    const int32_t projectCount = 1;
+    std::string projections[projectCount] = {"#0"};
+    std::vector<VectorBatch*> ret;
+    VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes, allData);
+
+    auto types = vector<DataType> {INT32D};
+    string expr = "$operator$LESS_THAN:4(#0, 2000)";
+    auto filter = new SimpleFilter(expr, types);
+    bool initialized = filter->Initialize();
+    EXPECT_TRUE(initialized);
+
+    // set first 500 elements to null
+    auto vector = (IntVector*) in1->GetVector(0);
+    for (int i = 0; i < 500; i++) {
+        vector->SetValueNull(i);
+    }
+
+    auto values = new int64_t[1];
+    bool *isNulls = new bool[1];
+    for (int i = 0; i < numRows; i++) {
+        values[0] = VectorHelper::GetValuesAddr(vector) + i * sizeof(int32_t);
+        isNulls[0] = vector->IsValueNull(i);
+        bool result = filter->Evaluate(values, isNulls, nullptr);
+        if (i >= 500 && i < 2000) {
+            EXPECT_TRUE(result);
+        } else {
+            EXPECT_FALSE(result);
+        }
+    }
+    delete filter;
+    delete[] values;
+    delete[] isNulls;
+    VectorHelper::FreeVecBatch(in1);
+    delete[] inputTypes;
+    delete[] col1;
+}
