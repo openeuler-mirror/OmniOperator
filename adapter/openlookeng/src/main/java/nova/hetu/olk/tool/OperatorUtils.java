@@ -426,10 +426,9 @@ public final class OperatorUtils {
                 Block block = page.getBlock(channel);
                 Vec src;
                 if (!block.isExtensionBlock()) {
-                    src = (Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues();
-                } else {
-                    src = (Vec) block.getValues();
+                    block = OperatorUtils.buildOffHeapBlock(vecAllocator, block);
                 }
+                src = (Vec) block.getValues();
                 Vec dest = resultVecBatch.getVector(channel);
                 dest.append(src, offset, positionCount);
 

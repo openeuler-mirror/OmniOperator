@@ -135,6 +135,7 @@ import io.prestosql.sql.gen.JoinCompiler;
 import io.prestosql.sql.gen.JoinFilterFunctionCompiler;
 import io.prestosql.sql.gen.OrderingCompiler;
 import io.prestosql.sql.gen.PageFunctionCompiler;
+import io.prestosql.sql.planner.LocalDynamicFiltersCollector;
 import io.prestosql.sql.planner.LocalExecutionPlanner;
 import io.prestosql.sql.planner.NodePartitioningManager;
 import io.prestosql.sql.planner.OrderingScheme;
@@ -170,6 +171,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -1556,6 +1558,19 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                                              DynamicFilterCacheManager dynamicFilterCacheManager) {
             super(taskContext, types, metadata, dynamicFilterCacheManager);
             this.taskContext = taskContext;
+        }
+
+        private OmniLocalExecutionPlanContext(TaskContext taskContext, TypeProvider types,
+            List<DriverFactory> driverFactories, Optional<IndexSourceContext> indexSourceContext,
+            LocalDynamicFiltersCollector dynamicFiltersCollector, AtomicInteger nextPipelineId) {
+            super(taskContext, types, driverFactories, indexSourceContext, dynamicFiltersCollector, nextPipelineId);
+            this.taskContext = taskContext;
+        }
+
+        public LocalExecutionPlanContext createSubContext() {
+            checkState(!getIndexSourceContext().isPresent(), "index build plan can not have sub-contexts");
+            return new OmniLocalExecutionPlanContext(taskContext, getTypes(), getDriverFactories(),
+                    getIndexSourceContext(), getDynamicFiltersCollector(), getPipelineId());
         }
 
         /**
