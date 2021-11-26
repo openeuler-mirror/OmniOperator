@@ -110,6 +110,36 @@ double* MakeDoubles(const int32_t size, const double start = 0)
     return arr;
 }
 
+TEST (ProjectTest, Cast) {
+    const int32_t numRows = 1000;
+    int64_t* col = MakeLongs(numRows);
+    const int32_t numCols = 1;
+    string exprs[numCols] = {"$operator$CAST:1(#0)"};
+    int32_t inputTypes[numCols] = {2};
+    auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator* op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col};
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    op->AddInput(t);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector*) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0, i);
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col;
+    delete op;
+    delete factory;
+}
+
 TEST (ProjectTest, Simple) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows);

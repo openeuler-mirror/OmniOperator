@@ -162,6 +162,13 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
         this->RegisterFunctionFromSignature(signature);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt32ToInt64Str, signature));
     }
+    if (fn == castInt64ToInt32Str) {
+        vector<DataType> castInt64Types {DataType::INT64D};
+        FunctionSignature signature (castInt64ToInt32Str, castInt64Types, DataType::INT32D,
+                                     reinterpret_cast<void *>(CastInt64ToInt32));
+        this->RegisterFunctionFromSignature(signature);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(castInt64ToInt32Str, signature));
+    }
     if (fn == castStringStr) {
         vector<DataType> castStringTypes {DataType::INT8PTRD, DataType::INT32D};
         FunctionSignature signature (castStringStr, castStringTypes, DataType::INT32D,
