@@ -12,10 +12,24 @@ import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.StandardErrorCode;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.RowBlock;
-import nova.hetu.olk.block.*;
+import nova.hetu.olk.block.DictionaryOmniBlock;
+import nova.hetu.olk.block.DoubleArrayOmniBlock;
+import nova.hetu.olk.block.Int128ArrayOmniBlock;
+import nova.hetu.olk.block.IntArrayOmniBlock;
+import nova.hetu.olk.block.LongArrayOmniBlock;
+import nova.hetu.olk.block.VariableWidthOmniBlock;
+import nova.hetu.olk.block.ByteArrayOmniBlock;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.*;
-
+import nova.hetu.omniruntime.vector.ContainerVec;
+import nova.hetu.omniruntime.vector.Decimal128Vec;
+import nova.hetu.omniruntime.vector.DictionaryVec;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.BooleanVec;
+import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecBatch;
 import java.util.Iterator;
 
 /**

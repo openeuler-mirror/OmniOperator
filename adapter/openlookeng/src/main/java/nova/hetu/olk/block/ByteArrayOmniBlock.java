@@ -27,8 +27,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-// temporarily we use BooleanVec to store the byte value.
-public class ByteArrayOmniBlock implements Block<Byte>{
+
+public class ByteArrayOmniBlock implements Block<Byte> {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(ByteArrayOmniBlock.class).instanceSize();
 
     private final VecAllocator vecAllocator;
@@ -57,12 +57,13 @@ public class ByteArrayOmniBlock implements Block<Byte>{
     /**
      * Instantiates a new Byte array omni block.
      *
-     * @param vecAllocator
+     * @param vecAllocator the vector allocator
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public ByteArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull, byte[] values) {
+    public ByteArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull,
+                              byte[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -90,13 +91,14 @@ public class ByteArrayOmniBlock implements Block<Byte>{
     /**
      * Instantiates a new Byte array omni block.
      *
-     * @param vecAllocator
+     * @param vecAllocator the vector allocator
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    ByteArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull, byte[] values) {
+    ByteArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull,
+                       byte[] values) {
         this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -112,7 +114,7 @@ public class ByteArrayOmniBlock implements Block<Byte>{
         }
 
         this.values = new BooleanVec(vecAllocator, positionCount);
-        boolean[] boolValues = transformByteToBoolean(values,arrayOffset,positionCount);
+        boolean[] boolValues = transformByteToBoolean(values, arrayOffset, positionCount);
         this.values.put(boolValues, 0, arrayOffset, positionCount);
 
         if (valueIsNull != null && valueIsNull.length - arrayOffset < positionCount) {
@@ -221,7 +223,7 @@ public class ByteArrayOmniBlock implements Block<Byte>{
         if (offset != 0) {
             throw new IllegalArgumentException("offset must be zero");
         }
-        return values.get(position)? (byte) 1 : (byte) 0;
+        return values.get(position) ? (byte) 1 : (byte) 0;
     }
 
     @Override
@@ -253,7 +255,7 @@ public class ByteArrayOmniBlock implements Block<Byte>{
     @Override
     public void writePositionTo(int position, BlockBuilder blockBuilder) {
         checkReadablePosition(position);
-        blockBuilder.writeByte(values.get(position)? (byte) 1 : (byte) 0);
+        blockBuilder.writeByte(values.get(position) ? (byte) 1 : (byte) 0);
         blockBuilder.closeEntry();
     }
 
@@ -261,7 +263,7 @@ public class ByteArrayOmniBlock implements Block<Byte>{
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
         return new ByteArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null,
-                new byte[] {(values.get(position)? (byte) 1 : (byte) 0)});
+                new byte[] {(values.get(position) ? (byte) 1 : (byte) 0)});
     }
 
     @Override
@@ -319,7 +321,7 @@ public class ByteArrayOmniBlock implements Block<Byte>{
     @Override
     public boolean[] filter(BloomFilter filter, boolean[] validPositions) {
         for (int i = 0; i < positionCount; i++) {
-            validPositions[i] = validPositions[i] && filter.test(values.get(i)? (byte) 1: (byte) 0);
+            validPositions[i] = validPositions[i] && filter.test(values.get(i) ? (byte) 1: (byte) 0);
         }
         return validPositions;
     }
@@ -344,6 +346,6 @@ public class ByteArrayOmniBlock implements Block<Byte>{
         if (valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL) {
             return null;
         }
-        return values.get(position)? (byte) 1 : (byte) 0;
+        return values.get(position) ? (byte) 1 : (byte) 0;
     }
 }

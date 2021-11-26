@@ -4,7 +4,12 @@
 
 package nova.hetu.olk.tool;
 
-import nova.hetu.omniruntime.vector.*;
+import nova.hetu.omniruntime.vector.Decimal128Vec;
+import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.vector.IntVec;
+import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.BooleanVec;
 
 /**
  * The type Block utils.
