@@ -18,7 +18,7 @@ public class BlockUtils {
      * @param vec the vec
      * @param index the index
      * @param length the length
-     * @return the int vec
+     * @return the boolean vec
      */
     public static BooleanVec compactVec(BooleanVec vec, int index, int length) {
         if (index == 0 && length == vec.getSize() && vec.getOffset() == 0) {
