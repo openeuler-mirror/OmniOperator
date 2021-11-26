@@ -25,11 +25,12 @@ namespace {
     const int ROW_PROJ_NULL_BITMAP_INDEX = 1;
     const int ROW_PROJ_OFFSETS_INDEX = 2;
     const int ROW_PROJ_ROW_IDX_INDEX = 3;
-    const int ROW_PROJ_OUTPUT_NULL_INDEX = 4;
-    const int ROW_PROJ_LENGTH_INDEX = 5;
-    const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 6;
-    const int ROW_PROJ_DICT_VECTORS_INDEX = 7;
+    const int ROW_PROJ_LENGTH_INDEX = 4;
+    const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 5;
+    const int ROW_PROJ_DICT_VECTORS_INDEX = 6;
+    const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
+
 int64_t ProjectionCodeGen::GetFunction()
 {
     Function *func = this->CreateFunction();
@@ -63,7 +64,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     args.push_back(bitmapArg);
     // Offsets for columns
     args.push_back(Type::getInt64PtrTy(*context));
-    // bool array to hold null values
+    // bool array to return evaluated null status
     args.push_back(Type::getInt1PtrTy(*context));
     // int array to hold output values
     args.push_back(Type::getInt32PtrTy(*context));
@@ -117,11 +118,6 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
 
     Value *zero = this->CreateConstantInt(0);
     Value *one = this->CreateConstantInt(1);
-    std::vector<Value*> projFuncArgs;
-    // projFuncArgs contains the values of the arguments to the projection function
-    // value*, bitmap*, offset*, rowIdx, isResultNull*, outputLength*, executionContext
-    int32_t argsSize = 7;
-    projFuncArgs.reserve(argsSize);
     Value *gep;
 
     CallInst *ret;
@@ -170,15 +166,17 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         case DataType::DECIMAL128D:
             outPtrType = Type::getInt64PtrTy(*context);
             break;
+        case DataType::BOOLD:
+            outPtrType = Type::getInt1PtrTy(*context);
+            break;
         default:
             LLVM_DEBUG_LOG("Error: Invalid column type %d", expr->GetExprDataType());
             break;
     }
     Value *outColPtr = builder->CreateIntToPtr(outputAddress, outPtrType);
-    // Create a boolean pointer to store result null value
-    AllocaInst *isResultNullStore = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "isResultNull");
     // Create a integer pointer to store output length value
     AllocaInst *outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "OUTPUT_LENGTH");
+    auto isNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_NULL");
 
     builder->CreateBr(loopBody);
     // loop body
@@ -197,18 +195,22 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         rowIndexVal = curIndexVal;
     }
 
+    builder->CreateStore(this->CreateConstantBool(false), isNullPtr);
+
+    std::vector<Value*> projFuncArgs;
+    // projFuncArgs contains the values of the arguments to the projection function
+    // value*, bitmap*, offset*, rowIdx, outputLength*, executionContext, dictionaryVectors, isNullPtr
+    int32_t argsSize = 8;
+    projFuncArgs.reserve(argsSize);
+
     projFuncArgs.push_back(input);
     projFuncArgs.push_back(bitmap);
     projFuncArgs.push_back(offsets);
     projFuncArgs.push_back(rowIndexVal);
-
-    builder->CreateStore(CreateConstantBool(false), isResultNullStore);
-    projFuncArgs.push_back(isResultNullStore);
-
     projFuncArgs.push_back(outputLenPtr);
-
     projFuncArgs.push_back(executionContext);
     projFuncArgs.push_back(dictionaryVectors);
+    projFuncArgs.push_back(isNullPtr);
 
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
@@ -244,10 +246,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         builder->CreateStore(ret, gep);
     }
 
-    auto isResultNull = builder->CreateLoad(isResultNullStore, "isResultNull");
-    // update null values
     gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
-    builder->CreateStore(isResultNull, gep);
+    builder->CreateStore(builder->CreateLoad(isNullPtr), gep);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter
@@ -269,6 +269,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     builder->CreateRet(nextIndexVal);
 
     OptimizeFunctionsAndModule();
+
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
     auto resTracker = jit->getMainJITDylib().createResourceTracker();
@@ -286,10 +287,10 @@ std::vector<Type*> GetSingleProjectArguments(LLVMContext &context)
         Type::getInt64PtrTy(context),
         Type::getInt64PtrTy(context),
         Type::getInt32Ty(context),
-        Type::getInt1PtrTy(context),
         Type::getInt32PtrTy(context),
         Type::getInt64Ty(context),
-        Type::getInt64PtrTy(context)
+        Type::getInt64PtrTy(context),
+        Type::getInt1PtrTy(context)
     };
     return args;
 }
@@ -326,24 +327,24 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
     offsets->setName("OFFSETS");
     Argument *rowIndex = funcDecl->getArg(ROW_PROJ_ROW_IDX_INDEX);
     rowIndex->setName("ROW_INDEX");
-    Argument *isResultNull = funcDecl->getArg(ROW_PROJ_OUTPUT_NULL_INDEX);
-    isResultNull->setName("IS_RESULT_NULL");
     Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
     lengthPtr->setName("LENGTH_PTR");
     Argument *executionContext = funcDecl->getArg(ROW_PROJ_EXECUTION_CONTEXT_INDEX);
     executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
     Argument *dictionaryVectors = funcDecl->getArg(ROW_PROJ_DICT_VECTORS_INDEX);
     dictionaryVectors->setName("DICTIONARY_VECTOR_ADDRESSES");
+    Argument *isNullPtr = funcDecl->getArg(ROW_PROJ_IS_NULL_INDEX);
+    isNullPtr->setName("IS_NULL_PTR");
 
     std::vector<Value*> funcArgs;
     funcArgs.push_back(inputData);
     funcArgs.push_back(nulls);
     funcArgs.push_back(offsets);
     funcArgs.push_back(rowIndex);
-    funcArgs.push_back(isResultNull);
     funcArgs.push_back(lengthPtr);
     funcArgs.push_back(executionContext);
     funcArgs.push_back(dictionaryVectors);
+    funcArgs.push_back(isNullPtr);
 
     // Store the result
     AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");

@@ -26,13 +26,12 @@ using namespace vec;
  * vector value addresses
  * vector null value addresses
  * vector offsets addresses
- * row index
- * boolean pointer to return if results is null
- * int pointer to return length of varchar result
+ * row index * int pointer to return length of varchar result
  * address of ExecutionContext
  * dictionary vector addresses
+ * boolean pointer to return if results is null
  */
-using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, bool*, int32_t*, int64_t, int64_t *);
+using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, int32_t*, int64_t, int64_t *, bool*);
 
 class RowProjection {
 public:
