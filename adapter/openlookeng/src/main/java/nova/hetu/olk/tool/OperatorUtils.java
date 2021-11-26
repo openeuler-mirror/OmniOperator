@@ -22,14 +22,7 @@ import io.prestosql.spi.block.VariableWidthBlock;
 import io.prestosql.spi.type.StandardTypes;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeSignature;
-import nova.hetu.olk.block.DictionaryOmniBlock;
-import nova.hetu.olk.block.DoubleArrayOmniBlock;
-import nova.hetu.olk.block.Int128ArrayOmniBlock;
-import nova.hetu.olk.block.IntArrayOmniBlock;
-import nova.hetu.olk.block.LazyOmniBlock;
-import nova.hetu.olk.block.LongArrayOmniBlock;
-import nova.hetu.olk.block.RowOmniBlock;
-import nova.hetu.olk.block.VariableWidthOmniBlock;
+import nova.hetu.olk.block.*;
 import nova.hetu.omniruntime.type.BooleanVecType;
 import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
@@ -255,6 +248,18 @@ public final class OperatorUtils {
         }
         byte[] valueIsNull = new byte[positionCount];
         switch (type) {
+            case "ByteArrayBlock": {
+                byte[] bytes = new byte[positionCount];
+                for (int j = 0; j < positionCount; j++) {
+                    if (block.isNull(j)) {
+                        valueIsNull[j] = Vec.NULL;
+                    }
+                    else {
+                        bytes[j] = (byte) block.get(j);
+                    }
+                }
+                return new ByteArrayOmniBlock(vecAllocator, positionCount, Optional.of(valueIsNull), bytes);
+            }
             case "IntArrayBlock": {
                 int[] ints = new int[positionCount];
                 for (int j = 0; j < positionCount; j++) {

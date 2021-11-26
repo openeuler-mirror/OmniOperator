@@ -12,22 +12,9 @@ import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.StandardErrorCode;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.RowBlock;
-import nova.hetu.olk.block.DictionaryOmniBlock;
-import nova.hetu.olk.block.DoubleArrayOmniBlock;
-import nova.hetu.olk.block.Int128ArrayOmniBlock;
-import nova.hetu.olk.block.IntArrayOmniBlock;
-import nova.hetu.olk.block.LongArrayOmniBlock;
-import nova.hetu.olk.block.VariableWidthOmniBlock;
+import nova.hetu.olk.block.*;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.ContainerVec;
-import nova.hetu.omniruntime.vector.Decimal128Vec;
-import nova.hetu.omniruntime.vector.DictionaryVec;
-import nova.hetu.omniruntime.vector.DoubleVec;
-import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.LongVec;
-import nova.hetu.omniruntime.vector.VarcharVec;
-import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecBatch;
+import nova.hetu.omniruntime.vector.*;
 
 import java.util.Iterator;
 
@@ -63,6 +50,8 @@ public class VecBatchToPageIterator implements Iterator<Page> {
         for (int i = 0; i < channelCount; i++) {
             if (vectors[i] instanceof DoubleVec) {
                 blocks[i] = new DoubleArrayOmniBlock(positionCount, ((DoubleVec) vectors[i]));
+            } else if (vectors[i] instanceof BooleanVec) {
+                blocks[i] = new ByteArrayOmniBlock(positionCount, ((BooleanVec) vectors[i]));
             } else if (vectors[i] instanceof LongVec) {
                 blocks[i] = new LongArrayOmniBlock(positionCount, (LongVec) vectors[i]);
             } else if (vectors[i] instanceof IntVec) {
