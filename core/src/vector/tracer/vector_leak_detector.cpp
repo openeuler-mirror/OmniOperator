@@ -44,7 +44,7 @@ VectorLeakDetector::~VectorLeakDetector()
         auto &head = buckets[i];
         VectorTracer *tracer = RemoveTracer(head);
         while (tracer != nullptr) {
-            if (!tracer->Closed()) {
+            if (!tracer->IsClosed()) {
                 tracer->Print("Memory Leak");
             }
             delete tracer;
@@ -54,40 +54,6 @@ VectorLeakDetector::~VectorLeakDetector()
 #endif
 }
 
-void VectorLeakDetector::Record(const Vector *vec, std::string &stack, VecOpType vecOpType)
-{
-    VectorTracer *tracer = nullptr;
-    switch (vecOpType) {
-        case NEW:
-        case SLICE:
-            // check whether the vector address is reused
-            tracer = FindTracer(vec);
-            if (tracer != nullptr && tracer->Closed()) {
-                tracer->Reset();
-                deletedCount.fetch_sub(1);
-            } else if (tracer == nullptr) {
-                tracer = InsertTracer(vec);
-            } else {
-                tracer->Print("Vector is not released, but be reused again.");
-            }
-            break;
-        case FREE:
-            if (deletedCount.fetch_add(1) >= RECYCLE_THRESHOLD) {
-                RecycleDeletedTracer();
-            }
-        default:
-            tracer = FindTracer(vec);
-            break;
-    }
-    if (tracer == nullptr) {
-        VectorTracer tmpTracer(scope, vec);
-        tmpTracer.Record(stack, vecOpType);
-        tmpTracer.Print("Tracer Not Found");
-    } else {
-        tracer->Record(stack, vecOpType);
-    }
-}
-
 int32_t VectorLeakDetector::HashBucket(const Vector *vec)
 {
     std::hash<int64_t> hashFunc;
@@ -95,8 +61,7 @@ int32_t VectorLeakDetector::HashBucket(const Vector *vec)
     return hash % BUCKET_NUM;
 }
 
-VectorTracer *VectorLeakDetector::InsertTracer(const Vector *vec)
-{
+VectorTracer *VectorLeakDetector::NewTracer(const Vector *vec) {
     std::shared_lock<std::shared_timed_mutex> lock(mutex);
     auto &head = buckets[HashBucket(vec)];
     VectorTracer *tracer = new VectorTracer(scope, vec);
@@ -106,6 +71,13 @@ VectorTracer *VectorLeakDetector::InsertTracer(const Vector *vec)
         tracer->next = oldHead;
     }
     return tracer;
+}
+
+void VectorLeakDetector::CloseTracer(VectorTracer *tracer) {
+    tracer->Close();
+    if (deletedCount.fetch_add(1) >= RECYCLE_THRESHOLD) {
+        RecycleDeletedTracer();
+    }
 }
 
 VectorTracer *VectorLeakDetector::RemoveTracer(std::atomic<VectorTracer *> &head)
@@ -145,7 +117,7 @@ void VectorLeakDetector::RecycleDeletedTracer()
         auto &head = buckets[i];
         VectorTracer *tracer = head.load();
         // if head is closed, then head move to next tracer.
-        while (tracer != nullptr && tracer->Closed()) {
+        while (tracer != nullptr && tracer->IsClosed()) {
             head = tracer->next;
             delete tracer;
             deletedCount.fetch_sub(1);
@@ -153,7 +125,7 @@ void VectorLeakDetector::RecycleDeletedTracer()
         }
         // then head is not closed.
         while (tracer != nullptr) {
-            if (tracer->next != nullptr && tracer->next->Closed()) {
+            if (tracer->next != nullptr && tracer->next->IsClosed()) {
                 VectorTracer *swapTracer = tracer->next->next;
                 delete tracer->next;
                 tracer->next = swapTracer;

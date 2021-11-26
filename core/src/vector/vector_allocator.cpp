@@ -5,21 +5,12 @@
 #include <sstream>
 #include "vector.h"
 #include "vector_allocator.h"
-#include "../memory/chunk.h"
 #include "../util/trace_util.h"
 
 namespace omniruntime {
 namespace vec {
 using Chunk = omniruntime::mem::Chunk;
-#ifdef DEBUG_VECTOR
-#define RECORD_VECTOR_STACK(vector, opType)        \
-    do {                                           \
-        std::string stack = TraceUtil::GetStack(); \
-        RecordVectorStack(vector, stack, opType);  \
-    } while (0)
-#else
-#define RECORD_VECTOR_STACK(vector, opType)
-#endif
+
 VectorAllocator::VectorAllocator(std::string scope) : scope(scope), leakDetector(scope) {}
 
 VectorAllocator::~VectorAllocator() {}
@@ -28,7 +19,12 @@ void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, V
 {
     VectorReference *reference = new VectorReference(capacityInBytes, size, type);
     vector->SetVectorReference(reference);
-    RECORD_VECTOR_STACK(vector, NEW);
+#ifdef DEBUG_VECTOR
+    VectorTracer *tracer = leakDetector.NewTracer(vector);
+    std::string stack = TraceUtil::GetStack();
+    tracer->Record(stack, NEW);
+    vector->SetVectorTracer(tracer);
+#endif
 }
 
 void VectorAllocator::SliceVector(Vector *vector, Vector *sliceVector)
@@ -36,12 +32,22 @@ void VectorAllocator::SliceVector(Vector *vector, Vector *sliceVector)
     VectorReference *reference = vector->GetVectorReference();
     reference->IncRef();
     sliceVector->SetVectorReference(reference);
-    RECORD_VECTOR_STACK(sliceVector, SLICE);
+#ifdef DEBUG_VECTOR
+    VectorTracer *tracer = leakDetector.NewTracer(sliceVector);
+    std::string stack = TraceUtil::GetStack();
+    tracer->Record(stack, SLICE);
+    sliceVector->SetVectorTracer(tracer);
+#endif
 }
 
 void VectorAllocator::DeleteVector(Vector *vector)
 {
-    RECORD_VECTOR_STACK(vector, FREE);
+#ifdef DEBUG_VECTOR
+    VectorTracer *tracer = vector->GetVectorTracer();
+    std::string stack = TraceUtil::GetStack();
+    tracer->Record(stack, FREE);
+    leakDetector.CloseTracer(tracer);
+#endif
     VectorReference *reference = vector->GetVectorReference();
     if (reference == nullptr) {
         return;
@@ -60,11 +66,6 @@ std::string VectorAllocator::GetScope() const
 int64_t VectorAllocator::GetAllocatedBytes() const
 {
     return allocatedBytes;
-}
-
-void VectorAllocator::RecordVectorStack(const Vector *vector, std::string &stack, VecOpType opType)
-{
-    leakDetector.Record(vector, stack, opType);
 }
 }
 }

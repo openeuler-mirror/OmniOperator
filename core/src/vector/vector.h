@@ -126,6 +126,10 @@ public:
 
     void RecordStack(std::string &stack, VecOpType opType);
 
+    void SetVectorTracer(VectorTracer *tracer);
+
+    VectorTracer *GetVectorTracer();
+
 protected:
     // this method is mainly used for vector slice
     Vector(Vector *vector, int size, int offset);
@@ -143,6 +147,7 @@ protected:
     int size = 0;
     VecType type;
     VectorReference *reference = nullptr;
+    VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;
 };
 } // namespace vec

@@ -20,7 +20,9 @@ public:
 
     ~VectorLeakDetector();
 
-    void Record(const Vector *vec, std::string &stack, VecOpType vecOpType);
+    VectorTracer *NewTracer(const Vector *vec);
+
+    void CloseTracer(VectorTracer *tracer);
 
     VectorTracer *FindTracer(const Vector *vec);
 
