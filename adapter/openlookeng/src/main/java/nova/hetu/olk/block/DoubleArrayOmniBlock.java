@@ -294,7 +294,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("DoubleArrayBlock{");
+        StringBuilder sb = new StringBuilder("DoubleArrayOmniBlock{");
         sb.append("positionCount=").append(getPositionCount());
         sb.append('}');
         return sb.toString();

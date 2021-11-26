@@ -27,7 +27,11 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-
+/**
+ * The type Byte array omni block.
+ *
+ * @since 20210630
+ */
 public class ByteArrayOmniBlock implements Block<Byte> {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(ByteArrayOmniBlock.class).instanceSize();
 
@@ -63,7 +67,7 @@ public class ByteArrayOmniBlock implements Block<Byte> {
      * @param values the values
      */
     public ByteArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull,
-                              byte[] values) {
+            byte[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -98,7 +102,7 @@ public class ByteArrayOmniBlock implements Block<Byte> {
      * @param values the values
      */
     ByteArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull,
-                       byte[] values) {
+            byte[] values) {
         this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -262,8 +266,8 @@ public class ByteArrayOmniBlock implements Block<Byte> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new ByteArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null,
-                new byte[] {(values.get(position) ? (byte) 1 : (byte) 0)});
+        return new ByteArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[]{Vec.NULL} : null,
+                new byte[]{(values.get(position) ? (byte) 1 : (byte) 0)});
     }
 
     @Override
@@ -306,7 +310,7 @@ public class ByteArrayOmniBlock implements Block<Byte> {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("ByteArrayBlock{");
+        StringBuilder sb = new StringBuilder("ByteArrayOmniBlock{");
         sb.append("positionCount=").append(getPositionCount());
         sb.append('}');
         return sb.toString();
@@ -321,7 +325,7 @@ public class ByteArrayOmniBlock implements Block<Byte> {
     @Override
     public boolean[] filter(BloomFilter filter, boolean[] validPositions) {
         for (int i = 0; i < positionCount; i++) {
-            validPositions[i] = validPositions[i] && filter.test(values.get(i) ? (byte) 1: (byte) 0);
+            validPositions[i] = validPositions[i] && filter.test(values.get(i) ? (byte) 1 : (byte) 0);
         }
         return validPositions;
     }
