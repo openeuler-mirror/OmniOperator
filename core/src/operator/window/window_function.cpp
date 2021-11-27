@@ -161,18 +161,18 @@ void AggregateWindowFunction::ResetAccumulator()
 void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn,
     int32_t index) const
 {
-    auto state = pAggregator->GetNonGroupState();
+    auto state = pAggregator->Evaluate(pAggregator->GetNonGroupState(), pColumn->GetTypeId());
     switch (aggregationType) {
         case WIN_SUM:
         case WIN_MAX:
         case WIN_MIN:
-            VectorHelper::SetValue(pColumn, index, state.val);
+            VectorHelper::SetValue(pColumn, index, state);
             break;
         case WIN_COUNT:
-            VectorHelper::SetValue(pColumn, index, (void *)(&state.count));
+            VectorHelper::SetValue(pColumn, index, state);
             break;
         case WIN_AVG:
-            VectorHelper::SetValue(pColumn, index, state.avgVal);
+            VectorHelper::SetValue(pColumn, index, state);
             break;
         default:
             break;
@@ -253,6 +253,6 @@ void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Ve
                 break;
         }
 
-        aggregator->AggProcessNonGroup(resultVector, dataType.GetId(), resultVectorPosition - start);
+        aggregator->ProcessNonGroup(resultVector, dataType.GetId(), resultVectorPosition - start);
     }
 }

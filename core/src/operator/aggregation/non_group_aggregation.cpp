@@ -105,35 +105,35 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
 {
     for (int32_t aggIdx = 0; aggIdx < colNum; ++aggIdx) {
         int32_t type = aggDataType[aggIdx];
-        aggregators[aggIdx]->AggProcessNonGroup(vectors[aggIdx], type, offset);
+        aggregators[aggIdx]->ProcessNonGroup(vectors[aggIdx], type, offset);
     }
 }
 
-static void FillNormalAggregate(Vector *vector, GroupBySlot &state)
+static void FillNormalAggregate(Vector *vector, void *state)
 {
     switch (vector->GetTypeId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
-            static_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state.val));
+            static_cast<IntVector *>(vector)->SetValue(0, *static_cast<int32_t *>(state));
             break;
         }
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64: {
-            static_cast<LongVector *>(vector)->SetValue(0, *static_cast<int64_t *>(state.val));
+            static_cast<LongVector *>(vector)->SetValue(0, *static_cast<int64_t *>(state));
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            static_cast<DoubleVector *>(vector)->SetValue(0, *static_cast<double *>(state.val));
+            static_cast<DoubleVector *>(vector)->SetValue(0, *static_cast<double *>(state));
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
-            static_cast<Decimal128Vector *>(vector)->SetValue(0, *static_cast<Decimal128 *>(state.val));
+            static_cast<Decimal128Vector *>(vector)->SetValue(0, *static_cast<Decimal128 *>(state));
             break;
         }
         case OMNI_VEC_TYPE_VARCHAR: {
             static_cast<VarcharVector *>(vector)->SetValue(0,
-                reinterpret_cast<const uint8_t *>((*(std::string *)(state.val)).c_str()),
-                (*(std::string *)(state.val)).size());
+                reinterpret_cast<const uint8_t *>((*(std::string *)(state)).c_str()),
+                (*(std::string *)(state)).size());
             break;
         }
         default:
@@ -146,9 +146,10 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
     // set result value
     int32_t vectorCount = vecBatch->GetVectorCount();
     for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
-        AggregateType aggType = this->aggregators[colIdx]->GetType();
-        auto state = this->aggregators[colIdx]->GetNonGroupState();
+        auto &aggregator = aggregators[colIdx];
         auto vector = vecBatch->GetVector(colIdx);
+        AggregateType aggType = aggregator->GetType();
+        auto state = aggregator->Evaluate(aggregator->GetNonGroupState(), vector->GetTypeId());
         switch (aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:
@@ -157,14 +158,11 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {
-                dynamic_cast<LongVector *>(vector)->SetValue(0, state.count);
+                dynamic_cast<LongVector *>(vector)->SetValue(0, *static_cast<int64_t *>(state));
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
-                if (state.count == 0) {
-                    LogError("Divisor is zero! column index = %d", colIdx);
-                }
-                dynamic_cast<DoubleVector *>(vector)->SetValue(0, *reinterpret_cast<double *>(state.avgVal));
+                dynamic_cast<DoubleVector *>(vector)->SetValue(0, *static_cast<double *>(state));
                 break;
             }
             default: {
