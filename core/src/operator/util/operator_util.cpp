@@ -209,7 +209,7 @@ void OperatorUtil::ProjectRequiredVectors(const VecTypes &newInputTypes, const s
     for (int32_t i = 0; i < projectColsCount; i++) {
         int32_t projectCol = projectCols[i];
         // skip the project key which is not expression
-        if (projectCol > 0) {
+        if (projectCol != -1) {
             continue;
         }
 
