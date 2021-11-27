@@ -34,8 +34,6 @@ string DemangleOperator(string opStr)
 
 Operator OpTrans(string op)
 {
-    op = DemangleOperator(op);
-
     // Comparison operators
     if (op == "EQUAL") {
         return Operator::EQ;
@@ -74,8 +72,6 @@ Operator OpTrans(string op)
 
 OperatorReturnType GetBinaryOperatorType(string opStr)
 {
-    opStr = DemangleOperator(opStr);
-
     vector<string> allCmpOps{"LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "EQUAL",
                               "NOT_EQUAL"};
     vector<string> allLogOps{"AND", "OR"};
@@ -153,7 +149,8 @@ Expr *Parser::ParseRowExpression(const string& inputStr, int32_t *inputTypes, in
         return GenerateData(input, inputTypes, vecCount);
     }
 
-    string opStr = input.substr(0, firstParenInd);
+    // demangled operator string
+    string opStr = DemangleOperator(input.substr(0, firstParenInd));
     string exprStr = input.substr(firstParenInd + 1, input.size() - firstParenInd - 1 - 1);
 
     // ensure that strings and parentheses are respected
@@ -237,7 +234,6 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // Function
     // Check that the signature matches
-    opStr = DemangleOperator(opStr);
     if (ph.FuncDeclMatch(opStr, args, true)) {
         return std::make_unique<FuncExpr>(opStr, args, type).release();
     }
