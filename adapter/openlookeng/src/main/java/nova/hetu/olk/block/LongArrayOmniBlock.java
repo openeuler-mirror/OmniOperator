@@ -314,7 +314,7 @@ public class LongArrayOmniBlock implements Block<Long> {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("LongArrayBlock{");
+        StringBuilder sb = new StringBuilder("LongArrayOmniBlock{");
         sb.append("positionCount=").append(getPositionCount());
         sb.append('}');
         return sb.toString();

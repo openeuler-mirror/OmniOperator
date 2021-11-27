@@ -299,7 +299,7 @@ public class IntArrayOmniBlock implements Block<Integer> {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("IntArrayBlock{");
+        StringBuilder sb = new StringBuilder("IntArrayOmniBlock{");
         sb.append("positionCount=").append(getPositionCount());
         sb.append('}');
         return sb.toString();

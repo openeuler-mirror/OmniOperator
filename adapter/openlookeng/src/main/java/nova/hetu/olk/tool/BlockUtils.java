@@ -9,6 +9,7 @@ import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.BooleanVec;
 
 /**
  * The type Block utils.
@@ -16,6 +17,25 @@ import nova.hetu.omniruntime.vector.VarcharVec;
  * @since 20210630
  */
 public class BlockUtils {
+    /**
+     * Compact vec boolean vec.
+     *
+     * @param vec the vec
+     * @param index the index
+     * @param length the length
+     * @return the boolean vec
+     */
+    public static BooleanVec compactVec(BooleanVec vec, int index, int length) {
+        if (index == 0 && length == vec.getSize() && vec.getOffset() == 0) {
+            return vec;
+        }
+
+        BooleanVec newValues = vec.copyRegion(index, length);
+        // TODO: is there any other place to close? Use put(bytebuffer) for better performance
+        vec.close();
+        return newValues;
+    }
+
     /**
      * Compact vec int vec.
      *

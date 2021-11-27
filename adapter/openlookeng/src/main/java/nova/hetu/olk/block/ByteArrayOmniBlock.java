@@ -9,29 +9,31 @@ import static io.prestosql.spi.block.BlockUtil.checkArrayRange;
 import static io.prestosql.spi.block.BlockUtil.checkValidRegion;
 import static io.prestosql.spi.block.BlockUtil.compactArray;
 import static io.prestosql.spi.block.BlockUtil.countUsedPositions;
-import static java.lang.Double.doubleToLongBits;
 import static nova.hetu.olk.tool.BlockUtils.compactVec;
 
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockBuilder;
-import nova.hetu.omniruntime.vector.DoubleVec;
-import nova.hetu.omniruntime.vector.Vec;
+import io.prestosql.spi.block.ByteArrayBlockEncoding;
+import io.prestosql.spi.util.BloomFilter;
+import nova.hetu.omniruntime.vector.BooleanVec;
 
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 /**
- * The type Double array omni block.
+ * The type Byte array omni block.
  *
  * @since 20210630
  */
-public class DoubleArrayOmniBlock implements Block<Double> {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(DoubleArrayOmniBlock.class).instanceSize();
+public class ByteArrayOmniBlock implements Block<Byte> {
+    private static final int INSTANCE_SIZE = ClassLayout.parseClass(ByteArrayOmniBlock.class).instanceSize();
 
     private final VecAllocator vecAllocator;
 
@@ -42,57 +44,70 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     @Nullable
     private final byte[] valueIsNull;
 
-    private final DoubleVec values;
+    private final BooleanVec values;
 
     private final long sizeInBytes;
 
     private final long retainedSizeInBytes;
 
+    private static boolean[] transformByteToBoolean(byte[] values, int start, int length) {
+        boolean[] transformedBoolean = new boolean[length];
+        for (int i = 0; i < length; i++) {
+            transformedBoolean[i] = values[i + start] == 1;
+        }
+        return transformedBoolean;
+    }
+
     /**
-     * Instantiates a new Double array omni block.
-     * @param vecAllocator vector allocator
+     * Instantiates a new Byte array omni block.
+     *
+     * @param vecAllocator the vector allocator
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public DoubleArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull, double[] values) {
+    public ByteArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull,
+            byte[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
     /**
-     * Instantiates a new Double array omni block.
+     * Instantiates a new Byte array omni block.
+     *
+     * @param positionCount the position count
+     * @param values the values
+     */
+    public ByteArrayOmniBlock(int positionCount, BooleanVec values) {
+        this(positionCount, values.hasNullValue() ? Optional.of(values.getRawValueNulls()) : Optional.empty(), values);
+    }
+
+    /**
+     * Instantiates a new Byte array omni block.
      *
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public DoubleArrayOmniBlock(int positionCount, Optional<byte[]> valueIsNull, DoubleVec values) {
+    public ByteArrayOmniBlock(int positionCount, Optional<byte[]> valueIsNull, BooleanVec values) {
         this(values.getOffset(), positionCount, valueIsNull.orElse(null), values);
     }
 
     /**
-     * Instantiates a new Double array omni block.
+     * Instantiates a new Byte array omni block.
      *
-     * @param positionCount the position count
-     * @param values the values
-     */
-    public DoubleArrayOmniBlock(int positionCount, DoubleVec values) {
-        this(positionCount, values.hasNullValue() ? Optional.of(values.getRawValueNulls()) : Optional.empty(), values);
-    }
-
-    /**
-     * Instantiates a new Double array omni block.
-     * @param vecAllocator vector allocator
+     * @param vecAllocator the vector allocator
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    DoubleArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull, double[] values) {
+    ByteArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull,
+            byte[] values) {
         this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
+
         if (positionCount < 0) {
             throw new IllegalArgumentException("positionCount is negative");
         }
@@ -102,8 +117,9 @@ public class DoubleArrayOmniBlock implements Block<Double> {
             throw new IllegalArgumentException("values length is less than positionCount");
         }
 
-        this.values = new DoubleVec(vecAllocator, positionCount);
-        this.values.put(values, 0, arrayOffset, positionCount);
+        this.values = new BooleanVec(vecAllocator, positionCount);
+        boolean[] boolValues = transformByteToBoolean(values, arrayOffset, positionCount);
+        this.values.put(boolValues, 0, arrayOffset, positionCount);
 
         if (valueIsNull != null && valueIsNull.length - arrayOffset < positionCount) {
             throw new IllegalArgumentException("isNull length is less than positionCount");
@@ -118,19 +134,19 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
         this.arrayOffset = 0;
 
-        sizeInBytes = (Double.BYTES + Byte.BYTES) * (long) positionCount;
+        sizeInBytes = (Byte.BYTES + Byte.BYTES) * (long) positionCount;
         retainedSizeInBytes = INSTANCE_SIZE + sizeOf(valueIsNull) + this.values.getCapacityInBytes();
     }
 
     /**
-     * Instantiates a new Double array omni block.
+     * Instantiates a new Byte array omni block.
      *
      * @param arrayOffset the array offset
      * @param positionCount the position count
      * @param valueIsNull the value is null
      * @param values the values
      */
-    DoubleArrayOmniBlock(int arrayOffset, int positionCount, byte[] valueIsNull, DoubleVec values) {
+    ByteArrayOmniBlock(int arrayOffset, int positionCount, byte[] valueIsNull, BooleanVec values) {
         this.vecAllocator = values.getAllocator();
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -152,12 +168,12 @@ public class DoubleArrayOmniBlock implements Block<Double> {
         }
         this.valueIsNull = valueIsNull;
 
-        sizeInBytes = (Double.BYTES + Byte.BYTES) * (long) positionCount;
+        sizeInBytes = (Byte.BYTES + Byte.BYTES) * (long) positionCount;
         retainedSizeInBytes = INSTANCE_SIZE + sizeOf(valueIsNull) + this.values.getCapacityInBytes();
     }
 
     @Override
-    public Vec getValues() {
+    public Object getValues() {
         return values;
     }
 
@@ -173,12 +189,12 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     @Override
     public long getRegionSizeInBytes(int position, int length) {
-        return (Double.BYTES + Byte.BYTES) * (long) length;
+        return (Byte.BYTES + Byte.BYTES) * (long) length;
     }
 
     @Override
     public long getPositionsSizeInBytes(boolean[] positions) {
-        return (Double.BYTES + Byte.BYTES) * (long) countUsedPositions(positions);
+        return (Byte.BYTES + Byte.BYTES) * (long) countUsedPositions(positions);
     }
 
     @Override
@@ -188,7 +204,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     @Override
     public long getEstimatedDataSizeForStats(int position) {
-        return isNull(position) ? 0 : Double.BYTES;
+        return isNull(position) ? 0 : Byte.BYTES;
     }
 
     @Override
@@ -206,17 +222,17 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     }
 
     @Override
-    public double getDouble(int position, int offset) {
+    public byte getByte(int position, int offset) {
         checkReadablePosition(position);
         if (offset != 0) {
             throw new IllegalArgumentException("offset must be zero");
         }
-        return values.get(position);
+        return values.get(position) ? (byte) 1 : (byte) 0;
     }
 
     @Override
     public long getLong(int position, int offset) {
-        return doubleToLongBits(getDouble(position, offset));
+        return getByte(position, offset);
     }
 
     @Override
@@ -237,64 +253,64 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     @Override
     public boolean isNull(int position) {
         checkReadablePosition(position);
-        return valueIsNull != null && valueIsNull[position] == Vec.NULL;
+        return valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL;
     }
 
     @Override
     public void writePositionTo(int position, BlockBuilder blockBuilder) {
         checkReadablePosition(position);
-        blockBuilder.writeDouble(values.get(position));
+        blockBuilder.writeByte(values.get(position) ? (byte) 1 : (byte) 0);
         blockBuilder.closeEntry();
     }
 
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new DoubleArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null,
-            new double[] {values.get(position)});
+        return new ByteArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[]{Vec.NULL} : null,
+                new byte[]{(values.get(position) ? (byte) 1 : (byte) 0)});
     }
 
     @Override
     public Block copyPositions(int[] positions, int offset, int length) {
         checkArrayRange(positions, offset, length);
         byte[] newValueIsNull = null;
-        DoubleVec newValues = values.copyPositions(positions, offset, length);
+        BooleanVec newValues = values.copyPositions(positions, offset, length);
         if (valueIsNull != null) {
             newValueIsNull = newValues.getRawValueNulls();
         }
-        return new DoubleArrayOmniBlock(0, length, newValueIsNull, newValues);
+        return new ByteArrayOmniBlock(0, length, newValueIsNull, newValues);
     }
 
     @Override
-    public Block<Double> getRegion(int positionOffset, int length) {
+    public Block getRegion(int positionOffset, int length) {
         checkValidRegion(getPositionCount(), positionOffset, length);
-        DoubleVec newValues = values.slice(positionOffset, positionOffset + length);
-        return new DoubleArrayOmniBlock(newValues.getOffset(), length, valueIsNull, newValues);
+        BooleanVec newValues = values.slice(positionOffset, positionOffset + length);
+        return new ByteArrayOmniBlock(newValues.getOffset(), length, valueIsNull, newValues);
     }
 
     @Override
-    public Block<Double> copyRegion(int positionOffset, int length) {
+    public Block copyRegion(int positionOffset, int length) {
         checkValidRegion(getPositionCount(), positionOffset, length);
 
-        DoubleVec newValues = compactVec(values, positionOffset, length);
+        BooleanVec newValues = compactVec(values, positionOffset, length);
         byte[] newValueIsNull = valueIsNull == null
-            ? null
-            : compactArray(valueIsNull, positionOffset + arrayOffset, length);
+                ? null
+                : compactArray(valueIsNull, positionOffset + arrayOffset, length);
 
         if (newValueIsNull == valueIsNull && newValues == values) {
             return this;
         }
-        return new DoubleArrayOmniBlock(0, length, newValueIsNull, newValues);
+        return new ByteArrayOmniBlock(0, length, newValueIsNull, newValues);
     }
 
     @Override
     public String getEncodingName() {
-        return DoubleArrayOmniBlockEncoding.NAME;
+        return ByteArrayBlockEncoding.NAME;
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("DoubleArrayOmniBlock{");
+        StringBuilder sb = new StringBuilder("ByteArrayOmniBlock{");
         sb.append("positionCount=").append(getPositionCount());
         sb.append('}');
         return sb.toString();
@@ -307,11 +323,33 @@ public class DoubleArrayOmniBlock implements Block<Double> {
     }
 
     @Override
-    public Double get(int position) {
+    public boolean[] filter(BloomFilter filter, boolean[] validPositions) {
+        for (int i = 0; i < positionCount; i++) {
+            validPositions[i] = validPositions[i] && filter.test(values.get(i) ? (byte) 1 : (byte) 0);
+        }
+        return validPositions;
+    }
+
+    @Override
+    public int filter(int[] positions, int positionCount, int[] matchedPositions, Function<Object, Boolean> test) {
+        int matchCount = 0;
+        for (int i = 0; i < positionCount; i++) {
+            if (valueIsNull != null && valueIsNull[positions[i] + arrayOffset] == Vec.NULL) {
+                if (test.apply(null)) {
+                    matchedPositions[matchCount++] = positions[i];
+                }
+            } else if (test.apply(values.get(positions[i]))) {
+                matchedPositions[matchCount++] = positions[i];
+            }
+        }
+        return matchCount;
+    }
+
+    @Override
+    public Byte get(int position) {
         if (valueIsNull != null && valueIsNull[position + arrayOffset] == Vec.NULL) {
             return null;
         }
-
-        return values.get(position);
+        return values.get(position) ? (byte) 1 : (byte) 0;
     }
 }

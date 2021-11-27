@@ -30,6 +30,7 @@ import nova.hetu.olk.block.LazyOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
+import nova.hetu.olk.block.ByteArrayOmniBlock;
 import nova.hetu.omniruntime.type.BooleanVecType;
 import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
@@ -255,6 +256,17 @@ public final class OperatorUtils {
         }
         byte[] valueIsNull = new byte[positionCount];
         switch (type) {
+            case "ByteArrayBlock": {
+                byte[] bytes = new byte[positionCount];
+                for (int j = 0; j < positionCount; j++) {
+                    if (block.isNull(j)) {
+                        valueIsNull[j] = Vec.NULL;
+                    } else {
+                        bytes[j] = (byte) block.get(j);
+                    }
+                }
+                return new ByteArrayOmniBlock(vecAllocator, positionCount, Optional.of(valueIsNull), bytes);
+            }
             case "IntArrayBlock": {
                 int[] ints = new int[positionCount];
                 for (int j = 0; j < positionCount; j++) {
