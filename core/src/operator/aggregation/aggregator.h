@@ -39,19 +39,24 @@ using AggregateType = enum AggregateType {
 };
 
 using GroupBySlot = union GroupBySlot {
+    // For sum() and basic type min()/max()
     void *val;
+    // For count()
     int64_t count;
+    // For basic type avg()
     struct {
         void *avgVal;
         int64_t avgCnt;
     };
+    // For string min()/max()
     struct {
         uint8_t *strVal;
         int32_t strLen;
     };
 };
 
-template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
+template<typename T>
+int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
 }
@@ -88,10 +93,11 @@ public:
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
     virtual void ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) = 0;
-    void AggProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset);
     virtual void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) = 0;
     virtual void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) = 0;
     virtual void Initiate(Vector *colPtr, int32_t type, uint32_t offset) = 0;
+    // return nullptr if error occurs
+    virtual void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) = 0;
     bool IsInputRaw() const;
     bool IsOutputPartial() const;
 
@@ -125,106 +131,115 @@ protected:
     std::unique_ptr<ExecutionContext> executionContext;
 };
 
-using ProcessGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+using ProcessGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-using ProcessNonGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-using InsertFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+using ProcessNonGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+using InsertFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-using InitiateFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+using InitiateFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+using EvaluateFunc = void* (*)(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
 using AggFunctionByType = struct AggFunctionByType {
     VecTypeId typeId;
     InsertFunc insertFunc;
     ProcessGroupFunc processGroupFunc;
     InitiateFunc initiateFunc;
     ProcessNonGroupFunc processNonGroupFunc;
+    EvaluateFunc evaluateFunc;
 };
 
-template <typename V, typename D>
-void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D>
+void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset,
+void SumInsertDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void SumInsertDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D>
+void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void SumProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void SumProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-template <typename V, typename D>
-void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void SumInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+template<typename V, typename D>
+void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void SumProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
 
-template <typename V, typename D>
-void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D>
+void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void AvgInsertDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgInsertDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void AvgInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D>
+void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void AvgProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void AvgProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-template <typename V, typename D>
-void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void AvgProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-template <typename V, typename D>
-void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-void MinInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-void MinProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-template <typename V, typename D>
-void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+template<typename V, typename D>
+void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void AvgInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void AvgInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+template<typename V, typename D>
+void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void AvgProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void AvgProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+template<typename D>
+void* AvgEvaluateImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
 
-template <typename V, typename D>
-void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D>
+void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void MinInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void MaxInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D>
+void MinProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+void MinProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void MaxProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset,
+template<typename V, typename D> 
+void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MinInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+template<typename V, typename D> 
+void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MinProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+
+template<typename V, typename D>
+void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-template <typename V, typename D>
-void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-template <typename V, typename D>
-void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
-void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset);
+void MaxInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+    std::unique_ptr<ExecutionContext> &context);
+template<typename V, typename D>
+void MaxProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+    std::unique_ptr<ExecutionContext> &context);
+void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+    std::unique_ptr<ExecutionContext> &context);
+void MaxProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+    std::unique_ptr<ExecutionContext> &context);
+template<typename V, typename D> 
+void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MaxInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+template<typename V, typename D> 
+void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MaxProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
 
 class SumAggregator : public Aggregator {
 public:
@@ -240,6 +255,7 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, VecType type) override {}
+    void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
 };
 
 class AverageAggregator : public Aggregator {
@@ -257,6 +273,7 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Process(void *valuePtr, VecType type) override {}
+    void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
 };
 
 class CountAggregator : public Aggregator {
@@ -271,6 +288,7 @@ public:
     void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
     void Process(void *valuePtr, VecType type) override {}
 };
 
@@ -286,49 +304,8 @@ public:
     void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
     void Process(void *valuePtr, VecType type) override {}
-    static constexpr AggFunctionByType MIN_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
-        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_INT, MinInsertImpl<IntVector, int32_t>, MinProcessGroupImpl<IntVector, int32_t>,
-            MinInitiateImpl<IntVector, int32_t>, MinProcessNonGroupImpl<IntVector, int32_t>
-        },
-        {
-            OMNI_VEC_TYPE_LONG, MinInsertImpl<LongVector, int64_t>, MinProcessGroupImpl<LongVector, int64_t>,
-            MinInitiateImpl<LongVector, int64_t>, MinProcessNonGroupImpl<LongVector, int64_t>
-        },
-        {
-            OMNI_VEC_TYPE_DOUBLE, MinInsertImpl<DoubleVector, double>, MinProcessGroupImpl<DoubleVector, double>,
-            MinInitiateImpl<DoubleVector, double>, MinProcessNonGroupImpl<DoubleVector, double>
-        },
-        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_DECIMAL64, MinInsertImpl<LongVector, int64_t>, MinProcessGroupImpl<LongVector, int64_t>,
-            MinInitiateImpl<LongVector, int64_t>, MinProcessNonGroupImpl<LongVector, int64_t>
-        },
-        {
-            OMNI_VEC_TYPE_DECIMAL128, MinInsertImpl<Decimal128Vector, Decimal128>,
-            MinProcessGroupImpl<Decimal128Vector, Decimal128>, MinInitiateImpl<Decimal128Vector, Decimal128>,
-            MinProcessNonGroupImpl<Decimal128Vector, Decimal128>
-        },
-        {
-            OMNI_VEC_TYPE_DATE32, MinInsertImpl<IntVector, int32_t>, MinProcessGroupImpl<IntVector, int32_t>,
-            MinInitiateImpl<IntVector, int32_t>, MinProcessNonGroupImpl<IntVector, int32_t>
-        },
-        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_VARCHAR, MinInsertVarcharImpl, MinProcessGroupVarcharImpl, MinInitiateVarcharImpl,
-            MinProcessNonGroupVarcharImpl
-        },
-        {OMNI_VEC_TYPE_DICTIONARY, MinInsertDictionaryImpl, MinProcessGroupDictionaryImpl, nullptr, nullptr},
-        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
-    };
 };
 
 class MaxAggregator : public Aggregator {
@@ -343,49 +320,8 @@ public:
     void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
+    void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
     void Process(void *valuePtr, VecType type) override {}
-    static constexpr AggFunctionByType MAX_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
-        {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_INT, MaxInsertImpl<IntVector, int32_t>, MaxProcessGroupImpl<IntVector, int32_t>,
-            MaxInitiateImpl<IntVector, int32_t>, MaxProcessNonGroupImpl<IntVector, int32_t>
-        },
-        {
-            OMNI_VEC_TYPE_LONG, MaxInsertImpl<LongVector, int64_t>, MaxProcessGroupImpl<LongVector, int64_t>,
-            MaxInitiateImpl<LongVector, int64_t>, MaxProcessNonGroupImpl<LongVector, int64_t>
-        },
-        {
-            OMNI_VEC_TYPE_DOUBLE, MaxInsertImpl<DoubleVector, double>, MaxProcessGroupImpl<DoubleVector, double>,
-            MaxInitiateImpl<DoubleVector, double>, MaxProcessNonGroupImpl<DoubleVector, double>
-        },
-        {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_DECIMAL64, MaxInsertImpl<LongVector, int64_t>, MaxProcessGroupImpl<LongVector, int64_t>,
-            MaxInitiateImpl<LongVector, int64_t>, MaxProcessNonGroupImpl<LongVector, int64_t>
-        },
-        {
-            OMNI_VEC_TYPE_DECIMAL128, MaxInsertImpl<Decimal128Vector, Decimal128>,
-            MaxProcessGroupImpl<Decimal128Vector, Decimal128>, MaxInitiateImpl<Decimal128Vector, Decimal128>,
-            MaxProcessNonGroupImpl<Decimal128Vector, Decimal128>
-        },
-        {
-            OMNI_VEC_TYPE_DATE32, MaxInsertImpl<IntVector, int32_t>, MaxProcessGroupImpl<IntVector, int32_t>,
-            MaxInitiateImpl<IntVector, int32_t>, MaxProcessNonGroupImpl<IntVector, int32_t>
-        },
-        {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIME64, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_TIMESTAMP, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr},
-        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr},
-        {
-            OMNI_VEC_TYPE_VARCHAR, MaxInsertVarcharImpl, MaxProcessGroupVarcharImpl, MaxInitiateVarcharImpl,
-            MaxProcessNonGroupVarcharImpl
-        },
-        {OMNI_VEC_TYPE_DICTIONARY, MaxInsertDictionaryImpl, MaxProcessGroupDictionaryImpl, nullptr, nullptr},
-        {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr},
-    };
 };
 
 class AggregatorFactory {
