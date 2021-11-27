@@ -22,6 +22,15 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 
+template void HashFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+    uint64_t *combinedHash);
+template void HashFuncVectImpl<BooleanVector, bool>(Vector *vector, const uint32_t start, const uint32_t rowCount,
+    uint64_t *combinedHash);
+template void DuplicateKeyValueImpl<BooleanVector, bool>(GroupBySlot &groupBySlot, Vector *vector,
+    const uint32_t offset, ExecutionContext *context);
+template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, GroupBySlot &slot,
+    bool &isSame);
+
 static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {

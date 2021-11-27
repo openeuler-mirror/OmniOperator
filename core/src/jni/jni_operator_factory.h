@@ -288,6 +288,28 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_closeNativeOperatorFactory(JNIEnv *,
     jclass, jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory
+ * Method:    CreateLimitOperatorFactory
+ * Signature: (L)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
+    JNIEnv *env, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_distinctlimit_OmniDistinctLimitOperatorFactory
+ * Method:    CreateDistinctLimitOperatorFactory
+ * Signature: ([Ljava/lang/String;[Ijava/lang/Int;IL)J
+ * Note: out put seq as below:
+ *                           1. distinct cols
+ *                           2. normal cols
+ *                           3. hash col(jHashChannel)
+ * Note: put jHashChannel to -1 if no precomputed hash value for distinct cols
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_createDistinctLimitOperatorFactory(
+    JNIEnv *env, jclass, jstring, jintArray, jint, jlong);
+
 #ifdef __cplusplus
 }
 #endif

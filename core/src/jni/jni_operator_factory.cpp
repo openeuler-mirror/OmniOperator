@@ -25,6 +25,8 @@
 #include "../operator/union/union.h"
 #include "../operator/optimization.h"
 #include "../operator/window/window_expr.h"
+#include "../operator/limit/limit.h"
+#include "../operator/limit/distinct_limit.h"
 #include "config.h"
 
 using omniruntime::jit::Context;
@@ -1876,4 +1878,42 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_c
     if (nativeOperatorFactory != nullptr) {
         delete nativeOperatorFactory;
     }
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
+    JNIEnv *env, jclass jObj, jlong jLimit)
+{
+    JNI_DEBUG_LOG("create limit operator factory starting.");
+    auto start = START();
+    JNI_DEBUG_LOG("before create limit operator factory elapsed time: %ld ms.", END(start));
+    auto *limitOperatorFactory = omniruntime::op::LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
+    JNI_DEBUG_LOG("create limit operator factory finished, elapsed time: %ld ms.", END(start));
+    limitOperatorFactory->SetJitContext(nullptr);
+
+    return (int64_t)limitOperatorFactory;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_createDistinctLimitOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jSoureTypes, jintArray jDistinctChannel, jint jHashChannel, jlong jLimit)
+{
+    JNI_DEBUG_LOG("create distinct limit operator factory starting.");
+    auto start = START();
+
+    size_t distinctColCount = (size_t)env->GetArrayLength(jDistinctChannel);
+    jint *distinctCols = env->GetIntArrayElements(jDistinctChannel, JNI_FALSE);
+
+    const char *sourceTypesCharPtr = env->GetStringUTFChars(jSoureTypes, JNI_FALSE);
+    auto sourceTypes = Deserialize(sourceTypesCharPtr);
+
+    JNI_DEBUG_LOG("before create distinct limit operator factory elapsed time: %ld ms.", END(start));
+    auto *distinctLimitOperatorFactory =
+        omniruntime::op::DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes, distinctCols,
+        distinctColCount, jHashChannel, jLimit);
+    JNI_DEBUG_LOG("create distinct limit operator factory finished, elapsed time: %ld ms.", END(start));
+    distinctLimitOperatorFactory->SetJitContext(nullptr);
+
+    env->ReleaseStringUTFChars(jSoureTypes, sourceTypesCharPtr);
+
+    return (int64_t)distinctLimitOperatorFactory;
 }
