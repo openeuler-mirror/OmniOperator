@@ -14,10 +14,15 @@
 
 package nova.hetu.olk.operator.localexchange;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.prestosql.operator.PipelineExecutionStrategy.UNGROUPED_EXECUTION;
 import static io.prestosql.sql.planner.SystemPartitioningHandle.FIXED_HASH_DISTRIBUTION;
 
 import io.airlift.units.DataSize;
+import io.prestosql.execution.Lifespan;
+import io.prestosql.operator.PipelineExecutionStrategy;
 import io.prestosql.operator.exchange.LocalExchange;
 import io.prestosql.operator.exchange.PageReference;
 import io.prestosql.spi.type.Type;
@@ -43,6 +48,36 @@ public class OmniLocalExchange extends LocalExchange {
         if (partitioning.equals(FIXED_HASH_DISTRIBUTION)) {
             exchangerSupplier = () -> new OmniPartitioningExchanger(buffers, this.memoryManager, types,
                 partitionChannels, partitionHashChannel);
+        }
+    }
+
+    @ThreadSafe
+    public static class OmniLocalExchangeFactory extends LocalExchangeFactory {
+        public OmniLocalExchangeFactory(PartitioningHandle partitioning, int defaultConcurrency, List<Type> types,
+                                        List<Integer> partitionChannels, Optional<Integer> partitionHashChannel,
+                                        PipelineExecutionStrategy exchangeSourcePipelineExecutionStrategy,
+                                        DataSize maxBufferedBytes) {
+            super(partitioning, defaultConcurrency, types, partitionChannels, partitionHashChannel,
+                exchangeSourcePipelineExecutionStrategy, maxBufferedBytes);
+        }
+
+        public synchronized LocalExchange getLocalExchange(Lifespan lifespan) {
+            if (exchangeSourcePipelineExecutionStrategy == UNGROUPED_EXECUTION) {
+                checkArgument(lifespan.isTaskWide(),
+                    "OmniLocalExchangeFactory is declared as UNGROUPED_EXECUTION. Driver-group exchange cannot be created.");
+            } else {
+                checkArgument(!lifespan.isTaskWide(),
+                    "OmniLocalExchangeFactory is declared as GROUPED_EXECUTION. Task-wide exchange cannot be created.");
+            }
+            return localExchangeMap.computeIfAbsent(lifespan, ignored -> {
+                checkState(noMoreSinkFactories);
+                LocalExchange localExchange = new OmniLocalExchange(numSinkFactories, bufferCount, partitioning, types,
+                    partitionChannels, partitionHashChannel, maxBufferedBytes);
+                for (LocalExchangeSinkFactoryId closedSinkFactoryId : closedSinkFactories) {
+                    localExchange.getSinkFactory(closedSinkFactoryId).close();
+                }
+                return localExchange;
+            });
         }
     }
 }

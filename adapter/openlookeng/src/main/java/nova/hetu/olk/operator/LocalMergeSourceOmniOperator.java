@@ -69,7 +69,7 @@ public class LocalMergeSourceOmniOperator implements Operator {
          * @param outputChannels       the output channels
          */
         public LocalMergeSourceOmniOperatorFactory(int operatorId, int orderByOmniId, PlanNodeId planNodeId,
-                                                   OmniLocalExchange.LocalExchangeFactory localExchangeFactory,
+                                                   LocalExchange.LocalExchangeFactory localExchangeFactory,
                                                    List<Type> types, OrderingCompiler orderingCompiler,
                                                    List<Integer> sortChannels, List<SortOrder> orderings,
                                                    List<Integer> outputChannels) {

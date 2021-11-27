@@ -804,7 +804,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 }
             }
 
-            OmniLocalExchange.LocalExchangeFactory localExchangeFactory = new OmniLocalExchange.LocalExchangeFactory(
+            LocalExchange.LocalExchangeFactory localExchangeFactory = new OmniLocalExchange.OmniLocalExchangeFactory(
                 node.getPartitioningScheme().getPartitioning().getHandle(), driverInstanceCount, types, channels,
                 hashChannel, exchangeSourcePipelineExecutionStrategy, maxLocalExchangeBufferSize);
             for (int i = 0; i < node.getSources().size(); i++) {
@@ -861,7 +861,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             int operatorsCount = subContext.getDriverInstanceCount().orElse(1);
             List<Type> types = getSourceOperatorTypes(node, context.getTypes());
-            OmniLocalExchange.LocalExchangeFactory exchangeFactory = new OmniLocalExchange.LocalExchangeFactory(
+            LocalExchange.LocalExchangeFactory exchangeFactory = new OmniLocalExchange.OmniLocalExchangeFactory(
                 node.getPartitioningScheme().getPartitioning().getHandle(), operatorsCount, types, ImmutableList.of(),
                 Optional.empty(), source.getPipelineExecutionStrategy(), maxLocalExchangeBufferSize);
 
