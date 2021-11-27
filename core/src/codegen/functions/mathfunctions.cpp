@@ -36,6 +36,12 @@ extern "C" DLLEXPORT long CastInt32ToInt64(int32_t x)
     return static_cast<long>(x);
 }
 
+
+extern "C" DLLEXPORT int CastInt64ToInt32(int64_t x)
+{
+    return static_cast<int>(x);
+}
+
 extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
 {
     return static_cast<double>(x);
