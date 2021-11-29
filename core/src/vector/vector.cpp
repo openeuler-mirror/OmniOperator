@@ -68,7 +68,17 @@ void Vector::SetValueNullBitMap(int index)
 
 void Vector::RecordStack(std::string &stack, VecOpType opType)
 {
-    allocator->RecordVectorStack(this, stack, opType);
+    tracer->Record(stack, opType);
+}
+
+void Vector::SetVectorTracer(VectorTracer *tracer)
+{
+    this->tracer = tracer;
+}
+
+VectorTracer *Vector::GetVectorTracer()
+{
+    return this->tracer;
 }
 }
 }

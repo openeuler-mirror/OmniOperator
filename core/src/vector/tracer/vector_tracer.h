@@ -68,20 +68,14 @@ public:
         return vec;
     }
 
-    bool Closed()
+    void Close()
+    {
+        closed = true;
+    }
+
+    bool IsClosed()
     {
         return closed;
-    }
-
-    void Reset()
-    {
-        closed = false;
-        path.clear();
-    }
-
-    std::vector<std::string> &GetPath()
-    {
-        return path;
     }
 
     VectorTracer *next;
@@ -89,7 +83,6 @@ public:
 private:
     const std::string &scope;
     const Vector *vec;
-    std::vector<std::string> path;
     bool closed;
 
     void PrepareTracerHeaderLog(std::stringstream &ss, const char *message) const;

@@ -34,8 +34,6 @@ public:
         return leakDetector;
     }
 
-    void RecordVectorStack(const Vector *vector, std::string &stack, VecOpType opType);
-
 private:
     const std::string scope;
     VectorLeakDetector leakDetector;

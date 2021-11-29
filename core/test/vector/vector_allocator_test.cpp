@@ -177,7 +177,7 @@ TEST(VectorAllocator, usedAfterReleased)
     EXPECT_EQ(vector->GetTypeId(), OMNI_VEC_TYPE_LONG);
     delete vector;
     std::string stack = "HASH_AGG";
-    allocator->RecordVectorStack(vector, stack, JNI_ADD_INPUT);
+    vector->RecordStack(stack, JNI_ADD_INPUT);
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
@@ -191,21 +191,19 @@ TEST(VectorAllocator, recycleDeletedTracer)
     for (int i = 0; i < vectorCount; i++) {
         vecs.push_back(new LongVector(allocator, 10));
     }
+    std::vector<VectorTracer *> tracers;
     for (int i = 0; i < vectorCount; i++) {
+        tracers.push_back(vecs[i]->GetVectorTracer());
         delete vecs[i];
     }
 
     auto *vec = new LongVector(allocator, 10);
+    auto *tracer = vec->GetVectorTracer();
     delete vec;
-    EXPECT_TRUE(allocator->GetLeakDetector().FindTracer(vec)->Closed());
+    EXPECT_TRUE(tracer->IsClosed());
 
     for (int i = 0; i < vectorCount; i++) {
-        if (vecs[i] == vec) {
-            // vector address reused
-            EXPECT_TRUE(allocator->GetLeakDetector().FindTracer(vecs[i])->Closed());
-        } else {
-            EXPECT_TRUE(allocator->GetLeakDetector().FindTracer(vecs[i]) == nullptr);
-        }
+        EXPECT_TRUE(tracers[i]->IsClosed());
     }
     vecs.clear();
 
@@ -225,9 +223,9 @@ TEST(VectorAllocator, recycleDeletedTracer)
         if (i % 2 == 0 && i != 2048) {
             EXPECT_TRUE(allocator->GetLeakDetector().FindTracer(vecs[i]) == nullptr);
         } else if (i == 2048) {
-            EXPECT_TRUE(allocator->GetLeakDetector().FindTracer(vecs[i])->Closed());
+            EXPECT_TRUE(allocator->GetLeakDetector().FindTracer(vecs[i])->IsClosed());
         } else {
-            EXPECT_TRUE(!allocator->GetLeakDetector().FindTracer(vecs[i])->Closed());
+            EXPECT_TRUE(!allocator->GetLeakDetector().FindTracer(vecs[i])->IsClosed());
         }
     }
 
