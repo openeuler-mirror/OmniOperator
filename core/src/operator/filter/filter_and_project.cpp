@@ -47,6 +47,8 @@ SimpleFilter::SimpleFilter(std::string &expression, std::vector<expressions::Dat
 
 SimpleFilter::~SimpleFilter()
 {
+    this->executionContext->getArena()->Reset();
+    this->executionContext.reset();
     delete this->expression;
     this->codegen.reset();
 }
@@ -54,30 +56,42 @@ SimpleFilter::~SimpleFilter()
 bool SimpleFilter::Initialize()
 {
     if (this->expression == nullptr) {
-        return false;
-    }
-    this->codegen = std::make_unique<FilterCodeGen>("single_row_filter", *this->expression);
-    if (this->codegen == nullptr) {
+        LogWarn("Unable to parse expression for simple filter");
         return false;
     }
 
-    int64_t fAddr = this->codegen->GetExpressionEvaluator();
+    if (this->expression->GetExprDataType() != BOOLD) {
+        LogWarn("Filter expression can only return boolean, current type: %d", this->expression->GetExprDataType());
+        return false;
+    }
+
+    this->codegen = std::make_unique<RowExpressionCodeGen>("simple_row_expr_eval", *this->expression);
+    if (this->codegen == nullptr) {
+        LogWarn("Unable to generate function for simple filter");
+        return false;
+    }
+
+    int64_t fAddr = this->codegen->GetFunction();
     void *refFunc = &fAddr;
-    auto castedRef = static_cast<RowFilterFunc *>(refFunc);
+    this->func = *static_cast<SimpleRowExprEvalFunc *>(refFunc);
+    this->executionContext = std::make_unique<ExecutionContext>();
+    this->initialized = true;
     return true;
 }
 
 set<int32_t> SimpleFilter::GetVectorIndexes()
 {
-    if (this->codegen == nullptr) {
+    if (!this->initialized) {
+        LogWarn("SimpleFilter not initialized or failed to initialize.");
         return set<int32_t> {};
     }
     return this->codegen->vectorIndexes;
 }
 
-bool SimpleFilter::Evaluate(int64_t *values, bool *isNull, int32_t *lengths)
+bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths)
 {
-
+    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, 
+        reinterpret_cast<int64_t>(this->executionContext.get()));
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputVecTypes,

@@ -35,6 +35,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
+#include "./codegen_context.h"
 #include "../common/expressions.h"
 #include "../common/parser/parser.h"
 #include "../common/expr_printer.h"
@@ -47,30 +48,6 @@
 #include "../util/debug.h"
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
-
-class CodegenContext {
-public:
-    explicit CodegenContext() : data(nullptr), nullBitmap(nullptr), offsets(nullptr),
-        rowIdx(nullptr), print(nullptr) {}
-
-    explicit CodegenContext(llvm::Value *data, llvm::Value *nullBitmap, llvm::Value *offsets, llvm::Value *rowIdx,
-        llvm::Value *executionContext, llvm::Value *dictionaryVectors) : data(data),
-        nullBitmap(nullBitmap), offsets(offsets), rowIdx(rowIdx),
-        executionContext(executionContext), dictionaryVectors(dictionaryVectors), print(nullptr) {}
-
-    ~CodegenContext() {}
-
-    friend class ExpressionCodeGen;
-
-private:
-    llvm::Value *data;
-    llvm::Value *nullBitmap;
-    llvm::Value *offsets;
-    llvm::Value *rowIdx;
-    llvm::Value *executionContext;
-    llvm::Value *dictionaryVectors;
-    llvm::FunctionCallee print;
-};
 
 // Given an expression generates the function for it.
 class ExpressionCodeGen : public ExprVisitor {
@@ -129,8 +106,7 @@ protected:
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);
 
-    llvm::Function* CreateFunction();
-    llvm::Function* CreateSimpleFunction();
+    virtual llvm::Function* CreateFunction();
     void OptimizeFunctionsAndModule();
 
     omniruntime::expressions::Expr *expr = nullptr;
@@ -144,11 +120,11 @@ protected:
     llvm::orc::ResourceTrackerSP rt;
     FunctionRegistry *fr;
     llvm::Function *func = nullptr;
+    CodeGenValuePtr value = nullptr;
+    std::unique_ptr<CodegenContext> codegenContext;
     int numGlobalValues = 0;
 
 private:
-    CodeGenValuePtr value = nullptr;
-    std::unique_ptr<CodegenContext> codegenContext;
     std::string funcName;
     std::map<std::string, FunctionSignature> funcNameToSignature;
 

@@ -3,7 +3,6 @@
  * Description: Expression code generator
  */
 #include "expression_codegen.h"
-#include "expr_info_extractor.h"
 
 #include <chrono>
 
@@ -13,6 +12,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
 #include "vector"
+#include "expr_info_extractor.h"
+#include "codegen_context.h"
 
 using namespace llvm;
 using namespace orc;
@@ -399,31 +400,6 @@ std::string ExpressionCodeGen::DumpCode()
     return ir;
 }
 
-void AddOptimizationPasses(legacy::FunctionPassManager *fpm, llvm::legacy::PassManager &mpm)
-{
-    fpm->add(createSCCPPass());
-    fpm->add(createNewGVNPass());
-    fpm->add(createInductiveRangeCheckEliminationPass());
-    fpm->add(createIndVarSimplifyPass());
-
-    fpm->add(createLICMPass());
-    fpm->add(createLoopUnrollPass());
-    fpm->add(createLoopUnswitchPass());
-
-    fpm->add(createLoopLoadEliminationPass());
-    fpm->add(createInductiveRangeCheckEliminationPass());
-    fpm->add(createIndVarSimplifyPass());
-    fpm->add(createLoopInstSimplifyPass());
-    fpm->add(createLoopSimplifyCFGPass());
-    fpm->add(createMergedLoadStoreMotionPass());
-    fpm->add(createMergeICmpsLegacyPass());
-    fpm->add(createAggressiveDCEPass());
-    fpm->add(createDeadStoreEliminationPass());
-
-    mpm.add(createFunctionInliningPass());
-    mpm.add(createPruneEHPass());
-}
-
 bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)
 {
     this->codegenContext = std::make_unique<CodegenContext>();
@@ -507,65 +483,6 @@ Function *ExpressionCodeGen::CreateFunction()
     }
 
     builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
-
-    // cast char* to int64 for output
-    if (expr->GetExprDataType() == DataType::STRINGD) {
-        result->data = builder->CreatePtrToInt(result->data, Type::getInt64Ty(*context));
-    }
-    // Return value
-    builder->CreateRet(result->data);
-    verifyFunction(*func);
-    return func;
-}
-
-Function *ExpressionCodeGen::CreateSimpleFunction()
-{
-    int32_t argsSize = 8;
-    std::vector<Type *> args;
-    args.reserve(argsSize);
-    // Values in args vector follow the format:
-    // value*, bitmap*, length*, outputLength*, executionContext, isNullPtr
-    args.push_back(Type::getInt64PtrTy(*context));
-    args.push_back(Type::getInt1PtrTy(*context));
-    args.push_back(Type::getInt32PtrTy(*context));
-    args.push_back(Type::getInt32PtrTy(*context));
-    args.push_back(Type::getInt64Ty(*context));
-    args.push_back(Type::getInt1PtrTy(*context));
-#ifdef DEBUG_LLVM
-    std::cout << "exprtree: ";
-    ExprPrinter p;
-    expr->Accept(p);
-    std::cout << std::endl;
-#endif
-    FunctionType *prototype = FunctionType::get(GetFunctionReturnType(expr->GetExprDataType()), args, false);
-    func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
-
-    std::string argNames[] = {
-        "data", "nullBitmap", "offsets",
-        "dataLength", "executionContext", "isNullPtr"
-    };
-    int32_t idx = 0;
-    for (auto &arg : func->args()) {
-        arg.setName(argNames[idx]);
-        idx++;
-    }
-
-    BasicBlock *body = BasicBlock::Create(*context, "CREATED_FUNC_BODY", func);
-    builder->SetInsertPoint(body);
-
-    if (!InitializeCodegenContext(func->args())) {
-        return nullptr;
-    }
-
-    // Generate code
-    auto result = VisitExpr(*expr);
-    int32_t outputLengthIndex = 4;
-    // Update final output Length
-    if (result->length != nullptr) {
-        Argument *outputLength = func->getArg(outputLengthIndex);
-        Value *lengthGep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
-        builder->CreateStore(result->length, lengthGep);
-    }
 
     // cast char* to int64 for output
     if (expr->GetExprDataType() == DataType::STRINGD) {

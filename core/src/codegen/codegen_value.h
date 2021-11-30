@@ -16,6 +16,7 @@ public:
     virtual ~CodeGenValue() = default;
 
     friend class ExpressionCodeGen;
+    friend class RowExpressionCodeGen;
 
 private:
     llvm::Value* data;

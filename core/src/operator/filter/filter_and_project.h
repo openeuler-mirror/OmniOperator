@@ -14,6 +14,7 @@
 #include "../projection/projection.h"
 #include "../../codegen/filter_codegen.h"
 #include "../../common/expressions.h"
+#include "../../codegen/row_expression_codegen.h"
 #include "../execution_context.h"
 
 using vec64 = std::vector<int64_t>;
@@ -28,6 +29,7 @@ namespace op {
  * row index
  */
 using RowFilterFunc = bool (*)(int64_t *, int64_t *, int64_t *, int32_t, int64_t, int64_t *);
+using SimpleRowExprEvalFunc = bool (*)(int64_t *, bool *, int32_t *, bool *, int32_t *, int64_t);
 
 class RowFilter {
 public:
@@ -89,8 +91,13 @@ public:
     bool Evaluate(int64_t *values, bool *isNull, int32_t *lengths);
 
 private:
-    std::unique_ptr<FilterCodeGen> codegen = nullptr;
+    std::unique_ptr<ExpressionCodeGen> codegen = nullptr;
     expressions::Expr *expression;
+    SimpleRowExprEvalFunc func;
+    std::unique_ptr<ExecutionContext> executionContext;
+    bool *isResultNull;
+    int32_t *resultLength;
+    bool initialized = false;
 };
 
 class Filter {
