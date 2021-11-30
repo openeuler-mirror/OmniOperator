@@ -16,30 +16,6 @@ VectorLeakDetector::VectorLeakDetector(const std::string scope) : scope(scope), 
 
 VectorLeakDetector::~VectorLeakDetector()
 {
-#ifdef DEBUG
-    using VectorTracerMap = std::map<std::vector<std::string>, VectorTracer *>;
-    using VectorTracerMapIt = VectorTracerMap::iterator;
-    VectorTracerMap compact;
-    for (int i = 0; i < BUCKET_NUM; ++i) {
-        auto &head = buckets[i];
-        VectorTracer *tracer = RemoveTracer(head);
-        while (tracer != nullptr) {
-            if (!tracer->Closed() && compact.end() == compact.find(tracer->GetPath())) {
-                compact.insert(VectorTracerMap::value_type(tracer->GetPath(), tracer));
-            } else {
-                delete tracer;
-            }
-            tracer = RemoveTracer(head);
-        }
-    }
-
-    for (VectorTracerMapIt it = compact.begin(); it != compact.end(); it++) {
-        VectorTracer *tracer = it->second;
-        tracer->Print("Memory Leak");
-        delete tracer;
-    }
-    compact.clear();
-#else
     for (int i = 0; i < BUCKET_NUM; ++i) {
         auto &head = buckets[i];
         VectorTracer *tracer = RemoveTracer(head);
@@ -51,7 +27,6 @@ VectorLeakDetector::~VectorLeakDetector()
             tracer = RemoveTracer(head);
         }
     }
-#endif
 }
 
 int32_t VectorLeakDetector::HashBucket(const Vector *vec)
