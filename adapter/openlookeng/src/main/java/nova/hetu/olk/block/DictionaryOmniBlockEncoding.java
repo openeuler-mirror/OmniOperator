@@ -12,8 +12,11 @@ import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
+import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
+
+import static nova.hetu.olk.tool.OperatorUtils.buildOffHeapBlock;
 
 /**
  * The type Dictionary omni block encoding.
@@ -30,13 +33,7 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
     @Override
     public void writeBlock(BlockEncodingSerde blockEncodingSerde, SliceOutput sliceOutput, Block block) {
         // The down casts here are safe because it is the block itself the provides this encoding implementation.
-        DictionaryOmniBlock dictionaryBlock;
-        if (block instanceof DictionaryBlock) {
-            dictionaryBlock = new DictionaryOmniBlock((Vec) (((DictionaryBlock) block).getDictionary().getValues()),
-                ((DictionaryBlock) block).getIdsArray());
-        } else {
-            dictionaryBlock = (DictionaryOmniBlock) block;
-        }
+        DictionaryOmniBlock dictionaryBlock = (DictionaryOmniBlock) buildOffHeapBlock(vecAllocator, block);
 
         DictionaryOmniBlock compactDictionaryBlock = dictionaryBlock.compact();
 
