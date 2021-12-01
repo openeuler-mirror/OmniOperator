@@ -63,6 +63,7 @@ bool VectorReference::IsVariableWidthType(int type)
 {
     switch (type) {
         case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR:
             return true;
         default:
             return false;

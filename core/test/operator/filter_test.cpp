@@ -38,7 +38,8 @@ VectorBatch* CreateInput(const int32_t numRows,
             case OMNI_VEC_TYPE_SHORT:
                 ((IntVector *)vecBatch->GetVector(i))->SetValues(0, (int32_t *)allData[i], numRows);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 for (int j = 0; j < numRows; ++j) {
                     // std::cout << "row: " << j << std::endl;
                     int64_t addr = ((int64_t *)(allData[i]))[j];

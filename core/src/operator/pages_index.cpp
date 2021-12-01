@@ -801,10 +801,10 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
                 sortColCount, valueAddresses, columns, from, to, currentCol);
             break;
         case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR:
             ColumnarSortVarChar(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
                 columns, from, to, currentCol);
             break;
-
         case OMNI_VEC_TYPE_DECIMAL128:
             ColumnarSortDec128(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, valueAddresses,
                 columns, from, to, currentCol);
@@ -854,7 +854,8 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 outputVecBatch->SetVector(j,
                     ConstructVector<BooleanVector>(valueAddresses, offset, length, inputVecBatch, vecAllocator));
                 break;
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 auto vecType = (VarcharVecType &)vecTypes[outputCol];
                 VarcharVector *varcharVector = ConstructVarcharVector(valueAddresses, offset, length, inputVecBatch,
                     vecType.GetWidth(), vecAllocator);

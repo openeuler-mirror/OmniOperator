@@ -24,8 +24,11 @@ public class VarcharVecType extends VecType {
      */
     public static final VarcharVecType VARCHAR = new VarcharVecType(MAX_WIDTH);
 
+    /**
+     * average length of a varchar
+     */
     @JsonProperty
-    private final int width;
+    protected final int width;
 
     /**
      * The construct of varchar vector type
@@ -39,6 +42,11 @@ public class VarcharVecType extends VecType {
         } else {
             this.width = width;
         }
+    }
+
+    protected VarcharVecType(int width, VecTypeId vecTypeId) {
+        super(vecTypeId);
+        this.width = width;
     }
 
     public int getWidth() {

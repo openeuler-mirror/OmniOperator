@@ -59,8 +59,12 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
-        OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl, DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue,
-        ReleaseMemoryVarcharImpl
+        OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl,
+        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue, ReleaseMemoryVarcharImpl
+    },
+    {
+        OMNI_VEC_TYPE_CHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl,
+        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue, ReleaseMemoryVarcharImpl
     },
     {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
@@ -186,8 +190,7 @@ std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t *hash,
     return bucktes;
 }
 
-static void DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset,
-    ExecutionContext *context)
+static void DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset, ExecutionContext *context)
 {
     int32_t originalRowIndex;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, offset, originalRowIndex);
@@ -195,7 +198,7 @@ static void DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint
         context);
 }
 
-static int32_t IsSameGroupByTuples(Vector** vectors, const uint32_t offset, const int32_t colNum,
+static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, const int32_t colNum,
     std::vector<std::vector<GroupBySlot>> &sameBucket)
 {
     // early break
@@ -480,8 +483,7 @@ OmniStatus HashAggregationOperator::Close()
 }
 
 template <typename V, typename D>
-void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount,
-    uint64_t *combinedHash)
+void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     uint64_t hash;
     std::hash<D> hasher;
@@ -492,8 +494,7 @@ void HashFuncVectImpl(Vector *vector, const uint32_t start, const uint32_t rowCo
     }
 }
 
-void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount,
-    uint64_t *combinedHash)
+void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     uint8_t *data = nullptr;
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -504,8 +505,7 @@ void HashVarcharVectFuncImpl(Vector *vector, const uint32_t start, const uint32_
     }
 }
 
-void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount,
-    uint64_t *combinedHash)
+void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     for (int32_t i = 0; i < rowCount; ++i) {
         int idx = i + start;
@@ -516,8 +516,7 @@ void HashDecimalVectFunc(Vector *vector, const uint32_t start, const uint32_t ro
 }
 
 template <typename V, typename D>
-void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    uint64_t *combinedHash)
+void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     uint64_t hash;
     std::hash<D> hasher;
@@ -528,8 +527,7 @@ void HashFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowInd
     }
 }
 
-void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    uint64_t *combinedHash)
+void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     uint8_t *data = nullptr;
     for (int32_t i = 0; i < rowCount; ++i) {
@@ -540,8 +538,7 @@ void HashVarcharFuncImpl(Vector *vector, const uint32_t rowCount, const int32_t 
     }
 }
 
-void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    uint64_t *combinedHash)
+void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     for (int32_t i = 0; i < rowCount; ++i) {
         int32_t idx = rowIndexes[i];
@@ -590,8 +587,7 @@ void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, GroupBySlo
 }
 
 template <typename V, typename D>
-void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
-    ExecutionContext *context)
+void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset, ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
         return;

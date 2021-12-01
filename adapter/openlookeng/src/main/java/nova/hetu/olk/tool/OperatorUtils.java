@@ -32,6 +32,7 @@ import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.olk.block.ByteArrayOmniBlock;
 import nova.hetu.omniruntime.type.BooleanVecType;
+import nova.hetu.omniruntime.type.CharVecType;
 import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
@@ -110,9 +111,10 @@ public final class OperatorUtils {
                 // FIXME: the max varbinary length is 8000. when varchar support dynamic allocate, pls fix it.
                 return new VarcharVecType(8000);
             case StandardTypes.VARCHAR:
-            case StandardTypes.CHAR:
                 int width = signature.getParameters().get(0).getLongLiteral().intValue();
                 return new VarcharVecType(width);
+            case StandardTypes.CHAR:
+                return new CharVecType(signature.getParameters().get(0).getLongLiteral().intValue());
             case StandardTypes.DECIMAL:
                 int precision = signature.getParameters().get(0).getLongLiteral().intValue();
                 int scale = signature.getParameters().get(1).getLongLiteral().intValue();
@@ -181,6 +183,7 @@ public final class OperatorUtils {
                     vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
                     break;
                 case OMNI_VEC_TYPE_VARCHAR:
+                case OMNI_VEC_TYPE_CHAR:
                     vecsResult.add(new VarcharVec(vecAllocator,
                             totalPositions * ((VarcharVecType) type).getWidth(), totalPositions));
                     break;
@@ -341,9 +344,8 @@ public final class OperatorUtils {
                     rowBlock.getRawFieldBlocks());
             }
             default:
-                break;
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support block:" + type);
         }
-        return null;
     }
 
     private static VariableWidthOmniBlock getVariableWidthOmniBlock(VecAllocator vecAllocator, Block block,
@@ -370,16 +372,9 @@ public final class OperatorUtils {
                 valueIsNull[j] = Vec.NULL;
             }
         }
-
-        int arrayOffset = 0;
-        int dataLength = offsets[arrayOffset + positionCount] - offsets[arrayOffset];
-        VarcharVec varcharVec = new VarcharVec(vecAllocator, dataLength, positionCount);
         Slice slice = ((VariableWidthBlock) block).getRawSlice(0);
-        if (slice.hasByteArray()) {
-            varcharVec.put(0, slice.byteArray(), slice.byteArrayOffset(), offsets, 0, positionCount);
-        }
-        varcharVec.setNulls(0, valueIsNull, 0, positionCount);
-        return new VariableWidthOmniBlock(positionCount, varcharVec, offsets, Optional.ofNullable(valueIsNull));
+        return new VariableWidthOmniBlock(vecAllocator, positionCount, slice, offsets,
+                Optional.ofNullable(valueIsNull));
     }
 
     /**

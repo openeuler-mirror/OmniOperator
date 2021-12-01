@@ -75,7 +75,8 @@ Vector *buildHashInput(VecTypeId groupTypeId, int32_t rowPerVecBatch, int32_t ca
             }
             return col;
         }
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR:{
             VarcharVector* col = new VarcharVector(vecAllocator, 1024, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 std::string str = std::to_string(j % cardinality);
@@ -131,7 +132,8 @@ Vector *buildAggregateInput(VecTypeId aggTypeId, int32_t rowPerVecBatch)
             }
             return col;
         }
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR: {
             VarcharVector* col = new VarcharVector(vecAllocator, 1024, rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 std::string str = std::to_string(j);
@@ -177,10 +179,8 @@ VectorBatch** buildVarCharInput(int32_t vecBatchNum, int32_t colNum, int32_t row
     VectorBatch** input = new VectorBatch*[vecBatchNum];
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch* vecBatch = new VectorBatch(colNum);
-        for (int32_t c = 0; c < colNum; ++ c) {
-            VarcharVector *col =
-                    std::make_unique<VarcharVector>(vecAllocator, rowPerVecBatch*10, rowPerVecBatch)
-                            .release();
+        for (int32_t c = 0; c < colNum; ++c) {
+            VarcharVector *col = std::make_unique<VarcharVector>(vecAllocator, rowPerVecBatch * 10, rowPerVecBatch).release();
             std::string *values = va_arg(args, std::string *);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
                 col->SetValue(j,reinterpret_cast<const uint8_t *>(values[j].c_str()), values[j].length());
@@ -598,6 +598,64 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     std::string expectData3[3] = {"2", "1","0"};
     std::string expectData4[3] = {"4.4", "5.5","6.6"};
     VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(),VarcharVecType(1), VarcharVecType(3) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
+    VectorHelper::PrintVecBatch(resBatch);
+    VectorHelper::PrintVecBatch(expectVecBatch);
+    EXPECT_TRUE(VecBatchMatch(resBatch, expectVecBatch));
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(resBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
+{
+    using namespace omniruntime::op;
+    // create 10 pages
+    const int VEC_BATCH_NUM = 1;
+    const int ROW_SIZE = 8;
+    const int COLUMN_COUNT = 4; // groupby + count + min + max
+    std::string aggNames[] = {"group", "count","min","max" };
+    std::string data0[8] = {"0", "1", "2", "0", "1", "2", "0", "1"};
+    std::string data1[8] = {"0", "1", "2", "0", "1", "2", "0", "1"};
+    std::string data2[8] = {"0", "1", "2", "0", "1", "2", "0", "1"};
+    std::string data3[8] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1", "1.1", "1"};
+    VectorBatch** input = buildVarCharInput(VEC_BATCH_NUM, COLUMN_COUNT, ROW_SIZE,data0,data1,data2,data3);
+    // First stage
+    CharVecType type1(1);
+    ColumnIndex c0 = {0,   type1, type1};
+    CharVecType type2(1);
+    ColumnIndex c1 = {1, type2, type2};
+    CharVecType type3(1);
+    ColumnIndex c2 = {2,  type3, type3};
+    CharVecType type4(4);
+    ColumnIndex c3 = {3, type4, type4};
+
+    std::vector<ColumnIndex> groupByColumns1 = {c0};
+    std::vector<ColumnIndex> aggregateColumns1 = {c1,c2,c3};
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MinAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_CHAR, INPUT_MODE, OUTPUT_MODE));
+    aggs1.push_back(std::make_unique<MaxAggregator>(OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_CHAR, INPUT_MODE, OUTPUT_MODE));
+    HashAggregationOperator* groupByVarChar = new HashAggregationOperator(groupByColumns1, aggregateColumns1, std::move(aggs1), true, false);
+    groupByVarChar->Init();
+
+    for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
+        groupByVarChar->AddInput(input[i]);
+    }
+    std::vector<VectorBatch*> result1;
+    int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
+    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
+    auto resBatch = VectorHelper::ConcatVectorBatches(result1);
+    for (auto res : result1) {
+        VectorHelper::FreeVecBatch(res);
+    }
+
+    groupByVarChar->Close();
+    delete groupByVarChar;
+    std::string expectData1[3] = {"2", "1","0"};
+    int64_t expectData2[3] = {2,3,3};
+    std::string expectData3[3] = {"2", "1","0"};
+    std::string expectData4[3] = {"4.4", "5.5","6.6"};
+    VecTypes expectedTypes(std::vector<VecType>({ CharVecType(1), LongVecType(),CharVecType(1), CharVecType(3) }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
     VectorHelper::PrintVecBatch(resBatch);
     VectorHelper::PrintVecBatch(expectVecBatch);

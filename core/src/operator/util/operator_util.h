@@ -60,6 +60,7 @@ public:
             case OMNI_VEC_TYPE_DATE32:
                 return OperatorUtil::SIZE_OF_DATE32;
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 return ((VarcharVecType &)vecType).GetWidth();
             default:
                 return 0;
@@ -120,6 +121,7 @@ public:
             case OMNI_VEC_TYPE_DOUBLE:
                 return CompareDouble(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 return CompareVarchar(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_VEC_TYPE_DECIMAL128:
                 return CompareDecimal128(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);

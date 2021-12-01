@@ -68,6 +68,7 @@ public class VecType implements Serializable {
         OMNI_VEC_TYPE_INTERVAL_MONTHS,
         OMNI_VEC_TYPE_INTERVAL_DAY_TIME,
         OMNI_VEC_TYPE_VARCHAR,
+        OMNI_VEC_TYPE_CHAR,
         OMNI_VEC_TYPE_DICTIONARY,
         OMNI_VEC_TYPE_CONTAINER,
         OMNI_VEC_TYPE_LAZY,

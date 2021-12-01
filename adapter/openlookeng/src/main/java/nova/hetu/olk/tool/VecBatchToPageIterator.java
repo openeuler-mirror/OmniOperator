@@ -81,6 +81,11 @@ public class VecBatchToPageIterator implements Iterator<Page> {
             } else if (vectors[i] instanceof DictionaryVec) {
                 DictionaryVec dictionaryVec = (DictionaryVec) vectors[i];
                 blocks[i] = new DictionaryOmniBlock(dictionaryVec, false, randomDictionaryId());
+            } else {
+                vecBatch.releaseAllVectors();
+                vecBatch.close();
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED,
+                        "Unsupported vector type " + vectors[i]);
             }
         }
         vecBatch.close();
@@ -110,6 +115,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
                     rowBlocks[vecIdx] = block;
                     break;
                 case OMNI_VEC_TYPE_VARCHAR:
+                case OMNI_VEC_TYPE_CHAR:
                     block = new VariableWidthOmniBlock(positionCount, new VarcharVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;

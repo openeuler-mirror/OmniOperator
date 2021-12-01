@@ -5,6 +5,7 @@ import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DICTION
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
+import nova.hetu.omniruntime.type.CharVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -42,6 +43,7 @@ public class TestUtils {
             case OMNI_VEC_TYPE_BOOLEAN:
                 return createBooleanVec(data);
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 return createVarcharVec((VarcharVecType) type, data);
             default:
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
@@ -174,6 +176,7 @@ public class TestUtils {
                     assertEquals(((BooleanVec) vec).get(i), expectedData[i]);
                     break;
                 case OMNI_VEC_TYPE_VARCHAR:
+                case OMNI_VEC_TYPE_CHAR:
                     assertEquals(new String(((VarcharVec) vec).get(i)), expectedData[i]);
                     break;
                 default:

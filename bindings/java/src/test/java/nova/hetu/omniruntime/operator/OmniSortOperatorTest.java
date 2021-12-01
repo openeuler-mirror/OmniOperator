@@ -12,6 +12,7 @@ import static org.testng.Assert.assertTrue;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
+import nova.hetu.omniruntime.type.CharVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
 import nova.hetu.omniruntime.type.Decimal64VecType;
@@ -119,6 +120,34 @@ public class OmniSortOperatorTest {
         VecType[] sourceTypes = {new VarcharVecType(1), LongVecType.LONG, new VarcharVecType(3)};
         Object[][] sourceDatas = {
             {"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L}, {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}
+        };
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
+        int[] outputCols = {1, 2};
+        String[] sortCols = {"#0", "#2"};
+        int[] ascendings = {0, 1};
+        int[] nullFirsts = {1, 1};
+        OmniSortOperatorFactory sortOperatorFactory =
+                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniOperator sortOperator = sortOperatorFactory.createOperator();
+        sortOperator.addInput(vecBatch);
+        Iterator<VecBatch> results = sortOperator.getOutput();
+
+        VecBatch resultVecBatch = results.next();
+        Object[][] expectedDatas = {{5L, 2L, 4L, 1L, 3L, 0L}, {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        freeVecBatch(vecBatch);
+        freeVecBatch(resultVecBatch);
+    }
+
+    /**
+     * Test order by two char column.
+     */
+    @Test
+    public void testOrderByTwoCharColumn() {
+        VecType[] sourceTypes = {new CharVecType(1), LongVecType.LONG, new CharVecType(3)};
+        Object[][] sourceDatas = {
+                {"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L}, {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}
         };
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 

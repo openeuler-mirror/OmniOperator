@@ -58,6 +58,7 @@ static bool ValueEqualsValueIgnoreNulls(int32_t vecType, Vector *leftVector, int
         case OMNI_VEC_TYPE_BOOLEAN:
             return ValueEqualsValueIgnoreNulls<BooleanVector>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR:
             return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_VEC_TYPE_DECIMAL128:
             return ValueEqualsValueIgnoreNulls<Decimal128Vector>(leftVector, leftRowIndex, rightVector, rightRowIndex);

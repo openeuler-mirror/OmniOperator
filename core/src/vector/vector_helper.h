@@ -46,6 +46,7 @@ public:
                 static_cast<BooleanVector *>(vector)->SetValue(index, *static_cast<bool *>(value));
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 static_cast<VarcharVector *>(vector)->SetValue(index,
                     reinterpret_cast<const uint8_t *>(static_cast<std::string *>(value)->c_str()),
                     static_cast<std::string *>(value)->length());
@@ -63,6 +64,7 @@ public:
     {
         switch (vector->GetTypeId()) {
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 static_cast<VarcharVector *>(vector)->SetValue(index, static_cast<uint8_t *>(value), length);
                 break;
             default:
@@ -93,7 +95,8 @@ public:
                 *static_cast<bool *>(value) = static_cast<BooleanVector *>(vector)->GetValue(index);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 length = static_cast<VarcharVector *>(vector)->GetValue(index, static_cast<uint8_t **>(value));
                 break;
             }
@@ -141,7 +144,8 @@ public:
                 vector = new ContainerVector(allocator, size);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 vector = new VarcharVector(allocator, capacityInBytes, size);
                 break;
             }
@@ -207,6 +211,7 @@ public:
             case OMNI_VEC_TYPE_DECIMAL128:
                 return reinterpret_cast<int64_t>(reinterpret_cast<int64_t *>(values) + 2 * positionOffset);
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 return reinterpret_cast<int64_t>(values);
             case OMNI_VEC_TYPE_LAZY:
                 return reinterpret_cast<int64_t>(values);

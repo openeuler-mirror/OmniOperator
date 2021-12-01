@@ -8,6 +8,8 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.nio.ByteBuffer;
+
+import nova.hetu.omniruntime.type.CharVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
 import nova.hetu.omniruntime.type.Date64VecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
@@ -79,6 +81,9 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
                 protoVecTypeExtBuild.setWidth(((VarcharVecType) type).getWidth());
+                break;
+            case OMNI_VEC_TYPE_CHAR:
+                protoVecTypeExtBuild.setWidth(((CharVecType) type).getWidth());
                 break;
             case OMNI_VEC_TYPE_INTERVAL_DAY_TIME:
                 protoVecTypeExtBuild.setDateUnit(VecBatchSerde.VecTypeExt.DateUnit.DAY);
@@ -186,7 +191,8 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             }
             long realCapacityInBytes = variableWidthVec.getValueOffset(lastSetIndex + 1)
                 - variableWidthVec.getValueOffset(0);
-            if (newVec.getCapacityInBytes() / realCapacityInBytes >= 2) {
+            if (realCapacityInBytes != 0 && (newVec.getCapacityInBytes() / realCapacityInBytes >= 2) ||
+                    (realCapacityInBytes == 0 && newVec.getCapacityInBytes() != 0)) {
                 return newVec.copyRegion(0, newVec.getSize());
             }
         }
@@ -249,6 +255,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 vec = new DoubleVec(vecAllocator, vecSize);
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 vec = new VarcharVec(vecAllocator, protoVec.getValues().size(), protoVec.getSize());
                 if (vec instanceof VarcharVec) {
                     ((VarcharVec) vec).setOffsetsBuf(protoVec.getOffsets().toByteArray());

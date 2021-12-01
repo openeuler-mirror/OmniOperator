@@ -251,7 +251,8 @@ void WindowOperator::InitResultVectors(const std::vector<VecType> &outputTypes, 
                 vecBatch->SetVector(colIndex, new IntVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 int32_t width = (static_cast<const VarcharVecType *>(&type))->GetWidth();
                 vecBatch->SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * width, rowCount));
                 break;

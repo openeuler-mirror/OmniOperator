@@ -12,7 +12,7 @@
 
 namespace omniruntime {
 namespace vec {
-constexpr int32_t VEC_TYPE_MAX_COUNT = 18;
+constexpr int32_t VEC_TYPE_MAX_COUNT = 19;
 
 enum VecTypeId {
     OMNI_VEC_TYPE_NONE = 0,
@@ -31,9 +31,10 @@ enum VecTypeId {
     OMNI_VEC_TYPE_INTERVAL_MONTHS = 13,
     OMNI_VEC_TYPE_INTERVAL_DAY_TIME = 14,
     OMNI_VEC_TYPE_VARCHAR = 15,
-    OMNI_VEC_TYPE_DICTIONARY = 16,
-    OMNI_VEC_TYPE_CONTAINER = 17,
-    OMNI_VEC_TYPE_LAZY = 18,
+    OMNI_VEC_TYPE_CHAR = 16,
+    OMNI_VEC_TYPE_DICTIONARY = 17,
+    OMNI_VEC_TYPE_CONTAINER = 18,
+    OMNI_VEC_TYPE_LAZY = 19,
     OMNI_VEC_TYPE_INVALID
 };
 
@@ -53,6 +54,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(VecTypeId, { { OMNI_VEC_TYPE_NONE, nullptr },
     { OMNI_VEC_TYPE_INTERVAL_MONTHS, "OMNI_VEC_TYPE_INTERVAL_MONTHS" },
     { OMNI_VEC_TYPE_INTERVAL_DAY_TIME, "OMNI_VEC_TYPE_INTERVAL_DAY_TIME" },
     { OMNI_VEC_TYPE_VARCHAR, "OMNI_VEC_TYPE_VARCHAR" },
+    { OMNI_VEC_TYPE_CHAR, "OMNI_VEC_TYPE_CHAR" },
     { OMNI_VEC_TYPE_DICTIONARY, "OMNI_VEC_TYPE_DICTIONARY" },
     { OMNI_VEC_TYPE_CONTAINER, "OMNI_VEC_TYPE_CONTAINER" },
     { OMNI_VEC_TYPE_INVALID, "OMNI_VEC_TYPE_INVALID" } })
@@ -333,7 +335,7 @@ public:
         this->width = width;
     }
 
-    ~VarcharVecType() override {}
+    virtual ~VarcharVecType() override {}
 
     uint32_t GetWidth() const
     {
@@ -344,6 +346,12 @@ public:
     {
         static VarcharVecType type(INT_MAX);
         return type;
+    }
+
+protected:
+    explicit VarcharVecType(uint32_t width, VecTypeId vecTypeId) : VecType(vecTypeId)
+    {
+        this->width = width;
     }
 };
 
@@ -371,6 +379,22 @@ public:
         static LazyVecType type;
         return type;
     }
+};
+
+class CharVecType : public VarcharVecType {
+public:
+    explicit CharVecType(uint32_t width) : VarcharVecType(width, VecTypeId::OMNI_VEC_TYPE_CHAR) {}
+
+    ~CharVecType() override {}
+
+    const static CharVecType &Instance()
+    {
+        static CharVecType type(MAX_WIDTH);
+        return type;
+    }
+
+private:
+    const static int32_t MAX_WIDTH = 65536;
 };
 } // namespace vec
 } // namespace omniruntime

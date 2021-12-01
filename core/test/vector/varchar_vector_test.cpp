@@ -167,6 +167,7 @@ TEST(VarcharVector, copyPositions)
 
     delete vector;
     delete copyPostionVector;
+    delete[] positions;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 

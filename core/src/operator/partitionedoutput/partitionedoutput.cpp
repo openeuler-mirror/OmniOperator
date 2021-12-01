@@ -133,6 +133,7 @@ static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *curren
             break;
         }
         case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR:
             InsertVarchar(origintVector, originRowIndex, currentVector, currentRowIndex);
             break;
         case OMNI_VEC_TYPE_DECIMAL128: {
@@ -163,12 +164,13 @@ void PartitionedOutputOperator::MergeVectorBatch(VectorBatch *vecBatch, int32_t 
                 int32_t newRowIndex = j;
                 int32_t originalOldRowIndex;
                 int32_t originalNewRowIndex;
-                Vector *oldVector = VectorHelper::ExpandVectorAndIndex(vecBatch->GetVector(vecIdx), oldRowIndex,
-                                                                       originalOldRowIndex);
+                Vector *oldVector =
+                    VectorHelper::ExpandVectorAndIndex(vecBatch->GetVector(vecIdx), oldRowIndex, originalOldRowIndex);
                 Vector *newVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(vecIdx), newRowIndex,
-                                                                       originalNewRowIndex);
+                    originalNewRowIndex);
                 if (oldVector->IsValueNull(originalOldRowIndex)) {
-                    if (newVector->GetTypeId() == OMNI_VEC_TYPE_VARCHAR) {
+                    if (newVector->GetTypeId() == OMNI_VEC_TYPE_VARCHAR ||
+                        newVector->GetTypeId() == OMNI_VEC_TYPE_CHAR) {
                         static_cast<VarcharVector *>(newVector)->SetValueNull(originalNewRowIndex);
                     } else {
                         newVector->SetValueNull(originalNewRowIndex);
@@ -228,11 +230,11 @@ long GetHash(int32_t rowIndex, int type, Vector *vector)
             auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->getValue(0));
             result = HashUtil::CombineHash(result, GetHash(rowIndex, avgValVector->GetTypeId(), avgValVector));
             auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->getValue(1));
-            result =
-                HashUtil::CombineHash(result, GetHash(rowIndex, avgCountVector->GetTypeId(), avgCountVector));
+            result = HashUtil::CombineHash(result, GetHash(rowIndex, avgCountVector->GetTypeId(), avgCountVector));
             return result;
         }
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR: {
             uint8_t *varcharValue = nullptr;
             int32_t valueLength = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
             return HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);

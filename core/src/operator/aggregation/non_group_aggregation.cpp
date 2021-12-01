@@ -130,7 +130,8 @@ static void FillNormalAggregate(Vector *vector, void *state)
             static_cast<Decimal128Vector *>(vector)->SetValue(0, *static_cast<Decimal128 *>(state));
             break;
         }
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR: {
             static_cast<VarcharVector *>(vector)->SetValue(0,
                 reinterpret_cast<const uint8_t *>((*(std::string *)(state)).c_str()),
                 (*(std::string *)(state)).size());

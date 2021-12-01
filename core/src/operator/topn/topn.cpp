@@ -97,7 +97,8 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch,
             case OMNI_VEC_TYPE_DOUBLE:
                 SetValueForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 SetVarCharForSingleRowVecBatch(singleRowVecBatch, i, vector, originalPosition);
                 break;
             }
@@ -132,7 +133,8 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
             case OMNI_VEC_TYPE_DOUBLE:
                 SetVectorForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 SetVectorForSingleRowVecBatch<VarcharVector>(singleRowVecBatch, i, vector, originalPosition);
                 break;
             }
@@ -167,7 +169,7 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
         for (int i = 0; i < sourceTypesCount; ++i) {
             Vector *pqVector = pqVecBatch->GetVector(i);
             Vector *tmpVector = tmpVecBatch->GetVector(i);
-            if (typeIds[i] == OMNI_VEC_TYPE_VARCHAR) {
+            if (typeIds[i] == OMNI_VEC_TYPE_VARCHAR || typeIds[i] == OMNI_VEC_TYPE_CHAR) {
                 SetVarcharValueForVectorBatch(rowNum, static_cast<VarcharVector *>(pqVector),
                     static_cast<VarcharVector *>(tmpVector));
             } else {
@@ -227,7 +229,7 @@ void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch
 {
     int vecIndex = 0;
     for (const VecType &item : sourceTypes.Get()) {
-        if (item.GetId() != OMNI_VEC_TYPE_VARCHAR) {
+        if (item.GetId() != OMNI_VEC_TYPE_VARCHAR && item.GetId() != OMNI_VEC_TYPE_CHAR) {
             vecIndex++;
             continue;
         }
