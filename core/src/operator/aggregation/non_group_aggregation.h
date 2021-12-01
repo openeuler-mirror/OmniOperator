@@ -6,7 +6,7 @@
 #define NON_GROUP_AGGREGATION_H
 
 #include "aggregation.h"
-#include "../../vector/vector_types.h"
+#include "vector/vector_types.h"
 
 namespace omniruntime {
 namespace op {

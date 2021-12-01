@@ -3,10 +3,10 @@
  * Description: Aggregation Source File
  */
 #include "non_group_aggregation.h"
-#include "../../jit/annotation.h"
-#include "../optimization.h"
-#include "../../vector/vector_common.h"
-#include "../status.h"
+#include "jit/annotation.h"
+#include "operator/optimization.h"
+#include "vector/vector_common.h"
+#include "operator/status.h"
 
 namespace omniruntime {
 namespace op {
