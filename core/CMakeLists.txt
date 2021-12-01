@@ -37,6 +37,10 @@ foreach (file ${target_generated})
     endif ()
 endforeach (file)
 
+# for header searching
+include_directories(SYSTEM src)
+include_directories(SYSTEM thirdparty)
+
 # compile library
 add_subdirectory(src)
 add_subdirectory(thirdparty/huawei_secure_c)

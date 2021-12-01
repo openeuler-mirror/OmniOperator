@@ -116,6 +116,9 @@ message(STATUS "Install externalfunctions.so into ${CMAKE_INSTALL_PREFIX}")
 # compile IR files
 set(COMPILE_OPTION -S -O2 -emit-llvm -fno-discard-value-names)
 set(LLVM_INCLUDE -I/usr/lib/llvm-12/include)
+set(COMPILE_INCLUDE_SOURCE
+        -I${CMAKE_CURRENT_LIST_DIR}
+        -I${CMAKE_CURRENT_LIST_DIR}/../thirdparty)
 
 # add sources file, if you have new source need compile to ir file, pls add it here.
 set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
@@ -149,7 +152,7 @@ set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cp
         ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp)
 set(IR_COMPILE_COMMANDS "")
 foreach(IR_SOURCE_FILE ${IR_SOURCE_FILES})
-    list(APPEND IR_COMPILE_COMMANDS COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${IR_SOURCE_FILE} ${LLVM_INCLUDE})
+    list(APPEND IR_COMPILE_COMMANDS COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${IR_SOURCE_FILE} ${LLVM_INCLUDE} ${COMPILE_INCLUDE_SOURCE})
 endforeach()
 message(STATUS "IRs Compiling...")
 execute_process(${IR_COMPILE_COMMANDS})
