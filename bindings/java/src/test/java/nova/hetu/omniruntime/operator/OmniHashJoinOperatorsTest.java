@@ -14,6 +14,7 @@ import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
+import nova.hetu.omniruntime.type.CharVecType;
 import nova.hetu.omniruntime.type.Date32VecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
 import nova.hetu.omniruntime.type.Decimal64VecType;
@@ -240,6 +241,57 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {
             {1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null}, {"11", null, "33", null}
+        };
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        freeVecBatch(probeVecBatch);
+        freeVecBatch(buildVecBatch);
+        freeVecBatch(resultVecBatch);
+    }
+
+    /**
+     * Test left join with char join key
+     */
+    @Test
+    public void testLeftHashEqualityJoinChar() {
+        VecType[] buildTypes = {LongVecType.LONG, new CharVecType(3)};
+        Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {"aaa", "11", "ccc", "33"}};
+        VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
+
+        String[] buildJoinCols = {"#1"};
+        int operatorCount = 1;
+        OmniHashBuilderOperatorFactory hashBuilderOperatorFactory =
+                new OmniHashBuilderOperatorFactory(buildTypes, buildJoinCols, operatorCount);
+        OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
+        hashBuilderOperator.addInput(buildVecBatch);
+        hashBuilderOperator.getOutput();
+
+        VecType[] probeTypes = {LongVecType.LONG, new CharVecType(2)};
+        Object[][] probeDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}};
+        VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
+
+        int[] probeOutputCols = {0, 1};
+        String[] probeHashCols = {"#1"};
+        int[] buildOutputCols = {0, 1};
+        VecType[] buildOutputTypes = {LongVecType.LONG, new CharVecType(2)};
+        OmniLookupJoinOperatorFactory lookupJoinOperatorFactory =
+                new OmniLookupJoinOperatorFactory(
+                        probeTypes,
+                        probeOutputCols,
+                        probeHashCols,
+                        buildOutputCols,
+                        buildOutputTypes,
+                        OMNI_JOIN_TYPE_LEFT,
+                        hashBuilderOperatorFactory);
+        OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
+        lookupJoinOperator.addInput(probeVecBatch);
+        Iterator<VecBatch> results = lookupJoinOperator.getOutput();
+
+        VecBatch resultVecBatch = results.next();
+        int len = resultVecBatch.getRowCount();
+        assertEquals(len, 4);
+        assertEquals(resultVecBatch.getVectorCount(), 4);
+        Object[][] expectedDatas = {
+                {1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null}, {"11", null, "33", null}
         };
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(probeVecBatch);

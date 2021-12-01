@@ -552,7 +552,7 @@ TEST(NativeOmniSortTest, TestOrderByJITMultiThreads)
     DeleteOperatorFactory(operatorFactory);
 }
 
-TEST(NativeOmniSortTest, TestOrderByDoubleCharColumn)
+TEST(NativeOmniSortTest, TestOrderByDoubleVarcharColumn)
 {
     // construct input data
     const int32_t dataSize = 6;
@@ -583,6 +583,48 @@ TEST(NativeOmniSortTest, TestOrderByDoubleCharColumn)
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     std::string expectData2[dataSize] = {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"};
     VecTypes expectedTypes(std::vector<VecType>({ LongVecType(), VarcharVecType(3) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+
+    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sortOperator;
+    DeleteOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestOrderByDoubleCharColumn)
+{
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    std::string data2[dataSize] = {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"};
+    VecTypes sourceTypes(std::vector<VecType>({ CharVecType(3), LongVecType(), CharVecType(3) }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {0, 2};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
+
+    SortOperatorFactory *operatorFactory =
+            SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext =
+            CreateTestSortJitContext(sourceTypes.GetIds(), 3, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    operatorFactory->SetJitContext(jitContext);
+
+    SortOperator *sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    vector<VectorBatch *> outputVecBatches;
+    sortOperator->GetOutput(outputVecBatches);
+    VectorHelper::PrintVecBatch(outputVecBatches[0]);
+
+    int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
+    std::string expectData2[dataSize] = {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"};
+    VecTypes expectedTypes(std::vector<VecType>({ LongVecType(), CharVecType(3) }));
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));

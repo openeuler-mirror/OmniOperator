@@ -329,7 +329,8 @@ void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, 
                 CalculateColDec128Hashes(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
-            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
+            case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+            case omniruntime::vec::OMNI_VEC_TYPE_CHAR: {
                 CalculateColVarcharHashes(hashCols[i], rowCount, hashes, nulls);
                 break;
             }
@@ -591,7 +592,8 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
                 buildColumn = ConstructBuildColumn<BooleanVector, bool>(vecAllocator, hashTables, buildOutputCol,
                     buildIndex.data(), position, rowCount);
                 break;
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 uint32_t width = ((VarcharVecType &)vecType).GetWidth();
                 buildColumn = ConstructBuildVarcharColumn(vecAllocator, hashTables, buildOutputCol, buildIndex.data(),
                     position, rowCount, width);

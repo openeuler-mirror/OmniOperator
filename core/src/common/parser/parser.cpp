@@ -129,6 +129,10 @@ DataType ParseReturnType(const string& typeString)
         if (omniruntime::vec::OMNI_VEC_TYPE_DATE32 == typeOrdinal) {
             return INT32D;
         }
+        // FIXME: when the codegen support char type ,need remove this code, pls fix it.
+        if (typeOrdinal == omniruntime::vec::OMNI_VEC_TYPE_CHAR) {
+            return STRINGD;
+        }
         if (omniruntime::vec::OMNI_VEC_TYPE_SHORT == typeOrdinal ||
             (omniruntime::vec::OMNI_VEC_TYPE_DATE64 <= typeOrdinal &&
             omniruntime::vec::OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= typeOrdinal)) {

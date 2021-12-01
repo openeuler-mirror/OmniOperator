@@ -131,7 +131,8 @@ static int64_t ReadHash(int32_t vecType, omniruntime::vec::Vector *vector, int32
             Decimal128 decimal128Value = static_cast<omniruntime::vec::Decimal128Vector *>(vector)->GetValue(rowIndex);
             return HashUtil::HashValue(decimal128Value.LowBits(), decimal128Value.HighBits());
         }
-        case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR: {
+        case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+        case omniruntime::vec::OMNI_VEC_TYPE_CHAR: {
             uint8_t *varcharValue = nullptr;
             int32_t valueLength =
                 static_cast<omniruntime::vec::VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
@@ -581,6 +582,7 @@ static void ProcessColumns(int32_t offset, int32_t addressesCount, int64_t *addr
                     nullPositions);
                 break;
             case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+            case omniruntime::vec::OMNI_VEC_TYPE_CHAR:
                 ReadColumnVarCharHashes(offset, addressesCount, addresses, columns[columnIdx], hashes, nullPositions);
                 break;
             default:

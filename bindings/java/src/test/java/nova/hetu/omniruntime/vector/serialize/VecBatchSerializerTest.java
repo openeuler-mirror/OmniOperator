@@ -275,4 +275,36 @@ public class VecBatchSerializerTest {
         }
         col1.close();
     }
+
+    @Test
+    public void testSerializeCharVec()
+    {
+        // prepare vector batch
+        int ROW_COUNT = 1024;
+        VarcharVec charVec = new VarcharVec(ROW_COUNT * 20, ROW_COUNT);
+        for (int i = 0; i < ROW_COUNT; i++) {
+            charVec.set(i, ("test" + i).getBytes());
+        }
+        DictionaryVec dictionaryVec = new DictionaryVec(charVec, new int[] {1, 2, 1000});
+        VecBatch vecBatch = new VecBatch(new Vec[]{dictionaryVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        VarcharVec checkResultVec = (VarcharVec)checkVecBatch.getVectors()[0];
+        assertEquals(3, checkResultVec.getSize());
+        assertEquals("test1", new String(checkResultVec.get(0)));
+        assertEquals("test2", new String(checkResultVec.get(1)));
+        assertEquals("test1000", new String(checkResultVec.get(2)));
+
+        vecBatch.releaseAllVectors();
+        vecBatch.close();
+        checkVecBatch.releaseAllVectors();
+        checkVecBatch.close();
+    }
 }

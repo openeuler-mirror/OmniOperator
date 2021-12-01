@@ -98,7 +98,7 @@ bool DictionaryVector::GetBoolean(int32_t position) const
 int32_t DictionaryVector::GetVarchar(int32_t position, uint8_t **dst) const
 {
     VecTypeId dictionaryType = dictionary->GetTypeId();
-    if (dictionaryType == OMNI_VEC_TYPE_VARCHAR) {
+    if (dictionaryType == OMNI_VEC_TYPE_VARCHAR || dictionaryType == OMNI_VEC_TYPE_CHAR) {
         return static_cast<VarcharVector *>(dictionary)->GetValue(GetId(position), dst);
     } else if (dictionaryType == OMNI_VEC_TYPE_DICTIONARY) {
         return static_cast<DictionaryVector *>(dictionary)->GetVarchar(GetId(position), dst);

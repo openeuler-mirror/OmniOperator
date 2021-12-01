@@ -186,11 +186,12 @@ void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator 
     }
     Vector ***vectorBatch = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
-    uint32_t varcharWidth = (dataType.GetId() == OMNI_VEC_TYPE_VARCHAR) ? ((VarcharVecType &)dataType).GetWidth() : 0;
+    uint32_t width = (dataType.GetId() == OMNI_VEC_TYPE_VARCHAR || dataType.GetId() == OMNI_VEC_TYPE_CHAR)
+            ? static_cast<const VarcharVecType &>(dataType).GetWidth() : 0;
 
     // this is important to package data into an extra vector and use it to do the aggregation
     *resultVector =
-        VectorHelper::CreateVector(vecAllocator, dataType.GetId(), rowCount * varcharWidth, rowCount);
+        VectorHelper::CreateVector(vecAllocator, dataType.GetId(), rowCount * width, rowCount);
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
             windowIndex->GetPagesIndex()->GetValueAddresses()[resultVectorPosition + windowIndex->GetStart()];
@@ -237,7 +238,8 @@ void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Ve
                 static_cast<BooleanVector *>(resultVector)->SetValue(resultVectorPosition - start, actual);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 uint8_t *actual = nullptr;
                 int32_t length =
                     static_cast<VarcharVector *>(originalVector)->GetValue(originalVectorPosition, &actual);

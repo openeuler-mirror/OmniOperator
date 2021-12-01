@@ -111,6 +111,11 @@ public class VecTypeSerializer {
                     return typeExt.setWidth(((VarcharVecType) type).getWidth());
                 }
                 break;
+            case OMNI_VEC_TYPE_CHAR:
+                if (type instanceof CharVecType) {
+                    return typeExt.setWidth(((CharVecType) type).getWidth());
+                }
+                break;
             case OMNI_VEC_TYPE_DECIMAL64:
                 if (type instanceof Decimal64VecType) {
                     return typeExt.setPrecision(((Decimal64VecType) type).getPrecision())
@@ -161,6 +166,8 @@ public class VecTypeSerializer {
                 return VecType.INVALID;
             case OMNI_VEC_TYPE_VARCHAR:
                 return new VarcharVecType(typeExt.getWidth());
+            case OMNI_VEC_TYPE_CHAR:
+                return new CharVecType(typeExt.getWidth());
             case OMNI_VEC_TYPE_DECIMAL64:
                 return new Decimal64VecType(typeExt.getPrecision(), typeExt.getScale());
             case OMNI_VEC_TYPE_DECIMAL128:

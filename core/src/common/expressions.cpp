@@ -25,6 +25,7 @@ const int TYPE_TIME32D = 10;
 const int TYPE_TIME64D = 11;
 const int TYPE_TIMESTAMPD = 12;
 const int TYPE_STRINGD = 15;
+const int TYPE_CHAR = 16;
 
 // Helper function to get DataType from jint type
 // Find types in core/src/types/vector_type.h
@@ -47,6 +48,7 @@ DataType ColTypeTrans(int32_t colType)
         case TYPE_INT32D_2ND:
             return DataType::INT32D;
         case TYPE_STRINGD:
+        case TYPE_CHAR:
             return DataType::STRINGD;
         default:
             return DataType::INVALIDDATAD;

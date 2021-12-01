@@ -39,6 +39,7 @@ public class VecFactory {
                 vector = new BooleanVec(nativeVector);
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 vector = new VarcharVec(nativeVector);
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
@@ -97,6 +98,7 @@ public class VecFactory {
                     nativeVectorAllocator, capacityInBytes, size, offset);
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 vector = new VarcharVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress,
                     nativeVectorOffsetBufAddress, nativeVectorAllocator, capacityInBytes, size, offset);
                 break;

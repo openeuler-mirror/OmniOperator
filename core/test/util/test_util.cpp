@@ -98,7 +98,8 @@ bool ColumnMatch(Vector *actualColumn, Vector *expectColumn)
                     result = (static_cast<Decimal128Vector *>(actualCol)->GetValue(actualIndex) ==
                         static_cast<Decimal128Vector *>(expectCol)->GetValue(expectIndex));
                     break;
-                case OMNI_VEC_TYPE_VARCHAR: {
+                case OMNI_VEC_TYPE_VARCHAR:
+                case OMNI_VEC_TYPE_CHAR: {
                     uint8_t *actual = nullptr;
                     int32_t actualLength = static_cast<VarcharVector *>(actualCol)->GetValue(actualIndex, &actual);
                     uint8_t *expected = nullptr;
@@ -157,6 +158,7 @@ Vector *CreateVector(VecType &vecType, int32_t rowCount, va_list &args)
         case OMNI_VEC_TYPE_BOOLEAN:
             return CreateVector<BooleanVector>(va_arg(args, bool *), rowCount);
         case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR:
             return CreateVarcharVector(static_cast<VarcharVecType &>(vecType), va_arg(args, std::string *), rowCount);
         case OMNI_VEC_TYPE_DECIMAL128:
             return CreateDecimal128Vector(va_arg(args, Decimal128 *), rowCount);

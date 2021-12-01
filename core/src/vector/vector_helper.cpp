@@ -65,7 +65,8 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             std::cout << static_cast<BooleanVector *>(vector)->GetValue(originalRowIndex) << "\t";
             break;
         }
-        case OMNI_VEC_TYPE_VARCHAR: {
+        case OMNI_VEC_TYPE_VARCHAR:
+        case OMNI_VEC_TYPE_CHAR: {
             uint8_t *value = nullptr;
             int32_t len = static_cast<VarcharVector *>(vector)->GetValue(originalRowIndex, &value);
             std::string valueString(value, value + len);
@@ -142,7 +143,8 @@ VectorBatch* VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
                 result->SetVector(i, vector);
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 VarcharVector *vector = new VarcharVector(allocator, 50 * rowCount, rowCount);
                 result->SetVector(i, vector);
                 break;
@@ -187,7 +189,8 @@ VectorBatch* VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
                     static_cast<BooleanVector*>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
-                case OMNI_VEC_TYPE_VARCHAR: {
+                case OMNI_VEC_TYPE_VARCHAR:
+                case OMNI_VEC_TYPE_CHAR: {
                     for (int32_t j = 0; j < rc; ++j) {
                         uint8_t *data = nullptr;
                         int32_t len = static_cast<VarcharVector*>(vector)->GetValue(j, &data);

@@ -246,6 +246,7 @@ public class DictionaryOmniBlock<T> implements Block<T> {
                 dictionaryBlock = new DoubleArrayOmniBlock(dictionary.getSize(), (DoubleVec) dictionary);
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR:
                 dictionaryBlock = new VariableWidthOmniBlock(dictionary.getSize(), (VarcharVec) dictionary);
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:

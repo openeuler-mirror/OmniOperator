@@ -80,7 +80,8 @@ void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<Ve
                 SetVector(colIndex, new IntVector(vecAllocator, rowCount));
                 break;
             }
-            case OMNI_VEC_TYPE_VARCHAR: {
+            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR: {
                 int32_t width = (static_cast<const VarcharVecType *>(&types[colIndex]))->GetWidth();
                 SetVector(colIndex, new VarcharVector(vecAllocator, rowCount * width, rowCount));
                 break;

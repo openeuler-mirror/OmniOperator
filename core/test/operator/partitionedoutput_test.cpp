@@ -184,6 +184,48 @@ TEST (PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput) {
     VectorHelper::FreeVecBatch(vecBatch);
 }
 
+TEST (PartitionedOutputOperatorTest, TestHashCharPartitionedOutput) {
+    const int32_t DATA_SIZE = 3;
+    VecTypes buildTypes(std::vector<VecType>({ CharVecType(3), CharVecType(3) }));
+    std::string buildData1[DATA_SIZE] = {"abc", "de", "f"};
+    std::string buildData2[DATA_SIZE] = {"def", "bc", "a"};
+    VectorBatch *vecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData1, buildData2);
+
+    bool isHashPrecomputed = false;
+
+    VecTypes sourceTypes(std::vector<VecType>({ CharVecType(3) }));
+    bool replicatesAnyRow = false;
+    int32_t nullChannel = -1;
+    int32_t partitionChannels[1] = {0};
+    int32_t partitionCount = 1;
+    int32_t bucketToPartition[1] = {0};
+    int32_t hashChannelTypes[1] = {CharVecType::Instance().GetId()};
+    int32_t hashChannelTypesCount = 1;
+    int32_t hashChannels[1] = {0};
+    int32_t hashChannelsCount = 1;
+    PartitionedOutputOperatorFactory *partitionedOutputOperatorFactory =
+            PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(
+                    sourceTypes, 3, replicatesAnyRow, nullChannel, partitionChannels, 1, partitionCount,
+                    bucketToPartition, 1, isHashPrecomputed, hashChannelTypes, hashChannelTypesCount, hashChannels, hashChannelsCount);
+    PartitionedOutputOperator *partitionedOperator = (PartitionedOutputOperator *) partitionedOutputOperatorFactory->CreateOperator();
+    partitionedOperator->AddInput(vecBatch);
+    std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
+    partitionedOperator->GetOutput(outputVecBatch);
+
+    EXPECT_EQ(outputVecBatch.size(), 1);
+    EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 4 row
+    string expectData0[3] = {"abc", "de", "f"};
+    VecTypes expectedTypes(std::vector<VecType>({ CharVecType(3) }));
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 3, expectData0);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch[0], expectVecBatch));
+
+    delete partitionedOutputOperatorFactory;
+    delete partitionedOperator;
+    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+}
+
 TEST (PartitionedOutputOperatorTest, TestNullPartitionedOutput) {
     const int32_t DATA_SIZE = 3;
     VecTypes buildTypes(std::vector<VecType>({ VarcharVecType(3), VarcharVecType(3) }));
