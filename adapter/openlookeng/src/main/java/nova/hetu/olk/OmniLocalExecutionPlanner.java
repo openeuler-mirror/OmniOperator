@@ -1528,8 +1528,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
         public LocalExecutionPlanContext createSubContext() {
             checkState(!getIndexSourceContext().isPresent(), "index build plan can not have sub-contexts");
-            return new OmniLocalExecutionPlanContext(taskContext, getTypes(), getDriverFactories(),
-                    getIndexSourceContext(), getDynamicFiltersCollector(), getPipelineId());
+            return new OmniLocalExecutionPlanContext(taskContext, types, driverFactories, indexSourceContext,
+                    dynamicFiltersCollector, nextPipelineId);
         }
 
         /**
