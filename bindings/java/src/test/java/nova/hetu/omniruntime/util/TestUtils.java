@@ -32,29 +32,29 @@ public class TestUtils {
 
     public static Vec createVec(VecType type, Object[] data) {
         switch (type.getId()) {
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_VEC_TYPE_INT :
+            case OMNI_VEC_TYPE_DATE32 :
                 return createIntVec(data);
-            case OMNI_VEC_TYPE_LONG:
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_LONG :
+            case OMNI_VEC_TYPE_DECIMAL64 :
                 return createLongVec(data);
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_VEC_TYPE_DOUBLE :
                 return createDoubleVec(data);
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_VEC_TYPE_BOOLEAN :
                 return createBooleanVec(data);
-            case OMNI_VEC_TYPE_VARCHAR:
-            case OMNI_VEC_TYPE_CHAR:
+            case OMNI_VEC_TYPE_VARCHAR :
+            case OMNI_VEC_TYPE_CHAR :
                 return createVarcharVec((VarcharVecType) type, data);
-            default:
+            default :
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
         }
     }
 
     public static Vec createVec(VecType type, Object[][] data) {
         switch (type.getId()) {
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_VEC_TYPE_DECIMAL128 :
                 return createDecimal128Vec(data);
-            default:
+            default :
                 throw new UnsupportedOperationException("Unsupported type : " + type.getId());
         }
     }
@@ -125,14 +125,13 @@ public class TestUtils {
             if (data[i] == null) {
                 result.setNull(i);
             } else {
-                result.set(i, new long[] {(long) data[i][0], (long) data[i][1]});
+                result.set(i, new long[]{(long) data[i][0], (long) data[i][1]});
             }
         }
         return result;
     }
 
-    public static DictionaryVec createDictionaryVec(VecType vecType, Object[] data, int[] ids)
-    {
+    public static DictionaryVec createDictionaryVec(VecType vecType, Object[] data, int[] ids) {
         Vec dictionary = createVec(vecType, data);
         return new DictionaryVec(dictionary, ids);
     }
@@ -161,25 +160,25 @@ public class TestUtils {
                 continue;
             }
             switch (vec.getType().getId()) {
-                case OMNI_VEC_TYPE_INT:
-                case OMNI_VEC_TYPE_DATE32:
+                case OMNI_VEC_TYPE_INT :
+                case OMNI_VEC_TYPE_DATE32 :
                     assertEquals(((IntVec) vec).get(i), expectedData[i]);
                     break;
-                case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64:
+                case OMNI_VEC_TYPE_LONG :
+                case OMNI_VEC_TYPE_DECIMAL64 :
                     assertEquals(((LongVec) vec).get(i), expectedData[i]);
                     break;
-                case OMNI_VEC_TYPE_DOUBLE:
+                case OMNI_VEC_TYPE_DOUBLE :
                     assertTrue(Double.compare(((DoubleVec) vec).get(i), (Double) expectedData[i]) == 0);
                     break;
-                case OMNI_VEC_TYPE_BOOLEAN:
+                case OMNI_VEC_TYPE_BOOLEAN :
                     assertEquals(((BooleanVec) vec).get(i), expectedData[i]);
                     break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                case OMNI_VEC_TYPE_CHAR:
+                case OMNI_VEC_TYPE_VARCHAR :
+                case OMNI_VEC_TYPE_CHAR :
                     assertEquals(new String(((VarcharVec) vec).get(i)), expectedData[i]);
                     break;
-                default:
+                default :
                     throw new UnsupportedOperationException("Unsupported type : " + vec.getType().getId());
             }
         }
@@ -192,12 +191,11 @@ public class TestUtils {
                 continue;
             }
             switch (vec.getType().getId()) {
-                case OMNI_VEC_TYPE_DECIMAL128:
-                    assertEquals(
-                            ((Decimal128Vec) vec).get(i),
-                            new long[] {(long) expectedData[i][0], (long) expectedData[i][1]});
+                case OMNI_VEC_TYPE_DECIMAL128 :
+                    assertEquals(((Decimal128Vec) vec).get(i),
+                            new long[]{(long) expectedData[i][0], (long) expectedData[i][1]});
                     break;
-                default:
+                default :
                     throw new UnsupportedOperationException("Unsupported type : " + vec.getType().getId());
             }
         }
@@ -216,28 +214,28 @@ public class TestUtils {
                 continue;
             }
             switch (typeId) {
-                case OMNI_VEC_TYPE_INT:
-                case OMNI_VEC_TYPE_DATE32:
+                case OMNI_VEC_TYPE_INT :
+                case OMNI_VEC_TYPE_DATE32 :
                     assertEquals(vec.getInt(i), expectedData[i]);
                     break;
-                case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64:
+                case OMNI_VEC_TYPE_LONG :
+                case OMNI_VEC_TYPE_DECIMAL64 :
                     assertEquals(vec.getLong(i), expectedData[i]);
                     break;
-                case OMNI_VEC_TYPE_BOOLEAN:
+                case OMNI_VEC_TYPE_BOOLEAN :
                     assertEquals(vec.getBoolean(i), expectedData[i]);
                     break;
-                case OMNI_VEC_TYPE_DOUBLE:
+                case OMNI_VEC_TYPE_DOUBLE :
                     assertEquals(Double.compare(vec.getDouble(i), (Double) expectedData[i]), 0);
                     break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                    assertEquals(vec.getBytes(i), expectedData[i]);
+                case OMNI_VEC_TYPE_VARCHAR :
+                    assertEquals(vec.getBytes(i), ((String) (expectedData[i])).getBytes(StandardCharsets.UTF_8));
                     break;
-                case OMNI_VEC_TYPE_DECIMAL128:
-                    assertEquals(vec.getDecimal128(i), new long[] {(long) expectedData[i * 2],
-                            (long) expectedData[i * 2 + 1]});
+                case OMNI_VEC_TYPE_DECIMAL128 :
+                    assertEquals(vec.getDecimal128(i),
+                            new long[]{(long) expectedData[i * 2], (long) expectedData[i * 2 + 1]});
                     break;
-                default:
+                default :
                     throw new UnsupportedOperationException("Unsupported type : " + typeId);
             }
         }

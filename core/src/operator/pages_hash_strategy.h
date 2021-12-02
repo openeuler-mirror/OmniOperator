@@ -95,6 +95,11 @@ public:
     {
         return buildHashColumns;
     }
+
+    int32_t GetBuildColsCount() const
+    {
+        return buildColumnCount;
+    }
     omniruntime::vec::Vector ***GetBuildColumns() const
     {
         return buildColumns;

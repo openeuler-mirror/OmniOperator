@@ -54,8 +54,10 @@ add_library(window_partition SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/wi
 add_library(topn SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn.cpp)
 add_library(memory_pool SHARED ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp ${CMAKE_CURRENT_LIST_DIR}/memory/memory_statistic.cpp)
 add_library(projection SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/projection/projection.cpp)
+add_library(filter_and_project SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/filter/filter_and_project.cpp)
 add_library(operator_util SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp)
 add_library(expr_visitor SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_visitor.cpp)
+add_library(expr_printer SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_printer.cpp)
 add_library(expressions SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp)
 add_library(parserhelper SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp)
 add_library(parser SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp)
@@ -95,8 +97,10 @@ install(TARGETS
         topn
         memory_pool
         projection
+        filter_and_project
         operator_util
         expr_visitor
+        expr_printer
         expressions
         parserhelper
         parser
@@ -139,8 +143,10 @@ set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_statistic.cpp
         ${CMAKE_CURRENT_LIST_DIR}/memory/memory_pool.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/projection/projection.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/filter/filter_and_project.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp
         ${CMAKE_CURRENT_LIST_DIR}/common/expr_visitor.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/common/expr_printer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp
         ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp
         ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp

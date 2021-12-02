@@ -13,6 +13,7 @@
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 const int32_t BLOCK_SIZE = 1024;
 
 int32_t NumberOfTrailingZeros(int32_t value)
@@ -75,6 +76,32 @@ JoinHashTables::~JoinHashTables()
 {
     delete[] hashTables;
     hashTables = nullptr;
+    if (simpleFilter != nullptr) {
+        delete simpleFilter;
+        simpleFilter = nullptr;
+    }
+}
+
+void JoinHashTables::JoinFilterCodeGen()
+{
+    // parse filter expression and create function
+    if (filterExpression.compare("") == 0) {
+        return;
+    }
+
+    std::vector<expressions::DataType> allTypes;
+    const int32_t *probeTypeIds = probeTypes->GetIds();
+    int32_t probeTypesCount = probeTypes->GetSize();
+    for (int32_t i = 0; i < probeTypesCount; i++) {
+        allTypes.push_back(static_cast<const DataType>(probeTypeIds[i]));
+    }
+    const int32_t *buildTypeIds = buildTypes->GetIds();
+    int32_t buildTypesCount = buildTypes->GetSize();
+    for (int32_t i = 0; i < buildTypesCount; i++) {
+        allTypes.push_back(static_cast<const DataType>(buildTypeIds[i]));
+    }
+    simpleFilter = new SimpleFilter(filterExpression, allTypes);
+    simpleFilter->Initialize();
 }
 
 void JoinHashTables::AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable)
@@ -89,9 +116,49 @@ JoinHashTable *JoinHashTables::GetHashTable(int32_t partitionIndex) const
     return hashTable;
 }
 
-bool JoinHashTables::IsJoinPositionEligible() const
+bool JoinHashTables::IsJoinPositionEligible(int64_t partitionedJoinPosition, int32_t probePosition,
+    Vector **probeColumns, int32_t probeColsCount) const
 {
-    return true;
+    if (!simpleFilter) {
+        return true;
+    }
+
+    int32_t partition = 0;
+    auto joinPosition = static_cast<int32_t>(partitionedJoinPosition);
+    if (hashTableCount != 1) {
+        partition = DecodePartition(partitionedJoinPosition);
+        joinPosition = DecodeJoinPosition(partitionedJoinPosition);
+    }
+    JoinHashTable *hashTable = hashTables[partition];
+    auto pagesHash = hashTable->GetPagesHash();
+    int64_t address = pagesHash->GetAddresses()[joinPosition];
+    int32_t vecBatchIndex = DecodeSliceIndex(address);
+    int32_t buildPosition = DecodePosition(address);
+
+    auto pagesHashStrategy = pagesHash->GetPagesHashStrategy();
+    Vector ***buildColumns = pagesHashStrategy->GetBuildColumns();
+    int32_t buildColsCount = pagesHashStrategy->GetBuildColsCount();
+    int32_t allColsCount = probeColsCount + buildColsCount;
+    // left is probe vectors, right is build vectors
+    int64_t values[allColsCount];
+    bool nulls[allColsCount];
+    int32_t lengths[allColsCount];
+
+    // prepare probe datas
+    for (int32_t i = 0; i < probeColsCount; i++) {
+        auto probeVector = probeColumns[i];
+        nulls[i] = probeVector->IsValueNull(probePosition);
+        values[i] = VectorHelper::GetValuePtrAndLength(probeVector, probePosition, lengths + i);
+    }
+
+    // prepare build datas
+    for (int32_t i = probeColsCount; i < allColsCount; i++) {
+        auto buildVector = buildColumns[i - probeColsCount][vecBatchIndex];
+        nulls[i] = buildVector->IsValueNull(buildPosition);
+        values[i] = VectorHelper::GetValuePtrAndLength(buildVector, buildPosition, lengths + i);
+    }
+
+    return simpleFilter->Evaluate(values, nulls, lengths);
 }
 
 int64_t JoinHashTables::GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const
@@ -393,8 +460,8 @@ static void ReadColumnDoubleHashes(int32_t offset, int32_t addressesCount, int64
     }
 }
 
-static void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
-    Vector **columns, int64_t *hashes, bool *nullPositions)
+static void ReadColumnDecimal64Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+    int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
     int64_t address;
@@ -473,8 +540,8 @@ static void ReadColumnBooleanHashes(int32_t offset, int32_t addressesCount, int6
     }
 }
 
-static void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses,
-    Vector **columns, int64_t *hashes, bool *nullPositions)
+static void ReadColumnDecimal128Hashes(int32_t offset, int32_t addressesCount, int64_t *addresses, Vector **columns,
+    int64_t *hashes, bool *nullPositions)
 {
     Vector *column = nullptr, *result = nullptr;
     int64_t address;

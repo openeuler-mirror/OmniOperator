@@ -90,7 +90,7 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
 
 bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths)
 {
-    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, 
+    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength,
         reinterpret_cast<int64_t>(this->executionContext.get()));
 }
 

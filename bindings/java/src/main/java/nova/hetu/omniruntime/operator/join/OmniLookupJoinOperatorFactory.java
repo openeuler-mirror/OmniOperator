@@ -33,28 +33,28 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
      * @param joinType the join type
      * @param hashBuilderOperatorFactory the hash builder operator factory
      */
-    public OmniLookupJoinOperatorFactory(VecType[] probeTypes, int[] probeOutputCols, String[] probeHashCols,
-        int[] buildOutputCols, VecType[] buildOutputTypes, JoinType joinType,
-        OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
+    public OmniLookupJoinOperatorFactory(VecType[] probeTypes, int[] probeOutputCols, int[] probeHashCols,
+            int[] buildOutputCols, VecType[] buildOutputTypes, JoinType joinType,
+            OmniHashBuilderOperatorFactory hashBuilderOperatorFactory) {
         super(new FactoryContext(
-            new JitContext(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, joinType),
-            hashBuilderOperatorFactory));
+                new JitContext(probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, joinType),
+                hashBuilderOperatorFactory));
     }
 
     private static native long createLookupJoinOperatorFactory(String probeTypes, int[] probeOutputCols,
-        String[] probeHashCols, int[] buildOutputCols, String buildOutputTypes, int joinType,
-        long hashBuilderOperatorFactory, long jitContext);
+            int[] probeHashCols, int[] buildOutputCols, String buildOutputTypes, int joinType,
+            long hashBuilderOperatorFactory, long jitContext);
 
-    private static native long createLookupJoinJitContext(String probeTypes, int[] probeOutputCols,
-        String[] probeHashCols, int[] buildOutputCols, String buildOutputTypes, int joinType);
+    private static native long createLookupJoinJitContext(String probeTypes, int[] probeOutputCols, int[] probeHashCols,
+            int[] buildOutputCols, String buildOutputTypes, int joinType);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createLookupJoinOperatorFactory(VecTypeSerializer.serialize(context.probeTypes), context.probeOutputCols,
-            context.probeHashCols, context.buildOutputCols, VecTypeSerializer.serialize(context.buildOutputTypes),
-            context.joinType.getValue(), factoryContext.getHashBuilderOperatorFactory(),
-            factoryContext.getNativeJitContext());
+                context.probeHashCols, context.buildOutputCols, VecTypeSerializer.serialize(context.buildOutputTypes),
+                context.joinType.getValue(), factoryContext.getHashBuilderOperatorFactory(),
+                factoryContext.getNativeJitContext());
     }
 
     /**
@@ -67,7 +67,7 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
 
         private final int[] probeOutputCols;
 
-        private final String[] probeHashCols;
+        private final int[] probeHashCols;
 
         private final int[] buildOutputCols;
 
@@ -85,8 +85,8 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
          * @param buildOutputTypes the build output types
          * @param joinType the join type
          */
-        public JitContext(VecType[] probeTypes, int[] probeOutputCols, String[] probeHashCols, int[] buildOutputCols,
-            VecType[] buildOutputTypes, JoinType joinType) {
+        public JitContext(VecType[] probeTypes, int[] probeOutputCols, int[] probeHashCols, int[] buildOutputCols,
+                VecType[] buildOutputTypes, JoinType joinType) {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
             this.probeOutputCols = requireNonNull(probeOutputCols, "probeOutputCols");
             this.probeHashCols = requireNonNull(probeHashCols, "probeHashCols");
@@ -98,8 +98,8 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
-                Arrays.hashCode(probeHashCols), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
-                joinType);
+                    Arrays.hashCode(probeHashCols), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
+                    joinType);
         }
 
         @Override
@@ -111,10 +111,11 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
                 return false;
             }
             JitContext that = (JitContext) obj;
-            return joinType.equals(that.joinType) && Arrays.equals(probeTypes, that.probeTypes) && Arrays.equals(
-                probeOutputCols, that.probeOutputCols) && Arrays.equals(probeHashCols, that.probeHashCols)
-                && Arrays.equals(buildOutputCols, that.buildOutputCols) && Arrays.equals(buildOutputTypes,
-                that.buildOutputTypes);
+            return joinType.equals(that.joinType) && Arrays.equals(probeTypes, that.probeTypes)
+                    && Arrays.equals(probeOutputCols, that.probeOutputCols)
+                    && Arrays.equals(probeHashCols, that.probeHashCols)
+                    && Arrays.equals(buildOutputCols, that.buildOutputCols)
+                    && Arrays.equals(buildOutputTypes, that.buildOutputTypes);
         }
     }
 
@@ -142,8 +143,8 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
         @Override
         protected long createNativeJitContext(JitContext context) {
             return createLookupJoinJitContext(VecTypeSerializer.serialize(context.probeTypes), context.probeOutputCols,
-                context.probeHashCols, context.buildOutputCols, VecTypeSerializer.serialize(context.buildOutputTypes),
-                context.joinType.getValue());
+                    context.probeHashCols, context.buildOutputCols,
+                    VecTypeSerializer.serialize(context.buildOutputTypes), context.joinType.getValue());
         }
 
         /**
