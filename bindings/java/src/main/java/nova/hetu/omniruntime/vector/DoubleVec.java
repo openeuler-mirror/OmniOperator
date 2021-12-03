@@ -106,4 +106,9 @@ public class DoubleVec extends FixedWidthVec {
     public DoubleVec copyRegion(int positionOffset, int length) {
         return new DoubleVec(this, positionOffset, length, false);
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }

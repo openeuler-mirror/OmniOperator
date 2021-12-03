@@ -2,6 +2,7 @@ package nova.hetu.omniruntime.vector.serialize;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertTrue;
 
 import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.Decimal128VecType;
@@ -301,6 +302,67 @@ public class VecBatchSerializerTest {
         assertEquals("test1", new String(checkResultVec.get(0)));
         assertEquals("test2", new String(checkResultVec.get(1)));
         assertEquals("test1000", new String(checkResultVec.get(2)));
+
+        vecBatch.releaseAllVectors();
+        vecBatch.close();
+        checkVecBatch.releaseAllVectors();
+        checkVecBatch.close();
+    }
+
+    @Test
+    public void testSerializeVectorSizeReset() {
+        int size = 1000;
+        LongVec col1 = new LongVec(size);
+        for (int i = 0; i < size; i++) {
+            col1.set(i, i);
+        }
+        col1.setSize(5);
+        Vec[] vecs = new Vec []{col1};
+        VecBatch vecBatch = new VecBatch(vecs, size);
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+        // deserialize
+        VecBatch resultVecBatch = serializer.deserialize(str);
+        Object[][] expectedDatas = {{0L, 1L, 2L, 3L, 4L}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        vecBatch.close();
+        resultVecBatch.close();
+        col1.close();
+    }
+
+    @Test
+    public void testSerializeVarcharVecWithNull()
+    {
+        // prepare vector batch
+        int row = 10;
+        VarcharVec vec = new VarcharVec(row * 20, row);
+        for (int i = 0; i < row; i++) {
+            if (i % 2 == 0) {
+                vec.set(i, ("test" + i).getBytes());
+            } else {
+                vec.setNull(i);
+            }
+        }
+        VecBatch vecBatch = new VecBatch(new Vec[]{vec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        VarcharVec checkResultVec = (VarcharVec) checkVecBatch.getVector(0);
+        assertEquals(row, checkResultVec.getSize());
+        for (int i = 0; i < row; i++) {
+            if (i % 2 == 0) {
+                assertEquals("test" + i, new String(checkResultVec.get(i)));
+            } else {
+                assertTrue(checkResultVec.isNull(i));
+            }
+        }
 
         vecBatch.releaseAllVectors();
         vecBatch.close();

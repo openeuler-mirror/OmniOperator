@@ -89,4 +89,9 @@ public class ShortVec extends FixedWidthVec {
     public ShortVec copyRegion(int positionOffset, int length) {
         return null;
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }

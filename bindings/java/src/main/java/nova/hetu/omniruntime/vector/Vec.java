@@ -540,4 +540,20 @@ public abstract class Vec implements Closeable {
     public VecAllocator getAllocator() {
         return allocator;
     }
+
+    /**
+     * returns the number of bytes of the data written
+     *
+     * @return length in bytes
+     */
+    public abstract int getRealValueBufCapacityInBytes();
+
+    /**
+     * returns the number of bytes of the null buf
+     *
+     * @return length in bytes
+     */
+    public int getRealNullBufCapacityInBytes() {
+        return size * Byte.BYTES;
+    }
 }
