@@ -46,8 +46,6 @@ SimpleFilter::SimpleFilter(std::string &expression, VecTypes &inputTypes)
 
 SimpleFilter::~SimpleFilter()
 {
-    this->executionContext->getArena()->Reset();
-    this->executionContext.reset();
     delete this->expression;
     this->codegen.reset();
 }
@@ -73,7 +71,6 @@ bool SimpleFilter::Initialize()
     int64_t fAddr = this->codegen->GetFunction();
     void *refFunc = &fAddr;
     this->func = *static_cast<SimpleRowExprEvalFunc *>(refFunc);
-    this->executionContext = std::make_unique<ExecutionContext>();
     this->initialized = true;
     return true;
 }
@@ -87,10 +84,9 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
     return this->codegen->vectorIndexes;
 }
 
-bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths)
+bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
 {
-    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength,
-        reinterpret_cast<int64_t>(this->executionContext.get()));
+    return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputTypes,

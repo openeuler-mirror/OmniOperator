@@ -80,6 +80,7 @@ private:
     int64_t partitionedJoinPosition; // the addressIndex combined partition for build, it is encoded by ((addressIndex
     // << shiftSize) | partition)
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
+    ExecutionContext *executionContext = nullptr;
 };
 
 class JoinProbe {

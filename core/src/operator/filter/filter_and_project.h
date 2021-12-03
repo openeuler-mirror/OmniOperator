@@ -87,15 +87,15 @@ public:
      * @param values array of value addresses that will be used for evaluation
      * @param isNull array of booleans indicating if each value is null
      * @param lengths array of lengths for varchar type values, 0 for other types
+     * @param the execution context
      * @return true if the data matches the expression, false if it doesn't match
      */
-    bool Evaluate(int64_t *values, bool *isNull, int32_t *lengths);
+    bool Evaluate(int64_t *values, bool *isNull, int32_t *lengths, int64_t executionContext);
 
 private:
     std::unique_ptr<ExpressionCodeGen> codegen = nullptr;
     expressions::Expr *expression;
     SimpleRowExprEvalFunc func;
-    std::unique_ptr<ExecutionContext> executionContext;
     bool *isResultNull;
     int32_t *resultLength;
     bool initialized = false;
