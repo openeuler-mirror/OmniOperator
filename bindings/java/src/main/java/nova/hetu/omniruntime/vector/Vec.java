@@ -110,8 +110,8 @@ public abstract class Vec implements Closeable {
         this.type = type;
         this.offset = offset;
         this.nativeVector = nativeVector;
-        this.valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
-        this.nullsBuf = OmniBufFactory.create(getValueNullsNative(nativeVector), size);
+        this.valuesBuf = OmniBufFactory.create(nativeVectorValueBufAddress, capacityInBytes);
+        this.nullsBuf = OmniBufFactory.create(nativeVectorNullBufAddress, size);
         this.isWritable = isWritable;
     }
 
