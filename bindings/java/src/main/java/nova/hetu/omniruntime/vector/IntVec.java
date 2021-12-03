@@ -106,4 +106,9 @@ public class IntVec extends FixedWidthVec {
     public IntVec copyRegion(int positionOffset, int length) {
         return new IntVec(this, positionOffset, length, false);
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }

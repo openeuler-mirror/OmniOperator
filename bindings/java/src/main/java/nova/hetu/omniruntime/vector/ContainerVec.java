@@ -142,4 +142,9 @@ public class ContainerVec extends FixedWidthVec {
     public Vec copyRegion(int positionOffset, int length) {
         return new ContainerVec(this, positionOffset, length, false, positionCount, vecTypes);
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }

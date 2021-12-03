@@ -57,4 +57,9 @@ public class LazyVec extends FixedWidthVec {
         Vec vec = ((LazyVecLoader) loader).load();
         return vec.getNativeVector();
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return 0;
+    }
 }

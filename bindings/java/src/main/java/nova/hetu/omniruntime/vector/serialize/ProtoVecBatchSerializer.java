@@ -146,19 +146,18 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
 
         if (compactVec instanceof VariableWidthVec) {
             VariableWidthVec variableWidthVec = (VariableWidthVec) compactVec;
-            // reset byteBuffer position, avoid serializing the samge vector,
-            // the serialized data length is 0.
             ByteBuffer buffer = JvmUtils.directBuffer(variableWidthVec.getOffsetsBuf());
-            buffer.position(0);
+            // only serialize the actual offset size
+            buffer.limit(variableWidthVec.getRealOffsetBufCapacityInBytes());
             protoVecBuilder.setOffsets(ByteString.copyFrom(buffer));
         }
 
-        // reset byteBuffer position, avoid serializing the samge vector,
-        // the serialized data length is 0.
         ByteBuffer valueBuf = JvmUtils.directBuffer(compactVec.getValuesBuf());
+        // only serialize the data actually written
+        valueBuf.limit(compactVec.getRealValueBufCapacityInBytes());
         ByteBuffer valueNullsBuf = JvmUtils.directBuffer(compactVec.getValueNullsBuf());
-        valueBuf.position(0);
-        valueNullsBuf.position(0);
+        // only serialize the actual null size
+        valueNullsBuf.limit(compactVec.getRealNullBufCapacityInBytes());
         VecBatchSerde.Vec protoVec = protoVecBuilder.setTypeExt(protoVecTypeExtBuild.build())
             .setSize(compactVec.getSize())
             .setOffset(compactVec.getOffset())
@@ -173,30 +172,15 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
     }
 
     private Vec compactVec(Vec vec, int[] ids) {
-        Vec newVec = vec;
+        // original vec is dictionary vec
         if (ids != null) {
-            newVec = vec.copyPositions(ids, 0, ids.length);
+            return vec.copyPositions(ids, 0, ids.length);
         }
-        if (newVec.getOffset() != 0) {
-            return newVec.copyRegion(0, newVec.getSize());
+        // original vec slice
+        if (vec.getOffset() != 0) {
+            return vec.copyRegion(0, vec.getSize());
         }
-        if (newVec instanceof VariableWidthVec) {
-            VariableWidthVec variableWidthVec = (VariableWidthVec) newVec;
-            int lastSetIndex = variableWidthVec.getSize() - 1;
-            for (int rowIdx = lastSetIndex; rowIdx >= 0; rowIdx--) {
-                if (!variableWidthVec.isNull(rowIdx)) {
-                    lastSetIndex = rowIdx;
-                    break;
-                }
-            }
-            long realCapacityInBytes = variableWidthVec.getValueOffset(lastSetIndex + 1)
-                - variableWidthVec.getValueOffset(0);
-            if (realCapacityInBytes != 0 && (newVec.getCapacityInBytes() / realCapacityInBytes >= 2) ||
-                    (realCapacityInBytes == 0 && newVec.getCapacityInBytes() != 0)) {
-                return newVec.copyRegion(0, newVec.getSize());
-            }
-        }
-        return newVec;
+        return vec;
     }
 
     @Override

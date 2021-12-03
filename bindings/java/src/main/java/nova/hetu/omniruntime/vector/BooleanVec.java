@@ -104,4 +104,9 @@ public class BooleanVec extends FixedWidthVec {
     public BooleanVec copyRegion(int positionOffset, int length) {
         return new BooleanVec(this, positionOffset, length, false);
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }

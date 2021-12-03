@@ -117,4 +117,9 @@ public class LongVec extends FixedWidthVec {
     public LongVec copyRegion(int positionOffset, int length) {
         return new LongVec(this, positionOffset, length, false);
     }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }

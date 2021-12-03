@@ -6,9 +6,6 @@ package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.VecType;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 /**
  * base class of variable width vec
  *
@@ -170,5 +167,19 @@ public abstract class VariableWidthVec extends Vec {
             setValueOffset(i + 1, getValueOffset(i));
         }
         lastOffsetPosition = index - 1;
+    }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return getValueOffset(size) - getValueOffset(0);
+    }
+
+    /**
+     * returns the number of bytes of the offsets
+     *
+     * @return length in bytes
+     */
+    public int getRealOffsetBufCapacityInBytes() {
+        return (size + 1) * Integer.BYTES;
     }
 }

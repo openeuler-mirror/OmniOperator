@@ -94,6 +94,11 @@ public abstract class DecimalVec extends FixedWidthVec {
         if (length % this.typeWidth != 0) {
             throw new OmniRuntimeException(OMNI_PARAM_ERROR, "length " + length + "is error.");
         }
-        valuesBuf.setLongArray(offset * 2 * Long.BYTES, values, start * Long.BYTES, length * Long.BYTES);
+        valuesBuf.setLongArray(offset * typeWidth * Long.BYTES, values, start * Long.BYTES, length * Long.BYTES);
+    }
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * typeWidth * Long.BYTES;
     }
 }

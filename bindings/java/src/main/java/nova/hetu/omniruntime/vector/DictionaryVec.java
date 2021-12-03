@@ -204,4 +204,9 @@ public class DictionaryVec extends FixedWidthVec {
     }
 
     private static native void setDictionaryNative(long nativeVector, long nativeDictionaryVector);
+
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
+    }
 }
