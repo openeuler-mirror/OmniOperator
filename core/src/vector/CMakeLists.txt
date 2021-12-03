@@ -16,3 +16,4 @@ install(FILES ${PROJECT_SOURCE_DIR}/src/vector/tracer/vector_tracer.h ${PROJECT_
 install(FILES ${PROJECT_SOURCE_DIR}/src/util/debug.h ${PROJECT_SOURCE_DIR}/src/util/compiler_util.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/util)
 install(FILES ${PROJECT_SOURCE_DIR}/config.h DESTINATION ${CMAKE_INSTALL_PREFIX}/)
 install(FILES ${PROJECT_SOURCE_DIR}/src/memory/chunk.h ${PROJECT_SOURCE_DIR}/src/memory/memory_pool.h ${PROJECT_SOURCE_DIR}/src/memory/memory_statistic.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/memory)
+install(FILES ${PROJECT_SOURCE_DIR}/thirdparty/huawei_secure_c/include/securec.h ${PROJECT_SOURCE_DIR}/thirdparty/huawei_secure_c/include/securectype.h DESTINATION ${CMAKE_INSTALL_PREFIX}/thirdparty/huawei_secure_c/include/)
