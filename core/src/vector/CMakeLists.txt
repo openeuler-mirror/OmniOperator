@@ -17,3 +17,5 @@ install(FILES ${PROJECT_SOURCE_DIR}/src/vector/tracer/vector_tracer.h ${PROJECT_
 install(FILES ${PROJECT_SOURCE_DIR}/src/util/debug.h ${PROJECT_SOURCE_DIR}/src/util/compiler_util.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/util)
 install(FILES ${PROJECT_SOURCE_DIR}/config.h DESTINATION ${CMAKE_INSTALL_PREFIX}/)
 install(FILES ${PROJECT_SOURCE_DIR}/thirdparty/huawei_secure_c/include/securec.h ${PROJECT_SOURCE_DIR}/thirdparty/huawei_secure_c/include/securectype.h DESTINATION ${CMAKE_INSTALL_PREFIX}/thirdparty/huawei_secure_c/include/)
+file(GLOB VECTOR_TYPE_HEAD_FILES ${PROJECT_SOURCE_DIR}/src/vector/type/*.h)
+install(FILES ${VECTOR_TYPE_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vector/type)
