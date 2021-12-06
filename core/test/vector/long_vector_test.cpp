@@ -3,10 +3,8 @@
  */
 
 #include "gtest/gtest.h"
-#include "vector_allocator.h"
-#include "vector_allocator_factory.h"
-#include "long_vector.h"
 #include "../util/test_util.h"
+#include "vector_common.h"
 
 using namespace omniruntime::vec;
 

@@ -348,8 +348,8 @@ void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t off
     std::unique_ptr<ExecutionContext> &context)
 {
     auto containerVector = static_cast<ContainerVector *>(colPtr);
-    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
-    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
+    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
+    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
     if (UNLIKELY(avgValVector->IsValueNull(offset) || avgCountVector->IsValueNull(offset))) {
         return;
     }
@@ -396,8 +396,8 @@ void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32
         return;
     }
     auto containerVector = static_cast<ContainerVector *>(colPtr);
-    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
-    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
+    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
+    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
     if (UNLIKELY(avgValVector->IsValueNull(offset) || avgCountVector->IsValueNull(offset))) {
         return;
     }
@@ -916,9 +916,9 @@ void ProcessIntermediateAvg(GroupBySlot &groupSlot, Vector *colPtr, uint32_t off
     auto currentVal = static_cast<double *>(groupSlot.avgVal);
     auto currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
     auto containerVector = static_cast<ContainerVector *>(colPtr);
-    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
+    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
     double avgVal = avgValVector->GetValue(offset);
-    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
+    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
     int64_t avgCnt = avgCountVector->GetValue(offset);
     if (avgCnt == 0) {
         // Fixme use error code

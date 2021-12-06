@@ -227,9 +227,9 @@ long GetHash(int32_t rowIndex, int type, Vector *vector)
         case OMNI_VEC_TYPE_CONTAINER: {
             long result = 1;
             ContainerVector *containerVec = static_cast<ContainerVector *>(vector);
-            auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->getValue(0));
+            auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->GetValue(0));
             result = HashUtil::CombineHash(result, GetHash(rowIndex, avgValVector->GetTypeId(), avgValVector));
-            auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->getValue(1));
+            auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->GetValue(1));
             result = HashUtil::CombineHash(result, GetHash(rowIndex, avgCountVector->GetTypeId(), avgCountVector));
             return result;
         }

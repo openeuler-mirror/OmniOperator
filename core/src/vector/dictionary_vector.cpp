@@ -3,12 +3,8 @@
  */
 
 #include "dictionary_vector.h"
-#include "int_vector.h"
-#include "long_vector.h"
-#include "double_vector.h"
-#include "boolean_vector.h"
-#include "varchar_vector.h"
-#include "decimal128_vector.h"
+#include "variable_width_vector.h"
+#include "fixed_width_vector.h"
 
 namespace omniruntime {
 namespace vec {
@@ -16,12 +12,23 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
     : DictionaryVector(dictionary->GetAllocator(), idsCount)
 {
     this->dictionary = dictionary->Slice(0, dictionary->GetSize());
-    memcpy_s(valuesAddress, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
+    error_t ret = memcpy_s(valuesAddress, idsCount * sizeof(int32_t), ids, idsCount * sizeof(int32_t));
+    if (ret != EOK) {
+        LogError("Memory copy failed. %d", ret);
+        delete this->dictionary;
+        return;
+    }
     bool *nulls = new bool[idsCount];
     for (int32_t i = 0; i < idsCount; i++) {
         nulls[i] = dictionary->IsValueNull(ids[i]);
     }
-    memcpy_s(valueNullsAddress, idsCount * sizeof(bool), nulls, idsCount * sizeof(bool));
+    ret = memcpy_s(valueNullsAddress, idsCount * sizeof(bool), nulls, idsCount * sizeof(bool));
+    if (ret != EOK) {
+        LogError("Memory copy failed. %d", ret);
+        delete this->dictionary;
+        delete[] nulls;
+        return;
+    }
     delete[] nulls;
 }
 
@@ -32,8 +39,7 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t idsCount)
 }
 
 DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t idsCount)
-    : FixedWidthVector<int32_t>(allocator, idsCount * sizeof(int32_t), idsCount, DictionaryVecType::Instance()),
-      dictionary(nullptr)
+    : Vector(allocator, idsCount * sizeof(int32_t), idsCount, OMNI_VEC_TYPE_DICTIONARY), dictionary(nullptr)
 {}
 
 DictionaryVector::~DictionaryVector()
@@ -209,7 +215,5 @@ Vector *DictionaryVector::ExtractDictionaryAndIds(int32_t positionOffset, int32_
     } while (dictionary->GetTypeId() == OMNI_VEC_TYPE_DICTIONARY);
     return dictionary;
 }
-
-void DictionaryVector::SetValues(int startIndex, const int32_t *values, int length) {}
 } // namespace vec
 } // namespace omniruntime

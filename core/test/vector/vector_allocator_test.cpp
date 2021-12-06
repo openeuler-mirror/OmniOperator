@@ -5,10 +5,7 @@
 #include "../../config.h"
 #include <thread>
 #include "gtest/gtest.h"
-#include "long_vector.h"
-#include "vector_batch.h"
-#include "vector_allocator.h"
-#include "vector_allocator_factory.h"
+#include "vector_common.h"
 
 using namespace omniruntime::vec;
 

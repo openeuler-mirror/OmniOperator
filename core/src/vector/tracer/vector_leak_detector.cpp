@@ -36,7 +36,8 @@ int32_t VectorLeakDetector::HashBucket(const Vector *vec)
     return hash % BUCKET_NUM;
 }
 
-VectorTracer *VectorLeakDetector::NewTracer(const Vector *vec) {
+VectorTracer *VectorLeakDetector::NewTracer(const Vector *vec)
+{
     std::shared_lock<std::shared_timed_mutex> lock(mutex);
     auto &head = buckets[HashBucket(vec)];
     VectorTracer *tracer = new VectorTracer(scope, vec);
@@ -48,7 +49,8 @@ VectorTracer *VectorLeakDetector::NewTracer(const Vector *vec) {
     return tracer;
 }
 
-void VectorLeakDetector::CloseTracer(VectorTracer *tracer) {
+void VectorLeakDetector::CloseTracer(VectorTracer *tracer)
+{
     tracer->Close();
     if (deletedCount.fetch_add(1) >= RECYCLE_THRESHOLD) {
         RecycleDeletedTracer();

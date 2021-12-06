@@ -10,10 +10,10 @@
 
 namespace omniruntime {
 namespace vec {
-class LazyVector : public FixedWidthVector<int64_t> {
+class LazyVector : public Vector {
 public:
     LazyVector(VectorAllocator *allocator, int32_t size)
-        : FixedWidthVector<int64_t>(allocator, -1, size, LazyVecType::Instance()), loader(nullptr), loadedVector(nullptr)
+        : Vector(allocator, -1, size, OMNI_VEC_TYPE_LAZY), loader(nullptr), loadedVector(nullptr)
     {}
 
     void SetLoader(VectorLoader *loader)
@@ -38,9 +38,6 @@ public:
         AssureLoaded();
         return loadedVector;
     }
-
-    void SetValues(int startIndex, const int64_t *values, int length) override {
-    };
 
     Vector *Slice(int positionOffset, int length) override
     {

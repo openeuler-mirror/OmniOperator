@@ -20,13 +20,13 @@ static void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originR
                                           int32_t currentRowIndex)
 {
     ContainerVector *containerVec = static_cast<ContainerVector *>(origintVector);
-    auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->getValue(0));
-    auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->getValue(1));
+    auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->GetValue(0));
+    auto *avgCountVector = reinterpret_cast<LongVector *>(containerVec->GetValue(1));
     int64_t longValue = static_cast<LongVector *>(avgCountVector)->GetValue(originRowIndex);
     double doubleValue = static_cast<DoubleVector *>(avgValVector)->GetValue(originRowIndex);
     ContainerVector *currentContainerVec = static_cast<ContainerVector *>(currentVector);
-    auto *currentAvgValVector = reinterpret_cast<DoubleVector *>(currentContainerVec->getValue(0));
-    auto *currentAvgCountVector = reinterpret_cast<LongVector *>(currentContainerVec->getValue(1));
+    auto *currentAvgValVector = reinterpret_cast<DoubleVector *>(currentContainerVec->GetValue(0));
+    auto *currentAvgCountVector = reinterpret_cast<LongVector *>(currentContainerVec->GetValue(1));
     static_cast<DoubleVector *>(currentAvgValVector)->SetValue(currentRowIndex, doubleValue);
     static_cast<LongVector *>(currentAvgCountVector)->SetValue(currentRowIndex, longValue);
 }

@@ -3,9 +3,9 @@
  */
 
 #include <sstream>
+#include "../util/trace_util.h"
 #include "vector.h"
 #include "vector_allocator.h"
-#include "../util/trace_util.h"
 
 namespace omniruntime {
 namespace vec {
@@ -15,9 +15,9 @@ VectorAllocator::VectorAllocator(std::string scope) : scope(scope), leakDetector
 
 VectorAllocator::~VectorAllocator() {}
 
-void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, VecType type)
+void VectorAllocator::NewVector(Vector *vector, int capacityInBytes, int size, VecTypeId typeId)
 {
-    VectorReference *reference = new VectorReference(capacityInBytes, size, type);
+    VectorReference *reference = new VectorReference(capacityInBytes, size, typeId);
     vector->SetVectorReference(reference);
 #ifdef DEBUG_VECTOR
     VectorTracer *tracer = leakDetector.NewTracer(vector);

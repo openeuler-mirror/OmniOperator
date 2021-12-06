@@ -5,10 +5,8 @@
 #include "topn.h"
 #include <vector>
 #include "../../jit/annotation.h"
-#include "../../vector/long_vector.h"
 #include "../optimization.h"
 #include "../sort/sort.h"
-#include "../util/operator_util.h"
 
 using namespace std;
 namespace omniruntime {

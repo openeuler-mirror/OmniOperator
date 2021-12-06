@@ -3,7 +3,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../src/vector/date32.h"
+#include "type/date32.h"
 
 using namespace omniruntime::vec;
 

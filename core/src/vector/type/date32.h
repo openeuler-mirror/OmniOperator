@@ -5,6 +5,9 @@
 #ifndef OMNI_RUNTIME_DATE32_H
 #define OMNI_RUNTIME_DATE32_H
 
+#include <type_traits>
+#include <cstdint>
+
 #include "date_base.h"
 
 namespace omniruntime {

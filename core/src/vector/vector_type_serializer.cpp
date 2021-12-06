@@ -2,8 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include <nlohmann/json.hpp>
 #include "vector_type_serializer.h"
+
+#include <nlohmann/json.hpp>
 
 namespace omniruntime {
 namespace vec {

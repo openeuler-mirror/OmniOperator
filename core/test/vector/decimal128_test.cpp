@@ -2,8 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  */
 
-#include <decimal128.h>
 #include "gtest/gtest.h"
+#include "vector_common.h"
 
 using namespace omniruntime::vec;
 

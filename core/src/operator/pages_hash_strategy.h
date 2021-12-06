@@ -6,17 +6,10 @@
 #define __PAGES_HASH_STRATETY_H__
 
 #include <stdint.h>
-#include "../vector/vector.h"
-#include "../vector/vector_type.h"
-#include "../vector/vector_batch.h"
-#include "../vector/int_vector.h"
-#include "../vector/long_vector.h"
-#include "../vector/double_vector.h"
-#include "../vector/varchar_vector.h"
+#include "../vector/vector_common.h"
 #include "pages_index.h"
 #include "hash_util.h"
 #include "util/operator_util.h"
-#include "../vector/vector_helper.h"
 
 template <typename V>
 ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(omniruntime::vec::Vector *leftVector, int32_t leftIndex,

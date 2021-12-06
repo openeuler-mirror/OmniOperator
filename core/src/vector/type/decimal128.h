@@ -7,11 +7,18 @@
 
 #include <cstdint>
 #include <iostream>
+
 #include "decimal_base.h"
-#include "op_result.h"
 
 namespace omniruntime {
 namespace vec {
+enum class OpStatus {
+    SUCCESS = 0,
+    OP_OVERFLOW = 1,
+    DIVIDE_BY_ZERO = 2,
+    FAIL = 3
+};
+
 class Decimal128 : public BasicDecimal {
 public:
     Decimal128(int64_t high_bits, uint64_t low_bits);
@@ -81,8 +88,8 @@ public:
     static constexpr int32_t LOW_BITS_WIDTH = 64;
 
 private:
-    int64_t highBits;
     uint64_t lowBits;
+    int64_t highBits;
     static const Decimal128 SCALE_MULTIPLIERS[];
 };
 
