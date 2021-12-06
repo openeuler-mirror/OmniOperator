@@ -3,10 +3,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "vector_allocator.h"
-#include "vector_allocator_factory.h"
-#include "container_vector.h"
-#include "../util/test_util.h"
+#include "vector_common.h"
 
 using namespace omniruntime::vec;
 
@@ -27,7 +24,7 @@ TEST(ContainerVector, sliceVector)
     ContainerVector *originalVector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
         const_cast<VecType *>(VECTOR_TYPES));
     for (int i = 0; i < originalVector->GetSize(); i++) {
-        originalVector->setValue(i, i * 2);
+        originalVector->SetValue(i, i * 2);
     }
 
     int offset = 0;
@@ -36,7 +33,7 @@ TEST(ContainerVector, sliceVector)
     EXPECT_EQ(slice1->GetSize(), 2);
     EXPECT_EQ(slice1->GetReference(), 2);
     for (int i = 0; i < slice1->GetSize(); i++) {
-        EXPECT_EQ(slice1->getValue(i), originalVector->getValue(i + offset));
+        EXPECT_EQ(slice1->GetValue(i), originalVector->GetValue(i + offset));
     }
 
     delete originalVector;
@@ -62,11 +59,11 @@ TEST(ContainerVector, setAndGetValue)
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
         const_cast<VecType *>(VECTOR_TYPES));
     for (int i = 0; i < VECTOR_COUNT; i++) {
-        vector->setValue(i, i * 2);
+        vector->SetValue(i, i * 2);
     }
 
     for (int i = 0; i < VECTOR_COUNT; i++) {
-        EXPECT_EQ(vector->getValue(i), i * 2);
+        EXPECT_EQ(vector->GetValue(i), i * 2);
     }
     delete vector;
     delete doubleVector;
@@ -82,7 +79,7 @@ TEST(ContainerVector, setValueOutOfBounds1)
     EXPECT_TRUE(allocator != nullptr);
 
     ContainerVector *vector = new ContainerVector(allocator, 256);
-    EXPECT_THROW(vector->setValue(256, 256), std::runtime_error);
+    EXPECT_THROW(vector->SetValue(256, 256), std::runtime_error);
 
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
@@ -97,7 +94,7 @@ TEST(ContainerVector, setValueOutOfBounds2)
     EXPECT_TRUE(allocator != nullptr);
 
     ContainerVector *vector = new ContainerVector(allocator, 256);
-    EXPECT_THROW(vector->setValue(-1, 256), std::runtime_error);
+    EXPECT_THROW(vector->SetValue(-1, 256), std::runtime_error);
 
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
@@ -135,7 +132,7 @@ TEST(ContainerVector, setValuesWithoutOffsetOutOfBounds)
 //        if (i % 5 == 0) {
 //            vector->setValueNull(i);
 //        } else {
-//            vector->setValue(i, i);
+//            vector->SetValue(i, i);
 //        }
 //    }
 //    for (int i = 0; i < 256; i++) {
@@ -168,7 +165,7 @@ TEST(ContainerVector, copyPositions)
     ContainerVector *copyPostionVector = vector->CopyPositions(positions, 0, 1);
 
     for (int i = 0; i < copyPostionVector->GetSize(); i++) {
-        EXPECT_EQ(copyPostionVector->getValue(i), vector->getValue(positions[i]));
+        EXPECT_EQ(copyPostionVector->GetValue(i), vector->GetValue(positions[i]));
     }
 
     delete vector;
@@ -195,7 +192,7 @@ TEST(ContainerVector, copyRegion)
     ContainerVector *copyRegionVector = vector->CopyRegion(0, 2);
 
     for (int i = 0; i < copyRegionVector->GetSize(); i++) {
-        EXPECT_EQ(copyRegionVector->getValue(i), vector->getValue(i));
+        EXPECT_EQ(copyRegionVector->GetValue(i), vector->GetValue(i));
     }
 
     delete vector;
@@ -236,7 +233,7 @@ TEST(ContainerVector, getVectorAllocator)
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
         const_cast<VecType *>(VECTOR_TYPES));
 
-    int64_t doubleVecAddr = vector->getValue(0);
+    int64_t doubleVecAddr = vector->GetValue(0);
     auto doubleVec = reinterpret_cast<Vector *>(doubleVecAddr);
 
     delete vector;

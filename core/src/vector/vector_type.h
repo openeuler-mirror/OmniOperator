@@ -9,6 +9,8 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <climits>
+#include "type/decimal128.h"
+#include "../util/debug.h"
 
 namespace omniruntime {
 namespace vec {
@@ -37,6 +39,109 @@ enum VecTypeId {
     OMNI_VEC_TYPE_LAZY = 19,
     OMNI_VEC_TYPE_INVALID
 };
+
+template <VecTypeId typeId> struct NativeType {};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_INT> {
+    using type = int32_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_LONG> {
+    using type = int64_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_DOUBLE> {
+    using type = double;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_BOOLEAN> {
+    using type = bool;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_SHORT> {
+    using type = int16_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_DECIMAL64> {
+    using type = int64_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_DECIMAL128> {
+    using type = Decimal128;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_DATE32> {
+    using type = int32_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_DATE64> {
+    using type = int64_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_TIME64> {
+    using type = int64_t;
+};
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_VARCHAR> {
+    using type = uint8_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_CHAR> {
+    using type = uint8_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_CONTAINER> {
+    using type = int64_t;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_LAZY> {
+    using type = void;
+};
+
+template <> struct NativeType<VecTypeId::OMNI_VEC_TYPE_DICTIONARY> {
+    using type = void;
+};
+
+#define DYNAMIC_TYPE_DISPATCH(PREFIX, typeId, ...)                    \
+    [&]() {                                                           \
+        switch (typeId) {                                             \
+            case OMNI_VEC_TYPE_INT: {                                 \
+                return PREFIX<OMNI_VEC_TYPE_INT>(__VA_ARGS__);        \
+            }                                                         \
+            case OMNI_VEC_TYPE_LONG: {                                \
+                return PREFIX<OMNI_VEC_TYPE_LONG>(__VA_ARGS__);       \
+            }                                                         \
+            case OMNI_VEC_TYPE_DOUBLE: {                              \
+                return PREFIX<OMNI_VEC_TYPE_DOUBLE>(__VA_ARGS__);     \
+            }                                                         \
+            case OMNI_VEC_TYPE_BOOLEAN: {                             \
+                return PREFIX<OMNI_VEC_TYPE_BOOLEAN>(__VA_ARGS__);    \
+            }                                                         \
+            case OMNI_VEC_TYPE_SHORT: {                               \
+                return PREFIX<OMNI_VEC_TYPE_SHORT>(__VA_ARGS__);      \
+            }                                                         \
+            case OMNI_VEC_TYPE_DECIMAL64: {                           \
+                return PREFIX<OMNI_VEC_TYPE_DECIMAL64>(__VA_ARGS__);  \
+            }                                                         \
+            case OMNI_VEC_TYPE_DECIMAL128: {                          \
+                return PREFIX<OMNI_VEC_TYPE_DECIMAL128>(__VA_ARGS__); \
+            }                                                         \
+            case OMNI_VEC_TYPE_CHAR:                                  \
+            case OMNI_VEC_TYPE_VARCHAR: {                             \
+                return PREFIX<OMNI_VEC_TYPE_VARCHAR>(__VA_ARGS__);    \
+            }                                                         \
+            case OMNI_VEC_TYPE_CONTAINER: {                           \
+                return PREFIX<OMNI_VEC_TYPE_CONTAINER>(__VA_ARGS__);  \
+            }                                                         \
+            case OMNI_VEC_TYPE_DICTIONARY: {                          \
+                return PREFIX<OMNI_VEC_TYPE_DICTIONARY>(__VA_ARGS__); \
+            }                                                         \
+            case OMNI_VEC_TYPE_LAZY: {                                \
+                return PREFIX<OMNI_VEC_TYPE_LAZY>(__VA_ARGS__);       \
+            }                                                         \
+            default:                                                  \
+                LogError("Can not handle this type %d", typeId);      \
+        }                                                             \
+    }()
 
 NLOHMANN_JSON_SERIALIZE_ENUM(VecTypeId, { { OMNI_VEC_TYPE_NONE, nullptr },
     { OMNI_VEC_TYPE_INT, "OMNI_VEC_TYPE_INT" },

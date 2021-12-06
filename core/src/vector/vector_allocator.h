@@ -19,7 +19,7 @@ public:
 
     ~VectorAllocator();
 
-    void NewVector(Vector *vector, int capacityInBytes, int size, VecType type);
+    void NewVector(Vector *vector, int capacityInBytes, int size, VecTypeId typeId);
 
     void SliceVector(Vector *vector, Vector *sliceVector);
 

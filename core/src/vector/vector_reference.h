@@ -15,7 +15,7 @@ using Chunk = mem::Chunk;
 
 class VectorReference {
 public:
-    VectorReference(int capacityInBytes, int size, VecType type);
+    VectorReference(int capacityInBytes, int size, VecTypeId typeId);
 
     ~VectorReference();
 

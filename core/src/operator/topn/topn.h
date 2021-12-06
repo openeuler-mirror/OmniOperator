@@ -10,9 +10,7 @@
 #include <vector>
 #include "../operator.h"
 #include "../operator_factory.h"
-#include "../../vector/vector_type_serializer.h"
-#include "../../vector/varchar_vector.h"
-#include "../../vector/vector_helper.h"
+#include "../../vector/vector_common.h"
 
 namespace omniruntime {
 namespace op {

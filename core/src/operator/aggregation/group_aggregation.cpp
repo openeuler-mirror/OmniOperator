@@ -361,9 +361,9 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex
         if ((*rowIterator)[colIndex].avgCnt == 0) {
             LogError("Divisor is zero!");
         }
-        DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->getValue(0));
+        DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->GetValue(0));
         doubleVector->SetValue(rowIndex, *static_cast<double *>((*rowIterator)[colIndex].avgVal));
-        LongVector *longVector = reinterpret_cast<LongVector *>(vector->getValue(1));
+        LongVector *longVector = reinterpret_cast<LongVector *>(vector->GetValue(1));
         longVector->SetValue(rowIndex, (*rowIterator)[colIndex].avgCnt);
     } else {
         DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));

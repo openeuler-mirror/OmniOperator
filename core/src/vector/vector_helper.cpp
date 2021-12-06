@@ -6,11 +6,6 @@
 
 #include <iomanip>
 
-#include "dictionary_vector.h"
-#include "varchar_vector.h"
-#include "boolean_vector.h"
-#include "decimal128_vector.h"
-
 namespace omniruntime {
 namespace vec {
 void VectorHelper::FreeVecBatch(VectorBatch *vecBatch)
@@ -80,10 +75,10 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         }
         case OMNI_VEC_TYPE_CONTAINER: {
             ContainerVector *containerVector = static_cast<ContainerVector *>(vector);
-            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->getValue(0));
-            LongVector *longVector = reinterpret_cast<LongVector *>(containerVector->getValue(1));
-            std::cout << "temp average: " << doubleVector->GetValue(originalRowIndex)
-            << " temp count: " << longVector->GetValue(originalRowIndex) << "\t";
+            DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
+            LongVector *longVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
+            std::cout << "temp average: " << doubleVector->GetValue(originalRowIndex) << " temp count: " <<
+                longVector->GetValue(originalRowIndex) << "\t";
             break;
         }
         default:
@@ -104,7 +99,7 @@ void VectorHelper::PrintVecBatch(VectorBatch *vecBatch)
     }
 }
 
-VectorBatch* VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches)
+VectorBatch *VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBatches)
 {
     if (vecBatches.empty()) {
         return nullptr;
@@ -169,33 +164,33 @@ VectorBatch* VectorHelper::ConcatVectorBatches(std::vector<VectorBatch *> &vecBa
             switch (types[i]) {
                 case OMNI_VEC_TYPE_INT:
                 case OMNI_VEC_TYPE_DATE32: {
-                    auto rValues = static_cast<int32_t *>(static_cast<IntVector*>(vector)->GetValues());
-                    static_cast<IntVector*>(resVec)->SetValues(offset, rValues, rc);
+                    auto rValues = static_cast<int32_t *>(static_cast<IntVector *>(vector)->GetValues());
+                    static_cast<IntVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
                 case OMNI_VEC_TYPE_LONG:
                 case OMNI_VEC_TYPE_DECIMAL64: {
-                    auto rValues = static_cast<int64_t *>(static_cast<IntVector*>(vector)->GetValues());
-                    static_cast<LongVector*>(resVec)->SetValues(offset, rValues, rc);
+                    auto rValues = static_cast<int64_t *>(static_cast<IntVector *>(vector)->GetValues());
+                    static_cast<LongVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
                 case OMNI_VEC_TYPE_DOUBLE: {
-                    auto rValues = static_cast<double *>(static_cast<DoubleVector*>(vector)->GetValues());
-                    static_cast<DoubleVector*>(resVec)->SetValues(offset, rValues, rc);
+                    auto rValues = static_cast<double *>(static_cast<DoubleVector *>(vector)->GetValues());
+                    static_cast<DoubleVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
                 case OMNI_VEC_TYPE_BOOLEAN: {
-                    auto rValues = static_cast<bool *>(static_cast<BooleanVector*>(vector)->GetValues());
-                    static_cast<BooleanVector*>(resVec)->SetValues(offset, rValues, rc);
+                    auto rValues = static_cast<bool *>(static_cast<BooleanVector *>(vector)->GetValues());
+                    static_cast<BooleanVector *>(resVec)->SetValues(offset, rValues, rc);
                     break;
                 }
                 case OMNI_VEC_TYPE_VARCHAR:
                 case OMNI_VEC_TYPE_CHAR: {
                     for (int32_t j = 0; j < rc; ++j) {
                         uint8_t *data = nullptr;
-                        int32_t len = static_cast<VarcharVector*>(vector)->GetValue(j, &data);
+                        int32_t len = static_cast<VarcharVector *>(vector)->GetValue(j, &data);
                         std::string val(reinterpret_cast<char *>(data), len);
-                        static_cast<VarcharVector*>(resVec)->SetValue(offset + j, data, len);
+                        static_cast<VarcharVector *>(resVec)->SetValue(offset + j, data, len);
                     }
                     break;
                 }

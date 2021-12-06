@@ -12,8 +12,7 @@ Chunk *VectorReference::zeroChunk = new Chunk(0);
 /*
  * Encoding : values | nulls | offsets(option)
  */
-VectorReference::VectorReference(int capacityInBytes, int size, VecType type)
-    : reference(1), writable(true)
+VectorReference::VectorReference(int capacityInBytes, int size, VecTypeId typeId) : reference(1), writable(true)
 {
     // for empty vector, like lazy vector.
     if (capacityInBytes == -1) {
@@ -27,7 +26,7 @@ VectorReference::VectorReference(int capacityInBytes, int size, VecType type)
     int valuesCapacityInBytes = capacityInBytes;
     int nullsCapacityInBytes = size;
     int offsetsCapacityInBytes = 0;
-    bool isVariableType = IsVariableWidthType(type.GetId());
+    bool isVariableType = IsVariableWidthType(typeId);
     if (isVariableType) {
         offsetsCapacityInBytes += (size + 1) * sizeof(int32_t);
     }

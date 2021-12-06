@@ -7,8 +7,8 @@
 #include <limits>
 #include <array>
 #include <iomanip>
-#include "op_util_internal.h"
-#include "../util/compiler_util.h"
+#include <compiler_util.h>
+#include "../../util/debug.h"
 
 namespace omniruntime {
 namespace vec {
@@ -465,7 +465,7 @@ Decimal128 &Decimal128::Rescale(int32_t delta)
         *this *= SCALE_MULTIPLIERS[multiplierIndex];
         return *this;
     }
-    std::cerr << "multiplier index is more than 38, it is: " << multiplierIndex << std::endl;
+    LogError("multiplier index is more than 38, it is: %d", multiplierIndex);
     return *this;
 }
 
@@ -493,7 +493,7 @@ Decimal128 operator*(const Decimal128 &left, const Decimal128 &right)
 Decimal128 operator / (const Decimal128 &left, const Decimal128 &right)
 {
     if (right == 0) {
-        std::cerr << "right is zero" << std::endl;
+        LogError("right is zero");
         return left;
     }
     Decimal128 result(left.HighBits(), left.LowBits());

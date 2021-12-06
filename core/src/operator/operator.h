@@ -4,6 +4,7 @@
 #ifndef __OMNI_OPERATOR_H__
 #define __OMNI_OPERATOR_H__
 
+#include "../util/compiler_util.h"
 #include "../vector/vector_batch.h"
 #include "../vector/vector_allocator.h"
 #include "../vector/vector_allocator_factory.h"

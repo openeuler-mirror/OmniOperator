@@ -3,15 +3,8 @@
  */
 
 #include "gtest/gtest.h"
-#include "dictionary_vector.h"
-#include "long_vector.h"
-#include "int_vector.h"
-#include "double_vector.h"
-#include "boolean_vector.h"
-#include "decimal128_vector.h"
-#include "decimal128.h"
-#include "varchar_vector.h"
-#include <vector_allocator_factory.h>
+#include "type/decimal128.h"
+#include "vector_common.h"
 
 using namespace omniruntime::vec;
 

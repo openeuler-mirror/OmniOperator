@@ -1,32 +1,35 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
  */
-#include "container_vector.h"
 
-#include "../../thirdparty/huawei_secure_c/include/securec.h"
+#include "container_vector.h"
 
 namespace omniruntime {
 namespace vec {
-void ContainerVector::SetValues(int32_t startIndex, const int64_t *values, int32_t length)
+ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount, Vector **fieldVectors,
+    int32_t vectorCount, VecType *types)
+    : Vector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER),
+      vectorCount(vectorCount),
+      positionCount(positionCount)
 {
-    void *startAddress = &(((int64_t *)valuesAddress)[startIndex]);
-    errno_t ret = memcpy_s(startAddress, capacityInBytes, values, length * BYTES);
-    if (ret != EOK) {
-        std::cerr << "setvalues failed in container vector" << std::endl;
+    for (int32_t i = 0; i < vectorCount; ++i) {
+        SetValue(i, reinterpret_cast<int64_t>(fieldVectors[i]));
+        this->vecTypes.push_back(types[i]);
     }
 }
+
+ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t vectorCount)
+    : vectorCount(vectorCount),
+      positionCount(0),
+      Vector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER)
+{}
 
 ContainerVector *ContainerVector::Slice(int32_t positionOffset, int32_t length)
 {
     return new ContainerVector(this, length, positionOffset, this->vecTypes.data());
 }
 
-void ContainerVector::Append(Vector *other, int positionOffset, int length)
-{
-    return;
-}
-
-ContainerVector *ContainerVector::CopyPositions(const int32_t *positions, int32_t offset, int32_t length)
+ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset, int length)
 {
     if (length <= 0) {
         return nullptr;
@@ -35,13 +38,13 @@ ContainerVector *ContainerVector::CopyPositions(const int32_t *positions, int32_
     VecType *copyTypes = new VecType[length];
 
     for (int32_t i = offset; i < offset + length; ++i) {
-        vectorAddresses[i] = reinterpret_cast<Vector *>(getValue(positions[i]));
+        vectorAddresses[i] = reinterpret_cast<Vector *>(GetValue(positions[i]));
         copyTypes[i] = this->vecTypes[positions[i]];
     }
     return new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
 }
 
-ContainerVector *ContainerVector::CopyRegion(int32_t positionOffset, int32_t length)
+ContainerVector *ContainerVector::CopyRegion(int positionOffset, int length)
 {
     if (length <= 0) {
         return nullptr;
@@ -50,10 +53,12 @@ ContainerVector *ContainerVector::CopyRegion(int32_t positionOffset, int32_t len
     VecType *copyTypes = new VecType[length];
 
     for (int32_t i = positionOffset; i < positionOffset + length; ++i) {
-        vectorAddresses[i] = reinterpret_cast<Vector *>(getValue(i));
+        vectorAddresses[i] = reinterpret_cast<Vector *>(GetValue(i));
         copyTypes[i] = this->vecTypes[i];
     }
     return new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
 }
+
+void ContainerVector::Append(Vector *other, int positionOffset, int length) {}
 } // namespace vec
 } // namespace omniruntime

@@ -4,9 +4,7 @@
 
 #include <sstream>
 #include "gtest/gtest.h"
-#include "vector_allocator.h"
-#include "vector_allocator_factory.h"
-#include "varchar_vector.h"
+#include "vector_common.h"
 
 using namespace omniruntime::vec;
 

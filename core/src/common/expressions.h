@@ -8,7 +8,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "../vector/decimal128.h"
+#include "../vector/type/decimal128.h"
 
 class ExprVisitor;
 

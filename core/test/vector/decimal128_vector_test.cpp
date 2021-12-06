@@ -3,7 +3,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../src/vector/vector_common.h"
+#include "vector_common.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;

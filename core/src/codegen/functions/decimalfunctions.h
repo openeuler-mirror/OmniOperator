@@ -7,7 +7,7 @@
 
 
 #include <iostream>
-#include "../../vector/decimal128.h"
+#include "../../vector/type/decimal128.h"
 #include <vector>
 
 // All extern functions go here temporarily

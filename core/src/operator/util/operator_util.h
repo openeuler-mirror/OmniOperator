@@ -5,16 +5,7 @@
 #define OMNI_RUNTIME_OPERATOR_UTIL_H
 
 #include <memory>
-#include "../../vector/int_vector.h"
-#include "../../vector/long_vector.h"
-#include "../../vector/double_vector.h"
-#include "../../vector/varchar_vector.h"
-#include "../../vector/decimal128.h"
-#include "../../vector/decimal128_vector.h"
-#include "../../vector/boolean_vector.h"
-#include "../../vector/dictionary_vector.h"
-#include "../../vector/vector_batch.h"
-#include "../../vector/vector_types.h"
+#include "../../vector/vector_common.h"
 #include "../projection/projection.h"
 
 namespace omniruntime {
