@@ -11,6 +11,7 @@
 #include "../operator.h"
 #include "../../vector/vector_common.h"
 #include "../../vector/vector_allocator_factory.h"
+#include "../../vector/vector_types.h"
 #include "../../common/expressions.h"
 #include "projection.h"
 #include "../execution_context.h"
@@ -35,7 +36,7 @@ using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, int32_t*
 
 class RowProjection {
 public:
-    RowProjection(const std::string &expression, const std::vector<expressions::DataType> &inputType);
+    RowProjection(const std::string &expression, const VecTypes &inputType);
     ~RowProjection();
     RowProjFunc Create();
     expressions::DataType GetReturnType();
@@ -49,8 +50,8 @@ private:
 
 class Projection {
 public:
-    Projection(int32_t *inputTypes, int32_t nCols, const std::string &expr, bool filter);
-    Projection(int32_t *inputTypes, int32_t nCols, expressions::Expr &expr, bool filter);
+    Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter);
+    Projection(VecTypes &inputTypes, int32_t nCols, expressions::Expr &expr, bool filter);
     ~Projection()
     {
         delete this->expr;
@@ -79,7 +80,8 @@ public:
     }
 
 private:
-    int32_t *inputTypes;
+    int32_t *inputTypeIds;
+    VecTypes inputTypes;
     int32_t nCols;
     omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
@@ -127,15 +129,17 @@ private:
 
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
-    ProjectionOperatorFactory(std::string expression[], int32_t nProj, int32_t inputTypes[], int32_t nCols);
-    ProjectionOperatorFactory(omniruntime::expressions::Expr *exprs[], int32_t nProj, int32_t inputTypes[],
+    ProjectionOperatorFactory(std::string expression[], int32_t nProj, VecTypes &inputTypes, int32_t nCols);
+    ProjectionOperatorFactory(omniruntime::expressions::Expr *exprs[], int32_t nProj, VecTypes &inputTypes,
         int32_t nCols);
+
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;
     bool IsSupported();
 
 private:
-    int32_t *inputTypes;
+    int32_t *inputTypeIds;
+    VecTypes inputTypes;
     int32_t nCols;
     std::vector<std::unique_ptr<Projection>> proj;
     int32_t nProj;

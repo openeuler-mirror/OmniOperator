@@ -717,7 +717,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         env->ReleaseStringUTFChars(st, exprStringPtr);
     }
     auto projectLength = (int32_t)jProjectLength;
-    auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputTypeIds, inputLength,
+    auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputVecTypes, inputLength,
         projectExpressions, projectLength);
     if (!factory->isSupportedExpr) {
         delete factory;
@@ -741,10 +741,9 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     int32_t exprLength = (int32_t)jExprsLength;
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputVecTypes = Deserialize(inputTypesCharPtr);
-    auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
     int32_t inputLength = (int32_t)jInputLength;
     omniruntime::op::ProjectionOperatorFactory *factory =
-        new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputTypeIds, inputLength);
+        new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputVecTypes, inputLength);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
 
     if (!factory->IsSupported()) {

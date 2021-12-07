@@ -29,7 +29,7 @@ void RowExpressionCodeGen::Visit(omniruntime::expressions::DataExpr &dataExpr)
 
         Value *dataValue = nullptr;
         Value *length = nullptr;
-        if (dataExpr.GetExprDataType() == DataType::STRINGD) {
+        if (IsStringDataType(dataExpr.GetExprDataType())) {
             // Get length for varchar/char type
             auto lengthGEP = builder->CreateGEP(lengths, colIdx);
             length = builder->CreateLoad(lengthGEP);

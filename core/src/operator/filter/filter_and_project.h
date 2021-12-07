@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "../../vector/vector_batch.h"
+#include "../../vector/vector_types.h"
 #include "../operator_factory.h"
 #include "../operator.h"
 #include "../projection/projection.h"
@@ -33,7 +34,7 @@ using SimpleRowExprEvalFunc = bool (*)(int64_t *, bool *, int32_t *, bool *, int
 
 class RowFilter {
 public:
-    RowFilter(std::string &expression, std::vector<expressions::DataType> &inputType);
+    RowFilter(std::string &expression, VecTypes &inputType);
     ~RowFilter();
     RowFilterFunc Create();
 
@@ -54,7 +55,7 @@ public:
      * @param expression the filter expression, must return evaluates to boolean type
      * @param inputType types for all involved values
      */
-    SimpleFilter(std::string &expression, std::vector<expressions::DataType> &valueTypes);
+    SimpleFilter(std::string &expression, VecTypes &inputTypes);
 
     ~SimpleFilter();
 
@@ -102,7 +103,7 @@ private:
 
 class Filter {
 public:
-    Filter(expressions::Expr &expression, int32_t inputVecTypes[], int32_t inputVecCount);
+    Filter(expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount);
     ~Filter()
     {
         this->codeGen.reset();
@@ -126,10 +127,10 @@ private:
 
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t inputTypes[], int32_t vecCount,
+    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const *inputVecTypes, int32_t vecCount,
         const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount, ExecutionContext *context)
         : filter(filter),
-          inputTypes(inputTypes),
+          inputTypes(inputVecTypes),
           vecCount(vecCount),
           projections(projections),
           projectVecCount(projectVecCount),
@@ -155,7 +156,7 @@ private:
     const std::unique_ptr<Filter> &filter;
     const std::vector<std::unique_ptr<Projection>> &projections;
     int32_t projectVecCount;
-    int32_t *inputTypes;
+    const int32_t *inputTypes;
     int32_t vecCount;
     ExecutionContext *context;
     std::unique_ptr<omniruntime::vec::VectorBatch> projectedVecs;
@@ -163,7 +164,7 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(std::string expression, int32_t inputVecTypes[], int32_t inputVecCount,
+    FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputVecTypes, int32_t inputVecCount,
                                     std::string projections[], int32_t projectVecCount);
 
     ~FilterAndProjectOperatorFactory() override;
@@ -174,7 +175,7 @@ public:
 
 private:
     std::string expression;
-    int32_t *inputVecTypes;
+    VecTypes &inputVecTypes;
     int32_t inputVecCount;
     int32_t projectVecCount;
     std::unique_ptr<Filter> filter;

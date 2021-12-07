@@ -89,18 +89,11 @@ void JoinHashTables::JoinFilterCodeGen()
         return;
     }
 
-    std::vector<expressions::DataType> allTypes;
-    const int32_t *probeTypeIds = probeTypes->GetIds();
-    int32_t probeTypesCount = probeTypes->GetSize();
-    for (int32_t i = 0; i < probeTypesCount; i++) {
-        allTypes.push_back(static_cast<const DataType>(probeTypeIds[i]));
-    }
-    const int32_t *buildTypeIds = buildTypes->GetIds();
-    int32_t buildTypesCount = buildTypes->GetSize();
-    for (int32_t i = 0; i < buildTypesCount; i++) {
-        allTypes.push_back(static_cast<const DataType>(buildTypeIds[i]));
-    }
-    simpleFilter = new SimpleFilter(filterExpression, allTypes);
+    std::vector<VecType> allTypes;
+    allTypes.insert(allTypes.end(), probeTypes->Get().begin(), probeTypes->Get().end());
+    allTypes.insert(allTypes.end(), buildTypes->Get().begin(), buildTypes->Get().end());
+    VecTypes VecTypes (allTypes);
+    simpleFilter = new SimpleFilter(filterExpression, VecTypes);
     simpleFilter->Initialize();
 }
 

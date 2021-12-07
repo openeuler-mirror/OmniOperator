@@ -23,7 +23,7 @@ VecType CreateVecTypeFromDataType(DataType dataType)
             return DoubleVecType();
         case DataType::DECIMAL64D:
             return LongVecType();
-        case DataType::STRINGD:
+        case DataType::VARCHARD:
             return VarcharVecType(200);
         default:
             return IntVecType();
@@ -43,7 +43,7 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
         inputDataTypes.push_back(static_cast<const DataType>(inputTypeIds[i]));
     }
     for (int32_t i = 0; i < projectKeysCount; i++) {
-        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputDataTypes);
+        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputTypes);
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
         if (projectCol != -1) {
             projectCols.push_back(projectCol);
@@ -74,7 +74,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const omniruntime::vec::VecTypes &
     int32_t newProjectCol = 0;
     std::map<int32_t, int32_t> colIdMap;
     for (int32_t i = 0; i < projectKeysCount; i++) {
-        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputDataTypes);
+        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputTypes);
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
         if (projectCol != -1) {
             if (colIdMap.find(projectCol) != colIdMap.end()) {

@@ -26,17 +26,18 @@ bool ParserHelper::FuncDeclMatch(string fnName, vector<Expr *> args, bool checkT
     if (fnName == "CAST" && args.size() == 1) {
         return true;
     } else if (fnName == "substr" && (args.size() == ARGS_2 || args.size() == ARGS_3)) {
-        return (args[0]->dataType == STRINGD &&
-            IsIntType(args[1]->dataType) &&
-            (args.size() == ARGS_2 || IsIntType(args[ARGS_2]->dataType)));
+        return ((args[0]->dataType == VARCHARD || args[0]->dataType == CHARD) &&
+                IsIntType(args[1]->dataType) &&
+                (args.size() == ARGS_2 || IsIntType(args[ARGS_2]->dataType)));
     } else if (fnName == "concat" && args.size() == ARGS_2) {
-        return (args[0]->dataType == STRINGD && args[1]->dataType == STRINGD);
+        return (args[0]->dataType == VARCHARD || args[0]->dataType == CHARD)
+                   && (args[1]->dataType == VARCHARD || args[1]->dataType == CHARD);
     } else if (fnName == "abs" && args.size() == 1) {
         return (args[0]->dataType == INT32D || args[0]->dataType == INT64D
                    || args[0]->dataType == DOUBLED || args[0]->dataType == DECIMAL128D);
     } else if (fnName == "LIKE" && args.size() == ARGS_2) {
         // Assuming that like patterns are represented with strings
-        return (args[0]->dataType == STRINGD && args[0]->dataType == STRINGD);
+        return ((args[0]->dataType == VARCHARD || args[0]->dataType == CHARD) && args[1]->dataType == VARCHARD);
     } else if (fnName == "combine_hash" && args.size() == ARGS_2) {
         return (IsIntType(args[0]->dataType) && IsIntType(args[1]->dataType));
     } else if (fnName == "mm3hash" && args.size() == ARGS_2) {
@@ -59,7 +60,7 @@ omniruntime::expressions::DataExpr *ParserHelper::GetDataExprCast(omniruntime::e
             return std::make_unique<DataExpr>(0.000).release();
         case DataType::BOOLD:
             return std::make_unique<DataExpr>(true).release();
-        case DataType::STRINGD:
+        case DataType::VARCHARD:
             return std::make_unique<DataExpr>("NULL").release();
         case DataType::DECIMAL128D:
             return std::make_unique<DataExpr>(0L).release();

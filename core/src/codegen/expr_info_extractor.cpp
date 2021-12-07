@@ -67,9 +67,9 @@ void ExprInfoExtractor::Visit(FuncExpr &e)
     std::set<std::string> externalFuncNames = efr.GetAllExternalFunctionNames();
     if (externalFuncNames.find(e.funcName) == externalFuncNames.end()) {
         for (auto &argument : e.arguments) {
-            fn += "_" + DataTypeString(argument->GetExprDataType());
+            fn += "_" + DataTypeString(*argument);
         }
-        fn += "_" + DataTypeString(e.GetExprDataType());
+        fn += "_" + DataTypeString(e);
     }
     this->functions.insert(fn);
     // Recurse on the arguments

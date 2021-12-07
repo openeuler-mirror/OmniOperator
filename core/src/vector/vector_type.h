@@ -200,6 +200,11 @@ public:
         return id;
     }
 
+    uint32_t GetWidth() const
+    {
+        return width;
+    }
+
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(VecType, id, width, precision, scale, dateUnit, timeUnit);
 
     VecType &operator = (const VecType &right)
@@ -441,11 +446,6 @@ public:
     }
 
     virtual ~VarcharVecType() override {}
-
-    uint32_t GetWidth() const
-    {
-        return width;
-    }
 
     const static VarcharVecType &Instance()
     {

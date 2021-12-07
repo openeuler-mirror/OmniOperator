@@ -46,7 +46,7 @@ map<string, DataType> ExternalFuncRegistry::GetFuncReturnTypeMap() const
 
 // Add the signatures for your own functions here
 // Create a new conditional branch for it
-// Possible DataTypes are: BOOLD, INT32D, INT64D, DOUBLED, STRINGD
+// Possible DataTypes are: BOOLD, INT32D, INT64D, DOUBLED, VARCHARD
 FunctionSignature ExternalFuncRegistry::GetExternalSignature(string funcName) const
 {
     return g_funcSignatureMap[funcName];

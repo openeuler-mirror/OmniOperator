@@ -6,18 +6,20 @@
 #define __PARSER_H__
 
 #include "../parserhelper.h"
+#include "../../vector/vector_types.h"
 
+using namespace omniruntime::vec;
 class Parser {
 public:
     Parser();
     ~Parser();
 
-    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, int32_t inputTypes[],
+    omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, VecTypes inputTypes,
         int32_t vecCount);
     omniruntime::expressions::Expr *ParseRowExpressionHelper(std::string opStr,
         std::vector<omniruntime::expressions::Expr *> args);
 
-    static omniruntime::expressions::DataExpr *GenerateData(std::string dataStr, int32_t *inputTypes, int32_t vecCount);
+    static omniruntime::expressions::DataExpr *GenerateData(std::string dataStr, VecTypes inputTypes, int32_t vecCount);
     static omniruntime::expressions::DataExpr *GenerateDataHelper(const std::string &dataStr,
         omniruntime::expressions::DataType currDataType);
 

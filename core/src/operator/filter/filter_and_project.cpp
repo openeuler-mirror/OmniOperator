@@ -13,12 +13,11 @@ using namespace omniruntime::mem;
 using namespace std;
 
 using Uint8vec = std::vector<uint8_t>;
-RowFilter::RowFilter(std::string &expression, std::vector<expressions::DataType> &inputTypes)
+RowFilter::RowFilter(std::string &expression, VecTypes &inputTypes)
     : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
-    this->expression =
-        parser.ParseRowExpression(expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
+    this->expression = parser.ParseRowExpression(expression, inputTypes, inputTypes.GetSize());
 }
 
 RowFilter::~RowFilter()
@@ -37,12 +36,12 @@ RowFilterFunc RowFilter::Create()
     return *castedRef;
 }
 
-SimpleFilter::SimpleFilter(std::string &expression, std::vector<expressions::DataType> &inputTypes)
+SimpleFilter::SimpleFilter(std::string &expression, VecTypes &inputTypes)
     : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
     this->expression = parser.ParseRowExpression(
-        expression, reinterpret_cast<int32_t *>(inputTypes.data()), inputTypes.size());
+        expression, inputTypes, inputTypes.GetSize());
 }
 
 SimpleFilter::~SimpleFilter()
@@ -94,10 +93,10 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths)
         reinterpret_cast<int64_t>(this->executionContext.get()));
 }
 
-FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, int32_t *inputVecTypes,
-    int32_t inputVecCount, std::string projectExprs[], int32_t projectVecCount)
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputTypes,
+    int32_t inputVecCount, std::string projectExprs[], int32_t projectVecCount) : inputVecTypes(inputTypes)
 {
-    this->inputVecTypes = inputVecTypes;
+    this->inputVecTypes = inputTypes;
     this->inputVecCount = inputVecCount;
     this->projectVecCount = projectVecCount;
     this->SetJitContext(nullptr);
@@ -114,7 +113,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     if (parsedExpr != nullptr) {
         this->isSupportedExpr = true;
 
-        this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes, inputVecCount);
+        this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes.GetIds(), inputVecCount);
 
         for (int32_t i = 0; i < this->projectVecCount; i++) {
             projections.push_back(make_unique<Projection>(inputVecTypes, inputVecCount, projectExprs[i], true));
@@ -136,7 +135,7 @@ FilterAndProjectOperatorFactory::~FilterAndProjectOperatorFactory()
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputVecTypes,
+    auto filterAndProjectOperator = make_unique<FilterAndProjectOperator>(this->filter, this->inputVecTypes.GetIds(),
         this->inputVecCount, this->projections, this->projectVecCount, new ExecutionContext());
     return filterAndProjectOperator.release();
 }
@@ -248,12 +247,12 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-Filter::Filter(expressions::Expr &expression, int32_t inputVecTypes[], int32_t inputVecCount)
+Filter::Filter(expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount)
 {
     vector<DataType> dataTypes;
     dataTypes.reserve(inputVecCount);
     for (int32_t i = 0; i < inputVecCount; i++) {
-        dataTypes.push_back(expressions::ColTypeTrans(inputVecTypes[i]));
+        dataTypes.push_back(expressions::ColTypeTrans(inputTypeIds[i]));
     }
     auto codeGenObj = make_unique<FilterCodeGen>("filterFunc", expression);
 

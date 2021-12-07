@@ -58,7 +58,8 @@ enum DataType {
     BOOLD = 4,
     DECIMAL64D = 6,
     DECIMAL128D = 7,
-    STRINGD = 15,
+    VARCHARD = 15,
+    CHARD = 16,
     INT32PTRD,
     INT8PTRD,
     VOIDD,
@@ -82,9 +83,12 @@ enum ExprType {
 // Helper function to get DataType from a string representing the type
 DataType StringToDataType(std::string dt);
 
+bool IsStringDataType(DataType type);
 
 class Expr {
 public:
+        // TODO:: wrap width with the type
+        int32_t width = INT32_MAX;
         DataType dataType; // dataType of returned value
         DataType GetExprDataType();
         virtual ExprType GetType();
@@ -112,14 +116,14 @@ public:
     explicit DataExpr(double val);
     explicit DataExpr(std::string* val);
     explicit DataExpr(int64_t &val);
-    DataExpr(int32_t val, DataType colType);
-
+    DataExpr(int32_t colIdx, DataType colType);
+    DataExpr(int32_t colIdx, DataType colType, int32_t width);
     void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };
 
 // Helper function for debugging DataType
-std::string DataTypeString(DataType dt);
+std::string DataTypeString(Expr &expr);
 
 // Helper function to translate from jni type number to DataType
 DataType ColTypeTrans(int32_t colType);
@@ -233,6 +237,7 @@ public:
     ~FuncExpr() override;
     FuncExpr(std::string fnName, std::vector<Expr*> args);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width);
     
     void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;

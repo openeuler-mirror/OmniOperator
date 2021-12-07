@@ -397,7 +397,7 @@ void DeleteOperatorFactory(OperatorFactory *operatorFactory)
     delete operatorFactory;
 }
 
-void ToVectorTypes(int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes)
+void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes)
 {
     for (int i = 0; i < vecTypeCount; ++i) {
         if (vecTypeIds[i] == OMNI_VEC_TYPE_VARCHAR) {

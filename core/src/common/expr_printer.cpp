@@ -69,7 +69,7 @@ void ExprPrinter::Visit(BinaryExpr &e)
     } else {
         printf(
             (indent + (message.append("\n"))).c_str(),
-            DataTypeString(expr->dataType).c_str()
+            DataTypeString(e).c_str()
             );
     }
     this->indentationDepth++;
@@ -99,7 +99,7 @@ void ExprPrinter::Visit(UnaryExpr &e)
         case NOT:
             printf(
                 (indent + "Unary:%s(NOT,\n").c_str(),
-                DataTypeString(expr->dataType).c_str()
+                DataTypeString(e).c_str()
                 );
             break;
         default:
@@ -120,7 +120,11 @@ void ExprPrinter::Visit(DataExpr &e)
     DataExpr *expr = &e;
     const bool printWithTypes = false; // for debugging types
     if (expr->isColumn) {
-        printf(indent.append("#%d").c_str(), expr->colVal);
+        if (expr->dataType == DataType::CHARD) {
+            printf(indent.append("#%d[%d]").c_str(), expr->colVal, expr->width);
+        } else {
+            printf(indent.append("#%d").c_str(), expr->colVal);
+        }
     } else {
         switch (expr->dataType) {
             case BOOLD:
@@ -148,7 +152,14 @@ void ExprPrinter::Visit(DataExpr &e)
                 }
                 printf(indent.append("%f").c_str(), expr->doubleVal);
                 break;
-            case STRINGD:
+            case CHARD:
+                if (printWithTypes) {
+                    printf("s_");
+                }
+                printf(
+                    indent.append("'%s[%d]'").c_str(), (expr->stringVal)->c_str(), expr->width);
+                break;
+            case VARCHARD:
                 if (printWithTypes) {
                     printf("s_");
                 }
@@ -179,7 +190,7 @@ void ExprPrinter::Visit(InExpr &e)
     string indent = GenerateIndentation();
     InExpr *expr = &e;
     printf((indent + "In:%s(\n").c_str(),
-           DataTypeString(expr->dataType).c_str());
+           DataTypeString(e).c_str());
     this->indentationDepth++;
     for (int i = 0; i < expr->arguments.size(); i++) {
         (expr->arguments[i])->Accept(*this);
@@ -208,7 +219,7 @@ void ExprPrinter::Visit(BetweenExpr &e)
     BetweenExpr *expr = &e;
     printf(
         (indent + "Between:%s(\n").c_str(),
-        DataTypeString(expr->dataType).c_str()
+        DataTypeString(e).c_str()
         );
     this->indentationDepth++;
     (expr->value)->Accept(*this);
@@ -247,7 +258,7 @@ void ExprPrinter::Visit(IfExpr &e)
     IfExpr *expr = &e;
     printf(
         (indent + "If:%s(\n").c_str(),
-        DataTypeString(expr->dataType).c_str()
+        DataTypeString(e).c_str()
         );
     this->indentationDepth++;
     expr->condition->Accept(*this);
@@ -279,7 +290,7 @@ void ExprPrinter::Visit(CoalesceExpr &e)
     CoalesceExpr *expr = &e;
     printf(
         (indent + "Coalesce:%s(\n").c_str(),
-        DataTypeString(expr->dataType).c_str()
+        DataTypeString(e).c_str()
         );
     this->indentationDepth++;
     expr->value1->Accept(*this);
@@ -306,7 +317,7 @@ void ExprPrinter::Visit(IsNullExpr &e)
     IsNullExpr *expr = &e;
     printf(
         (indent + "IsNull:%s(\n").c_str(),
-        DataTypeString(expr->dataType).c_str()
+        DataTypeString(e).c_str()
         );
     this->indentationDepth++;
     expr->value->Accept(*this);
@@ -328,7 +339,7 @@ void ExprPrinter::Visit(FuncExpr &e)
     FuncExpr *expr = &e;
     printf(
         (indent + "%s:%s(\n").c_str(),
-        expr->funcName.c_str(), DataTypeString(expr->dataType).c_str()
+        expr->funcName.c_str(), DataTypeString(e).c_str()
         );
     this->indentationDepth++;
     for (int i = 0; i < expr->arguments.size(); i++) {
