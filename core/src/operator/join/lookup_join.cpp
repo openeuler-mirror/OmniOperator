@@ -78,9 +78,14 @@ LookupJoinOperator::LookupJoinOperator(const VecTypes &probeTypes, std::vector<i
     this->partitionedJoinPosition = -1;
     this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeTypes.GetIds(), probeOutputCols.data(),
         probeOutputCols.size(), buildOutputCols.data(), buildOutputTypes, outputRowSize);
+    this->executionContext = new ExecutionContext();
 }
 
-LookupJoinOperator::~LookupJoinOperator() {}
+LookupJoinOperator::~LookupJoinOperator()
+{
+    delete executionContext;
+    executionContext = nullptr;
+}
 
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
@@ -161,7 +166,7 @@ void LookupJoinOperator::JoinCurrentPositionWithFilter()
     while (partitionedJoinPosition >= 0) {
         // match in hash table
         if (hashTables->IsJoinPositionEligible(partitionedJoinPosition, joinProbe->GetPosition(),
-            joinProbe->GetProbeAllColumns(), joinProbe->GetProbeAllColsCount())) {
+            joinProbe->GetProbeAllColumns(), joinProbe->GetProbeAllColsCount(), executionContext)) {
             // handle data of build
             currentProbePositionProducedRow = true;
             outputBuilder->AppendRow(joinProbe->GetPosition(), partitionedJoinPosition);

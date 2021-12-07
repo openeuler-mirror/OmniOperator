@@ -80,7 +80,7 @@ public:
     void AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable);
     JoinHashTable *GetHashTable(int32_t partitionIndex) const;
     bool IsJoinPositionEligible(int64_t partitionedJoinPosition, int32_t probePosition,
-        omniruntime::vec::Vector **probeColumns, int32_t probeColsCount) const;
+        omniruntime::vec::Vector **probeColumns, int32_t probeColsCount, ExecutionContext *executionContext) const;
     int64_t GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const;
     int64_t GetJoinPosition(int32_t position, omniruntime::vec::Vector **joinColumns, int32_t *joinColumnTypes,
         int32_t joinColumnsCount, omniruntime::vec::Vector **allColumns, int32_t allColumnsCount,
@@ -98,6 +98,7 @@ private:
     omniruntime::vec::VecTypes *buildTypes;
     std::string filterExpression;
     SimpleFilter *simpleFilter = nullptr;
+    std::set<int32_t> usedVectors;
 };
 
 class JoinHashTable {

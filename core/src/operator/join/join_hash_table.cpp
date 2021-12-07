@@ -95,6 +95,7 @@ void JoinHashTables::JoinFilterCodeGen()
     VecTypes VecTypes (allTypes);
     simpleFilter = new SimpleFilter(filterExpression, VecTypes);
     simpleFilter->Initialize();
+    usedVectors = simpleFilter->GetVectorIndexes();
 }
 
 void JoinHashTables::AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable)
@@ -110,7 +111,7 @@ JoinHashTable *JoinHashTables::GetHashTable(int32_t partitionIndex) const
 }
 
 bool JoinHashTables::IsJoinPositionEligible(int64_t partitionedJoinPosition, int32_t probePosition,
-    Vector **probeColumns, int32_t probeColsCount) const
+    Vector **probeColumns, int32_t probeColsCount, ExecutionContext *executionContext) const
 {
     if (!simpleFilter) {
         return true;
@@ -132,26 +133,24 @@ bool JoinHashTables::IsJoinPositionEligible(int64_t partitionedJoinPosition, int
     Vector ***buildColumns = pagesHashStrategy->GetBuildColumns();
     int32_t buildColsCount = pagesHashStrategy->GetBuildColsCount();
     int32_t allColsCount = probeColsCount + buildColsCount;
+
     // left is probe vectors, right is build vectors
     int64_t values[allColsCount];
     bool nulls[allColsCount];
     int32_t lengths[allColsCount];
-
-    // prepare probe datas
-    for (int32_t i = 0; i < probeColsCount; i++) {
-        auto probeVector = probeColumns[i];
-        nulls[i] = probeVector->IsValueNull(probePosition);
-        values[i] = VectorHelper::GetValuePtrAndLength(probeVector, probePosition, lengths + i);
+    memset_s(values, sizeof(values), 0, sizeof(values));
+    memset_s(nulls, sizeof(nulls), 0, sizeof(nulls));
+    memset_s(lengths, sizeof(lengths), 0, sizeof(lengths));
+    for (auto iter = usedVectors.begin(); iter != usedVectors.end(); ++iter) {
+        int32_t vecIdx = *iter;
+        auto vector =
+            (vecIdx < probeColsCount) ? probeColumns[vecIdx] : buildColumns[vecIdx - probeColsCount][vecBatchIndex];
+        auto position = (vecIdx < probeColsCount) ? probePosition : buildPosition;
+        nulls[vecIdx] = vector->IsValueNull(position);
+        values[vecIdx] = VectorHelper::GetValuePtrAndLength(vector, position, lengths + vecIdx);
     }
 
-    // prepare build datas
-    for (int32_t i = probeColsCount; i < allColsCount; i++) {
-        auto buildVector = buildColumns[i - probeColsCount][vecBatchIndex];
-        nulls[i] = buildVector->IsValueNull(buildPosition);
-        values[i] = VectorHelper::GetValuePtrAndLength(buildVector, buildPosition, lengths + i);
-    }
-
-    return simpleFilter->Evaluate(values, nulls, lengths);
+    return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
 }
 
 int64_t JoinHashTables::GetNextJoinPosition(int64_t currentJoinPosition, int32_t probePosition) const

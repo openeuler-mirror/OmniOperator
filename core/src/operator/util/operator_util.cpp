@@ -107,12 +107,12 @@ T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls
     T *result = std::make_unique<T>(vecAllocator, rowCount).release();
     bool isNull = false;
     int32_t length = 0;
-    auto context = std::make_unique<ExecutionContext>();
+    ExecutionContext context;
     for (int32_t i = 0; i < rowCount; i++) {
         isNull = false;
         length = 0;
         void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &length,
-            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs, &isNull);
+            reinterpret_cast<int64_t>(&context), dictVectorAddrs, &isNull);
         if (!isNull) {
             V value = *(static_cast<V *>(valuePtr));
             result->SetValue(i, value);
@@ -133,12 +133,12 @@ VarcharVector *ProjectVarcharVector(VecType &type, const RowProjFunc func, int64
 
     bool isNull = false;
     int32_t length = 0;
-    auto context = std::make_unique<ExecutionContext>();
+    ExecutionContext context;
     for (int32_t i = 0; i < rowCount; i++) {
         isNull = false;
         length = 0;
         void *valuePtr = func(valuesAddresses, valueNulls, valueOffsets, i, &length,
-            reinterpret_cast<int64_t>(context.get()), dictVectorAddrs, &isNull);
+            reinterpret_cast<int64_t>(&context), dictVectorAddrs, &isNull);
         if (!isNull) {
             uint8_t *value = *reinterpret_cast<uint8_t **>(reinterpret_cast<uintptr_t>(valuePtr));
             result->SetValue(i, value, length);
@@ -216,25 +216,25 @@ void OperatorUtil::ProjectRequiredVectors(const VecTypes &newInputTypes, const s
         switch (typeIds[i]) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
-                newVecBatch->SetVector(i, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                newVecBatch->SetVector(i, ProjectVector<IntVector, int32_t>(projectFuncs[projectFuncsIndex], values,
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64:
-                newVecBatch->SetVector(i, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                newVecBatch->SetVector(i, ProjectVector<LongVector, int64_t>(projectFuncs[projectFuncsIndex], values,
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_DOUBLE:
-                newVecBatch->SetVector(i, ProjectVector<DoubleVector, double>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                newVecBatch->SetVector(i, ProjectVector<DoubleVector, double>(projectFuncs[projectFuncsIndex], values,
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_BOOLEAN:
-                newVecBatch->SetVector(i, ProjectVector<BooleanVector, bool>(projectFuncs[projectFuncsIndex],
-                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                newVecBatch->SetVector(i, ProjectVector<BooleanVector, bool>(projectFuncs[projectFuncsIndex], values,
+                    valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
-                newVecBatch->SetVector(i, ProjectVarcharVector(vecTypes[projectCol],
-                    projectFuncs[projectFuncsIndex], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                newVecBatch->SetVector(i, ProjectVarcharVector(vecTypes[projectCol], projectFuncs[projectFuncsIndex],
+                    values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
                 // TODO: codegen does not support decimal128 current.
