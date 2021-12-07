@@ -114,7 +114,9 @@ TEST(ContainerVector, setValuesWithoutOffsetOutOfBounds)
         value[i] = i * 2;
     }
 
-    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
+    for (int i = 0; i < 257; i++) {
+        EXPECT_THROW(vector->SetValue(i, value[i]), std::runtime_error);
+    }
 
     delete[] value;
     delete vector;
