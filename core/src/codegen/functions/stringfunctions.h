@@ -28,6 +28,8 @@ extern "C" DLLEXPORT const char *SubstrWithStartExt(const char *str, int32_t str
                                                     int32_t *outLen, int64_t contextPtr);
 extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
                                               int32_t *outLen, int64_t contextPtr);
+extern "C" DLLEXPORT const char *ConcatCharExt(const char *ap, int32_t width, int32_t apLen, const char *bp,
+                                               int32_t bpLen, int32_t *outLen, int64_t contextPtr);
 extern "C" DLLEXPORT const char *CastString(const char *str, int32_t strLen);
 
 #endif

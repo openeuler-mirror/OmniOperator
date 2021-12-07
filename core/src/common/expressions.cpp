@@ -10,8 +10,6 @@
 
 namespace omniruntime {
 namespace expressions {
-
-
 const int TYPE_INT32D = 1;
 const int TYPE_INT64D = 2;
 const int TYPE_DOUBLED = 3;
@@ -48,21 +46,25 @@ DataType ColTypeTrans(int32_t colType)
         case TYPE_INT32D_2ND:
             return DataType::INT32D;
         case TYPE_STRINGD:
+            return DataType::VARCHARD;
         case TYPE_CHAR:
-            return DataType::STRINGD;
+            return DataType::CHARD;
         default:
             return DataType::INVALIDDATAD;
     }
 }
 
-std::string DataTypeString(DataType dt)
+std::string DataTypeString(Expr &expr)
 {
+    DataType dt = expr.dataType;
+    int32_t width = expr.width;
     switch (dt) {
         case DataType::BOOLD: return "bool";
         case DataType::DOUBLED: return "double";
         case DataType::INT32D: return "int32";
         case DataType::INT64D: return "int64";
-        case DataType::STRINGD: return "string";
+        case DataType::VARCHARD: return "string";
+        case DataType::CHARD: return "char(" + std::to_string(width) + ")";
         case DataType::DECIMAL64D: return "decimal64";
         case DataType::DECIMAL128D: return "decimal128";
         case DataType::INT32PTRD: return "int32ptr";
@@ -71,6 +73,11 @@ std::string DataTypeString(DataType dt)
         case DataType::INVALIDDATAD: return "invalid";
         default: return "";
     }
+}
+
+bool IsStringDataType(DataType type)
+{
+    return type == DataType::CHARD || type == DataType::VARCHARD;
 }
 
 // Helper function to get DataType from a string representing the type
@@ -92,7 +99,7 @@ DataType StringToDataType(std::string dt)
         return DataType::BOOLD;
     }
     if (dt == "STRING") {
-        return DataType::STRINGD;
+        return DataType::VARCHARD;
     }
     if (dt == "DECIMAL128") {
         return DataType::DECIMAL128D;
@@ -116,7 +123,7 @@ DataExpr::DataExpr(){}
 
 DataExpr::~DataExpr()
 {
-    if (dataType == STRINGD && !isColumn) {
+    if (dataType == VARCHARD && !isColumn) {
         delete stringVal;
     }
 }
@@ -154,8 +161,9 @@ DataExpr::DataExpr(double val)
 DataExpr::DataExpr(std::string* val)
 {
     isColumn = false;
-    dataType = STRINGD;
+    dataType = VARCHARD;
     stringVal = val;
+    width = val->length() + 1;
 }
 DataExpr::DataExpr(int64_t &val)
 {
@@ -166,11 +174,17 @@ DataExpr::DataExpr(int64_t &val)
 DataExpr::DataExpr(int32_t colIdx, DataType dt)
 {
     isColumn = true;
-    // use magic numbers from jni wrapper
-    dataType = dt; // has already been translated
+    dataType = dt;
     colVal = colIdx;
 }
 
+DataExpr::DataExpr(int32_t colIdx, DataType dt, int32_t width)
+{
+    isColumn = true;
+    dataType = dt;
+    colVal = colIdx;
+    this->width = width;
+}
 
 BinaryExpr::BinaryExpr()
 {
@@ -369,6 +383,14 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt)
     funcName = fnName;
     arguments = args;
     dataType = dt;
+}
+
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width)
+{
+    funcName = fnName;
+    arguments = args;
+    dataType = dt;
+    this->width = width;
 }
 
 ExprType FuncExpr::GetType()

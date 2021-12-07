@@ -66,7 +66,8 @@ Type *ExpressionCodeGen::ToLlvmType(DataType t)
             return Type::getDoubleTy(*context);
         case DataType::BOOLD:
             return Type::getInt1Ty(*context);
-        case DataType::STRINGD:
+        case DataType::CHARD:
+        case DataType::VARCHARD:
             return Type::getInt8PtrTy(*context);
         case DataType::DECIMAL64D:
             return Type::getInt64Ty(*context);
@@ -89,7 +90,8 @@ Type *ExpressionCodeGen::ToPointerType(DataType type)
             return Type::getInt64PtrTy(*context);
         case DataType::DOUBLED:
             return Type::getDoublePtrTy(*context);
-        case DataType::STRINGD:
+        case DataType::CHARD:
+        case DataType::VARCHARD:
             return Type::getInt64PtrTy(*context);
         default:
             LLVM_DEBUG_LOG("Unsupported column data type %d", type);
@@ -99,7 +101,7 @@ Type *ExpressionCodeGen::ToPointerType(DataType type)
 
 Type *ExpressionCodeGen::GetFunctionReturnType(DataType type)
 {
-    if (type == DataType::STRINGD) {
+    if (IsStringDataType(type)) {
         return Type::getInt64Ty(*context);
     } else {
         return this->ToLlvmType(expr->GetExprDataType());
@@ -485,7 +487,7 @@ Function *ExpressionCodeGen::CreateFunction()
     builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
 
     // cast char* to int64 for output
-    if (expr->GetExprDataType() == DataType::STRINGD) {
+    if (expr->GetExprDataType() == DataType::VARCHARD) {
         result->data = builder->CreatePtrToInt(result->data, Type::getInt64Ty(*context));
     }
     // Return value
@@ -512,7 +514,8 @@ Value *ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, Value *elementAddr)
         case DataType::DOUBLED:
             elementPtr = builder->CreateIntToPtr(elementAddr, Type::getDoublePtrTy(*context));
             break;
-        case DataType::STRINGD:
+        case DataType::CHARD:
+        case DataType::VARCHARD:
             elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt8PtrTy(*context));
             break;
         case DataType::DECIMAL64D:
@@ -548,7 +551,8 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
                 new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
             break;
         }
-        case DataType::STRINGD: {
+        case DataType::CHARD:
+        case DataType::VARCHARD: {
             Constant *strValConst =
                 ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
             Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, Type::getInt8PtrTy(*context));
@@ -608,7 +612,8 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *r
         case omniruntime::expressions::BOOLD:
             dictionaryFunc = module->getFunction(fr->dictionaryGetBooleanStr);
             break;
-        case omniruntime::expressions::STRINGD:
+        case omniruntime::expressions::CHARD:
+        case omniruntime::expressions::VARCHARD:
             dictionaryFunc = module->getFunction(fr->dictionaryGetVarcharStr);
             break;
         default:
@@ -619,7 +624,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *r
     funcArgs.push_back(dictionaryVectorPtr);
     funcArgs.push_back(rowIdx);
 
-    if (vectorType == DataType::STRINGD) {
+    if (IsStringDataType(vectorType)) {
         lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "varchar_length");
         builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
         funcArgs.push_back(lengthAllocaInst);
@@ -671,7 +676,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
         }
 
         Value *dictionaryLength = nullptr;
-        if (dEx->GetExprDataType() == DataType::STRINGD) {
+        if (IsStringDataType(dEx->GetExprDataType())) {
             dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
         }
 
@@ -687,7 +692,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
 
         Value *elementPtr = GetIntToPtr(dExpr, elementAddr);
         Value *dataValue = nullptr;
-        if (dEx->GetExprDataType() == DataType::STRINGD) {
+        if (IsStringDataType(dEx->GetExprDataType())) {
             // Get offset for varchar
             auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
             Value *offsetPtr = builder->CreateLoad(offsetsGEP);
@@ -722,7 +727,7 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
 
         // Length is only valid for varchar type
         PHINode *phiLength = nullptr;
-        if (dEx->GetExprDataType() == DataType::STRINGD) {
+        if (IsStringDataType(dEx->GetExprDataType())) {
             phiLength = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
             phiLength->addIncoming(dictionaryLength, trueBlock);
             phiLength->addIncoming(length, falseBlock);
@@ -783,7 +788,7 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
             make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (bExpr->left->GetExprDataType() == STRINGD) {
+    } else if (IsStringDataType(bExpr->left->GetExprDataType())) {
         this->value = make_shared<CodeGenValue>(
             this->BinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
@@ -862,7 +867,7 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
     phiNull->addIncoming(evFalseNull, falseBlock);
 
     PHINode *lengthPhi = nullptr;
-    if (ifExpr.GetExprDataType() == STRINGD) {
+    if (IsStringDataType(ifExpr.GetExprDataType())) {
         lengthPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
         lengthPhi->addIncoming(evTrueLength, trueBlock);
         lengthPhi->addIncoming(evFalseLength, falseBlock);
@@ -918,7 +923,8 @@ void ExpressionCodeGen::Visit(InExpr &inExpr)
                     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                     break;
                 }
-                case STRINGD: {
+                case CHARD:
+                case VARCHARD: {
                     argiValue = VisitExpr(*(iExpr->arguments[i]));
                     tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
                         builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
@@ -975,7 +981,7 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
         cmpLeft = builder->CreateFCmpULE(lowerValData, valData, "between_cmpleft");
         cmpRight = builder->CreateFCmpULE(valData, upperValData, "between_cmpright");
         supportedType = true;
-    } else if (bExpr->value->GetExprDataType() == STRINGD) {
+    } else if (IsStringDataType(bExpr->value->GetExprDataType())) {
         cmpLeft =
             builder->CreateICmpSLE(this->StringCmp(lowerValData, lowerValLen, valData, valLen), CreateConstantInt(0));
         cmpRight =
@@ -1052,7 +1058,7 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     PHINode *pnNull = builder->CreatePHI(value1->isNull->getType(), numReservedValues, "iftmp");
 
     PHINode *lengthPhi = nullptr;
-    if (cExpr.GetExprDataType() == STRINGD) {
+    if (IsStringDataType(cExpr.GetExprDataType())) {
         lengthPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
         lengthPhi->addIncoming(value1Length, isNotNullBlock);
         lengthPhi->addIncoming(value2Length, isNullBlock);
@@ -1108,19 +1114,26 @@ void ExpressionCodeGen::Visit(FuncExpr &fExpr)
             resultPtr = VisitExpr(*(fExpr.arguments[i]));
             argVals.push_back(resultPtr->data);
             isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-            if (fExpr.arguments[i]->dataType == DataType::STRINGD && fExpr.funcName != fr->mm3hashStr) {
+            // special case for concat function uses width
+            if (fExpr.dataType == DataType::CHARD && fExpr.funcName.compare("concat") == 0) {
+                if (i == 0) {
+                    argVals.push_back(CreateConstantInt(fExpr.arguments[i]->width));
+                }
+            }
+            if ((IsStringDataType(fExpr.arguments[i]->dataType))
+                && fExpr.funcName != fr->mm3hashStr) {
                 argVals.push_back(this->value->length);
             }
-            funcName += "_" + DataTypeString(fExpr.arguments[i]->dataType);
+            funcName += "_" + DataTypeString(*(fExpr.arguments[i]));
             if (i == numArgs - 1) {
-                funcName += "_" + DataTypeString(fExpr.dataType);
+                funcName += "_" + DataTypeString(fExpr);
             }
         }
     }
     Value *ret = nullptr;
     Value *outputLen = nullptr;
     AllocaInst *outputLenPtr = nullptr;
-    if (fExpr.GetExprDataType() == DataType::STRINGD) {
+    if (IsStringDataType(fExpr.GetExprDataType())) {
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         argVals.push_back(outputLenPtr);
         argVals.push_back(this->codegenContext->executionContext);

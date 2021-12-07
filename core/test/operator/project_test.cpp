@@ -18,7 +18,7 @@ namespace project_test {
 
 VectorBatch* CreateInput(const int32_t numRows,
                          const int32_t numCols,
-                         int32_t* inputTypeIds,
+                         const int32_t* inputTypeIds,
                          int64_t* allData)
 {
     auto *vecBatch = new VectorBatch(numCols, numRows);
@@ -115,11 +115,12 @@ TEST (ProjectTest, Cast) {
     int64_t* col = MakeLongs(numRows);
     const int32_t numCols = 1;
     string exprs[numCols] = {"$operator$CAST:1(#0)"};
-    int32_t inputTypes[numCols] = {2};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         t->GetVector(0)->SetValueNotNull(i);
@@ -145,11 +146,12 @@ TEST (ProjectTest, Simple) {
     int32_t* col = MakeInts(numRows);
     const int32_t numCols = 1;
     string exprs[numCols] = {"$operator$ADD:1(#0, 5)"};
-    int32_t inputTypes[numCols] = {1};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
@@ -186,11 +188,12 @@ TEST (ProjectTest, WithNullValues) {
     int32_t* col = MakeInts(numRows, -5);
     const int32_t numCols = 1;
     string exprs[numCols] = {"$operator$abs:1(#0)"};
-    int32_t inputTypes[numCols] = {1};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     for (int i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
             t->GetVector(0)->SetValueNull(i);
@@ -220,11 +223,12 @@ TEST (ProjectTest, Negatives) {
     int32_t* col = MakeInts(numRows, -5);
     const int32_t numCols = 1;
     string exprs[numCols] = {"$operator$SUBTRACT:1(#0, 500)"};
-    int32_t inputTypes[numCols] = {1};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
         op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -246,11 +250,12 @@ TEST (ProjectTest, Longs) {
     int64_t* col = MakeLongs(numRows, -5000);
     const int32_t numCols = 1;
     string exprs[numCols] = {"$operator$MULTIPLY:2(#0, 5000000)"};
-    int32_t inputTypes[numCols] = {2};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
         op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -272,11 +277,12 @@ TEST (ProjectTest, Doubles) {
     double* col = MakeDoubles(numRows, -5000.5);
     const int32_t numCols = 1;
     string exprs[numCols] = {"$operator$DIVIDE:3(#0, 2)"};
-    int32_t inputTypes[numCols] = {3};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
         op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -305,11 +311,12 @@ TEST (ProjectTest, MultipleColumns) {
            "$operator$SUBTRACT:1(#0, 10)", "$operator$ADD:2(#2, 1)"
    };
    const int32_t numCols = 3;
-   int32_t inputTypes[numCols] = {1, 1, 2};
+   std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
+   VecTypes inputTypes(vecOfTypes);
    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
    omniruntime::op::Operator* op = factory->CreateOperator();
    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
-   VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+   VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
        op->AddInput(t);
    vector<VectorBatch*> ret;
    int32_t numReturned = op->GetOutput(ret);
@@ -358,11 +365,13 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
             "$operator$SUBTRACT:1(#0, 10)", "$operator$ADD:2(#2, 1)"
     };
     const int32_t numCols = 4;
-    int32_t inputTypes[numCols] = {1, 1, 2, 15};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
+                                        VarcharVecType(1000) };
+    VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     std::cout << "[BenchmarkMultipleColumns Project without varchar]\n\n";
     for (int i = 0; i < 10; i++) {
@@ -425,11 +434,12 @@ TEST (ProjectTest, DependOtherColumn) {
            "$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500), 4000000000, #2)"
    };
    const int32_t numCols = 3;
-   int32_t inputTypes[numCols] = {1, 1, 2};
+   std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG)};
+   VecTypes inputTypes(vecOfTypes);
    auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
    omniruntime::op::Operator* op = factory->CreateOperator();
    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
-   VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+   VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
        op->AddInput(t);
    vector<VectorBatch*> ret;
    int32_t numReturned = op->GetOutput(ret);
@@ -455,8 +465,8 @@ TEST(ProjectTest, ProjectString1) {
     vector<string*> strings;
 
     const int32_t numCols = 1;
-    int32_t* inputTypes = new int32_t[numCols];
-    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+    std::vector<VecType> vecOfTypes = {VecType(OMNI_VEC_TYPE_VARCHAR) };
+    VecTypes inputTypes(vecOfTypes);
 
     const int32_t numRows = 100;
     int64_t* col1 = new int64_t[numRows];
@@ -474,7 +484,7 @@ TEST(ProjectTest, ProjectString1) {
         }
     }
     int64_t allData[numCols] = {(int64_t) col1};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
 
     const int32_t numProject = 2;
@@ -506,7 +516,6 @@ TEST(ProjectTest, ProjectString1) {
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
-    delete[] inputTypes;
     delete[] col1;
     delete op;
     delete factory;
@@ -532,6 +541,7 @@ TEST (ProjectTest, DictionaryVecTest) {
     int32_t inputTypeIds[numCols] = {1, 1, 1};
     vector<VecType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    VecTypes vecTypes(inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -539,7 +549,7 @@ TEST (ProjectTest, DictionaryVecTest) {
 
     const int32_t numProject = 3;
     string exprs[numProject] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)", "$operator$ADD:1(#2, 10)"};
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
     vector<VectorBatch *> ret;
@@ -583,6 +593,7 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     int32_t inputTypeIds[numCols] = {1, 1, 1};
     vector<VecType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    VecTypes vecTypes(inputTypes);
     batch->NewVectors(vecAllocator, inputTypes);
     batch->SetVector(0, col1);
     batch->SetVector(1, col2);
@@ -590,7 +601,7 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
 
     const int32_t numProjs = 3;
     string exprs[numProjs] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)", "$operator$ADD:1(#2, 10)"};
-    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, inputTypeIds, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
     vector<VectorBatch *> ret;
@@ -620,11 +631,12 @@ TEST (ProjectTest, Decimal128Arithmetic) {
     const int32_t numProject = 1;
     string exprs[numProject] = {"$operator$ADD:7(#0, 20)"};
     const int32_t numCols = 1;
-    int32_t inputTypes[numCols] = {7};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -649,11 +661,12 @@ TEST (ProjectTest, MultipleDecimal128Columns) {
     const int32_t numProject = 2;
     string exprs[numProject] = {"$operator$ADD:7(#0, 50)", "$operator$MULTIPLY:7(#1, 20)"};
     const int32_t numCols = 2;
-    int32_t inputTypes[numCols] = {7, 7};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
+    VecTypes inputTypes(vecOfTypes);
     ProjectionOperatorFactory* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(t);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
@@ -685,8 +698,8 @@ TEST (ProjectTest, StringSubstr) {
     vector<string*> strings;
 
     const int32_t numCols = 1;
-    int32_t* inputTypes = new int32_t[numCols];
-    inputTypes[0] = OMNI_VEC_TYPE_VARCHAR;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
+    VecTypes inputTypes(vecOfTypes);
 
     const int32_t numRows = 100;
     int64_t* col1 = new int64_t[numRows];
@@ -704,7 +717,7 @@ TEST (ProjectTest, StringSubstr) {
         }
     }
     int64_t allData[numCols] = {(int64_t) col1};
-    VectorBatch* t = CreateInput(numRows, numCols, inputTypes, allData);
+    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
 
     const int32_t numProject = 2;
@@ -741,7 +754,6 @@ TEST (ProjectTest, StringSubstr) {
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
-    delete[] inputTypes;
     delete[] col1;
     delete op;
     delete factory;
@@ -774,6 +786,7 @@ TEST (ProjectTest, SlicedDictionaryVecTest) {
     int32_t inputTypeIds[numCols] = {1, 1, 1};
     vector<VecType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
+    VecTypes inputVecTypes(inputTypes);
     input->NewVectors(vecAllocator, inputTypes);
     input->SetVector(0, slicedCol1);
     input->SetVector(1, slicedCol2);
@@ -782,7 +795,7 @@ TEST (ProjectTest, SlicedDictionaryVecTest) {
     const int32_t numProject = 3;
     string exprs[numProject] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)",
                                 "$operator$ADD:1(#2, 10)"};
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
@@ -827,10 +840,10 @@ TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
     input->NewVectors(vecAllocator, inputTypes);
     input->SetVector(0, slicedCol1);
-
+    VecTypes inputVecTypes(inputTypes);
     const int32_t numProject = 1;
     string exprs[numProject] = {"$operator$ADD:1(#0, #0)"};
-    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypeIds, numCols);
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;

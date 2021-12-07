@@ -34,7 +34,7 @@ Type* ToLlvmType(DataType t, LLVMContext* context)
             return Type::getDoubleTy(*context);
         case DataType::BOOLD:
             return Type::getInt1Ty(*context);
-        case DataType::STRINGD:
+        case DataType::VARCHARD:
             return Type::getInt64Ty(*context);
         case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
@@ -216,9 +216,22 @@ void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
         }
     }
 
-    if (fn.find(concatStrExtStr) != std::string::npos) {
-        vector<DataType> concatStrExtTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D,
-                                            DataType::INT32PTRD, DataType::INT64D};
+    int32_t lengthToCompare = 11;
+    // Register Concat Functions
+    if (fn.find(concatStrExtStr) != std::string::npos && strncmp(fn.c_str(), "concat_char", lengthToCompare) == 0) {
+        vector<DataType> concatStrExtTypes {
+            DataType::INT8PTRD, DataType::INT32D, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D,
+                                            DataType::INT32PTRD, DataType::INT64D
+        };
+        FunctionSignature concatStrExtSig (fn, concatStrExtTypes,
+                                           DataType::INT8PTRD, reinterpret_cast<void *>(ConcatCharExt));
+        this->RegisterFunctionFromSignature(concatStrExtSig);
+        funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, concatStrExtSig));
+    } else if (fn.find(concatStrExtStr) != std::string::npos) {
+        vector<DataType> concatStrExtTypes {
+            DataType::INT8PTRD, DataType::INT32D, DataType::INT8PTRD, DataType::INT32D,
+                                            DataType::INT32PTRD, DataType::INT64D
+        };
         FunctionSignature concatStrExtSig (fn, concatStrExtTypes,
                                            DataType::INT8PTRD, reinterpret_cast<void *>(ConcatStrExt));
         this->RegisterFunctionFromSignature(concatStrExtSig);

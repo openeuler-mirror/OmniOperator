@@ -131,7 +131,7 @@ template <typename T, typename E> void AssertVectorEquals(T *vector, E *expected
     }
 }
 
-void ToVectorTypes(int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes);
+void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes);
 
 void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols);

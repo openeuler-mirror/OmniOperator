@@ -10,6 +10,7 @@ import io.prestosql.spi.type.CharType;
 import io.prestosql.spi.type.DecimalType;
 import io.prestosql.spi.type.Decimals;
 import io.prestosql.spi.type.Type;
+import io.prestosql.spi.type.TypeSignature;
 import io.prestosql.spi.type.VarcharType;
 import io.prestosql.sql.relational.CallExpression;
 import io.prestosql.sql.relational.ConstantExpression;
@@ -44,7 +45,7 @@ public class OmniRowExpressionUtil {
             List<String> args = callExpression.getArguments().stream()
                 .map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList());
             return callExpression.getSignature().getName() + ":" +
-                    toVecType(callExpression.getType().getTypeSignature()).getId().ordinal() +
+                    signatureToVecTypeId(callExpression.getType().getTypeSignature()) +
                     "(" + Joiner.on(", ").join(args) + ")";
         }
 
@@ -85,5 +86,19 @@ public class OmniRowExpressionUtil {
             return String.valueOf(constantExpression.getValue());
         }
         return rowExpression.toString();
+    }
+
+    /**
+     * Get VecTypeId with width from the type signature
+     *
+     * @param signature Signature from openLooKeng
+     * @return VecTypeId corresponding to Type
+     */
+    public static String signatureToVecTypeId(TypeSignature signature) {
+        if ("char".equalsIgnoreCase(signature.getBase())) {
+            int width = signature.getParameters().get(0).getLongLiteral().intValue();
+            return String.format("%d[%d]", toVecType(signature).getId().ordinal(), width);
+        }
+        return String.valueOf(toVecType(signature).getId().ordinal());
     }
 }

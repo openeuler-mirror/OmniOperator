@@ -12,12 +12,12 @@ using namespace omniruntime::expressions;
 
 namespace omniruntime {
 namespace op {
-RowProjection::RowProjection(const std::string &expression, const std::vector<DataType> &inputTypes)
+RowProjection::RowProjection(const std::string &expression, const VecTypes &inputTypes)
     : codegen(nullptr), expression(nullptr)
 {
     Parser parser;
     this->expression = parser.ParseRowExpression(expression,
-        reinterpret_cast<int32_t *>(const_cast<DataType *>(inputTypes.data())), inputTypes.size());
+        inputTypes, inputTypes.GetSize());
 }
 
 RowProjection::~RowProjection()
@@ -135,7 +135,7 @@ bool Projection::Initialize(bool filter)
     std::vector<DataType> dataTypes;
     dataTypes.reserve(nCols);
     for (int32_t i = 0; i < nCols; i++) {
-        dataTypes.push_back(expressions::ColTypeTrans(inputTypes[i]));
+        dataTypes.push_back(expressions::ColTypeTrans(inputTypeIds[i]));
     }
 
     // short-circuit logic for column projections
@@ -167,11 +167,13 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(int32_t inputTypes[], int32_t nCols, const std::string &expr, bool filter)
-    : inputTypes(inputTypes), nCols(nCols)
+Projection::Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter)
+    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols)
 {
     Parser parser;
     this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
+    ExprPrinter printExprTree;
+    this->expr->Accept(printExprTree);
     if (this->expr == nullptr) {
         this->isSupported = false;
     } else {
@@ -182,8 +184,8 @@ Projection::Projection(int32_t inputTypes[], int32_t nCols, const std::string &e
     }
 }
 
-Projection::Projection(int32_t inputTypes[], int32_t nCols, Expr &expr, bool filter)
-    : inputTypes(inputTypes), nCols(nCols), expr(&expr)
+Projection::Projection(VecTypes &inputTypes, int32_t nCols, Expr &expr, bool filter)
+    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols), expr(&expr)
 {
     bool initialized = this->Initialize(filter);
     if (!initialized) {
@@ -284,7 +286,8 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case DOUBLED:
             outVec = std::make_unique<DoubleVector>(vecAllocator, numSelectedRows);
             break;
-        case STRINGD:
+        case VARCHARD:
+        case CHARD:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
             outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
@@ -303,7 +306,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     }
 
     Vector *projectedVec = nullptr;
-    if (outType == STRINGD) {
+    if (outType == VARCHARD) {
         projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
             selectedRows, context, dictionaryVectors);
     } else {
@@ -400,9 +403,9 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-ProjectionOperatorFactory::ProjectionOperatorFactory(std::string expressions[], int32_t nProj, int32_t inputTypes[],
+ProjectionOperatorFactory::ProjectionOperatorFactory(std::string expressions[], int32_t nProj, VecTypes &inputTypes,
     int32_t nCols)
-    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
+    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols), nProj(nProj)
 {
     this->SetJitContext(nullptr);
     for (int32_t i = 0; i < nProj; i++) {
@@ -415,9 +418,8 @@ ProjectionOperatorFactory::ProjectionOperatorFactory(std::string expressions[], 
     }
 }
 
-
-ProjectionOperatorFactory::ProjectionOperatorFactory(Expr *exprs[], int32_t nProj, int32_t inputTypes[], int32_t nCols)
-    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
+ProjectionOperatorFactory::ProjectionOperatorFactory(Expr *exprs[], int32_t nProj, VecTypes &inputTypes, int32_t nCols)
+    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols), nProj(nProj)
 {
     this->SetJitContext(nullptr);
     for (int32_t i = 0; i < nProj; i++) {
@@ -435,7 +437,7 @@ ProjectionOperatorFactory::~ProjectionOperatorFactory()
 
 omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 {
-    auto projectionOperator = std::make_unique<ProjectionOperator>(this->proj, this->inputTypes, this->nCols,
+    auto projectionOperator = std::make_unique<ProjectionOperator>(this->proj, this->inputTypeIds, this->nCols,
         this->nProj, new ExecutionContext());
     return projectionOperator.release();
 }

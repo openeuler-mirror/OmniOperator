@@ -157,7 +157,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
         case DataType::DOUBLED:
             outPtrType = Type::getDoublePtrTy(*context);
             break;
-        case DataType::STRINGD:
+        case DataType::CHARD:
+        case DataType::VARCHARD:
             outPtrType = Type::getInt8PtrTy(*context);
             break;
         case DataType::DECIMAL64D:
@@ -221,7 +222,7 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     // Add row index to results array
     builder->SetInsertPoint(addToOutput);
 
-    if (expr->GetExprDataType() == STRINGD) {
+    if (IsStringDataType(expr->GetExprDataType())) {
         auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
         auto currOffset = builder->CreateLoad(offsetStore);
 

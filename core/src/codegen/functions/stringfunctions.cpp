@@ -137,7 +137,37 @@ extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, con
     return ret;
 }
 
-extern "C" DLLEXPORT  int32_t CastString(const char *str, int32_t strLen)
+extern "C" DLLEXPORT const char *ConcatCharExt(const char *ap, int32_t width, int32_t apLen, const char *bp,
+                                               int32_t bpLen, int32_t *outLen, int64_t contextPtr)
+{
+    if (bpLen == 0) {
+        return ap;
+    }
+    int32_t apPaddedLen;
+    if (apLen <= width) {
+        if (apPaddedLen == apLen) {
+            apPaddedLen = apLen;
+        } else {
+            apPaddedLen = width;
+        }
+    }
+    *outLen = apPaddedLen + bpLen;
+    if (*outLen <= 0) {
+        *outLen = 0;
+        return "";
+    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
+    memset(ret + apLen, ' ', apPaddedLen - apLen);
+    errno_t res2 = memcpy_s(ret + apPaddedLen, *outLen, bp, bpLen);
+    if (res1 != EOK || res2 != EOK) {
+        std::cerr << "Concat failed" << std::endl;
+    }
+
+    return ret;
+}
+
+extern "C" DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
