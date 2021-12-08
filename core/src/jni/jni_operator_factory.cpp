@@ -1337,14 +1337,9 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     GetExpressions(env, jBuildHashKeys, buildHashKeysArr, buildHashKeysCount);
     auto buildVecTypes = Deserialize(buildTypesChars);
     env->ReleaseStringUTFChars(jBuildTypes, buildTypesChars);
-    std::string filterExpression;
-    if (jFilter == nullptr) {
-        filterExpression = "";
-    } else {
-        auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
-        std::string filterExpression = std::string(filterChars);
-        env->ReleaseStringUTFChars(jFilter, filterChars);
-    }
+    auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
+    std::string filterExpression = std::string(filterChars);
+    env->ReleaseStringUTFChars(jFilter, filterChars);
 
     JNI_DEBUG_LOG("before create hash builder with expression operator factory elapsed time: %ld ms.", END(start));
     HashBuilderWithExprOperatorFactory *operatorFactory =
