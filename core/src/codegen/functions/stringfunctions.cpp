@@ -141,6 +141,7 @@ extern "C" DLLEXPORT const char *ConcatCharExt(const char *ap, int32_t width, in
                                                int32_t bpLen, int32_t *outLen, int64_t contextPtr)
 {
     if (bpLen == 0) {
+        *outLen = apLen;
         return ap;
     }
     int32_t apPaddedLen;
@@ -158,9 +159,9 @@ extern "C" DLLEXPORT const char *ConcatCharExt(const char *ap, int32_t width, in
     }
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res1 = memcpy_s(ret, *outLen, ap, apLen);
-    memset(ret + apLen, ' ', apPaddedLen - apLen);
-    errno_t res2 = memcpy_s(ret + apPaddedLen, *outLen, bp, bpLen);
-    if (res1 != EOK || res2 != EOK) {
+    errno_t res2 = memset_s(ret + apLen, *outLen, ' ', apPaddedLen - apLen);
+    errno_t res3 = memcpy_s(ret + apPaddedLen, *outLen, bp, bpLen);
+    if (res1 != EOK || res2 != EOK || res3 != EOK) {
         std::cerr << "Concat failed" << std::endl;
     }
 
