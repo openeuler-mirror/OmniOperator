@@ -20,35 +20,32 @@ import java.util.Optional;
  * The Omni hash builder with expression operator factory.
  */
 public class OmniHashBuilderWithExprOperatorFactory
-        extends OmniOperatorFactory<OmniHashBuilderWithExprOperatorFactory.FactoryContext> {
+        extends
+            OmniOperatorFactory<OmniHashBuilderWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni hash builder with expression operator factory.
      *
      * @param buildTypes the build input types
      * @param buildHashKeys the build hash keys
-     * @param filter the filter in join
+     * @param filterExpression the filter expression in join
      * @param operatorCount the operator count
      */
-    public OmniHashBuilderWithExprOperatorFactory(
-            VecType[] buildTypes, String[] buildHashKeys, Optional<String> filter, int operatorCount) {
-        super(new FactoryContext(new JitContext(buildTypes, buildHashKeys, filter, operatorCount)));
+    public OmniHashBuilderWithExprOperatorFactory(VecType[] buildTypes, String[] buildHashKeys,
+            Optional<String> filterExpression, int operatorCount) {
+        super(new FactoryContext(new JitContext(buildTypes, buildHashKeys, filterExpression, operatorCount)));
     }
 
-    private static native long createHashBuilderWithExprOperatorFactory(
-            String buildTypes, String[] buildHashKeys, String filter, int operatorCount, long jitContext);
+    private static native long createHashBuilderWithExprOperatorFactory(String buildTypes, String[] buildHashKeys,
+            String filterExpression, int operatorCount, long jitContext);
 
-    private static native long createHashBuilderWithExprJitContext(
-            String buildTypes, String[] buildHashKeys, String filter, int operatorCount);
+    private static native long createHashBuilderWithExprJitContext(String buildTypes, String[] buildHashKeys,
+            String filterExpression, int operatorCount);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        String filter = context.filter.isPresent() ? context.filter.get() : null;
-        return createHashBuilderWithExprOperatorFactory(
-                VecTypeSerializer.serialize(context.buildTyeps),
-                context.buildHashKeys,
-                filter,
-                context.operatorCount,
+        return createHashBuilderWithExprOperatorFactory(VecTypeSerializer.serialize(context.buildTyeps),
+                context.buildHashKeys, context.filterExpression, context.operatorCount,
                 factoryContext.getNativeJitContext());
     }
 
@@ -60,20 +57,22 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         private final String[] buildHashKeys;
 
-        private final Optional<String> filter;
+        private final String filterExpression;
 
         private final int operatorCount;
 
-        public JitContext(VecType[] buildTyeps, String[] buildHashKeys, Optional<String> filter, int operatorCount) {
+        public JitContext(VecType[] buildTyeps, String[] buildHashKeys, Optional<String> filterExpression,
+                int operatorCount) {
             this.buildTyeps = requireNonNull(buildTyeps, "buildTyeps");
             this.buildHashKeys = requireNonNull(buildHashKeys, "buildHashKeys");
-            this.filter = filter;
+            this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
             this.operatorCount = operatorCount;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(buildTyeps), Arrays.hashCode(buildHashKeys), operatorCount);
+            return Objects.hash(Arrays.hashCode(buildTyeps), Arrays.hashCode(buildHashKeys), filterExpression,
+                    operatorCount);
         }
 
         @Override
@@ -85,9 +84,8 @@ public class OmniHashBuilderWithExprOperatorFactory
                 return false;
             }
             JitContext that = (JitContext) obj;
-            return Arrays.equals(buildTyeps, that.buildTyeps)
-                    && Arrays.equals(buildHashKeys, that.buildHashKeys)
-                    && operatorCount == that.operatorCount;
+            return Arrays.equals(buildTyeps, that.buildTyeps) && Arrays.equals(buildHashKeys, that.buildHashKeys)
+                    && filterExpression.equals(that.filterExpression) && operatorCount == that.operatorCount;
         }
     }
 
@@ -102,12 +100,8 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            String filter = context.filter.isPresent() ? context.filter.get() : null;
-            return createHashBuilderWithExprJitContext(
-                    VecTypeSerializer.serialize(context.buildTyeps),
-                    context.buildHashKeys,
-                    filter,
-                    context.operatorCount);
+            return createHashBuilderWithExprJitContext(VecTypeSerializer.serialize(context.buildTyeps),
+                    context.buildHashKeys, context.filterExpression, context.operatorCount);
         }
     }
 }
