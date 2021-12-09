@@ -172,8 +172,6 @@ Projection::Projection(VecTypes &inputTypes, int32_t nCols, const std::string &e
 {
     Parser parser;
     this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
-    ExprPrinter printExprTree;
-    this->expr->Accept(printExprTree);
     if (this->expr == nullptr) {
         this->isSupported = false;
     } else {
