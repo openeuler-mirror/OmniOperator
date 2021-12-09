@@ -137,8 +137,8 @@ int64_t RowExpressionCodeGen::GetFunction()
     this->CreateFunction();
 
     OptimizeFunctionsAndModule();
-#ifdef LLVM_DEBUG
-    module->print(outs(), nullptr);
+#ifdef DEBUG
+    module->print(errs(), nullptr);
 #endif
     jit->getMainJITDylib().addGenerator(
         eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
