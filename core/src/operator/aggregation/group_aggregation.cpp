@@ -358,6 +358,10 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex
     // TODO support average value type which is decimal
     if (outputPartial) {
         ContainerVector *vector = static_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
+        if ((*rowIterator)[colIndex].val == nullptr) {
+            vector->SetValueNull(rowIndex);
+            return;
+        }
         if ((*rowIterator)[colIndex].avgCnt == 0) {
             LogError("Divisor is zero!");
         }
@@ -367,6 +371,10 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex
         longVector->SetValue(rowIndex, (*rowIterator)[colIndex].avgCnt);
     } else {
         DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
+        if ((*rowIterator)[colIndex].val == nullptr) {
+            vector->SetValueNull(rowIndex);
+            return;
+        }
         if ((*rowIterator)[colIndex].avgCnt == 0) {
             LogError("Divisor is zero!");
         }

@@ -38,12 +38,17 @@ public:
         reinterpret_cast<int64_t *>(valuesAddress)[index] = value;
     }
 
-    int32_t ALWAYS_INLINE getPositionCount()
+    int32_t ALWAYS_INLINE GetPositionCount()
     {
         return positionCount;
     }
 
-    std::vector<VecType> ALWAYS_INLINE &getVecTypes()
+    int32_t ALWAYS_INLINE GetVectorCount()
+    {
+        return vectorCount;
+    }
+
+    std::vector<VecType> ALWAYS_INLINE &GetVecTypes()
     {
         return vecTypes;
     }

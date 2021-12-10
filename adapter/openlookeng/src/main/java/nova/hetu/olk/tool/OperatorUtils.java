@@ -340,7 +340,7 @@ public final class OperatorUtils {
                         valueIsNull[j] = Vec.NULL;
                     }
                 }
-                return RowOmniBlock.fromFieldBlocks(rowBlock.getPositionCount(), Optional.of(valueIsNull),
+                return RowOmniBlock.fromFieldBlocks(vecAllocator, rowBlock.getPositionCount(), Optional.of(valueIsNull),
                     rowBlock.getRawFieldBlocks());
             }
             default:
@@ -388,13 +388,7 @@ public final class OperatorUtils {
         if (!block.isExtensionBlock()) {
             return (Vec) OperatorUtils.buildOffHeapBlock(vecAllocator, block).getValues();
         } else {
-            if (block instanceof DictionaryBlock) {
-                return buildDictionaryVec((DictionaryBlock<?>) block);
-            } else if (block instanceof RowBlock) {
-                return buildContainerVec(vecAllocator, (RowBlock) block);
-            } else {
-                return (Vec) block.getValues();
-            }
+            return (Vec) block.getValues();
         }
     }
 
@@ -443,19 +437,6 @@ public final class OperatorUtils {
                 src.close();
             }
         }
-    }
-
-    private static Vec buildContainerVec(VecAllocator vecAllocator, RowBlock block) {
-        Block[] rawFieldBlocks = block.getRawFieldBlocks();
-        int numFields = rawFieldBlocks.length;
-        long[] vectorAddresses = new long[numFields];
-        VecType[] vecTypes = new VecType[numFields];
-        for (int i = 0; i < numFields; ++i) {
-            Vec vec = (Vec) rawFieldBlocks[i].getValues();
-            long nativeVectorAddress = vec.getNativeVector();
-            vectorAddresses[i] = nativeVectorAddress;
-        }
-        return new ContainerVec(vecAllocator, numFields, block.getPositionCount(), vectorAddresses, vecTypes);
     }
 
     private static Vec buildDictionaryVec(DictionaryBlock<?> block) {

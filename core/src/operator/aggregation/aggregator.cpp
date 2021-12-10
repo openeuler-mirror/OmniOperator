@@ -350,7 +350,7 @@ void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t off
     auto containerVector = static_cast<ContainerVector *>(colPtr);
     DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
     LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
-    if (UNLIKELY(avgValVector->IsValueNull(offset) || avgCountVector->IsValueNull(offset))) {
+    if (UNLIKELY(containerVector->IsValueNull(offset))) {
         return;
     }
     double avgVal = avgValVector->GetValue(offset);
@@ -391,6 +391,9 @@ void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset
 void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context)
 {
+    if (UNLIKELY(colPtr->IsValueNull(offset))) {
+        return;
+    }
     if (groupSlot.val == nullptr) {
         AvgInsertContainerImpl(groupSlot, colPtr, offset, context);
         return;
