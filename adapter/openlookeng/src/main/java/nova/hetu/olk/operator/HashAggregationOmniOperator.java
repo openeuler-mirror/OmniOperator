@@ -48,6 +48,8 @@ public class HashAggregationOmniOperator implements Operator {
 
     private final OperatorContext operatorContext;
 
+    private final Step step;
+
     /**
      * The Pages.
      */
@@ -63,9 +65,10 @@ public class HashAggregationOmniOperator implements Operator {
      * @param operatorContext the operator context
      * @param omniOperator the omni operator
      */
-    public HashAggregationOmniOperator(OperatorContext operatorContext, OmniOperator omniOperator) {
+    public HashAggregationOmniOperator(OperatorContext operatorContext, OmniOperator omniOperator, Step step) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null.");
         this.omniOperator = requireNonNull(omniOperator, "omniOperator is null.");
+        this.step = step;
     }
 
     @Override
@@ -131,6 +134,10 @@ public class HashAggregationOmniOperator implements Operator {
 
     @Override
     public void finishMemoryRevoke() {
+    }
+
+    public Step getStep() {
+        return step;
     }
 
     /**
@@ -250,7 +257,7 @@ public class HashAggregationOmniOperator implements Operator {
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                 HashAggregationOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniFactory.createOperator(vecAllocator);
-            return new HashAggregationOmniOperator(operatorContext, omniOperator);
+            return new HashAggregationOmniOperator(operatorContext, omniOperator, step);
         }
 
         @Override

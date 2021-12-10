@@ -11,7 +11,7 @@ import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.StandardErrorCode;
 import io.prestosql.spi.block.Block;
-import io.prestosql.spi.block.RowBlock;
+import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.DictionaryOmniBlock;
 import nova.hetu.olk.block.DoubleArrayOmniBlock;
 import nova.hetu.olk.block.Int128ArrayOmniBlock;
@@ -76,8 +76,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
                 blocks[i] = new Int128ArrayOmniBlock(positionCount, (Decimal128Vec) vectors[i]);
             } else if (vectors[i] instanceof ContainerVec) {
                 ContainerVec containerVec = (ContainerVec) vectors[i];
-                RowBlock rowBlock = buildContainerVec(containerVec);
-                blocks[i] = rowBlock;
+                blocks[i] = buildRowOmniBlock(containerVec);
             } else if (vectors[i] instanceof DictionaryVec) {
                 DictionaryVec dictionaryVec = (DictionaryVec) vectors[i];
                 blocks[i] = new DictionaryOmniBlock(dictionaryVec, false, randomDictionaryId());
@@ -92,11 +91,12 @@ public class VecBatchToPageIterator implements Iterator<Page> {
         return new Page(positionCount, blocks);
     }
 
-    private RowBlock buildContainerVec(ContainerVec containerVec) {
+    private RowOmniBlock buildRowOmniBlock(ContainerVec containerVec) {
         VecType[] vecTypes = containerVec.getVecTypes();
         int positionCount = containerVec.getPositionCount();
         Block[] rowBlocks = new Block[vecTypes.length];
-        for (int vecIdx = 0; vecIdx < containerVec.getSize(); ++vecIdx) {
+        int vectorCount = containerVec.getVecTypes().length;
+        for (int vecIdx = 0; vecIdx < vectorCount; ++vecIdx) {
             VecType vecType = vecTypes[vecIdx];
             Block block;
             switch (vecType.getId()) {
@@ -130,9 +130,10 @@ public class VecBatchToPageIterator implements Iterator<Page> {
             }
         }
         int[] fieldBlockOffsets = new int[positionCount + 1];
-        for (int i = 1; i < fieldBlockOffsets.length; ++i) {
-            fieldBlockOffsets[i] = i;
+        byte[] nulls = containerVec.getRawValueNulls();
+        for (int position = 0; position < positionCount; position++) {
+            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position] + nulls[position] == Vec.NULL ? 0 : 1;
         }
-        return new RowBlock(0, positionCount, null, fieldBlockOffsets, rowBlocks);
+        return new RowOmniBlock(0, positionCount, nulls, fieldBlockOffsets, rowBlocks);
     }
 }

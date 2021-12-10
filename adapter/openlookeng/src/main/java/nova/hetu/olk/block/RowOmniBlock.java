@@ -21,6 +21,7 @@ import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 
 import io.prestosql.spi.block.AbstractRowBlock;
 import io.prestosql.spi.block.Block;
+import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -67,7 +68,7 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
      * @param fieldBlocks the field blocks
      * @return the block
      */
-    public static <T> Block<T> fromFieldBlocks(int positionCount, Optional<byte[]> rowIsNull,
+    public static <T> Block<T> fromFieldBlocks(VecAllocator vecAllocator, int positionCount, Optional<byte[]> rowIsNull,
         Block<T>[] fieldBlocks) {
         int[] fieldBlockOffsets = new int[positionCount + 1];
         for (int position = 0; position < positionCount; position++) {
@@ -75,6 +76,10 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
                 rowIsNull.isPresent() && rowIsNull.get()[position] == Vec.NULL ? 0 : 1);
         }
         validateConstructorArguments(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets, fieldBlocks);
+        // transform field blocks to off-heap
+        for (int blockIndex = 0; blockIndex < fieldBlocks.length; ++blockIndex) {
+            fieldBlocks[blockIndex] = OperatorUtils.buildOffHeapBlock(vecAllocator, fieldBlocks[blockIndex]);
+        }
         return new RowOmniBlock(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets, fieldBlocks);
     }
 
@@ -140,14 +145,19 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
 
     @Override
     public Vec getValues() {
-        long[] vectorAddresses = new long[this.numFields];
-        VecType[] vecTypes = new VecType[this.numFields];
-        for (int i = 0; i < this.numFields; ++i) {
-            Vec vec = (Vec) fieldBlocks[i].getValues();
+        Block[] rawFieldBlocks = this.getRawFieldBlocks();
+        int numFields = rawFieldBlocks.length;
+        long[] vectorAddresses = new long[numFields];
+        VecType[] vecTypes = new VecType[numFields];
+        for (int i = 0; i < numFields; ++i) {
+            Vec vec = (Vec) rawFieldBlocks[i].getValues();
             long nativeVectorAddress = vec.getNativeVector();
             vectorAddresses[i] = nativeVectorAddress;
         }
-        return new ContainerVec(vecAllocator, this.numFields, this.positionCount, vectorAddresses, vecTypes);
+        ContainerVec containerVec =
+            new ContainerVec(vecAllocator, numFields, this.getPositionCount(), vectorAddresses, vecTypes);
+        containerVec.setNulls(0, this.getRowIsNull(), 0, this.getPositionCount());
+        return containerVec;
     }
 
     /**
@@ -179,6 +189,11 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
     }
 
     @Override
+    public boolean isExtensionBlock() {
+        return true;
+    }
+
+    @Override
     public Block[] getRawFieldBlocks() {
         return fieldBlocks;
     }
@@ -195,7 +210,7 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
 
     @Override
     @Nullable
-    protected boolean[] getRowIsNull() {
+    public boolean[] getRowIsNull() {
         boolean[] isNull = new boolean[rowIsNull.length];
         for (int i = 0; i < rowIsNull.length; i++) {
             isNull[i] = rowIsNull[i] == Vec.NULL;

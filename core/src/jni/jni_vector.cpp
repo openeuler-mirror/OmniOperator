@@ -149,14 +149,14 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositio
     jlong jNativeVector)
 {
     ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
-    return containerVec->getPositionCount();
+    return containerVec->GetPositionCount();
 }
 
 JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getVecTypesNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector)
 {
     ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
-    auto vecTypes = containerVec->getVecTypes();
+    auto vecTypes = containerVec->GetVecTypes();
     return env->NewStringUTF(Serialize(vecTypes).data());
 }
 

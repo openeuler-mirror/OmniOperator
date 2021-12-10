@@ -166,7 +166,7 @@ TEST(ContainerVector, copyPositions)
     positions[0] = 1;
     ContainerVector *copyPostionVector = vector->CopyPositions(positions, 0, 1);
 
-    for (int i = 0; i < copyPostionVector->GetSize(); i++) {
+    for (int i = 0; i < copyPostionVector->GetVectorCount(); i++) {
         EXPECT_EQ(copyPostionVector->GetValue(i), vector->GetValue(positions[i]));
     }
 
@@ -193,7 +193,7 @@ TEST(ContainerVector, copyRegion)
 
     ContainerVector *copyRegionVector = vector->CopyRegion(0, 2);
 
-    for (int i = 0; i < copyRegionVector->GetSize(); i++) {
+    for (int i = 0; i < copyRegionVector->GetVectorCount(); i++) {
         EXPECT_EQ(copyRegionVector->GetValue(i), vector->GetValue(i));
     }
 

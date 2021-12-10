@@ -8,7 +8,7 @@ namespace omniruntime {
 namespace vec {
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount, Vector **fieldVectors,
     int32_t vectorCount, VecType *types)
-    : Vector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER),
+    : Vector(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_TYPE_CONTAINER),
       vectorCount(vectorCount),
       positionCount(positionCount)
 {
@@ -41,7 +41,11 @@ ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset
         vectorAddresses[i] = reinterpret_cast<Vector *>(GetValue(positions[i]));
         copyTypes[i] = this->vecTypes[positions[i]];
     }
-    return new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
+    auto containerVec = new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
+    for (int32_t i = 0; i < positionCount; ++i) {
+        containerVec->SetValueNull(i, IsValueNull(i));
+    }
+    return containerVec;
 }
 
 ContainerVector *ContainerVector::CopyRegion(int positionOffset, int length)
