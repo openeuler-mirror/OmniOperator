@@ -81,10 +81,5 @@ int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
-
-const int32_t *HashBuilderOperator::GetSourceTypes()
-{
-    return buildTypes.GetIds();
-}
 } // end of op
 } // end of omniruntime

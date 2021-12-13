@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
@@ -32,8 +33,8 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =
-                new OmniSortWithExprOperatorFactory(sourceTypes, outputCols, sortKeys, ascendings, nullFirsts);
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts);
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
         sortWithExprOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortWithExprOperator.getOutput();
@@ -45,6 +46,8 @@ public class OmniSortWithExprOperatorTest {
 
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortWithExprOperator.close();
+        sortWithExprOperatorFactory.close();
     }
 
     /**
@@ -60,8 +63,8 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {"ADD:1(#0, 5:1)", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =
-                new OmniSortWithExprOperatorFactory(sourceTypes, outputCols, sortKeys, ascendings, nullFirsts);
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts);
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
         sortWithExprOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortWithExprOperator.getOutput();
@@ -73,6 +76,8 @@ public class OmniSortWithExprOperatorTest {
 
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortWithExprOperator.close();
+        sortWithExprOperatorFactory.close();
     }
 
     /**
@@ -88,8 +93,8 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =
-                new OmniSortWithExprOperatorFactory(sourceTypes, outputCols, sortKeys, ascendings, nullFirsts);
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts);
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
         sortWithExprOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortWithExprOperator.getOutput();
@@ -101,6 +106,8 @@ public class OmniSortWithExprOperatorTest {
 
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortWithExprOperator.close();
+        sortWithExprOperatorFactory.close();
     }
 
     /**
@@ -117,11 +124,11 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 50:1)", "ADD:1(#1, 50:1)"};
+        String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =
-                new OmniSortWithExprOperatorFactory(sourceTypes, outputCols, sortKeys, ascendings, nullFirsts);
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts);
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
         sortWithExprOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortWithExprOperator.getOutput();
@@ -133,5 +140,7 @@ public class OmniSortWithExprOperatorTest {
 
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortWithExprOperator.close();
+        sortWithExprOperatorFactory.close();
     }
 }

@@ -147,11 +147,6 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
 
-    const int32_t *GetSourceTypes() override
-    {
-        return this->inputTypes;
-    }
-
 private:
     const std::unique_ptr<Filter> &filter;
     const std::vector<std::unique_ptr<Projection>> &projections;

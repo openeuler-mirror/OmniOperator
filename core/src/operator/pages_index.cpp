@@ -95,7 +95,7 @@ int32_t CompareTo(const int32_t sortAscendings, const int32_t sortNullFirsts, co
     Vector **columns, int32_t leftPosition, int32_t rightPosition)
 {
     return Compare(sortAscendings, sortNullFirsts, valueAddresses, columns, leftPosition, rightPosition,
-                   OperatorUtil::CompareTemplate<V>);
+        OperatorUtil::CompareTemplate<V>);
 }
 
 int32_t CompareToDouble(const int32_t sortAscendings, const int32_t sortNullFirsts, const int64_t *valueAddresses,
@@ -926,10 +926,13 @@ void SetVarcharValue(Vector *inputVector, int32_t inputIndex, VarcharVector *out
         SetVarcharValue(dictionaryVector->GetDictionary(), dictionaryVector->GetId(inputIndex), outputVector,
             outputIndex);
     } else {
-        outputVector->SetValueNull(outputIndex, inputVector->IsValueNull(inputIndex));
-        uint8_t *value = nullptr;
-        int32_t valueLength = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex, &value);
-        outputVector->SetValue(outputIndex, value, valueLength);
+        if (inputVector->IsValueNull(inputIndex)) {
+            static_cast<VarcharVector *>(outputVector)->SetValueNull(outputIndex);
+        } else {
+            uint8_t *value = nullptr;
+            int32_t valueLength = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex, &value);
+            outputVector->SetValue(outputIndex, value, valueLength);
+        }
     }
 }
 

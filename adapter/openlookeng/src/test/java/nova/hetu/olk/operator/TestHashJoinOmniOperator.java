@@ -23,7 +23,6 @@ import static org.testng.Assert.assertNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 
@@ -39,7 +38,6 @@ import io.prestosql.operator.exchange.LocalExchangeSourceOperator.LocalExchangeS
 import io.prestosql.spi.Page;
 import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.type.Type;
-import io.prestosql.sql.gen.JoinFilterFunctionCompiler.JoinFilterFunctionFactory;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import io.prestosql.testing.MaterializedResult;
 import io.prestosql.testing.TestingTaskContext;

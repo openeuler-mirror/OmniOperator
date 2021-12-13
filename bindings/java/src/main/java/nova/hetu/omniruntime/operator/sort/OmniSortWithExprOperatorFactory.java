@@ -17,7 +17,8 @@ import java.util.Objects;
  * The Omni sort with expression operator factory.
  */
 public class OmniSortWithExprOperatorFactory
-        extends OmniOperatorFactory<OmniSortWithExprOperatorFactory.FactoryContext> {
+        extends
+            OmniOperatorFactory<OmniSortWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni sort with expression operator factory.
      *
@@ -27,31 +28,22 @@ public class OmniSortWithExprOperatorFactory
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
      */
-    public OmniSortWithExprOperatorFactory(
-            VecType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings, int[] sortNullFirsts) {
+    public OmniSortWithExprOperatorFactory(VecType[] sourceTypes, int[] outputColumns, String[] sortKeys,
+            int[] sortAscendings, int[] sortNullFirsts) {
         super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts)));
     }
 
-    private static native long createSortWithExprOperatorFactory(
-            String sourceTypes,
-            int[] outputCols,
-            String[] sortKeys,
-            int[] ascendings,
-            int[] nullFirsts,
-            long jitContext);
+    private static native long createSortWithExprOperatorFactory(String sourceTypes, int[] outputCols,
+            String[] sortKeys, int[] ascendings, int[] nullFirsts, long jitContext);
 
-    private static native long createSortWithExprJitContext(
-            String sourceTypes, int[] outputCols, String[] sortKeys, int[] ascendings, int[] nullFirsts);
+    private static native long createSortWithExprJitContext(String sourceTypes, int[] outputCols, String[] sortKeys,
+            int[] ascendings, int[] nullFirsts);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createSortWithExprOperatorFactory(
-                VecTypeSerializer.serialize(context.sourceTypes),
-                context.outputColumns,
-                context.sortKeys,
-                context.sortAscendings,
-                context.sortNullFirsts,
+        return createSortWithExprOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+                context.outputColumns, context.sortKeys, context.sortAscendings, context.sortNullFirsts,
                 factoryContext.getNativeJitContext());
     }
 
@@ -78,11 +70,7 @@ public class OmniSortWithExprOperatorFactory
          * @param sortAscendings the sort ascendings
          * @param sortNullFirsts the sort null firsts
          */
-        public JitContext(
-                VecType[] sourceTypes,
-                int[] outputColumns,
-                String[] sortKeys,
-                int[] sortAscendings,
+        public JitContext(VecType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings,
                 int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
@@ -93,12 +81,8 @@ public class OmniSortWithExprOperatorFactory
 
         @Override
         public int hashCode() {
-            return Objects.hash(
-                    Arrays.hashCode(sourceTypes),
-                    Arrays.hashCode(outputColumns),
-                    Arrays.hashCode(sortKeys),
-                    Arrays.hashCode(sortAscendings),
-                    Arrays.hashCode(sortNullFirsts));
+            return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns), Arrays.hashCode(sortKeys),
+                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
         }
 
         @Override
@@ -110,10 +94,8 @@ public class OmniSortWithExprOperatorFactory
                 return false;
             }
             JitContext that = (JitContext) obj;
-            return Arrays.equals(sourceTypes, that.sourceTypes)
-                    && Arrays.equals(outputColumns, that.outputColumns)
-                    && Arrays.equals(sortKeys, that.sortKeys)
-                    && Arrays.equals(sortAscendings, that.sortAscendings)
+            return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
+                    && Arrays.equals(sortKeys, that.sortKeys) && Arrays.equals(sortAscendings, that.sortAscendings)
                     && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
         }
     }
@@ -133,12 +115,8 @@ public class OmniSortWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createSortWithExprJitContext(
-                    VecTypeSerializer.serialize(context.sourceTypes),
-                    context.outputColumns,
-                    context.sortKeys,
-                    context.sortAscendings,
-                    context.sortNullFirsts);
+            return createSortWithExprJitContext(VecTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
+                    context.sortKeys, context.sortAscendings, context.sortNullFirsts);
         }
     }
 }

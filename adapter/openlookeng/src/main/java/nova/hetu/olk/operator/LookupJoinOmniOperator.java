@@ -7,14 +7,12 @@ package nova.hetu.olk.operator;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import static io.airlift.concurrent.MoreFutures.addSuccessCallback;
 import static io.airlift.concurrent.MoreFutures.getDone;
 import static io.prestosql.operator.LookupJoinOperators.JoinType.INNER;
 import static io.prestosql.operator.LookupJoinOperators.JoinType.PROBE_OUTER;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
-import static nova.hetu.olk.tool.OperatorUtils.createExpressions;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_FULL;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT;
@@ -58,7 +56,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.stream.IntStream;
 
 /**
  * The type Lookup join omni operator.

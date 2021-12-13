@@ -60,6 +60,7 @@ public:
     {
         return RotateLeft(value * PRIME64_2, ROTATE_DISTANCE_31) * PRIME64_1;
     }
+
     static ALWAYS_INLINE int64_t HashValue(double value)
     {
         return HashValue(DoubleToLongBits(value));

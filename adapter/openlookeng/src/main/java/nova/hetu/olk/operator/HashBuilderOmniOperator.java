@@ -10,7 +10,6 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.createExpressions;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -43,7 +42,6 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

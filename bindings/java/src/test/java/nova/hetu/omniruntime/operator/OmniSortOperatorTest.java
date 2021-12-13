@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
@@ -53,10 +54,10 @@ public class OmniSortOperatorTest {
     int pageDistinctValueRepeatCount = 25000;
 
     /**
-     * Test order by two column.
+     * Test sort two columns.
      */
     @Test
-    public void testOrderByTwoColumn() {
+    public void testSortTwoColumns() {
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -65,8 +66,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -79,10 +80,15 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
+    /**
+     * Test sort two columns with dictionary vector.
+     */
     @Test
-    public void testOrderByTwoColumnDictionary() {
+    public void testSortTwoColumnsWithDict() {
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         Vec vecs[] = new Vec[2];
@@ -96,8 +102,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -110,25 +116,26 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by two varchar column.
+     * Test sort two varchar columns.
      */
     @Test
-    public void testOrderByTwoVarcharColumn() {
+    public void testSortTwoVarcharColumns() {
         VecType[] sourceTypes = {new VarcharVecType(1), LongVecType.LONG, new VarcharVecType(3)};
-        Object[][] sourceDatas = {
-            {"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L}, {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}
-        };
+        Object[][] sourceDatas = {{"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L},
+                {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {1, 2};
         String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -138,25 +145,26 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by two char column.
+     * Test sort two char columns.
      */
     @Test
-    public void testOrderByTwoCharColumn() {
+    public void testSortTwoCharColumns() {
         VecType[] sourceTypes = {new CharVecType(1), LongVecType.LONG, new CharVecType(3)};
-        Object[][] sourceDatas = {
-                {"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L}, {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}
-        };
+        Object[][] sourceDatas = {{"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L},
+                {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {1, 2};
         String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -166,16 +174,17 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by two date32 column.
+     * Test sort two date32 columns.
      */
     @Test
-    public void testOrderByTwoDate32Column() {
-        VecType[] sourceTypes = {
-            new Date32VecType(VecType.DateUnit.DAY), LongVecType.LONG, new Date32VecType(VecType.DateUnit.MILLI)
-        };
+    public void testSortTwoDate32Columns() {
+        VecType[] sourceTypes = {new Date32VecType(VecType.DateUnit.DAY), LongVecType.LONG,
+                new Date32VecType(VecType.DateUnit.MILLI)};
         Object[][] sourceDatas = {{0, 1, 2, 0, 1, 2}, {0L, 1L, 2L, 3L, 4L, 5L}, {66, 55, 44, 33, 22, 11}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -183,8 +192,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -194,13 +203,15 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by two decimal64 column.
+     * Test sort two decimal64 columns.
      */
     @Test
-    public void testOrderByTwoDecimal64Column() {
+    public void testSortTwoDecimal64Columns() {
         VecType[] sourceTypes = {new Decimal64VecType(1, 0), LongVecType.LONG, new Decimal64VecType(2, 0)};
         Object[][] sourceDatas = {{0L, 1L, 2L, 0L, 1L, 2L}, {0L, 1L, 2L, 3L, 4L, 5L}, {66L, 55L, 44L, 33L, 22L, 11L}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -209,8 +220,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -220,49 +231,49 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by two decimal128 column.
+     * Test sort two decimal128 columns.
      */
     @Test
-    public void testOrderByTwoDecimal128Column() {
+    public void testSortTwoDecimal128Columns() {
         VecType[] sourceTypes = {new Decimal128VecType(1, 0), LongVecType.LONG, new Decimal128VecType(2, 0)};
         Vec[] vecs = new Vec[sourceTypes.length];
-        vecs[0] =
-                createVec(sourceTypes[0], new Object[][] {{0L, 0L}, {1L, 0L}, {2L, 0L}, {0L, 0L}, {1L, 0L}, {2L, 0L}});
-        vecs[1] = createVec(sourceTypes[1], new Object[] {0L, 1L, 2L, 3L, 4L, 5L});
-        vecs[2] =
-                createVec(
-                        sourceTypes[2],
-                        new Object[][] {{66L, 0L}, {55L, 0L}, {44L, 0L}, {33L, 0L}, {22L, 0L}, {11L, 0L}});
+        vecs[0] = createVec(sourceTypes[0], new Object[][]{{0L, 0L}, {1L, 0L}, {2L, 0L}, {0L, 0L}, {1L, 0L}, {2L, 0L}});
+        vecs[1] = createVec(sourceTypes[1], new Object[]{0L, 1L, 2L, 3L, 4L, 5L});
+        vecs[2] = createVec(sourceTypes[2],
+                new Object[][]{{66L, 0L}, {55L, 0L}, {44L, 0L}, {33L, 0L}, {22L, 0L}, {11L, 0L}});
         VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {1, 2};
         String[] sortCols = {"#0", "#2"};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {1, 1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
 
         VecBatch resultVecBatch = results.next();
         assertEquals(resultVecBatch.getVectorCount(), outputCols.length);
-        assertVecEquals(resultVecBatch.getVectors()[0], new Object[] {5L, 2L, 4L, 1L, 3L, 0L});
-        assertVecEquals(
-                resultVecBatch.getVectors()[1],
-                new Object[][] {{11L, 0L}, {44L, 0L}, {22L, 0L}, {55L, 0L}, {33L, 0L}, {66L, 0L}});
+        assertVecEquals(resultVecBatch.getVectors()[0], new Object[]{5L, 2L, 4L, 1L, 3L, 0L});
+        assertVecEquals(resultVecBatch.getVectors()[1],
+                new Object[][]{{11L, 0L}, {44L, 0L}, {22L, 0L}, {55L, 0L}, {33L, 0L}, {66L, 0L}});
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by with null first.
+     * Test sort with null first.
      */
     @Test
-    public void testOrderByWithNullFirst() {
+    public void testSortWithNullFirst() {
         VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
         Object[][] sourceDatas = {{4, 3, 2, 1, 0, null}, {0L, 1L, 2L, 3L, 4L, null}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -271,8 +282,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#1"};
         int[] ascendings = {0};
         int[] nullFirsts = {1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -282,13 +293,15 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by with null last.
+     * Test sort with null last.
      */
     @Test
-    public void testOrderByWithNullLast() {
+    public void testSortWithNullLast() {
         VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
         Object[][] sourceDatas = {{4, 3, 2, 1, 0, null}, {0L, 1L, 2L, 3L, 4L, null}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -297,8 +310,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#1"};
         int[] ascendings = {0};
         int[] nullFirsts = {0};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -308,13 +321,15 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by with multi nulls.
+     * Test sort with multi nulls.
      */
     @Test
-    public void testOrderByWithMultiNulls() {
+    public void testSortWithMultiNulls() {
         VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
         Object[][] sourceDatas = {{4, 3, 2, 1, 0, null}, {0L, 1L, null, null, null, null}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -323,8 +338,8 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#1", "#0"};
         int[] ascendings = {0, 0};
         int[] nullFirsts = {1, 1};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
         sortOperator.addInput(vecBatch);
         Iterator<VecBatch> results = sortOperator.getOutput();
@@ -334,13 +349,15 @@ public class OmniSortOperatorTest {
         assertVecBatchEquals(resultVecBatch, expectedDatas);
         freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by performance.
+     * Test sort performance.
      */
     @Test
-    public void testOrderByPerformance() {
+    public void testSortPerformance() {
         ImmutableList<VecBatch> vecs = buildVecs();
 
         VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
@@ -349,8 +366,8 @@ public class OmniSortOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
 
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
 
         long start = System.currentTimeMillis();
         OmniOperator sortOperator = sortOperatorFactory.createOperator();
@@ -366,13 +383,15 @@ public class OmniSortOperatorTest {
             VecBatch result = iterator.next();
             freeVecBatch(result);
         }
+        sortOperator.close();
+        sortOperatorFactory.close();
     }
 
     /**
-     * Test order by multi performance.
+     * Test sort performance when multi threads.
      */
     @Test
-    public void testOrderByMultiPerformance() {
+    public void testSortMultiThreadsPerformance() {
         ImmutableList<VecBatch> vecs = buildVecs();
 
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
@@ -380,37 +399,35 @@ public class OmniSortOperatorTest {
         String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortOperatorFactory sortOperatorFactory =
-                new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols, ascendings, nullFirsts);
+        OmniSortOperatorFactory sortOperatorFactory = new OmniSortOperatorFactory(sourceTypes, outputCols, sortCols,
+                ascendings, nullFirsts);
 
         int threadNum = 4;
         CountDownLatch countDownLatch = new CountDownLatch(threadNum);
         for (int i = 0; i < threadNum; i++) {
-            Thread thread =
-                    new Thread(
-                            () -> {
-                                try {
-                                    OmniOperator sortOperator = sortOperatorFactory.createOperator();
-                                    for (VecBatch vec : vecs) {
-                                        sortOperator.addInput(vec);
-                                    }
-                                    Iterator<VecBatch> iterator = sortOperator.getOutput();
-                                    while (iterator.hasNext()) {
-                                        VecBatch result = iterator.next();
-                                        freeVecBatch(result);
-                                    }
-                                } finally {
-                                    countDownLatch.countDown();
-                                }
-                            });
+            Thread thread = new Thread(() -> {
+                try {
+                    OmniOperator sortOperator = sortOperatorFactory.createOperator();
+                    for (VecBatch vec : vecs) {
+                        sortOperator.addInput(vec);
+                    }
+                    Iterator<VecBatch> iterator = sortOperator.getOutput();
+                    while (iterator.hasNext()) {
+                        VecBatch result = iterator.next();
+                        freeVecBatch(result);
+                    }
+                    sortOperator.close();
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
             thread.setName("thread" + i);
-            thread.setUncaughtExceptionHandler(
-                    new Thread.UncaughtExceptionHandler() {
-                        @Override
-                        public void uncaughtException(Thread thread1, Throwable throwable) {
-                            assertTrue(false);
-                        }
-                    });
+            thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                @Override
+                public void uncaughtException(Thread thread1, Throwable throwable) {
+                    assertTrue(false);
+                }
+            });
             thread.start();
         }
         try {
@@ -419,6 +436,7 @@ public class OmniSortOperatorTest {
             assertTrue(false);
         }
         vecs.forEach(TestUtils::freeVecBatch);
+        sortOperatorFactory.close();
     }
 
     private ImmutableList<VecBatch> buildVecs() {
@@ -438,7 +456,7 @@ public class OmniSortOperatorTest {
             }
             vecs.add(longVec1);
             vecs.add(longVec2);
-            VecBatch vecBatch = new VecBatch(new Vec[] {longVec1, longVec2});
+            VecBatch vecBatch = new VecBatch(new Vec[]{longVec1, longVec2});
             vecBatchList.add(vecBatch);
         }
         return vecBatchList.build();

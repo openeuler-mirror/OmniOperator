@@ -23,11 +23,6 @@ public:
 
     virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) = 0;
 
-    virtual const int32_t *GetSourceTypes()
-    {
-        return sourceTypes;
-    }
-
     int GetStatus()
     {
         return status;

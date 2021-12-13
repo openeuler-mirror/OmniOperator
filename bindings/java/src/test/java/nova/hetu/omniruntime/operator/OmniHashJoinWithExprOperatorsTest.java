@@ -28,7 +28,7 @@ public class OmniHashJoinWithExprOperatorsTest {
      * Test inner hash join one column .
      */
     @Test
-    public void testInnerHashJoinOneColumn() {
+    public void testInnerEqualityJoinOneColumn() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         Object[][] buildDatas = {{1L, 2L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 1L},
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
@@ -68,13 +68,17 @@ public class OmniHashJoinWithExprOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test inner hash join one dictionary column .
      */
     @Test
-    public void testInnerHashJoinOneDictionaryColumn() {
+    public void testInnerEqualityJoinOneDictionaryColumn() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         Object[][] buildDatas = {{1L, 2L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 1L},
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
@@ -121,10 +125,17 @@ public class OmniHashJoinWithExprOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
+    /**
+     * Test inner hash join with join filter expression .
+     */
     @Test
-    public void testHashEqualityJoinWithCharFilter() {
+    public void testInnerEqualityJoinWithCharFilter() {
         VecType[] buildTypes = {IntVecType.INTEGER, new VarcharVecType(5)};
         Object[][] buildDatas = {{19, 14, 7, 19, 1, 20, 10, 13, 20, 16},
                 {"35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904"}};
@@ -165,5 +176,9 @@ public class OmniHashJoinWithExprOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 }

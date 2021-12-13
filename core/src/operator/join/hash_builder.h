@@ -42,7 +42,6 @@ public:
     ~HashBuilderOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
-    const int32_t *GetSourceTypes() override;
 
 private:
     const vec::VecTypes &buildTypes;
