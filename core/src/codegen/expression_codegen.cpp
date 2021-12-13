@@ -899,54 +899,38 @@ void ExpressionCodeGen::Visit(InExpr &inExpr)
         Value *tmpCmpData = this->CreateConstantBool(false);
         Value *tmpCmpNull = this->CreateConstantBool(false);
 
-        if (toCompare->GetExprDataType() == DataType::INT64D &&
-            iExpr->arguments[i]->GetExprDataType() == DataType::INT32D) {
-            argiValue = VisitExpr(*(iExpr->arguments[i]));
-            Value *argInt64 = builder->CreateIntCast(argiValue->data, Type::getInt64Ty(*context), true);
-            tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
-                builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(valueToCompare->data, argInt64)));
-            tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
-        } else if (toCompare->GetExprDataType() == DataType::INT32D &&
-            iExpr->arguments[i]->GetExprDataType() == DataType::INT64D) {
-            argiValue = VisitExpr(*(iExpr->arguments[i]));
-            Value *valInt64 = builder->CreateIntCast(valueToCompare->data, Type::getInt64Ty(*context), true);
-            tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull), builder->CreateAnd(
-                builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(valInt64, argiValue->data)));
-            tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
-        } else {
-            switch (iExpr->arguments[0]->dataType) {
-                case INT32D:
-                case INT64D: {
-                    argiValue = VisitExpr(*(iExpr->arguments[i]));
-                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
-                        builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
-                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
-                    break;
-                }
-                case DOUBLED: {
-                    argiValue = VisitExpr(*(iExpr->arguments[i]));
-                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                        builder->CreateAnd(builder->CreateNot(argiValue->isNull),
-                        builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
-                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
-                    break;
-                }
-                case CHARD:
-                case VARCHARD: {
-                    argiValue = VisitExpr(*(iExpr->arguments[i]));
-                    tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                        builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
-                        valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
-                        CreateConstantInt(0))));
-                    tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
-                    break;
-                }
-                default: {
-                    LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->dataType);
-                    tmpCmpData = this->CreateConstantBool(false);
-                    tmpCmpNull = this->CreateConstantBool(false);
-                }
+        switch (iExpr->arguments[0]->dataType) {
+            case INT32D:
+            case INT64D: {
+                argiValue = VisitExpr(*(iExpr->arguments[i]));
+                tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+                    builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+                    builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
+                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                break;
+            }
+            case DOUBLED: {
+                argiValue = VisitExpr(*(iExpr->arguments[i]));
+                tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+                    builder->CreateAnd(builder->CreateNot(argiValue->isNull),
+                    builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
+                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                break;
+            }
+            case CHARD:
+            case VARCHARD: {
+                argiValue = VisitExpr(*(iExpr->arguments[i]));
+                tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
+                    builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
+                    valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
+                    CreateConstantInt(0))));
+                tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+                break;
+            }
+            default: {
+                LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->dataType);
+                tmpCmpData = this->CreateConstantBool(false);
+                tmpCmpNull = this->CreateConstantBool(false);
             }
         }
 
@@ -1051,13 +1035,6 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     // Codegen of 'false' can change the current block, update falseBlock for the PHI.
     isNotNullBlock = builder->GetInsertBlock();
     int32_t numReservedValues = 2;
-    if (value2Expr->GetExprDataType() == INT32D && value1Expr->GetExprDataType() == INT64D) {
-        value2Data = builder->CreateIntCast(value2Data, Type::getInt64Ty(*context), true);
-    }
-    if ((value2Expr->GetExprDataType() == INT32D || value2Expr->GetExprDataType() == INT64D) &&
-        value1Expr->GetExprDataType() == DOUBLED) {
-        value2Data = builder->CreateCast(Instruction::SIToFP, value2Data, Type::getDoubleTy(*context));
-    }
 
     // Emit merge block.
     Type *phiType = this->ToLlvmType(cExpr.GetExprDataType());
@@ -1103,22 +1080,9 @@ void ExpressionCodeGen::Visit(FuncExpr &fExpr)
             FunctionSignature fs = funcNameToSignature[fExpr.funcName];
             DataType desiredType = fs.GetParams()[i];
             DataType currType = fExpr.arguments[i]->GetExprDataType();
-            if (desiredType == DOUBLED && (currType == INT32D || currType == INT64D)) {
-                resultPtr = VisitExpr(*(fExpr.arguments[i]));
-                Value *argDouble =
-                    builder->CreateCast(Instruction::SIToFP, resultPtr->data, Type::getDoubleTy(*(context)));
-                argVals.push_back(argDouble);
-                isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-            } else if (desiredType == INT64D && currType == INT32D) {
-                resultPtr = VisitExpr(*(fExpr.arguments[i]));
-                Value *argInt64 = builder->CreateIntCast(resultPtr->data, Type::getInt64Ty(*context), true);
-                argVals.push_back(argInt64);
-                isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-            } else {
-                resultPtr = VisitExpr(*(fExpr.arguments[i]));
-                argVals.push_back(resultPtr->data);
-                isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-            }
+            resultPtr = VisitExpr(*(fExpr.arguments[i]));
+            argVals.push_back(resultPtr->data);
+            isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
         } else {
             resultPtr = VisitExpr(*(fExpr.arguments[i]));
             argVals.push_back(resultPtr->data);
