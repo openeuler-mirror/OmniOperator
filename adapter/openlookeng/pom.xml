@@ -13,6 +13,8 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <openLooKeng.version>1.2.0-SNAPSHOT</openLooKeng.version>
+        <dep.prestosql.apache.hadoop.version>3.2.0-8</dep.prestosql.apache.hadoop.version>
+        <dep.prestosql.apache.hive.version>3.0.0-2</dep.prestosql.apache.hive.version>
     </properties>
 
     <dependencies>
@@ -55,6 +57,28 @@
             <artifactId>presto-spi</artifactId>
             <version>${openLooKeng.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.hetu.core</groupId>
+            <artifactId>presto-orc</artifactId>
+            <version>${openLooKeng.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prestosql.hadoop</groupId>
+            <artifactId>hadoop-apache</artifactId>
+            <version>${dep.prestosql.apache.hadoop.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prestosql.hive</groupId>
+            <artifactId>hive-apache</artifactId>
+            <version>${dep.prestosql.apache.hive.version}</version>
             <scope>test</scope>
         </dependency>
 
