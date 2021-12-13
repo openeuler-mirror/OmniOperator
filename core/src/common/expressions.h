@@ -52,6 +52,7 @@ enum OperatorReturnType {
 
 
 enum DataType {
+    UNKNOWND = 0,
     INT32D = 1,
     INT64D = 2,
     DOUBLED = 3,
@@ -84,6 +85,7 @@ enum ExprType {
 DataType StringToDataType(std::string dt);
 
 bool IsStringDataType(DataType type);
+bool IsNullLiteral(const std::string& value);
 
 class Expr {
 public:
@@ -100,6 +102,7 @@ public:
 class DataExpr : public Expr {
 public:
     bool isColumn = false;
+    bool isNull = false;
     bool boolVal = false;
     int32_t intVal = 0;
     int64_t longVal = 0;

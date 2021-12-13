@@ -41,7 +41,7 @@ public class OmniWindowWithExprOperatorTest {
         int[] sortNullFirsts = {0};
         int preSortedChannelPrefix = 0;
         int expectedPositions = 10000;
-        String[] argumentKeys = {"ADD:3(#2, 50)"};
+        String[] argumentKeys = {"ADD:3(#2, 50:3)"};
         VecType[] windowFunctionReturnType = {DoubleVecType.DOUBLE};
         OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
             outputChannels,

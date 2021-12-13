@@ -15,13 +15,13 @@ ParserHelper::~ParserHelper() {
 }
 
 // Helper function to determine if a type is INT32D or INT64D
-bool ParserHelper::IsIntType(DataType dt) const
+bool ParserHelper::IsIntType(DataType dt)
 {
     return (dt == INT32D || dt == INT64D);
 }
 
 // Update with conditions every time a new function is added
-bool ParserHelper::FuncDeclMatch(string fnName, vector<Expr *> args, bool checkTypes)
+bool ParserHelper::FuncDeclMatch(const string& fnName, vector<Expr *> args, bool checkTypes)
 {
     if (fnName == "CAST" && args.size() == 1) {
         return true;
@@ -49,7 +49,7 @@ bool ParserHelper::FuncDeclMatch(string fnName, vector<Expr *> args, bool checkT
     return false;
 }
 
-omniruntime::expressions::DataExpr *ParserHelper::GetDataExprCast(omniruntime::expressions::DataType destType)
+omniruntime::expressions::DataExpr *ParserHelper::GetDefaultValueForType(omniruntime::expressions::DataType destType)
 {
     switch (destType) {
         case DataType::INT32D:
@@ -60,10 +60,13 @@ omniruntime::expressions::DataExpr *ParserHelper::GetDataExprCast(omniruntime::e
             return std::make_unique<DataExpr>(0.000).release();
         case DataType::BOOLD:
             return std::make_unique<DataExpr>(true).release();
+        case DataType::CHARD:
         case DataType::VARCHARD:
             return std::make_unique<DataExpr>("NULL").release();
         case DataType::DECIMAL128D:
             return std::make_unique<DataExpr>(0L).release();
+        case DataType::UNKNOWND:
+            return std::make_unique<DataExpr>(0).release();
         default:
             return nullptr;
     }

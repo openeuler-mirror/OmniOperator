@@ -11,6 +11,7 @@ import io.prestosql.spi.type.DecimalType;
 import io.prestosql.spi.type.Decimals;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeSignature;
+import io.prestosql.spi.type.UnknownType;
 import io.prestosql.spi.type.VarcharType;
 import io.prestosql.sql.relational.CallExpression;
 import io.prestosql.sql.relational.ConstantExpression;
@@ -72,18 +73,23 @@ public class OmniRowExpressionUtil {
         if (rowExpression instanceof ConstantExpression) {
             ConstantExpression constantExpression = (ConstantExpression) rowExpression;
             Type type = rowExpression.getType();
+            if (type instanceof UnknownType && constantExpression.getValue() == null) {
+                return "NULL:0";
+            }
+
             if ((type instanceof VarcharType || type instanceof CharType)
                 && constantExpression.getValue() instanceof Slice) {
                 String varcharValue = ((Slice) constantExpression.getValue()).toStringAscii();
-                return "'" + varcharValue + "'";
+                return "'" + varcharValue + "':" + signatureToVecTypeId(type.getTypeSignature());
             }
 
             if (type instanceof DecimalType && !((DecimalType) type).isShort()
                 && constantExpression.getValue() instanceof Slice) {
-                return Decimals.decodeUnscaledValue((Slice) constantExpression.getValue()).toString();
+                return Decimals.decodeUnscaledValue((Slice) constantExpression.getValue()) + ":" +
+                    signatureToVecTypeId(type.getTypeSignature());
             }
 
-            return String.valueOf(constantExpression.getValue());
+            return constantExpression.getValue() + ":" + signatureToVecTypeId(type.getTypeSignature());
         }
         return rowExpression.toString();
     }

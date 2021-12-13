@@ -145,7 +145,7 @@ TEST (ProjectTest, Simple) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$ADD:1(#0, 5)"};
+    string exprs[numCols] = {"$operator$ADD:1(#0, 5:1)"};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -222,7 +222,7 @@ TEST (ProjectTest, Negatives) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows, -5);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$SUBTRACT:1(#0, 500)"};
+    string exprs[numCols] = {"$operator$SUBTRACT:1(#0, 500:1)"};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -249,7 +249,7 @@ TEST (ProjectTest, Longs) {
     const int32_t numRows = 10000;
     int64_t* col = MakeLongs(numRows, -5000);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$MULTIPLY:2(#0, 5000000)"};
+    string exprs[numCols] = {"$operator$MULTIPLY:2(#0, 5000000:2)"};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -276,7 +276,7 @@ TEST (ProjectTest, Doubles) {
     const int32_t numRows = 10000;
     double* col = MakeDoubles(numRows, -5000.5);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$DIVIDE:3(#0, 2)"};
+    string exprs[numCols] = {"$operator$DIVIDE:3(#0, 2:1)"};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -308,7 +308,7 @@ TEST (ProjectTest, MultipleColumns) {
    int64_t* col3 = MakeLongs(numRows, -10);
    const int32_t numProject = 2;
    string exprs[numProject] = {
-           "$operator$SUBTRACT:1(#0, 10)", "$operator$ADD:2(#2, 1)"
+           "$operator$SUBTRACT:1(#0, 10:1)", "$operator$ADD:2(#2, 1:2)"
    };
    const int32_t numCols = 3;
    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
@@ -362,7 +362,7 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
 
     const int32_t numProject = 2;
     string exprs[numProject] = {
-            "$operator$SUBTRACT:1(#0, 10)", "$operator$ADD:2(#2, 1)"
+            "$operator$SUBTRACT:1(#0, 10:1)", "$operator$ADD:2(#2, 1:2)"
     };
     const int32_t numCols = 4;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
@@ -392,7 +392,7 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
     delete factory;
 
     std::cout << "\n\n\n[BenchmarkMultipleColumns Project with varchar]\n\n";
-    exprs[1] = "substr:15(#3, 1, 3)";
+    exprs[1] = "substr:15(#3, 1:1, 3:1)";
     factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     op = factory->CreateOperator();
 
@@ -431,7 +431,7 @@ TEST (ProjectTest, DependOtherColumn) {
    int64_t* col3 = MakeLongs(numRows);
    const int32_t numProject = 2;
    string exprs[numProject] = {
-           "$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500), 4000000000, #2)"
+           "$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500:1), 4000000000:2, #2)"
    };
    const int32_t numCols = 3;
    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG)};
@@ -488,7 +488,7 @@ TEST(ProjectTest, ProjectString1) {
 
 
     const int32_t numProject = 2;
-    std::string exprs[numProject] = {"substr:15(#0, 1, 3)", "#0"};
+    std::string exprs[numProject] = {"substr:15(#0, 1:1, 3:1)", "#0"};
 
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
@@ -548,7 +548,7 @@ TEST (ProjectTest, DictionaryVecTest) {
     batch->SetVector(2, dictionaryVector);
 
     const int32_t numProject = 3;
-    string exprs[numProject] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)", "$operator$ADD:1(#2, 10)"};
+    string exprs[numProject] = {"$operator$ADD:1(#0, 1:1)", "$operator$ADD:1(#1, 2:1)", "$operator$ADD:1(#2, 10:1)"};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -600,7 +600,7 @@ TEST (ProjectTest, DictionaryVecNestedTest) {
     batch->SetVector(2, dictionaryNested);
 
     const int32_t numProjs = 3;
-    string exprs[numProjs] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)", "$operator$ADD:1(#2, 10)"};
+    string exprs[numProjs] = {"$operator$ADD:1(#0, 1:1)", "$operator$ADD:1(#1, 2:1)", "$operator$ADD:1(#2, 10:1)"};
     auto *factory = new ProjectionOperatorFactory(exprs, numProjs, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -629,7 +629,7 @@ TEST (ProjectTest, Decimal128Arithmetic) {
     const int32_t numRows = 10;
     int64_t* col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:7(#0, 20)"};
+    string exprs[numProject] = {"$operator$ADD:7(#0, 20:7)"};
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes inputTypes(vecOfTypes);
@@ -659,7 +659,7 @@ TEST (ProjectTest, MultipleDecimal128Columns) {
     int64_t* col1 = MakeDecimals(numRows);
     int64_t* col2 = MakeDecimals(numRows, 100);
     const int32_t numProject = 2;
-    string exprs[numProject] = {"$operator$ADD:7(#0, 50)", "$operator$MULTIPLY:7(#1, 20)"};
+    string exprs[numProject] = {"$operator$ADD:7(#0, 50:7)", "$operator$MULTIPLY:7(#1, 20:7)"};
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes inputTypes(vecOfTypes);
@@ -721,7 +721,7 @@ TEST (ProjectTest, StringSubstr) {
 
 
     const int32_t numProject = 2;
-    std::string exprs[numProject] = {"concat:15(substr:15(#0, 1, 5), ' world')", "#0"};
+    std::string exprs[numProject] = {"concat:15(substr:15(#0, 1:1, 5:1), ' world':15)", "#0"};
 
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
@@ -793,8 +793,8 @@ TEST (ProjectTest, SlicedDictionaryVecTest) {
     input->SetVector(2, slicedCol3);
 
     const int32_t numProject = 3;
-    string exprs[numProject] = {"$operator$ADD:1(#0, 1)", "$operator$ADD:1(#1, 2)",
-                                "$operator$ADD:1(#2, 10)"};
+    string exprs[numProject] = {"$operator$ADD:1(#0, 1:1)", "$operator$ADD:1(#1, 2:1)",
+                                "$operator$ADD:1(#2, 10:1)"};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);

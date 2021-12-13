@@ -41,7 +41,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$LESS_THAN:4(#0, 1.0)", types, projections);
+            "$operator$LESS_THAN:4(#0, 1.0:3)", types, projections);
         final int numRows = 5000;
         DoubleVec col1 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -69,7 +69,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$LESS_THAN:4(#0, 2000)", types, projections);
+            "$operator$LESS_THAN:4(#0, 2000:1)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -97,7 +97,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$GREATER_THAN:4(#0, 20)", types, projections);
+            "$operator$GREATER_THAN:4(#0, 20:1)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -129,7 +129,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#2");
         OmniFilterAndProjectOperatorFactory factory =
-                new OmniFilterAndProjectOperatorFactory("$operator$EQUAL:4(#1, 50)",
+                new OmniFilterAndProjectOperatorFactory("$operator$EQUAL:4(#1, 50:2)",
                         types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
@@ -163,7 +163,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30)", types, projections);
+            "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30:1)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -197,7 +197,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$NOT_EQUAL:4(#0, 0)", types, projections);
+            "$operator$NOT_EQUAL:4(#0, 0:3)", types, projections);
         final int numRows = 5000;
         DoubleVec col1 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -226,7 +226,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$EQUAL:4(#0, 9348)", types, projections);
+            "$operator$EQUAL:4(#0, 9348:1)", types, projections);
         final int numRows = 20000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
@@ -254,7 +254,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$LESS_THAN_OR_EQUAL:4(#0, 4)", types, projections);
+            "$operator$LESS_THAN_OR_EQUAL:4(#0, 4:1)", types, projections);
         final int numRows = 1000;
         OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(numRows);
@@ -298,7 +298,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1))",
+            "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1:1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1:2))",
             types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -340,8 +340,8 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4($operator$EQUAL:4(#0, 0), AND:4($operator$EQUAL:4(#1, 3000000000), " +
-                "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4)))",
+            "AND:4($operator$EQUAL:4(#0, 0:1), AND:4($operator$EQUAL:4(#1, 3000000000:2), " +
+                "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4:3)))",
             types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -391,8 +391,8 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4(AND:4($operator$GREATER_THAN:4(#3, 8766), $operator$LESS_THAN:4(#3, 9131)), " +
-                    "AND:4($operator$BETWEEN:4(#2, 0.05, 0.07), $operator$LESS_THAN:4(#0, 24.0)))",
+            "AND:4(AND:4($operator$GREATER_THAN:4(#3, 8766:3), $operator$LESS_THAN:4(#3, 9131:3)), " +
+                    "AND:4($operator$BETWEEN:4(#2, 0.05:3, 0.07:3), $operator$LESS_THAN:4(#0, 24.0:3)))",
             types, projections);
         OmniOperator op = factory.createOperator();
         for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4)) {
@@ -419,9 +419,9 @@ public class OmniFilterAndProjectOperatorTest {
         };
         List<String> projections = ImmutableList.of("#0", "#2", "#4", "#5");
         String str
-            = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52), AND:4($operator$LESS_THAN:4(#4, 50.8), " +
-                "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990)), " +
-                "AND:4($operator$NOT_EQUAL:4(#0, 1), $operator$EQUAL:4(#3, 3000000000)))))";
+            = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52:2), AND:4($operator$LESS_THAN:4(#4, 50.8:3), " +
+                "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800:1), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990:1)), " +
+                "AND:4($operator$NOT_EQUAL:4(#0, 1:1), $operator$EQUAL:4(#3, 3000000000:2)))))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -464,8 +464,8 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#3", "#2", "#1", "#0");
         String str
-            = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50), $operator$EQUAL:4(#1, -12)), " +
-                "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0)))";
+            = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50:1), $operator$EQUAL:4(#1, -12:1)), " +
+                "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000:2), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0:2)))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -508,9 +508,9 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#0");
         String expr
-            = "AND:4($operator$NOT_EQUAL:4(#1, 0), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1), " +
-                "$operator$EQUAL:4(#0, 2)), $operator$EQUAL:4(#0, 3)), OR:4(OR:4(OR:4($operator$EQUAL:4(55, #0), " +
-                "$operator$EQUAL:4(5, #0)), $operator$EQUAL:4(#0, 8)), $operator$EQUAL:4(#0, 13))))";
+            = "AND:4($operator$NOT_EQUAL:4(#1, 0:3), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1:1), " +
+                "$operator$EQUAL:4(#0, 2:1)), $operator$EQUAL:4(#0, 3:1)), OR:4(OR:4(OR:4($operator$EQUAL:4(55:1, #0), " +
+                "$operator$EQUAL:4(5:1, #0)), $operator$EQUAL:4(#0, 8:1)), $operator$EQUAL:4(#0, 13:1))))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types,
             projections);
         final int numRows = 10000;
@@ -555,7 +555,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$GREATER_THAN:4(ADD:1(#0, 1), 4)",
+            "$operator$GREATER_THAN:4(ADD:1(#0, 1:1), 4:1)",
                 types, projections);
         final int numRows = 10000;
         IntVec col1 = new IntVec(numRows);
@@ -603,7 +603,7 @@ public class OmniFilterAndProjectOperatorTest {
     public void multithreadTest() {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, DoubleVecType.DOUBLE, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2", "#3");
-        String str = "$operator$LESS_THAN_OR_EQUAL:4(#0, 500)";
+        String str = "$operator$LESS_THAN_OR_EQUAL:4(#0, 500:1)";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         final int numRows = 1000;
         for (int i = 0; i < 1000; i++) {
@@ -640,8 +640,8 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4(IF:4($operator$EQUAL:4(#0, 0), $operator$LESS_THAN:4(#1, 3), $operator$EQUAL:4(#1, 4)), " +
-                "$operator$GREATER_THAN:4(#2, 3))",
+            "AND:4(IF:4($operator$EQUAL:4(#0, 0:1), $operator$LESS_THAN:4(#1, 3:1), $operator$EQUAL:4(#1, 4:1)), " +
+                "$operator$GREATER_THAN:4(#2, 3:1))",
             types, projections);
         final int numRows = 10000;
         IntVec col1 = new IntVec(numRows);

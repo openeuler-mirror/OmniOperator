@@ -30,7 +30,7 @@ using namespace omniruntime::op;
 // Check CodeGenTest.RowFilter for a dedicated test using the RowFilter class instead.
 TEST(CodeGenTest, SimpleFilter)
 {
-    string unparsed = "$operator$LESS_THAN:4(#0, 50)";
+    string unparsed = "$operator$LESS_THAN:4(#0, 50:1)";
 
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
@@ -91,7 +91,7 @@ TEST(CodeGenTest, SimpleFilter)
 // Simple project example using individual row processing.
 TEST(CodeGenTest, SimpleProject)
 {
-    string unparsed = "ADD:1(#0, 50)";
+    string unparsed = "ADD:1(#0, 50:1)";
 
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
@@ -146,7 +146,7 @@ TEST(CodeGenTest, SimpleProject)
 // A more complicated test for individual row projection
 TEST(CodeGenTest, SingleProject)
 {
-    string unparsed = "IF:1($operator$GREATER_THAN:4(#1, 3000000000), ADD:1(#0, 10), MULTIPLY:1(#0, -1))";
+    string unparsed = "IF:1($operator$GREATER_THAN:4(#1, 3000000000:2), ADD:1(#0, 10:1), MULTIPLY:1(#0, -1:1))";
 
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
@@ -277,7 +277,7 @@ TEST(CodeGenTest, ShortCircuitProject)
 // Test the row filter
 TEST(CodeGenTest, RowFilter)
 {
-    string unparsed = "$operator$EQUAL:4(#0, 0)";
+    string unparsed = "$operator$EQUAL:4(#0, 0:1)";
     DataType types[1] = {DataType::INT32D};
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
@@ -365,7 +365,7 @@ TEST (CodeGenTest, RowFilterString) {
     string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 2);
 
-    std::string expr = "$operator$EQUAL:4(substr:15(#0, 1, 5), 'hello')";
+    std::string expr = "$operator$EQUAL:4(substr:15(#0, 1:1, 5:1), 'hello':15)";
     auto filter = new RowFilter(expr, vecTypes);
     EXPECT_FALSE(filter == nullptr);
     auto filterFunc = filter->Create();
@@ -375,7 +375,7 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    expr = "$operator$EQUAL:4(substr:15(#1, 1, 5), 'hello')";
+    expr = "$operator$EQUAL:4(substr:15(#1, 1:1, 5:1), 'hello':15)";
     filter = new RowFilter(expr, vecTypes);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
@@ -385,7 +385,7 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, false);
 
     delete filter;
-    expr = "$operator$EQUAL:4(substr:15(#0, 1, 5), substr:15(#1, 7, 11))";
+    expr = "$operator$EQUAL:4(substr:15(#0, 1:1, 5:1), substr:15(#1, 7:1, 11:1))";
     filter = new RowFilter(expr, vecTypes);
     EXPECT_FALSE(filter == nullptr);
     filterFunc = filter->Create();
@@ -408,8 +408,8 @@ TEST (CodeGenTest, RowFilterString) {
 
 TEST(CodeGenTest, Operators1)
 {
-    string unparsed = "AND:4($operator$GREATER_THAN_OR_EQUAL:4(ADD:1(#0, 2), 4), AND:4($operator$LESS_THAN:4(#1, 4), "
-                      "$operator$EQUAL:4(#2, 2)))";
+    string unparsed = "AND:4($operator$GREATER_THAN_OR_EQUAL:4(ADD:1(#0, 2:1), 4:1), AND:4($operator$LESS_THAN:4(#1, 4:1), "
+                      "$operator$EQUAL:4(#2, 2:1)))";
 
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
@@ -641,8 +641,8 @@ TEST(CodeGenTest, MathFunctions2)
 
 TEST(CodeGenTest, MathFunctions3)
 {
-    string unparsed = "IF:4($operator$GREATER_THAN:4(#0, 100), $operator$GREATER_THAN:4(#0, 200), "
-                      "$operator$LESS_THAN:4(#0, 0))";
+    string unparsed = "IF:4($operator$GREATER_THAN:4(#0, 100:1), $operator$GREATER_THAN:4(#0, 200:1), "
+                      "$operator$LESS_THAN:4(#0, 0:1))";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -734,7 +734,7 @@ TEST(CodeGenTest, MathFunctions3)
 
 TEST(CodeGenTest, MathFunctions4)
 {
-    string unparsed = "IN:4(#0, 1, 2, 3, 4, 5)";
+    string unparsed = "IN:4(#0, 1:1, 2:1, 3:1, 4:1, 5:1)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -998,7 +998,7 @@ TEST(CodeGenTest, CastNumbers2)
 
 TEST(CodeGenTest, Like)
 {
-    string unparsed = "LIKE:4(#2, '%hello%world%')";
+    string unparsed = "LIKE:4(#2, '%hello%world%':15)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1171,7 +1171,7 @@ TEST(CodeGenTest, DateCast)
 
 TEST(CodeGenTest, SubstrIn)
 {
-    string unparsed = "IN:4(substr:15(#2, 1, 2), '12', '21', '13', '31', '34', '43')";
+    string unparsed = "IN:4(substr:15(#2, 1:1, 2:1), '12':15, '21':15, '13':15, '31':15, '34':15, '43':15)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1268,7 +1268,7 @@ TEST(CodeGenTest, SubstrIn)
 
 TEST(CodeGenTest, ConcatStr)
 {
-    string unparsed = "$operator$EQUAL:4(concat:15(#1, #2), 'helloworld')";
+    string unparsed = "$operator$EQUAL:4(concat:15(#1, #2), 'helloworld':15)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1364,7 +1364,7 @@ TEST(CodeGenTest, ConcatStr)
 
 TEST(CodeGenTest, ConcatChars)
 {
-    string unparsed = "$operator$EQUAL:4(concat:16[52](concat:16[32](#1, ','), #2), 'hello                         , world')";
+    string unparsed = "$operator$EQUAL:4(concat:16[52](concat:16[32](#1, ',':16[32]), #2), 'hello                         , world':16[52])";
     auto charTypeA = new CharVecType(30);
     auto charTypeB = new CharVecType(20);
     std::vector<VecType> vecOfTypes = { IntVecType(), VecType(*charTypeA), VecType(*charTypeB)};
@@ -1457,7 +1457,7 @@ TEST(CodeGenTest, ConcatChars)
 
 TEST(CodeGenTest, StringWithOps)
 {
-    string unparsed = "OR:4($operator$EQUAL:4(#2, 'Sunday'), $operator$EQUAL:4(#2, 'Saturday'))";
+    string unparsed = "OR:4($operator$EQUAL:4(#2, 'Sunday':15), $operator$EQUAL:4(#2, 'Saturday':15))";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -1549,7 +1549,7 @@ TEST(CodeGenTest, StringWithOps)
 
 TEST(CodeGenTest, Coalesce)
 {
-    string unparsed = "$operator$EQUAL:4(COALESCE:2(#0, 0), 123)";
+    string unparsed = "$operator$EQUAL:4(COALESCE:2(#0, 0:2), 123:2)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -1613,7 +1613,7 @@ TEST(CodeGenTest, Coalesce)
 
 TEST(CodeGenTest, ProjectionCoalesce)
 {
-    string unparsed = "$operator$EQUAL:4(COALESCE:2(#0, 100), 100)";
+    string unparsed = "$operator$EQUAL:4(COALESCE:2(#0, 100:2), 100:2)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -1857,7 +1857,7 @@ TEST(CodeGenTest, IsNotNull)
 
 TEST(CodeGenTest, DecimalOperators1)
 {
-    string unparsed = "$operator$EQUAL:4(ADD:7(#0, 5), 15)";
+    string unparsed = "$operator$EQUAL:4(ADD:7(#0, 5:7), 15:7)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
@@ -1978,8 +1978,8 @@ TEST(CodeGenTest, DecimalOperators2)
 
 TEST(CodeGenTest, DecimalOperators3)
 {
-    string unparsed = "IF:4($operator$GREATER_THAN:4(#0, 100), $operator$GREATER_THAN:4(#0, 200), "
-                      "$operator$LESS_THAN:4(#0, 0))";
+    string unparsed = "IF:4($operator$GREATER_THAN:4(#0, 100:7), $operator$GREATER_THAN:4(#0, 200:7), "
+                      "$operator$LESS_THAN:4(#0, 0:7))";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
@@ -2044,7 +2044,7 @@ TEST(CodeGenTest, DecimalOperators3)
 
 TEST(CodeGenTest, ProjectionSubtractNulls)
 {
-    string unparsed = "$operator$SUBTRACT:2(#0, 100)";
+    string unparsed = "$operator$SUBTRACT:2(#0, 100:2)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
@@ -2117,7 +2117,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
 
 TEST(CodeGenTest, ProjectionCodeGen)
 {
-    string unparsed = "$operator$ADD:7(#0, 100)";
+    string unparsed = "$operator$ADD:7(#0, 100:7)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes types(vecOfTypes);
@@ -2215,7 +2215,7 @@ TEST(CodeGenTest, TestRowProjectLong)
     omniruntime::vec::LongVector * vector = CreateVector<LongVector>(values, 10);
     auto slicedVector = vector->Slice(4, 6);
 
-    std::string expr = "$operator$ADD:2(#0, 100)";
+    std::string expr = "$operator$ADD:2(#0, 100:2)";
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes types(vecOfTypes);
     RowProjection rowProjection(expr, types);
@@ -2254,7 +2254,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
     omniruntime::vec::VarcharVector *vector = CreateVarcharVector(type, values, 2);
     auto slicedVector = vector->Slice(1, 1);
 
-    std::string expr = "substr:15(#0, 1, 5)";
+    std::string expr = "substr:15(#0, 1:1, 5:1)";
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
     RowProjection rowProjection(expr, types);
@@ -2403,7 +2403,7 @@ TEST (CodeGenTest, Substr) {
     }
 
     string testname = "stringTest";
-    std::string expr = "$operator$EQUAL:4(substr:15(#0, -5, 5), 'ction')";
+    std::string expr = "$operator$EQUAL:4(substr:15(#0, -5:1, 5:1), 'ction':15)";
     int64_t dictionaries[numCols] = {};
 
     auto filter = new RowFilter(expr, types);
@@ -2414,7 +2414,7 @@ TEST (CodeGenTest, Substr) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    expr = "$operator$EQUAL:4(substr:15(#1, -5), 'UBSTR')";
+    expr = "$operator$EQUAL:4(substr:15(#1, -5:1), 'UBSTR':15)";
 
     filter = new RowFilter(expr, types);
     EXPECT_FALSE(filter == nullptr);
@@ -2424,7 +2424,7 @@ TEST (CodeGenTest, Substr) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    expr = "$operator$EQUAL:4(substr:15(#0, 4), 'STR Function')";
+    expr = "$operator$EQUAL:4(substr:15(#0, 4:1), 'STR Function':15)";
 
     filter = new RowFilter(expr, types);
     EXPECT_FALSE(filter == nullptr);
@@ -2449,7 +2449,7 @@ TEST (CodeGenTest, Substr) {
 
 TEST(CodeGenTest, Mm3Hash)
 {
-    string unparsed = "$operator$EQUAL:4(mm3hash:1(#0, 42), 723455942)";
+    string unparsed = "$operator$EQUAL:4(mm3hash:1(#0, 42:1), 723455942:1)";
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -2525,7 +2525,7 @@ TEST (CodeGenTest, SubstrWithChars) {
     }
 
     string testname = "stringTest";
-    std::string expr = "$operator$NOT_EQUAL:4(substr:16[10](#0, 1, 5), substr:16[10](#1, 1, 5))";
+    std::string expr = "$operator$NOT_EQUAL:4(substr:16[10](#0, 1:1, 5:1), substr:16[10](#1, 1:1, 5:1))";
     int64_t dictionaries[numCols] = {};
 
     auto filter = new RowFilter(expr, types);

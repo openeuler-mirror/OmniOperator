@@ -537,18 +537,21 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
 {
     DataExpr *dEx = &dExpr;
     CodeGenValue *codeGenValue = nullptr;
+    bool isNullLiteral = dExpr.isNull;
     switch (dEx->GetExprDataType()) {
         case DataType::INT32D: {
-            codeGenValue = new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(
+                this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::INT64D: {
-            codeGenValue = new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(
+                this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::DOUBLED: {
-            codeGenValue =
-                new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(
+                this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::CHARD:
@@ -558,15 +561,17 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
             Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, Type::getInt8PtrTy(*context));
             Constant *strLenConst =
                 ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
-            codeGenValue = new CodeGenValue(strValPtr, this->CreateConstantBool(false), strLenConst);
+            codeGenValue = new CodeGenValue(strValPtr, this->CreateConstantBool(isNullLiteral), strLenConst);
             break;
         }
         case DataType::BOOLD: {
-            codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(
+                this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::DECIMAL64D: {
-            codeGenValue = new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(
+                this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::DECIMAL128D: {
@@ -578,7 +583,11 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
             decimal[1] = decValue.HighBits();
 
             Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(decimal)));
-            codeGenValue = new CodeGenValue(addr, this->CreateConstantBool(false));
+            codeGenValue = new CodeGenValue(addr, this->CreateConstantBool(isNullLiteral));
+            break;
+        }
+        case DataType::UNKNOWND: {
+            codeGenValue = new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(true));
             break;
         }
         default: {

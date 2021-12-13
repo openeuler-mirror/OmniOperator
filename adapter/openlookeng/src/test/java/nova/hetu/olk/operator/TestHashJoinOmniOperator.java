@@ -294,7 +294,7 @@ public class TestHashJoinOmniOperator {
     public void testProbeOuterJoinWithFilterFunction(boolean parallelBuild, boolean probeHashEnabled,
             boolean buildHashEnabled) {
         TaskContext taskContext = createTaskContext();
-        String filterFunction = "$operator$GREATER_THAN_OR_EQUAL:4(#1, 1025)";
+        String filterFunction = "$operator$GREATER_THAN_OR_EQUAL:4(#1, 1025:2)";
 
         // build factory
         List<Type> buildTypes = ImmutableList.of(VARCHAR, BIGINT, BIGINT);
@@ -378,7 +378,7 @@ public class TestHashJoinOmniOperator {
     public void testOuterJoinWithNullProbeAndFilterFunction(boolean parallelBuild, boolean probeHashEnabled,
             boolean buildHashEnabled) {
         TaskContext taskContext = createTaskContext();
-        String filterFunction = "$operator$EQUAL:4(#0, a)";
+        String filterFunction = "$operator$EQUAL:4(#0, a:15)";
 
         // build factory
         List<Type> buildTypes = ImmutableList.of(VARCHAR);
@@ -454,7 +454,7 @@ public class TestHashJoinOmniOperator {
     public void testOuterJoinWithNullBuildAndFilterFunction(boolean parallelBuild, boolean probeHashEnabled,
             boolean buildHashEnabled) {
         TaskContext taskContext = createTaskContext();
-        String filterFunction = "OR:4($operator$EQUAL:4(#0, 'a'), $operator$EQUAL:4(#0, 'c'))";
+        String filterFunction = "OR:4($operator$EQUAL:4(#0, 'a':15), $operator$EQUAL:4(#0, 'c':15))";
 
         // build factory
         List<Type> buildTypes = ImmutableList.of(VARCHAR);
@@ -530,7 +530,7 @@ public class TestHashJoinOmniOperator {
     public void testOuterJoinWithNullOnBothSidesAndFilterFunction(boolean parallelBuild, boolean probeHashEnabled,
             boolean buildHashEnabled) {
         TaskContext taskContext = createTaskContext();
-        String filterFunction = "OR:4($operator$EQUAL:4(#0, 'a'), $operator$EQUAL:4(#0, 'c'))";
+        String filterFunction = "OR:4($operator$EQUAL:4(#0, 'a':15), $operator$EQUAL:4(#0, 'c':15))";
 
         // build factory
         RowPagesBuilder buildPages = rowPagesBuilder(buildHashEnabled, Ints.asList(0), ImmutableList.of(VARCHAR))

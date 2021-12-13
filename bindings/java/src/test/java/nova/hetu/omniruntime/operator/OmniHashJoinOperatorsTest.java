@@ -499,7 +499,7 @@ public class OmniHashJoinOperatorsTest {
 
         int[] buildHashCols = {0};
         int operatorCount = 1;
-        String filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1, 5), substr:15(#3, 1, 5))";
+        String filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
                 buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
