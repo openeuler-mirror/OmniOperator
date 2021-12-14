@@ -466,6 +466,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         try {
             physicalOperation = plan.accept(new OmniVisitor(session, stageExecutionDescriptor), context);
         } catch (Exception e) {
+            log.warn("Unable to plan with OmniRuntime Operators for task: " + taskContext.getTaskId() +
+                ", cause: " + e.getLocalizedMessage());
             return null;
         }
 

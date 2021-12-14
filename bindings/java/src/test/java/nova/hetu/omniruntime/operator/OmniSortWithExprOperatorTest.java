@@ -57,7 +57,7 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 5)", "#1"};
+        String[] sortKeys = {"ADD:1(#0, 5:1)", "#1"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =
@@ -85,7 +85,7 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 5)", "ADD:1(5, #1)"};
+        String[] sortKeys = {"ADD:1(#0, 5:1)", "ADD:1(5:1, #1)"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =
@@ -117,7 +117,7 @@ public class OmniSortWithExprOperatorTest {
         VecBatch vecBatch = new VecBatch(vecs);
 
         int[] outputCols = {0, 1};
-        String[] sortKeys = {"ADD:1(#0, 50)", "ADD:1(#1, 50)"};
+        String[] sortKeys = {"ADD:1(#0, 50:1)", "ADD:1(#1, 50:1)"};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory =

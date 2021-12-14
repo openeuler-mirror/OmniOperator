@@ -80,6 +80,20 @@ bool IsStringDataType(DataType type)
     return type == DataType::CHARD || type == DataType::VARCHARD;
 }
 
+bool IsNullLiteral(const std::string& value)
+{
+    const std::string loweredNullValue = "null";
+    if (value.size() != loweredNullValue.size()) {
+        return false;
+    }
+    for (int i = 0; i < loweredNullValue.size(); i++) {
+        if (tolower(value[i]) != loweredNullValue[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Helper function to get DataType from a string representing the type
 DataType StringToDataType(std::string dt)
 {

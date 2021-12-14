@@ -34,7 +34,7 @@ public class OmniHashJoinWithExprOperatorsTest {
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
 
-        String[] buildHashKeys = {"ADD:2(#0, 50)"};
+        String[] buildHashKeys = {"ADD:2(#0, 50:2)"};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashKeys, Optional.empty(), operatorCount);
@@ -48,7 +48,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
 
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:2(#0, 50)"};
+        String[] probeHashKeys = {"ADD:2(#0, 50:2)"};
         int[] buildOutputCols = {1};
         VecType[] buildOutputTypes = {LongVecType.LONG};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
@@ -84,7 +84,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         buildVecs[1] = TestUtils.createDictionaryVec(buildTypes[1], buildDatas[1], ids);
         VecBatch buildVecBatch = new VecBatch(buildVecs);
 
-        String[] buildHashKeys = {"ADD:2(#0, 50)"};
+        String[] buildHashKeys = {"ADD:2(#0, 50:2)"};
         int operatorCount = 1;
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashKeys, Optional.empty(), operatorCount);
@@ -101,7 +101,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch probeVecBatch = new VecBatch(probeVecs);
 
         int[] probeOutputCols = {1};
-        String[] probeHashKeys = {"ADD:2(#0, 50)"};
+        String[] probeHashKeys = {"ADD:2(#0, 50:2)"};
         int[] buildOutputCols = {1};
         VecType[] buildOutputTypes = {LongVecType.LONG};
         OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
@@ -132,7 +132,7 @@ public class OmniHashJoinWithExprOperatorsTest {
 
         String[] buildHashCols = {"#0"};
         int operatorCount = 1;
-        String filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1, 5), substr:15(#3, 1, 5))";
+        String filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
         OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
                 buildTypes, buildHashCols, Optional.of(filterExpression), operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();

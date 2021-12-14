@@ -21,14 +21,14 @@ public:
     ~ParserHelper();
     omniruntime::expressions::DataType FuncRetTypeMap(std::string fnName,
                                                       std::vector<omniruntime::expressions::Expr *> args);
-    bool FuncDeclMatch(std::string fnName, std::vector<omniruntime::expressions::Expr *> args, bool checkTypes);
-    omniruntime::expressions::DataExpr *GetDataExprCast(omniruntime::expressions::DataType destType);
+    bool FuncDeclMatch(const std::string& fnName, std::vector<omniruntime::expressions::Expr *> args, bool checkTypes);
+    static omniruntime::expressions::DataExpr *GetDefaultValueForType(omniruntime::expressions::DataType destType);
 private:
     ExternalFuncRegistry efr;
     std::set<std::string> externalFuncNames;
     std::map<std::string, omniruntime::expressions::DataType> externalFuncRetTypeMap;
 
-    bool IsIntType(omniruntime::expressions::DataType dt) const;
+    static bool IsIntType(omniruntime::expressions::DataType dt);
 };
 
 

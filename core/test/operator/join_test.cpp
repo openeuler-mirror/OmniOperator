@@ -1476,7 +1476,7 @@ TEST(NativeOmniJoinTest, TestLookupEqualityJoinWithCharFilter)
     int32_t buildJoinCols[1] = {0};
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
-    string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1, 5), substr:15(#3, 1, 5))";
+    string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
@@ -1570,7 +1570,7 @@ TEST(NativeOmniJoinTest, TestLookupEqualityJoinWithCharFilter2)
     int32_t buildJoinCols[1] = {0};
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
-    string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1, 5), substr:15(#3, 1, 5))";
+    string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),

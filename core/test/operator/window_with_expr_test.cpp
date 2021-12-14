@@ -126,7 +126,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
                                              DoubleVecType() }));
     VecTypes outputTypes(std::vector<VecType>({ DoubleVecType() }));
 
-    std::string argumentChannels[1] = { "ADD:3(#2, 50)" };
+    std::string argumentChannels[1] = { "ADD:3(#2, 50:3)" };
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory =
@@ -762,7 +762,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     VecTypes outputTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
                                              Date32VecType(omniruntime::vec::MILLI), LongVecType(),
                                              Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
-    string argumentChannels[7] = {"ADD:1(2, #0)", "#1", "#2", "#3", "#4", "#5", "#8"};
+    string argumentChannels[7] = {"ADD:1(2:1, #0)", "#1", "#2", "#3", "#4", "#5", "#8"};
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory =
@@ -853,7 +853,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
 
     VecTypes outputTypes(std::vector<VecType>({  DoubleVecType(), DoubleVecType(), DoubleVecType(),
                                              DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
-    string argumentChannels[7] = {"#0", "ADD:1(2, #1)", "#2", "#3", "#4", "#5", "#8"};
+    string argumentChannels[7] = {"#0", "ADD:1(2:1, #1)", "#2", "#3", "#4", "#5", "#8"};
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory =
@@ -941,7 +941,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
 
     VecTypes outputTypes(std::vector<VecType>({IntVecType(), Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
                                              Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
-    string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(2, #3)", "#4", "#5", "#7", "#8"};
+    string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory =
@@ -1032,7 +1032,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
     VecTypes outputTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
                                              Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
-    string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(#3, 2)", "#4", "#5", "#7", "#8"};
+    string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(#3, 2:2)", "#4", "#5", "#7", "#8"};
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory =
@@ -1123,7 +1123,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 
     VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(),
                                              LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
-    string argumentChannels[8] = {"#0", "#1", "SUBTRACT:1(#2, 2)", "#3", "#4", "#5", "#7", "#8"};
+    string argumentChannels[8] = {"#0", "#1", "SUBTRACT:1(#2, 2:1)", "#3", "#4", "#5", "#7", "#8"};
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory =
@@ -1219,7 +1219,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(),
                                              LongVecType(), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
-    string argumentChannels[7] = {"#0", "#1", "ADD:2(2, #3)", "#4", "#5", "#7", "#8"};
+    string argumentChannels[7] = {"#0", "#1", "ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     // dealing data with the operator
     WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,

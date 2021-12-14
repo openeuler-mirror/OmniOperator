@@ -138,33 +138,34 @@ void ExprPrinter::Visit(DataExpr &e)
                 if (printWithTypes) {
                     printf("i32_");
                 }
-                printf(indent.append("%d").c_str(), expr->intVal);
+                printf(indent.append("%d:%s").c_str(), expr->intVal, DataTypeString(e).c_str());
                 break;
             case INT64D:
                 if (printWithTypes) {
                     printf("i64_");
                 }
-                printf(indent.append("%ld").c_str(), expr->longVal);
+                printf(indent.append("%ld:%s").c_str(), expr->longVal, DataTypeString(e).c_str());
                 break;
             case DOUBLED:
                 if (printWithTypes) {
                     printf("d64_");
                 }
-                printf(indent.append("%f").c_str(), expr->doubleVal);
+                printf(indent.append("%f:%s").c_str(), expr->doubleVal, DataTypeString(e).c_str());
                 break;
             case CHARD:
                 if (printWithTypes) {
                     printf("s_");
                 }
                 printf(
-                    indent.append("'%s[%d]'").c_str(), (expr->stringVal)->c_str(), expr->width);
+                    indent.append("'%s[%d]':%s").c_str(),
+                    (expr->stringVal)->c_str(), expr->width, DataTypeString(e).c_str());
                 break;
             case VARCHARD:
                 if (printWithTypes) {
                     printf("s_");
                 }
                 printf(
-                    indent.append("'%s'").c_str(), (expr->stringVal)->c_str());
+                    indent.append("'%s':%s").c_str(), (expr->stringVal)->c_str(), DataTypeString(e).c_str());
                 break;
             default:
                 printf(

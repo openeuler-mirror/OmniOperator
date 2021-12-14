@@ -64,7 +64,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::string sortKeys[sortKeyCnt] = {"ADD:1(#0, 5)", "MODULUS:2(#2, 3)"};
+    std::string sortKeys[sortKeyCnt] = {"ADD:1(#0, 5:1)", "MODULUS:2(#2, 3:2)"};
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
     int32_t sortCols[sortKeyCnt] = {3, 4};
@@ -121,7 +121,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::string sortKeys[sortKeyCnt] = {"#0", "MODULUS:2(#2, 3)"};
+    std::string sortKeys[sortKeyCnt] = {"#0", "MODULUS:2(#2, 3:2)"};
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
     int32_t sortCols[sortKeyCnt] = {3, 4};

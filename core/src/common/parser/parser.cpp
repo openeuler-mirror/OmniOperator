@@ -121,7 +121,7 @@ string Parser::StripString(const string& input)
 DataType ParseReturnType(const string& typeString)
 {
     int endIdx = 2;
-    int widthIdx = typeString.find("[");
+    int widthIdx = typeString.find('[');
     if (widthIdx != string::npos) {
         if (stoi(typeString.substr(0, endIdx)) == CHARD) {
             return CHARD;
@@ -138,11 +138,11 @@ DataType ParseReturnType(const string& typeString)
         if (omniruntime::vec::OMNI_VEC_TYPE_SHORT == typeOrdinal ||
             (omniruntime::vec::OMNI_VEC_TYPE_DATE64 <= typeOrdinal &&
             omniruntime::vec::OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= typeOrdinal)) {
-            cout << "Unsupported return type: "<< static_cast<omniruntime::vec::VecTypeId>(typeOrdinal) << endl;
+            LogWarn("Unsupported return type: %u", static_cast<omniruntime::vec::VecTypeId>(typeOrdinal));
         }
         return static_cast<DataType>(stoi(typeString));
     }
-    cout << "Unsupported return type: " << typeString << endl;
+    LogError("Invalid return type: %s", typeString.c_str());
     return INVALIDDATAD;
 }
 
@@ -152,7 +152,7 @@ Expr *Parser::ParseRowExpression(const string& inputStr, VecTypes inputTypes, in
     int firstParenInd = input.find('(');
     // Check if it is just data (i.e. 123, #4, 34.4)
     if (firstParenInd == string::npos) {
-        return GenerateData(input, inputTypes, vecCount);
+        return GenerateData(input, inputTypes);
     }
 
     // demangled operator string
@@ -229,7 +229,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         if ((args[ARG2]->GetExprDataType() == VARCHARD || args[ARG2]->GetExprDataType() == CHARD)
             && args[ARG2]->GetType() == ExprType::DATA_E
             && static_cast<DataExpr*>(args[ARG2])->stringVal->compare("null") == 0) {
-            return std::make_unique<IfExpr>(args[0], args[1], ph.GetDataExprCast(args[1]->dataType)).release();
+            return std::make_unique<IfExpr>(
+                args[0], args[1], ParserHelper::GetDefaultValueForType(args[1]->dataType)).release();
         }
         return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
     }
@@ -250,90 +251,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         return std::make_unique<FuncExpr>(opStr, args, type, width).release();
     }
     // if operator is not supported, return nullptr
-#ifdef DEBUG
-    cout << "operator is not supported" << endl;
-#endif
+    LogError("operator is not supported: %s", opStr.c_str());
     return nullptr;
-}
-
-// Helper functions for generateComparisionExpr to find the correct data type
-// Takes in an array of inputTypes from filter to determine the correct column type
-DataType GetDataTypeInt(string data)
-{
-    // First check if int32 or int64
-    bool isIntOrLong = true;
-    for (int i = 0; i < data.size(); i++) {
-        if ((i == 0 && data[i] == '-') || ('0' <= data[i] && data[i] <= '9')) {
-            continue;
-        } else {
-            isIntOrLong = false;
-            break;
-        }
-    }
-    // Check If int32D or int64D or decimal128
-    int32_t maxLongDigits = 20;
-    if (isIntOrLong) {
-        int64_t longVal = stol(data);
-        if ((data[0] == '-' && data.size() <= maxLongDigits) || data.size() <= maxLongDigits - 1) {
-            if (INT32_MIN <= longVal && longVal <= INT32_MAX) {
-                return INT32D;
-            }
-            return INT64D;
-        } else {
-            // decimal 128
-            return DECIMAL128D;
-        }
-    }
-    return INVALIDDATAD;
-}
-
-DataType GetDataTypeHelper(string data)
-{
-    bool foundDot = false;
-    for (int i = 0; i < data.size(); i++) {
-        if ((i == 0 && data[i] == '-') || ('0' <= data[i] && data[i] <= '9') || data[i] == '.') {
-            if (data[i] == '.' && foundDot) {
-                return VARCHARD; // if a second . is found
-            } else if (data[i] == '.') {
-                foundDot = true;
-            }
-        } else {
-            return VARCHARD;
-        }
-    }
-    int32_t maxDoubleDigits = 21;
-    if ((data[0] == '-' && data.size() <= maxDoubleDigits) || data.size() <= maxDoubleDigits - 1) {
-        return DOUBLED;
-    } else {
-        return DECIMAL128D;
-    }
-}
-
-DataType GetDataType(string data, VecTypes inputTypes, int32_t vecCount)
-{
-    // Check for '' (string)
-    if (data[0] == '\'' && data[data.size() - 1] == '\'') {
-        return VARCHARD;
-    }
-    // Check for # (column)
-    if (data[0] == '#') {
-        for (int i = 1; i < data.size(); i++) {
-            // Treat as string if the chars aren't digits
-            if (!isdigit(data[i])) {
-                return VARCHARD;
-            }
-        }
-        int colIdx = stoi(data.substr(1));
-        return ColTypeTrans(inputTypes.GetIds()[colIdx]);
-    }
-    DataType intType = GetDataTypeInt(data);
-    if (intType != INVALIDDATAD) {
-        return intType;
-    }
-
-    // Check if double or Decimal128
-    // default to string
-    return GetDataTypeHelper(data);
 }
 
 // Helper function to turn all % to .* for regex wildcard matching
@@ -364,44 +283,68 @@ DataExpr *Parser::GenerateDataHelper(const string& dataStr, DataType currDataTyp
             e->doubleVal = e->intVal;
             return e;
         }
+        // Need to handle decimals properly
+        case DECIMAL128D:
         case INT64D: {
             return  std::make_unique<DataExpr>(stol(dataStr)).release();
         }
         case DOUBLED: {
             return std::make_unique<DataExpr>(stod(dataStr)).release();
         }
+        case CHARD:
         case VARCHARD: {
             return std::make_unique<DataExpr>(FixString(dataStr)).release();
         }
+        case UNKNOWND: {
+            return std::make_unique<DataExpr>(0).release();
+        }
         default: {
-#ifdef DEBUG
-    cout << "datatype is not supported" << endl;
-#endif
+            LogError("type %u is not supported", currDataType);
             return nullptr;
         }
     }
 }
 
-DataExpr *Parser::GenerateData(string dataStr, VecTypes inputTypes, int32_t vecCount)
+DataExpr *Parser::GenerateData(string dataStr, const VecTypes &inputTypes)
 {
-    // Case with boolean true/false
-    if (dataStr == "true") return std::make_unique<DataExpr>(true).release();
-    if (dataStr == "false") return std::make_unique<DataExpr>(false).release();
-
-    // Other cases
-    DataType currDataType = GetDataType(dataStr, inputTypes, vecCount);
-
-    // Case with normal string format (ex. 'hello')
-    if (currDataType == VARCHARD && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
-        return std::make_unique<DataExpr>
-                (FixString(dataStr.substr(1, dataStr.size() - 1 - 1))).release();
-    }
     // Case with column
     if (dataStr[0] == '#') {
         int colIdx = stoi(dataStr.substr(1));
         DataType dt = ColTypeTrans(inputTypes.GetIds()[colIdx]);
         return std::make_unique<DataExpr>(colIdx, dt, inputTypes.Get().at(colIdx).GetWidth()).release();
     }
-    // Case with regular data (int, long, double, string)
+
+    int typeIdx = dataStr.find(':');
+    int stepSize = 4;
+    int32_t width = INT32_MAX;
+    DataType currDataType;
+    if (typeIdx != string::npos) {
+        currDataType = ParseReturnType(dataStr.substr(typeIdx + 1));
+        if (currDataType == CHARD) {
+            width = stoi(dataStr.substr(typeIdx + stepSize, dataStr.size() - typeIdx - stepSize));
+        }
+        dataStr = dataStr.substr(0, typeIdx);
+    } else {
+        LogError("Unknown constant type for expr: %s", dataStr.c_str());
+        return nullptr;
+    }
+
+    // Case with boolean true/false
+    if (dataStr == "true") return std::make_unique<DataExpr>(true).release();
+    if (dataStr == "false") return std::make_unique<DataExpr>(false).release();
+
+    // trim the single quotes for string values if there is any
+    if (IsStringDataType(currDataType) && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
+        dataStr = dataStr.substr(1, dataStr.size() - 1 - 1);
+    }
+
+    // case with null constants
+    if (IsNullLiteral(dataStr)) {
+        auto expr = ParserHelper::GetDefaultValueForType(currDataType);
+        expr->isNull = true;
+        return expr;
+    }
+
+    // Case with regular data (int, long, double, string ...)
     return GenerateDataHelper(dataStr, currDataType);
 }
