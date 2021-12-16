@@ -67,6 +67,8 @@ add_library(lookup_join_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/look
 add_library(window_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_expr.cpp)
 add_library(group_aggregation_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation_expr.cpp)
 add_library(topn_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp)
+add_library(limit SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/limit/limit.cpp)
+add_library(distinct_limit SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/limit/distinct_limit.cpp)
 
 set(EXTERNAL_FUNCTIONS
         ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/external_func_registry.cpp
@@ -110,6 +112,8 @@ install(TARGETS
         window_expr
         group_aggregation_expr
         topn_expr
+        limit
+        distinct_limit
         DESTINATION ${CMAKE_INSTALL_PREFIX}/jit_libs)
 
 install(TARGETS
@@ -155,7 +159,10 @@ set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cp
         ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/window/window_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation_expr.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp)
+        ${CMAKE_CURRENT_LIST_DIR}/operator/topn/topn_expr.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/limit/limit.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/limit/distinct_limit.cpp
+        )
 set(IR_COMPILE_COMMANDS "")
 foreach(IR_SOURCE_FILE ${IR_SOURCE_FILES})
     list(APPEND IR_COMPILE_COMMANDS COMMAND ${IR_COMPILER} ${COMPILE_OPTION} ${IR_SOURCE_FILE} ${LLVM_INCLUDE} ${COMPILE_INCLUDE_SOURCE})

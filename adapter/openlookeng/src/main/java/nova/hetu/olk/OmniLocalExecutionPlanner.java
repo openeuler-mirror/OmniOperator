@@ -17,7 +17,9 @@ import static io.prestosql.SystemSessionProperties.getDynamicFilteringWaitTime;
 import static io.prestosql.SystemSessionProperties.getFilterAndProjectMinOutputPageRowCount;
 import static io.prestosql.SystemSessionProperties.getFilterAndProjectMinOutputPageSize;
 import static io.prestosql.SystemSessionProperties.getOmniAggEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniDistinctLimitEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniJoinEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniLimitEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniOrderByEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniPartitionedOutputEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniTopNEnabled;
@@ -73,6 +75,7 @@ import io.prestosql.index.IndexManager;
 import io.prestosql.metadata.Metadata;
 import io.prestosql.metadata.TableHandle;
 import io.prestosql.operator.AggregationOperator;
+import io.prestosql.operator.DistinctLimitOperator;
 import io.prestosql.operator.DriverFactory;
 import io.prestosql.operator.DynamicFilterSourceOperator;
 import io.prestosql.operator.ExchangeClientSupplier;
@@ -80,6 +83,7 @@ import io.prestosql.operator.ExchangeOperator;
 import io.prestosql.operator.HashAggregationOperator;
 import io.prestosql.operator.HashBuilderOperator.HashBuilderOperatorFactory;
 import io.prestosql.operator.JoinBridgeManager;
+import io.prestosql.operator.LimitOperator;
 import io.prestosql.operator.LocalPlannerAware;
 import io.prestosql.operator.LookupJoinOperators;
 import io.prestosql.operator.LookupSourceFactory;
@@ -148,9 +152,11 @@ import io.prestosql.sql.planner.TypeAnalyzer;
 import io.prestosql.sql.planner.TypeProvider;
 import io.prestosql.sql.planner.plan.AggregationNode;
 import io.prestosql.sql.planner.plan.Assignments;
+import io.prestosql.sql.planner.plan.DistinctLimitNode;
 import io.prestosql.sql.planner.plan.ExchangeNode;
 import io.prestosql.sql.planner.plan.FilterNode;
 import io.prestosql.sql.planner.plan.JoinNode;
+import io.prestosql.sql.planner.plan.LimitNode;
 import io.prestosql.sql.planner.plan.PlanNode;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import io.prestosql.sql.planner.plan.ProjectNode;
@@ -181,8 +187,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
 import nova.hetu.olk.operator.AggregationOmniOperator;
+import nova.hetu.olk.operator.DistinctLimitOmniOperator;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
 import nova.hetu.olk.operator.HashBuilderOmniOperator.HashBuilderOmniOperatorFactory;
+import nova.hetu.olk.operator.LimitOmniOperator;
 import nova.hetu.olk.operator.LocalMergeSourceOmniOperator;
 import nova.hetu.olk.operator.LookupJoinOmniOperators;
 import nova.hetu.olk.operator.MergeOmniOperator;
@@ -572,6 +580,42 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             }
 
             return new PhysicalOperation(operatorFactory, source.getLayout(), context, source);
+        }
+
+        @Override
+        public PhysicalOperation visitLimit(LimitNode node, LocalExecutionPlanContext context) {
+            PhysicalOperation source = node.getSource().accept(this, context);
+
+            OperatorFactory operatorFactory;
+            if (getOmniLimitEnabled(session)) {
+                operatorFactory = new LimitOmniOperator.LimitOmniOperatorFactory(context.getNextOperatorId(),
+                        node.getId(), node.getCount());
+            } else {
+                operatorFactory = new LimitOperator.LimitOperatorFactory(context.getNextOperatorId(), node.getId(),
+                        node.getCount());
+            }
+
+            return new PhysicalOperation(operatorFactory, source.getLayout(), context, source);
+        }
+
+        @Override
+        public PhysicalOperation visitDistinctLimit(DistinctLimitNode node, LocalExecutionPlanContext context) {
+            PhysicalOperation source = node.getSource().accept(this, context);
+
+            Optional<Integer> hashChannel = node.getHashSymbol().map(channelGetter(source));
+            List<Integer> distinctChannels = getChannelsForSymbols(node.getDistinctSymbols(), source.getLayout());
+
+            OperatorFactory operatorFactory;
+            if (getOmniDistinctLimitEnabled(session)) {
+                operatorFactory = new DistinctLimitOmniOperator.DistinctLimitOmniOperatorFactory(
+                        context.getNextOperatorId(), node.getId(), source.getTypes(), distinctChannels,
+                        hashChannel, node.getLimit());
+            } else {
+                operatorFactory = new DistinctLimitOperator.DistinctLimitOperatorFactory(context.getNextOperatorId(),
+                        node.getId(), source.getTypes(), distinctChannels, node.getLimit(), hashChannel, joinCompiler);
+            }
+
+            return new PhysicalOperation(operatorFactory, makeLayout(node), context, source);
         }
 
         @Override
