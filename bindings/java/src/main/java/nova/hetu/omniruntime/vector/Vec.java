@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
+import com.google.common.annotations.VisibleForTesting;
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
@@ -66,7 +67,7 @@ public abstract class Vec implements Closeable {
     /**
      * The {@link VecType} of this vector
      */
-    private final VecType type;
+    private VecType type;
 
     /**
      * The capacity in bytes of this vector.
@@ -555,5 +556,10 @@ public abstract class Vec implements Closeable {
      */
     public int getRealNullBufCapacityInBytes() {
         return size * Byte.BYTES;
+    }
+
+    @VisibleForTesting
+    void setType(VecType type) {
+        this.type = type;
     }
 }

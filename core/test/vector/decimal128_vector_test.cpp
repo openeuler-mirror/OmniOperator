@@ -93,37 +93,6 @@ TEST(Decimal128Vector, SetValues)
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
-// Test out of bounds
-#ifdef DEBUG
-TEST(Decimal128Vector, SetValueOutOfBounds1)
-{
-
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(256, 256), std::runtime_error);
-
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
-
-// Test out of bounds
-#ifdef DEBUG
-TEST(Decimal128Vector, SetValueOutOfBounds2)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(-1, 256), std::runtime_error);
-
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
-
 // Test SetValues/get
 TEST(Decimal128Vector, SetValuesWithoutOffset)
 {
@@ -171,27 +140,6 @@ TEST(Decimal128Vector, SetValuesWithOffset)
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
-
-// Test out of bounds
-#ifdef DEBUG
-TEST(Decimal128Vector, SetValuesWithoutOffsetOutOfBounds)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    Decimal128Vector *vector = new Decimal128Vector(allocator, 256);
-    long *value = new long[257];
-    for (int i = 0; i < 257; i++) {
-        value[i] = i * 2;
-    }
-
-    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
-
-    delete[] value;
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
 
 // Test is null
 TEST(Decimal128Vector, SetValueNull)
