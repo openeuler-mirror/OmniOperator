@@ -4,8 +4,6 @@
 
 #include "vector.h"
 
-#include <stdint.h>
-#include "../util/bitmap_util.h"
 #include "../../thirdparty/huawei_secure_c/include/securec.h"
 
 namespace omniruntime {
@@ -55,14 +53,6 @@ void Vector::SetValueNulls(int startIndex, bool *nulls, int length)
     }
     if (ret != EOK) {
         std::cerr << "set value nulls failed." << ret << std::endl;
-    }
-}
-
-void Vector::SetValueNullBitMap(int index)
-{
-    if (valueNullsAddress != nullptr) {
-        // std::cout << "set value null BitMap" << std::endl;
-        BitMapUtil::Set(reinterpret_cast<uint8_t *>(valueNullsAddress), index);
     }
 }
 

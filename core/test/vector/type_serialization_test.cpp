@@ -56,4 +56,7 @@ TEST(VecTypeSerializer, serialization)
     EXPECT_EQ(static_cast<VarcharVecType *>(&check[6])->GetWidth(), 1024);
 
     std::cout << omniruntime::vec::Serialize(types) << std::endl;
+    std::string typeJson = omniruntime::vec::SerializeSingle(IntVecType());
+    auto vecType = omniruntime::vec::DeserializeSingle(typeJson);
+    EXPECT_EQ(vecType.GetId(), OMNI_VEC_TYPE_INT);
 }

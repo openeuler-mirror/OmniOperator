@@ -13,6 +13,7 @@ void VectorBatchTestInitVecTypes(std::vector<VecType> &types)
     types.push_back(DoubleVecType::Instance());
     types.push_back(LongVecType::Instance());
     types.push_back(DoubleVecType::Instance());
+    types.push_back(ContainerVecType::Instance());
 }
 
 TEST(VectorBatch, constructVectorBatchWithVectorCount)
@@ -64,11 +65,11 @@ TEST(VectorBatch, getVectorTypes)
 {
     std::vector<VecType> types;
     VectorBatchTestInitVecTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(4, 1024);
+    VectorBatch *vectorBatch = new VectorBatch(5, 1024);
     vectorBatch->NewVectors(VectorAllocatorFactory::GetGlobalAllocator(), types);
 
     const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 5; ++i) {
         EXPECT_EQ(types[i].GetId(), vectorTypeIds[i]);
     }
     delete vectorBatch;

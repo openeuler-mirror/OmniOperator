@@ -86,36 +86,6 @@ TEST(LongVector, SetValues)
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
-// Test out of bounds
-#ifdef DEBUG
-TEST(LongVector, SetValueOutOfBounds1)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    LongVector *vector = new LongVector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(256, 256), std::runtime_error);
-
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
-
-// Test out of bounds
-#ifdef DEBUG
-TEST(LongVector, SetValueOutOfBounds2)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    LongVector *vector = new LongVector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(-1, 256), std::runtime_error);
-
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
-
 // Test SetValues/get
 TEST(LongVector, SetValuesWithoutOffset)
 {
@@ -157,27 +127,6 @@ TEST(LongVector, SetValuesWithOffset)
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
-
-// Test out of bounds
-#ifdef DEBUG
-TEST(LongVector, SetValuesWithoutOffsetOutOfBounds)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    LongVector *vector = new LongVector(allocator, 256);
-    long *value = new long[257];
-    for (int i = 0; i < 257; i++) {
-        value[i] = i * 2;
-    }
-
-    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
-
-    delete[] value;
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
 
 // Test is null
 TEST(LongVector, setValueNull)
@@ -353,6 +302,40 @@ TEST(LongVector, performanceCompare)
     //    delete longVector;
     delete[](long *) longVector2;
     delete vectorTest2;
+}
+
+TEST(LongVector, appendVector)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+
+    int64_t data[5] = {1, 2, 3, 4, 5};
+    auto *src1 = new LongVector (allocator, 5);
+    src1->SetValues(0, data, 5);
+    auto *src2 = new LongVector (allocator, 5);
+    int64_t data2[5] = {6, 7, 8, 9, 10};
+    src2->SetValues(0, data2, 5);
+
+    auto *appended = new LongVector(allocator, 13);
+    appended->Append(src1, 0, 5);
+    appended->Append(src2, 5, 5);
+    for (int i = 0; i < 10; i++) {
+        EXPECT_EQ(appended->GetValue(i), i + 1);
+    }
+
+    int32_t ids[3] = {1, 2, 3};
+    auto *dictionaryVector = new DictionaryVector(src1, ids, 3);
+    appended->Append(dictionaryVector, 10, 3);
+    for (int i = 10; i < 13; i++) {
+        EXPECT_EQ(appended->GetValue(i), dictionaryVector->GetLong(i % 10));
+    }
+
+    delete src1;
+    delete src2;
+    delete dictionaryVector;
+    delete appended;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    EXPECT_TRUE(allocator == nullptr);
 }
 
 // Test is not writable

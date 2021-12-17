@@ -223,3 +223,49 @@ TEST(VarcharVector, emptyString)
     delete original;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
+
+TEST(VarcharVector, appendVector)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+
+    auto *src1 = new VarcharVector(allocator, 1024, 5);
+    auto *src2 = new VarcharVector(allocator, 1024, 5);
+    for (int i = 0; i < 5; i++) {
+        std::string str = std::to_string(i + 1);
+        src1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string str1 = std::to_string(i + 6);
+        src2->SetValue(i, reinterpret_cast<const uint8_t *>(str1.c_str()), str1.length());
+    }
+
+    auto *appended = new VarcharVector(allocator, 1024, 13);
+    appended->Append(src1, 0, 5);
+    appended->Append(src2, 5, 5);
+    int32_t ids[3] = {1, 2, 3};
+    auto *dictionaryVector = new DictionaryVector(src1, ids, 3);
+    appended->Append(dictionaryVector, 10, 3);
+
+    for (int i = 0; i < 10; i++) {
+        uint8_t *actualChar = nullptr;
+        int32_t len = appended->GetValue(i, &actualChar);
+        std::string result(actualChar, actualChar + len);
+        EXPECT_EQ(result, std::to_string(i + 1));
+    }
+
+    for (int i = 10; i < 13; i++) {
+        uint8_t *actualChar = nullptr;
+        int32_t len = appended->GetValue(i, &actualChar);
+        uint8_t *actualChar1 = nullptr;
+        int32_t len1 = dictionaryVector->GetVarchar(i % 10, &actualChar1);
+        std::string result(actualChar, actualChar + len);
+        std::string result1(actualChar1, actualChar1 + len1);
+        EXPECT_EQ(result, result1);
+    }
+
+    delete src1;
+    delete src2;
+    delete dictionaryVector;
+    delete appended;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    EXPECT_TRUE(allocator == nullptr);
+}

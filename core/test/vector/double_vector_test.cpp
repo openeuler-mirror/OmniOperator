@@ -99,36 +99,6 @@ TEST(DoubleVector, SetValues)
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
 
-// Test out of bounds
-#ifdef DEBUG
-TEST(DoubleVector, SetValueOutOfBounds1)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    DoubleVector *vector = new DoubleVector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(256, 256), std::runtime_error);
-
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
-
-// Test out of bounds
-#ifdef DEBUG
-TEST(DoubleVector, SetValueOutOfBounds2)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    DoubleVector *vector = new DoubleVector(allocator, 256);
-    EXPECT_THROW(vector->SetValue(-1, 256), std::runtime_error);
-
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
-
 // Test SetValues/get
 TEST(DoubleVector, SetValuesWithoutOffset)
 {
@@ -170,27 +140,6 @@ TEST(DoubleVector, SetValuesWithOffset)
     delete vector;
     VectorAllocatorFactory::DeleteAllocator(&allocator);
 }
-
-// Test out of bounds
-#ifdef DEBUG
-TEST(DoubleVector, SetValuesWithoutOffsetOutOfBounds)
-{
-    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
-    EXPECT_TRUE(allocator != nullptr);
-
-    DoubleVector *vector = new DoubleVector(allocator, 256);
-    double *value = new double[257];
-    for (int i = 0; i < 257; i++) {
-        value[i] = i * 2.3;
-    }
-
-    EXPECT_THROW(vector->SetValues(0, value, 257), std::runtime_error);
-
-    delete[] value;
-    delete vector;
-    VectorAllocatorFactory::DeleteAllocator(&allocator);
-}
-#endif
 
 // Test is null
 TEST(DoubleVector, SetValueNull)

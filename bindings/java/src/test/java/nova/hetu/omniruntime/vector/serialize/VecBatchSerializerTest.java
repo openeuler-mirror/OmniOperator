@@ -1,6 +1,12 @@
 package nova.hetu.omniruntime.vector.serialize;
 
+import static nova.hetu.omniruntime.type.CharVecType.CHAR;
+import static nova.hetu.omniruntime.type.Date32VecType.DATE32;
+import static nova.hetu.omniruntime.type.Date64VecType.DATE64;
+import static nova.hetu.omniruntime.type.Decimal64VecType.DECIMAL64;
+import static nova.hetu.omniruntime.type.VecType.INVALID;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertTrue;
 
@@ -10,16 +16,23 @@ import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
+import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
+import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
+import nova.hetu.omniruntime.vector.VecUtil;
 import org.testng.annotations.Test;
+
+import java.nio.charset.StandardCharsets;
 
 public class VecBatchSerializerTest {
 
@@ -124,7 +137,7 @@ public class VecBatchSerializerTest {
         vecBatch.close();
     }
 
-    @Test(enabled = false)
+    @Test
     public void should_return_right_result_when_serialize_nested_directory_vec()
     {
         // prepare vector batch
@@ -147,8 +160,8 @@ public class VecBatchSerializerTest {
         // check result
         VarcharVec checkLongVec = (VarcharVec)checkVecBatch.getVectors()[0];
         assertEquals(3, checkLongVec.getSize());
-        assertEquals("test1", new String(checkLongVec.get(0)));
-        assertEquals("test2", new String(checkLongVec.get(1)));
+        assertEquals("test2", new String(checkLongVec.get(0)));
+        assertEquals("test3", new String(checkLongVec.get(1)));
         assertEquals("test1000", new String(checkLongVec.get(2)));
 
         vecBatch.releaseAllVectors();
@@ -364,6 +377,101 @@ public class VecBatchSerializerTest {
             }
         }
 
+        vecBatch.releaseAllVectors();
+        vecBatch.close();
+        checkVecBatch.releaseAllVectors();
+        checkVecBatch.close();
+    }
+
+    @Test
+    public void testSerializeWithSetVecType()
+    {
+        int row = 5;
+        IntVec data32 = new IntVec(row);
+        VecUtil.setType(data32, DATE32);
+        data32.put(new int[] {1, 2, 3, 4, 5}, 0, 0, row);
+        LongVec data64 = new LongVec(row);
+        VecUtil.setType(data64, DATE64);
+        data64.put(new long[] {1, 2, 3, 4, 5}, 0, 0, row);
+        LongVec decimal64 = new LongVec(row);
+        VecUtil.setType(decimal64, DECIMAL64);
+        decimal64.put(new long[] {1, 2, 3, 4, 5}, 0, 0, row);
+        VarcharVec charVec = new VarcharVec(1024, row);
+        VecUtil.setType(charVec, CHAR);
+        charVec.put(0, "12345".getBytes(StandardCharsets.UTF_8), 0,
+                new int[] {0, 1, 2, 3, 4, 5}, 0, row);
+
+        DoubleVec doubleVec = new DoubleVec(row);
+        doubleVec.put(new double[] {1.1, 2.2, 3.3, 4.4, 5.5}, 0, 0, row);
+        BooleanVec booleanVec = new BooleanVec(row);
+        booleanVec.put(new boolean[]{true, false, true, false, true}, 0, 0, row);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{data32, data64, decimal64, charVec, doubleVec, booleanVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] serialized = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(serialized);
+
+        // check result
+        Object[][] expectedDatas = {{1, 2, 3, 4, 5},
+                {1L, 2L, 3L, 4L, 5L}, {1L, 2L, 3L, 4L, 5L}, {"1", "2", "3", "4", "5"},
+                {1.1D, 2.2D, 3.3D, 4.4D, 5.5D}, {true, false, true, false, true}};
+        assertVecBatchEquals(checkVecBatch, expectedDatas);
+        vecBatch.releaseAllVectors();
+        vecBatch.close();
+        checkVecBatch.releaseAllVectors();
+        checkVecBatch.close();
+    }
+
+    @Test(expectedExceptions = IllegalStateException.class,
+            expectedExceptionsMessageRegExp = "Unexpected value: OMNI_VEC_TYPE_INVALID")
+    public void testSerializeInvalidType()
+    {
+        int row = 5;
+        IntVec invalidType = new IntVec(row);
+        VecUtil.setType(invalidType, INVALID);
+        VecBatch vecBatch = new VecBatch(new Vec[]{invalidType});
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        try {
+            serializer.serialize(vecBatch);
+        } finally {
+            vecBatch.releaseAllVectors();
+            vecBatch.close();
+        }
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class,
+            expectedExceptionsMessageRegExp = "deserialize failed.null")
+    public void deserializeInvalid()
+    {
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        serializer.deserialize("invalid".getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test(expectedExceptions = OmniRuntimeException.class,
+            expectedExceptionsMessageRegExp = "deserialize failed.null")
+    public void deserializeInvalidWithAllocator()
+    {
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        serializer.deserialize(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, "invalid".getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void testDeserializeWithAllocator()
+    {
+        int row = 5;
+        IntVec intVec = new IntVec(row);
+        int[] values = new int[] {1, 2, 3, 4, 5};
+        intVec.put(values, 0, 0, row);
+        VecBatch vecBatch = new VecBatch(new Vec[]{intVec});
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] serialized = serializer.serialize(vecBatch);
+        VecBatch checkVecBatch = serializer.deserialize(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, serialized);
+        IntVec checkResultVec = (IntVec) checkVecBatch.getVector(0);
+        assertVecEquals(checkResultVec, new Object[] {1, 2, 3, 4, 5});
         vecBatch.releaseAllVectors();
         vecBatch.close();
         checkVecBatch.releaseAllVectors();
