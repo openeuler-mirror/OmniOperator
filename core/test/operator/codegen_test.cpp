@@ -1450,6 +1450,8 @@ TEST(CodeGenTest, ConcatChars)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
+    delete charTypeA;
+    delete charTypeB;
     delete expr;
     delete lc;
     delete context;
@@ -2447,7 +2449,7 @@ TEST (CodeGenTest, Substr) {
     delete context;
 }
 
-TEST(CodeGenTest, Mm3Hash)
+TEST(CodeGenTest, Mm3HashInt)
 {
     string unparsed = "$operator$EQUAL:4(mm3hash:1(#0, 42:1), 723455942:1)";
 
@@ -2458,7 +2460,7 @@ TEST(CodeGenTest, Mm3Hash)
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
 
-    int64_t v1[1] = {-2147483648};
+    int32_t v1[1] = {-2147483648};
     auto *vals = new int64_t[1];
     vals[0] = (int64_t)v1;
     auto *selected = new int32_t[1];
@@ -2485,14 +2487,149 @@ TEST(CodeGenTest, Mm3Hash)
 
     delete[] bitmap[0];
     delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
     delete[] vals;
     delete[] selected;
+    delete context;
     delete expr;
     delete lc;
 }
 
+TEST(CodeGenTest, Mm3HashLong)
+{
+    string unparsed = "mm3hash:1(#0, 42:1)";
 
-TEST (CodeGenTest, SubstrWithChars) {
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
+    VecTypes types(vecOfTypes);
+
+    int64_t v1[1] = {-2147483648};
+    auto *vals = new int64_t[1];
+    vals[0] = (int64_t)v1;
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    RowProjection lc(unparsed, types);
+    RowProjFunc func = lc.Create();
+    EXPECT_EQ(lc.GetReturnType(), INT32D);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    bool isNull = false;
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+    int32_t expected_res = Mm3Int64(v1[0], 42);
+    EXPECT_EQ(res, expected_res);
+    context->getArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] dataLength;
+    delete context;
+}
+
+TEST(CodeGenTest, Mm3HashDouble)
+{
+    string unparsed = "mm3hash:1(#0, 42:1)";
+
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
+    VecTypes types(vecOfTypes);
+
+    double v1[1] = {123.456};
+    auto *vals = new int64_t[1];
+    vals[0] = (int64_t)v1;
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    RowProjection lc(unparsed, types);
+    RowProjFunc func = lc.Create();
+    EXPECT_EQ(lc.GetReturnType(), INT32D);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    bool isNull = false;
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+    int32_t expected_res = Mm3Double(v1[0], 42);
+    EXPECT_EQ(res, expected_res);
+    context->getArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] dataLength;
+    delete context;
+}
+
+TEST(CodeGenTest, Mm3HashString)
+{
+    string unparsed = "mm3hash:1(#0, 42:1)";
+
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
+    VecTypes types(vecOfTypes);
+
+    char v1[] = "hello world";
+    auto *vals = new int64_t[1];
+    vals[0] = (int64_t)v1;
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    RowProjection lc(unparsed, types);
+    RowProjFunc func = lc.Create();
+    EXPECT_EQ(lc.GetReturnType(), INT32D);
+
+    int32_t *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    bool isNull = false;
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+    int32_t expected_res = Mm3String(vals[0], 42);
+    EXPECT_EQ(res, expected_res);
+    context->getArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] dataLength;
+    delete context;
+}
+
+TEST(CodeGenTest, SubstrWithChars)
+{
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_CHAR), VecType(OMNI_VEC_TYPE_CHAR) };
     VecTypes types(vecOfTypes);
     const int32_t numCols = 2;
@@ -2592,10 +2729,19 @@ TEST(CodeGenTest, CombineHash)
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
 
-    delete[] bitmap[0];
+    for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+    }
     delete[] bitmap;
+
+    for (int i = 0; i < 3; i++) {
+        delete[] offsets[i];
+    }
+    delete[] offsets;
+
     delete[] vals;
     delete[] selected;
+    delete context;
     delete expr;
     delete lc;
 }

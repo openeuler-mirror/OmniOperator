@@ -1,6 +1,13 @@
+
 package nova.hetu.omniruntime.operator;
 
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createIntVec;
+import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
@@ -8,21 +15,21 @@ import com.google.common.collect.ImmutableList;
 import nova.hetu.omniruntime.type.DoubleVecType;
 import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
+import nova.hetu.omniruntime.util.TestUtils;
+import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
-import java.nio.DoubleBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -30,7 +37,72 @@ import java.util.List;
  */
 public class OmniFilterAndProjectOperatorTest {
     private ImmutableList<VecBatch> makeInput(int nRows, Vec... cols) {
-        return ImmutableList.copyOf(new VecBatch[] {new VecBatch(cols)});
+        return ImmutableList.copyOf(new VecBatch[]{new VecBatch(cols)});
+    }
+
+    /**
+     * Between int.
+     */
+    @Test
+    public void betweenInt() {
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
+        List<String> projections = ImmutableList.of("#0", "#1", "#2");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
+
+        Object[][] datas = {{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {0, 1, 2, 3, 4, 5, 6, 6, 6, 6}};
+        VecBatch vecBatch = createVecBatch(types, datas);
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{0, 1, 2, 3, 4, 0, 1}, {0, 1, 2, 3, 4, 5, 6}, {0, 1, 2, 3, 4, 5, 6}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(resultVecBatch);
+        op.close();
+        factory.close();
+    }
+
+    /**
+     * Between int dictionary.
+     */
+    @Test
+    public void betweenIntDictionary() {
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
+        List<String> projections = ImmutableList.of("#0", "#1", "#2");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$BETWEEN:4(#1, #0, #2)", types, projections);
+
+        Object[][] datas = {{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {-3, -2, -1, 0, 1, 2, 3, 4, 5, 6}};
+        Vec vecs[] = new Vec[3];
+        vecs[0] = TestUtils.createIntVec(datas[0]);
+        vecs[1] = TestUtils.createIntVec(datas[1]);
+
+        int[] ids = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
+        DictionaryVec dicVec = TestUtils.createDictionaryVec(types[2], datas[2], ids);
+        dicVec = new DictionaryVec(dicVec, ids);
+        vecs[2] = dicVec;
+
+        VecBatch vecBatch = new VecBatch(vecs);
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{0, 1, 2, 3, 4, 0, 1}, {0, 1, 2, 3, 4, 5, 6}, {3, 4, 5, 6, 6, 6, 6}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(resultVecBatch);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -41,24 +113,31 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$LESS_THAN:4(#0, 1.0:3)", types, projections);
+                "$operator$LESS_THAN:4(#0, 1.0:3)", types, projections);
         final int numRows = 5000;
         DoubleVec col1 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2500);
-        DoubleBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asDoubleBuffer();
-        while (res1.hasRemaining()) {
-            assertTrue(res1.get() < 1);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((DoubleVec) res.getVector(0)).get(i) < 1);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -69,24 +148,64 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$LESS_THAN:4(#0, 2000:1)", types, projections);
+                "$operator$LESS_THAN:4(#0, 2000:1)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
-        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res1.hasRemaining()) {
-            assertTrue(res1.get() < 2000);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) < 2000);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
+    }
+
+    /**
+     * Less than dictionary varchar.
+     */
+    @Test
+    public void lessThanDictionaryVarchar() {
+        VecType[] types = {IntVecType.INTEGER, new VarcharVecType(50)};
+        List<String> projections = ImmutableList.of("#0", "#1");
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$LESS_THAN:4(#0, 6:1)", types, projections);
+
+        Object[][] datas = {{0, 3, 9}, {"hello", "world", "friends"}};
+        Vec vecs[] = new Vec[2];
+        vecs[0] = createIntVec(datas[0]);
+        int[] ids = {0, 1, 2};
+        DictionaryVec dicVec = TestUtils.createDictionaryVec(types[1], datas[1], ids);
+        vecs[1] = dicVec;
+        VecBatch vecBatch = new VecBatch(vecs);
+
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{0, 3}, {"hello", "world"}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(resultVecBatch);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -97,7 +216,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$GREATER_THAN:4(#0, 20:1)", types, projections);
+                "$operator$GREATER_THAN:4(#0, 20:1)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -106,19 +225,25 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, 3000000000L);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 800);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
-        while (res0.hasRemaining()) {
-            assertTrue(res0.get() > 20);
-            assertEquals(res1.get(), 3000000000L);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) > 20);
+            assertEquals(((LongVec) res.getVector(1)).get(i), 3000000000L);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -128,9 +253,8 @@ public class OmniFilterAndProjectOperatorTest {
     public void equalTo() {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#2");
-        OmniFilterAndProjectOperatorFactory factory =
-                new OmniFilterAndProjectOperatorFactory("$operator$EQUAL:4(#1, 50:2)",
-                        types, projections);
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "$operator$EQUAL:4(#1, 50:2)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         LongVec col2 = new LongVec(numRows);
@@ -140,19 +264,25 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 100);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 50);
-        DoubleBuffer res0 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asDoubleBuffer();
-        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asLongBuffer();
-        while (res0.hasRemaining()) {
-            assertEquals(res0.get(), 50.0);
-            assertEquals(res1.get(), 50);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((LongVec) res.getVector(0)).get(i), 50);
+            assertEquals(((DoubleVec) res.getVector(1)).get(i), 50.0);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -163,7 +293,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30:1)", types, projections);
+                "$operator$GREATER_THAN_OR_EQUAL:4(#1, 30:1)", types, projections);
         final int numRows = 5000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -176,17 +306,24 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, value);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 834);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res0.hasRemaining()) {
-            assertTrue(res0.get() >= 30);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) >= 30);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -197,25 +334,32 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$NOT_EQUAL:4(#0, 0:3)", types, projections);
+                "$operator$NOT_EQUAL:4(#0, 0:3)", types, projections);
         final int numRows = 5000;
         DoubleVec col1 = new DoubleVec(numRows);
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 4999);
-        DoubleBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asDoubleBuffer();
         double cnt = 1;
-        while (res0.hasRemaining()) {
-            assertEquals(res0.get(), cnt++);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((DoubleVec) res.getVector(0)).get(i), cnt++);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -226,24 +370,31 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$EQUAL:4(#0, 9348:1)", types, projections);
+                "$operator$EQUAL:4(#0, 9348:1)", types, projections);
         final int numRows = 20000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
             col1.set(i, 9348);
         }
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 20000);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res0.hasRemaining()) {
-            assertEquals(res0.get(), 9348);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((IntVec) res.getVector(0)).get(i), 9348);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -254,7 +405,7 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$LESS_THAN_OR_EQUAL:4(#0, 4:1)", types, projections);
+                "$operator$LESS_THAN_OR_EQUAL:4(#0, 4:1)", types, projections);
         final int numRows = 1000;
         OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(numRows);
@@ -263,31 +414,39 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i % 10);
             col2.set(i, i % 6 + 1);
         }
-        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 500);
-
-        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res1.hasRemaining()) {
-            assertTrue(res1.get() <= 4);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) <= 4);
         }
 
         // Test multiple inputs
-        for (VecBatch vecBatch : makeInput(numRows, col2)) {
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col2);
+        for (VecBatch vecBatch : vecBatches2) {
             op.addInput(vecBatch);
         }
         assertTrue(op.getOutput().hasNext());
         res = op.getOutput().next();
         assertEquals(res.getRowCount(), 668);
-        res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res1.hasRemaining()) {
-            assertTrue(res1.get() <= 4);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) <= 4);
         }
+
+        for (VecBatch vecBatch : vecBatches1) {
+            freeVecBatch(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
         op.close();
+        factory.close();
     }
 
     /**
@@ -298,8 +457,8 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#0", "#1");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1:1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1:2))",
-            types, projections);
+                "AND:4($operator$LESS_THAN_OR_EQUAL:4(#0, -1:1), $operator$LESS_THAN_OR_EQUAL:4(#1, -1:2))", types,
+                projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(numRows);
@@ -317,19 +476,25 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, val2);
         }
 
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 286);
-        IntBuffer res1 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        LongBuffer res2 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
-        while (res1.hasRemaining()) {
-            assertTrue(res1.get() < 0);
-            assertTrue(res2.get() < 0);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) < 0);
+            assertTrue(((LongVec) res.getVector(1)).get(i) < 0);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -340,9 +505,9 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4($operator$EQUAL:4(#0, 0:1), AND:4($operator$EQUAL:4(#1, 3000000000:2), " +
-                "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4:3)))",
-            types, projections);
+                "AND:4($operator$EQUAL:4(#0, 0:1), AND:4($operator$EQUAL:4(#1, 3000000000:2), "
+                        + "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4:3)))",
+                types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(numRows);
@@ -354,21 +519,26 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 10 / 10D);
         }
 
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 1000);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
-        DoubleBuffer res2 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).asDoubleBuffer();
-        while (res1.hasRemaining()) {
-            assertEquals(res0.get(), 0);
-            assertEquals(res1.get(), (long) 3e9);
-            assertTrue(res2.get() >= 0.4);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((IntVec) res.getVector(0)).get(i), 0);
+            assertEquals(((LongVec) res.getVector(1)).get(i), (long) 3e9);
+            assertTrue(((DoubleVec) res.getVector(2)).get(i) >= 0.4);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -391,21 +561,28 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4(AND:4($operator$GREATER_THAN:4(#3, 8766:3), $operator$LESS_THAN:4(#3, 9131:3)), " +
-                    "AND:4($operator$BETWEEN:4(#2, 0.05:3, 0.07:3), $operator$LESS_THAN:4(#0, 24.0:3)))",
-            types, projections);
+                "AND:4(AND:4($operator$GREATER_THAN:4(#3, 8766:3), $operator$LESS_THAN:4(#3, 9131:3)), "
+                        + "AND:4($operator$BETWEEN:4(#2, 0.05:3, 0.07:3), $operator$LESS_THAN:4(#0, 24.0:3)))",
+                types, projections);
         OmniOperator op = factory.createOperator();
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 100);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res0.hasRemaining()) {
-            assertTrue(res0.get() < 24);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) < 24);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -413,15 +590,12 @@ public class OmniFilterAndProjectOperatorTest {
      */
     @Test
     public void logicalOperators1() {
-        VecType[] types = {
-            IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE,
-            LongVecType.LONG
-        };
+        VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG,
+                DoubleVecType.DOUBLE, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#0", "#2", "#4", "#5");
-        String str
-            = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52:2), AND:4($operator$LESS_THAN:4(#4, 50.8:3), " +
-                "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800:1), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990:1)), " +
-                "AND:4($operator$NOT_EQUAL:4(#0, 1:1), $operator$EQUAL:4(#3, 3000000000:2)))))";
+        String str = "OR:4($operator$GREATER_THAN_OR_EQUAL:4(#5, 52:2), AND:4($operator$LESS_THAN:4(#4, 50.8:3), "
+                + "AND:4(AND:4($operator$GREATER_THAN:4(#2, 4800:1), $operator$LESS_THAN_OR_EQUAL:4(#1, 9990:1)), "
+                + "AND:4($operator$NOT_EQUAL:4(#0, 1:1), $operator$EQUAL:4(#3, 3000000000:2)))))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -440,20 +614,28 @@ public class OmniFilterAndProjectOperatorTest {
             col6.set(i, i % 55);
         }
 
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4, col5, col6)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4, col5, col6);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 543);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        IntBuffer res2 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asIntBuffer();
-        DoubleBuffer res4 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).asDoubleBuffer();
-        LongBuffer res5 = JvmUtils.directBuffer(res.getVectors()[3].getValuesBuf()).asLongBuffer();
-        while (res0.hasRemaining()) {
-            assertTrue((res0.get() != 1 && res2.get() > 4800 && res4.get() < 50.8) || res5.get() >= 52);
+        IntVec res0 = ((IntVec) res.getVector(0));
+        IntVec res1 = ((IntVec) res.getVector(1));
+        DoubleVec res2 = ((DoubleVec) res.getVector(2));
+        LongVec res3 = ((LongVec) res.getVector(3));
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue((res0.get(i) != 1 && res1.get(i) > 4800 && res2.get(i) < 50.8) || res3.get(i) >= 52);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -463,9 +645,8 @@ public class OmniFilterAndProjectOperatorTest {
     public void logicalOperators2() {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG, LongVecType.LONG};
         List<String> projections = ImmutableList.of("#3", "#2", "#1", "#0");
-        String str
-            = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50:1), $operator$EQUAL:4(#1, -12:1)), " +
-                "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000:2), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0:2)))";
+        String str = "AND:4(OR:4($operator$LESS_THAN:4(#0, 50:1), $operator$EQUAL:4(#1, -12:1)), "
+                + "OR:4($operator$LESS_THAN_OR_EQUAL:4(#2, -3000000000:2), $operator$GREATER_THAN_OR_EQUAL:4(#3, 0:2)))";
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(str, types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
@@ -480,24 +661,28 @@ public class OmniFilterAndProjectOperatorTest {
             col4.set(i, i % 9 - 4);
         }
 
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3, col4)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 3498);
-        LongBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asLongBuffer();
-        LongBuffer res1 = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asLongBuffer();
-        IntBuffer res2 = JvmUtils.directBuffer(res.getVectors()[2].getValuesBuf()).asIntBuffer();
-        IntBuffer res3 = JvmUtils.directBuffer(res.getVectors()[3].getValuesBuf()).asIntBuffer();
-        while (res0.hasRemaining()) {
-            long v0 = res0.get();
-            long v1 = res1.get();
-            int v2 = res2.get();
-            int v3 = res3.get();
-            assertTrue((v0 >= 0 || v1 <= -3000000000L) && (v2 == -12 || v3 < 50));
+        LongVec res0 = ((LongVec) res.getVector(0));
+        LongVec res1 = ((LongVec) res.getVector(1));
+        IntVec res2 = ((IntVec) res.getVector(2));
+        IntVec res3 = ((IntVec) res.getVector(3));
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue((res0.get(i) >= 0 || res1.get(i) <= -3000000000L) && (res2.get(i) == -12 || res3.get(i) < 50));
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -507,12 +692,10 @@ public class OmniFilterAndProjectOperatorTest {
     public void logicalOperators3() {
         VecType[] types = {IntVecType.INTEGER, DoubleVecType.DOUBLE};
         List<String> projections = ImmutableList.of("#1", "#0");
-        String expr
-            = "AND:4($operator$NOT_EQUAL:4(#1, 0:3), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1:1), " +
-                "$operator$EQUAL:4(#0, 2:1)), $operator$EQUAL:4(#0, 3:1)), OR:4(OR:4(OR:4($operator$EQUAL:4(55:1, #0), " +
-                "$operator$EQUAL:4(5:1, #0)), $operator$EQUAL:4(#0, 8:1)), $operator$EQUAL:4(#0, 13:1))))";
-        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types,
-            projections);
+        String expr = "AND:4($operator$NOT_EQUAL:4(#1, 0:3), OR:4(OR:4(OR:4($operator$EQUAL:4(#0, 1:1), "
+                + "$operator$EQUAL:4(#0, 2:1)), $operator$EQUAL:4(#0, 3:1)), OR:4(OR:4(OR:4($operator$EQUAL:4(55:1, #0), "
+                + "$operator$EQUAL:4(5:1, #0)), $operator$EQUAL:4(#0, 8:1)), $operator$EQUAL:4(#0, 13:1))))";
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(expr, types, projections);
         final int numRows = 10000;
         OmniOperator op = factory.createOperator();
         IntVec col1 = new IntVec(numRows);
@@ -531,20 +714,25 @@ public class OmniFilterAndProjectOperatorTest {
         col1.set(7, 13);
         col2.set(2, 0);
 
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
 
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 6);
-        IntBuffer fib = JvmUtils.directBuffer(res.getVectors()[1].getValuesBuf()).asIntBuffer();
-        assertEquals(fib.get(), 1);
-        assertEquals(fib.get(), 2);
-        assertEquals(fib.get(), 3);
-        assertEquals(fib.get(), 5);
-        assertEquals(fib.get(), 8);
-        assertEquals(fib.get(), 13);
+        int vals[] = {1, 2, 3, 5, 8, 13};
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertEquals(((IntVec) res.getVector(1)).get(i), vals[i]);
+        }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     /**
@@ -555,26 +743,31 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "$operator$GREATER_THAN:4(ADD:1(#0, 1:1), 4:1)",
-                types, projections);
+                "$operator$GREATER_THAN:4(ADD:1(#0, 1:1), 4:1)", types, projections);
         final int numRows = 10000;
         IntVec col1 = new IntVec(numRows);
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i % 5);
         }
-
         OmniOperator op = factory.createOperator();
-
-        for (VecBatch vecBatch : makeInput(numRows, col1)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
+
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
-        IntBuffer res0 = JvmUtils.directBuffer(res.getVectors()[0].getValuesBuf()).asIntBuffer();
-        while (res0.hasRemaining()) {
-            assertTrue(res0.get() + 1 > 4);
+        for (int i = 0; i < res.getRowCount(); i++) {
+            assertTrue(((IntVec) res.getVector(0)).get(i) + 1 > 4);
         }
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 
     private List<Vec> createTable(final int numRows) {
@@ -609,13 +802,18 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < 1000; i++) {
             Thread thread = new Thread(() -> {
                 OmniOperator op = factory.createOperator();
-                op.addInput(new VecBatch(createTable(numRows)));
+                VecBatch vecBatch = new VecBatch(createTable(numRows));
+                op.addInput(vecBatch);
                 assertTrue(op.getOutput().hasNext());
                 VecBatch res = op.getOutput().next();
                 // System.out.println(res.getLength());
                 assertEquals(res.getRowCount(), 501);
+
+                freeVecBatch(vecBatch);
+                freeVecBatch(res);
+                op.close();
             });
-            thread.setName("thread"+i);
+            thread.setName("thread" + i);
             thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                 @Override
                 public void uncaughtException(Thread thread1, Throwable throwable) {
@@ -630,6 +828,8 @@ public class OmniFilterAndProjectOperatorTest {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        factory.close();
     }
 
     /**
@@ -640,9 +840,9 @@ public class OmniFilterAndProjectOperatorTest {
         VecType[] types = {IntVecType.INTEGER, IntVecType.INTEGER, IntVecType.INTEGER};
         List<String> projections = ImmutableList.of("#0", "#1", "#2");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
-            "AND:4(IF:4($operator$EQUAL:4(#0, 0:1), $operator$LESS_THAN:4(#1, 3:1), $operator$EQUAL:4(#1, 4:1)), " +
-                "$operator$GREATER_THAN:4(#2, 3:1))",
-            types, projections);
+                "AND:4(IF:4($operator$EQUAL:4(#0, 0:1), $operator$LESS_THAN:4(#1, 3:1), $operator$EQUAL:4(#1, 4:1)), "
+                        + "$operator$GREATER_THAN:4(#2, 3:1))",
+                types, projections);
         final int numRows = 10000;
         IntVec col1 = new IntVec(numRows);
         IntVec col2 = new IntVec(numRows);
@@ -654,12 +854,20 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         OmniOperator op = factory.createOperator();
-
-        for (VecBatch vecBatch : makeInput(numRows, col1, col2, col3)) {
+        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
+        for (VecBatch vecBatch : vecBatches) {
             op.addInput(vecBatch);
         }
+
         assertTrue(op.getOutput().hasNext());
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
+
+        for (VecBatch vecBatch : vecBatches) {
+            freeVecBatch(vecBatch);
+        }
+        freeVecBatch(res);
+        op.close();
+        factory.close();
     }
 }
