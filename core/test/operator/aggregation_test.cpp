@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
-#include "../../src/operator/aggregation/group_aggregation.h"
-#include "../../src/operator/aggregation/non_group_aggregation.h"
+#include "operator/aggregation/group_aggregation.h"
+#include "operator/aggregation/non_group_aggregation.h"
 #include "../util/test_util.h"
-#include "../../src/jit/jit.h"
-#include "../../src/jit/specialization.h"
-#include "../../src/operator/optimization.h"
-#include "../../src/vector/vector_helper.h"
-#include "../../src/util/perf_util.h"
+#include "jit/jit.h"
+#include "jit/specialization.h"
+#include "operator/optimization.h"
+#include "vector/vector_helper.h"
+#include "util/perf_util.h"
 #include "../../libconfig.h"
 
 #include <time.h>
@@ -95,6 +95,13 @@ Vector *buildAggregateInput(VecTypeId aggTypeId, int32_t rowPerVecBatch)
 {
     VectorAllocator *vecAllocator = VectorAllocatorFactory::GetGlobalAllocator();
     switch (aggTypeId) {
+        case OMNI_VEC_TYPE_NONE: {
+            LongVector *col = new LongVector(vecAllocator, rowPerVecBatch);
+            for (int32_t j = 0; j < rowPerVecBatch; ++j) {
+                col->SetValueNull(j);
+            }
+            return col;
+        }
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             IntVector *col = new IntVector(vecAllocator, rowPerVecBatch);
@@ -874,7 +881,7 @@ TEST(HashAggregationOperatorTest, perf_via_API_multiple_threads)
     }
     uint64_t factoryObjAddr = CreateHashFactoryWithJit(true, false);
     std::cout << "after prepare" << std::endl;
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1, 2, 4, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
@@ -1071,7 +1078,7 @@ TEST(AggregationOperatorTest, perf_original)
         rowCount[i] = ROW_PER_VEC_BATCH;
     }
     std::cout << "after prepare" << std::endl;
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1, 2, 4, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
@@ -1122,7 +1129,7 @@ TEST(AggregationOperatorTest, perf_codegen)
     }
     uint64_t factoryObjAddr = CreateAggFactoryWithJit();
     std::cout << "after prepare" << std::endl;
-    int threadNums[] = {1, 8, 16};
+    int threadNums[] = {1, 2, 4, 8, 16};
     for (int32_t i = 0; i < sizeof(threadNums) / sizeof(int); ++i) {
         total_wall_time = 0;
         total_cpu_time = 0;
@@ -1577,4 +1584,476 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     aggregateColumns.clear();
     aggs.clear();
     result.clear();
+}
+
+TEST(AggregatorTest, sum_test)
+{
+    using namespace omniruntime::op;
+    int32_t ROW_PER_VEC_BATCH = 200;
+    auto sumFactory = new SumAggregatorFactory();
+    // sum test types : long + decimal + dictionary + null
+    auto sumLong = sumFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto sumDecimal = sumFactory->CreateAggregator(OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128, true, false);
+    auto sumDict = sumFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto sumNull = sumFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+
+    auto longInputVec = buildAggregateInput(OMNI_VEC_TYPE_LONG, ROW_PER_VEC_BATCH);
+    auto decimalInputVec = buildAggregateInput(OMNI_VEC_TYPE_DECIMAL128, ROW_PER_VEC_BATCH);
+    LongVecType longVecType;
+    int32_t ids[ROW_PER_VEC_BATCH];
+    int64_t dict[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        ids[i] = 0;
+        dict[i] = 1;
+    }
+    auto dictInputVec = CreateDictionaryVector(longVecType, ROW_PER_VEC_BATCH, ids, ROW_PER_VEC_BATCH, dict);
+    auto nullInputVec = buildAggregateInput(OMNI_VEC_TYPE_NONE, ROW_PER_VEC_BATCH);
+
+    // process long
+    GroupBySlot groupBySlot;
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            sumLong->Insert(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            sumLong->Initiate(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            sumLong->ProcessGroup(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            sumLong->ProcessNonGroup(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(200, *static_cast<int64_t *>(groupBySlot.val));
+    EXPECT_EQ(200, *static_cast<int64_t *>(sumLong->Evaluate(sumLong->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process decimal
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            sumDecimal->Insert(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            sumDecimal->Initiate(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        } else {
+            sumDecimal->ProcessGroup(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            sumDecimal->ProcessNonGroup(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        }
+    }
+    Decimal128 expected(200);
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(groupBySlot.val));
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(sumDecimal->Evaluate(sumDecimal->GetNonGroupState(), OMNI_VEC_TYPE_DECIMAL128)));
+    groupBySlot.val = nullptr;
+
+    // process dictionary
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            sumDict->Insert(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            sumDict->Initiate(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        } else {
+            sumDict->ProcessGroup(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            sumDict->ProcessNonGroup(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        }
+    }
+    EXPECT_EQ(200, *static_cast<int64_t *>(groupBySlot.val));
+    EXPECT_EQ(200, *static_cast<int64_t *>(sumDict->Evaluate(sumDict->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process null
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            sumNull->Insert(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            sumNull->Initiate(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            sumNull->ProcessGroup(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            sumNull->ProcessNonGroup(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(nullptr, groupBySlot.val);
+    EXPECT_EQ(nullptr, sumNull->Evaluate(sumNull->GetNonGroupState(), OMNI_VEC_TYPE_LONG));
+    groupBySlot.val = nullptr;
+
+    delete longInputVec;
+    delete decimalInputVec;
+    delete dictInputVec;
+    delete nullInputVec;
+    delete sumFactory;
+}
+
+TEST(AggregatorTest, count_column_test)
+{
+    using namespace omniruntime::op;
+    int32_t ROW_PER_VEC_BATCH = 200;
+    auto countFactory = new CountAggregatorFactory();
+    // count test types : long + dictionary + null
+    auto countLong = countFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto countDict = countFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto countNull = countFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+
+    auto longInputVec = buildAggregateInput(OMNI_VEC_TYPE_LONG, ROW_PER_VEC_BATCH);
+    LongVecType longVecType;
+    int32_t ids[ROW_PER_VEC_BATCH];
+    int64_t dict[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        ids[i] = 0;
+        dict[i] = 1;
+    }
+    auto dictInputVec = CreateDictionaryVector(longVecType, ROW_PER_VEC_BATCH, ids, ROW_PER_VEC_BATCH, dict);
+    auto nullInputVec = buildAggregateInput(OMNI_VEC_TYPE_NONE, ROW_PER_VEC_BATCH);
+
+    // process long
+    GroupBySlot groupBySlot;
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            countLong->Insert(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            countLong->Initiate(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            countLong->ProcessGroup(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            countLong->ProcessNonGroup(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(200, groupBySlot.count);
+    EXPECT_EQ(200, *static_cast<int64_t *>(countLong->Evaluate(countLong->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process dictionary
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            countDict->Insert(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            countDict->Initiate(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        } else {
+            countDict->ProcessGroup(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            countDict->ProcessNonGroup(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        }
+    }
+    EXPECT_EQ(200, groupBySlot.count);
+    EXPECT_EQ(200, *static_cast<int64_t *>(countDict->Evaluate(countDict->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process null
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            countNull->Insert(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            countNull->Initiate(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            countNull->ProcessGroup(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            countNull->ProcessNonGroup(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(0, groupBySlot.count);
+    EXPECT_EQ(0, *static_cast<int64_t *>(countNull->Evaluate(countNull->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    delete longInputVec;
+    delete dictInputVec;
+    delete nullInputVec;
+    delete countFactory;
+}
+
+TEST(AggregatorTest, min_test)
+{
+    using namespace omniruntime::op;
+    int32_t ROW_PER_VEC_BATCH = 200;
+    auto minFactory = new MinAggregatorFactory();
+    // min test types : long + decimal + varchar + dictionary + null
+    auto minLong = minFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto minDecimal = minFactory->CreateAggregator(OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128, true, false);
+    auto minVarchar = minFactory->CreateAggregator(OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR, true, false);
+    auto minDict = minFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto minNull = minFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+
+    auto longInputVec = buildAggregateInput(OMNI_VEC_TYPE_LONG, ROW_PER_VEC_BATCH);
+    auto decimalInputVec = buildAggregateInput(OMNI_VEC_TYPE_DECIMAL128, ROW_PER_VEC_BATCH);
+    VarcharVecType varcharVecType(1);
+    std::string stringVals[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        stringVals[i] = "1";
+    }
+    auto varcharInputVec = CreateVarcharVector(varcharVecType, stringVals, ROW_PER_VEC_BATCH);
+    LongVecType longVecType;
+    int32_t ids[ROW_PER_VEC_BATCH];
+    int64_t dict[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        ids[i] = 0;
+        dict[i] = 1;
+    }
+    auto dictInputVec = CreateDictionaryVector(longVecType, ROW_PER_VEC_BATCH, ids, ROW_PER_VEC_BATCH, dict);
+    auto nullInputVec = buildAggregateInput(OMNI_VEC_TYPE_NONE, ROW_PER_VEC_BATCH);
+
+    // process long
+    GroupBySlot groupBySlot;
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            minLong->Insert(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            minLong->Initiate(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            minLong->ProcessGroup(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            minLong->ProcessNonGroup(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(1, *static_cast<int64_t *>(groupBySlot.val));
+    EXPECT_EQ(1, *static_cast<int64_t *>(minLong->Evaluate(minLong->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process dictionary
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            minDict->Insert(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            minDict->Initiate(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        } else {
+            minDict->ProcessGroup(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            minDict->ProcessNonGroup(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        }
+    }
+    EXPECT_EQ(1, *static_cast<int64_t *>(groupBySlot.val));
+    EXPECT_EQ(1, *static_cast<int64_t *>(minDict->Evaluate(minDict->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process null
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            minNull->Insert(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            minNull->Initiate(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            minNull->ProcessGroup(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            minNull->ProcessNonGroup(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(nullptr, groupBySlot.val);
+    EXPECT_EQ(nullptr, minNull->Evaluate(minNull->GetNonGroupState(), OMNI_VEC_TYPE_LONG));
+    groupBySlot.val = nullptr;
+
+    // process varchar
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            minVarchar->Insert(groupBySlot, varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+            minVarchar->Initiate(varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+        } else {
+            minVarchar->ProcessGroup(groupBySlot, varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+            minVarchar->ProcessNonGroup(varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+        }
+    }
+    std::string expectedStr = "1";
+    EXPECT_EQ(0, std::memcmp(groupBySlot.val, expectedStr.c_str(), 1));
+    auto res = minVarchar->Evaluate(minVarchar->GetNonGroupState(), OMNI_VEC_TYPE_VARCHAR);
+    auto strRes = static_cast<std::string *>(res);
+    EXPECT_EQ(0, std::memcmp(strRes->c_str(), expectedStr.c_str(), 1));
+    groupBySlot.val = nullptr;
+
+    // process decimal
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            minDecimal->Insert(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            minDecimal->Initiate(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        } else {
+            minDecimal->ProcessGroup(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            minDecimal->ProcessNonGroup(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        }
+    }
+    Decimal128 expected(1);
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(groupBySlot.val));
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(minDecimal->Evaluate(minDecimal->GetNonGroupState(), OMNI_VEC_TYPE_DECIMAL128)));
+    groupBySlot.val = nullptr;
+
+    delete longInputVec;
+    delete dictInputVec;
+    delete nullInputVec;
+    delete decimalInputVec;
+    delete varcharInputVec;
+    delete minFactory;
+}
+
+TEST(AggregatorTest, max_test)
+{
+    using namespace omniruntime::op;
+    int32_t ROW_PER_VEC_BATCH = 200;
+    auto maxFactory = new MaxAggregatorFactory();
+    // max test types : long + decimal + varchar + dictionary + null
+    auto maxLong = maxFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto maxDecimal = maxFactory->CreateAggregator(OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128, true, false);
+    auto maxVarchar = maxFactory->CreateAggregator(OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR, true, false);
+    auto maxDict = maxFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto maxNull = maxFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+
+    auto longInputVec = buildAggregateInput(OMNI_VEC_TYPE_LONG, ROW_PER_VEC_BATCH);
+    auto decimalInputVec = buildAggregateInput(OMNI_VEC_TYPE_DECIMAL128, ROW_PER_VEC_BATCH);
+    VarcharVecType varcharVecType(1);
+    std::string stringVals[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        stringVals[i] = "1";
+    }
+    auto varcharInputVec = CreateVarcharVector(varcharVecType, stringVals, ROW_PER_VEC_BATCH);
+    LongVecType longVecType;
+    int32_t ids[ROW_PER_VEC_BATCH];
+    int64_t dict[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        ids[i] = 0;
+        dict[i] = 1;
+    }
+    auto dictInputVec = CreateDictionaryVector(longVecType, ROW_PER_VEC_BATCH, ids, ROW_PER_VEC_BATCH, dict);
+    auto nullInputVec = buildAggregateInput(OMNI_VEC_TYPE_NONE, ROW_PER_VEC_BATCH);
+
+    // process long
+    GroupBySlot groupBySlot;
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            maxLong->Insert(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            maxLong->Initiate(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            maxLong->ProcessGroup(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            maxLong->ProcessNonGroup(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(1, *static_cast<int64_t *>(groupBySlot.val));
+    EXPECT_EQ(1, *static_cast<int64_t *>(maxLong->Evaluate(maxLong->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process dictionary
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            maxDict->Insert(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            maxDict->Initiate(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        } else {
+            maxDict->ProcessGroup(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            maxDict->ProcessNonGroup(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        }
+    }
+    EXPECT_EQ(1, *static_cast<int64_t *>(groupBySlot.val));
+    EXPECT_EQ(1, *static_cast<int64_t *>(maxDict->Evaluate(maxDict->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process null
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            maxNull->Insert(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            maxNull->Initiate(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            maxNull->ProcessGroup(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            maxNull->ProcessNonGroup(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(nullptr, groupBySlot.val);
+    EXPECT_EQ(nullptr, maxNull->Evaluate(maxNull->GetNonGroupState(), OMNI_VEC_TYPE_LONG));
+    groupBySlot.val = nullptr;
+
+    // process varchar
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            maxVarchar->Insert(groupBySlot, varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+            maxVarchar->Initiate(varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+        } else {
+            maxVarchar->ProcessGroup(groupBySlot, varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+            maxVarchar->ProcessNonGroup(varcharInputVec, OMNI_VEC_TYPE_VARCHAR, i);
+        }
+    }
+    std::string expectedStr = "1";
+    EXPECT_EQ(0, std::memcmp(groupBySlot.val, expectedStr.c_str(), 1));
+    auto res = maxVarchar->Evaluate(maxVarchar->GetNonGroupState(), OMNI_VEC_TYPE_VARCHAR);
+    auto strRes = static_cast<std::string *>(res);
+    EXPECT_EQ(0, std::memcmp(strRes->c_str(), expectedStr.c_str(), 1));
+    groupBySlot.val = nullptr;
+
+    // process decimal
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            maxDecimal->Insert(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            maxDecimal->Initiate(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        } else {
+            maxDecimal->ProcessGroup(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            maxDecimal->ProcessNonGroup(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        }
+    }
+    Decimal128 expected(1);
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(groupBySlot.val));
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(maxDecimal->Evaluate(maxDecimal->GetNonGroupState(), OMNI_VEC_TYPE_DECIMAL128)));
+    groupBySlot.val = nullptr;
+
+    delete longInputVec;
+    delete dictInputVec;
+    delete nullInputVec;
+    delete decimalInputVec;
+    delete varcharInputVec;
+    delete maxFactory;
+}
+
+TEST(AggregatorTest, avg_test)
+{
+    using namespace omniruntime::op;
+    int32_t ROW_PER_VEC_BATCH = 200;
+
+    auto avgFactory = new AverageAggregatorFactory();
+    // avg test types : long + decimal + dictionary + null
+    auto avgLong = avgFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto avgDecimal = avgFactory->CreateAggregator(OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128, true, false);
+    auto avgDict = avgFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+    auto avgNull = avgFactory->CreateAggregator(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, true, false);
+
+    auto longInputVec = buildAggregateInput(OMNI_VEC_TYPE_LONG, ROW_PER_VEC_BATCH);
+    auto decimalInputVec = buildAggregateInput(OMNI_VEC_TYPE_DECIMAL128, ROW_PER_VEC_BATCH);
+    LongVecType longVecType;
+    int32_t ids[ROW_PER_VEC_BATCH];
+    int64_t dict[ROW_PER_VEC_BATCH];
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        ids[i] = 0;
+        dict[i] = 1;
+    }
+    auto dictInputVec = CreateDictionaryVector(longVecType, ROW_PER_VEC_BATCH, ids, ROW_PER_VEC_BATCH, dict);
+    auto nullInputVec = buildAggregateInput(OMNI_VEC_TYPE_NONE, ROW_PER_VEC_BATCH);
+
+    // process long
+    GroupBySlot groupBySlot;
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            avgLong->Insert(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            avgLong->Initiate(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            avgLong->ProcessGroup(groupBySlot, longInputVec, OMNI_VEC_TYPE_LONG, i);
+            avgLong->ProcessNonGroup(longInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(1, *static_cast<double *>(avgLong->Evaluate(groupBySlot, OMNI_VEC_TYPE_LONG)));
+    EXPECT_EQ(1, *static_cast<double *>(avgLong->Evaluate(avgLong->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            avgDecimal->Insert(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            avgDecimal->Initiate(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        } else {
+            avgDecimal->ProcessGroup(groupBySlot, decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+            avgDecimal->ProcessNonGroup(decimalInputVec, OMNI_VEC_TYPE_DECIMAL128, i);
+        }
+    }
+    Decimal128 expected(1);
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(avgDecimal->Evaluate(groupBySlot, OMNI_VEC_TYPE_DECIMAL128)));
+    EXPECT_EQ(expected, *static_cast<Decimal128 *>(avgDecimal->Evaluate(avgDecimal->GetNonGroupState(), OMNI_VEC_TYPE_DECIMAL128)));
+    groupBySlot.val = nullptr;
+
+    // process dictionary
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            avgDict->Insert(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            avgDict->Initiate(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        } else {
+            avgDict->ProcessGroup(groupBySlot, dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+            avgDict->ProcessNonGroup(dictInputVec, OMNI_VEC_TYPE_DICTIONARY, i);
+        }
+    }
+    EXPECT_EQ(1, *static_cast<double *>(avgDict->Evaluate(groupBySlot, OMNI_VEC_TYPE_LONG)));
+    EXPECT_EQ(1, *static_cast<double *>(avgDict->Evaluate(avgDict->GetNonGroupState(), OMNI_VEC_TYPE_LONG)));
+    groupBySlot.val = nullptr;
+
+    // process null
+    for (int32_t i = 0; i < ROW_PER_VEC_BATCH; ++i) {
+        if (i == 0) {
+            avgNull->Insert(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            avgNull->Initiate(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        } else {
+            avgNull->ProcessGroup(groupBySlot, nullInputVec, OMNI_VEC_TYPE_LONG, i);
+            avgNull->ProcessNonGroup(nullInputVec, OMNI_VEC_TYPE_LONG, i);
+        }
+    }
+    EXPECT_EQ(nullptr, avgNull->Evaluate(groupBySlot, OMNI_VEC_TYPE_LONG));
+    EXPECT_EQ(nullptr, avgNull->Evaluate(avgNull->GetNonGroupState(), OMNI_VEC_TYPE_LONG));
+    groupBySlot.val = nullptr;
+
+    delete longInputVec;
+    delete dictInputVec;
+    delete nullInputVec;
+    delete decimalInputVec;
+    delete avgFactory;
 }

@@ -57,7 +57,6 @@ using IsSameNodeFunc = void (*)(Vector *vector, const uint32_t offset, GroupBySl
 using SetVector = void (*)(VectorBatch *vecBatch, VecType &type, int32_t columnIndex, VectorAllocator *vecAllocator,
     int32_t rowCount);
 using FillValue = void (*)(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
-using ReleaseMemory = void (*)(GroupBySlot &rowIterator, int32_t columnIndex, VecType &type);
 
 using FunctionByDataType = struct FunctionByDataType {
     VecTypeId vecTypeId;
@@ -67,7 +66,6 @@ using FunctionByDataType = struct FunctionByDataType {
     DuplicateKeyValue duplicateKey;
     SetVector setVector;
     FillValue fillValue;
-    ReleaseMemory releaseMemory;
 };
 
 using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
@@ -103,9 +101,6 @@ template <typename V, typename D>
 void FillValueImpl(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
 
 void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &tempRowIterator, int colIndex);
-
-template <typename T> void ReleaseMemoryImpl(GroupBySlot &rowIterator, int32_t columnIndex, VecType &type);
-void ReleaseMemoryVarcharImpl(GroupBySlot &columnVal, int32_t columnIndex, VecType &type);
 
 class HashAggregationOperator : public AggregationCommonOperator {
 public:

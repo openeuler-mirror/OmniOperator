@@ -88,7 +88,6 @@ public:
           executionContext(std::make_unique<ExecutionContext>())
     {}
     virtual ~Aggregator() {}
-    virtual void Process(void *valuePtr, VecType type) = 0;
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
@@ -133,10 +132,12 @@ protected:
 
 using ProcessGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-using ProcessNonGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+using ProcessNonGroupFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+    std::unique_ptr<ExecutionContext> &context);
 using InsertFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-using InitiateFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+using InitiateFunc = void (*)(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+    std::unique_ptr<ExecutionContext> &context);
 using EvaluateFunc = void* (*)(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
 using AggFunctionByType = struct AggFunctionByType {
     VecTypeId typeId;
@@ -148,7 +149,8 @@ using AggFunctionByType = struct AggFunctionByType {
 };
 
 template<typename V, typename D>
-void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                   std::unique_ptr<ExecutionContext> &context);
 void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 void SumInsertDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
@@ -161,19 +163,20 @@ void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t
 void SumProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D>
-void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void SumInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context);
+void SumInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D>
-void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void SumProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void SumProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context);
 
 template<typename V, typename D>
-void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                   std::unique_ptr<ExecutionContext> &context);
 void AvgInsertContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
-void AvgInsertDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 void AvgInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
@@ -182,23 +185,29 @@ void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset
     std::unique_ptr<ExecutionContext> &context);
 void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
-void AvgProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context);
 void AvgProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D>
-void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void AvgInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void AvgInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context);
+void AvgInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void AvgInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D>
-void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void AvgProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void AvgProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void AvgProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                   std::unique_ptr<ExecutionContext> &context);
+void AvgProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context);
 template<typename D>
 void* AvgEvaluateImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
+void* AvgEvaluateDecimalImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
 
 template<typename V, typename D>
-void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                   std::unique_ptr<ExecutionContext> &context);
 void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 void MinInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
@@ -211,16 +220,24 @@ void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t
 void MinProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D> 
-void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MinInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context);
+void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void MinInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D> 
-void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MinProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                   std::unique_ptr<ExecutionContext> &context);
+void MinProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context);
+void *MinEvaluateVarcharImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
 
 template<typename V, typename D>
-void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std::unique_ptr<ExecutionContext> &context);
+void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                   std::unique_ptr<ExecutionContext> &context);
 void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 void MaxInsertDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
@@ -233,13 +250,20 @@ void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t
 void MaxProcessGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D> 
-void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MaxInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context);
+void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void MaxInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context);
 template<typename V, typename D> 
-void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
-void MaxProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset);
+void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context);
+void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                   std::unique_ptr<ExecutionContext> &context);
+void MaxProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context);
+void *MaxEvaluateVarcharImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context);
 
 class SumAggregator : public Aggregator {
 public:
@@ -254,7 +278,6 @@ public:
     void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
     void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
 };
 
@@ -272,7 +295,6 @@ public:
     void ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offset) override;
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
-    void Process(void *valuePtr, VecType type) override {}
     void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
 };
 
@@ -289,7 +311,6 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
-    void Process(void *valuePtr, VecType type) override {}
 };
 
 class MinAggregator : public Aggregator {
@@ -305,7 +326,6 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
-    void Process(void *valuePtr, VecType type) override {}
 };
 
 class MaxAggregator : public Aggregator {
@@ -321,7 +341,6 @@ public:
     void Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset) override;
     void Initiate(Vector *colPtr, int32_t type, uint32_t offset) override;
     void* Evaluate(const GroupBySlot &groupBySlot, int32_t type) override;
-    void Process(void *valuePtr, VecType type) override {}
 };
 
 class AggregatorFactory {

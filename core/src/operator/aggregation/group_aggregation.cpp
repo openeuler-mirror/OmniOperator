@@ -26,31 +26,29 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
         OMNI_VEC_TYPE_INT, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>,
-        DuplicateKeyValueImpl<IntVector, int32_t>, SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>,
-        ReleaseMemoryImpl<int32_t>
+        DuplicateKeyValueImpl<IntVector, int32_t>, SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
     },
     {
         OMNI_VEC_TYPE_LONG, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>,
-        DuplicateKeyValueImpl<LongVector, int64_t>, SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>,
-        ReleaseMemoryImpl<int64_t>
+        DuplicateKeyValueImpl<LongVector, int64_t>, SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
     },
     {
         OMNI_VEC_TYPE_DOUBLE, HashFuncImpl<DoubleVector, double>, HashFuncVectImpl<DoubleVector, double>, IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
-        SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>, ReleaseMemoryImpl<double>
+        SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>
     },
     {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
         OMNI_VEC_TYPE_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImpl<LongVector, int64_t>, IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
-        SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>, ReleaseMemoryImpl<int64_t>
+        SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
     },
     {
         OMNI_VEC_TYPE_DECIMAL128, HashDecimalFunc, HashDecimalVectFunc, IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
-        SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>, ReleaseMemoryImpl<Decimal128>
+        SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>
     },
     {
         OMNI_VEC_TYPE_DATE32, HashFuncImpl<IntVector, int32_t>, HashFuncVectImpl<IntVector, int32_t>, IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
-        SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>, ReleaseMemoryImpl<int32_t>
+        SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
     },
     {OMNI_VEC_TYPE_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VEC_TYPE_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
@@ -60,14 +58,14 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
         OMNI_VEC_TYPE_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl,
-        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue, ReleaseMemoryVarcharImpl
+        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue
     },
     {
         OMNI_VEC_TYPE_CHAR, HashVarcharFuncImpl, HashVarcharVectFuncImpl, IsSameNodeFuncVarcharImpl,
-        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue, ReleaseMemoryVarcharImpl
+        DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue
     },
-    {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr, nullptr},
+    {OMNI_VEC_TYPE_DICTIONARY, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
 };
 
 
@@ -378,7 +376,8 @@ void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex
         if ((*rowIterator)[colIndex].avgCnt == 0) {
             LogError("Divisor is zero!");
         }
-        vector->SetValue(rowIndex, *static_cast<double *>((*rowIterator)[colIndex].avgVal));
+        vector->SetValue(rowIndex,
+                         *static_cast<double *>((*rowIterator)[colIndex].avgVal) / (*rowIterator)[colIndex].avgCnt);
     }
 }
 
@@ -671,24 +670,6 @@ void FillVarcharValue(VectorBatch *vecBatch, int32_t rowIndex, ChainIterator &te
     }
     vector->SetValue(rowIndex, reinterpret_cast<uint8_t *>((*tempRowIterator)[colIndex].strVal),
         (*tempRowIterator)[colIndex].strLen);
-}
-
-template <typename T> void ReleaseMemoryImpl(GroupBySlot &columnVal, int32_t columnIndex, VecType &type)
-{
-    auto p = columnVal.val;
-    if (p != nullptr) {
-        delete static_cast<T *>(p);
-        p = nullptr;
-    }
-}
-
-void ReleaseMemoryVarcharImpl(GroupBySlot &columnVal, int32_t columnIndex, VecType &type)
-{
-    auto p = columnVal.strVal;
-    if (p != nullptr) {
-        delete[] p;
-        p = nullptr;
-    }
 }
 } // end of namespace op
 } // end of namespace omniruntime
