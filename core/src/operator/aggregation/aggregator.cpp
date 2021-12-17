@@ -31,8 +31,8 @@ static constexpr AggFunctionByType AGG_SUM_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_BOOLEAN, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VEC_TYPE_SHORT, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
-        OMNI_VEC_TYPE_DECIMAL64, SumInsertDecimalImpl, SumProcessGroupDecimalImpl,
-        SumInitiateDecimalImpl, SumProcessNonGroupDecimalImpl, nullptr
+        OMNI_VEC_TYPE_DECIMAL64, SumInsertImpl<LongVector, Decimal128>, SumProcessGroupImpl<LongVector, Decimal128>,
+        SumInitiateImpl<LongVector, Decimal128>, SumProcessNonGroupImpl<LongVector, Decimal128>, nullptr
     },
     {
         OMNI_VEC_TYPE_DECIMAL128, SumInsertImpl<Decimal128Vector, Decimal128>,
@@ -75,9 +75,8 @@ static constexpr AggFunctionByType AGG_AVG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
         OMNI_VEC_TYPE_DECIMAL64, AvgInsertImpl<LongVector, double>, AvgProcessGroupImpl<LongVector, double>,
         AvgInitiateImpl<LongVector, double>, AvgProcessNonGroupImpl<LongVector, double>, AvgEvaluateImpl<double>
     },
-    // TODO support decimal128 average
     {
-        OMNI_VEC_TYPE_DECIMAL128, nullptr, nullptr,
+        OMNI_VEC_TYPE_DECIMAL128, AvgInsertImpl<Decimal128Vector, Decimal128>, AvgProcessGroupImpl<Decimal128Vector, Decimal128>,
         AvgInitiateImpl<Decimal128Vector, Decimal128>, AvgProcessNonGroupImpl<Decimal128Vector, Decimal128>, AvgEvaluateImpl<Decimal128>
     },
     {
@@ -133,7 +132,7 @@ static constexpr AggFunctionByType AGG_MIN_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
         OMNI_VEC_TYPE_VARCHAR, MinInsertVarcharImpl, MinProcessGroupVarcharImpl, MinInitiateVarcharImpl,
-        MinProcessNonGroupVarcharImpl, nullptr
+        MinProcessNonGroupVarcharImpl, MinEvaluateVarcharImpl
     },
     {
         OMNI_VEC_TYPE_CHAR, MinInsertVarcharImpl, MinProcessGroupVarcharImpl, MinInitiateVarcharImpl,
@@ -180,13 +179,16 @@ static constexpr AggFunctionByType AGG_MAX_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
     {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
     {
         OMNI_VEC_TYPE_VARCHAR, MaxInsertVarcharImpl, MaxProcessGroupVarcharImpl, MaxInitiateVarcharImpl,
-        MaxProcessNonGroupVarcharImpl, nullptr
+        MaxProcessNonGroupVarcharImpl, MaxEvaluateVarcharImpl
     },
     {
         OMNI_VEC_TYPE_CHAR, MaxInsertVarcharImpl, MaxProcessGroupVarcharImpl, MaxInitiateVarcharImpl,
         MaxProcessNonGroupVarcharImpl
     },
-    {OMNI_VEC_TYPE_DICTIONARY, MaxInsertDictionaryImpl, MaxProcessGroupDictionaryImpl, MaxInitiateDictionaryImpl, MinProcessNonGroupDictionaryImpl, nullptr},
+    {
+        OMNI_VEC_TYPE_DICTIONARY, MaxInsertDictionaryImpl, MaxProcessGroupDictionaryImpl, MaxInitiateDictionaryImpl,
+        MaxProcessNonGroupDictionaryImpl, nullptr
+     },
     {OMNI_VEC_TYPE_CONTAINER, nullptr, nullptr, nullptr, nullptr, nullptr},
 };
 
@@ -199,19 +201,8 @@ void SumInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std:
     auto curVal = (static_cast<V *>(colPtr))->GetValue(offset);
     int32_t len = sizeof(D);
     auto ptr = context->getArena()->Allocate(len);
-    memcpy_s(ptr, len, &curVal, len);
+    *reinterpret_cast<D *>(ptr) = curVal;
     groupSlot.val = ptr;
-}
-
-void SumInsertDecimalImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context)
-{
-    if (UNLIKELY(colPtr->IsValueNull(offset))) {
-        return;
-    }
-    auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-    auto val = std::make_unique<Decimal128>(curVal);
-    groupBySlot.val = val.release();
 }
 
 void SumInsertDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
@@ -237,21 +228,6 @@ void SumProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset
     *(static_cast<D *>(groupSlot.val)) += (static_cast<V *>(colPtr))->GetValue(offset);
 }
 
-void SumProcessGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
-    std::unique_ptr<ExecutionContext> &context)
-{
-    if (UNLIKELY(colPtr->IsValueNull(offset))) {
-        return;
-    }
-    if (groupSlot.val == nullptr) {
-        SumInsertDecimalImpl(groupSlot, colPtr, offset, context);
-        return;
-    }
-    auto val = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-    auto v = std::make_unique<Decimal128>(val);
-    *(static_cast<Decimal128 *>(groupSlot.val)) += *v;
-}
-
 void SumProcessGroupDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uint32_t offset,
     std::unique_ptr<ExecutionContext> &context)
 {
@@ -262,71 +238,50 @@ void SumProcessGroupDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uin
 }
 
 template <typename V, typename D>
-void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void SumInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     auto curVal = (static_cast<V *>(colPtr))->GetValue(offset);
-    auto val = std::make_unique<D>(curVal);
-    groupSlot = { val.release() };
+    auto ptr = context->getArena()->Allocate(sizeof(D));
+    *reinterpret_cast<D *>(ptr) = curVal;
+    groupSlot.val = ptr;
 }
 
-void SumInitiateDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
-{
-    if (UNLIKELY(colPtr->IsValueNull(offset))) {
-        return;
-    }
-
-    auto curVal = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-    auto val = std::make_unique<Decimal128>(curVal);
-    groupSlot = { val.release() };
-}
-
-void SumInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void SumInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_SUM_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset);
+    AGG_SUM_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset, context);
 }
 
 template <typename V, typename D>
-void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void SumProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     if (groupSlot.val == nullptr) {
-        SumInitiateImpl<V, D>(groupSlot, colPtr, offset);
+        SumInitiateImpl<V, D>(groupSlot, colPtr, offset, context);
         return;
     }
     *(static_cast<D *>(groupSlot.val)) += (static_cast<V *>(colPtr))->GetValue(offset);
 }
 
-void SumProcessNonGroupDecimalImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
-{
-    if (UNLIKELY(colPtr->IsValueNull(offset))) {
-        return;
-    }
-
-    if (groupSlot.val == nullptr) {
-        SumInitiateDecimalImpl(groupSlot, colPtr, offset);
-        return;
-    }
-    auto val = (static_cast<LongVector *>(colPtr))->GetValue(offset);
-    auto v = std::make_unique<Decimal128>(val);
-    *(static_cast<Decimal128 *>(groupSlot.val)) += *v;
-}
-
-void SumProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void SumProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_SUM_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset);
+    AGG_SUM_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset, context);
 }
 
 template <typename V, typename D>
@@ -336,11 +291,11 @@ void AvgInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std:
         return;
     }
 
-    double rowVal = (static_cast<V *>(colPtr))->GetValue(offset) / 1.0;
-    int32_t len = sizeof(double);
+    auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
+    auto len = sizeof(D);
     auto ptr = context->getArena()->Allocate(len);
-    memcpy_s(ptr, len, &rowVal, len);
-    groupSlot.avgVal = reinterpret_cast<double *>(ptr);
+    *reinterpret_cast<D *>(ptr) = rowVal;
+    groupSlot.avgVal = ptr;
     groupSlot.avgCnt = 1;
 }
 
@@ -383,9 +338,9 @@ void AvgProcessGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset
         AvgInsertImpl<V, D>(groupSlot, colPtr, offset, context);
         return;
     }
-    auto currentVal = static_cast<double *>(groupSlot.avgVal);
-    auto sum = (static_cast<V *>(colPtr))->GetValue(offset) + *currentVal * groupSlot.avgCnt;
-    *currentVal = sum / ++groupSlot.avgCnt;
+    auto currentVal = static_cast<D *>(groupSlot.avgVal);
+    *reinterpret_cast<D *>(groupSlot.avgVal) = (static_cast<V *>(colPtr))->GetValue(offset) + *currentVal;
+    ++groupSlot.avgCnt;
 }
 
 void AvgProcessGroupContainerImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
@@ -426,36 +381,39 @@ void AvgProcessGroupDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uin
 }
 
 template <typename V, typename D>
-void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void AvgInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
-    auto val = std::make_unique<D>(0);
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
-    *val = rowVal;
-    groupSlot.avgVal = val.release();
+    auto ptr = context->getArena()->Allocate(sizeof(D));
+    *reinterpret_cast<D *>(ptr) = rowVal;
+    groupSlot.avgVal = ptr;
     groupSlot.avgCnt = 1;
 }
 
-void AvgInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void AvgInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_AVG_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset);
+    AGG_AVG_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset, context);
 }
 
 template <typename V, typename D>
-void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     if (groupSlot.val == nullptr) {
-        AvgInitiateImpl<V, D>(groupSlot, colPtr, offset);
+        AvgInitiateImpl<V, D>(groupSlot, colPtr, offset, context);
         return;
     }
     auto currentVal = static_cast<D *>(groupSlot.avgVal);
@@ -463,17 +421,21 @@ void AvgProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t off
     ++groupSlot.avgCnt;
 }
 
-void AvgProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void AvgProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_AVG_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset);
+    AGG_AVG_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset, context);
 }
 
 template <typename D>
 void *AvgEvaluateImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context)
 {
+    if (groupBySlot.val == nullptr) {
+        return nullptr;
+    }
     if (groupBySlot.avgCnt <= 0) {
         LogError("Divisor has to be larger than 0!");
         return nullptr;
@@ -494,7 +456,7 @@ void MinInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std:
     auto rowVal = static_cast<V *>(colPtr)->GetValue(offset);
     int32_t len = sizeof(D);
     auto ptr = context->getArena()->Allocate(len);
-    memcpy_s(ptr, len, &rowVal, len);
+    *reinterpret_cast<D *>(ptr) = rowVal;
     groupSlot.val = ptr;
 }
 
@@ -507,7 +469,10 @@ void MinInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offse
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
     uint8_t *state = context->getArena()->Allocate(valLen);
-    memcpy_s(state, valLen, data, valLen);
+    auto err = memcpy_s(state, valLen, data, valLen);
+    if (err != EOK) {
+        LogError("set data failed in variable vector. %d", err);
+    }
     groupSlot.strVal = state;
     groupSlot.strLen = valLen;
 }
@@ -551,7 +516,10 @@ void MinProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t
     int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &rowVal);
     auto leftVal = reinterpret_cast<char *>(groupSlot.strVal);
     if (memcmp(leftVal, (char *)rowVal, std::min(valLen, groupSlot.strLen)) > 0) {
-        memcpy_s(leftVal, valLen, rowVal, valLen);
+        auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
+        if (err != EOK) {
+            LogError("set data failed in variable vector. %d", err);
+        }
     }
     return;
 }
@@ -566,44 +534,56 @@ void MinProcessGroupDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uin
 }
 
 template <typename V, typename D>
-void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MinInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     auto curVal = (static_cast<V *>(colPtr))->GetValue(offset);
-    auto val = std::make_unique<D>(curVal);
-    groupSlot = { val.release() };
+    auto ptr = context->getArena()->Allocate(sizeof(D));
+    *reinterpret_cast<D *>(ptr) = curVal;
+    groupSlot.val = ptr;
 }
 
-void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MinInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     uint8_t *data = nullptr;
-    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &data);
-    auto val = std::make_unique<std::string>(reinterpret_cast<char *>(data), 0, valLen);
-    groupSlot = { val.release() };
+    int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
+    uint8_t *state = context->getArena()->Allocate(valLen);
+    auto err = memcpy_s(state, valLen, data, valLen);
+    if (err != EOK) {
+        LogError("set data failed in variable vector. %d", err);
+    }
+    groupSlot.strVal = state;
+    groupSlot.strLen = valLen;
 }
 
-void MinInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MinInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_MIN_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset);
+    AGG_MIN_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset, context);
 }
-template <typename V, typename D> void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+
+template<typename V, typename D>
+void MinProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     if (groupSlot.val == nullptr) {
-        MinInitiateImpl<V, D>(groupSlot, colPtr, offset);
+        MinInitiateImpl<V, D>(groupSlot, colPtr, offset, context);
         return;
     }
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
@@ -611,29 +591,41 @@ template <typename V, typename D> void MinProcessNonGroupImpl(GroupBySlot &group
     *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
 }
 
-void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MinProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                   std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     if (groupSlot.val == nullptr) {
-        MinInitiateVarcharImpl(groupSlot, colPtr, offset);
+        MinInitiateVarcharImpl(groupSlot, colPtr, offset, context);
         return;
     }
-    uint8_t *data = nullptr;
-    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &data);
-    std::string rowVal(reinterpret_cast<char *>(data), 0, valLen);
-    auto leftVal = static_cast<std::string *>(groupSlot.val);
-    *leftVal = (Compare(*leftVal, rowVal) == -1) ? *leftVal : rowVal;
+    uint8_t *rowVal = nullptr;
+    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &rowVal);
+    auto leftVal = reinterpret_cast<char *>(groupSlot.strVal);
+    if (memcmp(leftVal, (char *)rowVal, std::min(valLen, groupSlot.strLen)) > 0) {
+        auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
+        if (err != EOK) {
+            LogError("set data failed in variable vector. %d", err);
+        }
+    }
+    return;
 }
 
-void MinProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MinProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_MAX_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset);
+    AGG_MAX_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset, context);
+}
+
+void *MinEvaluateVarcharImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context)
+{
+    return new std::string(reinterpret_cast<char *>(groupBySlot.strVal),0, groupBySlot.strLen);
 }
 
 template <typename V, typename D>
@@ -645,7 +637,7 @@ void MaxInsertImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset, std:
     auto rowVal = static_cast<V *>(colPtr)->GetValue(offset);
     int32_t len = sizeof(D);
     auto ptr = context->getArena()->Allocate(len);
-    memcpy_s(ptr, len, &rowVal, len);
+    *reinterpret_cast<D *>(ptr) = rowVal;
     groupSlot.val = ptr;
 }
 
@@ -658,7 +650,10 @@ void MaxInsertVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offse
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
     auto state = context->getArena()->Allocate(valLen);
-    memcpy_s(state, valLen, data, valLen);
+    auto err = memcpy_s(state, valLen, data, valLen);
+    if (err != EOK) {
+        LogError("set data failed in variable vector. %d", err);
+    }
     groupSlot.strVal = state;
     groupSlot.strLen = valLen;
 }
@@ -702,7 +697,10 @@ void MaxProcessGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t
     int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &rowVal);
     auto leftVal = reinterpret_cast<char *>(groupSlot.strVal);
     if (memcmp(leftVal, (char *)rowVal, std::min(valLen, groupSlot.strLen)) < 0) {
-        memcpy_s(leftVal, valLen, rowVal, valLen);
+        auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
+        if (err != EOK) {
+            LogError("set data failed in variable vector. %d", err);
+        }
     }
     return;
 }
@@ -717,18 +715,21 @@ void MaxProcessGroupDictionaryImpl(GroupBySlot &groupBySlot, Vector *colPtr, uin
 }
 
 template <typename V, typename D>
-void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MaxInitiateImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                     std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     auto curVal = (static_cast<V *>(colPtr))->GetValue(offset);
-    auto val = std::make_unique<D>(curVal);
-    groupSlot = { val.release() };
+    auto ptr = context->getArena()->Allocate(sizeof(D));
+    *reinterpret_cast<D *>(ptr) = curVal;
+    groupSlot.val = ptr;
 }
 
-void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
@@ -736,26 +737,33 @@ void MaxInitiateVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t off
 
     uint8_t *data = nullptr;
     int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
-    auto val = std::make_unique<std::string>(reinterpret_cast<char *>(data), valLen);
-    groupSlot = { val.release() };
+    uint8_t *state = context->getArena()->Allocate(valLen);
+    auto err = memcpy_s(state, valLen, data, valLen);
+    if (err != EOK) {
+        LogError("set data failed in variable vector. %d", err);
+    }
+    groupSlot.strVal = state;
+    groupSlot.strLen = valLen;
 }
 
-void MaxInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MaxInitiateDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                               std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_MAX_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset);
+    AGG_MAX_FUNCTIONS[dictType].initiateFunc(groupSlot, originalVector, originalOffset, context);
 }
 template <typename V, typename D>
-void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                            std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     if (groupSlot.val == nullptr) {
-        MaxInitiateImpl<V, D>(groupSlot, colPtr, offset);
+        MaxInitiateImpl<V, D>(groupSlot, colPtr, offset, context);
         return;
     }
     auto rowVal = (static_cast<V *>(colPtr))->GetValue(offset);
@@ -763,29 +771,40 @@ void MaxProcessNonGroupImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t off
     *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
 }
 
-void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MaxProcessNonGroupVarcharImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                   std::unique_ptr<ExecutionContext> &context)
 {
     if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
 
     if (groupSlot.val == nullptr) {
-        MaxInitiateVarcharImpl(groupSlot, colPtr, offset);
+        MaxInitiateVarcharImpl(groupSlot, colPtr, offset, context);
         return;
     }
-    uint8_t *data = nullptr;
-    int valLen = static_cast<VarcharVector *>(colPtr)->GetValue(offset, &data);
-    std::string rowVal(reinterpret_cast<char *>(data), valLen);
-    auto leftVal = static_cast<std::string *>(groupSlot.val);
-    *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
+    uint8_t *rowVal = nullptr;
+    int valLen = (static_cast<VarcharVector *>(colPtr))->GetValue(offset, &rowVal);
+    auto leftVal = reinterpret_cast<char *>(groupSlot.strVal);
+    if (memcmp(leftVal, (char *)rowVal, std::min(valLen, groupSlot.strLen)) < 0) {
+        auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
+        if (err != EOK) {
+            LogError("set data failed in variable vector. %d", err);
+        }
+    }
 }
 
-void MaxProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
+void MaxProcessNonGroupDictionaryImpl(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset,
+                                      std::unique_ptr<ExecutionContext> &context)
 {
     auto dictType = static_cast<DictionaryVector *>(colPtr)->ExtractDictionaryTypeId();
     int32_t originalOffset;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(colPtr, offset, originalOffset);
-    AGG_MAX_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset);
+    AGG_MAX_FUNCTIONS[dictType].processNonGroupFunc(groupSlot, originalVector, originalOffset, context);
+}
+
+void *MaxEvaluateVarcharImpl(const GroupBySlot &groupBySlot, std::unique_ptr<ExecutionContext> &context)
+{
+    return new std::string(reinterpret_cast<char *>(groupBySlot.strVal), 0, groupBySlot.strLen);
 }
 
 bool Aggregator::IsInputRaw() const
@@ -813,7 +832,7 @@ void SumAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t
 void SumAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
 {
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_SUM_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset);
+    AGG_SUM_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset, executionContext);
     initiated = true;
 }
 
@@ -825,7 +844,7 @@ void SumAggregator::ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offse
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_SUM_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset);
+    AGG_SUM_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset, executionContext);
 }
 
 void *SumAggregator::Evaluate(const GroupBySlot &groupBySlot, int32_t type)
@@ -863,6 +882,12 @@ void CountAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32
 
 void CountAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
 {
+    // It is only effective when COUNT(col). When COUNT(*) or COUNT(1) should directly accumulate vector size;
+    if (UNLIKELY(colPtr->IsValueNull(offset))) {
+        nonGroupState.count = 0;
+        return;
+    }
+
     if (inputRaw) {
         nonGroupState.count = 1;
         initiated = true;
@@ -876,6 +901,9 @@ void CountAggregator::ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t off
 {
     if (!initiated) {
         Initiate(colPtr, type, offset);
+        return;
+    }
+    if (UNLIKELY(colPtr->IsValueNull(offset))) {
         return;
     }
     if (inputRaw) {
@@ -893,7 +921,7 @@ void *CountAggregator::Evaluate(const GroupBySlot &groupBySlot, int32_t type)
 void AverageAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
 {
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_AVG_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset);
+    AGG_AVG_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset, executionContext);
     initiated = true;
 }
 
@@ -905,30 +933,13 @@ void AverageAggregator::ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t o
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_AVG_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset);
+    AGG_AVG_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset, executionContext);
 }
 
 void AverageAggregator::Insert(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
 {
     auto typeId = static_cast<VecTypeId>(type);
     AGG_AVG_FUNCTIONS[typeId].insertFunc(groupSlot, colPtr, offset, executionContext);
-}
-
-void ProcessIntermediateAvg(GroupBySlot &groupSlot, Vector *colPtr, uint32_t offset)
-{
-    auto currentVal = static_cast<double *>(groupSlot.avgVal);
-    auto currentCnt = static_cast<int64_t>(groupSlot.avgCnt);
-    auto containerVector = static_cast<ContainerVector *>(colPtr);
-    DoubleVector *avgValVector = reinterpret_cast<DoubleVector *>(containerVector->GetValue(0));
-    double avgVal = avgValVector->GetValue(offset);
-    LongVector *avgCountVector = reinterpret_cast<LongVector *>(containerVector->GetValue(1));
-    int64_t avgCnt = avgCountVector->GetValue(offset);
-    if (avgCnt == 0) {
-        // Fixme use error code
-        LogError("Divisor should not be zero! Offset = %d", offset);
-    }
-    groupSlot.avgCnt += avgCnt;
-    *currentVal = (avgVal * avgCnt + *currentVal * currentCnt) / groupSlot.avgCnt;
 }
 
 void AverageAggregator::ProcessGroup(GroupBySlot &groupSlot, Vector *colPtr, int32_t type, uint32_t offset)
@@ -968,7 +979,7 @@ void MinAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_MIN_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset);
+    AGG_MIN_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset, executionContext);
     initiated = true;
 }
 
@@ -984,11 +995,14 @@ void MinAggregator::ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offse
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_MIN_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset);
+    AGG_MIN_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset, executionContext);
 }
 
 void *MinAggregator::Evaluate(const GroupBySlot &groupBySlot, int32_t type)
 {
+    if (type == OMNI_VEC_TYPE_VARCHAR || type == OMNI_VEC_TYPE_CHAR) {
+        return AGG_MIN_FUNCTIONS[type].evaluateFunc(groupBySlot, executionContext);
+    }
     return groupBySlot.val;
 }
 
@@ -1018,7 +1032,7 @@ void MaxAggregator::Initiate(Vector *colPtr, int32_t type, uint32_t offset)
         return;
     }
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_MAX_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset);
+    AGG_MAX_FUNCTIONS[typeId].initiateFunc(nonGroupState, colPtr, offset, executionContext);
     initiated = true;
 }
 
@@ -1034,11 +1048,14 @@ void MaxAggregator::ProcessNonGroup(Vector *colPtr, int32_t type, uint32_t offse
     }
 
     auto typeId = static_cast<VecTypeId>(type);
-    AGG_MAX_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset);
+    AGG_MAX_FUNCTIONS[typeId].processNonGroupFunc(nonGroupState, colPtr, offset, executionContext);
 }
 
 void *MaxAggregator::Evaluate(const GroupBySlot &groupBySlot, int32_t type)
 {
+    if (type == OMNI_VEC_TYPE_VARCHAR || type == OMNI_VEC_TYPE_CHAR) {
+        return AGG_MAX_FUNCTIONS[type].evaluateFunc(groupBySlot, executionContext);
+    }
     return groupBySlot.val;
 }
 
