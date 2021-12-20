@@ -38,6 +38,7 @@ public:
     void RegisterCastFunctions(const std::string& fnName);
     void RegisterStringFunctions(const std::string& fnName);
     void RegisterMm3HashFunctions(const std::string& fnName);
+    void RegisterPmodFunctions();
     void RegisterCombineHashFunctions();
     void RegisterNecessaryFuncs(const std::set<std::string>& requiredFuncs);
     void RegisterDecimalFuncs();
@@ -69,6 +70,7 @@ public:
     const std::string castStringStr = "CAST_string_int32";
     const std::string combineHashInt32Str = "combine_hash_int64_int64_int32";
     const std::string combineHashInt64Str = "combine_hash_int64_int64_int64";
+    const std::string pmodInt32Str = "pmod_int32_int32_int32";
     const std::string mm3hashInt32Str = "mm3hash_int32";
     const std::string mm3hashInt64Str = "mm3hash_int64";
     const std::string mm3hashStringStr = "mm3hash_string";

@@ -114,8 +114,8 @@ public class OmniProjectOperatorTest {
      * Murmur3hash test.
      */
     @Test
-    public void mm3HashTest() {
-        String[] exprs = {"mm3hash:1(#0, 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
+    public void mm3HashAndPmodTest() {
+        String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
         VecType[] inputTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1;
@@ -139,7 +139,7 @@ public class OmniProjectOperatorTest {
         assertEquals(res.getRowCount(), numRows);
         assertEquals(res.getVectors().length, exprs.length);
         for (int i = 0; i < res.getRowCount(); i++) {
-            assertEquals(((IntVec) res.getVector(0)).get(i), 723455942);
+            assertEquals(((IntVec) res.getVector(0)).get(i), 20);
             assertEquals(((IntVec) res.getVector(1)).get(i), -508695674);
             assertEquals(((IntVec) res.getVector(2)).get(i), 613818021);
         }

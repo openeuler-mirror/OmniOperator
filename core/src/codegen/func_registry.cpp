@@ -360,6 +360,15 @@ void FunctionRegistry::RegisterCombineHashFunctions()
     funcNameToSignatureMap.insert(pair<string, FunctionSignature>(combineHashInt64Str, combineHashSig));
 }
 
+void FunctionRegistry::RegisterPmodFunctions()
+{
+    vector<DataType> pmodTypes {DataType::INT32D, DataType::INT32D};
+    FunctionSignature pmodSig (pmodInt32Str, pmodTypes, DataType::INT32D,
+                               reinterpret_cast<void *>(Pmod));
+    this->RegisterFunctionFromSignature(pmodSig);
+    funcNameToSignatureMap.insert(pair<string, FunctionSignature>(pmodInt32Str, pmodSig));
+}
+
 void FunctionRegistry::ContextHelperFuncs()
 {
     vector<DataType> contextAllocatorTypes {DataType::INT64D, DataType::INT32D};
@@ -412,6 +421,10 @@ void FunctionRegistry::RegisterNecessaryFuncs(const std::set<string>& requiredFu
 
         if (fn.size() > mm3hashStr.length() && fn.substr(0, mm3hashStr.length()) == mm3hashStr) {
             this->RegisterMm3HashFunctions(fn);
+        }
+
+        if (fn == pmodInt32Str) {
+            this->RegisterPmodFunctions();
         }
 
         // External functions
