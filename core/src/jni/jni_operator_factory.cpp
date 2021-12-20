@@ -362,7 +362,6 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory_createSortJitCo
     return (int64_t)jitContext;
 }
 
-
 /*
  * Class:     nova_hetu_omniruntime_operator_sort_OmniSortOperatorFactory
  * Method:    createSortOperatorFactory
@@ -819,17 +818,15 @@ JitContext *CreateHashBuilderJitContext(const int32_t *buildTypes, int32_t build
     using namespace omniruntime::jit;
     ParamValue pHashColTypes = ParamValue(hashColTypes, buildHashColsCount);
     ParamValue pHashColCount = ParamValue(&buildHashColsCount);
-
-    auto *hashPositionSp = new Specialization();
-    hashPositionSp->AddSpecializedParam(3, &pHashColTypes);
-    hashPositionSp->AddSpecializedParam(4, &pHashColCount);
-    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_STRATEGY_HASH_POSITION,
-        *hashPositionSp } };
+    auto processColumnsSp = new Specialization();
+    processColumnsSp->AddSpecializedParam(4, &pHashColTypes);
+    processColumnsSp->AddSpecializedParam(5, &pHashColCount);
+    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS,
+        *processColumnsSp } };
 
     auto *positionEqualsPositionIgnoreNullsSp = new Specialization();
     positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
     positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &pHashColCount);
-
     std::map<std::string, Specialization> hashStrategySps = {
         { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp }
     };
@@ -848,7 +845,7 @@ JitContext *CreateHashBuilderJitContext(const int32_t *buildTypes, int32_t build
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    delete hashPositionSp;
+    delete processColumnsSp;
     delete positionEqualsPositionIgnoreNullsSp;
     delete hashBuilderContext;
     delete joinHashTableContext;
@@ -992,12 +989,7 @@ JitContext *CreateLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
     populateHashesSp->AddSpecializedParam(2, &pHashColTypes);
     populateHashesSp->AddSpecializedParam(3, &pHashColCount);
     std::map<std::string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
-        { OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
-
-    auto *hashRowSp = new Specialization();
-    hashRowSp->AddSpecializedParam(2, &pHashColTypes);
-    hashRowSp->AddSpecializedParam(3, &pHashColCount);
-    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
+        { OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
 
     auto *positionEqualsRowIgnoreNullsSp = new Specialization();
     positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
@@ -1006,13 +998,10 @@ JitContext *CreateLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
         *positionEqualsRowIgnoreNullsSp } };
 
     auto lookupJoinContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
-    auto joinHashTableContext =
-        new omniruntime::jit::Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
     auto pagesHashStrategyContext =
         new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
 
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *joinHashTableContext,
-        *pagesHashStrategyContext });
+    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *pagesHashStrategyContext });
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
@@ -1020,10 +1009,8 @@ JitContext *CreateLookupJoinJitContext(const int32_t *probeTypes, int32_t probeT
 
     delete buildBuildColumnsSp;
     delete populateHashesSp;
-    delete hashRowSp;
     delete positionEqualsRowIgnoreNullsSp;
     delete lookupJoinContext;
-    delete joinHashTableContext;
     delete pagesHashStrategyContext;
     delete jit;
 
@@ -1273,16 +1260,15 @@ JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes, string 
 
     ParamValue pHashColTypes = ParamValue(hashColTypes, buildHashKeysCount);
     ParamValue pHashColCount = ParamValue(&buildHashKeysCount);
-
-    auto hashPositionSp = new Specialization();
-    hashPositionSp->AddSpecializedParam(3, &pHashColTypes);
-    hashPositionSp->AddSpecializedParam(4, &pHashColCount);
-    map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_STRATEGY_HASH_POSITION, *hashPositionSp } };
+    auto processColumnsSp = new Specialization();
+    processColumnsSp->AddSpecializedParam(4, &pHashColTypes);
+    processColumnsSp->AddSpecializedParam(5, &pHashColCount);
+    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS,
+        *processColumnsSp } };
 
     auto positionEqualsPositionIgnoreNullsSp = new Specialization();
     positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
     positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &pHashColCount);
-
     map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS,
         *positionEqualsPositionIgnoreNullsSp } };
 
@@ -1299,7 +1285,7 @@ JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes, string 
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    delete hashPositionSp;
+    delete processColumnsSp;
     delete positionEqualsPositionIgnoreNullsSp;
     delete hashBuilderWithExprContext;
     delete hashBuilderContext;
@@ -1383,12 +1369,7 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
     populateHashesSp->AddSpecializedParam(2, &pHashColTypes);
     populateHashesSp->AddSpecializedParam(3, &pHashColCount);
     map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
-        { OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
-
-    auto hashRowSp = new Specialization();
-    hashRowSp->AddSpecializedParam(2, &pHashColTypes);
-    hashRowSp->AddSpecializedParam(3, &pHashColCount);
-    map<string, Specialization> joinHashTableSps = { { OMNIJIT_HASH_ROW, *hashRowSp } };
+        { OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
 
     auto positionEqualsRowIgnoreNullsSp = new Specialization();
     positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
@@ -1399,11 +1380,9 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
     auto lookupJoinWithExprContext =
         new Context(GenerateOperatorTemplatePath("lookup_join_expr"), map<string, Specialization>());
     auto lookupJoinContext = new Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
-    auto joinHashTableContext = new Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
     auto pagesHashStrategyContext = new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
 
-    Jit *jit = new Jit(vector<Context> { *lookupJoinWithExprContext, *lookupJoinContext, *joinHashTableContext,
-        *pagesHashStrategyContext });
+    Jit *jit = new Jit(vector<Context> { *lookupJoinWithExprContext, *lookupJoinContext, *pagesHashStrategyContext });
     jit->Specialize();
     auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
     JitContext *jitContext = new JitContext;
@@ -1411,11 +1390,9 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
 
     delete buildBuildColumnsSp;
     delete populateHashesSp;
-    delete hashRowSp;
     delete positionEqualsRowIgnoreNullsSp;
     delete lookupJoinWithExprContext;
     delete lookupJoinContext;
-    delete joinHashTableContext;
     delete pagesHashStrategyContext;
     delete jit;
 

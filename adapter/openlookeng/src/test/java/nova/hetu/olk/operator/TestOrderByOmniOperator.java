@@ -40,42 +40,32 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 @Test(singleThreaded = true)
-public class TestOrderByOmniOperator
-{
+public class TestOrderByOmniOperator {
     private ExecutorService executor;
     private ScheduledExecutorService scheduledExecutor;
 
     @BeforeMethod
-    public void setUp()
-    {
+    public void setUp() {
         executor = newCachedThreadPool(daemonThreadsNamed("test-executor-%s"));
         scheduledExecutor = newScheduledThreadPool(2, daemonThreadsNamed("test-scheduledExecutor-%s"));
     }
 
     @AfterMethod(alwaysRun = true)
-    public void tearDown()
-    {
+    public void tearDown() {
         executor.shutdownNow();
         scheduledExecutor.shutdownNow();
     }
 
     @Test
-    public void testMultipleOutputPages()
-    {
+    public void testMultipleOutputPages() {
         // make operator produce multiple pages during finish phase
         long start = System.nanoTime();
         int numberOfRows = 80_000;
-        List<Page> input = rowPagesBuilder(BIGINT, DOUBLE)
-                .addSequencePage(numberOfRows, 0, 0)
-                .build();
+        List<Page> input = rowPagesBuilder(BIGINT, DOUBLE).addSequencePage(numberOfRows, 0, 0).build();
         List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
-        OrderByOmniOperator.OrderByOmniOperatorFactory operatorFactory = createOrderByOmniOperatorFactory(
-                0,
-                new PlanNodeId("test"),
-                ImmutableList.of(BIGINT, DOUBLE),
-                ImmutableList.of(1),
-                ImmutableList.of(0, 1),
+        OrderByOmniOperator.OrderByOmniOperatorFactory operatorFactory = createOrderByOmniOperatorFactory(0,
+                new PlanNodeId("test"), ImmutableList.of(BIGINT, DOUBLE), ImmutableList.of(1), ImmutableList.of(0, 1),
                 ImmutableList.of(DESC_NULLS_LAST, DESC_NULLS_LAST));
 
         DriverContext driverContext = createDriverContext(0);
@@ -95,33 +85,19 @@ public class TestOrderByOmniOperator
     }
 
     @Test
-    public void testSingleFieldKey()
-    {
+    public void testSingleFieldKey() {
         long start = System.nanoTime();
-        List<Page> input = rowPagesBuilder(BIGINT, DOUBLE)
-                .row(1L, 0.1)
-                .row(2L, 0.2)
-                .pageBreak()
-                .row(-1L, -0.1)
-                .row(4L, 0.4)
-                .build();
+        List<Page> input = rowPagesBuilder(BIGINT, DOUBLE).row(1L, 0.1).row(2L, 0.2).pageBreak().row(-1L, -0.1)
+                .row(4L, 0.4).build();
         List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
-        OrderByOmniOperator.OrderByOmniOperatorFactory operatorFactory = createOrderByOmniOperatorFactory(
-                0,
-                new PlanNodeId("test"),
-                ImmutableList.of(BIGINT, DOUBLE),
-                ImmutableList.of(1),
-                ImmutableList.of(0, 1),
+        OrderByOmniOperator.OrderByOmniOperatorFactory operatorFactory = createOrderByOmniOperatorFactory(0,
+                new PlanNodeId("test"), ImmutableList.of(BIGINT, DOUBLE), ImmutableList.of(1), ImmutableList.of(0, 1),
                 ImmutableList.of(ASC_NULLS_LAST, ASC_NULLS_LAST));
 
         DriverContext driverContext = createDriverContext(0);
-        MaterializedResult expected = resultBuilder(driverContext.getSession(), DOUBLE)
-                .row(-0.1)
-                .row(0.1)
-                .row(0.2)
-                .row(0.4)
-                .build();
+        MaterializedResult expected = resultBuilder(driverContext.getSession(), DOUBLE).row(-0.1).row(0.1).row(0.2)
+                .row(0.4).build();
 
         assertOperatorEquals(operatorFactory, driverContext, offHeapPages, expected, false);
 
@@ -130,12 +106,9 @@ public class TestOrderByOmniOperator
         System.out.println("testSingleFieldKey elapsed time : " + cost + "ms");
     }
 
-    private DriverContext createDriverContext(long memoryLimit)
-    {
+    private DriverContext createDriverContext(long memoryLimit) {
         return TestingTaskContext.builder(executor, scheduledExecutor, TEST_SESSION)
-                .setMemoryPoolSize(succinctBytes(memoryLimit))
-                .build()
-                .addPipelineContext(0, true, true, false)
+                .setMemoryPoolSize(succinctBytes(memoryLimit)).build().addPipelineContext(0, true, true, false)
                 .addDriverContext();
     }
 }

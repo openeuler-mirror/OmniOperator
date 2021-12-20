@@ -83,7 +83,7 @@ JitContext *CreateTestSortExprJitContext(VecTypes &sourceTypes, int32_t *outputC
     return jitContext;
 }
 
-TEST(SortWithExprTest, TestOrderByZeroExprColumns)
+TEST(SortWithExprTest, TestSortZeroExprColumns)
 {
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
@@ -119,7 +119,7 @@ TEST(SortWithExprTest, TestOrderByZeroExprColumns)
     DeleteOperatorFactory(operatorFactory);
 }
 
-TEST(SortWithExprTest, TestOrderByOneExprColumns)
+TEST(SortWithExprTest, TestSortOneExprColumns)
 {
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
@@ -155,7 +155,7 @@ TEST(SortWithExprTest, TestOrderByOneExprColumns)
     DeleteOperatorFactory(operatorFactory);
 }
 
-TEST(SortWithExprTest, TestOrderByTwoExprColumns)
+TEST(SortWithExprTest, TestSortTwoExprColumns)
 {
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
@@ -191,7 +191,7 @@ TEST(SortWithExprTest, TestOrderByTwoExprColumns)
     DeleteOperatorFactory(operatorFactory);
 }
 
-TEST(SortWithExprTest, TestOrderByTwoExprDictionaryColumns)
+TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 {
     // construct input data
     const int32_t dataSize = 6;
@@ -236,7 +236,7 @@ TEST(SortWithExprTest, TestOrderByTwoExprDictionaryColumns)
     DeleteOperatorFactory(operatorFactory);
 }
 
-TEST(SortWithExprTest, TestOrderByOneVarcharExprColumn)
+TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 {
     VarcharVecType type(10);
     const int32_t dataSize = 4;
@@ -276,7 +276,7 @@ TEST(SortWithExprTest, TestOrderByOneVarcharExprColumn)
     DeleteOperatorFactory(operatorFactory);
 }
 
-TEST(SortWithExprTest, TestOrderByTwoExprDictionaryWithNull)
+TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 {
     // construct input data
     const int32_t dataSize = 6;

@@ -89,8 +89,8 @@ public class OrderByOmniOperator implements Operator {
          * @return the order by omni operator factory
          */
         public static OrderByOmniOperatorFactory createOrderByOmniOperatorFactory(int operatorId, PlanNodeId planNodeId,
-            List<? extends Type> sourceTypes, List<Integer> outputChannels, List<Integer> sortChannels,
-            List<SortOrder> sortOrder) {
+                List<? extends Type> sourceTypes, List<Integer> outputChannels, List<Integer> sortChannels,
+                List<SortOrder> sortOrder) {
             VecType[] types = OperatorUtils.toVecTypes(sourceTypes);
 
             int sortColSize = sortChannels.size();
@@ -103,11 +103,11 @@ public class OrderByOmniOperator implements Operator {
             }
 
             OmniSortOperatorFactory omniSortOperatorFactory = new OmniSortOperatorFactory(types,
-                Ints.toArray(outputChannels), createExpressions(sortChannels), ascendings, nullFirsts);
+                    Ints.toArray(outputChannels), createExpressions(sortChannels), ascendings, nullFirsts);
 
             return new OrderByOmniOperatorFactory(operatorId, planNodeId, (List<Type>) sourceTypes,
-                Ints.toArray(outputChannels), Ints.toArray(sortChannels), ascendings, nullFirsts,
-                omniSortOperatorFactory);
+                    Ints.toArray(outputChannels), Ints.toArray(sortChannels), ascendings, nullFirsts,
+                    omniSortOperatorFactory);
         }
 
         /**
@@ -123,8 +123,8 @@ public class OrderByOmniOperator implements Operator {
          * @param omniSortOperatorFactory the omni sort operator factory
          */
         public OrderByOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> sourceTypes,
-            int[] outputChannels, int[] sortChannels, int[] sortAscendings, int[] sortNullFirsts,
-            OmniSortOperatorFactory omniSortOperatorFactory) {
+                int[] outputChannels, int[] sortChannels, int[] sortAscendings, int[] sortNullFirsts,
+                OmniSortOperatorFactory omniSortOperatorFactory) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.sourceTypes = ImmutableList.copyOf(requireNonNull(sourceTypes, "sourceTypes is null"));
@@ -137,12 +137,13 @@ public class OrderByOmniOperator implements Operator {
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                OrderByOmniOperator.class.getSimpleName());
+                    OrderByOmniOperator.class.getSimpleName());
             OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator(vecAllocator);
             return new OrderByOmniOperator(operatorContext, sourceTypes, outputChannels, sortChannels, sortAscendings,
-                sortNullFirsts, omniSortOperator);
+                    sortNullFirsts, omniSortOperator);
         }
 
         /**
@@ -151,24 +152,25 @@ public class OrderByOmniOperator implements Operator {
          * @return the operator
          */
         public Operator createOperator(VecAllocator vecAllocator) {
-            // all this is prepared for a fake driverContext to avoid change the original pipeline
+            // all this is prepared for a fake driverContext to avoid change the original
+            // pipeline
             Executor mockExecutor = MoreExecutors.directExecutor();
             ScheduledExecutorService mockScheduledExecutorService = newSingleThreadScheduledExecutor();
             TaskContext mockTaskContext = TestingTaskContext.createTaskContext(mockExecutor,
-                mockScheduledExecutorService, TestingSession.testSessionBuilder().build());
+                    mockScheduledExecutorService, TestingSession.testSessionBuilder().build());
             MemoryTrackingContext mockMemoryTrackingContext = new MemoryTrackingContext(
-                newSimpleAggregatedMemoryContext(), newSimpleAggregatedMemoryContext(),
-                newSimpleAggregatedMemoryContext());
+                    newSimpleAggregatedMemoryContext(), newSimpleAggregatedMemoryContext(),
+                    newSimpleAggregatedMemoryContext());
             PipelineContext mockPipelineContext = new PipelineContext(1, mockTaskContext, mockExecutor,
-                mockScheduledExecutorService, mockMemoryTrackingContext, false, false, false);
+                    mockScheduledExecutorService, mockMemoryTrackingContext, false, false, false);
             DriverContext mockDriverContext = new DriverContext(mockPipelineContext, mockExecutor,
-                mockScheduledExecutorService, mockMemoryTrackingContext, Lifespan.taskWide(), 0);
+                    mockScheduledExecutorService, mockMemoryTrackingContext, Lifespan.taskWide(), 0);
             OperatorContext mockOperatorContext = mockDriverContext.addOperatorContext(1,
-                new PlanNodeId("Fake node for creating the OrderByOmniOperator"), "OrderByOmniOperator type");
+                    new PlanNodeId("Fake node for creating the OrderByOmniOperator"), "OrderByOmniOperator type");
 
             OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator(vecAllocator);
             return new OrderByOmniOperator(mockOperatorContext, sourceTypes, outputChannels, sortChannels,
-                sortAscendings, sortNullFirsts, omniSortOperator);
+                    sortAscendings, sortNullFirsts, omniSortOperator);
         }
 
         @Override
@@ -179,7 +181,7 @@ public class OrderByOmniOperator implements Operator {
         @Override
         public OperatorFactory duplicate() {
             return new OrderByOmniOperatorFactory(operatorId, planNodeId, sourceTypes, outputChannels, sortChannels,
-                sortAscendings, sortNullFirsts, omniSortOperatorFactory);
+                    sortAscendings, sortNullFirsts, omniSortOperatorFactory);
         }
 
         @Override
@@ -238,7 +240,7 @@ public class OrderByOmniOperator implements Operator {
      * @param omniOperator the omni operator
      */
     public OrderByOmniOperator(OperatorContext operatorContext, List<Type> sourceTypes, int[] outputChannels,
-        int[] sortChannels, int[] sortAscendings, int[] sortNullFirsts, OmniOperator omniOperator) {
+            int[] sortChannels, int[] sortAscendings, int[] sortNullFirsts, OmniOperator omniOperator) {
         this.operatorContext = operatorContext;
         this.localUserMemoryContext = operatorContext.localUserMemoryContext();
         this.revocableMemoryContext = operatorContext.localRevocableMemoryContext();
@@ -300,15 +302,18 @@ public class OrderByOmniOperator implements Operator {
         if (state == State.NEEDS_INPUT) {
             state = State.HAS_OUTPUT;
 
-            // Convert revocable memory to user memory as sortedPages holds on to memory so we no longer can revoke.
+            // Convert revocable memory to user memory as sortedPages holds on to memory so
+            // we no longer can revoke.
             if (revocableMemoryContext.getBytes() > 0) {
                 long currentRevocableBytes = revocableMemoryContext.getBytes();
                 revocableMemoryContext.setBytes(0);
                 if (!localUserMemoryContext.trySetBytes(localUserMemoryContext.getBytes() + currentRevocableBytes)) {
-                    // TODO: this might fail (even though we have just released memory), but we don't
+                    // TODO: this might fail (even though we have just released memory), but we
+                    // don't
                     // have a proper way to atomically convert memory reservations
                     revocableMemoryContext.setBytes(currentRevocableBytes);
-                    // spill since revocable memory could not be converted to user memory immediately
+                    // spill since revocable memory could not be converted to user memory
+                    // immediately
                     // TODO: this should be asynchronous
                 }
             }

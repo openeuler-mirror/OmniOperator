@@ -27,11 +27,6 @@ public:
 
     Operator *CreateOperator() override;
 
-    int32_t *GetSourceTypes()
-    {
-        return const_cast<int32_t *>(sourceTypes->GetIds());
-    }
-
     int32_t GetSourceTypeCount()
     {
         return sourceTypes->GetSize();

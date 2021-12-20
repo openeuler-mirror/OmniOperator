@@ -108,11 +108,6 @@ int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
     return 0;
 }
 
-const int32_t *LookupJoinOperator::GetSourceTypes()
-{
-    return probeTypes.GetIds();
-}
-
 void LookupJoinOperator::ProcessProbe()
 {
     if (!AdvanceProbePosition()) {
@@ -153,11 +148,9 @@ void LookupJoinOperator::JoinCurrentPosition()
     }
 
     // do not match in hash table
-    if (!currentProbePositionProducedRow) {
+    if (probeOnOuterSide && !currentProbePositionProducedRow && partitionedJoinPosition < 0) {
         currentProbePositionProducedRow = true;
-        if (probeOnOuterSide && partitionedJoinPosition < 0) {
-            outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
-        }
+        outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
     }
 }
 
@@ -175,11 +168,9 @@ void LookupJoinOperator::JoinCurrentPositionWithFilter()
     }
 
     // do not match in hash table
-    if (!currentProbePositionProducedRow) {
+    if (probeOnOuterSide && !currentProbePositionProducedRow && partitionedJoinPosition < 0) {
         currentProbePositionProducedRow = true;
-        if (probeOnOuterSide && partitionedJoinPosition < 0) {
-            outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
-        }
+        outputBuilder->AppendRow(joinProbe->GetPosition(), -1);
     }
 }
 
@@ -318,7 +309,7 @@ void CalculateColVarcharHashes(omniruntime::vec::Vector *vec, int32_t rowCount, 
     }
 }
 
-SPECIALIZE(OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES)
+SPECIALIZE(OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES)
 void PopulateHashes(Vector **hashCols, int32_t rowCount, int32_t *hashColTypes, int32_t hashColsCount, int64_t *hashes,
     bool *nulls)
 {

@@ -29,10 +29,6 @@
 #define OMNIJIT_PAGE_INDEX_GET_OUTPUT "page-index-get-output"
 #endif
 
-#ifndef OMNIJIT_HASH_STRATEGY_HASH_POSITION
-#define OMNIJIT_HASH_STRATEGY_HASH_POSITION "hash-strategy-hash-position"
-#endif
-
 #ifndef OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS
 #define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS "hash-strategy-position-equals-position-ignore-nulls"
 #endif
@@ -41,20 +37,20 @@
 #define OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS "hash-strategy-position-equals-row-ignore-nulls"
 #endif
 
-#ifndef OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES
-#define OMNIJIT_HASH_LOOKUP_JOIN_POPULATE_HASHES "hash-lookup-join-populate-hashes"
+#ifndef OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES
+#define OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES "lookup-join-populate-hashes"
 #endif
 
 #ifndef OMNIJIT_TOPN_COMPARE
 #define OMNIJIT_TOPN_COMPARE "topn-compare"
 #endif
 
-#ifndef OMNIJIT_HASH_ROW
-#define OMNIJIT_HASH_ROW "hash-row"
-#endif
-
 #ifndef OMNIJIT_CONSTRUCT_BUILD_COLUMNS
 #define OMNIJIT_CONSTRUCT_BUILD_COLUMNS "construct-build-columns"
+#endif
+
+#ifndef OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS
+#define OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS "join-hash-table-process-columns"
 #endif
 
 #endif

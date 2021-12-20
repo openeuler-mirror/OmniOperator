@@ -133,7 +133,9 @@ public class TestUtils {
 
     public static DictionaryVec createDictionaryVec(VecType vecType, Object[] data, int[] ids) {
         Vec dictionary = createVec(vecType, data);
-        return new DictionaryVec(dictionary, ids);
+        DictionaryVec dictionaryVec = new DictionaryVec(dictionary, ids);
+        dictionary.close();
+        return dictionaryVec;
     }
 
     public static void assertVecBatchEquals(VecBatch vecBatch, Object[][] expectedDatas) {

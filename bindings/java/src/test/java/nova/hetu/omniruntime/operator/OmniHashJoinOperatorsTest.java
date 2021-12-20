@@ -12,6 +12,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.join.OmniHashBuilderOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
@@ -39,7 +40,7 @@ public class OmniHashJoinOperatorsTest {
      * Test inner hash join one column 1.
      */
     @Test
-    public void testInnerHashJoinOneColumn1() {
+    public void testInnerEqualityJoinOneColumn1() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         Object[][] buildDatas = {{1L, 2L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 1L},
                 {79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
@@ -79,13 +80,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test inner hash join one column 2.
      */
     @Test
-    public void testInnerHashJoinOneColumn2() {
+    public void testInnerEqualityJoinOneColumn2() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         Object[][] buildDatas1 = {{1L, 1L, 3L, 6L, 7L, 1L}, {79L, 70L, 70L, 70L, 70L, 70L}};
         VecBatch buildVecBatch1 = createVecBatch(buildTypes, buildDatas1);
@@ -130,13 +135,18 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(buildVecBatch1);
         freeVecBatch(buildVecBatch2);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator1.close();
+        hashBuilderOperator2.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test left join
      */
     @Test
-    public void testLeftHashEqualityJoin() {
+    public void testLeftEqualityJoin() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {111L, 11L, 333L, 33L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -174,13 +184,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test left join with varchar join key
      */
     @Test
-    public void testLeftHashEqualityJoinVarchar() {
+    public void testLeftEqualityJoinVarchar() {
         VecType[] buildTypes = {LongVecType.LONG, new VarcharVecType(3)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {"aaa", "11", "ccc", "33"}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -218,13 +232,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test left join with char join key
      */
     @Test
-    public void testLeftHashEqualityJoinChar() {
+    public void testLeftEqualityJoinChar() {
         VecType[] buildTypes = {LongVecType.LONG, new CharVecType(3)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {"aaa", "11", "ccc", "33"}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -262,13 +280,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test left join with date32 join key
      */
     @Test
-    public void testLeftHashEqualityJoinDate32() {
+    public void testLeftEqualityJoinDate32() {
         VecType[] buildTypes = {LongVecType.LONG, new Date32VecType(VecType.DateUnit.DAY)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {123, 11, 321, 33}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -305,13 +327,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test left join with decimal64 join key
      */
     @Test
-    public void testLeftHashEqualityJoinDecimal64() {
+    public void testLeftEqualityJoinDecimal64() {
         VecType[] buildTypes = {LongVecType.LONG, new Decimal64VecType(3, 0)};
         Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {123L, 11L, 321L, 33L}};
         VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
@@ -349,13 +375,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
     /**
      * Test left join with decimal128 join key
      */
     @Test
-    public void testLeftHashEqualityJoinDecimal128() {
+    public void testLeftEqualityJoinDecimal128() {
         VecType[] buildTypes = {LongVecType.LONG, new Decimal128VecType(3, 0)};
         Vec[] buildVecs = new Vec[buildTypes.length];
         buildVecs[0] = createVec(buildTypes[0], new Object[]{1L, 2L, 3L, 4L});
@@ -398,10 +428,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
+    /**
+     * Test inner join with dictionary join key
+     */
     @Test
-    public void testLeftHashEqualityJoinDictionary() {
+    public void testInnerEqualityJoinDictionary() {
         VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
         Object[][] buildDatas = {{1L, null, 3L, null}, {111L, 11L, 333L, 33L}};
         Vec[] vecs = new Vec[2];
@@ -445,10 +482,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
+    /**
+     * Test inner join with join filter on int column
+     */
     @Test
-    public void testHashEqualityJoinWithIntFilter() {
+    public void testInnerEqualityJoinWithIntFilter() {
         VecType[] buildTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
         Object[][] buildDatas = {{19, 14, 7, 19, 1, 20, 10, 13, 20, 16},
                 {35709, 31904, 35709, 31904, 35709, null, 35709, 31904, null, 31904}};
@@ -488,10 +532,17 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 
+    /**
+     * Test inner join with join filter on varchar column
+     */
     @Test
-    public void testHashEqualityJoinWithCharFilter() {
+    public void testInnerEqualityJoinWithCharFilter() {
         VecType[] buildTypes = {IntVecType.INTEGER, new VarcharVecType(5)};
         Object[][] buildDatas = {{19, 14, 7, 19, 1, 20, 10, 13, 20, 16},
                 {"35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904"}};
@@ -532,5 +583,51 @@ public class OmniHashJoinOperatorsTest {
         freeVecBatch(probeVecBatch);
         freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
+    }
+
+    /**
+     * Test inner join without output
+     */
+    @Test
+    public void testInnerEqualityJoinWithNoOutput() {
+        VecType[] buildTypes = {LongVecType.LONG, LongVecType.LONG};
+        Object[][] buildDatas = {{1L, 2L, 3L, 4L}, {111L, 11L, 333L, 33L}};
+        VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
+
+        int[] buildHashCols = {0};
+        int operatorCount = 1;
+        OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
+                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+        OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
+        hashBuilderOperator.addInput(buildVecBatch);
+        hashBuilderOperator.getOutput();
+
+        VecType[] probeTypes = {LongVecType.LONG, LongVecType.LONG};
+        Object[][] probeDatas = {{0L, 5L, 6L, 7L}, {11L, 22L, 33L, 44L}};
+        VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
+
+        int[] probeOutputCols = {0, 1};
+        int[] probeHashCols = {0};
+        int[] buildOutputCols = {0, 1};
+        VecType[] buildOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
+                probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                hashBuilderOperatorFactory);
+        OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
+        lookupJoinOperator.addInput(probeVecBatch);
+        Iterator<VecBatch> results = lookupJoinOperator.getOutput();
+        assertTrue(results != null);
+        assertEquals(results.hasNext(), false);
+
+        freeVecBatch(probeVecBatch);
+        freeVecBatch(buildVecBatch);
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
     }
 }
