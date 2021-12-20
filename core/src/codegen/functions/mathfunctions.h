@@ -30,4 +30,6 @@ extern "C" DLLEXPORT int CastInt64ToInt32(int64_t x);
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val);
 
+extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
+
 #endif

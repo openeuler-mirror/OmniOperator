@@ -42,6 +42,8 @@ bool ParserHelper::FuncDeclMatch(const string& fnName, vector<Expr *> args, bool
         return (IsIntType(args[0]->dataType) && IsIntType(args[1]->dataType));
     } else if (fnName == "mm3hash" && args.size() == ARGS_2) {
         return true;
+    } else if (fnName == "pmod" && args.size() == ARGS_2) {
+        return (args[0]->dataType == INT32D && args[1]->dataType == INT32D);
     } else if (externalFuncNames.find(fnName) != externalFuncNames.end()) {
         // Don't do any other checks for now for external functions
         return true;
