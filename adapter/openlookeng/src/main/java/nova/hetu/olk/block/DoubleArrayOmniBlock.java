@@ -193,7 +193,7 @@ public class DoubleArrayOmniBlock implements Block<Double> {
 
     @Override
     public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer) {
-        consumer.accept(values, (long) values.getCapacityInBytes());
+        consumer.accept(values.get(0, positionCount), (long) values.getCapacityInBytes());
         if (valueIsNull != null) {
             consumer.accept(valueIsNull, sizeOf(valueIsNull));
         }

@@ -18,6 +18,7 @@ import static io.prestosql.SystemSessionProperties.getFilterAndProjectMinOutputP
 import static io.prestosql.SystemSessionProperties.getFilterAndProjectMinOutputPageSize;
 import static io.prestosql.SystemSessionProperties.getOmniAggEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniDistinctLimitEnabled;
+import static io.prestosql.SystemSessionProperties.getOmniFilterProjectEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniJoinEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniLimitEnabled;
 import static io.prestosql.SystemSessionProperties.getOmniOrderByEnabled;
@@ -80,6 +81,7 @@ import io.prestosql.operator.DriverFactory;
 import io.prestosql.operator.DynamicFilterSourceOperator;
 import io.prestosql.operator.ExchangeClientSupplier;
 import io.prestosql.operator.ExchangeOperator;
+import io.prestosql.operator.FilterAndProjectOperator;
 import io.prestosql.operator.HashAggregationOperator;
 import io.prestosql.operator.HashBuilderOperator.HashBuilderOperatorFactory;
 import io.prestosql.operator.JoinBridgeManager;
@@ -235,6 +237,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
     private final ExpressionCompiler expressionCompiler;
 
+    private final OmniExpressionCompiler omniExpressionCompiler;
+
     private final PageFunctionCompiler pageFunctionCompiler;
 
     private final JoinFilterFunctionCompiler joinFilterFunctionCompiler;
@@ -345,8 +349,9 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
         this.pageSinkManager = requireNonNull(pageSinkManager, "pageSinkManager is null");
+        this.expressionCompiler = requireNonNull(expressionCompiler, "compiler is null");
         // use omni expressionCompiler
-        this.expressionCompiler = new OmniExpressionCompiler(metadata, pageFunctionCompiler);
+        this.omniExpressionCompiler = new OmniExpressionCompiler(metadata, pageFunctionCompiler);
         this.pageFunctionCompiler = requireNonNull(pageFunctionCompiler, "pageFunctionCompiler is null");
         this.joinFilterFunctionCompiler = requireNonNull(joinFilterFunctionCompiler, "compiler is null");
         this.indexJoinLookupStats = requireNonNull(indexJoinLookupStats, "indexJoinLookupStats is null");
@@ -474,8 +479,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         try {
             physicalOperation = plan.accept(new OmniVisitor(session, stageExecutionDescriptor), context);
         } catch (Exception e) {
-            log.warn("Unable to plan with OmniRuntime Operators for task: " + taskContext.getTaskId() +
-                ", cause: " + e.getLocalizedMessage());
+            log.warn("Unable to plan with OmniRuntime Operators for task: " + taskContext.getTaskId() + ", cause: "
+                    + e.getLocalizedMessage());
             return null;
         }
 
@@ -608,8 +613,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             OperatorFactory operatorFactory;
             if (getOmniDistinctLimitEnabled(session)) {
                 operatorFactory = new DistinctLimitOmniOperator.DistinctLimitOmniOperatorFactory(
-                        context.getNextOperatorId(), node.getId(), source.getTypes(), distinctChannels,
-                        hashChannel, node.getLimit());
+                        context.getNextOperatorId(), node.getId(), source.getTypes(), distinctChannels, hashChannel,
+                        node.getLimit());
             } else {
                 operatorFactory = new DistinctLimitOperator.DistinctLimitOperatorFactory(context.getNextOperatorId(),
                         node.getId(), source.getTypes(), distinctChannels, node.getLimit(), hashChannel, joinCompiler);
@@ -738,19 +743,24 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     .map(expression -> toRowExpression(expression, expressionTypes, sourceLayout))
                     .collect(toImmutableList());
 
-            Supplier<PageProcessor> pageProcessor = ((OmniExpressionCompiler) expressionCompiler).compilePageProcessor(
-                    translatedFilter, translatedProjections, Optional.of(context.getStageId() + "_" + planNodeId),
-                    OptionalInt.empty(), inputTypes, context.getTaskId(), (OmniLocalExecutionPlanContext) context);
+            boolean isOmniFilterProjectEnabled = getOmniFilterProjectEnabled(context.getSession());
+            Supplier<PageProcessor> pageProcessor;
+            if (isOmniFilterProjectEnabled) {
+                pageProcessor = omniExpressionCompiler.compilePageProcessor(translatedFilter, translatedProjections,
+                        Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(), inputTypes,
+                        context.getTaskId(), (OmniLocalExecutionPlanContext) context);
+            } else {
+                pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter, translatedProjections,
+                        Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(), inputTypes, null);
+            }
             if (pageProcessor == null) {
                 throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
             }
 
             if (columns != null) {
-                // TODO: Need Support RecordCursor Filter And Project Omni Codegen
                 boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
                 int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024 * 1024; // convert from MB
                                                                                                       // to bytes
-
                 Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(translatedFilter,
                         translatedProjections, sourceNode.getId());
                 SourceOperatorFactory operatorFactory = new ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory(
@@ -766,10 +776,18 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                                 ? GROUPED_EXECUTION
                                 : UNGROUPED_EXECUTION);
             } else {
-                OperatorFactory operatorFactory = new FilterAndProjectOmniOperator.FilterAndProjectOmniOperatorFactory(
-                        context.getNextOperatorId(), planNodeId, pageProcessor, getTypes(projections, expressionTypes),
-                        getFilterAndProjectMinOutputPageSize(session),
-                        getFilterAndProjectMinOutputPageRowCount(session), session);
+                OperatorFactory operatorFactory;
+                if (isOmniFilterProjectEnabled) {
+                    operatorFactory = new FilterAndProjectOmniOperator.FilterAndProjectOmniOperatorFactory(
+                            context.getNextOperatorId(), planNodeId, pageProcessor,
+                            getTypes(projections, expressionTypes), getFilterAndProjectMinOutputPageSize(session),
+                            getFilterAndProjectMinOutputPageRowCount(session));
+                } else {
+                    operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
+                            context.getNextOperatorId(), planNodeId, pageProcessor,
+                            getTypes(projections, expressionTypes), getFilterAndProjectMinOutputPageSize(session),
+                            getFilterAndProjectMinOutputPageRowCount(session));
+                }
 
                 return new PhysicalOperation(operatorFactory, outputMappings, context, source);
             }
@@ -1374,7 +1392,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         getDynamicFilteringMaxPerDriverSize(buildContext.getSession())));
             });
 
-            if (getOmniJoinEnabled(context.getSession())) {
+            // if it is right join or full join, we do not use omni operators
+            if (getOmniJoinEnabled(context.getSession()) && !buildOuter) {
                 Optional<String> filterFunction = node.getFilter()
                         .map(filterExpression -> getTranslatedExpression(context, buildSource, probeSource,
                                 filterExpression));
@@ -1495,7 +1514,10 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             OptionalInt totalOperatorsCount = context.getDriverInstanceCount();
             checkState(!spillEnabled || totalOperatorsCount.isPresent(),
                     "A fixed distribution is required for JOIN when spilling is enabled");
-            if (getOmniJoinEnabled(context.getSession())) {
+
+            // if it is right join or full join, we do not use omni operators
+            boolean buildOuter = node.getType() == RIGHT || node.getType() == FULL;
+            if (getOmniJoinEnabled(context.getSession()) && !buildOuter) {
                 return createOmniLookupJoin(node, lookupSourceFactoryManager, context, probeTypes, probeOutputChannels,
                         probeJoinChannels, probeHashChannel, totalOperatorsCount);
             }

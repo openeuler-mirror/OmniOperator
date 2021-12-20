@@ -248,7 +248,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
 
     @Override
     public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer) {
-        consumer.accept(values, (long) values.getCapacityInBytes());
+        consumer.accept(getRawSlice(0), (long) values.getCapacityInBytes());
         consumer.accept(offsets, sizeOf(offsets));
         if (valueIsNull != null) {
             consumer.accept(valueIsNull, sizeOf(valueIsNull));
