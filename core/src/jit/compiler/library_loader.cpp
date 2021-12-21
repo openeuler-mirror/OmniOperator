@@ -107,6 +107,7 @@ LibraryLoader::LibraryLoader() : neededLibs()
             {"codegen", CoreLibrary("libcodegen.so", "codegen", 3)},
             {"parserhelper", CoreLibrary("libparserhelper.so", "parserhelper", 4)},
             {"parser", CoreLibrary("libparser.so", "parser", 5)},
+            {"jsonparser", CoreLibrary("libjsonparser.so", "jsonparser", 5)},
             {"projection", CoreLibrary("libprojection.so", "projection", 6)},
             {"hash_util", CoreLibrary("libhash_util.so", "hash_util", 6)},
             {"filter_and_project", CoreLibrary("libfilter_and_project.so", "filter_and_project", 7)},

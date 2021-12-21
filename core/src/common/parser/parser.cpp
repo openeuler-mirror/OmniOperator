@@ -31,60 +31,22 @@ string DemangleOperator(string opStr)
     return opStr;
 }
 
-Operator OpTrans(string op)
-{
-    // Comparison operators
-    if (op == "EQUAL") {
-        return Operator::EQ;
-    } else if (op == "LESS_THAN") {
-        return Operator::LT;
-    } else if (op == "LESS_THAN_OR_EQUAL") {
-        return Operator::LTE;
-    } else if (op == "GREATER_THAN_OR_EQUAL") {
-        return Operator::GTE;
-    } else if (op == "GREATER_THAN") {
-        return Operator::GT;
-    } else if (op == "NOT_EQUAL") {
-        return Operator::NEQ;
-        // Logical operators
-    } else if (op == "AND") {
-        return Operator::AND;
-    } else if (op == "OR") {
-        return Operator::OR;
-    } else if (op == "NOT" || op == "not") {
-        return Operator::NOT;
-        // Arithmetic
-    } else if (op == "ADD") {
-        return Operator::ADD;
-    } else if (op == "SUBTRACT") {
-        return Operator::SUB;
-    } else if (op == "MULTIPLY") {
-        return Operator::MUL;
-    } else if (op == "DIVIDE") {
-        return Operator::DIV;
-    } else if (op == "MODULUS") {
-        return Operator::MOD;
-    } else {
-        return Operator::INVALIDOP;
-    }
-}
-
-OperatorReturnType GetBinaryOperatorType(string opStr)
+OperatorType GetBinaryOperatorType(string opStr)
 {
     vector<string> allCmpOps{"LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "EQUAL",
                               "NOT_EQUAL"};
     vector<string> allLogOps{"AND", "OR"};
     vector<string> allArithOps{"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS"};
     for (const string& cmpOp : allCmpOps) {
-        if (opStr == cmpOp) {return OperatorReturnType::COMPARISON; }
+        if (opStr == cmpOp) {return OperatorType::COMPARISON; }
     }
     for (const string& logOp : allLogOps) {
-        if (opStr == logOp) {return OperatorReturnType::LOGICAL; }
+        if (opStr == logOp) {return OperatorType::LOGICAL; }
     }
     for (const string& arithOp : allArithOps) {
-        if (opStr == arithOp) {return OperatorReturnType::ARITHMETIC; }
+        if (opStr == arithOp) {return OperatorType::ARITHMETIC; }
     }
-    return OperatorReturnType::INVALIDRETURNTYPE;
+    return OperatorType::INVALIDOPTTYPE;
 }
 
 bool IsUnaryOperator(const string& opStr)
@@ -129,18 +91,7 @@ DataType ParseReturnType(const string& typeString)
     }
     if (typeString.find_first_not_of("0123456789") == string::npos && stoi(typeString) < INT32_MAX) {
         int typeOrdinal = stoi(typeString);
-        if (DECIMAL64D == typeOrdinal) {
-            return INT64D;
-        }
-        if (omniruntime::vec::OMNI_VEC_TYPE_DATE32 == typeOrdinal) {
-            return INT32D;
-        }
-        if (omniruntime::vec::OMNI_VEC_TYPE_SHORT == typeOrdinal ||
-            (omniruntime::vec::OMNI_VEC_TYPE_DATE64 <= typeOrdinal &&
-            omniruntime::vec::OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= typeOrdinal)) {
-            LogWarn("Unsupported return type: %u", static_cast<omniruntime::vec::VecTypeId>(typeOrdinal));
-        }
-        return static_cast<DataType>(stoi(typeString));
+        return OrdinalToDataType(typeOrdinal);
     }
     LogError("Invalid return type: %s", typeString.c_str());
     return INVALIDDATAD;
@@ -209,15 +160,16 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     }
 
     // BinaryExpr
-    OperatorReturnType binRetType = GetBinaryOperatorType(opStr);
-    if (binRetType != OperatorReturnType::INVALIDRETURNTYPE && args.size() == ARG2) {
-        return std::make_unique<BinaryExpr>(OpTrans(opStr), args[0], args[1], type).release();
+    OperatorType binRetType = GetBinaryOperatorType(opStr);
+    if (binRetType != OperatorType::INVALIDOPTTYPE && args.size() == ARG2) {
+        return std::make_unique<BinaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0],
+                                            args[1], type).release();
     }
 
     // UnaryExpr
     // only handling NOT for now
     if (IsUnaryOperator(opStr) && args.size() == 1) {
-        return std::make_unique<UnaryExpr>(OpTrans(opStr), args[0], type).release();
+        return std::make_unique<UnaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], type).release();
     }
 
     // Special form

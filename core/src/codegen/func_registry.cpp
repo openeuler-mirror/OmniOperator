@@ -180,39 +180,71 @@ void FunctionRegistry::RegisterCastFunctions(const std::string& fn)
 
 bool IsSubstrFunc(const std::string& fn)
 {
-    return (fn.size() > 7 && fn.substr(0,7) == "substr_");
+    return (fn.size() > 7 && fn.substr(0, 7) == "substr_");
 }
 
 void FunctionRegistry::RegisterStringFunctions(const std::string& fn)
 {
     if (IsSubstrFunc(fn)) {
+        int substrFuncPrefix = 14;
+        int typeStrLength = 6; // with "_" suffix counted
+        int startIdxPos = 1;
+        int endIdxPos = 2;
+        int retTypePos = 3;
         int numArgs = -1;
+        vector<int> delimiterIndex;
         for (int i = 0; i < fn.size(); i++) {
             if (fn[i] == '_') {
                 numArgs++;
+                delimiterIndex.push_back(i);
             }
         }
         if (numArgs == SUBSTREXT_VALUE) {
-            vector<DataType> substrExtTypes {
-                    DataType::INT8PTRD, DataType::INT32D, DataType::INT32D, DataType::INT32D,
-                    DataType::INT32PTRD, DataType::INT64D
-            };
-            FunctionSignature substrExtSig(fn, substrExtTypes, DataType::INT8PTRD,
-                                           reinterpret_cast<void *>(SubstrExt));
-            this->RegisterFunctionFromSignature(substrExtSig);
-            funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, substrExtSig));
+            bool isInt = (fn.substr(substrFuncPrefix, delimiterIndex.at(endIdxPos) -
+                delimiterIndex.at(startIdxPos) - 1)) == "int32" && (fn.substr(substrFuncPrefix + typeStrLength,
+                    delimiterIndex.at(retTypePos) - delimiterIndex.at(endIdxPos) - 1) == "int32");
+            if (isInt) {
+                vector<DataType> substrExtTypes {
+                        DataType::INT8PTRD, DataType::INT32D, DataType::INT32D, DataType::INT32D,
+                        DataType::INT32PTRD, DataType::INT64D
+                };
+                FunctionSignature substrExtSig(fn, substrExtTypes, DataType::INT8PTRD,
+                        reinterpret_cast<void *>(SubstrExt));
+                this->RegisterFunctionFromSignature(substrExtSig);
+                funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, substrExtSig));
+            } else {
+                vector<DataType> substrExt64Types {
+                        DataType::INT8PTRD, DataType::INT32D, DataType::INT64D, DataType::INT64D,
+                        DataType::INT32PTRD, DataType::INT64D
+                };
+                FunctionSignature substrExt64Sig(fn, substrExt64Types, DataType::INT8PTRD,
+                                                 reinterpret_cast<void *>(SubstrExt64));
+                this->RegisterFunctionFromSignature(substrExt64Sig);
+                funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, substrExt64Sig));
+            }
         }
         if (numArgs == STARTEXT_VALUE) {
-            vector<DataType> substrWithStartExtTypes {
-                    DataType::INT8PTRD, DataType::INT32D, DataType::INT32D,
-                    DataType::INT32PTRD, DataType::INT64D
-            };
-            FunctionSignature substrWithStartExtSig
-                    (fn, substrWithStartExtTypes,
-                     DataType::INT8PTRD, reinterpret_cast<void *>(SubstrWithStartExt));
-            this->RegisterFunctionFromSignature(substrWithStartExtSig);
-            funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn,
-                                                                          substrWithStartExtSig));
+            bool isInt = (fn.substr(substrFuncPrefix, delimiterIndex.at(endIdxPos) -
+                delimiterIndex.at(startIdxPos) - 1) == "int32");
+            if (isInt) {
+                vector<DataType> substrWithStartExtTypes {
+                        DataType::INT8PTRD, DataType::INT32D, DataType::INT32D,
+                        DataType::INT32PTRD, DataType::INT64D
+                };
+                FunctionSignature substrWithStartExtSig(fn, substrWithStartExtTypes,
+                        DataType::INT8PTRD, reinterpret_cast<void *>(SubstrWithStartExt));
+                this->RegisterFunctionFromSignature(substrWithStartExtSig);
+                funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, substrWithStartExtSig));
+            } else {
+                vector<DataType> substrWithStartExt64Types {
+                        DataType::INT8PTRD, DataType::INT32D, DataType::INT64D,
+                        DataType::INT32PTRD, DataType::INT64D
+                };
+                FunctionSignature substrWithStartExt64Sig(fn, substrWithStartExt64Types,
+                        DataType::INT8PTRD, reinterpret_cast<void *>(SubstrWithStartExt64));
+                this->RegisterFunctionFromSignature(substrWithStartExt64Sig);
+                funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, substrWithStartExt64Sig));
+            }
         }
     }
 

@@ -61,6 +61,7 @@ add_library(expr_printer SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_printer.cp
 add_library(expressions SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp)
 add_library(parserhelper SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp)
 add_library(parser SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp)
+add_library(jsonparser SHARED ${CMAKE_CURRENT_LIST_DIR}/common/jsonparser/jsonparser.cpp)
 add_library(sort_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort_expr.cpp)
 add_library(hash_builder_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder_expr.cpp)
 add_library(lookup_join_expr SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp)
@@ -106,6 +107,7 @@ install(TARGETS
         expressions
         parserhelper
         parser
+        jsonparser
         sort_expr
         hash_builder_expr
         lookup_join_expr
@@ -154,6 +156,7 @@ set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cp
         ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp
         ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp
         ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/common/jsonparser/jsonparser.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/join/hash_builder_expr.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/join/lookup_join_expr.cpp

@@ -4,6 +4,7 @@
  */
 #include "projection.h"
 #include "../../vector/vector_helper.h"
+#include "../../common/jsonparser/jsonparser.h"
 
 using namespace std;
 using namespace omniruntime::op;
@@ -102,11 +103,17 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter)
+Projection::Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter,
+    const int8_t parseFormat)
     : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols)
 {
-    Parser parser;
-    this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
+    if (parseFormat == 1) {
+        this->expr = JSONParser::ParseJSON(nlohmann::json::parse(expr));
+    } else {
+        Parser parser;
+        this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
+    }
+
     if (this->expr == nullptr) {
         this->isSupported = false;
     } else {
@@ -337,12 +344,12 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
 }
 
 ProjectionOperatorFactory::ProjectionOperatorFactory(std::string expressions[], int32_t nProj, VecTypes &inputTypes,
-    int32_t nCols)
-    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols), nProj(nProj)
+    int32_t nCols, const int8_t parseFormat) : inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())),
+    inputTypes(inputTypes), nCols(nCols), nProj(nProj), parseFormat(parseFormat)
 {
     this->SetJitContext(nullptr);
     for (int32_t i = 0; i < nProj; i++) {
-        auto projection = std::make_unique<Projection>(inputTypes, nCols, expressions[i], false);
+        auto projection = std::make_unique<Projection>(inputTypes, nCols, expressions[i], false, parseFormat);
         if (!projection->IsSupported()) {
             this->isSupported = false;
             break;

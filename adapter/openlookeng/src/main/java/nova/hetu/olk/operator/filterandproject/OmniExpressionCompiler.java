@@ -67,7 +67,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
                 .maximumSize(expressionCacheSize)
                 .removalListener(notification -> {
                 })
-                .build(CacheLoader.from(cacheKey -> new OmniProjection(cacheKey.projections, cacheKey.inputTypes)));
+                .build(CacheLoader.from(cacheKey -> new OmniProjection(cacheKey.projections, cacheKey.inputTypes,
+                        OmniRowExpressionUtil.Format.JSON)));
 
         filterCache = CacheBuilder.newBuilder()
                 .recordStats()
@@ -78,7 +79,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
                     RowExpression re = cacheKey.filter.get();
                     PageFieldsToInputParametersRewriter.Result result = rewritePageFieldsToInputParameters(re);
                     OmniPageFilter omniPageFilter = new OmniPageFilter(re, determinismEvaluator.isDeterministic(re),
-                        result.getInputChannels(), cacheKey.inputTypes, cacheKey.projections);
+                        result.getInputChannels(), cacheKey.inputTypes, cacheKey.projections,
+                            OmniRowExpressionUtil.Format.JSON);
                     return omniPageFilter;
                 }));
     }

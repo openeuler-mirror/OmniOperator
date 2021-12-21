@@ -69,8 +69,6 @@ Type *ExpressionCodeGen::ToLlvmType(DataType t)
         case DataType::CHARD:
         case DataType::VARCHARD:
             return Type::getInt8PtrTy(*context);
-        case DataType::DECIMAL64D:
-            return Type::getInt64Ty(*context);
         case DataType::DECIMAL128D:
             return Type::getInt64Ty(*context);
         default:
@@ -518,9 +516,6 @@ Value *ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, Value *elementAddr)
         case DataType::VARCHARD:
             elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt8PtrTy(*context));
             break;
-        case DataType::DECIMAL64D:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
-            break;
         case DataType::DECIMAL128D:
             elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
             break;
@@ -607,8 +602,6 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *r
         case omniruntime::expressions::INT32D:
             dictionaryFunc = module->getFunction(fr->dictionaryGetIntStr);
             break;
-        // need to handle decimal properly in the future
-        case omniruntime::expressions::DECIMAL64D:
         case omniruntime::expressions::INT64D:
             dictionaryFunc = module->getFunction(fr->dictionaryGetLongStr);
             break;
@@ -802,7 +795,7 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
             this->BinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (bExpr->left->GetExprDataType() == DECIMAL128D || bExpr->left->GetExprDataType() == DECIMAL64D) {
+    } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprDecimalHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
@@ -979,11 +972,6 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
             builder->CreateICmpSLE(this->StringCmp(lowerValData, lowerValLen, valData, valLen), CreateConstantInt(0));
         cmpRight =
             builder->CreateICmpSLE(this->StringCmp(valData, valLen, upperValData, upperValLen), CreateConstantInt(0));
-        supportedType = true;
-    } else if (bExpr->value->GetExprDataType() == DECIMAL64D) {
-        // FIXME: Reusing function Decimal128Cmp; add and change to Decimal64Cmp if necessary
-        cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerValData, *valData), CreateConstantInt(0));
-        cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*valData, *upperValData), CreateConstantInt(0));
         supportedType = true;
     } else if (bExpr->value->GetExprDataType() == DECIMAL128D) {
         cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerValData, *valData), CreateConstantInt(0));
