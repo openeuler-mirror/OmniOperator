@@ -64,7 +64,7 @@ omniruntime::expressions::DataExpr *ParserHelper::GetDefaultValueForType(omnirun
             return std::make_unique<DataExpr>(true).release();
         case DataType::CHARD:
         case DataType::VARCHARD:
-            return std::make_unique<DataExpr>("NULL").release();
+            return std::make_unique<DataExpr>(make_unique<string>("NULL").release()).release();
         case DataType::DECIMAL128D:
             return std::make_unique<DataExpr>(0L).release();
         case DataType::UNKNOWND:

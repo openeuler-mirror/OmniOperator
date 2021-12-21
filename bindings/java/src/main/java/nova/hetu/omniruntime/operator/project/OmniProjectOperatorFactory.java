@@ -33,8 +33,18 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
         super(new FactoryContext(new JitContext(expressions, inputTypes)));
     }
 
+    /**
+     * Instantiates a new Omni project operator factory with configured expression parsing format.
+     *
+     * @param expressions the expressions
+     * @param inputTypes the input types
+     */
+    public OmniProjectOperatorFactory(String[] expressions, VecType[] inputTypes, int parseFormat) {
+        super(new FactoryContext(new JitContext(expressions, inputTypes, parseFormat)));
+    }
+
     private static native long createProjectOperatorFactory(String inputTypes, int inputLength, Object[] expressions,
-        int expressionsLength, long jitContext);
+        int expressionsLength, long jitContext, int parseFormat);
 
     private static native long createProjectJitContext(String inputTypes, int inputLength, Object[] expressions,
         int expressionsLength);
@@ -44,7 +54,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
         JitContext context = factoryContext.getJitContext();
         long factoryAddr = createProjectOperatorFactory(
             VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
-            context.expressions, context.expressions.length, factoryContext.getNativeJitContext());
+            context.expressions, context.expressions.length, factoryContext.getNativeJitContext(), context.parseFormat);
         if (factoryAddr != 0) {
             isSupported = true;
         }
@@ -65,6 +75,8 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
 
         private final String[] expressions;
 
+        private final int parseFormat;
+
         /**
          * Instantiates a new Context.
          *
@@ -72,8 +84,19 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
          * @param inputTypes the input types
          */
         public JitContext(String[] expressions, VecType[] inputTypes) {
+            this(expressions, inputTypes, 0);
+        }
+
+        /**
+         * Instantiates a new Context with configured parsing format of the expression.
+         *
+         * @param expressions the expressions
+         * @param inputTypes the input types
+         */
+        public JitContext(String[] expressions, VecType[] inputTypes, int parseFormat) {
             this.inputTypes = requireNonNull(inputTypes, "Input types array is null.");
             this.expressions = requireNonNull(expressions, "Expressions is null.");
+            this.parseFormat = parseFormat;
         }
 
         @Override
@@ -90,7 +113,8 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
                 return false;
             }
             JitContext that = (JitContext) obj;
-            return Arrays.equals(expressions, that.expressions) && Arrays.equals(inputTypes, that.inputTypes);
+            return Arrays.equals(expressions, that.expressions) && Arrays.equals(inputTypes, that.inputTypes)
+                    && parseFormat == that.parseFormat;
         }
     }
 
@@ -111,7 +135,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            //todo: use createProjectJitContext when there is a jit optimization in future.
+            // todo: use createProjectJitContext when there is a jit optimization in future.
             // return createProjectJitContext(
             //     VecTypeSerializer.serialize(context.inputTypes), context.inputTypes.length,
             //     context.expressions, context.expressions.length);

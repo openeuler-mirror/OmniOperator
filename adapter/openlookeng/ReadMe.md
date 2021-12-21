@@ -5,8 +5,9 @@ We use an extension jar to support the decouple of OmniRuntime and OLK.
 ### how to build
 you'd better build the project as fellow order:
 1. mvn build omni-runtime 
-2. mvn build hetu-core 
-3. mvn build this adapter
+2. mvn build omni-runtime/bindings
+3. mvn build hetu-core 
+4. mvn build this adapter
 
 ### config extension execution planner
 

@@ -48,9 +48,10 @@ public class TestOmniPageProcessor {
             ImmutableList.of(field(0, INTEGER), constant(1, INTEGER)));
 
         OmniPageFilter filter = new OmniPageFilter(filterExpression, true, new InputChannels(1),
-            ImmutableList.of(INTEGER, INTEGER), ImmutableList.of(projectExpression));
+            ImmutableList.of(INTEGER, INTEGER), ImmutableList.of(projectExpression),
+            OmniRowExpressionUtil.Format.JSON);
         OmniProjection projection = new OmniProjection(ImmutableList.of(projectExpression),
-            ImmutableList.of(INTEGER, INTEGER));
+            ImmutableList.of(INTEGER, INTEGER), OmniRowExpressionUtil.Format.JSON);
 
         VecAllocator vecAllocator = VecAllocatorFactory.create(TestOmniPageProcessor.class.getName(), null);
         PageProcessor pageProcessor = new OmniPageProcessor(vecAllocator, Optional.of(filter), projection,

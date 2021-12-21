@@ -4,6 +4,7 @@
  */
 #include "filter_and_project.h"
 #include "../../vector/vector_helper.h"
+#include "../../common/jsonparser/jsonparser.h"
 
 namespace omniruntime {
 namespace op {
@@ -90,7 +91,8 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputTypes,
-    int32_t inputVecCount, std::string projectExprs[], int32_t projectVecCount) : inputVecTypes(inputTypes)
+    int32_t inputVecCount, std::string projectExprs[], int32_t projectVecCount, const int8_t parseFormat)
+    : inputVecTypes(inputTypes)
 {
     this->inputVecTypes = inputTypes;
     this->inputVecCount = inputVecCount;
@@ -98,9 +100,12 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     this->SetJitContext(nullptr);
 
     Expr *parsedExpr = nullptr;
-
-    Parser parserObject;
-    parsedExpr = parserObject.ParseRowExpression(expression, inputVecTypes, inputVecCount);
+    if (parseFormat == 1) {
+        parsedExpr = JSONParser::ParseJSON(nlohmann::json::parse(expression));
+    } else {
+        Parser parserObject;
+        parsedExpr = parserObject.ParseRowExpression(expression, inputVecTypes, inputVecCount);
+    }
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << expression << std::endl;
     ExprPrinter printExprTree;
@@ -112,7 +117,8 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
         this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes.GetIds(), inputVecCount);
 
         for (int32_t i = 0; i < this->projectVecCount; i++) {
-            projections.push_back(make_unique<Projection>(inputVecTypes, inputVecCount, projectExprs[i], true));
+            projections.push_back(make_unique<Projection>(inputVecTypes, inputVecCount, projectExprs[i], true,
+                                                          parseFormat));
         }
     } else {
         this->isSupportedExpr = false;

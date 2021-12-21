@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <src/common/jsonparser/jsonparser.h>
 #include "../../src/codegen/expression_codegen.h"
 #include "../../src/codegen/filter_codegen.h"
 #include "../../src/codegen/projection_codegen.h"
@@ -2742,6 +2743,102 @@ TEST(CodeGenTest, CombineHash)
     delete[] vals;
     delete[] selected;
     delete context;
+    delete expr;
+    delete lc;
+}
+TEST(CodeGenTest, JSONFunc)
+{
+    std::string unparsed = R"(
+        {
+        "exprType": "BINARY",
+        "returnType": 4,
+        "operator": "EQUAL",
+        "left": {
+            "exprType": "BINARY",
+            "returnType": 2,
+            "operator": "ADD",
+            "left": {
+                "exprType": "LITERAL",
+                "dataType": 2,
+                "isNull": false,
+                "value": 122
+            },
+            "right": {
+                "exprType": "FUNC",
+                "returnType": 2,
+                "function_name": "abs",
+                "arguments": [
+                    {
+                        "exprType": "FIELD_REFERENCE",
+                        "dataType": 2,
+                        "colVal": 0
+                    }
+                ]
+            }
+        },
+        "right": {
+            "exprType": "LITERAL",
+            "dataType": 2,
+            "isNull": false,
+            "value": 123
+        }
+    }
+    )";
+
+    nlohmann::json unparsedJSON = nlohmann::json::parse(unparsed);
+    std::cout << "parsed into JSON" << std::endl;
+
+    Expr *expr = JSONParser::ParseJSON(unparsedJSON);
+    ExprPrinter printer;
+    expr->Accept(printer);
+    cout << endl;
+
+    int64_t v1[1] = {1};
+    int64_t v2[1] = {234};
+    int64_t v3[1] = {345};
+    int64_t *vals = new int64_t[3];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)v2;
+    vals[2] = (int64_t)v3;
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[3];
+    for (int i = 0; i < 3; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[3];
+    for (int col = 0; col < 3; col++) {
+        offsets[col] = new int32_t[1];
+    }
+
+    string testname = "JSONFuncTest";
+    FilterCodeGen *lc = new FilterCodeGen(testname, *expr);
+    int64_t dictionaries[3] = {};
+    auto context = new ExecutionContext();
+    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 1);
+
+
+    v1[0] = -1;
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 1);
+
+    v1[0] = 2;
+    result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+    EXPECT_EQ(result, 0);
+
+
+    for (int i = 0; i < 3; i++) {
+        delete[] bitmap[i];
+    }
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
     delete expr;
     delete lc;
 }

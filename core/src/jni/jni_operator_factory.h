@@ -78,7 +78,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
-    JNIEnv *, jobject, jstring, jint, jstring, jobjectArray, jint, jlong);
+    JNIEnv *, jobject, jstring, jint, jstring, jobjectArray, jint, jlong, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory
@@ -87,7 +87,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *, jobject,
-    jstring, jint, jobjectArray, jint, jlong);
+    jstring, jint, jobjectArray, jint, jlong, jint);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory

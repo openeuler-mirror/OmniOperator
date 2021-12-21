@@ -4,13 +4,11 @@
 
 package nova.hetu.olk.operator.filterandproject;
 
+import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
 import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
 
 import io.prestosql.spi.type.Type;
-import io.prestosql.sql.relational.CallExpression;
-import io.prestosql.sql.relational.InputReferenceExpression;
 import io.prestosql.sql.relational.RowExpression;
-import io.prestosql.sql.relational.SpecialForm;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 
 import java.util.List;
@@ -33,11 +31,12 @@ public class OmniProjection {
      * @param expressions the expressions
      * @param inputTypes the input types
      */
-    public OmniProjection(List<? extends RowExpression> expressions, List<Type> inputTypes) {
+    public OmniProjection(List<? extends RowExpression> expressions, List<Type> inputTypes,
+    OmniRowExpressionUtil.Format parseFormat) {
         this.projectLength = expressions.size();
         this.omniProjectionFactory = new OmniProjectOperatorFactory(
-            expressions.stream().map(OmniRowExpressionUtil::expressionStringify)
-            .toArray(String[]::new), toVecTypes(inputTypes));
+            expressions.stream().map(p -> expressionStringify(p, parseFormat))
+            .toArray(String[]::new), toVecTypes(inputTypes), parseFormat.ordinal());
         this.isSupported = omniProjectionFactory.isSupported();
     }
 

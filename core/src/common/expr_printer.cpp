@@ -167,6 +167,19 @@ void ExprPrinter::Visit(DataExpr &e)
                 printf(
                     indent.append("'%s':%s").c_str(), (expr->stringVal)->c_str(), DataTypeString(e).c_str());
                 break;
+            case DECIMAL64D:
+                if (printWithTypes) {
+                    printf("d64_");
+                }
+                printf(indent.append("%ld").c_str(), (long)expr->longVal);
+                break;
+            case DECIMAL128D:
+                if (printWithTypes) {
+                    printf("d128_");
+                }
+                // FIXME: printing as int64_t for now;
+                printf(indent.append("%ld").c_str(), (long)expr->longVal);
+                break;
             default:
                 printf(
                     "invalid DataType %d",

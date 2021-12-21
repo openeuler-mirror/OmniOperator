@@ -3,10 +3,10 @@
  * Description:
  */
 #include "expressions.h"
-#include <stdio.h>
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include "../vector/vector_type.h"
 
 namespace omniruntime {
 namespace expressions {
@@ -121,6 +121,37 @@ DataType StringToDataType(std::string dt)
     return DataType::INVALIDDATAD;
 }
 
+// Helper function to get DataType from the enum ordinal value of the type
+DataType OrdinalToDataType(const int32_t& dt)
+{
+    if (dt < INT32_MAX) {
+        if (omniruntime::vec::OMNI_VEC_TYPE_DATE32 == dt) {
+            return DataType::INT32D;
+        }
+        if (DECIMAL64D == dt) {
+            return INT64D;
+        }
+        if (omniruntime::vec::OMNI_VEC_TYPE_SHORT == dt ||
+            (omniruntime::vec::OMNI_VEC_TYPE_DATE64 <= dt &&
+            omniruntime::vec::OMNI_VEC_TYPE_INTERVAL_DAY_TIME >= dt)) {
+            LogWarn("Unsupported return type: %u", static_cast<omniruntime::vec::VecTypeId>(dt));
+        }
+
+        return static_cast<DataType>(dt);
+    }
+    std::cout << "Unsupported return type: " << dt << std::endl;
+    return INVALIDDATAD;
+}
+
+// Helper function to get Operator enum from string representing operator
+Operator StringToOperator(std::string opStr)
+{
+    auto opItr = OPERATOR_FROM_STRING.find(opStr);
+    if (opItr != OPERATOR_FROM_STRING.end()) {
+        return opItr->second;
+    }
+    return INVALIDOP;
+}
 
 ExprType Expr::GetType()
 {
@@ -133,7 +164,7 @@ DataType Expr::GetExprDataType()
 }
 
 
-DataExpr::DataExpr(){}
+DataExpr::DataExpr() {}
 
 DataExpr::~DataExpr()
 {
@@ -179,11 +210,11 @@ DataExpr::DataExpr(std::string* val)
     stringVal = val;
     width = val->length() + 1;
 }
-DataExpr::DataExpr(int64_t &val)
+DataExpr::DataExpr(int64_t *val)
 {
     isColumn = false;
     dataType = DECIMAL128D;
-    dec128Val = &val;
+    dec128Val = val;
 }
 DataExpr::DataExpr(int32_t colIdx, DataType dt)
 {

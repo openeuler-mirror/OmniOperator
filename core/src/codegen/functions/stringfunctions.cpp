@@ -82,6 +82,12 @@ extern "C" DLLEXPORT const char *SubstrWithStartExt(const char *str, int32_t str
     return ret;
 }
 
+extern "C" DLLEXPORT const char *SubstrWithStartExt64(const char *str, int32_t strLen, int64_t startIdx,
+                                                    int32_t *outLen, int64_t contextPtr)
+{
+    return SubstrWithStartExt(str, strLen, static_cast<int32_t>(startIdx), outLen, contextPtr);
+}
+
 extern "C" DLLEXPORT const char *SubstrExt(const char *str, int32_t strLen, int32_t startIdx, int32_t length,
                                            int32_t *outLen, int64_t contextPtr)
 {
@@ -117,6 +123,12 @@ extern "C" DLLEXPORT const char *SubstrExt(const char *str, int32_t strLen, int3
         std::cerr << "Substring failed" << std::endl;
     }
     return ret;
+}
+
+extern "C" DLLEXPORT const char *SubstrExt64(const char *str, int32_t strLen, int64_t startIdx, int64_t length,
+                                             int32_t *outLen, int64_t contextPtr)
+{
+    return SubstrExt(str, strLen, static_cast<int32_t>(startIdx), static_cast<int32_t>(length), outLen, contextPtr);
 }
 
 extern "C" DLLEXPORT const char *ConcatStrExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen,

@@ -43,11 +43,11 @@ enum Operator {
 };
 
 
-enum OperatorReturnType {
-    COMPARISON, 
-    LOGICAL, 
-    ARITHMETIC, 
-    INVALIDRETURNTYPE
+enum OperatorType {
+    COMPARISON,
+    LOGICAL,
+    ARITHMETIC,
+    INVALIDOPTTYPE
 };
 
 
@@ -81,11 +81,35 @@ enum ExprType {
     INVALID_E
 };
 
+const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
+    {"EQUAL", Operator::EQ},
+    {"LESS_THAN", Operator::LT},
+    {"LESS_THAN_OR_EQUAL", Operator::LTE},
+    {"GREATER_THAN_OR_EQUAL", Operator::GTE},
+    {"GREATER_THAN", Operator::GT},
+    {"NOT_EQUAL", Operator::NEQ},
+    {"AND", Operator::AND},
+    {"OR", Operator::OR},
+    {"NOT", Operator::NOT},
+    {"not", Operator::NOT},
+    {"ADD", Operator::ADD},
+    {"SUBTRACT", Operator::SUB},
+    {"MULTIPLY", Operator::MUL},
+    {"DIVIDE", Operator::DIV},
+    {"MODULUS", Operator::MOD},
+};
+
 // Helper function to get DataType from a string representing the type
 DataType StringToDataType(std::string dt);
 
 bool IsStringDataType(DataType type);
 bool IsNullLiteral(const std::string& value);
+
+// Helper function to get DataType from the enum ordinal value of the type
+DataType OrdinalToDataType(const int32_t& dt);
+
+// Helper function to get Operator enum from string representing operator
+Operator StringToOperator(std::string opStr);
 
 class Expr {
 public:
@@ -107,9 +131,9 @@ public:
     int32_t intVal = 0;
     int64_t longVal = 0;
     double doubleVal = 0;
-    std::string* stringVal;
+    std::string* stringVal = nullptr;
     int32_t colVal = 0;
-    int64_t* dec128Val;
+    int64_t* dec128Val = nullptr;
 
     DataExpr();
     ~DataExpr() override;
@@ -118,7 +142,7 @@ public:
     explicit DataExpr(int64_t val);
     explicit DataExpr(double val);
     explicit DataExpr(std::string* val);
-    explicit DataExpr(int64_t &val);
+    explicit DataExpr(int64_t* val);
     DataExpr(int32_t colIdx, DataType colType);
     DataExpr(int32_t colIdx, DataType colType, int32_t width);
     void Accept(ExprVisitor &visitor) override;
@@ -241,7 +265,7 @@ public:
     FuncExpr(std::string fnName, std::vector<Expr*> args);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width);
-    
+
     void Accept(ExprVisitor &visitor) override;
     ExprType GetType() override;
 };

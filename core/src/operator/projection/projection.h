@@ -50,7 +50,8 @@ private:
 
 class Projection {
 public:
-    Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter);
+    Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter,
+               const int8_t parseFormat);
     Projection(VecTypes &inputTypes, int32_t nCols, expressions::Expr &expr, bool filter);
     ~Projection()
     {
@@ -129,7 +130,8 @@ private:
 
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
-    ProjectionOperatorFactory(std::string expression[], int32_t nProj, VecTypes &inputTypes, int32_t nCols);
+    ProjectionOperatorFactory(std::string expression[], int32_t nProj, VecTypes &inputTypes, int32_t n,
+        const int8_t parseFormat = 0);
     ProjectionOperatorFactory(omniruntime::expressions::Expr *exprs[], int32_t nProj, VecTypes &inputTypes,
         int32_t nCols);
 
@@ -144,6 +146,7 @@ private:
     std::vector<std::unique_ptr<Projection>> proj;
     int32_t nProj;
     bool isSupported = true;
+    int8_t parseFormat;
 };
 }
 }

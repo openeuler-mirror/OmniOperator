@@ -160,7 +160,7 @@ private:
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
     FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputVecTypes, int32_t inputVecCount,
-                                    std::string projections[], int32_t projectVecCount);
+                                    std::string projections[], int32_t projectVecCount, const int8_t parseFormat = 0);
 
     ~FilterAndProjectOperatorFactory() override;
 

@@ -701,7 +701,7 @@ JitContext *createWindowJitContext(int32_t *sourceTypes, int32_t typesCount, int
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_createFilterAndProjectOperatorFactory(
     JNIEnv *env, jobject jObj, jstring jInputTypes, jint jInputLength, jstring jExpression, jobjectArray jProjections,
-    jint jProjectLength, jlong jitContext)
+    jint jProjectLength, jlong jitContext, jint jParseFormat)
 {
     auto expressionCharPtr = env->GetStringUTFChars(jExpression, JNI_FALSE);
     std::string filterExpression = std::string(expressionCharPtr);
@@ -718,8 +718,9 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         env->ReleaseStringUTFChars(st, exprStringPtr);
     }
     auto projectLength = (int32_t)jProjectLength;
+    auto parseFormat = (int8_t)jParseFormat;
     auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputVecTypes, inputLength,
-        projectExpressions, projectLength);
+        projectExpressions, projectLength, parseFormat);
     if (!factory->isSupportedExpr) {
         delete factory;
         return 0;
@@ -731,7 +732,8 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createProjectOperatorFactory(JNIEnv *env,
-    jobject jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jlong jitContext)
+    jobject jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jlong jitContext,
+    jint jParseFormat)
 {
     std::string *exprs = new std::string[jExprsLength];
     for (int32_t i = 0; i < jExprsLength; i++) {
@@ -743,8 +745,9 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputVecTypes = Deserialize(inputTypesCharPtr);
     int32_t inputLength = (int32_t)jInputLength;
+    auto parseFormat = (int8_t)jParseFormat;
     omniruntime::op::ProjectionOperatorFactory *factory =
-        new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputVecTypes, inputLength);
+        new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputVecTypes, inputLength, parseFormat);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
 
     if (!factory->IsSupported()) {
