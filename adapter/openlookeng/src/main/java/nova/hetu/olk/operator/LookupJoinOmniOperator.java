@@ -65,11 +65,7 @@ import java.util.OptionalInt;
 public class LookupJoinOmniOperator implements Operator {
     private final OperatorContext operatorContext;
 
-    private final List<Type> probeTypes;
-
     private final Runnable afterClose;
-
-    private final OptionalInt lookupJoinsCount;
 
     private final LookupSourceFactory lookupSourceFactory;
 
@@ -116,19 +112,15 @@ public class LookupJoinOmniOperator implements Operator {
      * @param joinType the join type
      * @param lookupSourceFactory the lookup source factory
      * @param afterClose the after close
-     * @param lookupJoinsCount the lookup joins count
      * @param omniOperator the omni operator
      */
     public LookupJoinOmniOperator(OperatorContext operatorContext, List<Type> probeTypes, JoinType joinType,
-            LookupSourceFactory lookupSourceFactory, Runnable afterClose, OptionalInt lookupJoinsCount,
-            OmniOperator omniOperator) {
+            LookupSourceFactory lookupSourceFactory, Runnable afterClose, OmniOperator omniOperator) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.probeTypes = ImmutableList.copyOf(requireNonNull(probeTypes, "probeTypes is null"));
-
+        requireNonNull(probeTypes, "probeTypes is null");
         requireNonNull(joinType, "joinType is null");
 
         this.afterClose = requireNonNull(afterClose, "afterClose is null");
-        this.lookupJoinsCount = requireNonNull(lookupJoinsCount, "lookupJoinsCount is null");
         this.lookupSourceFactory = requireNonNull(lookupSourceFactory, "lookupSourceFactory is null");
         this.lookupSourceProviderFuture = lookupSourceFactory.createLookupSourceProvider();
 
@@ -183,8 +175,7 @@ public class LookupJoinOmniOperator implements Operator {
         omniOperator.addInput(vecBatch);
         result = new VecBatchToPageIterator(omniOperator.getOutput());
 
-        // here we get nothing from the native join, we can just keep the state and go
-        // on
+        // here we get nothing from the native join, we can just keep the state and go on
         if (!result.hasNext()) {
             result = null;
             vecBatch.releaseAllVectors();
@@ -340,9 +331,8 @@ public class LookupJoinOmniOperator implements Operator {
 
             VecType[] types = OperatorUtils.toVecTypes(probeTypes);
             VecType[] buildOutputVecTypes = OperatorUtils.toVecTypes(buildOutputTypes);
-            int[] omniHashChannels = probeJoinChannel.stream().mapToInt(Integer::valueOf).toArray();
             this.omniLookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(types,
-                    Ints.toArray(probeOutputChannels), omniHashChannels, Ints.toArray(buildOutputChannels),
+                    Ints.toArray(probeOutputChannels), Ints.toArray(probeJoinChannel), Ints.toArray(buildOutputChannels),
                     buildOutputVecTypes, getOmniJoinType(joinType),
                     hashBuilderOmniOperatorFactory.getOmniHashBuilderOperatorFactory());
         }
@@ -385,15 +375,6 @@ public class LookupJoinOmniOperator implements Operator {
             omniLookupJoinOperatorFactory = other.omniLookupJoinOperatorFactory;
         }
 
-        /**
-         * Gets operator id.
-         *
-         * @return the operator id
-         */
-        public int getOperatorId() {
-            return operatorId;
-        }
-
         @Override
         public Operator createOperator(DriverContext driverContext) {
             checkState(!closed, "Factory is already closed");
@@ -410,8 +391,7 @@ public class LookupJoinOmniOperator implements Operator {
             joinBridgeManager.probeOperatorCreated(driverContext.getLifespan());
             OmniOperator omniOperator = omniLookupJoinOperatorFactory.createOperator(vecAllocator);
             return new LookupJoinOmniOperator(operatorContext, probeTypes, joinType, lookupSourceFactory,
-                    () -> joinBridgeManager.probeOperatorClosed(driverContext.getLifespan()), totalOperatorsCount,
-                    omniOperator);
+                    () -> joinBridgeManager.probeOperatorClosed(driverContext.getLifespan()), omniOperator);
         }
 
         @Override

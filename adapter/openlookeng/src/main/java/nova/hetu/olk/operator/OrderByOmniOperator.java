@@ -17,7 +17,6 @@ import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import io.prestosql.execution.Lifespan;
-import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.memory.context.MemoryTrackingContext;
 import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.Operator;
@@ -137,13 +136,13 @@ public class OrderByOmniOperator implements Operator {
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
+            checkState(!closed, "Factory is already closed");
             VecAllocator vecAllocator = VecAllocatorHelper
                     .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                     OrderByOmniOperator.class.getSimpleName());
             OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator(vecAllocator);
-            return new OrderByOmniOperator(operatorContext, sourceTypes, outputChannels, sortChannels, sortAscendings,
-                    sortNullFirsts, omniSortOperator);
+            return new OrderByOmniOperator(operatorContext, omniSortOperator);
         }
 
         /**
@@ -152,8 +151,7 @@ public class OrderByOmniOperator implements Operator {
          * @return the operator
          */
         public Operator createOperator(VecAllocator vecAllocator) {
-            // all this is prepared for a fake driverContext to avoid change the original
-            // pipeline
+            // all this is prepared for a fake driverContext to avoid change the original pipeline
             Executor mockExecutor = MoreExecutors.directExecutor();
             ScheduledExecutorService mockScheduledExecutorService = newSingleThreadScheduledExecutor();
             TaskContext mockTaskContext = TestingTaskContext.createTaskContext(mockExecutor,
@@ -169,8 +167,7 @@ public class OrderByOmniOperator implements Operator {
                     new PlanNodeId("Fake node for creating the OrderByOmniOperator"), "OrderByOmniOperator type");
 
             OmniOperator omniSortOperator = omniSortOperatorFactory.createOperator(vecAllocator);
-            return new OrderByOmniOperator(mockOperatorContext, sourceTypes, outputChannels, sortChannels,
-                    sortAscendings, sortNullFirsts, omniSortOperator);
+            return new OrderByOmniOperator(mockOperatorContext, omniSortOperator);
         }
 
         @Override
@@ -212,15 +209,7 @@ public class OrderByOmniOperator implements Operator {
 
     private final OperatorContext operatorContext;
 
-    private final LocalMemoryContext revocableMemoryContext;
-
-    private final LocalMemoryContext localUserMemoryContext;
-
     private final OmniOperator omniOperator;
-
-    private final List<Type> sourceTypes;
-
-    private final int[] outputChannels;
 
     private final List<VecBatch> inputVecBatchs = new ArrayList<>();
 
@@ -232,21 +221,10 @@ public class OrderByOmniOperator implements Operator {
      * Instantiates a new Order by omni operator.
      *
      * @param operatorContext the operator context
-     * @param sourceTypes the source types
-     * @param outputChannels the output channels
-     * @param sortChannels the sort channels
-     * @param sortAscendings the sort ascendings
-     * @param sortNullFirsts the sort null firsts
      * @param omniOperator the omni operator
      */
-    public OrderByOmniOperator(OperatorContext operatorContext, List<Type> sourceTypes, int[] outputChannels,
-            int[] sortChannels, int[] sortAscendings, int[] sortNullFirsts, OmniOperator omniOperator) {
+    public OrderByOmniOperator(OperatorContext operatorContext, OmniOperator omniOperator) {
         this.operatorContext = operatorContext;
-        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
-        this.revocableMemoryContext = operatorContext.localRevocableMemoryContext();
-
-        this.sourceTypes = sourceTypes;
-        this.outputChannels = outputChannels;
         this.omniOperator = omniOperator;
     }
 
@@ -301,22 +279,6 @@ public class OrderByOmniOperator implements Operator {
     public void finish() {
         if (state == State.NEEDS_INPUT) {
             state = State.HAS_OUTPUT;
-
-            // Convert revocable memory to user memory as sortedPages holds on to memory so
-            // we no longer can revoke.
-            if (revocableMemoryContext.getBytes() > 0) {
-                long currentRevocableBytes = revocableMemoryContext.getBytes();
-                revocableMemoryContext.setBytes(0);
-                if (!localUserMemoryContext.trySetBytes(localUserMemoryContext.getBytes() + currentRevocableBytes)) {
-                    // TODO: this might fail (even though we have just released memory), but we
-                    // don't
-                    // have a proper way to atomically convert memory reservations
-                    revocableMemoryContext.setBytes(currentRevocableBytes);
-                    // spill since revocable memory could not be converted to user memory
-                    // immediately
-                    // TODO: this should be asynchronous
-                }
-            }
             sortedPages = transform(new VecBatchToPageIterator(omniOperator.getOutput()), Optional::of);
         }
     }

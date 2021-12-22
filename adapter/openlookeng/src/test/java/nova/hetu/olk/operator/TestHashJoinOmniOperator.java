@@ -29,7 +29,17 @@ import com.google.common.primitives.Ints;
 import io.airlift.units.DataSize;
 import io.prestosql.RowPagesBuilder;
 import io.prestosql.execution.Lifespan;
-import io.prestosql.operator.*;
+import io.prestosql.operator.Driver;
+import io.prestosql.operator.DriverContext;
+import io.prestosql.operator.JoinBridgeManager;
+import io.prestosql.operator.LookupJoinOperators;
+import io.prestosql.operator.LookupSourceFactory;
+import io.prestosql.operator.LookupSourceProvider;
+import io.prestosql.operator.Operator;
+import io.prestosql.operator.OperatorFactory;
+import io.prestosql.operator.PartitionedLookupSourceFactory;
+import io.prestosql.operator.PipelineContext;
+import io.prestosql.operator.TaskContext;
 import io.prestosql.operator.ValuesOperator.ValuesOperatorFactory;
 import io.prestosql.operator.exchange.LocalExchange.LocalExchangeFactory;
 import io.prestosql.operator.exchange.LocalExchange.LocalExchangeSinkFactoryId;
@@ -64,7 +74,6 @@ import java.util.stream.IntStream;
 @Test(singleThreaded = true)
 public class TestHashJoinOmniOperator {
     private static final int PARTITION_COUNT = 4;
-    private static final LookupJoinOperators LOOKUP_JOIN_OPERATORS = new LookupJoinOperators();
 
     private ExecutorService executor;
     private ScheduledExecutorService scheduledExecutor;
@@ -113,8 +122,7 @@ public class TestHashJoinOmniOperator {
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0),
                 ImmutableList.of(BIGINT, BIGINT, BIGINT));
         List<Page> probeInput = probePages.addSequencePage(1000, 0, 1000, 2000).build();
-        List<Page> offHeapPagesProbeInput = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages,
                 buildSideSetup.getOperatorFactory());
 
@@ -132,9 +140,10 @@ public class TestHashJoinOmniOperator {
                 .row(26L, 1026L, 2026L, 26L, 36L, 46L).row(27L, 1027L, 2027L, 27L, 37L, 47L)
                 .row(28L, 1028L, 2028L, 28L, 38L, 48L).row(29L, 1029L, 2029L, 29L, 39L, 49L).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), offHeapPagesProbeInput,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -154,8 +163,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row(1L).row((String) null).row((String) null).row(1L).row(2L).build();
-        List<Page> offHeapPagesProbeInput = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages,
                 buildSideSetup.getBuildOperatorFactory());
 
@@ -168,9 +176,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildPages.getTypesWithoutHash()))
                 .row(1L, 1L).row(1L, 1L).row(2L, 2L).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), offHeapPagesProbeInput,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -190,6 +199,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row(1L).row(2L).row(3L).build();
+
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages,
                 buildSideSetup.getBuildOperatorFactory());
 
@@ -202,9 +212,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row(1L, 1L).row(1L, 1L)
                 .row(2L, 2L).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true,
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
                 getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -226,6 +237,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row(1L).row(2L).row((String) null).row(3L).build();
+
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages,
                 buildSideSetup.getBuildOperatorFactory());
 
@@ -238,10 +250,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row(1L, 1L).row(1L, 1L)
                 .row(2L, 2L).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true,
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
                 getHashChannels(probePages, buildPages));
-
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -261,8 +273,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR, BIGINT, BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.addSequencePage(15, 20, 1020, 2020).build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactoryManager, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -283,9 +294,10 @@ public class TestHashJoinOmniOperator {
                 .row("32", 1032L, 2032L, null, null, null).row("33", 1033L, 2033L, null, null, null)
                 .row("34", 1034L, 2034L, null, null, null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -307,8 +319,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR, BIGINT, BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.addSequencePage(15, 20, 1020, 2020).build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -329,9 +340,10 @@ public class TestHashJoinOmniOperator {
                 .row("32", 1032L, 2032L, null, null, null).row("33", 1033L, 2033L, null, null, null)
                 .row("34", 1034L, 2034L, null, null, null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -352,8 +364,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row("a").row((String) null).row((String) null).row("a").row("b").build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -367,9 +378,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row("a", "a").row(null, null)
                 .row(null, null).row("a", "a").row("b", "b").build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -391,8 +403,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row("a").row((String) null).row((String) null).row("a").row("b").build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -406,9 +417,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row("a", "a").row(null, null)
                 .row(null, null).row("a", "a").row("b", null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -428,8 +440,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row("a").row("b").row("c").build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -443,9 +454,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row("a", "a").row("a", "a")
                 .row("b", "b").row("c", null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -467,8 +479,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row("a").row("b").row("c").build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -482,9 +493,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row("a", "a").row("a", "a")
                 .row("b", null).row("c", null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -504,8 +516,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row("a").row("b").row((String) null).row("c").build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -519,9 +530,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildPages.getTypesWithoutHash()))
                 .row("a", "a").row("a", "a").row("b", "b").row(null, null).row("c", null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -542,8 +554,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(VARCHAR);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row("a").row("b").row((String) null).row("c").build();
-        List<Page> probeInputoffHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.probeOuterJoin(0, new PlanNodeId("test"),
                 lookupSourceFactory, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -557,9 +568,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildPages.getTypesWithoutHash()))
                 .row("a", "a").row("a", "a").row("b", null).row(null, null).row("c", null).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInputoffHeapPages,
-                expected, true, getHashChannels(probePages, buildPages));
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
+                getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -578,6 +590,7 @@ public class TestHashJoinOmniOperator {
         // probe factory
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
+
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.innerJoin(0, new PlanNodeId("test"),
                 lookupSourceFactoryManager, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
                 Optional.empty(), OptionalInt.of(1), buildSideSetup.getBuildOperatorFactory());
@@ -585,14 +598,15 @@ public class TestHashJoinOmniOperator {
         // drivers and operators
         instantiateBuildDrivers(buildSideSetup, taskContext);
         buildLookupSource(buildSideSetup);
-        Operator operator = joinOperatorFactory
-                .createOperator(taskContext.addPipelineContext(0, true, true, false).addDriverContext());
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        Operator operator = joinOperatorFactory.createOperator(driverContext);
 
         List<Page> pages = probePages.row(6L).build();
         List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, pages);
         operator.addInput(offHeapPages.get(0));
         Page outputPage = operator.getOutput();
         assertNull(outputPage);
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -624,9 +638,11 @@ public class TestHashJoinOmniOperator {
         MaterializedResult expected = MaterializedResult
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row("a", null).row("b", null)
                 .row(null, null).row("c", null).build();
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true,
+
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
                 getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -647,8 +663,6 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.build();
-        List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                probeInput);
 
         OperatorFactory joinOperatorFactory = LookupJoinOmniOperators.innerJoin(0, new PlanNodeId("test"),
                 lookupSourceFactoryManager, probePages.getTypes(), Ints.asList(0), getHashChannelAsInt(probePages),
@@ -661,9 +675,11 @@ public class TestHashJoinOmniOperator {
         // expected
         MaterializedResult expected = MaterializedResult
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).build();
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), offHeapPages, expected, true,
+
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
                 getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     @Test(dataProvider = "hashJoinTestValues")
@@ -685,6 +701,7 @@ public class TestHashJoinOmniOperator {
         List<Type> probeTypes = ImmutableList.of(BIGINT);
         RowPagesBuilder probePages = rowPagesBuilder(probeHashEnabled, Ints.asList(0), probeTypes);
         List<Page> probeInput = probePages.row(1L).row(2L).row((String) null).row(0L).row(3L).build();
+
         OperatorFactory joinOperatorFactory = innerJoinOperatorFactory(lookupSourceFactory, probePages,
                 buildSideSetup.getBuildOperatorFactory());
 
@@ -697,9 +714,10 @@ public class TestHashJoinOmniOperator {
                 .resultBuilder(taskContext.getSession(), concat(probeTypes, buildTypes)).row(1L, 1L).row(1L, 1L)
                 .row(2L, 2L).row(0L, 0L).build();
 
-        assertOperatorEquals(joinOperatorFactory,
-                taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true,
+        DriverContext driverContext = taskContext.addPipelineContext(0, true, true, false).addDriverContext();
+        assertOperatorEquals(joinOperatorFactory, driverContext, probeInput, expected, true,
                 getHashChannels(probePages, buildPages));
+        joinOperatorFactory.noMoreOperators(driverContext.getLifespan());
     }
 
     private TaskContext createTaskContext() {
@@ -787,6 +805,7 @@ public class TestHashJoinOmniOperator {
             buildDrivers.add(driver);
             buildOperators.add(buildOperator);
         }
+        buildSideSetup.getBuildOperatorFactory().noMoreOperators();
 
         buildSideSetup.setDriversAndOperators(buildDrivers, buildOperators);
     }

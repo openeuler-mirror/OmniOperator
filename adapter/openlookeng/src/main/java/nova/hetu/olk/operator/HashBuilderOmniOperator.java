@@ -7,29 +7,25 @@ package nova.hetu.olk.operator;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
-import static com.google.common.util.concurrent.Futures.immediateFuture;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.Closer;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import io.prestosql.execution.Lifespan;
-import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.DriverContext;
+import io.prestosql.operator.EmptyLookupSource;
 import io.prestosql.operator.HashCollisionsCounter;
 import io.prestosql.operator.JoinBridgeManager;
 import io.prestosql.operator.LookupSource;
-import io.prestosql.operator.LookupSourceSupplier;
 import io.prestosql.operator.Operator;
 import io.prestosql.operator.OperatorContext;
 import io.prestosql.operator.OperatorFactory;
 import io.prestosql.operator.PartitionedLookupSourceFactory;
 import io.prestosql.spi.Page;
-import io.prestosql.spi.PageBuilder;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import nova.hetu.olk.tool.VecAllocatorHelper;
@@ -40,15 +36,14 @@ import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -72,15 +67,7 @@ public class HashBuilderOmniOperator implements Operator {
 
         private final List<Integer> outputChannels;
 
-        private final List<Integer> hashChannels;
-
         private final OptionalInt preComputedHashChannel;
-
-        private final Optional<String> filterFunction;
-
-        private final Optional<Integer> sortChannel;
-
-        private final List<String> searchFunctions;
 
         private final Map<Lifespan, Integer> partitionIndexManager = new HashMap<>();
 
@@ -112,6 +99,7 @@ public class HashBuilderOmniOperator implements Operator {
                 int operatorCount) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+            requireNonNull(filterFunction, "filterFunction is null");
             requireNonNull(sortChannel, "sortChannel can not be null");
             requireNonNull(searchFunctions, "searchFunctions is null");
             checkArgument(sortChannel.isPresent() != searchFunctions.isEmpty(),
@@ -120,18 +108,13 @@ public class HashBuilderOmniOperator implements Operator {
                     "lookupSourceFactoryManager is null");
 
             this.outputChannels = ImmutableList.copyOf(requireNonNull(outputChannels, "outputChannels is null"));
-            this.hashChannels = ImmutableList.copyOf(requireNonNull(hashChannels, "hashChannels is null"));
             this.preComputedHashChannel = requireNonNull(preComputedHashChannel, "preComputedHashChannel is null");
-            this.filterFunction = requireNonNull(filterFunction, "filterFunction is null");
-            this.sortChannel = sortChannel;
-            this.searchFunctions = ImmutableList.copyOf(searchFunctions);
             this.buildTypes = ImmutableList.copyOf(requireNonNull(buildTypes, "sourceTypes is null"));
 
             VecType[] omniBuildTypes = OperatorUtils.toVecTypes(buildTypes);
-            int[] omniHashChannels = hashChannels.stream().mapToInt(Integer::valueOf).toArray();
             String[] omniSearchFunctions = searchFunctions.stream().toArray(String[]::new);
-            this.omniHashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(omniBuildTypes, omniHashChannels,
-                    filterFunction, sortChannel, omniSearchFunctions, operatorCount);
+            this.omniHashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(omniBuildTypes,
+                    Ints.toArray(hashChannels), filterFunction, sortChannel, omniSearchFunctions, operatorCount);
         }
 
         @Override
@@ -147,8 +130,7 @@ public class HashBuilderOmniOperator implements Operator {
             int partitionIndex = getAndIncrementPartitionIndex(driverContext.getLifespan());
             verify(partitionIndex < lookupSourceFactory.partitions());
             OmniOperator omniOperator = omniHashBuilderOperatorFactory.createOperator(vecAllocator);
-            return new HashBuilderOmniOperator(operatorContext, lookupSourceFactory, partitionIndex, outputChannels,
-                    hashChannels, preComputedHashChannel, filterFunction, sortChannel, searchFunctions, omniOperator);
+            return new HashBuilderOmniOperator(operatorContext, lookupSourceFactory, partitionIndex, omniOperator);
         }
 
         @Override
@@ -217,27 +199,11 @@ public class HashBuilderOmniOperator implements Operator {
 
     private final OperatorContext operatorContext;
 
-    private final LocalMemoryContext localUserMemoryContext;
-
-    private final LocalMemoryContext localRevocableMemoryContext;
-
     private final PartitionedLookupSourceFactory lookupSourceFactory;
 
     private final ListenableFuture<?> lookupSourceFactoryDestroyed;
 
     private final int partitionIndex;
-
-    private final List<Integer> outputChannels;
-
-    private final List<Integer> hashChannels;
-
-    private final OptionalInt preComputedHashChannel;
-
-    private final Optional<String> filterFunction;
-
-    private final Optional<Integer> sortChannel;
-
-    private final List<String> searchFunctions;
 
     private final HashCollisionsCounter hashCollisionsCounter;
 
@@ -249,43 +215,21 @@ public class HashBuilderOmniOperator implements Operator {
 
     private final List<VecBatch> inputVecBatches = new ArrayList<>();
 
-    @Nullable
-    private LookupSourceSupplier lookupSourceSupplier;
-
-    private Optional<Runnable> finishMemoryRevoke = Optional.empty();
-
     /**
      * Instantiates a new Hash builder omni operator.
      *
      * @param operatorContext the operator context
      * @param lookupSourceFactory the lookup source factory
      * @param partitionIndex the partition index
-     * @param outputChannels the output channels
-     * @param hashChannels the hash channels
-     * @param preComputedHashChannel the pre computed hash channel
-     * @param filterFunction the filter function factory
-     * @param sortChannel the sort channel
-     * @param searchFunctions the search function factories
      * @param omniOperator the omni operator
      */
     public HashBuilderOmniOperator(OperatorContext operatorContext, PartitionedLookupSourceFactory lookupSourceFactory,
-            int partitionIndex, List<Integer> outputChannels, List<Integer> hashChannels,
-            OptionalInt preComputedHashChannel, Optional<String> filterFunction, Optional<Integer> sortChannel,
-            List<String> searchFunctions, OmniOperator omniOperator) {
+            int partitionIndex, OmniOperator omniOperator) {
         this.operatorContext = operatorContext;
         this.partitionIndex = partitionIndex;
-        this.filterFunction = filterFunction;
-        this.sortChannel = sortChannel;
-        this.searchFunctions = searchFunctions;
-        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
-        this.localRevocableMemoryContext = operatorContext.localRevocableMemoryContext();
 
         this.lookupSourceFactory = lookupSourceFactory;
         lookupSourceFactoryDestroyed = lookupSourceFactory.isDestroyed();
-
-        this.outputChannels = outputChannels;
-        this.hashChannels = hashChannels;
-        this.preComputedHashChannel = preComputedHashChannel;
 
         this.hashCollisionsCounter = new HashCollisionsCounter(operatorContext);
         operatorContext.setInfoSupplier(hashCollisionsCounter);
@@ -295,16 +239,6 @@ public class HashBuilderOmniOperator implements Operator {
     @Override
     public OperatorContext getOperatorContext() {
         return operatorContext;
-    }
-
-    /**
-     * Gets state.
-     *
-     * @return the state
-     */
-    @VisibleForTesting
-    public State getState() {
-        return state;
     }
 
     @Override
@@ -353,38 +287,6 @@ public class HashBuilderOmniOperator implements Operator {
     }
 
     @Override
-    public ListenableFuture<?> startMemoryRevoke() {
-        if (state == State.CONSUMING_INPUT) {
-            finishMemoryRevoke = Optional.of(() -> {
-                localRevocableMemoryContext.setBytes(0);
-            });
-        }
-        if (state == State.LOOKUP_SOURCE_BUILT) {
-            finishMemoryRevoke = Optional.of(() -> {
-                lookupSourceNotNeeded = Optional.empty();
-                localRevocableMemoryContext.setBytes(0);
-                lookupSourceSupplier = null;
-            });
-        }
-        if (operatorContext.getReservedRevocableBytes() == 0) {
-            // Probably stale revoking request
-            finishMemoryRevoke = Optional.of(() -> {
-            });
-            return immediateFuture(null);
-        }
-
-        throw new IllegalStateException(format("State %s can not have revocable memory, but has %s revocable bytes",
-                state, operatorContext.getReservedRevocableBytes()));
-    }
-
-    @Override
-    public void finishMemoryRevoke() {
-        checkState(finishMemoryRevoke.isPresent(), "Cannot finish unknown revoking");
-        finishMemoryRevoke.get().run();
-        finishMemoryRevoke = Optional.empty();
-    }
-
-    @Override
     public Page getOutput() {
         return null;
     }
@@ -393,10 +295,6 @@ public class HashBuilderOmniOperator implements Operator {
     public void finish() {
         if (lookupSourceFactoryDestroyed.isDone()) {
             close();
-            return;
-        }
-
-        if (finishMemoryRevoke.isPresent()) {
             return;
         }
 
@@ -425,9 +323,8 @@ public class HashBuilderOmniOperator implements Operator {
         }
 
         omniOperator.getOutput();
-        LookupSourceSupplier partition = buildLookupSource();
-        localUserMemoryContext.setBytes(partition.get().getInMemorySizeInBytes());
-        lookupSourceNotNeeded = Optional.of(lookupSourceFactory.lendPartitionLookupSource(partitionIndex, partition));
+        lookupSourceNotNeeded = Optional
+                .of(lookupSourceFactory.lendPartitionLookupSource(partitionIndex, new EmptyJoinHashSupplier()));
 
         state = State.LOOKUP_SOURCE_BUILT;
     }
@@ -439,17 +336,7 @@ public class HashBuilderOmniOperator implements Operator {
             return;
         }
 
-        localRevocableMemoryContext.setBytes(0);
-        lookupSourceSupplier = null;
         close();
-    }
-
-    private LookupSourceSupplier buildLookupSource() {
-        LookupSourceSupplier partition = new EmptyJoinHashSupplier();
-        hashCollisionsCounter.recordHashCollision(partition.getHashCollisions(), partition.getExpectedHashCollisions());
-        checkState(lookupSourceSupplier == null, "lookupSourceSupplier is already set");
-        this.lookupSourceSupplier = partition;
-        return partition;
     }
 
     @Override
@@ -470,97 +357,16 @@ public class HashBuilderOmniOperator implements Operator {
         }
         // close() can be called in any state, due for example to query failure, and
         // must clean resource up unconditionally
-
         omniOperator.close();
         inputVecBatches.forEach(vecBatch -> vecBatch.releaseAllVectors());
         inputVecBatches.forEach(vecBatch -> vecBatch.close());
-        lookupSourceSupplier = null;
         state = State.CLOSED;
-        finishMemoryRevoke = finishMemoryRevoke.map(ifPresent -> () -> {
-        });
-
-        try (Closer closer = Closer.create()) {
-            closer.register(() -> localUserMemoryContext.setBytes(0));
-            closer.register(() -> localRevocableMemoryContext.setBytes(0));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
-    private class EmptyJoinHashSupplier implements LookupSourceSupplier {
-        @Override
-        public long getHashCollisions() {
-            return 0;
-        }
-
-        @Override
-        public double getExpectedHashCollisions() {
-            return 0;
-        }
-
-        @Override
-        public long checksum() {
-            return 0;
-        }
-
+    private class EmptyJoinHashSupplier implements Supplier<LookupSource> {
         @Override
         public LookupSource get() {
-            return new EmptyJoinHash();
-        }
-    }
-
-    private class EmptyJoinHash implements LookupSource {
-        @Override
-        public int getChannelCount() {
-            return 0;
-        }
-
-        @Override
-        public long getInMemorySizeInBytes() {
-            return 0;
-        }
-
-        @Override
-        public long getJoinPositionCount() {
-            return 0;
-        }
-
-        @Override
-        public long joinPositionWithinPartition(long joinPosition) {
-            return 0;
-        }
-
-        @Override
-        public long getJoinPosition(int position, Page hashChannelsPage, Page allChannelsPage, long rawHash) {
-            return 0;
-        }
-
-        @Override
-        public long getJoinPosition(int position, Page hashChannelsPage, Page allChannelsPage) {
-            return 0;
-        }
-
-        @Override
-        public long getNextJoinPosition(long currentJoinPosition, int probePosition, Page allProbeChannelsPage) {
-            return 0;
-        }
-
-        @Override
-        public void appendTo(long position, PageBuilder pageBuilder, int outputChannelOffset) {
-        }
-
-        @Override
-        public boolean isJoinPositionEligible(long currentJoinPosition, int probePosition, Page allProbeChannelsPage) {
-            return false;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return false;
-        }
-
-        @Override
-        public void close() {
+            return new EmptyLookupSource();
         }
     }
 }
