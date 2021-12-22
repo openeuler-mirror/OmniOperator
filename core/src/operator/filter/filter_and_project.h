@@ -170,7 +170,7 @@ public:
 
 private:
     std::string expression;
-    VecTypes &inputVecTypes;
+    VecTypes inputVecTypes;
     int32_t inputVecCount;
     int32_t projectVecCount;
     std::unique_ptr<Filter> filter;

@@ -94,7 +94,6 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
     int32_t inputVecCount, std::string projectExprs[], int32_t projectVecCount, const int8_t parseFormat)
     : inputVecTypes(inputTypes)
 {
-    this->inputVecTypes = inputTypes;
     this->inputVecCount = inputVecCount;
     this->projectVecCount = projectVecCount;
     this->SetJitContext(nullptr);
