@@ -270,7 +270,8 @@ public class HashAggregationOmniOperator implements Operator {
 
         @Override
         public OperatorFactory duplicate() {
-            return null;
+            return new HashAggregationOmniOperatorFactory(operatorId, planNodeId, sourceTypes, groupByInputChannels,
+                    groupByInputTypes, aggregationInputChannels, aggregationInputTypes, aggregatorTypes, aggregationOutputTypes, step);
         }
 
         @Override
