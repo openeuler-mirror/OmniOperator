@@ -2592,16 +2592,17 @@ TEST(CodeGenTest, Mm3HashString)
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
 
-    char v1[] = "hello world";
+    std::string v1 = "hello world";
     auto *vals = new int64_t[1];
-    vals[0] = (int64_t)v1;
+    vals[0] = (int64_t)v1.c_str();
 
     bool **bitmap = new bool *[1];
     bitmap[0] = new bool[1];
     bitmap[0][0] = false;
     auto **offsets = new int32_t *[1];
-    offsets[0] = new int32_t[1];
+    offsets[0] = new int32_t[2];
     offsets[0][0] = 0;
+    offsets[0][1] = v1.size();
 
     RowProjection lc(unparsed, types);
     RowProjFunc func = lc.Create();
@@ -2616,7 +2617,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3String(vals[0], 42);
+    int32_t expected_res = Mm3String(v1.c_str(), v1.size(), 42);
     EXPECT_EQ(res, expected_res);
     context->getArena()->Reset();
 

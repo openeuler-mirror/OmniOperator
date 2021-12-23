@@ -55,7 +55,7 @@ extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, int32_t seed);
 
 extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, int32_t seed);
 
-extern "C" DLLEXPORT int32_t Mm3String(int64_t val, int32_t seed);
+extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, int32_t seed);
 
 extern "C" DLLEXPORT int32_t Mm3Double(double val, int32_t seed);
 
