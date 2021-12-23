@@ -111,22 +111,26 @@ public class OmniProjectOperatorTest {
     }
 
     /**
-     * Murmur3hash test.
+     * Murmur3hash&Pmod test.
      */
     @Test
     public void mm3HashAndPmodTest() {
         String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
         VecType[] inputTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
-        final int numRows = 1;
-        final byte[] byteVal = "Wednesday".getBytes(StandardCharsets.UTF_8);
+        final int numRows = 2;
+        final byte[] byteVal1 = "Wednesday".getBytes(StandardCharsets.UTF_8);
+        final byte[] byteVal2 = "Hello World".getBytes(StandardCharsets.UTF_8);
         IntVec col1 = new IntVec(numRows);
         DoubleVec col2 = new DoubleVec(numRows);
-        VarcharVec col3 = new VarcharVec(byteVal.length, numRows);
+        VarcharVec col3 = new VarcharVec(byteVal1.length + byteVal2.length, numRows);
 
         col1.set(0, Integer.MIN_VALUE);
         col2.set(0, Double.MAX_VALUE);
-        col3.set(0, byteVal);
+        col3.set(0, byteVal1);
+        col1.set(1, Integer.MAX_VALUE);
+        col2.set(1, Double.MIN_VALUE);
+        col3.set(1, byteVal2);
 
         OmniOperator op = factory.createOperator();
         ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
@@ -138,11 +142,12 @@ public class OmniProjectOperatorTest {
         VecBatch res = op.getOutput().next();
         assertEquals(res.getRowCount(), numRows);
         assertEquals(res.getVectors().length, exprs.length);
-        for (int i = 0; i < res.getRowCount(); i++) {
-            assertEquals(((IntVec) res.getVector(0)).get(i), 20);
-            assertEquals(((IntVec) res.getVector(1)).get(i), -508695674);
-            assertEquals(((IntVec) res.getVector(2)).get(i), 613818021);
-        }
+        assertEquals(((IntVec) res.getVector(0)).get(0), 20);
+        assertEquals(((IntVec) res.getVector(1)).get(0), -508695674);
+        assertEquals(((IntVec) res.getVector(2)).get(0), 613818021);
+        assertEquals(((IntVec) res.getVector(0)).get(1), 25);
+        assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
+        assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
 
         for (VecBatch vecBatch : vecBatches) {
             freeVecBatch(vecBatch);

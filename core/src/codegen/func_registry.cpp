@@ -317,7 +317,6 @@ void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
 {
     // Mm3Hash functions
     if (fn.find(mm3hashInt32Str) != std::string::npos) {
-        std::cout << fn << std::endl;
         vector<DataType> mm3Int32Types {DataType::INT32D, DataType::INT32D};
         FunctionSignature mm3Int32Sig (fn, mm3Int32Types, DataType::INT32D,
                                        reinterpret_cast<void *>(Mm3Int32));
@@ -339,7 +338,7 @@ void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3DoubleSig));
     }
     if (fn.find(mm3hashStringStr) != std::string::npos) {
-        vector<DataType> mm3StringTypes {DataType::INT64D, DataType::INT32D};
+        vector<DataType> mm3StringTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT32D};
         FunctionSignature mm3StringSig (fn, mm3StringTypes, DataType::INT32D,
                                         reinterpret_cast<void *>(Mm3String));
         this->RegisterFunctionFromSignature(mm3StringSig);
