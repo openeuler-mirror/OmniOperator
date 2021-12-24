@@ -137,6 +137,8 @@ public class AggregationOmniOperator implements Operator {
         private final OmniAggregationOperatorFactory omniFactory;
 
         private final Step step;
+        private final ImmutableList<Aggregation> aggregations;
+        private final ImmutableList<AccumulatorFactory> accumulatorFactories;
 
         /**
          * The Operator id.
@@ -171,6 +173,8 @@ public class AggregationOmniOperator implements Operator {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
             this.step = step;
+            this.aggregations = aggregations;
+            this.accumulatorFactories = accumulatorFactories;
 
             this.sourceTypes = ImmutableList.copyOf(requireNonNull(types, "sourceTypes is null"));
             int aggregationSize = aggregations.size();
@@ -225,7 +229,7 @@ public class AggregationOmniOperator implements Operator {
 
         @Override
         public OperatorFactory duplicate() {
-            return null;
+            return new AggregationOmniOperatorFactory(operatorId, planNodeId, sourceTypes, aggregations, accumulatorFactories, step);
         }
 
         @Override
