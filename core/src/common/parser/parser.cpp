@@ -97,6 +97,19 @@ DataType ParseReturnType(const string& typeString)
     return INVALIDDATAD;
 }
 
+std::vector<omniruntime::expressions::Expr *>
+Parser::ParseExpressions(const string expressions[], int32_t numberOfExpressions, VecTypes inputTypes,
+                         int32_t vecCount)
+{
+    std::vector<Expr *> vExprs;
+    for (int32_t i = 0; i < numberOfExpressions; i++) {
+        Expr *expr = ParseRowExpression(expressions[i], inputTypes, vecCount);
+        if (expr == nullptr) return {nullptr};
+        vExprs.push_back(expr);
+    }
+    return vExprs;
+}
+
 Expr *Parser::ParseRowExpression(const string& inputStr, VecTypes inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);

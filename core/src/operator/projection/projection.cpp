@@ -13,12 +13,8 @@ using namespace omniruntime::expressions;
 
 namespace omniruntime {
 namespace op {
-RowProjection::RowProjection(const std::string &expression, const VecTypes &inputTypes)
-    : codegen(nullptr), expression(nullptr)
-{
-    Parser parser;
-    this->expression = parser.ParseRowExpression(expression, inputTypes, inputTypes.GetSize());
-}
+
+RowProjection::RowProjection(const Expr &expression) : codegen(nullptr), expression(&expression) {}
 
 RowProjection::~RowProjection()
 {
@@ -51,7 +47,7 @@ DataType RowProjection::GetReturnType()
 bool RowProjection::IsColumnProjection()
 {
     return this->expression != nullptr && this->expression->GetType() == ExprType::DATA_E &&
-        static_cast<DataExpr *>(this->expression)->isColumn;
+        static_cast<const DataExpr *>(this->expression)->isColumn;
 }
 
 int RowProjection::GetIndexIfColumnProjection()
@@ -59,7 +55,7 @@ int RowProjection::GetIndexIfColumnProjection()
     if (!IsColumnProjection()) {
         return -1;
     }
-    return static_cast<DataExpr *>(this->expression)->colVal;
+    return static_cast<const DataExpr *>(this->expression)->colVal;
 }
 }
 }
@@ -76,7 +72,7 @@ bool Projection::Initialize(bool filter)
     // short-circuit logic for column projections
     // no need to go through codegen
     if (expr->GetType() == DATA_E) {
-        auto dataExpr = static_cast<DataExpr *>(expr);
+        auto dataExpr = static_cast<const DataExpr *>(expr);
         if (dataExpr->isColumn) {
             this->isColumnProjection = true;
             this->columnProjectionIndex = dataExpr->colVal;
@@ -102,35 +98,8 @@ bool Projection::IsSupported()
     return this->isSupported;
 }
 
-Projection::Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter,
-    const int8_t parseFormat)
-    : inputTypes(inputTypes), nCols(nCols)
-{
-    this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
-
-    if (parseFormat == 1) {
-        this->expr = JSONParser::ParseJSON(nlohmann::json::parse(expr));
-    } else {
-        Parser parser;
-        this->expr = parser.ParseRowExpression(expr, inputTypes, nCols);
-    }
-#ifdef DEBUG
-    std::cout << "String expression in Projection: " << expr << std::endl;
-    ExprPrinter printExprTree;
-    this->expr->Accept(printExprTree);
-#endif
-    if (this->expr == nullptr) {
-        this->isSupported = false;
-    } else {
-        bool initialized = this->Initialize(filter);
-        if (!initialized) {
-            this->isSupported = false;
-        }
-    }
-}
-
-Projection::Projection(VecTypes &inputTypes, int32_t nCols, Expr &expr, bool filter)
-    : inputTypes(inputTypes), nCols(nCols), expr(&expr)
+Projection::Projection(VecTypes &inputTypes, int32_t nCols, const Expr &expr, bool filter)
+    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols), expr(&expr)
 {
     this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
 
@@ -349,32 +318,20 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     this->mutated = nullptr;
     return rowCount;
 }
-
-ProjectionOperatorFactory::ProjectionOperatorFactory(std::string expressions[], int32_t nProj, VecTypes &inputTypes,
-    int32_t nCols, const int8_t parseFormat)
-    : inputTypes(inputTypes), nCols(nCols), nProj(nProj), parseFormat(parseFormat)
+    ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
+        VecTypes &inputTypes, int32_t nCols): inputTypes(inputTypes),
+                                              inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())),
+                                              nCols(nCols), nProj(nProj)
 {
     this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
-
     this->SetJitContext(nullptr);
     for (int32_t i = 0; i < nProj; i++) {
-        auto projection = std::make_unique<Projection>(inputTypes, nCols, expressions[i], false, parseFormat);
+        auto projection = std::make_unique<Projection>(inputTypes, nCols, *(exprs.at(i)), false);
         if (!projection->IsSupported()) {
             this->isSupported = false;
             break;
         }
         this->proj.push_back(move(projection));
-    }
-}
-
-ProjectionOperatorFactory::ProjectionOperatorFactory(Expr *exprs[], int32_t nProj, VecTypes &inputTypes, int32_t nCols)
-    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
-{
-    this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
-
-    this->SetJitContext(nullptr);
-    for (int32_t i = 0; i < nProj; i++) {
-        this->proj.push_back(std::make_unique<Projection>(inputTypes, nCols, *(exprs[i]), false));
     }
 }
 

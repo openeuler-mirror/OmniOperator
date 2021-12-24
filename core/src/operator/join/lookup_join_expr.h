@@ -15,14 +15,17 @@ namespace omniruntime {
 namespace op {
 class LookupJoinWithExprOperatorFactory : public OperatorFactory {
 public:
+
     static LookupJoinWithExprOperatorFactory *CreateLookupJoinWithExprOperatorFactory(const vec::VecTypes &probeTypes,
-        int32_t *probeOutputCols, int32_t probeOutputColsCount, std::string *probeHashKeys, int32_t probeHashKeysCount,
+        int32_t *probeOutputCols, int32_t probeOutputColsCount,
+        const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
         int32_t *buildOutputCols, const vec::VecTypes &buildOutputTypes, JoinType joinType,
         int64_t hashBuilderFactoryAddr);
 
     LookupJoinWithExprOperatorFactory(const vec::VecTypes &probeTypes, int32_t *probeOutputCols,
-        int32_t probeOutputColsCount, std::string *probeHashKeys, int32_t probeHashKeysCount, int32_t *buildOutputCols,
-        const vec::VecTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr);
+        int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
+        int32_t probeHashKeysCount, int32_t *buildOutputCols, const vec::VecTypes &buildOutputTypes, JoinType joinType,
+        int64_t hashBuilderFactoryAddr);
 
     ~LookupJoinWithExprOperatorFactory() override;
 

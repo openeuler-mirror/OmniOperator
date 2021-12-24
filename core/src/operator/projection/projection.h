@@ -36,7 +36,7 @@ using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, int32_t*
 
 class RowProjection {
 public:
-    RowProjection(const std::string &expression, const VecTypes &inputType);
+    explicit RowProjection(const omniruntime::expressions::Expr &expression);
     ~RowProjection();
     RowProjFunc Create();
     expressions::DataType GetReturnType();
@@ -45,14 +45,13 @@ public:
 
 private:
     std::unique_ptr<ProjectionCodeGen> codegen = nullptr;
-    expressions::Expr *expression;
+    const expressions::Expr *expression;
 };
 
 class Projection {
 public:
-    Projection(VecTypes &inputTypes, int32_t nCols, const std::string &expr, bool filter,
-               const int8_t parseFormat);
-    Projection(VecTypes &inputTypes, int32_t nCols, expressions::Expr &expr, bool filter);
+
+    Projection(VecTypes &inputTypes, int32_t nCols, const expressions::Expr &expr, bool filter);
     ~Projection()
     {
         delete this->expr;
@@ -63,6 +62,7 @@ public:
     omniruntime::vec::Vector *ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
+
     omniruntime::vec::Vector *ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch,
         std::vector<int64_t> const &vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
         int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const;
@@ -84,7 +84,7 @@ private:
     int32_t *inputTypeIds;
     VecTypes inputTypes;
     int32_t nCols;
-    omniruntime::expressions::Expr *expr;
+    const omniruntime::expressions::Expr *expr;
     std::unique_ptr<ProjectionCodeGen> codegen { nullptr };
     bool isSupported = true;
     bool isColumnProjection = false;
@@ -130,10 +130,9 @@ private:
 
 class ProjectionOperatorFactory : public OperatorFactory {
 public:
-    ProjectionOperatorFactory(std::string expression[], int32_t nProj, VecTypes &inputTypes, int32_t n,
-        const int8_t parseFormat = 0);
-    ProjectionOperatorFactory(omniruntime::expressions::Expr *exprs[], int32_t nProj, VecTypes &inputTypes,
-        int32_t nCols);
+
+    ProjectionOperatorFactory(const std::vector<omniruntime::expressions::Expr *> &exprs, int32_t nProj,
+                              VecTypes &inputTypes, int32_t nCols);
 
     ~ProjectionOperatorFactory() override;
     omniruntime::op::Operator *CreateOperator() override;

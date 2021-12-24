@@ -6,47 +6,47 @@
 
 using namespace omniruntime::expressions;
 
-void DataExpr::Accept(ExprVisitor &visitor) 
+void DataExpr::Accept(ExprVisitor &visitor)  const
+{ 
+    return visitor.Visit(*this);
+}
+
+void BinaryExpr::Accept(ExprVisitor &visitor)  const
+{ 
+    return visitor.Visit(*this);
+}
+
+void InExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }
 
-void BinaryExpr::Accept(ExprVisitor &visitor) 
+void BetweenExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }
 
-void InExpr::Accept(ExprVisitor &visitor) 
+void IfExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }
 
-void BetweenExpr::Accept(ExprVisitor &visitor) 
+void CoalesceExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }
 
-void IfExpr::Accept(ExprVisitor &visitor) 
+void IsNullExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }
 
-void CoalesceExpr::Accept(ExprVisitor &visitor) 
+void FuncExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }
 
-void IsNullExpr::Accept(ExprVisitor &visitor) 
-{ 
-    return visitor.Visit(*this); 
-}
-
-void FuncExpr::Accept(ExprVisitor &visitor) 
-{ 
-    return visitor.Visit(*this); 
-}
-
-void UnaryExpr::Accept(ExprVisitor &visitor) 
+void UnaryExpr::Accept(ExprVisitor &visitor) const
 { 
     return visitor.Visit(*this); 
 }

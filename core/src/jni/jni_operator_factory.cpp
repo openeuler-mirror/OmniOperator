@@ -710,6 +710,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     auto inputTypeIds = const_cast<int32_t *>(inputVecTypes.GetIds());
     auto inputLength = (int32_t)jInputLength;
 
+    auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
     auto *projectExpressions = new std::string[jProjectLength];
     for (int32_t i = 0; i < jProjectLength; i++) {
         auto st = (jstring)(env->GetObjectArrayElement(jProjections, i));
@@ -718,13 +719,25 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         env->ReleaseStringUTFChars(st, exprStringPtr);
     }
     auto projectLength = (int32_t)jProjectLength;
-    auto parseFormat = (int8_t)jParseFormat;
-    auto *factory = new omniruntime::op::FilterAndProjectOperatorFactory(filterExpression, inputVecTypes, inputLength,
-        projectExpressions, projectLength, parseFormat);
-    if (!factory->isSupportedExpr) {
-        delete factory;
+    std::vector<omniruntime::expressions::Expr *> projectExprs;
+    omniruntime::expressions::Expr *filterExpr = nullptr;
+    if (parseFormat == JSON) {
+        nlohmann::json *jsonProjectExprs = new nlohmann::json[jProjectLength];
+        for (int32_t i = 0; i < projectLength; i++) {
+            jsonProjectExprs[i] = nlohmann::json::parse(projectExpressions[i]);
+        }
+        projectExprs = JSONParser::ParseJSON(jsonProjectExprs, projectLength);
+        filterExpr = JSONParser::ParseJSON(nlohmann::json::parse(filterExpression));
+    } else {
+        Parser parser;
+        filterExpr = parser.ParseRowExpression(filterExpression, inputVecTypes, inputLength);
+        projectExprs = parser.ParseExpressions(projectExpressions, projectLength, inputVecTypes, inputLength);
+    }
+    if (filterExpr == nullptr || (projectLength > 0 && projectExprs[0] == nullptr)) {
         return 0;
     }
+    omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
+            filterExpr, inputVecTypes, inputLength, projectExprs, projectLength);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
     env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     return (int64_t)factory;
@@ -735,6 +748,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     jobject jobj, jstring jInputTypes, jint jInputLength, jobjectArray jExprs, jint jExprsLength, jlong jitContext,
     jint jParseFormat)
 {
+    auto parseFormat = static_cast<ParserFormat>((int8_t)jParseFormat);
     std::string *exprs = new std::string[jExprsLength];
     for (int32_t i = 0; i < jExprsLength; i++) {
         jstring st = (jstring)(env->GetObjectArrayElement(jExprs, i));
@@ -745,15 +759,26 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputVecTypes = Deserialize(inputTypesCharPtr);
     int32_t inputLength = (int32_t)jInputLength;
-    auto parseFormat = (int8_t)jParseFormat;
-    omniruntime::op::ProjectionOperatorFactory *factory =
-        new omniruntime::op::ProjectionOperatorFactory(exprs, exprLength, inputVecTypes, inputLength, parseFormat);
-    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
 
-    if (!factory->IsSupported()) {
-        delete factory;
+    std::vector<omniruntime::expressions::Expr *> expressions;
+    if (parseFormat == JSON) {
+        nlohmann::json *jsonExprs = new nlohmann::json[jExprsLength];
+        for (int32_t i = 0; i < exprLength; i++) {
+            jsonExprs[i] = nlohmann::json::parse(exprs[i]);
+        }
+        expressions = JSONParser::ParseJSON(jsonExprs, exprLength);
+    } else {
+        Parser parser;
+        expressions = parser.ParseExpressions(exprs, exprLength, inputVecTypes, inputLength);
+    }
+
+    if (exprLength > 0 && expressions[0] == nullptr) {
         return 0;
     }
+
+    omniruntime::op::ProjectionOperatorFactory *factory =
+        new omniruntime::op::ProjectionOperatorFactory(expressions, exprLength, inputVecTypes, inputLength);
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
 
     return (int64_t)factory;
 }
@@ -904,6 +929,27 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
 
     auto probeVecTypes = Deserialize(probeTypesCharPtr);
     auto buildOutputVecTypes = Deserialize(buildOutputTypesCharPtr);
+
+    // extract the expression and the BuildVecTypes to parse the expression
+    auto hashTables = reinterpret_cast<HashBuilderOperatorFactory *>(jHashBuilderOperatorFactory)->GetHashTables();
+    std::string filterExpression = hashTables->GetFilterExpression();
+    VecTypes *buildTypes = hashTables->GetBuildVecTypes();
+    Parser parser;
+    if (filterExpression.compare("") != 0) {
+        std::vector<VecType> allTypes;
+        for (int32_t j = 0; j < probeVecTypes.GetSize(); j++) {
+            allTypes.push_back(probeVecTypes.Get().at(j));
+        }
+
+        for (int32_t j = 0; j < buildTypes->GetSize(); j++) {
+            allTypes.push_back(buildTypes->Get().at(j));
+        }
+        VecTypes VecTypes (allTypes);
+
+        omniruntime::expressions::Expr *filterExpr = parser.ParseRowExpression(filterExpression, VecTypes,
+                                                                               VecTypes.GetSize());
+        hashTables->SetFilterExpr(*filterExpr);
+    }
 
     JNI_DEBUG_LOG("before create lookup join operator factory elapsed time: %ld ms.", END(start));
     auto lookupJoinOperatorFactory = omniruntime::op::LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
@@ -1240,9 +1286,16 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
     auto sourceVecTypes = Deserialize(sourceTypesChars);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesChars);
 
+    // parse the expressions
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs = parser.ParseExpressions(sortKeysArr,
+                                                                                             sortKeysCount,
+                                                                                             sourceVecTypes,
+                                                                                             sourceVecTypes.GetSize());
+
     JNI_DEBUG_LOG("before create sort with expression operator factory elapsed time: %ld ms.", END(start));
     SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceVecTypes, outputCols, outputColsCount, sortKeysArr, ascendings, nullFirsts, sortKeysCount);
+        sourceVecTypes, outputCols, outputColsCount, sortKeysArrExprs, ascendings, nullFirsts, sortKeysCount);
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create sort with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1331,11 +1384,16 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
     std::string filterExpression = std::string(filterChars);
     env->ReleaseStringUTFChars(jFilter, filterChars);
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> buildHashKeysArrExprs = parser.ParseExpressions(buildHashKeysArr,
+                                                                                                  buildHashKeysCount,
+                                                                                                  buildVecTypes,
+                                                                                                  buildHashKeysCount);
 
     JNI_DEBUG_LOG("before create hash builder with expression operator factory elapsed time: %ld ms.", END(start));
     HashBuilderWithExprOperatorFactory *operatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildVecTypes, buildHashKeysArr,
-        buildHashKeysCount, filterExpression, jHashTableCount);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildVecTypes,
+        buildHashKeysArrExprs, buildHashKeysCount, filterExpression, jHashTableCount);
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hash builder with expression operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1449,10 +1507,35 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesChars);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
 
+    // extract the expression and the BuildVecTypes to parse the expression
+    auto hashTables = reinterpret_cast<HashBuilderWithExprOperatorFactory *>(jHashBuilderOperatorFactory)->
+            GetHashBuilderOperatorFactory()->GetHashTables();
+    std::string filterExpression = hashTables->GetFilterExpression();
+    VecTypes *buildTypes = hashTables->GetBuildVecTypes();
+    Parser parser;
+    if (filterExpression.compare("") != 0) {
+        std::vector<VecType> allTypes;
+        for (int32_t j = 0; j < probeVecTypes.GetSize(); j++) {
+            allTypes.push_back(probeVecTypes.Get().at(j));
+        }
+
+        for (int32_t j = 0; j < buildTypes->GetSize(); j++) {
+            allTypes.push_back(buildTypes->Get().at(j));
+        }
+        VecTypes VecTypes (allTypes);
+
+        omniruntime::expressions::Expr *filterExpr = parser.ParseRowExpression(filterExpression, VecTypes,
+            VecTypes.GetSize());
+        hashTables->SetFilterExpr(*filterExpr);
+    }
+
+    std::vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs = parser.ParseExpressions(probeHashKeysArr,
+        probeHashKeysCount, probeVecTypes, probeVecTypes.GetSize());
+
     JNI_DEBUG_LOG("before create lookup join with expression operator factory elapsed time: %ld ms.", END(start));
     LookupJoinWithExprOperatorFactory *operatorFactory =
         LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeVecTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeysArr, probeHashKeysCount, buildOutputCols, buildOutputVecTypes,
+        probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols, buildOutputVecTypes,
         (JoinType)jJoinType, jHashBuilderOperatorFactory);
     operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create lookup join with expression operator factory finished, elapsed time: %ld ms.", END(start));
@@ -1622,11 +1705,17 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     jint argumentKeysCount = env->GetArrayLength(jArgumentKeys);
     jint outputTypesCount = outputVecTypes.GetSize();
 
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> argumentKeysArrExprs = parser.ParseExpressions(argumentKeysArr,
+                                                                                                 argumentKeysArrCount,
+                                                                                                 inputVecTypes,
+                                                                                                 inputTypesCount);
+
     omniruntime::op::WindowWithExprOperatorFactory *windowWithExprOperatorFactory =
         omniruntime::op::WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputVecTypes,
         outputChannels, outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount,
         preGroupedChannels, preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount,
-        preSortedChannelPrefix, expectedPositions, outputVecTypes, argumentKeysArr, argumentKeysCount);
+        preSortedChannelPrefix, expectedPositions, outputVecTypes, argumentKeysArrExprs, argumentKeysCount);
 
     windowWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 
@@ -1754,9 +1843,19 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
     auto outVecTypes = Deserialize(outTypesCharPtr);
 
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> groupByKeysExprs = parser.ParseExpressions(groupByKeys,
+                                                                                             groupByNum, sourceVecTypes,
+                                                                                             sourceVecTypes.GetSize());
+    std::vector<omniruntime::expressions::Expr *> aggKeysExprs = parser.ParseExpressions(aggKeys, aggNum,
+                                                                                         sourceVecTypes,
+                                                                                         sourceVecTypes.GetSize());
+
     omniruntime::op::HashAggregationWithExprOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum,
+        new omniruntime::op::HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprs, aggNum,
         sourceVecTypes, outVecTypes, (uint32_t *)aggFuncTypes, inputRaw, outputPartial);
+
+
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     JNI_DEBUG_LOG("create hashagg operator factory finished, elapsed time: %ld ms.", END(start));
 
@@ -1839,10 +1938,17 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     int32_t n = (int32_t)jN;
-
     auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
+
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs = parser.ParseExpressions(sortKeysArr,
+                                                                                             sortKeyCount,
+                                                                                             sourceVecTypes,
+                                                                                             sourceVecTypes.GetSize());
+
+
     omniruntime::op::TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
-        new omniruntime::op::TopNWithExprOperatorFactory(sourceVecTypes, n, sortKeysArr, sortAsc, sortNullFirsts,
+        new omniruntime::op::TopNWithExprOperatorFactory(sourceVecTypes, n, sortKeysArrExprs, sortAsc, sortNullFirsts,
         sortKeyCount);
     topNWithExprOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
 

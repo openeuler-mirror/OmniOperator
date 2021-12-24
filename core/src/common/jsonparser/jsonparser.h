@@ -15,6 +15,8 @@
 class JSONParser {
 public:
     static omniruntime::expressions::Expr *ParseJSON(nlohmann::json jsonExpr);
+    static std::vector<omniruntime::expressions::Expr *> ParseJSON(nlohmann::json expressions[],
+                                                                   int32_t numberOfExpressions);
 
 private:
     static omniruntime::expressions::Expr *ParseJSONFieldRef(nlohmann::json jsonExpr);

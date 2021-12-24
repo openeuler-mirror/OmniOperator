@@ -9,6 +9,12 @@
 #include "../../vector/vector_types.h"
 
 using namespace omniruntime::vec;
+
+enum ParserFormat {
+    STRING = 0,
+    JSON = 1
+};
+
 class Parser {
 public:
     Parser();
@@ -16,6 +22,10 @@ public:
 
     omniruntime::expressions::Expr *ParseRowExpression(const std::string &input, VecTypes inputTypes,
         int32_t vecCount);
+
+    std::vector<omniruntime::expressions::Expr *> ParseExpressions(const std::string expressions[],
+        int32_t numberOfExpressions, VecTypes inputTypes, int32_t vecCount);
+
     omniruntime::expressions::Expr *ParseRowExpressionHelper(std::string opStr,
         std::vector<omniruntime::expressions::Expr *> args);
 

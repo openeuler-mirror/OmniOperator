@@ -49,6 +49,7 @@ JitContext *CreateTestTopNWithExprJitContext(VecTypes &sourceTypes, int32_t *sor
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
 {
     using namespace omniruntime::op;
+    using namespace omniruntime::expressions;
     using namespace std;
 
     // construct input data
@@ -64,15 +65,26 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::string sortKeys[sortKeyCnt] = {"ADD:1(#0, 5:1)", "MODULUS:2(#2, 3:2)"};
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
     int32_t sortCols[sortKeyCnt] = {3, 4};
 
+    DataExpr *addLeft = new DataExpr(0, INT32D);
+    DataExpr *addRight = new DataExpr(5);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+
+    DataExpr *modLeft = new DataExpr(2, INT64D);
+    DataExpr *modRight = new DataExpr(3);
+    modRight->longVal = 3;
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
+
+    std::vector<Expr*> sortKeysExprs = {addExpr, modExpr};
+
+
     JitContext *jitContext = CreateTestTopNWithExprJitContext(sourceTypes, sortCols, sortKeyCnt,
         sortKeyCnt);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts,
+        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeysExprs, ascendings, nullFirsts,
         sortKeyCnt);
     topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator = static_cast<TopNWithExprOperator *>(
@@ -105,6 +117,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
 
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
 {
+    using namespace omniruntime::expressions;
     using namespace omniruntime::op;
     using namespace std;
 
@@ -121,15 +134,23 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::string sortKeys[sortKeyCnt] = {"#0", "MODULUS:2(#2, 3:2)"};
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
     int32_t sortCols[sortKeyCnt] = {3, 4};
 
+    DataExpr *col0 = new DataExpr(0, INT32D);
+
+    DataExpr *modLeft = new DataExpr(2, INT64D);
+    DataExpr *modRight = new DataExpr(3);
+    modRight->longVal = 3;
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
+
+    std::vector<Expr *> sortKeysExprs = {col0, modExpr};
+
     JitContext *jitContext = CreateTestTopNWithExprJitContext(sourceTypes, sortCols, sortKeyCnt,
         sortKeyCnt);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts,
+        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeysExprs, ascendings, nullFirsts,
         sortKeyCnt);
     topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator = static_cast<TopNWithExprOperator *>(
@@ -160,6 +181,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
 
 TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
 {
+    using namespace omniruntime::expressions;
     using namespace omniruntime::op;
     using namespace std;
 
@@ -176,15 +198,18 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), LongVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
-    std::string sortKeys[sortKeyCnt] = {"#0", "#2"};
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
     int32_t sortCols[sortKeyCnt] = {3, 4};
 
+    DataExpr *col0 = new DataExpr(0, INT32D);
+    DataExpr *col2 = new DataExpr(2, INT64D);
+    std::vector<Expr*> sortKeysExprs = {col0, col2};
+
     JitContext *jitContext = CreateTestTopNWithExprJitContext(sourceTypes, sortCols, sortKeyCnt,
         sortKeyCnt);
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory =
-        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeys, ascendings, nullFirsts,
+        new TopNWithExprOperatorFactory(sourceTypes, expectedDataSize, sortKeysExprs, ascendings, nullFirsts,
         sortKeyCnt);
     topNWithExprOperatorFactory->SetJitContext(jitContext);
     TopNWithExprOperator *topNWithExprOperator = static_cast<TopNWithExprOperator *>(

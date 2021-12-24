@@ -6,6 +6,9 @@
 #define JNI_OPERATOR_FACTORY_H
 
 #include <jni.h>
+#include <common/parserhelper.h>
+
+#include "../common/jsonparser/jsonparser.h"
 
 #ifdef __cplusplus
 extern "C" {

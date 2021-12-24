@@ -9,10 +9,10 @@
 
 class RowExpressionCodeGen : public ExpressionCodeGen {
 public:
-    RowExpressionCodeGen(std::string name, omniruntime::expressions::Expr &expression)
+    RowExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
     : ExpressionCodeGen(name, expression) {}
     ~RowExpressionCodeGen() {}
-    void Visit(omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::DataExpr &e) override;
     int64_t GetFunction() override;
 
 private:

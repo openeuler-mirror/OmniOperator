@@ -216,3 +216,15 @@ Expr *JSONParser::ParseJSON(Json jsonExpr)
     // return nullptr if ExprType not supported
     return nullptr;
 }
+
+std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::json *expressions,
+                                                                    int32_t numberOfExpressions)
+{
+    std::vector<Expr *> result;
+    for (int32_t i = 0; i < numberOfExpressions; i++) {
+        Expr *expr = ParseJSON(expressions[i]);
+        if (expr == nullptr) return {nullptr};
+        result.push_back(expr);
+    }
+    return result;
+}

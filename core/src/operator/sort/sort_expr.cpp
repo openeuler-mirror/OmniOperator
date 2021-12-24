@@ -14,8 +14,9 @@ namespace op {
 using namespace omniruntime::vec;
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-    const vec::VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount, std::string *sortKeys,
-    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount)
+    const vec::VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
+    int32_t sortKeysCount)
 {
     auto pOperatorFactory = std::make_unique<SortWithExprOperatorFactory>(sourceTypes, outputCols, outputColsCount,
         sortKeys, sortAscendings, sortNullFirsts, sortKeysCount);
@@ -23,8 +24,8 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
 }
 
 SortWithExprOperatorFactory::SortWithExprOperatorFactory(const vec::VecTypes &sourceTypes, int32_t *outputCols,
-    int32_t outputColsCount, std::string *sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
-    int32_t sortKeysCount)
+    int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
+    int32_t *sortNullFirsts, int32_t sortKeysCount)
 {
     std::vector<VecType> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,

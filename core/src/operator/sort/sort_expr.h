@@ -16,12 +16,15 @@ namespace omniruntime {
 namespace op {
 class SortWithExprOperatorFactory : public OperatorFactory {
 public:
+
     static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const vec::VecTypes &sourceTypes,
-        int32_t *outputCols, int32_t outputColsCount, std::string *sortKeys, int32_t *sortAscendings,
-        int32_t *sortNullFirsts, int32_t sortKeysCount);
+        int32_t *outputCols, int32_t outputColsCount,
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys,
+        int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount);
 
     SortWithExprOperatorFactory(const vec::VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
-        std::string *sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount);
+        const std::vector<omniruntime::expressions::Expr *> &sortKeys,
+        int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount);
 
     ~SortWithExprOperatorFactory() override;
 

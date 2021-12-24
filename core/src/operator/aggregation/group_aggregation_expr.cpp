@@ -12,17 +12,18 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 
-HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(std::string *groupByKeys,
-    uint32_t groupByNum, std::string *aggKeys, uint32_t aggNum, const VecTypes& sourceVecTypes,
-    const VecTypes& aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
+HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
+        const std::vector<omniruntime::expressions::Expr *> &groupByKeys, uint32_t groupByNum,
+        const std::vector<omniruntime::expressions::Expr *> &aggKeys, uint32_t aggNum, const VecTypes &sourceVecTypes,
+        const VecTypes &aggOutputTypes, uint32_t *aggFuncTypes, bool inputRaw, bool outputPartial)
 {
     uint32_t projectColNum = groupByNum + aggNum;
-    std::string projectKeys[projectColNum];
+    omniruntime::expressions::Expr *projectKeys[projectColNum];
     for (int i = 0; i < groupByNum; ++i) {
-        projectKeys[i] = groupByKeys[i];
+        projectKeys[i] = groupByKeys.at(i);
     }
     for (int i = 0, j = groupByNum; i < aggNum; ++i, ++j) {
-        projectKeys[j] = aggKeys[i];
+        projectKeys[j] = aggKeys.at(i);
     }
     std::vector<int32_t> hashAggCols;
     std::vector<VecType> newSourceTypes;
@@ -57,8 +58,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(s
 
     this->sourceTypes = std::make_unique<VecTypes>(newSourceTypes);
     this->hashAggOperatorFactory = std::make_unique<HashAggregationOperatorFactory>(groupByCol,
-        *(this->groupByTypes.get()), aggCol, *(this->aggTypes.get()), aggOutputTypes, aggFunc,
-        inputRaw, outputPartial).release();
+         *(this->groupByTypes.get()), aggCol, *(this->aggTypes.get()), aggOutputTypes, aggFunc,
+          inputRaw, outputPartial).release();
     this->hashAggOperatorFactory->Init();
 }
 

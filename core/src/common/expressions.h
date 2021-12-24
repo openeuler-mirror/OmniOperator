@@ -116,10 +116,10 @@ public:
         // TODO:: wrap width with the type
         int32_t width = INT32_MAX;
         DataType dataType; // dataType of returned value
-        DataType GetExprDataType();
-        virtual ExprType GetType();
+        DataType GetExprDataType() const;
+        virtual ExprType GetType() const;
         virtual ~Expr() = default;
-        virtual void Accept(ExprVisitor &visitor) = 0;
+        virtual void Accept(ExprVisitor &visitor) const = 0;
 };
 
 
@@ -145,12 +145,12 @@ public:
     explicit DataExpr(int64_t* val);
     DataExpr(int32_t colIdx, DataType colType);
     DataExpr(int32_t colIdx, DataType colType, int32_t width);
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 // Helper function for debugging DataType
-std::string DataTypeString(Expr &expr);
+std::string DataTypeString(const Expr &expr);
 
 // Helper function to translate from jni type number to DataType
 DataType ColTypeTrans(int32_t colType);
@@ -166,8 +166,8 @@ public:
     UnaryExpr(Operator logOp, Expr *bodyexp);
     UnaryExpr(Operator uop, Expr *expr, DataType dt);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 
@@ -182,8 +182,8 @@ public:
     BinaryExpr(Operator op, Expr *leftExpr, Expr *rightExpr);
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt);
    
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 
@@ -196,8 +196,8 @@ public:
     ~InExpr() override;
     explicit InExpr(std::vector<Expr*> args);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 
@@ -211,8 +211,8 @@ public:
     ~BetweenExpr() override;
     BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 
@@ -226,8 +226,8 @@ public:
     ~IfExpr() override;
     IfExpr(Expr* cond, Expr* texp, Expr* fexp);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 
@@ -240,8 +240,8 @@ public:
     ~CoalesceExpr() override;
     CoalesceExpr(Expr* val1, Expr* val2);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 class IsNullExpr : public Expr {
@@ -251,8 +251,8 @@ public:
     ~IsNullExpr() override;
     explicit IsNullExpr(Expr* value);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 class FuncExpr : public Expr {
@@ -266,8 +266,8 @@ public:
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width);
 
-    void Accept(ExprVisitor &visitor) override;
-    ExprType GetType() override;
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
 };
 
 }

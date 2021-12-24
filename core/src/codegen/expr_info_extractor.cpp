@@ -10,57 +10,57 @@
 using namespace omniruntime::expressions;
 using namespace std;
 
-void ExprInfoExtractor::Visit(DataExpr &e)
+void ExprInfoExtractor::Visit(const DataExpr &e)
 {
     if (e.isColumn) {
         this->vectorIndexes.insert(e.colVal);
     }
 }
 
-void ExprInfoExtractor::Visit(BinaryExpr &e)
+void ExprInfoExtractor::Visit(const BinaryExpr &e)
 {
     e.left->Accept(*this);
     e.right->Accept(*this);
 }
 
-void ExprInfoExtractor::Visit(UnaryExpr &e)
+void ExprInfoExtractor::Visit(const UnaryExpr &e)
 {
     e.exp->Accept(*this);
 }
 
-void ExprInfoExtractor::Visit(IfExpr &e)
+void ExprInfoExtractor::Visit(const IfExpr &e)
 {
     e.condition->Accept(*this);
     e.trueExpr->Accept(*this);
     e.falseExpr->Accept(*this);
 }
 
-void ExprInfoExtractor::Visit(InExpr &e)
+void ExprInfoExtractor::Visit(const InExpr &e)
 {
     for (auto arg : e.arguments) {
         arg->Accept(*this);
     }
 }
 
-void ExprInfoExtractor::Visit(BetweenExpr &e)
+void ExprInfoExtractor::Visit(const BetweenExpr &e)
 {
     e.value->Accept(*this);
     e.lowerBound->Accept(*this);
     e.upperBound->Accept(*this);
 }
 
-void ExprInfoExtractor::Visit(CoalesceExpr &e)
+void ExprInfoExtractor::Visit(const CoalesceExpr &e)
 {
     e.value1->Accept(*this);
     e.value2->Accept(*this);
 }
 
-void ExprInfoExtractor::Visit(IsNullExpr &e)
+void ExprInfoExtractor::Visit(const IsNullExpr &e)
 {
     e.value->Accept(*this);
 }
 
-void ExprInfoExtractor::Visit(FuncExpr &e)
+void ExprInfoExtractor::Visit(const FuncExpr &e)
 {
     std::string fn = e.funcName;
     ExternalFuncRegistry efr;

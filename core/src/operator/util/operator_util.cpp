@@ -30,10 +30,11 @@ VecType CreateVecTypeFromDataType(DataType dataType)
     }
 }
 
-void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTypes, const std::string *projectKeys,
-    int32_t projectKeysCount, std::vector<omniruntime::vec::VecType> &newInputTypes,
-    std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-    std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
+
+void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTypes,
+    std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
+    std::vector<omniruntime::vec::VecType> &newInputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
+    std::vector<int32_t> &projectCols, std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
 {
     newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
     const int32_t *inputTypeIds = inputTypes.GetIds();
@@ -43,7 +44,7 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
         inputDataTypes.push_back(static_cast<const DataType>(inputTypeIds[i]));
     }
     for (int32_t i = 0; i < projectKeysCount; i++) {
-        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputTypes);
+        auto rowProjection = std::make_unique<RowProjection>(*(projectKeys[i]));
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
         if (projectCol != -1) {
             projectCols.push_back(projectCol);
@@ -58,10 +59,11 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
     }
 }
 
-void OperatorUtil::CreateRequiredProjectFuncs(const omniruntime::vec::VecTypes &inputTypes,
-    const std::string *projectKeys, int32_t projectKeysCount, std::vector<omniruntime::vec::VecType> &newInputTypes,
-    std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-    std::vector<int32_t> &hashAggCols, std::vector<omniruntime::op::RowProjFunc> &projectFuncs)
+void OperatorUtil::CreateRequiredProjectFuncs(const VecTypes &inputTypes, omniruntime::expressions::Expr *projectKeys[],
+    int32_t projectKeysCount, std::vector<VecType> &newInputTypes,
+    std::vector<std::unique_ptr<RowProjection>> &rowProjections,
+    std::vector<int32_t> &projectCols, std::vector<int32_t> &hashAggCols,
+    std::vector<RowProjFunc> &projectFuncs)
 {
     int32_t inputTypesCount = inputTypes.GetSize();
     const int32_t *inputTypeIds = inputTypes.GetIds();
@@ -74,7 +76,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const omniruntime::vec::VecTypes &
     int32_t newProjectCol = 0;
     std::map<int32_t, int32_t> colIdMap;
     for (int32_t i = 0; i < projectKeysCount; i++) {
-        auto rowProjection = std::make_unique<RowProjection>(projectKeys[i], inputTypes);
+        auto rowProjection = std::make_unique<RowProjection>(*(projectKeys[i]));
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
         if (projectCol != -1) {
             if (colIdMap.find(projectCol) != colIdMap.end()) {
@@ -98,6 +100,7 @@ void OperatorUtil::CreateRequiredProjectFuncs(const omniruntime::vec::VecTypes &
         rowProjections.push_back(std::move(rowProjection));
     }
 }
+
 
 template <typename T, typename V>
 T *ProjectVector(RowProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls, int64_t *valueOffsets,

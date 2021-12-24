@@ -13,7 +13,7 @@ namespace {
     const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
 }
 
-void RowExpressionCodeGen::Visit(omniruntime::expressions::DataExpr &dataExpr) 
+void RowExpressionCodeGen::Visit(const omniruntime::expressions::DataExpr &dataExpr)
 {
     if (dataExpr.isColumn) {
         Value *data = this->codegenContext->data;

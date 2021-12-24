@@ -67,6 +67,7 @@ JitContext *CreateHashAggregationWithExprJitContext(int32_t colNum, int32_t grou
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {
     using namespace omniruntime::op;
+    using namespace omniruntime::expressions;
 
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
@@ -79,12 +80,20 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType() }));
+    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType()}));
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    // groupByKeys
+    DataExpr *modRight = new DataExpr(3);
+    modRight->longVal = 3;
+    BinaryExpr *modExpr = new BinaryExpr(MOD, new DataExpr(0, INT64D), modRight, INT64D);
+    std::vector<Expr *> groupByKeys = {modExpr, new DataExpr(2, INT32D)};
 
-    std::string groupByKeys[] = {"MODULUS:2(#0, 3:2)", "#2"};
-    std::string aggKeys[] = {"MULTIPLY:2(#1, 5:2)", "#3"};
+    // aggKeys
+    DataExpr *mulRight = new DataExpr(5);
+    mulRight->longVal = 5;
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, new DataExpr(1, INT64D), mulRight, INT64D);
+    std::vector<Expr *> aggKeys = {mulExpr, new DataExpr(3, INT32D)};
 
     AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
@@ -129,6 +138,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
 {
     using namespace omniruntime::op;
+    using namespace omniruntime::expressions;
 
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
@@ -145,8 +155,31 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::string groupByKeys[] = {"MODULUS:2(#0, 3:2)", "ADD:1(#2, 5:1)"};
-    std::string aggKeys[] = {"MULTIPLY:2(#1, 5:2)", "ADD:1(#3, 5:1)"};
+    DataExpr *modLeft = new DataExpr(0, INT64D);
+    DataExpr *modRight = new DataExpr(3);
+    modRight->longVal = 3;
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
+
+    DataExpr *addLeft = new DataExpr(2, INT32D);
+    DataExpr *addRight = new DataExpr(5);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+
+
+    DataExpr *mulLeft = new DataExpr(1, INT64D);
+    DataExpr *mulRight = new DataExpr(5);
+    mulRight->longVal = 5;
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT64D);
+
+    DataExpr *addLeft2 = new DataExpr(3, INT32D);
+    DataExpr *addRight2 = new DataExpr(5);
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+
+
+
+
+
+    std::vector<Expr *> groupByKeys = {modExpr, addExpr};
+    std::vector<Expr *> aggKeys = {mulExpr, addExpr2};
 
     AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
@@ -155,16 +188,16 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t aggColNum = 2;
     int32_t aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     int32_t projectTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT,
-        OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT};
+                              OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT};
 
     JitContext *jitContext = CreateHashAggregationWithExprJitContext(colNum, groupColNum, aggColNum, aggFuncTypes,
-        projectTypes);
+                                                                     projectTypes);
     auto *hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum, sourceTypes,
-        aggOutputTypes, (uint32_t *) aggFunType, true, false);
+            new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum, sourceTypes,
+                                                       aggOutputTypes, (uint32_t *) aggFunType, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
     auto *hashAggWithExprOperator = dynamic_cast<HashAggregationWithExprOperator *>(
-        CreateTestOperator(hashAggWithExprOperatorFactory));
+            CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatchs;
@@ -175,9 +208,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int64_t expData3[] = {180};
     int32_t expData4[] = {76};
     VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(),
-        IntVecType() }));
+                                                IntVecType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3,
-        expData4);
+                                                      expData4);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
@@ -193,6 +226,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 {
     using namespace omniruntime::op;
+    using namespace omniruntime::expressions;
 
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
@@ -209,8 +243,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::string groupByKeys[] = {"#0", "#2"};
-    std::string aggKeys[] = {"#1", "#3"};
+    std::vector<Expr *> groupByKeys = {new DataExpr(0, INT64D), new DataExpr(2, INT32D)};
+    std::vector<Expr *> aggKeys = {new DataExpr(1, INT64D), new DataExpr(3, INT32D)};
 
     AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 

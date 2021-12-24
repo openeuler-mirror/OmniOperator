@@ -17,18 +17,18 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const vec::VecTypes
     int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols, int32_t preGroupedCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const vec::VecTypes &outputVecTypes,
-    std::string *argumentKeys, int32_t argumentChannelsCount)
+    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount)
 {
     std::vector<VecType> newTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes,
-        this->rowProjections, this->argumentChannels, this->projectFuncs);
+                                     this->rowProjections, this->argumentChannels, this->projectFuncs);
     this->sourceTypes = std::make_unique<VecTypes>(newTypes);
 
     // refact alltypes since sourcetypes changed
     std::vector<VecType> allTypesVec;
     allTypesVec.insert(allTypesVec.end(), sourceTypes.Get().begin(), sourceTypes.Get().end());
     allTypesVec.insert(allTypesVec.end(), std::begin((*(this->sourceTypes.get())).Get()) + sourceTypes.GetSize(),
-        std::end((*(this->sourceTypes.get())).Get()));
+                       std::end((*(this->sourceTypes.get())).Get()));
     allTypesVec.insert(allTypesVec.end(), outputVecTypes.Get().begin(), outputVecTypes.Get().end());
     VecTypes allTypes(allTypesVec);
     auto newOutputColsCount = outputColsCount + this->projectFuncs.size();
@@ -57,7 +57,7 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols,
     int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const vec::VecTypes &outputVecTypes,
-    std::string *argumentKeys, int32_t argumentChannelsCount)
+    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount)
 {
     auto factory = std::make_unique<WindowWithExprOperatorFactory>(sourceTypes, outputCols, outputColsCount,
         windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
