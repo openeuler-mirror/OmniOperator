@@ -32,6 +32,7 @@ import static io.prestosql.SystemSessionProperties.isSpillEnabled;
 import static io.prestosql.SystemSessionProperties.isSpillOrderBy;
 import static io.prestosql.SystemSessionProperties.isSpillReuseExchange;
 import static io.prestosql.SystemSessionProperties.isSpillWindowOperator;
+import static io.prestosql.SystemSessionProperties.isWholeStageFallback;
 import static io.prestosql.operator.PipelineExecutionStrategy.GROUPED_EXECUTION;
 import static io.prestosql.operator.PipelineExecutionStrategy.UNGROUPED_EXECUTION;
 import static io.prestosql.operator.ReuseExchangeOperator.STRATEGY.REUSE_STRATEGY_DEFAULT;
@@ -151,20 +152,43 @@ import io.prestosql.sql.planner.Symbol;
 import io.prestosql.sql.planner.TypeAnalyzer;
 import io.prestosql.sql.planner.TypeProvider;
 import io.prestosql.sql.planner.plan.AggregationNode;
+import io.prestosql.sql.planner.plan.AssignUniqueId;
 import io.prestosql.sql.planner.plan.Assignments;
+import io.prestosql.sql.planner.plan.CreateIndexNode;
+import io.prestosql.sql.planner.plan.DeleteNode;
 import io.prestosql.sql.planner.plan.DistinctLimitNode;
+import io.prestosql.sql.planner.plan.EnforceSingleRowNode;
 import io.prestosql.sql.planner.plan.ExchangeNode;
+import io.prestosql.sql.planner.plan.ExplainAnalyzeNode;
 import io.prestosql.sql.planner.plan.FilterNode;
+import io.prestosql.sql.planner.plan.GroupIdNode;
+import io.prestosql.sql.planner.plan.IndexJoinNode;
+import io.prestosql.sql.planner.plan.IndexSourceNode;
 import io.prestosql.sql.planner.plan.JoinNode;
+import io.prestosql.sql.planner.plan.LateralJoinNode;
 import io.prestosql.sql.planner.plan.LimitNode;
+import io.prestosql.sql.planner.plan.MarkDistinctNode;
+import io.prestosql.sql.planner.plan.OutputNode;
 import io.prestosql.sql.planner.plan.PlanNode;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import io.prestosql.sql.planner.plan.ProjectNode;
 import io.prestosql.sql.planner.plan.RemoteSourceNode;
+import io.prestosql.sql.planner.plan.RowNumberNode;
 import io.prestosql.sql.planner.plan.SampleNode;
+import io.prestosql.sql.planner.plan.SemiJoinNode;
 import io.prestosql.sql.planner.plan.SortNode;
+import io.prestosql.sql.planner.plan.SpatialJoinNode;
+import io.prestosql.sql.planner.plan.StatisticsWriterNode;
+import io.prestosql.sql.planner.plan.TableDeleteNode;
+import io.prestosql.sql.planner.plan.TableFinishNode;
 import io.prestosql.sql.planner.plan.TableScanNode;
+import io.prestosql.sql.planner.plan.TableWriterNode;
 import io.prestosql.sql.planner.plan.TopNNode;
+import io.prestosql.sql.planner.plan.TopNRankingNumberNode;
+import io.prestosql.sql.planner.plan.UnionNode;
+import io.prestosql.sql.planner.plan.UnnestNode;
+import io.prestosql.sql.planner.plan.VacuumTableNode;
+import io.prestosql.sql.planner.plan.ValuesNode;
 import io.prestosql.sql.planner.plan.WindowNode;
 import io.prestosql.sql.relational.RowExpression;
 import io.prestosql.sql.tree.Expression;
@@ -370,12 +394,15 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                             partitionConstants, partitioningScheme.isReplicateNullsAndAny(), nullChannel, outputBuffer,
                             pageProducers, maxPagePartitioningBufferSize,
                             partitioningScheme.getBucketToPartition().get(), isHashPrecomputed, partitionChannelTypes));
-        } else {
+        } else if (!isWholeStageFallback(taskContext.getSession())) {
             return plan(taskContext, stageExecutionDescriptor, plan, outputLayout, types, partitionedSourceOrder,
                     pageProducers,
                     new PartitionedOutputOperator.PartitionedOutputFactory(partitionFunction, partitionChannels,
                             partitionConstants, partitioningScheme.isReplicateNullsAndAny(), nullChannel, outputBuffer,
                             pageProducers, maxPagePartitioningBufferSize));
+        } else {
+            log.warn("PartitionedOutputOmniOperator is not enabled or not support in omniRuntime");
+            return null;
         }
     }
 
@@ -398,18 +425,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
         for (DriverFactory driverFactory : context.getDriverFactories()) {
             for (OperatorFactory operatorFactory : driverFactory.getOperatorFactories()) {
-                // if the operator is source or output operator then continue
-                if (operatorFactory instanceof TableScanOperator.TableScanOperatorFactory
-                        || operatorFactory instanceof ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory
-                        || operatorFactory instanceof ExchangeOperator.ExchangeOperatorFactory
-                        || operatorFactory instanceof LocalExchangeSinkOperator.LocalExchangeSinkOperatorFactory
-                        || operatorFactory instanceof LocalExchangeSourceOperator.LocalExchangeSourceOperatorFactory
-                        || operatorFactory instanceof TaskOutputOperator.TaskOutputOperatorFactory
-                        || operatorFactory instanceof DynamicFilterSourceOperator.DynamicFilterSourceOperatorFactory
-                        || operatorFactory instanceof ValuesOperator.ValuesOperatorFactory) {
-                    continue;
-                }
-
                 // if there is a operator not support by OmniRuntime, then fall back
                 // if there is a data type not support by OmniRuntime, then fall back
                 if (notSupportTypes(operatorFactory.getSourceTypes())) {
@@ -485,9 +500,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             if (getOmniTopNEnabled(session)) {
                 operatorFactory = new TopNOmniOperator.TopNOmniOperatorFactory(context.getNextOperatorId(),
                         node.getId(), source.getTypes(), (int) node.getCount(), sortChannels, sortOrders);
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 operatorFactory = new TopNOperator.TopNOperatorFactory(context.getNextOperatorId(), node.getId(),
                         source.getTypes(), (int) node.getCount(), sortChannels, sortOrders);
+            } else {
+                throw new UnsupportedOperationException(
+                        "TopNOmniOperator is not enabled or not support in omniRuntime");
             }
 
             return new PhysicalOperation(operatorFactory, source.getLayout(), context, source);
@@ -501,9 +519,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             if (getOmniLimitEnabled(session)) {
                 operatorFactory = new LimitOmniOperator.LimitOmniOperatorFactory(context.getNextOperatorId(),
                         node.getId(), node.getCount());
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 operatorFactory = new LimitOperator.LimitOperatorFactory(context.getNextOperatorId(), node.getId(),
                         node.getCount());
+            } else {
+                throw new UnsupportedOperationException(
+                        "LimitOmniOperator is not enabled or not support in omniRuntime");
             }
 
             return new PhysicalOperation(operatorFactory, source.getLayout(), context, source);
@@ -521,9 +542,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 operatorFactory = new DistinctLimitOmniOperator.DistinctLimitOmniOperatorFactory(
                         context.getNextOperatorId(), node.getId(), source.getTypes(), distinctChannels, hashChannel,
                         node.getLimit());
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 operatorFactory = new DistinctLimitOperator.DistinctLimitOperatorFactory(context.getNextOperatorId(),
                         node.getId(), source.getTypes(), distinctChannels, node.getLimit(), hashChannel, joinCompiler);
+            } else {
+                throw new UnsupportedOperationException(
+                        "DistinctLimitOperator is not enabled or not support in omniRuntime");
             }
 
             return new PhysicalOperation(operatorFactory, makeLayout(node), context, source);
@@ -655,9 +679,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 pageProcessor = omniExpressionCompiler.compilePageProcessor(translatedFilter, translatedProjections,
                         Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(), inputTypes,
                         context.getTaskId(), (OmniLocalExecutionPlanContext) context);
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 pageProcessor = expressionCompiler.compilePageProcessor(translatedFilter, translatedProjections,
                         Optional.of(context.getStageId() + "_" + planNodeId), OptionalInt.empty(), inputTypes, null);
+            } else {
+                throw new UnsupportedOperationException(
+                        "OmniFilterAndProjectOperator is not enabled or not support in omniRuntime");
             }
             if (pageProcessor == null) {
                 throw new UnsupportedOperationException("This expression is not supported by OmniRuntime");
@@ -688,11 +715,14 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                             context.getNextOperatorId(), planNodeId, pageProcessor,
                             getTypes(projections, expressionTypes), getFilterAndProjectMinOutputPageSize(session),
                             getFilterAndProjectMinOutputPageRowCount(session));
-                } else {
+                } else if (!isWholeStageFallback(session)) {
                     operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
                             context.getNextOperatorId(), planNodeId, pageProcessor,
                             getTypes(projections, expressionTypes), getFilterAndProjectMinOutputPageSize(session),
                             getFilterAndProjectMinOutputPageRowCount(session));
+                } else {
+                    throw new UnsupportedOperationException(
+                            "OmniFilterAndProjectOperator is not enabled or not support in omniRuntime");
                 }
 
                 return new PhysicalOperation(operatorFactory, outputMappings, context, source);
@@ -824,12 +854,16 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         node.getPartitioningScheme().getPartitioning().getHandle(), operatorsCount, types,
                         ImmutableList.of(), Optional.empty(), source.getPipelineExecutionStrategy(),
                         maxLocalExchangeBufferSize);
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 exchangeFactory = new LocalExchange.LocalExchangeFactory(
                         node.getPartitioningScheme().getPartitioning().getHandle(), operatorsCount, types,
                         ImmutableList.of(), Optional.empty(), source.getPipelineExecutionStrategy(),
                         maxLocalExchangeBufferSize);
+            } else {
+                throw new UnsupportedOperationException(
+                        "OmniLocalExchange is not enabled or not support in omniRuntime");
             }
+
             List<OperatorFactory> operatorFactories = new ArrayList<>(source.getOperatorFactories());
             List<Symbol> expectedLayout = node.getInputs().get(0);
             Function<Page, Page> pagePreprocessor = enforceLayoutProcessor(expectedLayout, source.getLayout());
@@ -856,10 +890,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 operatorFactory = new LocalMergeSourceOmniOperator.LocalMergeSourceOmniOperatorFactory(
                         context.getNextOperatorId(), context.getNextOperatorId(), node.getId(), exchangeFactory, types,
                         orderingCompiler, sortChannels, orderings, outputChannels.build());
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 operatorFactory = new LocalMergeSourceOperator.LocalMergeSourceOperatorFactory(
                         context.getNextOperatorId(), node.getId(), exchangeFactory, types, orderingCompiler,
                         sortChannels, orderings);
+            } else {
+                throw new UnsupportedOperationException(
+                        "LocalMergeSourceOmniOperator is not enabled or not support in omniRuntime");
             }
             return new PhysicalOperation(operatorFactory, layout, context, UNGROUPED_EXECUTION);
         }
@@ -893,11 +930,14 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         context.getNextOperatorId(), node.getId(), exchangeClientSupplier,
                         new PagesSerdeFactory(metadata.getBlockEncodingSerde(), isExchangeCompressionEnabled(session)),
                         orderingCompiler, types, outputChannels, sortChannels, sortOrder);
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 operatorFactory = new MergeOperator.MergeOperatorFactory(context.getNextOperatorId(), node.getId(),
                         exchangeClientSupplier,
                         new PagesSerdeFactory(metadata.getBlockEncodingSerde(), isExchangeCompressionEnabled(session)),
                         orderingCompiler, types, outputChannels, sortChannels, sortOrder);
+            } else {
+                throw new UnsupportedOperationException(
+                        "MergeOmniOperator is not enabled or not support in omniRuntime");
             }
 
             return new PhysicalOperation(operatorFactory, makeLayout(node), context, UNGROUPED_EXECUTION);
@@ -915,6 +955,226 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     new PagesSerdeFactory(blockEncodingSerde, isExchangeCompressionEnabled(session)));
 
             return new PhysicalOperation(operatorFactory, makeLayout(node), context, UNGROUPED_EXECUTION);
+        }
+
+        @Override
+        public PhysicalOperation visitExplainAnalyze(ExplainAnalyzeNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitExplainAnalyze(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "ExplainAnalyzeOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitOutput(OutputNode node, LocalExecutionPlanContext context) {
+            return super.visitOutput(node, context);
+        }
+
+        @Override
+        public PhysicalOperation visitRowNumber(RowNumberNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitRowNumber(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "RowNumberOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitTopNRankingNumber(TopNRankingNumberNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitTopNRankingNumber(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "TopNRankingNumberOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitGroupId(GroupIdNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitGroupId(node, context);
+            } else {
+                throw new UnsupportedOperationException("GroupIdOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitCreateIndex(CreateIndexNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitCreateIndex(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "CreateIndexOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitMarkDistinct(MarkDistinctNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitMarkDistinct(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "MarkDistinctOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitSample(SampleNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitSample(node, context);
+            } else {
+                throw new UnsupportedOperationException("SampleOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitValues(ValuesNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitValues(node, context);
+            } else {
+                throw new UnsupportedOperationException("ValuesOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitUnnest(UnnestNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitUnnest(node, context);
+            } else {
+                throw new UnsupportedOperationException("UnnestOperator is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitVacuumTable(VacuumTableNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitVacuumTable(node, context);
+            } else {
+                throw new UnsupportedOperationException("VacuumTable is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitIndexSource(IndexSourceNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitIndexSource(node, context);
+            } else {
+                throw new UnsupportedOperationException("IndexSource is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitIndexJoin(IndexJoinNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitIndexJoin(node, context);
+            } else {
+                throw new UnsupportedOperationException("IndexJoin is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitSpatialJoin(SpatialJoinNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitSpatialJoin(node, context);
+            } else {
+                throw new UnsupportedOperationException("SpatialJoin is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitSemiJoin(SemiJoinNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitSemiJoin(node, context);
+            } else {
+                throw new UnsupportedOperationException("SemiJoin is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitTableWriter(TableWriterNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitTableWriter(node, context);
+            } else {
+                throw new UnsupportedOperationException("TableWriter is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitStatisticsWriterNode(StatisticsWriterNode node,
+                LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitStatisticsWriterNode(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "StatisticsWriter is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitTableFinish(TableFinishNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitTableFinish(node, context);
+            } else {
+                throw new UnsupportedOperationException("TableFinish is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitDelete(DeleteNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitDelete(node, context);
+            } else {
+                throw new UnsupportedOperationException("Delete is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitTableDelete(TableDeleteNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitTableDelete(node, context);
+            } else {
+                throw new UnsupportedOperationException("TableDelete is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitUnion(UnionNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitUnion(node, context);
+            } else {
+                throw new UnsupportedOperationException("Union is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitEnforceSingleRow(EnforceSingleRowNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitEnforceSingleRow(node, context);
+            } else {
+                throw new UnsupportedOperationException(
+                        "EnforceSingleRow is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        public PhysicalOperation visitAssignUniqueId(AssignUniqueId node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitAssignUniqueId(node, context);
+            } else {
+                throw new UnsupportedOperationException("AssignUniqueId is not enabled or not support in omniRuntime");
+            }
+        }
+
+        @Override
+        protected PhysicalOperation visitPlan(PlanNode node, LocalExecutionPlanContext context) {
+            if (!isWholeStageFallback(session)) {
+                return super.visitPlan(node, context);
+            } else {
+                throw new UnsupportedOperationException("VisitPlan is not enabled or not support in omniRuntime");
+            }
         }
 
         @Override
@@ -959,9 +1219,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 // use omni aggregation operator
                 return new AggregationOmniOperator.AggregationOmniOperatorFactory(context.getNextOperatorId(),
                         planNodeId, source.getTypes(), aggregationToOmni, factories, step);
+            } else if (!isWholeStageFallback(session)) {
+                return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId, step,
+                        factories, useSystemMemory);
+            } else {
+                throw new UnsupportedOperationException(
+                        "AggregationOmniOperator is not enabled or not support in omniRuntime");
             }
-            return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId, step,
-                    factories, useSystemMemory);
         }
 
         private PhysicalOperation planGroupByAggregation(AggregationNode node, PhysicalOperation source,
@@ -1093,12 +1357,16 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                             context.getNextOperatorId(), planNodeId, source.getTypes(), groupByInputChannels,
                             groupByInputTypes, aggregationInputChannels, aggregationInputTypes, aggregatorTypes,
                             aggregationOutputTypes, step);
+                } else if (!isWholeStageFallback(session)) {
+                    return new HashAggregationOperator.HashAggregationOperatorFactory(context.getNextOperatorId(),
+                            planNodeId, groupByTypes, groupByChannels, ImmutableList.copyOf(globalGroupingSets), step,
+                            hasDefaultOutput, accumulatorFactories, hashChannel, groupIdChannel, expectedGroups,
+                            maxPartialAggregationMemorySize, spillEnabled, unspillMemoryLimit, spillerFactory,
+                            joinCompiler, useSystemMemory);
+                } else {
+                    throw new UnsupportedOperationException(
+                            "AggregationOmniOperator is not enabled or not support in omniRuntime");
                 }
-                return new HashAggregationOperator.HashAggregationOperatorFactory(context.getNextOperatorId(),
-                        planNodeId, groupByTypes, groupByChannels, ImmutableList.copyOf(globalGroupingSets), step,
-                        hasDefaultOutput, accumulatorFactories, hashChannel, groupIdChannel, expectedGroups,
-                        maxPartialAggregationMemorySize, spillEnabled, unspillMemoryLimit, spillerFactory, joinCompiler,
-                        useSystemMemory);
             }
         }
 
@@ -1126,10 +1394,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             if (getOmniOrderByEnabled(context.getSession())) {
                 operator = createOrderByOmniOperatorFactory(context.getNextOperatorId(), node.getId(),
                         source.getTypes(), outputChannels.build(), orderByChannels, sortOrder.build());
-            } else {
+            } else if (isWholeStageFallback(session)) {
                 operator = new OrderByOperator.OrderByOperatorFactory(context.getNextOperatorId(), node.getId(),
                         source.getTypes(), outputChannels.build(), 10_000, orderByChannels, sortOrder.build(),
                         pagesIndexFactory, spillEnabled, Optional.of(spillerFactory), orderingCompiler);
+            } else {
+                throw new UnsupportedOperationException(
+                        "OrderByOmniOperator is not enabled or not support in omniRuntime");
             }
             return new PhysicalOperation(operator, source.getLayout(), context, source);
         }
@@ -1209,12 +1480,15 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         node.getId(), source.getTypes(), outputChannels.build(), windowFunctionsBuilder.build(),
                         partitionChannels, preGroupedChannels, sortChannels, sortOrder, node.getPreSortedOrderPrefix(),
                         10_000);
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 operatorFactory = new WindowOperator.WindowOperatorFactory(context.getNextOperatorId(), node.getId(),
                         source.getTypes(), outputChannels.build(), windowFunctionsBuilder.build(), partitionChannels,
                         preGroupedChannels, sortChannels, sortOrder, node.getPreSortedOrderPrefix(), 10_000,
                         pagesIndexFactory, isSpillEnabled(session) && isSpillWindowOperator(session), spillerFactory,
                         orderingCompiler);
+            } else {
+                throw new UnsupportedOperationException(
+                        "WindowOmniOperator is not enabled or not support in omniRuntime");
             }
             return new PhysicalOperation(operatorFactory, outputMappings.build(), context, source);
         }
@@ -1323,7 +1597,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         buildSource.getTypes(), buildOutputChannels, buildChannels, buildHashChannel, filterFunction,
                         sortChannel, searchFunctions, taskCount);
                 factoriesBuilder.add(hashBuilderOmniOperatorFactory);
-            } else {
+            } else if (!isWholeStageFallback(session)) {
                 Optional<JoinFilterFunctionFactory> filterFunctionFactory = node.getFilter()
                         .map(filterExpression -> compileJoinFilterFunction(filterExpression, probeSource.getLayout(),
                                 buildSource.getLayout(), context.getTypes(), context.getSession()));
@@ -1351,6 +1625,9 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                         singleStreamSpillerFactory);
 
                 factoriesBuilder.add(hashBuilderOperatorFactory);
+            } else {
+                throw new UnsupportedOperationException(
+                        "HashBuilderOmniOperator is not enabled or not support in omniRuntime");
             }
 
             context.addDriverFactory(buildContext.isInputDriver(), false, factoriesBuilder.build(),
@@ -1426,9 +1703,13 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             if (getOmniJoinEnabled(context.getSession()) && !buildOuter) {
                 return createOmniLookupJoin(node, lookupSourceFactoryManager, context, probeTypes, probeOutputChannels,
                         probeJoinChannels, probeHashChannel, totalOperatorsCount);
+            } else if (!isWholeStageFallback(session)) {
+                return getLookUpJoinOperatorFactory(node, lookupSourceFactoryManager, context, probeTypes,
+                        probeOutputChannels, probeJoinChannels, probeHashChannel, totalOperatorsCount);
+            } else {
+                throw new UnsupportedOperationException(
+                        "LookUpJoinOmniOperator is not enabled or not support in omniRuntime");
             }
-            return getLookUpJoinOperatorFactory(node, lookupSourceFactoryManager, context, probeTypes,
-                    probeOutputChannels, probeJoinChannels, probeHashChannel, totalOperatorsCount);
         }
 
         /**
