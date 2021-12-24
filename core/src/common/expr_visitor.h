@@ -10,15 +10,15 @@
 class ExprVisitor {
 public:
     virtual ~ExprVisitor() = default;
-    virtual void Visit(omniruntime::expressions::DataExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::UnaryExpr &e) = 0;        
-    virtual void Visit(omniruntime::expressions::BinaryExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::InExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::BetweenExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::IfExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::CoalesceExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::IsNullExpr &e) = 0;
-    virtual void Visit(omniruntime::expressions::FuncExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::DataExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::UnaryExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::BinaryExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::InExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::BetweenExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::IfExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::CoalesceExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::IsNullExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::FuncExpr &e) = 0;
 };
 
 #endif

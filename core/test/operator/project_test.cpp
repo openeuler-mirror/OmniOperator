@@ -116,8 +116,19 @@ TEST(ProjectTest, Cast)
     int64_t *col1 = MakeLongs(numRows);
     int32_t *col2 = MakeInts(numRows);
     const int32_t numCols = 2;
-    string exprs[numCols] = {"$operator$CAST:1(#0)", "$operator$CAST:2(#1)"};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_INT) };
+    DataExpr *data1 = new DataExpr(0, INT64D);
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    FuncExpr *castExpr1 = new FuncExpr("CAST", args1, INT32D);
+
+    DataExpr *data2 = new DataExpr(1, INT32D);
+    std::vector<Expr *> args2;
+    args2.push_back(data2);
+    FuncExpr *castExpr2 = new FuncExpr("CAST", args2, INT64D);
+
+    std::vector<Expr*> exprs = {castExpr1, castExpr2};
+
     VecTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -151,7 +162,10 @@ TEST (ProjectTest, Simple) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$ADD:1(#0, 5:1)"};
+    DataExpr *addLeft = new DataExpr(0, INT32D);
+    DataExpr *addRight = new DataExpr(5);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    std::vector<Expr*> exprs = {addExpr};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -194,8 +208,20 @@ TEST (ProjectTest, WithNullValues) {
     int32_t *col1 = MakeInts(numRows, -5);
     int64_t *col2 = MakeLongs(numRows, -5);
     const int32_t numCols = 2;
-    string exprs[numCols] = {"$operator$abs:1(#0)", "$operator$abs:2(#1)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG)};
+    DataExpr *data1 = new DataExpr(0, INT32D);
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    FuncExpr *absExpr1 = new FuncExpr("abs", args1, INT32D);
+
+    DataExpr *data2 = new DataExpr(1, INT64D);
+    std::vector<Expr *> args2;
+    args2.push_back(data2);
+    FuncExpr *absExpr2 = new FuncExpr("abs", args2, INT64D);
+
+
+    std::vector<Expr*> exprs = {absExpr1, absExpr2};
+
     VecTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -235,7 +261,10 @@ TEST (ProjectTest, Negatives) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows, -5);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$SUBTRACT:1(#0, 500:1)"};
+    DataExpr *subLeft = new DataExpr(0, INT32D);
+    DataExpr *subRight = new DataExpr(500);
+    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, INT32D);
+    std::vector<Expr*> exprs = {subExpr};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -262,7 +291,11 @@ TEST (ProjectTest, Longs) {
     const int32_t numRows = 10000;
     int64_t* col = MakeLongs(numRows, -5000);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$MULTIPLY:2(#0, 5000000:2)"};
+    DataExpr *mulLeft = new DataExpr(0, INT64D);
+    DataExpr *mulRight = new DataExpr(5000000);
+    mulRight->longVal = 5000000;
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT64D);
+    std::vector<Expr*> exprs = {mulExpr};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -289,7 +322,12 @@ TEST (ProjectTest, Doubles) {
     const int32_t numRows = 10000;
     double* col = MakeDoubles(numRows, -5000.5);
     const int32_t numCols = 1;
-    string exprs[numCols] = {"$operator$DIVIDE:3(#0, 2:1)"};
+
+    DataExpr *divLeft = new DataExpr(0, DOUBLED);
+    DataExpr *divRight = new DataExpr(2);
+    divRight->doubleVal = 2;
+    BinaryExpr *divExpr = new BinaryExpr(DIV, divLeft, divRight, DOUBLED);
+    std::vector<Expr*> exprs= {divExpr};
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE) };
     VecTypes inputTypes(vecOfTypes);
     auto* factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -320,9 +358,17 @@ TEST (ProjectTest, MultipleColumns) {
    int32_t* col2 = MakeInts(numRows, -100);
    int64_t* col3 = MakeLongs(numRows, -10);
    const int32_t numProject = 2;
-   string exprs[numProject] = {
-           "$operator$SUBTRACT:1(#0, 10:1)", "$operator$ADD:2(#2, 1:2)"
-   };
+    DataExpr *subLeft = new DataExpr(0, INT32D);
+    DataExpr *subRight = new DataExpr(10);
+    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, INT32D);
+
+    DataExpr *addLeft = new DataExpr(2, INT64D);
+    DataExpr *addRight = new DataExpr(1);
+    addRight->longVal = 1;
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT64D);
+
+    std::vector<Expr*> exprs = {subExpr, addExpr};
+
    const int32_t numCols = 3;
    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
    VecTypes inputTypes(vecOfTypes);
@@ -374,9 +420,16 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
     }
 
     const int32_t numProject = 2;
-    string exprs[numProject] = {
-            "$operator$SUBTRACT:1(#0, 10:1)", "$operator$ADD:2(#2, 1:2)"
-    };
+    DataExpr *subLeft = new DataExpr(0, INT32D);
+    DataExpr *subRight = new DataExpr(10);
+    BinaryExpr *subExpr = new BinaryExpr(SUB, subLeft, subRight, INT32D);
+
+    DataExpr *addLeft = new DataExpr(2, INT64D);
+    DataExpr *addRight = new DataExpr(1);
+    addRight->longVal = 1;
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT64D);
+
+    std::vector<Expr*> exprs = {subExpr, addExpr};
     const int32_t numCols = 4;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
                                         VarcharVecType(1000) };
@@ -405,8 +458,23 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
     delete factory;
 
     std::cout << "\n\n\n[BenchmarkMultipleColumns Project with varchar]\n\n";
-    exprs[1] = "substr:15(#3, 1:1, 3:1)";
-    factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    DataExpr *subLeft2 = new DataExpr(0, INT32D);
+    DataExpr *subRight2 = new DataExpr(10);
+    BinaryExpr *subExpr2 = new BinaryExpr(SUB, subLeft2, subRight2, INT32D);
+
+    DataExpr *substData = new DataExpr(3, VARCHARD);
+    DataExpr *substrIndex = new DataExpr(1);
+    DataExpr *substrLen = new DataExpr(3);
+    std::vector<Expr *> args;
+    args.push_back(substData);
+    args.push_back(substrIndex);
+    args.push_back(substrLen);
+    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
+
+    std::vector<Expr*> exprs2 = {subExpr2, substrExpr};
+
+
+    factory = new ProjectionOperatorFactory(exprs2, numProject, inputTypes, numCols);
     op = factory->CreateOperator();
 
     for (int i = 0; i < 10; i++) {
@@ -443,9 +511,22 @@ TEST (ProjectTest, DependOtherColumn) {
    int32_t* col2 = MakeInts(numRows, -100);
    int64_t* col3 = MakeLongs(numRows);
    const int32_t numProject = 2;
-   string exprs[numProject] = {
-           "$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500:1), 4000000000:2, #2)"
-   };
+   DataExpr *mulLeft= new DataExpr(0, INT32D);
+   DataExpr *mulRight = new DataExpr(1, INT32D);
+   BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT32D);
+
+   DataExpr *conditionLeft= new DataExpr(0, INT32D);
+   DataExpr *conditionRight = new DataExpr(500);
+   BinaryExpr *condition = new BinaryExpr(LT, conditionLeft, conditionRight, BOOLD);
+
+   DataExpr *texp = new DataExpr(4000000000);
+   texp->longVal = 4000000000;
+
+   DataExpr *fexp = new DataExpr(2, INT64D);
+
+   IfExpr *ifExpr = new IfExpr(condition, texp, fexp);
+
+   std::vector<Expr*> exprs = {mulExpr, ifExpr};
    const int32_t numCols = 3;
    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG)};
    VecTypes inputTypes(vecOfTypes);
@@ -501,7 +582,18 @@ TEST(ProjectTest, ProjectString1) {
 
 
     const int32_t numProject = 2;
-    std::string exprs[numProject] = {"substr:15(#0, 1:1, 3:1)", "#0"};
+
+    DataExpr *substrData = new DataExpr(0, VARCHARD);
+    DataExpr *substrIndex = new DataExpr(1);
+    DataExpr *substrLen = new DataExpr(3);
+    std::vector<Expr *>args;
+    args.push_back(substrData);
+    args.push_back(substrIndex);
+    args.push_back(substrLen);
+    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
+
+    DataExpr *col0 = new DataExpr(0, VARCHARD);
+    std::vector<Expr*> exprs = {substrExpr, col0};
 
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
@@ -561,7 +653,20 @@ TEST (ProjectTest, DictionaryVecTest) {
     batch->SetVector(2, dictionaryVector);
 
     const int32_t numProject = 3;
-    string exprs[numProject] = {"$operator$ADD:1(#0, 1:1)", "$operator$ADD:1(#1, 2:1)", "$operator$ADD:1(#2, 10:1)"};
+    DataExpr *addLeft1 = new DataExpr(0, INT32D);
+    DataExpr *addRight1 = new DataExpr(1);
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, INT32D);
+
+    DataExpr *addLeft2 = new DataExpr(1, INT32D);
+    DataExpr *addRight2 = new DataExpr(2);
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+
+    DataExpr *addLeft3 = new DataExpr(2, INT32D);
+    DataExpr *addRight3 = new DataExpr(10);
+    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, INT32D);
+
+    std::vector<Expr*> exprs = {addExpr1, addExpr2, addExpr3};
+
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -608,7 +713,9 @@ TEST(ProjectTest, DictionaryVecDoubleTest)
     batch->SetVector(0, doubleDicVector);
 
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:3(#0, 10:1)"};
+    DataExpr *addRight = new DataExpr(10);
+    addRight->doubleVal = 10;
+    std::vector<Expr*> exprs =  {new BinaryExpr(ADD, new DataExpr(0, DOUBLED), addRight, DOUBLED)};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -656,7 +763,13 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     batch->SetVector(0, varcharDicVector);
 
     const int32_t numProject = 1;
-    string exprs[numProject] = {"substr:15(#0, 1:1, 3:1)"};
+    std:vector<Expr *> args;
+    args.push_back(new DataExpr(0, VARCHARD));
+    args.push_back(new DataExpr(1));
+    args.push_back(new DataExpr(3));
+
+    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
+    std::vector<Expr*> exprs = {substrExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -708,7 +821,11 @@ TEST(ProjectTest, DictionaryVecDecimal128Test)
     batch->SetVector(0, decimal128DicVector);
 
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:7(#0, 20:7)"};
+    DataExpr *addRight = new DataExpr(20);
+    addRight->longVal = 20;
+    addRight->doubleVal = 20;
+    BinaryExpr *addExpr = new BinaryExpr(ADD, new DataExpr(0, DECIMAL128D), addRight, DECIMAL128D);
+    std::vector<Expr*> exprs = {addExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -759,7 +876,20 @@ TEST(ProjectTest, DictionaryVecNestedTest)
     batch->SetVector(2, dictionaryNested);
 
     const int32_t numProjs = 3;
-    string exprs[numProjs] = {"$operator$ADD:1(#0, 1:1)", "$operator$ADD:1(#1, 2:1)", "$operator$ADD:1(#2, 10:1)"};
+    DataExpr *addLeft1 = new DataExpr(0, INT32D);
+    DataExpr *addRight1 = new DataExpr(1);
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, INT32D);
+
+    DataExpr *addLeft2 = new DataExpr(1, INT32D);
+    DataExpr *addRight2 = new DataExpr(2);
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+
+    DataExpr *addLeft3 = new DataExpr(2, INT32D);
+    DataExpr *addRight3 = new DataExpr(10);
+    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, INT32D);
+
+    std::vector<Expr*> exprs = {addExpr1, addExpr2, addExpr3};
+
     auto *factory = new ProjectionOperatorFactory(exprs, numProjs, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
@@ -788,7 +918,13 @@ TEST (ProjectTest, Decimal128Arithmetic) {
     const int32_t numRows = 10;
     int64_t* col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:7(#0, 20:7)"};
+    DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
+    DataExpr *addRight = new DataExpr(20);
+    addRight->longVal = 20;
+    addRight->doubleVal = 20;
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, DECIMAL128D);
+
+    std::vector<Expr*> exprs = {addExpr};
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes inputTypes(vecOfTypes);
@@ -818,7 +954,12 @@ TEST(ProjectTest, Decimal128Divide)
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$DIVIDE:7(#0, 20:7)"};
+    DataExpr *divRight = new DataExpr(20);
+    divRight->longVal = 20;
+    divRight->doubleVal = 20;
+    BinaryExpr *divExpr = new BinaryExpr(DIV, new DataExpr(0, DECIMAL128D), divRight, DECIMAL128D);
+    std::vector<Expr*> exprs = {divExpr};
+
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes inputTypes(vecOfTypes);
@@ -843,14 +984,26 @@ TEST(ProjectTest, Decimal128Divide)
     delete factory;
 }
 
-
 TEST(ProjectTest, MultipleDecimal128Columns)
 {
     const int32_t numRows = 100;
     int64_t* col1 = MakeDecimals(numRows);
     int64_t* col2 = MakeDecimals(numRows, 100);
     const int32_t numProject = 2;
-    string exprs[numProject] = {"$operator$ADD:7(#0, 50:7)", "$operator$MULTIPLY:7(#1, 20:7)"};
+    DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
+    DataExpr *addRight = new DataExpr(50);
+    addRight->longVal = 50;
+    addRight->doubleVal = 50;
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, DECIMAL128D);
+
+    DataExpr *mulLeft = new DataExpr(1, DECIMAL128D);
+    DataExpr *mulRight = new DataExpr(20);
+    mulRight->longVal = 20;
+    mulRight->doubleVal = 20;
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, DECIMAL128D);
+
+    std::vector<Expr*> exprs = {addExpr, mulExpr};
+
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_DECIMAL128) };
     VecTypes inputTypes(vecOfTypes);
@@ -912,8 +1065,22 @@ TEST (ProjectTest, StringSubstr) {
 
 
     const int32_t numProject = 2;
-    std::string exprs[numProject] = {"concat:15(substr:15(#0, 1:1, 5:1), ' world':15)", "#0"};
+    DataExpr *substrData = new DataExpr(0, VARCHARD);
+    DataExpr *substrIndex = new DataExpr(1);
+    DataExpr *substrLen = new DataExpr(5);
+    std::vector<Expr *> args;
+    args.push_back(substrData);
+    args.push_back(substrIndex);
+    args.push_back(substrLen);
+    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
 
+    std::vector<Expr *> concatArgs;
+    concatArgs.push_back(substrExpr);
+    concatArgs.push_back(new DataExpr(new std::string(" world")));
+    FuncExpr *concatExpr = new FuncExpr("concat", concatArgs, VARCHARD);
+
+    DataExpr *col0 = new DataExpr(0, VARCHARD);
+    std::vector<Expr*> exprs = {concatExpr, col0};
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
     op->AddInput(t);
@@ -984,8 +1151,20 @@ TEST (ProjectTest, SlicedDictionaryVecTest) {
     input->SetVector(2, slicedCol3);
 
     const int32_t numProject = 3;
-    string exprs[numProject] = {"$operator$ADD:1(#0, 1:1)", "$operator$ADD:1(#1, 2:1)",
-                                "$operator$ADD:1(#2, 10:1)"};
+
+    DataExpr *addLeft1 = new DataExpr(0, INT32D);
+    DataExpr *addRight1 = new DataExpr(1);
+    BinaryExpr *addExpr1 = new BinaryExpr(ADD, addLeft1, addRight1, INT32D);
+
+    DataExpr *addLeft2 = new DataExpr(1, INT32D);
+    DataExpr *addRight2 = new DataExpr(2);
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+
+    DataExpr *addLeft3 = new DataExpr(2, INT32D);
+    DataExpr *addRight3 = new DataExpr(10);
+    BinaryExpr *addExpr3 = new BinaryExpr(ADD, addLeft3, addRight3, INT32D);
+
+    std::vector<Expr*> exprs = {addExpr1, addExpr2, addExpr3};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
@@ -1033,7 +1212,14 @@ TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
     input->SetVector(0, slicedCol1);
     VecTypes inputVecTypes(inputTypes);
     const int32_t numProject = 1;
-    string exprs[numProject] = {"$operator$ADD:1(#0, #0)"};
+    //string exprs[numProject] = {"$operator$ADD:1(#0, #0)"};
+
+    DataExpr *addLeft = new DataExpr(0, INT32D);
+    DataExpr *addRight = new DataExpr(0, INT32D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+
+    std::vector<Expr*> exprs = {addExpr};
+
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
@@ -1055,3 +1241,5 @@ TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
     delete factory;
 }
 }
+
+

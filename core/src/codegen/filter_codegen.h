@@ -9,7 +9,7 @@
 
 class FilterCodeGen : public ExpressionCodeGen {
 public:
-    FilterCodeGen(std::string name, omniruntime::expressions::Expr &expression)
+    FilterCodeGen(std::string name, const omniruntime::expressions::Expr &expression)
         : ExpressionCodeGen(name, expression) {}
     ~FilterCodeGen() {}
     int64_t GetFunction() override;

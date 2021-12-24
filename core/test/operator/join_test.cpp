@@ -1365,6 +1365,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
 
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 {
+    using namespace omniruntime::expressions;
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
     int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
@@ -1375,6 +1376,12 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(#1, #3)";
+
+    // create the expression for the filter
+    DataExpr *notEqualLeft = new DataExpr(1, INT32D);
+    DataExpr *notEqualRight = new DataExpr(3, INT32D);
+    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, notEqualLeft, notEqualRight, BOOLD);
+
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
@@ -1407,6 +1414,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     int32_t probeHashCols[1] = {0};
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(*notEqualExpr);
     VecTypes buildOutputTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
@@ -1447,6 +1455,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
 {
+    using namespace omniruntime::expressions;
+
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
@@ -1457,6 +1467,28 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+
+    // create the filter expression
+    DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
+    DataExpr *leftSubstrIndex = new DataExpr(1);
+    DataExpr *leftSubstrLen = new DataExpr(5);
+    std::vector<Expr *> leftSubstrArgs;
+    leftSubstrArgs.push_back(leftSubstrColumn);
+    leftSubstrArgs.push_back(leftSubstrIndex);
+    leftSubstrArgs.push_back(leftSubstrLen);
+    FuncExpr *leftSubstrExpr = new FuncExpr("substr", leftSubstrArgs, VARCHARD);
+
+    DataExpr *rightSubstrColumn = new DataExpr(3, VARCHARD);
+    DataExpr *rightSubstrIndex = new DataExpr(1);
+    DataExpr *rightSubstrLen = new DataExpr(5);
+    std::vector<Expr *> rightSubstrArgs;
+    rightSubstrArgs.push_back(rightSubstrColumn);
+    rightSubstrArgs.push_back(rightSubstrIndex);
+    rightSubstrArgs.push_back(rightSubstrLen);
+    FuncExpr *rightSubstrExpr = new FuncExpr("substr", rightSubstrArgs, VARCHARD);
+
+    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BOOLD);
+
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
@@ -1490,6 +1522,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(*notEqualExpr);
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -1529,6 +1562,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
 
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
 {
+    using namespace omniruntime::expressions;
+
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {20, 16, 13, 4, 20, 4, 22, 19, 8, 7};
@@ -1551,6 +1586,28 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+
+    // create the filter expression
+    DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
+    DataExpr *leftSubstrIndex = new DataExpr(1);
+    DataExpr *leftSubstrLen = new DataExpr(5);
+    std::vector<Expr *> leftSubstrArgs;
+    leftSubstrArgs.push_back(leftSubstrColumn);
+    leftSubstrArgs.push_back(leftSubstrIndex);
+    leftSubstrArgs.push_back(leftSubstrLen);
+    FuncExpr *leftSubstrExpr = new FuncExpr("substr", leftSubstrArgs, VARCHARD);
+
+    DataExpr *rightSubstrColumn = new DataExpr(3, VARCHARD);
+    DataExpr *rightSubstrIndex = new DataExpr(1);
+    DataExpr *rightSubstrLen = new DataExpr(5);
+    std::vector<Expr *> rightSubstrArgs;
+    rightSubstrArgs.push_back(rightSubstrColumn);
+    rightSubstrArgs.push_back(rightSubstrIndex);
+    rightSubstrArgs.push_back(rightSubstrLen);
+    FuncExpr *rightSubstrExpr = new FuncExpr("substr", rightSubstrArgs, VARCHARD);
+
+    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BOOLD);
+
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
@@ -1572,6 +1629,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(*notEqualExpr);
     int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
@@ -1613,6 +1671,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
 // left join with filter
 TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
 {
+    using namespace omniruntime::expressions;
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
@@ -1623,8 +1682,25 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+
+    // create filter expression object
+    std::vector<Expr *> args1;
+    args1.push_back(new DataExpr(1, VARCHARD));
+    args1.push_back(new DataExpr(1));
+    args1.push_back(new DataExpr(5));
+    FuncExpr *neqLeft = new FuncExpr("substr", args1, VARCHARD);
+
+    std::vector<Expr *> args2;
+    args2.push_back(new DataExpr(3, VARCHARD));
+    args2.push_back(new DataExpr(1));
+    args2.push_back(new DataExpr(5));
+    FuncExpr *neqRight = new FuncExpr("substr", args2, VARCHARD);
+
+    BinaryExpr *filterExpr = new BinaryExpr(NEQ, neqLeft, neqRight, BOOLD);
+    
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(*filterExpr);
     auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
         buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);

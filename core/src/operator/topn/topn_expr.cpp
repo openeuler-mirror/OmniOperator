@@ -12,7 +12,8 @@ namespace op {
 using namespace omniruntime::vec;
 
 TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const vec::VecTypes &sourceVecTypes, int32_t n,
-    std::string *sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts, int32_t sortKeyCount)
+    const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
+    int32_t sortKeyCount)
 {
     std::vector<VecType> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceVecTypes, sortKeys, sortKeyCount, newSourceTypes,

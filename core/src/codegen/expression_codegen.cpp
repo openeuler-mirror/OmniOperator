@@ -28,7 +28,7 @@ const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
 const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
 }
 
-CodeGenValuePtr ExpressionCodeGen::VisitExpr(omniruntime::expressions::Expr &e)
+CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Expr &e)
 {
     e.Accept(*this);
     return this->value;
@@ -142,7 +142,7 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
     builder->CreateCall(codegenContext->print, args, "printfCall");
 }
 
-ExpressionCodeGen::ExpressionCodeGen(std::string name, Expr &cpExpr)
+ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr)
 {
     funcName = name;
     expr = &cpExpr;
@@ -198,7 +198,7 @@ Value *ExpressionCodeGen::Decimal128Cmp(const Value &lhs, const Value &rhs)
     return ret;
 }
 
-void ExpressionCodeGen::BinaryExprNullHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
     Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi, Value **isNeitherNull)
 {
     BasicBlock *incomingBlock, *nullBlock, *nextInst;
@@ -249,8 +249,8 @@ void ExpressionCodeGen::BinaryExprNullHelper(BinaryExpr *binaryExpr, Value *left
 }
 
 // Helper methods to parse binary expressions
-Value *ExpressionCodeGen::BinaryExprIntHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
-    Value *rightIsNull)
+Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+                                              Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
@@ -285,8 +285,8 @@ Value *ExpressionCodeGen::BinaryExprIntHelper(BinaryExpr *binaryExpr, Value *lef
     }
 }
 
-Value *ExpressionCodeGen::BinaryExprDoubleHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
-    Value *rightIsNull)
+Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+                                                 Value *leftIsNull,  Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
@@ -319,7 +319,7 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(BinaryExpr *binaryExpr, Value *
     }
 }
 
-Value *ExpressionCodeGen::BinaryExprStringHelper(BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen,
+Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen,
     Value *rightVal, Value *rightLen, Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
@@ -350,8 +350,8 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(BinaryExpr *binaryExpr, Value *
     }
 }
 
-Value *ExpressionCodeGen::BinaryExprDecimalHelper(BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
-    Value *rightIsNull)
+Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+                                                  Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
@@ -494,10 +494,10 @@ Function *ExpressionCodeGen::CreateFunction()
     return func;
 }
 
-Value *ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, Value *elementAddr)
+Value *ExpressionCodeGen::GetIntToPtr(const DataExpr &dExpr, Value *elementAddr)
 {
     Value *elementPtr = nullptr;
-    DataExpr *dEx = &dExpr;
+    const DataExpr *dEx = &dExpr;
     // Convert the column address to array of proper datatype.
     switch (dEx->GetExprDataType()) {
         case DataType::BOOLD:
@@ -528,9 +528,9 @@ Value *ExpressionCodeGen::GetIntToPtr(DataExpr &dExpr, Value *elementAddr)
 }
 
 
-CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(DataExpr &dExpr)
+CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
 {
-    DataExpr *dEx = &dExpr;
+    const DataExpr *dEx = &dExpr;
     CodeGenValue *codeGenValue = nullptr;
     bool isNullLiteral = dExpr.isNull;
     switch (dEx->GetExprDataType()) {
@@ -640,9 +640,9 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *r
     return call;
 }
 
-void ExpressionCodeGen::Visit(DataExpr &dExpr)
+void ExpressionCodeGen::Visit(const DataExpr &dExpr)
 {
-    DataExpr *dEx = &dExpr;
+    const DataExpr *dEx = &dExpr;
 
     if (dEx->isColumn) {
         Value *rowIdx = this->codegenContext->rowIdx;
@@ -749,9 +749,9 @@ void ExpressionCodeGen::Visit(DataExpr &dExpr)
     this->value.reset(DataExprConstantHelper(dExpr));
 }
 
-void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
+void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 {
-    BinaryExpr *bExpr = &binaryExpr;
+    const BinaryExpr *bExpr = &binaryExpr;
 
     if (bExpr->left->GetType() == ExprType::DATA_E || bExpr->right->GetType() == ExprType::DATA_E) {
         DataType biggerType = std::max(bExpr->left->GetExprDataType(), bExpr->right->GetExprDataType());
@@ -805,7 +805,7 @@ void ExpressionCodeGen::Visit(BinaryExpr &binaryExpr)
     this->value = make_shared<CodeGenValue>(this->CreateConstantBool(false), this->CreateConstantBool(false));
 }
 
-void ExpressionCodeGen::Visit(UnaryExpr &uExpr)
+void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
 {
     auto val = VisitExpr(*(uExpr.exp));
     switch (uExpr.op) {
@@ -822,7 +822,7 @@ void ExpressionCodeGen::Visit(UnaryExpr &uExpr)
     }
 }
 
-void ExpressionCodeGen::Visit(IfExpr &ifExpr)
+void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
 {
     Expr *cond = ifExpr.condition;
     Expr *ifTrue = ifExpr.trueExpr;
@@ -878,9 +878,9 @@ void ExpressionCodeGen::Visit(IfExpr &ifExpr)
     this->value = make_shared<CodeGenValue>(pn, phiNull, lengthPhi);
 }
 
-void ExpressionCodeGen::Visit(InExpr &inExpr)
+void ExpressionCodeGen::Visit(const InExpr &inExpr)
 {
-    InExpr *iExpr = &inExpr;
+    const InExpr *iExpr = &inExpr;
     Expr *toCompare = iExpr->arguments[0];
     auto valueToCompare = VisitExpr(*toCompare);
     CodeGenValuePtr argiValue;
@@ -933,9 +933,9 @@ void ExpressionCodeGen::Visit(InExpr &inExpr)
     this->value = make_shared<CodeGenValue>(inArray, isNull);
 }
 
-void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
+void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
 {
-    BetweenExpr *bExpr = &btExpr;
+    const BetweenExpr *bExpr = &btExpr;
     DataType biggerType = std::max(std::max(bExpr->lowerBound->GetExprDataType(), bExpr->upperBound->GetExprDataType()),
         bExpr->value->GetExprDataType());
     bExpr->lowerBound->dataType = biggerType;
@@ -993,7 +993,7 @@ void ExpressionCodeGen::Visit(BetweenExpr &btExpr)
     this->value = make_shared<CodeGenValue>(this->CreateConstantBool(false), this->CreateConstantBool(false));
 }
 
-void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
+void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
 {
     Expr *value1Expr = cExpr.value1;
     Expr *value2Expr = cExpr.value2;
@@ -1045,7 +1045,7 @@ void ExpressionCodeGen::Visit(CoalesceExpr &cExpr)
     this->value = make_shared<CodeGenValue>(pn, pnNull, lengthPhi);
 }
 
-void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
+void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
 {
     Expr *valueExpr = isNullExpr.value;
     Value *isNullValue = VisitExpr(*valueExpr)->isNull;
@@ -1056,7 +1056,7 @@ void ExpressionCodeGen::Visit(IsNullExpr &isNullExpr)
 
 // Handles all functions
 // Only calls them; registration is done in function registry
-void ExpressionCodeGen::Visit(FuncExpr &fExpr)
+void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
 {
     std::vector<Value *> argVals;
     std::string funcName = fExpr.funcName;

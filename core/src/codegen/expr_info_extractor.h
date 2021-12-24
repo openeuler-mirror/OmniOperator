@@ -8,15 +8,15 @@
 
 class ExprInfoExtractor : public ExprVisitor {
 public:
-    void Visit(omniruntime::expressions::DataExpr &e) override;
-    void Visit(omniruntime::expressions::UnaryExpr &e) override;        
-    void Visit(omniruntime::expressions::BinaryExpr &e) override;
-    void Visit(omniruntime::expressions::InExpr &e) override;
-    void Visit(omniruntime::expressions::BetweenExpr &e) override;
-    void Visit(omniruntime::expressions::IfExpr &e) override;
-    void Visit(omniruntime::expressions::CoalesceExpr &e) override;
-    void Visit(omniruntime::expressions::IsNullExpr &e) override;
-    void Visit(omniruntime::expressions::FuncExpr &e) override;
+    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::UnaryExpr &e) override;
+    void Visit(const omniruntime::expressions::BinaryExpr &e) override;
+    void Visit(const omniruntime::expressions::InExpr &e) override;
+    void Visit(const omniruntime::expressions::BetweenExpr &e) override;
+    void Visit(const omniruntime::expressions::IfExpr &e) override;
+    void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
+    void Visit(const omniruntime::expressions::IsNullExpr &e) override;
+    void Visit(const omniruntime::expressions::FuncExpr &e) override;
     std::set<std::string> GetFunctions();
     std::set<int32_t> GetVectorIndexes();
 private:

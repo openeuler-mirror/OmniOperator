@@ -9,7 +9,7 @@
 
 class ProjectionCodeGen : public ExpressionCodeGen {
 public:
-    ProjectionCodeGen(std::string name, omniruntime::expressions::Expr &expr, bool filter)
+    ProjectionCodeGen(std::string name, const omniruntime::expressions::Expr &expr, bool filter)
         : ExpressionCodeGen(name, expr), filter(filter) {}
     ~ProjectionCodeGen() {}
     int64_t GetFunction() override;

@@ -84,16 +84,10 @@ JoinHashTables::~JoinHashTables()
 
 void JoinHashTables::JoinFilterCodeGen()
 {
-    // parse filter expression and create function
-    if (filterExpression.compare("") == 0) {
+    if (this->filterExpr == nullptr) {
         return;
     }
-
-    std::vector<VecType> allTypes;
-    allTypes.insert(allTypes.end(), probeTypes->Get().begin(), probeTypes->Get().end());
-    allTypes.insert(allTypes.end(), buildTypes->Get().begin(), buildTypes->Get().end());
-    VecTypes VecTypes(allTypes);
-    simpleFilter = new SimpleFilter(filterExpression, VecTypes);
+    simpleFilter = new SimpleFilter(*this->filterExpr);
     simpleFilter->Initialize();
     usedVectors = simpleFilter->GetVectorIndexes();
 }

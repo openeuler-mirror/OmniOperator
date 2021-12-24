@@ -53,25 +53,25 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 class ExpressionCodeGen : public ExprVisitor {
 
 public:
-    ExpressionCodeGen(std::string name, omniruntime::expressions::Expr &expr);
+    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expr);
     ~ExpressionCodeGen() override;
 
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
 
     // visitor methods
-    void Visit(omniruntime::expressions::DataExpr &e) override;
-    void Visit(omniruntime::expressions::UnaryExpr &e) override;
-    void Visit(omniruntime::expressions::BinaryExpr &e) override;
-    void Visit(omniruntime::expressions::InExpr &e) override;
-    void Visit(omniruntime::expressions::BetweenExpr &e) override;
-    void Visit(omniruntime::expressions::IfExpr &e) override;
-    void Visit(omniruntime::expressions::CoalesceExpr &e) override;
-    void Visit(omniruntime::expressions::IsNullExpr &e) override;
-    void Visit(omniruntime::expressions::FuncExpr &e) override;
+    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::UnaryExpr &e) override;
+    void Visit(const omniruntime::expressions::BinaryExpr &e) override;
+    void Visit(const omniruntime::expressions::InExpr &e) override;
+    void Visit(const omniruntime::expressions::BetweenExpr &e) override;
+    void Visit(const omniruntime::expressions::IfExpr &e) override;
+    void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
+    void Visit(const omniruntime::expressions::IsNullExpr &e) override;
+    void Visit(const omniruntime::expressions::FuncExpr &e) override;
 
     // returns llvm value ptr of codegen functions
-    CodeGenValuePtr VisitExpr(omniruntime::expressions::Expr &e);
+    CodeGenValuePtr VisitExpr(const omniruntime::expressions::Expr &e);
     std::set<int32_t> vectorIndexes;
 
 // TODO: Figure out which of these can be private
@@ -81,7 +81,7 @@ protected:
     llvm::Value* CreateConstantInt(int32_t n);
     llvm::Value* CreateConstantLong(int64_t n);
     llvm::Value* CreateConstantDouble(double n);
-    llvm::Value* GetIntToPtr(omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
+    llvm::Value* GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
     llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
     llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
     llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
@@ -91,25 +91,25 @@ protected:
     llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
 
     // Helper functions and main function for parsing binary expressions
-    llvm::Value *BinaryExprIntHelper(omniruntime::expressions::BinaryExpr *binaryExpr,  llvm::Value *left,
+    llvm::Value *BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr,  llvm::Value *left,
                                      llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprDoubleHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+    llvm::Value *BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
                                         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprStringHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
+    llvm::Value *BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
                                         llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen,
                                         llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprDecimalHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+    llvm::Value *BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
                                          llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    void BinaryExprNullHelper(omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left, llvm::Value *right,
-            llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi, llvm::PHINode **rightPhi,
-            llvm::Value **isNeitherNull);
+    void BinaryExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+                              llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull,
+                              llvm::PHINode **leftPhi, llvm::PHINode **rightPhi, llvm::Value **isNeitherNull);
     // Helper functions and main function for parsing constant data expressions
-    CodeGenValue *DataExprConstantHelper(omniruntime::expressions::DataExpr &dExpr);
+    CodeGenValue *DataExprConstantHelper(const omniruntime::expressions::DataExpr &dExpr);
 
     virtual llvm::Function* CreateFunction();
     void OptimizeFunctionsAndModule();
 
-    omniruntime::expressions::Expr *expr = nullptr;
+    const omniruntime::expressions::Expr *expr;
     std::unique_ptr<llvm::LLVMContext> context;
     std::unique_ptr<llvm::IRBuilder<>> builder;
     std::unique_ptr<llvm::Module> module;

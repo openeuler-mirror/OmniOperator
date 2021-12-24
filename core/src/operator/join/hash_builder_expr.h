@@ -16,10 +16,12 @@ namespace op {
 class HashBuilderWithExprOperatorFactory : public OperatorFactory {
 public:
     static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(const vec::VecTypes &buildTypes,
-        const std::string *buildHashKeys, int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount);
+        const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
+        std::string &filter, int32_t hashTableCount);
 
-    HashBuilderWithExprOperatorFactory(const vec::VecTypes &buildTypes, const std::string *buildHashKeys,
-        int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount);
+    HashBuilderWithExprOperatorFactory(const vec::VecTypes &buildTypes,
+        const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
+        std::string &filter, int32_t hashTableCount);
 
     ~HashBuilderWithExprOperatorFactory() override;
 

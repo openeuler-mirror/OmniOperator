@@ -54,7 +54,7 @@ DataType ColTypeTrans(int32_t colType)
     }
 }
 
-std::string DataTypeString(Expr &expr)
+std::string DataTypeString(const Expr &expr)
 {
     DataType dt = expr.dataType;
     int32_t width = expr.width;
@@ -153,12 +153,12 @@ Operator StringToOperator(std::string opStr)
     return INVALIDOP;
 }
 
-ExprType Expr::GetType()
+ExprType Expr::GetType() const
 {
     return INVALID_E;
 }
 
-DataType Expr::GetExprDataType()
+DataType Expr::GetExprDataType() const
 {
     return dataType;
 }
@@ -173,7 +173,7 @@ DataExpr::~DataExpr()
     }
 }
 
-ExprType DataExpr::GetType()
+ExprType DataExpr::GetType() const
 {
     return ExprType::DATA_E;
 }
@@ -259,7 +259,7 @@ BinaryExpr::~BinaryExpr()
     delete right;
 }
 
-ExprType BinaryExpr::GetType()
+ExprType BinaryExpr::GetType() const
 {
     return ExprType::BINARY_E;
 }
@@ -288,7 +288,7 @@ UnaryExpr::~UnaryExpr()
     delete exp;
 }
 
-ExprType UnaryExpr::GetType()
+ExprType UnaryExpr::GetType() const
 {
     return ExprType::UNARY_E;
 }
@@ -312,7 +312,7 @@ InExpr::InExpr(std::vector<Expr*> args)
     arguments = args;
 }
 
-ExprType InExpr::GetType()
+ExprType InExpr::GetType() const
 {
     return ExprType::IN_E;
 }
@@ -338,7 +338,7 @@ BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound)
     upperBound = upBound;
 }
 
-ExprType BetweenExpr::GetType()
+ExprType BetweenExpr::GetType() const
 {
     return ExprType::BETWEEN_E;
 }
@@ -362,7 +362,7 @@ IfExpr::IfExpr(Expr* cond, Expr* texp, Expr* fexp)
     falseExpr = fexp;
 }
 
-ExprType IfExpr::GetType()
+ExprType IfExpr::GetType() const
 {
     return ExprType::IF_E;
 }
@@ -384,7 +384,7 @@ CoalesceExpr::CoalesceExpr(Expr* val1, Expr* val2)
     value2 = val2;
 }
 
-ExprType CoalesceExpr::GetType()
+ExprType CoalesceExpr::GetType() const
 {
     return ExprType::COALESCE_E;
 }
@@ -403,7 +403,7 @@ IsNullExpr::IsNullExpr(Expr* value)
     this->value = value;
 }
 
-ExprType IsNullExpr::GetType()
+ExprType IsNullExpr::GetType() const
 {
     return ExprType::IS_NULL_E;
 }
@@ -438,7 +438,7 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int
     this->width = width;
 }
 
-ExprType FuncExpr::GetType()
+ExprType FuncExpr::GetType() const
 {
     return ExprType::FUNC_E;
 }

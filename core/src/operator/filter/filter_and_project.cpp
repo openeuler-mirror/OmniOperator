@@ -14,12 +14,8 @@ using namespace omniruntime::mem;
 using namespace std;
 
 using Uint8vec = std::vector<uint8_t>;
-RowFilter::RowFilter(std::string &expression, VecTypes &inputTypes)
-    : codegen(nullptr), expression(nullptr)
-{
-    Parser parser;
-    this->expression = parser.ParseRowExpression(expression, inputTypes, inputTypes.GetSize());
-}
+
+RowFilter::RowFilter(const omniruntime::expressions::Expr &expr): codegen(nullptr), expression(&expr){}
 
 RowFilter::~RowFilter()
 {
@@ -37,12 +33,13 @@ RowFilterFunc RowFilter::Create()
     return *castedRef;
 }
 
-SimpleFilter::SimpleFilter(std::string &expression, VecTypes &inputTypes)
-    : codegen(nullptr), expression(nullptr)
+SimpleFilter::SimpleFilter(const omniruntime::expressions::Expr &expression)
 {
-    Parser parser;
-    this->expression = parser.ParseRowExpression(
-        expression, inputTypes, inputTypes.GetSize());
+    this->codegen = nullptr;
+    this->expression = &expression;
+    this->func = nullptr;
+    this->resultLength = nullptr;
+    this->isResultNull = nullptr;
 }
 
 SimpleFilter::~SimpleFilter()
@@ -90,21 +87,12 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
     return this->func(values, isNulls, lengths, this->isResultNull, this->resultLength, executionContext);
 }
 
-FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputTypes,
-    int32_t inputVecCount, std::string projectExprs[], int32_t projectVecCount, const int8_t parseFormat)
-    : inputVecTypes(inputTypes)
+FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, VecTypes &inputTypes,
+     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount): inputVecTypes(inputTypes)
 {
     this->inputVecCount = inputVecCount;
     this->projectVecCount = projectVecCount;
     this->SetJitContext(nullptr);
-
-    Expr *parsedExpr = nullptr;
-    if (parseFormat == 1) {
-        parsedExpr = JSONParser::ParseJSON(nlohmann::json::parse(expression));
-    } else {
-        Parser parserObject;
-        parsedExpr = parserObject.ParseRowExpression(expression, inputVecTypes, inputVecCount);
-    }
 #ifdef DEBUG
     std::cout << "String expression in Filter: " << expression << std::endl;
     ExprPrinter printExprTree;
@@ -116,8 +104,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(std::string exp
         this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes.GetIds(), inputVecCount);
 
         for (int32_t i = 0; i < this->projectVecCount; i++) {
-            projections.push_back(make_unique<Projection>(inputVecTypes, inputVecCount, projectExprs[i], true,
-                                                          parseFormat));
+            projections.push_back(make_unique<Projection>(inputVecTypes, inputVecCount, *(projectExprs.at(i)), true));
         }
     } else {
         this->isSupportedExpr = false;
@@ -248,7 +235,7 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-Filter::Filter(expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount)
+Filter::Filter(const expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount)
 {
     vector<DataType> dataTypes;
     dataTypes.reserve(inputVecCount);

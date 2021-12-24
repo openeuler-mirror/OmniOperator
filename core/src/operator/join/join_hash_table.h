@@ -60,6 +60,11 @@ public:
         this->buildTypes = buildTypes;
     }
 
+    omniruntime::vec::VecTypes* GetBuildVecTypes()
+    {
+        return this->buildTypes;
+    }
+
     void SetProbeTypes(omniruntime::vec::VecTypes *probeTypes)
     {
         this->probeTypes = probeTypes;
@@ -70,11 +75,21 @@ public:
         this->filterExpression = filterExpression;
     }
 
+    std::string &GetFilterExpression()
+    {
+        return this->filterExpression;
+    }
+
     void JoinFilterCodeGen();
 
     SimpleFilter *GetSimpleFilter()
     {
         return simpleFilter;
+    }
+
+    void SetFilterExpr(omniruntime::expressions::Expr &filterExpr)
+    {
+        this->filterExpr = &filterExpr;
     }
 
     void AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable);
@@ -97,6 +112,7 @@ private:
     omniruntime::vec::VecTypes *probeTypes;
     omniruntime::vec::VecTypes *buildTypes;
     std::string filterExpression;
+    omniruntime::expressions::Expr *filterExpr = nullptr;
     SimpleFilter *simpleFilter = nullptr;
     std::set<int32_t> usedVectors;
 };

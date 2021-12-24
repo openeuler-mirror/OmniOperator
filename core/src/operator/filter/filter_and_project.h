@@ -34,13 +34,13 @@ using SimpleRowExprEvalFunc = bool (*)(int64_t *, bool *, int32_t *, bool *, int
 
 class RowFilter {
 public:
-    RowFilter(std::string &expression, VecTypes &inputType);
+    explicit RowFilter(const omniruntime::expressions::Expr &expr);
     ~RowFilter();
     RowFilterFunc Create();
 
 private:
     std::unique_ptr<FilterCodeGen> codegen = nullptr;
-    expressions::Expr *expression;
+    const expressions::Expr *expression;
 };
 
 /**
@@ -55,7 +55,7 @@ public:
      * @param expression the filter expression, must return evaluates to boolean type
      * @param inputType types for all involved values
      */
-    SimpleFilter(std::string &expression, VecTypes &inputTypes);
+    explicit SimpleFilter(const omniruntime::expressions::Expr &expression);
 
     ~SimpleFilter();
 
@@ -94,7 +94,7 @@ public:
 
 private:
     std::unique_ptr<ExpressionCodeGen> codegen = nullptr;
-    expressions::Expr *expression;
+    const expressions::Expr *expression;
     SimpleRowExprEvalFunc func;
     bool *isResultNull;
     int32_t *resultLength;
@@ -103,7 +103,7 @@ private:
 
 class Filter {
 public:
-    Filter(expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount);
+    Filter(const expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount);
     ~Filter()
     {
         this->codeGen.reset();
@@ -114,7 +114,7 @@ public:
 
 private:
     std::unique_ptr<FilterCodeGen> codeGen;
-    expressions::Expr *expr;
+    const expressions::Expr *expr;
     // Filter function is retrieved from FilterCodeGen
     // arguments to func are (data, numSelectedRows, rowCount, bitmap, offsets, allocator)
     // data: 2D array containing vector values
@@ -159,8 +159,10 @@ private:
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    FilterAndProjectOperatorFactory(std::string expression, VecTypes &inputVecTypes, int32_t inputVecCount,
-                                    std::string projections[], int32_t projectVecCount, const int8_t parseFormat = 0);
+    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, VecTypes &inputVecTypes,
+                                    int32_t inputVecCount,
+                                    const std::vector<omniruntime::expressions::Expr *>  &projections,
+                                    int32_t projectVecCount);
 
     ~FilterAndProjectOperatorFactory() override;
 
