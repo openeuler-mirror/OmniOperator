@@ -236,7 +236,7 @@ void OperatorUtil::ProjectRequiredVectors(const VecTypes &newInputTypes, const s
                     valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_VARCHAR:
-                newVecBatch->SetVector(i, ProjectVarcharVector(vecTypes[projectCol], projectFuncs[projectFuncsIndex],
+                newVecBatch->SetVector(i, ProjectVarcharVector(vecTypes[i], projectFuncs[projectFuncsIndex],
                     values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
                 break;
             case OMNI_VEC_TYPE_DECIMAL128:
