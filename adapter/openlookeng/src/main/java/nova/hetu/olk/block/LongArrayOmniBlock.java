@@ -18,14 +18,12 @@ import io.prestosql.spi.block.LongArrayBlockEncoding;
 import io.prestosql.spi.util.BloomFilter;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
-
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import nova.hetu.omniruntime.vector.VecAllocator;
-
 import javax.annotation.Nullable;
 
 /**
@@ -59,7 +57,8 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull, long[] values) {
+    public LongArrayOmniBlock(VecAllocator vecAllocator, int positionCount, Optional<byte[]> valueIsNull,
+            long[] values) {
         this(vecAllocator, 0, positionCount, valueIsNull.orElse(null), values);
     }
 
@@ -93,7 +92,8 @@ public class LongArrayOmniBlock implements Block<Long> {
      * @param valueIsNull the value is null
      * @param values the values
      */
-    public LongArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull, long[] values) {
+    public LongArrayOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, byte[] valueIsNull,
+            long[] values) {
         this.vecAllocator = vecAllocator;
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -269,8 +269,8 @@ public class LongArrayOmniBlock implements Block<Long> {
     @Override
     public Block getSingleValueBlock(int position) {
         checkReadablePosition(position);
-        return new LongArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[] {Vec.NULL} : null,
-            new long[] {values.get(position)});
+        return new LongArrayOmniBlock(vecAllocator, 0, 1, isNull(position) ? new byte[]{Vec.NULL} : null,
+                new long[]{values.get(position)});
     }
 
     @Override
@@ -297,8 +297,8 @@ public class LongArrayOmniBlock implements Block<Long> {
 
         LongVec newValues = compactVec(values, positionOffset, length);
         byte[] newValueIsNull = valueIsNull == null
-            ? null
-            : compactArray(valueIsNull, positionOffset + arrayOffset, length);
+                ? null
+                : compactArray(valueIsNull, positionOffset + arrayOffset, length);
 
         if (newValueIsNull == valueIsNull && newValues == values) {
             return this;

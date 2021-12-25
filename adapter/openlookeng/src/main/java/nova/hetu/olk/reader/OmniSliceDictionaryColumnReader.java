@@ -21,12 +21,11 @@ import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.block.VariableWidthBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.io.IOException;
 import java.util.Optional;
-
-import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni slice dictionary column reader.
@@ -49,17 +48,16 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
      * @param maxCodePointCount the max code point count
      * @param isCharType the is char type
      */
-    public OmniSliceDictionaryColumnReader(VecAllocator vecAllocator, OrcColumn column, LocalMemoryContext systemMemoryContext,
-                                           int maxCodePointCount, boolean isCharType) {
+    public OmniSliceDictionaryColumnReader(VecAllocator vecAllocator, OrcColumn column,
+            LocalMemoryContext systemMemoryContext, int maxCodePointCount, boolean isCharType) {
         super(column, systemMemoryContext, maxCodePointCount, isCharType);
         this.vecAllocator = vecAllocator;
-        this.dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, 1,
-                wrappedBuffer(EMPTY_DICTIONARY_DATA), EMPTY_DICTIONARY_OFFSETS, Optional.of(new byte[] {Vec.NULL}));
+        this.dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, 1, wrappedBuffer(EMPTY_DICTIONARY_DATA),
+                EMPTY_DICTIONARY_OFFSETS, Optional.of(new byte[]{Vec.NULL}));
     }
 
     @Override
-    public Block readBlock()
-            throws IOException {
+    public Block readBlock() throws IOException {
         if (!rowGroupOpen) {
             openRowGroup();
         }
@@ -115,7 +113,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         VarcharVec varcharVec = (VarcharVec) dictionaryBlock.getValues();
         VarcharVec slice = varcharVec.slice(0, varcharVec.getSize());
         return new DictionaryBlock(nextBatchSize, new VariableWidthOmniBlock(dictionaryBlock.getPositionCount(), slice),
-            values);
+                values);
     }
 
     private Block readNullBlock(byte[] isNull, int nonNullCount) throws IOException {
@@ -146,7 +144,7 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
         VarcharVec varcharVec = (VarcharVec) dictionaryBlock.getValues();
         VarcharVec slice = varcharVec.slice(0, varcharVec.getSize());
         return new DictionaryBlock(nextBatchSize, new VariableWidthOmniBlock(dictionaryBlock.getPositionCount(), slice),
-            result);
+                result);
     }
 
     @Override
@@ -160,15 +158,14 @@ public class OmniSliceDictionaryColumnReader extends SliceDictionaryColumnReader
             dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
             dictionaryBlock.close();
             dictionaryBlock = new VariableWidthOmniBlock(vecAllocator, positionCount, wrappedBuffer(dictionaryData),
-                dictionaryOffsets, Optional.of(isNullVector));
+                    dictionaryOffsets, Optional.of(isNullVector));
             currentDictionaryData = dictionaryData;
         }
     }
 
     private RunLengthEncodedBlock readAllNullsBlock() {
         return new RunLengthEncodedBlock(
-                new VariableWidthBlock(1, EMPTY_SLICE, new int[2],
-                        Optional.of(new boolean[] {true})), nextBatchSize);
+                new VariableWidthBlock(1, EMPTY_SLICE, new int[2], Optional.of(new boolean[]{true})), nextBatchSize);
     }
 
     @Override

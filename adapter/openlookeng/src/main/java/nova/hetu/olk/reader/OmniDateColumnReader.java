@@ -18,12 +18,12 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.type.DateType;
 import io.prestosql.spi.type.Type;
-import java.util.Map;
 import nova.hetu.olk.block.IntArrayOmniBlock;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni date column reader.
@@ -32,6 +32,7 @@ import nova.hetu.omniruntime.vector.VecAllocator;
  */
 public class OmniDateColumnReader extends DateColumnReader {
     private final VecAllocator vecAllocator;
+
     /**
      * Instantiates a new Omni date column reader.
      *
@@ -40,15 +41,14 @@ public class OmniDateColumnReader extends DateColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniDateColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
-        throws OrcCorruptionException {
+    public OmniDateColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext,
+            Map<String, String> extensionColumnReadersProperties) throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
         vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
     }
 
     @Override
-    public Block<Integer> readBlock()
-            throws IOException {
+    public Block<Integer> readBlock() throws IOException {
         if (!rowGroupOpen) {
             openRowGroup();
         }

@@ -55,7 +55,7 @@ public class AggregationOmniOperator implements Operator {
      * @param aggregationChannels the aggregation channels
      */
     public AggregationOmniOperator(OperatorContext operatorContext, OmniOperator omniOperator,
-        int[] aggregationChannels) {
+            int[] aggregationChannels) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.omniOperator = requireNonNull(omniOperator, "omniOperator is null");
         this.aggregationChannels = aggregationChannels;
@@ -162,14 +162,14 @@ public class AggregationOmniOperator implements Operator {
          *
          * @param operatorId the operator id
          * @param planNodeId the plan node id
-         * @param types
+         * @param types the source types
          * @param aggregations the aggregations
          * @param accumulatorFactories the accumulator factories
          * @param step the step
          */
         public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> types,
-            ImmutableList<Aggregation> aggregations, ImmutableList<AccumulatorFactory> accumulatorFactories,
-            Step step) {
+                ImmutableList<Aggregation> aggregations, ImmutableList<AccumulatorFactory> accumulatorFactories,
+                Step step) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
             this.step = step;
@@ -190,35 +190,36 @@ public class AggregationOmniOperator implements Operator {
                 aggregationTypes[i] = OperatorUtils.toVecType(signature.getArgumentTypes().get(0));
                 aggReturnTypes[i] = OperatorUtils.toVecType(signature.getReturnType());
                 switch (signature.getName()) {
-                    case "sum":
+                    case "sum" :
                         aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_SUM;
                         break;
-                    case "avg":
+                    case "avg" :
                         aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_AVG;
                         break;
-                    case "count":
+                    case "count" :
                         aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_COUNT;
                         break;
-                    case "max":
+                    case "max" :
                         aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_MAX;
                         break;
-                    case "min":
+                    case "min" :
                         aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_MIN;
                         break;
-                    default:
+                    default :
                         throw new UnsupportedOperationException(
-                            "unsupported Aggregator type by OmniRuntime: " + signature.getName());
+                                "unsupported Aggregator type by OmniRuntime: " + signature.getName());
                 }
             }
             this.omniFactory = new OmniAggregationOperatorFactory(aggregationTypes, aggregationFuncTypes,
-                aggReturnTypes, this.step.isInputRaw(), this.step.isOutputPartial());
+                    aggReturnTypes, this.step.isInputRaw(), this.step.isOutputPartial());
         }
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                AggregationOmniOperator.class.getSimpleName());
+                    AggregationOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniFactory.createOperator(vecAllocator);
             return new AggregationOmniOperator(operatorContext, omniOperator, aggregationChannels);
         }

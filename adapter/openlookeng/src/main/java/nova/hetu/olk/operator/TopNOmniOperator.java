@@ -169,7 +169,7 @@ public class TopNOmniOperator implements Operator {
          * @param sortOrders the sort orders
          */
         public TopNOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<? extends Type> sourceTypes,
-            int topN, List<Integer> sortChannels, List<SortOrder> sortOrders) {
+                int topN, List<Integer> sortChannels, List<SortOrder> sortOrders) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.sourceTypes = ImmutableList.copyOf(requireNonNull(sourceTypes, "sourceTypes is null"));
@@ -181,7 +181,7 @@ public class TopNOmniOperator implements Operator {
         }
 
         private OmniTopNOperatorFactory getOmniTopNOperatorFactory(List<? extends Type> sourceTypes, int topN,
-            List<Integer> sortChannels, List<SortOrder> sortOrders) {
+                List<Integer> sortChannels, List<SortOrder> sortOrders) {
             VecType[] omniSourceTypes = OperatorUtils.toVecTypes(sourceTypes);
             int[] omniSortChannels = sortChannels.stream().mapToInt(Integer::valueOf).toArray();
             int[] omniSortOrder = new int[sortOrders.size()];
@@ -200,14 +200,15 @@ public class TopNOmniOperator implements Operator {
             }
 
             return new OmniTopNOperatorFactory(omniSourceTypes, topN, createExpressions(omniSortChannels),
-                omniSortOrder, omniSortNullFirst);
+                    omniSortOrder, omniSortNullFirst);
         }
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                TopNOmniOperator.class.getSimpleName());
+                    TopNOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniTopNOperatorFactory.createOperator(vecAllocator);
             return new TopNOmniOperator(operatorContext, omniOperator, topN);
         }

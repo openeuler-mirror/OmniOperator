@@ -4,6 +4,8 @@
 
 package nova.hetu.olk.operator.filterandproject;
 
+import static nova.hetu.olk.tool.OperatorUtils.toVecType;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -38,8 +40,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static nova.hetu.olk.tool.OperatorUtils.toVecType;
-
 /**
  * Util class for openLooKeng RowExpression
  *
@@ -50,11 +50,11 @@ public class OmniRowExpressionUtil {
      * Enum type to choose which format to parse RowExpression into
      */
     public enum Format {
-        STRING,
-        JSON;
+        STRING, JSON;
     }
 
-    private OmniRowExpressionUtil() {}
+    private OmniRowExpressionUtil() {
+    }
 
     // Unchecked Exception wrapper
     private static class RowExpressionJsonProcessingException extends RuntimeException {
@@ -64,7 +64,8 @@ public class OmniRowExpressionUtil {
     }
 
     /**
-     * Wrapper function that selectively stringify RowExpression into string / jsonString
+     * Wrapper function that selectively stringify RowExpression into string /
+     * jsonString
      *
      * @param rowExpression RowExpression from openLooKeng
      * @param format enum var indicates returning String / JSON String
@@ -72,7 +73,7 @@ public class OmniRowExpressionUtil {
      */
     public static String expressionStringify(RowExpression rowExpression, Format format) {
         switch (format) {
-            case JSON:
+            case JSON :
                 String expressionJsonString = null;
                 try {
                     expressionJsonString = expressionJsonify(rowExpression);
@@ -80,8 +81,8 @@ public class OmniRowExpressionUtil {
                     throw new RowExpressionJsonProcessingException(e);
                 }
                 return expressionJsonString;
-            case STRING:
-            default:
+            case STRING :
+            default :
                 return expressionStringify(rowExpression);
         }
     }
@@ -95,30 +96,29 @@ public class OmniRowExpressionUtil {
     public static String expressionStringify(RowExpression rowExpression) {
         if (rowExpression instanceof CallExpression) {
             CallExpression callExpression = (CallExpression) rowExpression;
-            List<String> args = callExpression.getArguments().stream()
-                .map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList());
-            return callExpression.getSignature().getName() + ":" +
-                    signatureToVecTypeId(callExpression.getType().getTypeSignature()) +
-                    "(" + Joiner.on(", ").join(args) + ")";
+            List<String> args = callExpression.getArguments().stream().map(OmniRowExpressionUtil::expressionStringify)
+                    .collect(Collectors.toList());
+            return callExpression.getSignature().getName() + ":"
+                    + signatureToVecTypeId(callExpression.getType().getTypeSignature()) + "("
+                    + Joiner.on(", ").join(args) + ")";
         }
 
         if (rowExpression instanceof SpecialForm) {
             SpecialForm specialForm = (SpecialForm) rowExpression;
-            List<String> args = specialForm.getArguments().stream()
-                .map(OmniRowExpressionUtil::expressionStringify).collect(Collectors.toList());
-            return specialForm.getForm().name() + ":" +
-                    toVecType(specialForm.getType().getTypeSignature()).getId().ordinal() +
-                    "(" + Joiner.on(", ").join(args) + ")";
+            List<String> args = specialForm.getArguments().stream().map(OmniRowExpressionUtil::expressionStringify)
+                    .collect(Collectors.toList());
+            return specialForm.getForm().name() + ":"
+                    + toVecType(specialForm.getType().getTypeSignature()).getId().ordinal() + "("
+                    + Joiner.on(", ").join(args) + ")";
         }
 
         if (rowExpression instanceof LambdaDefinitionExpression) {
             LambdaDefinitionExpression lambdaDefinitionExpression = (LambdaDefinitionExpression) rowExpression;
-            return "(" + Joiner.on(", ").join(lambdaDefinitionExpression.getArguments()) + ") -> " +
-                lambdaDefinitionExpression.getBody();
+            return "(" + Joiner.on(", ").join(lambdaDefinitionExpression.getArguments()) + ") -> "
+                    + lambdaDefinitionExpression.getBody();
         }
 
-        if (rowExpression instanceof InputReferenceExpression ||
-                rowExpression instanceof VariableReferenceExpression) {
+        if (rowExpression instanceof InputReferenceExpression || rowExpression instanceof VariableReferenceExpression) {
             return rowExpression.toString();
         }
 
@@ -130,15 +130,15 @@ public class OmniRowExpressionUtil {
             }
 
             if ((type instanceof VarcharType || type instanceof CharType)
-                && constantExpression.getValue() instanceof Slice) {
+                    && constantExpression.getValue() instanceof Slice) {
                 String varcharValue = ((Slice) constantExpression.getValue()).toStringAscii();
                 return "'" + varcharValue + "':" + signatureToVecTypeId(type.getTypeSignature());
             }
 
             if (type instanceof DecimalType && !((DecimalType) type).isShort()
-                && constantExpression.getValue() instanceof Slice) {
-                return Decimals.decodeUnscaledValue((Slice) constantExpression.getValue()) + ":" +
-                    signatureToVecTypeId(type.getTypeSignature());
+                    && constantExpression.getValue() instanceof Slice) {
+                return Decimals.decodeUnscaledValue((Slice) constantExpression.getValue()) + ":"
+                        + signatureToVecTypeId(type.getTypeSignature());
             }
 
             return constantExpression.getValue() + ":" + signatureToVecTypeId(type.getTypeSignature());
@@ -167,9 +167,8 @@ public class OmniRowExpressionUtil {
      * @return String representation of the RowExpression in JSON structure
      * @throws JsonProcessingException when error converting JSON to String
      */
-    public static String expressionJsonify(RowExpression rowExpression)
-            throws JsonProcessingException {
-        ObjectNode jsonRoot = rowExpression.accept( new JsonifyVisitor(), null);
+    public static String expressionJsonify(RowExpression rowExpression) throws JsonProcessingException {
+        ObjectNode jsonRoot = rowExpression.accept(new JsonifyVisitor(), null);
         return new ObjectMapper().writeValueAsString(jsonRoot);
     }
 }
@@ -177,9 +176,9 @@ public class OmniRowExpressionUtil {
 class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     private static final String OPERATOR_PREFIX = "$operator$";
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final List<String> ARITH_BIN_OPS = new ArrayList<>(Arrays.asList("ADD", "SUBTRACT", "MULTIPLY",
-            "DIVIDE", "MODULUS"));
-    private static final  List<String> COM_BIN_OPS = new ArrayList<>(Arrays.asList("GREATER_THAN",
+    private static final List<String> ARITH_BIN_OPS = new ArrayList<>(
+            Arrays.asList("ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS"));
+    private static final List<String> COM_BIN_OPS = new ArrayList<>(Arrays.asList("GREATER_THAN",
             "GREATER_THAN_OR_EQUAL", "LESS_THAN", "LESS_THAN_OR_EQUAL", "EQUAL", "NOT_EQUAL"));
     private static final List<String> UNARY_OPS = new ArrayList<>(Arrays.asList("NEGATION"));
 
@@ -195,17 +194,13 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         int returnType = OperatorUtils.toVecType(callSignature).getId().ordinal();
         // Binary operator in rowExpression
         if (ARITH_BIN_OPS.contains(callName) || COM_BIN_OPS.contains(callName)) {
-            callRoot.put("exprType", "BINARY")
-                    .put("returnType", returnType)
-                    .put("operator", callName)
-                    .set("left", call.getArguments().get(0).accept(this, context));
+            callRoot.put("exprType", "BINARY").put("returnType", returnType).put("operator", callName).set("left",
+                    call.getArguments().get(0).accept(this, context));
             callRoot.set("right", call.getArguments().get(1).accept(this, context));
         } else if (UNARY_OPS.contains(callName)) {
             // Unary operator in rowExpression
-            callRoot.put("exprType", "UNARY")
-                    .put("returnType", returnType)
-                    .put("operator", callName)
-                    .set("expr", call.getArguments().get(0).accept(this, context));
+            callRoot.put("exprType", "UNARY").put("returnType", returnType).put("operator", callName).set("expr",
+                    call.getArguments().get(0).accept(this, context));
         } else {
             // Function call in rowExpression
             ArrayNode arguments = MAPPER.createArrayNode();
@@ -213,13 +208,10 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             for (RowExpression argument : call.getArguments()) {
                 arguments.add(argument.accept(this, context));
             }
-            callRoot.put("exprType", "FUNCTION")
-                    .put("returnType", returnType)
-                    .put("function_name", callName)
+            callRoot.put("exprType", "FUNCTION").put("returnType", returnType).put("function_name", callName)
                     .set("arguments", arguments);
             if ("char".equalsIgnoreCase(callSignature.getBase())) {
-                callRoot.put("width",
-                        callSignature.getParameters().get(0).getLongLiteral().intValue());
+                callRoot.put("width", callSignature.getParameters().get(0).getLongLiteral().intValue());
             }
         }
         return callRoot;
@@ -231,45 +223,36 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         String formName = specialForm.getForm().name();
         int returnType = OperatorUtils.toVecType(specialForm.getType().getTypeSignature()).getId().ordinal();
         switch (formName) {
-            case "AND":
-            case "OR":
-                specialFormRoot.put("exprType", "BINARY")
-                        .put("returnType", returnType)
-                        .put("operator", formName)
+            case "AND" :
+            case "OR" :
+                specialFormRoot.put("exprType", "BINARY").put("returnType", returnType).put("operator", formName)
                         .set("left", specialForm.getArguments().get(0).accept(this, context));
                 specialFormRoot.set("right", specialForm.getArguments().get(1).accept(this, context));
                 break;
-            case "BETWEEN":
-                specialFormRoot.put("exprType", "BETWEEN")
-                        .put("returnType", returnType)
-                        .set("value", specialForm.getArguments().get(0).accept(this, context));
-                specialFormRoot.set("lower_bound",
-                        specialForm.getArguments().get(1).accept(this, context));
-                specialFormRoot.set("upper_bound",
-                        specialForm.getArguments().get(2).accept(this, context));
+            case "BETWEEN" :
+                specialFormRoot.put("exprType", "BETWEEN").put("returnType", returnType).set("value",
+                        specialForm.getArguments().get(0).accept(this, context));
+                specialFormRoot.set("lower_bound", specialForm.getArguments().get(1).accept(this, context));
+                specialFormRoot.set("upper_bound", specialForm.getArguments().get(2).accept(this, context));
                 break;
-            case "IF":
-                specialFormRoot.put("exprType", "IF")
-                        .put("returnType", returnType)
-                        .set("condition", specialForm.getArguments().get(0).accept(this, context));
+            case "IF" :
+                specialFormRoot.put("exprType", "IF").put("returnType", returnType).set("condition",
+                        specialForm.getArguments().get(0).accept(this, context));
                 specialFormRoot.set("if_true", specialForm.getArguments().get(1).accept(this, context));
                 specialFormRoot.set("if_false", specialForm.getArguments().get(2).accept(this, context));
                 break;
-            case "COALESCE":
-                specialFormRoot.put("exprType", "COALESCE")
-                        .put("returnType", returnType)
-                        .set("value1", specialForm.getArguments().get(0).accept(this, context));
+            case "COALESCE" :
+                specialFormRoot.put("exprType", "COALESCE").put("returnType", returnType).set("value1",
+                        specialForm.getArguments().get(0).accept(this, context));
                 specialFormRoot.set("value2", specialForm.getArguments().get(1).accept(this, context));
                 break;
-            default:
+            default :
                 ArrayNode arguments = MAPPER.createArrayNode();
                 // Process all arguments of this function call
                 for (RowExpression argument : specialForm.getArguments()) {
                     arguments.add(argument.accept(this, context));
                 }
-                specialFormRoot.put("exprType", formName)
-                        .put("returnType", returnType)
-                        .set("arguments", arguments);
+                specialFormRoot.put("exprType", formName).put("returnType", returnType).set("arguments", arguments);
                 break;
         }
         return specialFormRoot;
@@ -279,13 +262,12 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     public ObjectNode visitInputReference(InputReferenceExpression reference, Void context) {
         ObjectNode inputRefRoot = MAPPER.createObjectNode();
         VecType vecType = OperatorUtils.toVecType(reference.getType().getTypeSignature());
-        inputRefRoot.put("exprType", "FIELD_REFERENCE")
-                .put("dataType", vecType.getId().ordinal())
-                .put("colVal", reference.getField());
+        inputRefRoot.put("exprType", "FIELD_REFERENCE").put("dataType", vecType.getId().ordinal()).put("colVal",
+                reference.getField());
         if (vecType instanceof CharVecType) {
-            inputRefRoot.put("width", ((CharVecType)vecType).getWidth());
+            inputRefRoot.put("width", ((CharVecType) vecType).getWidth());
         } else if (vecType instanceof VarcharVecType) {
-            inputRefRoot.put("width", ((VarcharVecType)vecType).getWidth());
+            inputRefRoot.put("width", ((VarcharVecType) vecType).getWidth());
         }
 
         return inputRefRoot;
@@ -303,25 +285,25 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         }
         constantRoot.put("isNull", false);
         switch (literalType.getId()) {
-            case OMNI_VEC_TYPE_BOOLEAN:
+            case OMNI_VEC_TYPE_BOOLEAN :
                 constantRoot.put("value", Boolean.valueOf(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_DOUBLE:
+            case OMNI_VEC_TYPE_DOUBLE :
                 constantRoot.put("value", Double.parseDouble(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_VEC_TYPE_INT :
+            case OMNI_VEC_TYPE_DATE32 :
                 constantRoot.put("value", Integer.parseInt(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_LONG :
                 constantRoot.put("value", Long.parseLong(literal.getValue().toString()));
                 break;
-            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_DECIMAL64 :
                 constantRoot.put("value", (Long.parseLong(literal.getValue().toString())));
-                constantRoot.put("precision", ((Decimal64VecType)literalType).getPrecision());
-                constantRoot.put("scale", ((Decimal64VecType)literalType).getScale());
+                constantRoot.put("precision", ((Decimal64VecType) literalType).getPrecision());
+                constantRoot.put("scale", ((Decimal64VecType) literalType).getScale());
                 break;
-            case OMNI_VEC_TYPE_DECIMAL128:
+            case OMNI_VEC_TYPE_DECIMAL128 :
                 // FIXME: Need to Support 128 bits properly
                 long d128Val;
                 if (literal.getValue() instanceof Slice) {
@@ -330,11 +312,11 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                     d128Val = Long.parseLong(literal.getValue().toString());
                 }
                 constantRoot.put("value", d128Val);
-                constantRoot.put("precision", ((Decimal128VecType)literalType).getPrecision());
-                constantRoot.put("scale", ((Decimal128VecType)literalType).getScale());
+                constantRoot.put("precision", ((Decimal128VecType) literalType).getPrecision());
+                constantRoot.put("scale", ((Decimal128VecType) literalType).getScale());
                 break;
-            case OMNI_VEC_TYPE_CHAR:
-            case OMNI_VEC_TYPE_VARCHAR:
+            case OMNI_VEC_TYPE_CHAR :
+            case OMNI_VEC_TYPE_VARCHAR :
                 String varcharValue;
                 if (literal.getValue() instanceof Slice) {
                     varcharValue = ((Slice) literal.getValue()).toStringAscii();
@@ -344,12 +326,12 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                 constantRoot.put("value", varcharValue);
                 constantRoot.put("width", ((VarcharVecType) literalType).getWidth());
                 break;
-            case OMNI_VEC_TYPE_NONE:
+            case OMNI_VEC_TYPE_NONE :
                 // TODO: Support UNKNOWN presto type in VecType
                 // omni-runtime treat NONE regardless of its value
                 constantRoot.put("value", "UNKNOWN");
                 break;
-            default:
+            default :
                 constantRoot.put("invalidVal", "invalidVal");
                 break;
         }
@@ -369,13 +351,12 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         ObjectNode varRefRoot = MAPPER.createObjectNode();
         VecType vecType = OperatorUtils.toVecType(reference.getType().getTypeSignature());
         varRefRoot.put("exprType", "VARIABLE_REFERENCE")
-                .put("dataType", OperatorUtils.toVecType(reference.getType().getTypeSignature())
-                        .getId().ordinal())
+                .put("dataType", OperatorUtils.toVecType(reference.getType().getTypeSignature()).getId().ordinal())
                 .put("varName", reference.getName());
         if (vecType instanceof CharVecType) {
-            varRefRoot.put("width", ((CharVecType)vecType).getWidth());
+            varRefRoot.put("width", ((CharVecType) vecType).getWidth());
         } else if (vecType instanceof VarcharVecType) {
-            varRefRoot.put("width", ((VarcharVecType)vecType).getWidth());
+            varRefRoot.put("width", ((VarcharVecType) vecType).getWidth());
         }
         return varRefRoot;
     }

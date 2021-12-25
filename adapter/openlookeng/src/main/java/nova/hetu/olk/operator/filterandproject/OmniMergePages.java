@@ -15,7 +15,6 @@ import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.WorkProcessor;
 import io.prestosql.operator.project.MergePages;
@@ -23,7 +22,6 @@ import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -58,7 +56,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      * @param memoryContext the memory context
      */
     public OmniMergePages(Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount,
-        int maxPageSizeInBytes, LocalMemoryContext memoryContext) {
+            int maxPageSizeInBytes, LocalMemoryContext memoryContext) {
         super(types, minPageSizeInBytes, minRowCount, maxPageSizeInBytes, memoryContext);
         List<Type> inputTypes = Lists.newArrayList(requireNonNull(types, "types is null"));
         this.pages = new ArrayList<>();
@@ -116,8 +114,8 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
     }
 
     /**
-     * This method takes in one page at a time and buffers it in a
-     * list so that the final merged page can be created.
+     * This method takes in one page at a time and buffers it in a list so that the
+     * final merged page can be created.
      *
      * @param page A Page to be merged.
      */

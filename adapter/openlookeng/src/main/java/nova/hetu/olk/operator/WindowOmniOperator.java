@@ -203,9 +203,9 @@ public class WindowOmniOperator implements Operator {
          * @param expectedPositions the expected positions
          */
         public WindowOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<? extends Type> sourceTypes,
-            List<Integer> outputChannels, List<WindowFunctionDefinition> windowFunctionDefinitions,
-            List<Integer> partitionChannels, List<Integer> preGroupedChannels, List<Integer> sortChannels,
-            List<SortOrder> sortOrder, int preSortedChannelPrefix, int expectedPositions) {
+                List<Integer> outputChannels, List<WindowFunctionDefinition> windowFunctionDefinitions,
+                List<Integer> partitionChannels, List<Integer> preGroupedChannels, List<Integer> sortChannels,
+                List<SortOrder> sortOrder, int preSortedChannelPrefix, int expectedPositions) {
             requireNonNull(sourceTypes, "sourceTypes is null");
             requireNonNull(planNodeId, "planNodeId is null");
             requireNonNull(outputChannels, "outputChannels is null");
@@ -213,20 +213,21 @@ public class WindowOmniOperator implements Operator {
             requireNonNull(partitionChannels, "partitionChannels is null");
             requireNonNull(preGroupedChannels, "preGroupedChannels is null");
             checkArgument(partitionChannels.containsAll(preGroupedChannels),
-                "preGroupedChannels must be a subset of partitionChannels");
+                    "preGroupedChannels must be a subset of partitionChannels");
             requireNonNull(sortChannels, "sortChannels is null");
             requireNonNull(sortOrder, "sortOrder is null");
             checkArgument(sortChannels.size() == sortOrder.size(),
-                "Must have same number of sort channels as sort orders");
+                    "Must have same number of sort channels as sort orders");
             checkArgument(preSortedChannelPrefix <= sortChannels.size(),
-                "Cannot have more pre-sorted channels than specified sorted channels");
-            checkArgument(preSortedChannelPrefix == 0 || ImmutableSet.copyOf(preGroupedChannels)
-                    .equals(ImmutableSet.copyOf(partitionChannels)),
-                "preSortedChannelPrefix can only be greater than zero if all partition channels are pre-grouped");
+                    "Cannot have more pre-sorted channels than specified sorted channels");
+            checkArgument(
+                    preSortedChannelPrefix == 0
+                            || ImmutableSet.copyOf(preGroupedChannels).equals(ImmutableSet.copyOf(partitionChannels)),
+                    "preSortedChannelPrefix can only be greater than zero if all partition channels are pre-grouped");
 
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
-            this.sourceTypes =  ImmutableList.copyOf(requireNonNull(sourceTypes, "sourceTypes is null"));
+            this.sourceTypes = ImmutableList.copyOf(requireNonNull(sourceTypes, "sourceTypes is null"));
             this.outputChannels = ImmutableList.copyOf(outputChannels);
             this.windowFunctionDefinitions = ImmutableList.copyOf(windowFunctionDefinitions);
             this.partitionChannels = ImmutableList.copyOf(partitionChannels);
@@ -237,14 +238,14 @@ public class WindowOmniOperator implements Operator {
             this.expectedPositions = expectedPositions;
 
             omniWindowOperatorFactory = getOmniWindowOperatorFactory(sourceTypes, outputChannels,
-                windowFunctionDefinitions, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                preSortedChannelPrefix, expectedPositions);
+                    windowFunctionDefinitions, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                    preSortedChannelPrefix, expectedPositions);
         }
 
         private OmniWindowOperatorFactory getOmniWindowOperatorFactory(List<? extends Type> sourceTypes,
-            List<Integer> outputChannels, List<WindowFunctionDefinition> windowFunctionDefinitions,
-            List<Integer> partitionChannels, List<Integer> preGroupedChannels, List<Integer> sortChannels,
-            List<SortOrder> sortOrder, int preSortedChannelPrefix, int expectedPositions) {
+                List<Integer> outputChannels, List<WindowFunctionDefinition> windowFunctionDefinitions,
+                List<Integer> partitionChannels, List<Integer> preGroupedChannels, List<Integer> sortChannels,
+                List<SortOrder> sortOrder, int preSortedChannelPrefix, int expectedPositions) {
             VecType[] omniSourceTypes = OperatorUtils.toVecTypes(sourceTypes);
             int[] omniOutputChannels = outputChannels.stream().mapToInt(Integer::valueOf).toArray();
             WindowFunctionType[] windowFunctionType = getWindowFunctionTypes(windowFunctionDefinitions);
@@ -270,9 +271,9 @@ public class WindowOmniOperator implements Operator {
             VecType[] omniWindowReturnTypes = getVecTypes(windowFunctionDefinitions);
 
             OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(omniSourceTypes,
-                omniOutputChannels, windowFunctionType, omniPartitionChannels, omnipreGroupedChannels, omniSortChannels,
-                omniSortOrder, omniSortNullFirst, preSortedChannelPrefix, expectedPositions, argumentChannels,
-                omniWindowReturnTypes);
+                    omniOutputChannels, windowFunctionType, omniPartitionChannels, omnipreGroupedChannels,
+                    omniSortChannels, omniSortOrder, omniSortNullFirst, preSortedChannelPrefix, expectedPositions,
+                    argumentChannels, omniWindowReturnTypes);
             this.omniWindowOperatorFactory = omniWindowOperatorFactory;
             return omniWindowOperatorFactory;
         }
@@ -295,8 +296,8 @@ public class WindowOmniOperator implements Operator {
                     argumentChannels[i] = windowFunctionDefinitions.get(i).getArgumentChannels().get(0);
                 } else {
                     throw new UnsupportedOperationException(
-                        "Unsupported! WindowFunctionDefinition.getArgumentChannels() bigger than 1: "
-                            + windowFunctionDefinitions.get(i).getArgumentChannels().size());
+                            "Unsupported! WindowFunctionDefinition.getArgumentChannels() bigger than 1: "
+                                    + windowFunctionDefinitions.get(i).getArgumentChannels().size());
                 }
             }
             return argumentChannels;
@@ -306,33 +307,30 @@ public class WindowOmniOperator implements Operator {
             WindowFunctionType[] windowFunctionType = new WindowFunctionType[windowFunctionDefinitions.size()];
             for (int i = 0; i < windowFunctionDefinitions.size(); i++) {
                 switch (windowFunctionDefinitions.get(i).getFunctionSupplier().getSignature().getName()) {
-                    case "rank":
+                    case "rank" :
                         windowFunctionType[i] = WindowFunctionType.WIN_RANK;
                         break;
-                    case "row_number":
+                    case "row_number" :
                         windowFunctionType[i] = WindowFunctionType.WIN_ROW_NUMBER;
                         break;
-                    case "avg":
+                    case "avg" :
                         windowFunctionType[i] = WindowFunctionType.WIN_AVG;
                         break;
-                    case "sum":
+                    case "sum" :
                         windowFunctionType[i] = WindowFunctionType.WIN_SUM;
                         break;
-                    case "count":
+                    case "count" :
                         windowFunctionType[i] = WindowFunctionType.WIN_COUNT;
                         break;
-                    case "max":
+                    case "max" :
                         windowFunctionType[i] = WindowFunctionType.WIN_MAX;
                         break;
-                    case "min":
+                    case "min" :
                         windowFunctionType[i] = WindowFunctionType.WIN_MIN;
                         break;
-                    default:
-                        throw new UnsupportedOperationException(
-                            "unsupported Aggregator type by OmniRuntime: " + windowFunctionDefinitions.get(i)
-                                .getFunctionSupplier()
-                                .getSignature()
-                                .getName());
+                    default :
+                        throw new UnsupportedOperationException("unsupported Aggregator type by OmniRuntime: "
+                                + windowFunctionDefinitions.get(i).getFunctionSupplier().getSignature().getName());
                 }
             }
             return windowFunctionType;
@@ -340,9 +338,10 @@ public class WindowOmniOperator implements Operator {
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                WindowOmniOperator.class.getSimpleName());
+                    WindowOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniWindowOperatorFactory.createOperator(vecAllocator);
             return new WindowOmniOperator(operatorContext, omniOperator);
         }
@@ -354,8 +353,8 @@ public class WindowOmniOperator implements Operator {
         @Override
         public OperatorFactory duplicate() {
             return new WindowOmniOperatorFactory(operatorId, planNodeId, sourceTypes, outputChannels,
-                windowFunctionDefinitions, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
-                preSortedChannelPrefix, expectedPositions);
+                    windowFunctionDefinitions, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                    preSortedChannelPrefix, expectedPositions);
         }
 
         @Override

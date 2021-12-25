@@ -58,5 +58,3 @@ public class EncoderUtil {
         return Optional.of(valueIsNull);
     }
 }
-
-

@@ -23,13 +23,13 @@ import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.type.Decimals;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.UnscaledDecimal128Arithmetic;
-import java.util.Map;
 import nova.hetu.olk.block.Int128ArrayOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni decimal column reader.
@@ -47,15 +47,14 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniDecimalColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
-        throws OrcCorruptionException {
+    public OmniDecimalColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext,
+            Map<String, String> extensionColumnReadersProperties) throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
         vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
     }
 
     @Override
-    public Block readBlock()
-            throws IOException {
+    public Block readBlock() throws IOException {
         if (!rowGroupOpen) {
             openRowGroup();
         }
@@ -131,7 +130,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
             if (sourceScale != type.getScale()) {
                 Slice decimal = Slices.wrappedLongArray(data[offset], data[offset + 1]);
                 UnscaledDecimal128Arithmetic.rescale(decimal, (int) (type.getScale() - sourceScale),
-                    Slices.wrappedLongArray(data, offset, 2));
+                        Slices.wrappedLongArray(data, offset, 2));
             }
         }
         return new Int128ArrayOmniBlock(vecAllocator, nextBatchSize, Optional.empty(), data);
@@ -189,7 +188,7 @@ public class OmniDecimalColumnReader extends DecimalColumnReader {
             if (sourceScale != type.getScale()) {
                 Slice decimal = Slices.wrappedLongArray(nonNullValueTemp[offset], nonNullValueTemp[offset + 1]);
                 UnscaledDecimal128Arithmetic.rescale(decimal, (int) (type.getScale() - sourceScale),
-                    Slices.wrappedLongArray(nonNullValueTemp, offset, 2));
+                        Slices.wrappedLongArray(nonNullValueTemp, offset, 2));
             }
         }
 

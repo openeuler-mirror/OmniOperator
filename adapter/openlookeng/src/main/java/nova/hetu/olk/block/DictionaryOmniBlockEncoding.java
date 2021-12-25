@@ -4,19 +4,17 @@
 
 package nova.hetu.olk.block;
 
+import static nova.hetu.olk.tool.OperatorUtils.buildOffHeapBlock;
+
 import io.airlift.slice.SliceInput;
 import io.airlift.slice.SliceOutput;
 import io.airlift.slice.Slices;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
-import io.prestosql.spi.block.DictionaryBlock;
 import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
-import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
-
-import static nova.hetu.olk.tool.OperatorUtils.buildOffHeapBlock;
 
 /**
  * The type Dictionary omni block encoding.
@@ -32,7 +30,8 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
 
     @Override
     public void writeBlock(BlockEncodingSerde blockEncodingSerde, SliceOutput sliceOutput, Block block) {
-        // The down casts here are safe because it is the block itself the provides this encoding implementation.
+        // The down casts here are safe because it is the block itself the provides this
+        // encoding implementation.
         DictionaryOmniBlock dictionaryBlock = (DictionaryOmniBlock) buildOffHeapBlock(vecAllocator, block);
 
         DictionaryOmniBlock compactDictionaryBlock = dictionaryBlock.compact();
@@ -79,11 +78,14 @@ public class DictionaryOmniBlockEncoding extends DictionaryBlockEncoding {
         long leastSignificantBits = sliceInput.readLong();
         long sequenceId = sliceInput.readLong();
 
-        // We always compact the dictionary before we send it. However, dictionaryBlock comes from sliceInput, which may over-retain memory.
+        // We always compact the dictionary before we send it. However, dictionaryBlock
+        // comes from sliceInput, which may over-retain memory.
         // As a result, setting dictionaryIsCompacted to true is not appropriate here.
-        // TODO: fix DictionaryBlock so that dictionaryIsCompacted can be set to true when the underlying block over-retains memory.
-        DictionaryOmniBlock dictionaryOmniBlock = new DictionaryOmniBlock(positionCount, (Vec) dictionaryBlock.getValues(), ids, false,
-            new DictionaryId(mostSignificantBits, leastSignificantBits, sequenceId));
+        // TODO: fix DictionaryBlock so that dictionaryIsCompacted can be set to true
+        // when the underlying block over-retains memory.
+        DictionaryOmniBlock dictionaryOmniBlock = new DictionaryOmniBlock(positionCount,
+                (Vec) dictionaryBlock.getValues(), ids, false,
+                new DictionaryId(mostSignificantBits, leastSignificantBits, sequenceId));
         dictionaryBlock.close();
         return dictionaryOmniBlock;
     }

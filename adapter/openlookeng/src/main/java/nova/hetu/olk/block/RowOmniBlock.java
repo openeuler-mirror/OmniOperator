@@ -69,11 +69,11 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
      * @return the block
      */
     public static <T> Block<T> fromFieldBlocks(VecAllocator vecAllocator, int positionCount, Optional<byte[]> rowIsNull,
-        Block<T>[] fieldBlocks) {
+            Block<T>[] fieldBlocks) {
         int[] fieldBlockOffsets = new int[positionCount + 1];
         for (int position = 0; position < positionCount; position++) {
-            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position] + (
-                rowIsNull.isPresent() && rowIsNull.get()[position] == Vec.NULL ? 0 : 1);
+            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position]
+                    + (rowIsNull.isPresent() && rowIsNull.get()[position] == Vec.NULL ? 0 : 1);
         }
         validateConstructorArguments(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets, fieldBlocks);
         // transform field blocks to off-heap
@@ -94,7 +94,7 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
      * @return the row omni block
      */
     static RowOmniBlock createRowBlockInternal(int startOffset, int positionCount, @Nullable byte[] rowIsNull,
-        int[] fieldBlockOffsets, Block[] fieldBlocks) {
+            int[] fieldBlockOffsets, Block[] fieldBlocks) {
         validateConstructorArguments(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
         return new RowOmniBlock(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
     }
@@ -109,7 +109,7 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
      * @param fieldBlocks the field blocks
      */
     public static void validateConstructorArguments(int startOffset, int positionCount, @Nullable byte[] rowIsNull,
-        int[] fieldBlockOffsets, Block[] fieldBlocks) {
+            int[] fieldBlockOffsets, Block[] fieldBlocks) {
         if (startOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -136,9 +136,8 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
         int firstFieldBlockPositionCount = fieldBlocks[0].getPositionCount();
         for (int i = 1; i < fieldBlocks.length; i++) {
             if (firstFieldBlockPositionCount != fieldBlocks[i].getPositionCount()) {
-                throw new IllegalArgumentException(
-                    format("length of field blocks differ: field 0: %s, block %s: %s", firstFieldBlockPositionCount, i,
-                        fieldBlocks[i].getPositionCount()));
+                throw new IllegalArgumentException(format("length of field blocks differ: field 0: %s, block %s: %s",
+                        firstFieldBlockPositionCount, i, fieldBlocks[i].getPositionCount()));
             }
         }
     }
@@ -154,15 +153,17 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
             long nativeVectorAddress = vec.getNativeVector();
             vectorAddresses[i] = nativeVectorAddress;
         }
-        ContainerVec containerVec =
-            new ContainerVec(vecAllocator, numFields, this.getPositionCount(), vectorAddresses, vecTypes);
+        ContainerVec containerVec = new ContainerVec(vecAllocator, numFields, this.getPositionCount(), vectorAddresses,
+                vecTypes);
         containerVec.setNulls(0, this.getRowIsNull(), 0, this.getPositionCount());
         return containerVec;
     }
 
     /**
-     * Use createRowBlockInternal or fromFieldBlocks instead of this method.  The caller of this method is assumed to have
-     * validated the arguments with validateConstructorArguments.
+     * Use createRowBlockInternal or fromFieldBlocks instead of this method. The
+     * caller of this method is assumed to have validated the arguments with
+     * validateConstructorArguments.
+     * 
      * @param startOffset the start offset
      * @param positionCount the position count
      * @param rowIsNull the row is null

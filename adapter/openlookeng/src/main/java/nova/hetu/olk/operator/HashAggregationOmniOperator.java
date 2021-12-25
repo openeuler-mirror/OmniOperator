@@ -86,7 +86,6 @@ public class HashAggregationOmniOperator implements Operator {
         return finished;
     }
 
-
     @Override
     public void close() {
         omniOperator.close();
@@ -188,30 +187,33 @@ public class HashAggregationOmniOperator implements Operator {
          * @param step the step
          */
         public HashAggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> sourceTypes,
-            int[] groupByInputChannels, VecType[] groupByInputTypes, int[] aggregationInputChannels,
-            VecType[] aggregationInputTypes, AggType[] aggregatorTypes, VecType[] aggregationOutputTypes, Step step) {
+                int[] groupByInputChannels, VecType[] groupByInputTypes, int[] aggregationInputChannels,
+                VecType[] aggregationInputTypes, AggType[] aggregatorTypes, VecType[] aggregationOutputTypes,
+                Step step) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
-            this.sourceTypes= ImmutableList.copyOf(requireNonNull(sourceTypes, "sourceTypes is null"));
+            this.sourceTypes = ImmutableList.copyOf(requireNonNull(sourceTypes, "sourceTypes is null"));
             this.step = step;
             this.groupByInputChannels = Arrays.copyOf(
-                requireNonNull(groupByInputChannels, "groupByInputChannels is null."), groupByInputChannels.length);
+                    requireNonNull(groupByInputChannels, "groupByInputChannels is null."), groupByInputChannels.length);
             this.groupByInputTypes = Arrays.copyOf(requireNonNull(groupByInputTypes, "groupByInputTypes is null."),
-                groupByInputTypes.length);
+                    groupByInputTypes.length);
             this.aggregationInputChannels = Arrays.copyOf(
-                requireNonNull(aggregationInputChannels, "aggregationInputChannels is null."),
-                aggregationInputChannels.length);
+                    requireNonNull(aggregationInputChannels, "aggregationInputChannels is null."),
+                    aggregationInputChannels.length);
             this.aggregationInputTypes = Arrays.copyOf(
-                requireNonNull(aggregationInputTypes, "aggregationInputTypes is null."), aggregationInputTypes.length);
+                    requireNonNull(aggregationInputTypes, "aggregationInputTypes is null."),
+                    aggregationInputTypes.length);
             this.aggregatorTypes = Arrays.copyOf(requireNonNull(aggregatorTypes, "aggregatorTypes is null."),
-                aggregatorTypes.length);
+                    aggregatorTypes.length);
             this.aggregationOutputTypes = Arrays.copyOf(
-                requireNonNull(aggregationOutputTypes, "aggregationOutputTypes is null."),
-                aggregationOutputTypes.length);
+                    requireNonNull(aggregationOutputTypes, "aggregationOutputTypes is null."),
+                    aggregationOutputTypes.length);
 
             this.omniFactory = new OmniHashAggregationOperatorFactory(createExpressions(this.groupByInputChannels),
-                this.groupByInputTypes, createExpressions(this.aggregationInputChannels), this.aggregationInputTypes,
-                this.aggregatorTypes, this.aggregationOutputTypes, step.isInputRaw(), step.isOutputPartial());
+                    this.groupByInputTypes, createExpressions(this.aggregationInputChannels),
+                    this.aggregationInputTypes, this.aggregatorTypes, this.aggregationOutputTypes, step.isInputRaw(),
+                    step.isOutputPartial());
         }
 
         /**
@@ -228,8 +230,8 @@ public class HashAggregationOmniOperator implements Operator {
          */
         @VisibleForTesting
         public HashAggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, int[] groupByInputChannels,
-            VecType[] groupByInputTypes, int[] aggregationInputChannels, VecType[] aggregationInputTypes,
-            AggType[] aggregatorTypes, List<VecType[]> inAndOutputTypes) {
+                VecType[] groupByInputTypes, int[] aggregationInputChannels, VecType[] aggregationInputTypes,
+                AggType[] aggregatorTypes, List<VecType[]> inAndOutputTypes) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
             int groupByLength = groupByInputChannels.length;
@@ -245,17 +247,18 @@ public class HashAggregationOmniOperator implements Operator {
             }
             this.step = Step.SINGLE;
             OmniHashAggregationOperatorFactory omniFactory = new OmniHashAggregationOperatorFactory(
-                createExpressions(cppGroupByChannels), groupByInputTypes, createExpressions(cppAggChannels),
-                aggregationInputTypes, aggregatorTypes, inAndOutputTypes.get(1), this.step.isInputRaw(),
-                this.step.isOutputPartial());
+                    createExpressions(cppGroupByChannels), groupByInputTypes, createExpressions(cppAggChannels),
+                    aggregationInputTypes, aggregatorTypes, inAndOutputTypes.get(1), this.step.isInputRaw(),
+                    this.step.isOutputPartial());
             this.omniFactory = omniFactory;
         }
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                HashAggregationOmniOperator.class.getSimpleName());
+                    HashAggregationOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniFactory.createOperator(vecAllocator);
             return new HashAggregationOmniOperator(operatorContext, omniOperator, step);
         }

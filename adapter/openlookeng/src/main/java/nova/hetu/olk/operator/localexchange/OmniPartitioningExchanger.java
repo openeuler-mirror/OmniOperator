@@ -34,11 +34,12 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.type.Type;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import nova.hetu.olk.operator.filterandproject.OmniMergingPageOutput;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import nova.hetu.olk.operator.filterandproject.OmniMergingPageOutput;
 
 public class OmniPartitioningExchanger implements LocalExchanger {
     private final List<Consumer<PageReference>> buffers;
@@ -52,8 +53,7 @@ public class OmniPartitioningExchanger implements LocalExchanger {
     private final OmniMergingPageOutput mergingPageOutput;
 
     public OmniPartitioningExchanger(List<Consumer<PageReference>> partitions, LocalExchangeMemoryManager memoryManager,
-                                     List<? extends Type> types, List<Integer> partitionChannels,
-                                     Optional<Integer> hashChannel) {
+            List<? extends Type> types, List<Integer> partitionChannels, Optional<Integer> hashChannel) {
         this.buffers = ImmutableList.copyOf(requireNonNull(partitions, "partitions is null"));
         this.memoryManager = requireNonNull(memoryManager, "memoryManager is null");
 
@@ -114,8 +114,7 @@ public class OmniPartitioningExchanger implements LocalExchanger {
 
                 Page pageSplit = new Page(positions.size(), outputBlocks);
                 memoryManager.updateMemoryUsage(pageSplit.getRetainedSizeInBytes());
-                buffers.get(partition)
-                    .accept(new PageReference(pageSplit, 1,
+                buffers.get(partition).accept(new PageReference(pageSplit, 1,
                         () -> memoryManager.updateMemoryUsage(-pageSplit.getRetainedSizeInBytes())));
             }
         }

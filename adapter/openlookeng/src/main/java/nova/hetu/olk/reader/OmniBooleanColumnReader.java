@@ -9,4 +9,5 @@ package nova.hetu.olk.reader;
  *
  * @since 20210630
  */
-public class OmniBooleanColumnReader { }
+public class OmniBooleanColumnReader {
+}
