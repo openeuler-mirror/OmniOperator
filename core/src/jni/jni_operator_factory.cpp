@@ -608,15 +608,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperato
     using namespace omniruntime::jit;
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint sortColCount = env->GetArrayLength(jSortCols);
-    int32_t *sortCols = std::make_unique<int32_t[]>(sortColCount).release();
-    GetColumnsFromExpressions(env, jSortCols, sortCols, sortColCount);
+    int32_t sortColsArr[sortColCount];
+    GetColumnsFromExpressions(env, jSortCols, sortColsArr, sortColCount);
     jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
     int32_t n = (int32_t)jN;
 
     auto sourceTypes = Deserialize(sourceTypesCharPtr);
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
-        new omniruntime::op::TopNOperatorFactory(sourceTypes, n, sortCols, sortAsc, sortNullFirsts, sortColCount);
+        new omniruntime::op::TopNOperatorFactory(sourceTypes, n, sortColsArr, sortAsc, sortNullFirsts, sortColCount);
 
     topNOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
