@@ -17,9 +17,9 @@ TopNOperatorFactory::TopNOperatorFactory(const vec::VecTypes &sourceTypes, int32
     : sourceTypes(sourceTypes)
 {
     this->n = n;
-    this->sortCols = sortCols;
-    this->sortAscendings = sortAscendings;
-    this->sortNullFirsts = sortNullFirsts;
+    this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
+    this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
+    this->sortNullFirsts.insert(this->sortNullFirsts.end(), sortNullFirsts, sortNullFirsts + sortColCount);
     this->sortColCount = sortColCount;
 }
 
@@ -30,8 +30,8 @@ Operator *TopNOperatorFactory::CreateOperator()
     return new TopNOperator(sourceTypes, n, sortCols, sortAscendings, sortNullFirsts, sortColCount);
 }
 
-TopNOperator::TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortColCount)
+TopNOperator::TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
+    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
     : sourceTypes(sourceTypes), sourceTypesCount(sourceTypes.GetSize())
 {
     this->n = n;
@@ -58,23 +58,24 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
     int32_t position = 0;
     for (; (pq.size() < n) && (position < vectorBatch->GetRowCount()); ++position) {
         VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
-        pq.emplace(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, singleRowVecBatch);
+        pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount,
+            singleRowVecBatch);
         singleRowVectorBatchList.push_back(singleRowVecBatch);
     }
     for (; position < vectorBatch->GetRowCount(); ++position) {
         VectorBatch *top = pq.top().GetVecBatch();
-        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount, sortCols, typeIds,
-            sortAscendings, sortNullFirsts) < 0) {
+        if (CompareVectorBatch(position, vectorBatch, 0, top, sortColCount, sortCols.data(), typeIds,
+            sortAscendings.data(), sortNullFirsts.data()) < 0) {
             pq.pop();
             UpdateSingleRowVectorBatch(vectorBatch, top, position);
-            pq.emplace(typeIds, sortCols, sortAscendings, sortNullFirsts, sortColCount, top);
+            pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, top);
         }
     }
     return 0;
 }
 
-void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch,
-                                                VectorBatch *singleRowVecBatch, int32_t position) const
+void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
+    int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
     for (int i = 0; i < sourceTypesCount; ++i) {

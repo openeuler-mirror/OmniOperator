@@ -63,17 +63,17 @@ public:
 
 private:
     const vec::VecTypes sourceTypes;
-    int32_t *sortCols = nullptr;
+    std::vector<int32_t> sortCols;
     int32_t n = 0;
-    int32_t *sortAscendings = nullptr;
-    int32_t *sortNullFirsts = nullptr;
+    std::vector<int32_t> sortAscendings;
+    std::vector<int32_t> sortNullFirsts;
     int32_t sortColCount = 0;
 };
 
 class TopNOperator : public Operator {
 public:
-    TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, int32_t *sortCols, int32_t *sortAscendings,
-        int32_t *sortNullFirsts, int32_t sortColCount);
+    TopNOperator(const vec::VecTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
+        std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperator() override;
 
@@ -84,10 +84,10 @@ public:
 private:
     const vec::VecTypes &sourceTypes;
     int32_t sourceTypesCount = 0;
-    int32_t *sortCols = nullptr;
+    std::vector<int32_t> sortCols;
     int32_t n = 0;
-    int32_t *sortAscendings = nullptr;
-    int32_t *sortNullFirsts = nullptr;
+    std::vector<int32_t> sortAscendings;
+    std::vector<int32_t> sortNullFirsts;
     int32_t sortColCount = 0;
     std::priority_queue<RowComparator, std::vector<RowComparator>, std::less<std::vector<RowComparator>::value_type>>
         pq;
