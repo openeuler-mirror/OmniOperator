@@ -125,13 +125,7 @@ static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *curren
             static_cast<BooleanVector *>(currentVector)->SetValue(currentRowIndex, value);
             break;
         }
-        case OMNI_VEC_TYPE_DICTIONARY: {
-            auto *dictionaryVector = static_cast<DictionaryVector *>(origintVector);
-            Vector *dictionary = dictionaryVector->GetDictionary();
-            int32_t id = dictionaryVector->GetId(originRowIndex);
-            Insert(dictionary, id, currentVector, currentRowIndex);
-            break;
-        }
+        // OMNI_VEC_TYPE_DICTIONARY: The specific type in dictionary has been extracted before the call.
         case OMNI_VEC_TYPE_VARCHAR:
         case OMNI_VEC_TYPE_CHAR:
             InsertVarchar(origintVector, originRowIndex, currentVector, currentRowIndex);
@@ -239,12 +233,7 @@ long GetHash(int32_t rowIndex, int type, Vector *vector)
             int32_t valueLength = static_cast<VarcharVector *>(vector)->GetValue(rowIndex, &varcharValue);
             return HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
         }
-        case OMNI_VEC_TYPE_DICTIONARY: {
-            auto *dictionaryVector = static_cast<DictionaryVector *>(vector);
-            Vector *vector = dictionaryVector->GetDictionary();
-            rowIndex = dictionaryVector->GetId(rowIndex);
-            return GetHash(rowIndex, vector->GetTypeId(), vector);
-        }
+        // OMNI_VEC_TYPE_DICTIONARY: The specific type in dictionary has been extracted before the call.
         default:
             return 0;
     }
