@@ -287,5 +287,4 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
             fieldBlock.close();
         }
     }
-
 }
