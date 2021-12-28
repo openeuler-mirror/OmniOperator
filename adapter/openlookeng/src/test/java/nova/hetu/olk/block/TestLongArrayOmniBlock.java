@@ -97,7 +97,10 @@ public class TestLongArrayOmniBlock {
         Block copyRegionBlock = longArrayOmniBlock.copyRegion(0, longArrayOmniBlock.getPositionCount());
         assertBlockEquals(copyRegionBlock, (LongVec) longArrayOmniBlock.getValues());
 
-        copyRegionBlock.close();
+        Block copyNotEqualRegionBlock = longArrayOmniBlock.copyRegion(0, 3);
+        assertBlockEquals(copyNotEqualRegionBlock, (LongVec) longArrayOmniBlock.getValues());
+
+        copyNotEqualRegionBlock.close();
     }
 
     @Test

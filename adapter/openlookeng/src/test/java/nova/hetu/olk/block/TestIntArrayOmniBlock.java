@@ -95,22 +95,25 @@ public class TestIntArrayOmniBlock {
         Block intArrayOmniBlock = new IntArrayOmniBlock(baseBlock.getPositionCount(), (IntVec) baseBlock.getValues());
 
         int[] positions = {0, 2, 3};
-        Block copyRegionBlock = intArrayOmniBlock.copyPositions(positions, 0, 3);
+        Block copyPositionsBlock = intArrayOmniBlock.copyPositions(positions, 0, 3);
         for (int i = 0; i < 3; i++) {
-            assertEquals(copyRegionBlock.getInt(i, 0), intArrayOmniBlock.getInt(positions[i], 0));
+            assertEquals(copyPositionsBlock.getInt(i, 0), intArrayOmniBlock.getInt(positions[i], 0));
         }
         intArrayOmniBlock.close();
-        copyRegionBlock.close();
+        copyPositionsBlock.close();
     }
 
     @Test
     public void testCopyRegion() {
         Block baseBlock = buildBlockByBuilder();
-        Block newBlock1 = new IntArrayOmniBlock(baseBlock.getPositionCount(), (IntVec) baseBlock.getValues());
-        Block copyRegionBlock = newBlock1.copyRegion(0, newBlock1.getPositionCount());
-        assertBlockEquals(copyRegionBlock, (IntVec) newBlock1.getValues());
+        Block intArrayOmniBlock = new IntArrayOmniBlock(baseBlock.getPositionCount(), (IntVec) baseBlock.getValues());
+        Block copyRegionBlock = intArrayOmniBlock.copyRegion(0, intArrayOmniBlock.getPositionCount());
+        assertBlockEquals(copyRegionBlock, (IntVec) intArrayOmniBlock.getValues());
 
-        copyRegionBlock.close();
+        Block copyNotEqualRegionBlock = intArrayOmniBlock.copyRegion(0, 3);
+        assertBlockEquals(copyNotEqualRegionBlock, (IntVec) intArrayOmniBlock.getValues());
+
+        copyNotEqualRegionBlock.close();
     }
 
     @Test

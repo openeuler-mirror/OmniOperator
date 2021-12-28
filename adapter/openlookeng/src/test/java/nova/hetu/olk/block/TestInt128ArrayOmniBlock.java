@@ -92,7 +92,10 @@ public class TestInt128ArrayOmniBlock {
         Block copyRegionBlock = int128ArrayOmniBlock.copyRegion(0, int128ArrayOmniBlock.getPositionCount());
         assertBlockEquals(copyRegionBlock, int128ArrayOmniBlock);
 
-        copyRegionBlock.close();
+        Block copyNotEqualRegionBlock = int128ArrayOmniBlock.copyRegion(0, 3);
+        assertBlockEquals(copyNotEqualRegionBlock, int128ArrayOmniBlock);
+
+        copyNotEqualRegionBlock.close();
     }
 
     @Test
