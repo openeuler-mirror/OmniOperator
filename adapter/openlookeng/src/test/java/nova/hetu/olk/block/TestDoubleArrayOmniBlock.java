@@ -92,10 +92,14 @@ public class TestDoubleArrayOmniBlock {
     @Test
     public void testCopyRegion() {
         Block baseBlock = buildBlockByVec();
-        Block newBlock1 = new DoubleArrayOmniBlock(baseBlock.getPositionCount(), (DoubleVec) baseBlock.getValues());
-        Block copyRegionBlock = newBlock1.copyRegion(0, newBlock1.getPositionCount());
-        assertBlockEquals(copyRegionBlock, (DoubleVec) newBlock1.getValues());
-        copyRegionBlock.close();
+        Block doubleArrayOmniBlock = new DoubleArrayOmniBlock(baseBlock.getPositionCount(), (DoubleVec) baseBlock.getValues());
+        Block copyRegionBlock = doubleArrayOmniBlock.copyRegion(0, doubleArrayOmniBlock.getPositionCount());
+        assertBlockEquals(copyRegionBlock, (DoubleVec) doubleArrayOmniBlock.getValues());
+
+        Block copyNotEqualRegionBlock = doubleArrayOmniBlock.copyRegion(0, 3);
+        assertBlockEquals(copyNotEqualRegionBlock, (DoubleVec) doubleArrayOmniBlock.getValues());
+
+        copyNotEqualRegionBlock.close();
     }
 
     @Test

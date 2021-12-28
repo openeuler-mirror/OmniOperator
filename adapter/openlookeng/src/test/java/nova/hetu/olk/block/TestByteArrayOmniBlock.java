@@ -35,6 +35,10 @@ public class TestByteArrayOmniBlock {
         // build vec through vec
         Block baseBlock = buildBlockByBuilder();
         BooleanVec booleanVec = new BooleanVec(4);
+        booleanVec.set(0, false);
+        booleanVec.set(1, true);
+        booleanVec.set(2, false);
+        booleanVec.set(3, true);
         ByteArrayOmniBlock byteArrayOmniBlock = new ByteArrayOmniBlock(4, booleanVec);
         assertBlockEquals(BOOLEAN, byteArrayOmniBlock, baseBlock);
         assertEquals(baseBlock.toString(), byteArrayOmniBlock.toString());
@@ -101,6 +105,10 @@ public class TestByteArrayOmniBlock {
     @Test
     public void testGet() {
         BooleanVec booleanVec = new BooleanVec(4);
+        booleanVec.set(0, false);
+        booleanVec.set(1, true);
+        booleanVec.set(2, false);
+        booleanVec.set(3, true);
         Block byteArrayOmniBlock = new ByteArrayOmniBlock(4, booleanVec);
         long expect = 2L;
         long expectSizeBytes = 8L;
@@ -116,16 +124,27 @@ public class TestByteArrayOmniBlock {
     @Test
     public void testCopyRegion() {
         BooleanVec booleanVec = new BooleanVec(4);
+        booleanVec.set(0, false);
+        booleanVec.set(1, true);
+        booleanVec.set(2, false);
+        booleanVec.set(3, true);
         Block byteArrayOmniBlock = new ByteArrayOmniBlock(4, booleanVec);
         Block copyRegionBlock = byteArrayOmniBlock.copyRegion(0, byteArrayOmniBlock.getPositionCount());
         assertBlockEquals(copyRegionBlock, (BooleanVec) byteArrayOmniBlock.getValues());
 
-        copyRegionBlock.close();
+        Block copyNotEqualRegionBlock = byteArrayOmniBlock.copyRegion(0, 3);
+        assertBlockEquals(copyNotEqualRegionBlock, (BooleanVec) byteArrayOmniBlock.getValues());
+
+        copyNotEqualRegionBlock.close();
     }
 
     @Test
     public void testCopyPosition() {
         BooleanVec booleanVec = new BooleanVec(4);
+        booleanVec.set(0, false);
+        booleanVec.set(1, true);
+        booleanVec.set(2, false);
+        booleanVec.set(3, true);
         Block byteArrayOmniBlock = new ByteArrayOmniBlock(4, booleanVec);
 
         int[] positions = {0, 2, 3};
@@ -184,14 +203,21 @@ public class TestByteArrayOmniBlock {
     private Block buildBlockByBuilder() {
         BlockBuilder blockBuilder = BOOLEAN.createBlockBuilder(null, 4);
         BOOLEAN.writeBoolean(blockBuilder, false);
+        BOOLEAN.writeBoolean(blockBuilder, true);
         BOOLEAN.writeBoolean(blockBuilder, false);
-        BOOLEAN.writeBoolean(blockBuilder, false);
-        BOOLEAN.writeBoolean(blockBuilder, false);
+        BOOLEAN.writeBoolean(blockBuilder, true);
         return OperatorUtils.buildOffHeapBlock(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, blockBuilder.build());
     }
 
     private ByteArrayOmniBlock getBlock(int count) {
         BooleanVec booleanVec = new BooleanVec(count);
+        for (int i = 0; i < count; i++) {
+            if ((i & 1) == 1) {
+                booleanVec.set(i, true);
+            } else {
+                booleanVec.set(i, false);
+            }
+        }
         return new ByteArrayOmniBlock(count, booleanVec);
     }
 

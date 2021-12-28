@@ -78,7 +78,11 @@ public class TestVariableWidthOmniBlock {
             (VarcharVec) baseBlock.getValues());
         Block copyRegionBlock = variableWidthOmniBlock.copyRegion(0, variableWidthOmniBlock.getPositionCount());
         assertBlockEquals(copyRegionBlock, (VarcharVec) variableWidthOmniBlock.getValues());
-        copyRegionBlock.close();
+
+        Block copyNotEqualRegionBlock = variableWidthOmniBlock.copyRegion(0, 3);
+        assertBlockEquals(copyNotEqualRegionBlock, (VarcharVec) variableWidthOmniBlock.getValues());
+
+        copyNotEqualRegionBlock.close();
     }
 
     @Test
