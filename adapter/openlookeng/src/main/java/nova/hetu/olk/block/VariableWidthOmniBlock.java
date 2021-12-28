@@ -164,7 +164,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
         this.positionCount = positionCount;
 
         if (values == null) {
-            throw new IllegalArgumentException("slice is null");
+            throw new IllegalArgumentException("values is null");
         }
 
         this.values = values;
