@@ -136,7 +136,7 @@ public:
                 break;
             }
             case OMNI_VEC_TYPE_CONTAINER: {
-                vector = new ContainerVector(allocator, size);
+                vector = new ContainerVector(allocator, capacityInBytes, size);
                 break;
             }
             case OMNI_VEC_TYPE_VARCHAR:

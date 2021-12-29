@@ -18,10 +18,10 @@ ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCou
     }
 }
 
-ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t vectorCount)
-    : vectorCount(vectorCount),
-      positionCount(0),
-      Vector(allocator, vectorCount * BYTES, vectorCount, OMNI_VEC_TYPE_CONTAINER)
+ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount)
+    : vectorCount(capacityInBytes / BYTES),
+      positionCount(positionCount),
+      Vector(allocator, capacityInBytes, positionCount, OMNI_VEC_TYPE_CONTAINER)
 {}
 
 ContainerVector *ContainerVector::Slice(int32_t positionOffset, int32_t length)
