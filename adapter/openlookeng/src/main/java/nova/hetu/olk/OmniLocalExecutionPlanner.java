@@ -46,7 +46,6 @@ import static io.prestosql.sql.planner.plan.AggregationNode.Step.FINAL;
 import static io.prestosql.sql.planner.plan.ExchangeNode.Scope.LOCAL;
 import static io.prestosql.sql.planner.plan.JoinNode.Type.FULL;
 import static io.prestosql.sql.planner.plan.JoinNode.Type.RIGHT;
-import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.operator.OrderByOmniOperator.OrderByOmniOperatorFactory.createOrderByOmniOperatorFactory;
 import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
 import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_AVG;
@@ -59,7 +58,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-
 import io.airlift.log.Logger;
 import io.airlift.node.NodeInfo;
 import io.airlift.units.DataSize;
@@ -173,20 +171,6 @@ import io.prestosql.sql.tree.Expression;
 import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.statestore.StateStoreProvider;
 import io.prestosql.statestore.listener.StateStoreListenerManager;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import nova.hetu.olk.block.InternalOmniBlockEncodingSerde;
 import nova.hetu.olk.operator.AggregationOmniOperator;
 import nova.hetu.olk.operator.DistinctLimitOmniOperator;
@@ -211,6 +195,21 @@ import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 import nova.hetu.shuffle.PageProducer;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 /**
  * The type Omni local execution planner.
  *
@@ -219,63 +218,7 @@ import nova.hetu.shuffle.PageProducer;
 public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
     private static final Logger log = Logger.get(OmniLocalExecutionPlanner.class);
 
-    private final Metadata metadata;
-
-    private final TypeAnalyzer typeAnalyzer;
-
-    private final Optional<ExplainAnalyzeContext> explainAnalyzeContext;
-
-    private final PageSourceProvider pageSourceProvider;
-
-    private final IndexManager indexManager;
-
-    private final NodePartitioningManager nodePartitioningManager;
-
-    private final PageSinkManager pageSinkManager;
-
-    private final ExchangeClientSupplier exchangeClientSupplier;
-
-    private final ExpressionCompiler expressionCompiler;
-
     private final OmniExpressionCompiler omniExpressionCompiler;
-
-    private final PageFunctionCompiler pageFunctionCompiler;
-
-    private final JoinFilterFunctionCompiler joinFilterFunctionCompiler;
-
-    private final DataSize maxIndexMemorySize;
-
-    private final IndexJoinLookupStats indexJoinLookupStats;
-
-    private final DataSize maxPartialAggregationMemorySize;
-
-    private final DataSize maxPagePartitioningBufferSize;
-
-    private final DataSize maxLocalExchangeBufferSize;
-
-    private final SpillerFactory spillerFactory;
-
-    private final SingleStreamSpillerFactory singleStreamSpillerFactory;
-
-    private final PartitioningSpillerFactory partitioningSpillerFactory;
-
-    private final PagesIndex.Factory pagesIndexFactory;
-
-    private final JoinCompiler joinCompiler;
-
-    private final LookupJoinOperators lookupJoinOperators;
-
-    private final OrderingCompiler orderingCompiler;
-
-    private final StateStoreProvider stateStoreProvider;
-
-    private final NodeInfo nodeInfo;
-
-    private final StateStoreListenerManager stateStoreListenerManager;
-
-    private final DynamicFilterCacheManager dynamicFilterCacheManager;
-
-    private final HeuristicIndexerManager heuristicIndexerManager;
 
     /**
      * The Support types.
@@ -341,39 +284,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 singleStreamSpillerFactory, partitioningSpillerFactory, pagesIndexFactory, joinCompiler,
                 lookupJoinOperators, orderingCompiler, nodeInfo, stateStoreProvider, stateStoreListenerManager,
                 dynamicFilterCacheManager, heuristicIndexerManager);
-        this.explainAnalyzeContext = requireNonNull(explainAnalyzeContext, "explainAnalyzeContext is null");
-        this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
-        this.indexManager = requireNonNull(indexManager, "indexManager is null");
-        this.nodePartitioningManager = requireNonNull(nodePartitioningManager, "nodePartitioningManager is null");
-        this.exchangeClientSupplier = exchangeClientSupplier;
-        this.metadata = requireNonNull(metadata, "metadata is null");
-        this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
-        this.pageSinkManager = requireNonNull(pageSinkManager, "pageSinkManager is null");
-        this.expressionCompiler = requireNonNull(expressionCompiler, "compiler is null");
         // use omni expressionCompiler
         this.omniExpressionCompiler = new OmniExpressionCompiler(metadata, pageFunctionCompiler);
-        this.pageFunctionCompiler = requireNonNull(pageFunctionCompiler, "pageFunctionCompiler is null");
-        this.joinFilterFunctionCompiler = requireNonNull(joinFilterFunctionCompiler, "compiler is null");
-        this.indexJoinLookupStats = requireNonNull(indexJoinLookupStats, "indexJoinLookupStats is null");
-        this.maxIndexMemorySize = requireNonNull(taskManagerConfig, "taskManagerConfig is null")
-                .getMaxIndexMemoryUsage();
-        this.spillerFactory = requireNonNull(spillerFactory, "spillerFactory is null");
-        this.singleStreamSpillerFactory = requireNonNull(singleStreamSpillerFactory,
-                "singleStreamSpillerFactory is null");
-        this.partitioningSpillerFactory = requireNonNull(partitioningSpillerFactory,
-                "partitioningSpillerFactory is null");
-        this.maxPartialAggregationMemorySize = taskManagerConfig.getMaxPartialAggregationMemoryUsage();
-        this.maxPagePartitioningBufferSize = taskManagerConfig.getMaxPagePartitioningBufferSize();
-        this.maxLocalExchangeBufferSize = taskManagerConfig.getMaxLocalExchangeBufferSize();
-        this.pagesIndexFactory = requireNonNull(pagesIndexFactory, "pagesIndexFactory is null");
-        this.joinCompiler = requireNonNull(joinCompiler, "joinCompiler is null");
-        this.lookupJoinOperators = requireNonNull(lookupJoinOperators, "lookupJoinOperators is null");
-        this.orderingCompiler = requireNonNull(orderingCompiler, "orderingCompiler is null");
-        this.stateStoreProvider = requireNonNull(stateStoreProvider, "stateStore is null");
-        this.nodeInfo = nodeInfo;
-        this.stateStoreListenerManager = requireNonNull(stateStoreListenerManager, "stateStoreListenerManager is null");
-        this.dynamicFilterCacheManager = requireNonNull(dynamicFilterCacheManager, "dynamicFilterCacheManager is null");
-        this.heuristicIndexerManager = requireNonNull(heuristicIndexerManager, "heuristicIndexerManager is null");
     }
 
     @Override
@@ -546,10 +458,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
      * @since 20210630
      */
     public class OmniVisitor extends Visitor {
-        private final Session session;
-
-        private final StageExecutionDescriptor stageExecutionDescriptor;
-
         /**
          * Instantiates a new Omni visitor.
          *
@@ -558,8 +466,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
          */
         public OmniVisitor(Session session, StageExecutionDescriptor stageExecutionDescriptor) {
             super(session, stageExecutionDescriptor);
-            this.session = session;
-            this.stageExecutionDescriptor = stageExecutionDescriptor;
         }
 
         @Override
@@ -759,8 +665,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
             if (columns != null) {
                 boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
-                int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024 * 1024; // convert from MB
-                                                                                                      // to bytes
+                // convert from MB to bytes
+                int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024 * 1024;
                 Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(translatedFilter,
                         translatedProjections, sourceNode.getId());
                 SourceOperatorFactory operatorFactory = new ScanFilterAndProjectOperator.ScanFilterAndProjectOperatorFactory(
@@ -805,8 +711,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     concat(assignments.getExpressions()));
 
             boolean spillEnabled = isSpillEnabled(session) && isSpillReuseExchange(session);
-            int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024 * 1024; // convert from MB to
-                                                                                                  // bytes
+            // convert from MB to bytes
+            int spillerThreshold = getSpillOperatorThresholdReuseExchange(session) * 1024 * 1024;
             Integer consumerTableScanNodeCount = node.getConsumerTableScanNodeCount();
 
             OperatorFactory operatorFactory = new TableScanOperator.TableScanOperatorFactory(context.getSession(),
@@ -1569,48 +1475,34 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                             Optional.of(probeOutputChannels), totalOperatorsCount,
                             (HashBuilderOmniOperatorFactory) buildOperatorFactory);
                 default :
+                    throw new UnsupportedOperationException("Unsupported join type by OmniRuntime: " + node.getType());
+            }
+        }
+
+        private OperatorFactory getLookUpJoinOperatorFactory(JoinNode node,
+                JoinBridgeManager<? extends LookupSourceFactory> lookupSourceFactoryManager,
+                LocalExecutionPlanContext context, List<Type> probeTypes, List<Integer> probeOutputChannels,
+                List<Integer> probeJoinChannels, OptionalInt probeHashChannel, OptionalInt totalOperatorsCount) {
+            switch (node.getType()) {
+                case INNER :
+                    return lookupJoinOperators.innerJoin(context.getNextOperatorId(), node.getId(),
+                            lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
+                            Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+                case LEFT :
+                    return lookupJoinOperators.probeOuterJoin(context.getNextOperatorId(), node.getId(),
+                            lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
+                            Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+                case RIGHT :
+                    return lookupJoinOperators.lookupOuterJoin(context.getNextOperatorId(), node.getId(),
+                            lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
+                            Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+                case FULL :
+                    return lookupJoinOperators.fullOuterJoin(context.getNextOperatorId(), node.getId(),
+                            lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
+                            Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
+                default :
                     throw new UnsupportedOperationException("Unsupported join type: " + node.getType());
             }
-        }
-
-        private ImmutableMap<Symbol, Integer> makeLayout(PlanNode node) {
-            return makeLayoutFromOutputSymbols(node.getOutputSymbols());
-        }
-
-        private ImmutableMap<Symbol, Integer> makeLayoutFromOutputSymbols(List<Symbol> outputSymbols) {
-            ImmutableMap.Builder<Symbol, Integer> outputMappings = ImmutableMap.builder();
-            int channel = 0;
-            for (Symbol symbol : outputSymbols) {
-                outputMappings.put(symbol, channel);
-                channel++;
-            }
-            return outputMappings.build();
-        }
-    }
-
-    private OperatorFactory getLookUpJoinOperatorFactory(JoinNode node,
-            JoinBridgeManager<? extends LookupSourceFactory> lookupSourceFactoryManager,
-            LocalExecutionPlanContext context, List<Type> probeTypes, List<Integer> probeOutputChannels,
-            List<Integer> probeJoinChannels, OptionalInt probeHashChannel, OptionalInt totalOperatorsCount) {
-        switch (node.getType()) {
-            case INNER :
-                return lookupJoinOperators.innerJoin(context.getNextOperatorId(), node.getId(),
-                        lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
-                        Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
-            case LEFT :
-                return lookupJoinOperators.probeOuterJoin(context.getNextOperatorId(), node.getId(),
-                        lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
-                        Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
-            case RIGHT :
-                return lookupJoinOperators.lookupOuterJoin(context.getNextOperatorId(), node.getId(),
-                        lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
-                        Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
-            case FULL :
-                return lookupJoinOperators.fullOuterJoin(context.getNextOperatorId(), node.getId(),
-                        lookupSourceFactoryManager, probeTypes, probeJoinChannels, probeHashChannel,
-                        Optional.of(probeOutputChannels), totalOperatorsCount, partitioningSpillerFactory);
-            default :
-                throw new UnsupportedOperationException("Unsupported join type: " + node.getType());
         }
     }
 
@@ -1618,19 +1510,15 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
      * LocalExecutionPlanContext for OmniRuntime
      */
     public static class OmniLocalExecutionPlanContext extends LocalExecutionPlanContext {
-        private final TaskContext taskContext;
-
         public OmniLocalExecutionPlanContext(TaskContext taskContext, TypeProvider types, Metadata metadata,
                 DynamicFilterCacheManager dynamicFilterCacheManager) {
             super(taskContext, types, metadata, dynamicFilterCacheManager);
-            this.taskContext = taskContext;
         }
 
         private OmniLocalExecutionPlanContext(TaskContext taskContext, TypeProvider types,
                 List<DriverFactory> driverFactories, Optional<IndexSourceContext> indexSourceContext,
                 LocalDynamicFiltersCollector dynamicFiltersCollector, AtomicInteger nextPipelineId) {
             super(taskContext, types, driverFactories, indexSourceContext, dynamicFiltersCollector, nextPipelineId);
-            this.taskContext = taskContext;
         }
 
         public LocalExecutionPlanContext createSubContext() {
@@ -1646,25 +1534,6 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
          */
         public void onTaskFinished(Consumer<Boolean> taskFinishHandler) {
             taskContext.onTaskFinished(taskFinishHandler);
-        }
-    }
-
-    private static class DriverFactoryParameters {
-        private final LocalExecutionPlanContext subContext;
-
-        private final PhysicalOperation source;
-
-        public DriverFactoryParameters(LocalExecutionPlanContext subContext, PhysicalOperation source) {
-            this.subContext = subContext;
-            this.source = source;
-        }
-
-        public LocalExecutionPlanContext getSubContext() {
-            return subContext;
-        }
-
-        public PhysicalOperation getSource() {
-            return source;
         }
     }
 }
