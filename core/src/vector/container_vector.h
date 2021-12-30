@@ -24,7 +24,7 @@ public:
     ContainerVector(VectorAllocator *allocator, int32_t positionCount, Vector **fieldVectors, int32_t vectorCount,
         VecType types[]);
 
-    ContainerVector(VectorAllocator *allocator, int32_t vectorCount);
+    ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount);
 
     // inline for high performance.
     int64_t ALWAYS_INLINE GetValue(int32_t index)
