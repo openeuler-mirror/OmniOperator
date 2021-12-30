@@ -4,14 +4,14 @@
 
 package nova.hetu.olk.block;
 
+import static nova.hetu.olk.tool.EncoderUtil.decodeNullBits;
+
 import io.airlift.slice.SliceInput;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.BlockEncodingSerde;
 import io.prestosql.spi.block.IntArrayBlockEncoding;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecAllocator;
-
-import static nova.hetu.olk.tool.EncoderUtil.decodeNullBits;
 
 /**
  * The type Int array omni block encoding.
@@ -21,8 +21,7 @@ import static nova.hetu.olk.tool.EncoderUtil.decodeNullBits;
 public class IntArrayOmniBlockEncoding extends IntArrayBlockEncoding {
     private VecAllocator vecAllocator;
 
-    public IntArrayOmniBlockEncoding(VecAllocator vecAllocator)
-    {
+    public IntArrayOmniBlockEncoding(VecAllocator vecAllocator) {
         this.vecAllocator = vecAllocator;
     }
 

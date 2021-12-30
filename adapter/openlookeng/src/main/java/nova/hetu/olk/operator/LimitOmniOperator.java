@@ -4,6 +4,11 @@
 
 package nova.hetu.olk.operator;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
+
 import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.Operator;
 import io.prestosql.operator.OperatorContext;
@@ -18,11 +23,6 @@ import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 /**
  * The type limit omni operator.

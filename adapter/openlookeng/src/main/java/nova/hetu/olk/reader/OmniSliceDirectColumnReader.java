@@ -23,12 +23,11 @@ import io.prestosql.spi.PrestoException;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
+import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.io.IOException;
 import java.util.Optional;
-
-import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni slice direct column reader.
@@ -45,7 +44,8 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
      * @param maxCodePointCount the max code point count
      * @param isCharType the is char type
      */
-    public OmniSliceDirectColumnReader(VecAllocator vecAllocator, OrcColumn column, int maxCodePointCount, boolean isCharType) {
+    public OmniSliceDirectColumnReader(VecAllocator vecAllocator, OrcColumn column, int maxCodePointCount,
+            boolean isCharType) {
         super(column, maxCodePointCount, isCharType);
         this.vecAllocator = vecAllocator;
     }
@@ -65,13 +65,13 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
             if (readOffset > 0) {
                 if (lengthStream == null) {
                     throw new OrcCorruptionException(column.getOrcDataSourceId(),
-                        "Value is not null but length stream is missing");
+                            "Value is not null but length stream is missing");
                 }
                 long dataSkipSize = lengthStream.sum(readOffset);
                 if (dataSkipSize > 0) {
                     if (dataStream == null) {
                         throw new OrcCorruptionException(column.getOrcDataSourceId(),
-                            "Value is not null but data stream is missing");
+                                "Value is not null but data stream is missing");
                     }
                     dataStream.skip(dataSkipSize);
                 }
@@ -81,7 +81,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
         if (lengthStream == null) {
             if (presentStream == null) {
                 throw new OrcCorruptionException(column.getOrcDataSourceId(),
-                    "Value is null but present stream is missing");
+                        "Value is null but present stream is missing");
             }
             presentStream.skip(nextBatchSize);
             Block nullValueBlock = readAllNullsBlock();
@@ -112,7 +112,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
 
             if (lengthStream == null) {
                 throw new OrcCorruptionException(column.getOrcDataSourceId(),
-                    "Value is not null but length stream is missing");
+                        "Value is not null but length stream is missing");
             }
             if (nullCount == 0) {
                 isNullVector = null;
@@ -123,7 +123,8 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
             }
         }
 
-        // Calculate the total length for all entries. Note that the values in the offsetVector are still length values now.
+        // Calculate the total length for all entries. Note that the values in the
+        // offsetVector are still length values now.
         long totalLength = 0;
         for (int i = 0; i < nextBatchSize; i++) {
             totalLength += offsetVector[i];
@@ -134,16 +135,16 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
         nextBatchSize = 0;
         if (totalLength == 0) {
             return new VariableWidthOmniBlock(vecAllocator, currentBatchSize, EMPTY_SLICE, offsetVector,
-                Optional.ofNullable(isNullVector));
+                    Optional.ofNullable(isNullVector));
         }
         if (totalLength > ONE_GIGABYTE) {
             throw new PrestoException(GENERIC_INTERNAL_ERROR, format(
-                "Values in column \"%s\" are too large to process for Presto. %s column values are larger than 1GB [%s]",
-                column.getPath(), nextBatchSize, column.getOrcDataSourceId()));
+                    "Values in column \"%s\" are too large to process for Presto. %s column values are larger than 1GB [%s]",
+                    column.getPath(), nextBatchSize, column.getOrcDataSourceId()));
         }
         if (dataStream == null) {
             throw new OrcCorruptionException(column.getOrcDataSourceId(),
-                "Value is not null but data stream is missing");
+                    "Value is not null but data stream is missing");
         }
 
         // allocate enough space to read
@@ -164,7 +165,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
                 int nextLength = offsetVector[i];
                 if (isNullVector != null && isNullVector[i - 1] == Vec.NULL) {
                     checkState(currentLength == 0,
-                        "Corruption in slice direct stream: length is non-zero for null entry");
+                            "Corruption in slice direct stream: length is non-zero for null entry");
                     offsetVector[i] = offsetVector[i - 1];
                     currentLength = nextLength;
                     continue;
@@ -176,7 +177,7 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
 
                 // adjust offsetVector with truncated length
                 int truncatedLength = computeTruncatedLength(slice, offset, currentLength, maxCodePointCount,
-                    isCharType);
+                        isCharType);
                 verify(truncatedLength >= 0);
                 offsetVector[i] = offset + truncatedLength;
 
@@ -184,12 +185,15 @@ public class OmniSliceDirectColumnReader extends SliceDirectColumnReader {
             }
         }
 
-        // this can lead to over-retention but unlikely to happen given truncation rarely happens
-        return new VariableWidthOmniBlock(vecAllocator, currentBatchSize, slice, offsetVector, Optional.ofNullable(isNullVector));
+        // this can lead to over-retention but unlikely to happen given truncation
+        // rarely happens
+        return new VariableWidthOmniBlock(vecAllocator, currentBatchSize, slice, offsetVector,
+                Optional.ofNullable(isNullVector));
     }
 
     private RunLengthEncodedBlock readAllNullsBlock() {
         return new RunLengthEncodedBlock(
-            new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new byte[] {Vec.NULL})), nextBatchSize);
+                new VariableWidthOmniBlock(vecAllocator, 1, EMPTY_SLICE, new int[2], Optional.of(new byte[]{Vec.NULL})),
+                nextBatchSize);
     }
 }

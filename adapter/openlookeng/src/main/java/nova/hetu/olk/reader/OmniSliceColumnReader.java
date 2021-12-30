@@ -12,8 +12,9 @@ import io.prestosql.orc.OrcColumn;
 import io.prestosql.orc.OrcCorruptionException;
 import io.prestosql.orc.reader.SliceColumnReader;
 import io.prestosql.spi.type.Type;
-import java.util.Map;
 import nova.hetu.omniruntime.vector.VecAllocator;
+
+import java.util.Map;
 
 /**
  * The type Omni slice column reader.
@@ -31,8 +32,8 @@ public class OmniSliceColumnReader extends SliceColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniSliceColumnReader(Type type, OrcColumn column, AggregatedMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
-        throws OrcCorruptionException {
+    public OmniSliceColumnReader(Type type, OrcColumn column, AggregatedMemoryContext systemMemoryContext,
+            Map<String, String> extensionColumnReadersProperties) throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
 
         int maxCodePointCount = getMaxCodePointCount(type);
@@ -40,7 +41,7 @@ public class OmniSliceColumnReader extends SliceColumnReader {
         vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
         directReader = new OmniSliceDirectColumnReader(vecAllocator, column, maxCodePointCount, charType);
         dictionaryReader = new OmniSliceDictionaryColumnReader(vecAllocator, column,
-            systemMemoryContext.newLocalMemoryContext(SliceColumnReader.class.getSimpleName()), maxCodePointCount,
-            charType);
+                systemMemoryContext.newLocalMemoryContext(SliceColumnReader.class.getSimpleName()), maxCodePointCount,
+                charType);
     }
 }

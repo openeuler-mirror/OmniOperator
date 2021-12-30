@@ -12,7 +12,6 @@ import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_NATIVE_ERROR;
 
 import com.google.common.collect.ImmutableList;
-
 import io.prestosql.memory.context.LocalMemoryContext;
 import io.prestosql.operator.DriverYieldSignal;
 import io.prestosql.operator.WorkProcessor;
@@ -25,9 +24,6 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.connector.ConnectorSession;
 import io.prestosql.sql.gen.ExpressionProfiler;
-import java.util.List;
-
-import nova.hetu.olk.OmniLocalExecutionPlanner;
 import nova.hetu.olk.OmniLocalExecutionPlanner.OmniLocalExecutionPlanContext;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
@@ -36,9 +32,9 @@ import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
-
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -59,13 +55,14 @@ public class OmniPageProcessor extends PageProcessor {
     /**
      * Instantiates a new Omni page processor.
      *
-     * @param filter             the filter
-     * @param proj               the proj
-     * @param initialBatchSize   the initial batch size
+     * @param filter the filter
+     * @param proj the proj
+     * @param initialBatchSize the initial batch size
      * @param expressionProfiler the expression profiler
      */
     public OmniPageProcessor(VecAllocator vecAllocator, Optional<PageFilter> filter, OmniProjection proj,
-        OptionalInt initialBatchSize, ExpressionProfiler expressionProfiler, OmniLocalExecutionPlanContext context) {
+            OptionalInt initialBatchSize, ExpressionProfiler expressionProfiler,
+            OmniLocalExecutionPlanContext context) {
         super(filter, initialBatchSize, expressionProfiler);
         this.vecAllocator = vecAllocator;
         this.context = context;
@@ -113,7 +110,7 @@ public class OmniPageProcessor extends PageProcessor {
 
     @Override
     public WorkProcessor<Page> createWorkProcessor(ConnectorSession session, DriverYieldSignal yieldSignal,
-                                                   LocalMemoryContext memoryContext, Page page) {
+            LocalMemoryContext memoryContext, Page page) {
         if (page.getPositionCount() == 0) {
             page.close();
             return WorkProcessor.of();
@@ -136,9 +133,8 @@ public class OmniPageProcessor extends PageProcessor {
             }
         }
 
-        return WorkProcessor.create(
-            new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext, inputVecBatch,
-                positionsRange(0, inputVecBatch.getRowCount()), omniProjectionOperator.get()));
+        return WorkProcessor.create(new OmniProjectSelectedPositions(vecAllocator, session, yieldSignal, memoryContext,
+                inputVecBatch, positionsRange(0, inputVecBatch.getRowCount()), omniProjectionOperator.get()));
     }
 
     private class OmniProjectSelectedPositions implements WorkProcessor.Process<Page> {
@@ -160,16 +156,16 @@ public class OmniPageProcessor extends PageProcessor {
         /**
          * Instantiates a new Omni project selected positions.
          *
-         * @param vecAllocator      vector allocator
-         * @param session           the session
-         * @param yieldSignal       the yield signal
-         * @param memoryContext     the memory context
-         * @param vecBatch          the page
+         * @param vecAllocator vector allocator
+         * @param session the session
+         * @param yieldSignal the yield signal
+         * @param memoryContext the memory context
+         * @param vecBatch the page
          * @param selectedPositions the selected positions
          */
         public OmniProjectSelectedPositions(VecAllocator vecAllocator, ConnectorSession session,
-            DriverYieldSignal yieldSignal, LocalMemoryContext memoryContext,
-            VecBatch vecBatch, SelectedPositions selectedPositions, OmniOperator omniProjectionOperator) {
+                DriverYieldSignal yieldSignal, LocalMemoryContext memoryContext, VecBatch vecBatch,
+                SelectedPositions selectedPositions, OmniOperator omniProjectionOperator) {
             this.vecAllocator = vecAllocator;
             this.omniProjectionOperator = omniProjectionOperator;
             this.session = session;

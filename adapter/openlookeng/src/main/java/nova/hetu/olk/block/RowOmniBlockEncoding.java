@@ -39,8 +39,7 @@ public class RowOmniBlockEncoding extends RowBlockEncoding {
         int positionCount = sliceInput.readInt();
         int[] fieldBlockOffsets = new int[positionCount + 1];
         sliceInput.readBytes(wrappedIntArray(fieldBlockOffsets));
-        byte[] rowIsNull = decodeNullBits(sliceInput, positionCount)
-            .orElseGet(() -> new byte[positionCount]);
+        byte[] rowIsNull = decodeNullBits(sliceInput, positionCount).orElseGet(() -> new byte[positionCount]);
         return createRowBlockInternal(0, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
     }
 
@@ -55,7 +54,7 @@ public class RowOmniBlockEncoding extends RowBlockEncoding {
      * @return the row omni block
      */
     static RowOmniBlock createRowBlockInternal(int startOffset, int positionCount, @Nullable byte[] rowIsNull,
-        int[] fieldBlockOffsets, Block[] fieldBlocks) {
+            int[] fieldBlockOffsets, Block[] fieldBlocks) {
         validateConstructorArguments(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
         return new RowOmniBlock(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
     }

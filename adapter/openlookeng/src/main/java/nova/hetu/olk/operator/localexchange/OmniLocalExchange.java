@@ -36,43 +36,41 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class OmniLocalExchange extends LocalExchange {
     public OmniLocalExchange(int sinkFactoryCount, int bufferCount, PartitioningHandle partitioning,
-                             List<? extends Type> types, List<Integer> partitionChannels,
-                             Optional<Integer> partitionHashChannel, DataSize maxBufferedBytes) {
+            List<? extends Type> types, List<Integer> partitionChannels, Optional<Integer> partitionHashChannel,
+            DataSize maxBufferedBytes) {
         super(sinkFactoryCount, bufferCount, partitioning, types, partitionChannels, partitionHashChannel,
-            maxBufferedBytes);
+                maxBufferedBytes);
 
         List<Consumer<PageReference>> buffers = this.sources.stream()
-            .map(buffer -> (Consumer<PageReference>) buffer::addPage)
-            .collect(toImmutableList());
+                .map(buffer -> (Consumer<PageReference>) buffer::addPage).collect(toImmutableList());
 
         if (partitioning.equals(FIXED_HASH_DISTRIBUTION)) {
             exchangerSupplier = () -> new OmniPartitioningExchanger(buffers, this.memoryManager, types,
-                partitionChannels, partitionHashChannel);
+                    partitionChannels, partitionHashChannel);
         }
     }
 
     @ThreadSafe
     public static class OmniLocalExchangeFactory extends LocalExchangeFactory {
         public OmniLocalExchangeFactory(PartitioningHandle partitioning, int defaultConcurrency, List<Type> types,
-                                        List<Integer> partitionChannels, Optional<Integer> partitionHashChannel,
-                                        PipelineExecutionStrategy exchangeSourcePipelineExecutionStrategy,
-                                        DataSize maxBufferedBytes) {
+                List<Integer> partitionChannels, Optional<Integer> partitionHashChannel,
+                PipelineExecutionStrategy exchangeSourcePipelineExecutionStrategy, DataSize maxBufferedBytes) {
             super(partitioning, defaultConcurrency, types, partitionChannels, partitionHashChannel,
-                exchangeSourcePipelineExecutionStrategy, maxBufferedBytes);
+                    exchangeSourcePipelineExecutionStrategy, maxBufferedBytes);
         }
 
         public synchronized LocalExchange getLocalExchange(Lifespan lifespan) {
             if (exchangeSourcePipelineExecutionStrategy == UNGROUPED_EXECUTION) {
                 checkArgument(lifespan.isTaskWide(),
-                    "OmniLocalExchangeFactory is declared as UNGROUPED_EXECUTION. Driver-group exchange cannot be created.");
+                        "OmniLocalExchangeFactory is declared as UNGROUPED_EXECUTION. Driver-group exchange cannot be created.");
             } else {
                 checkArgument(!lifespan.isTaskWide(),
-                    "OmniLocalExchangeFactory is declared as GROUPED_EXECUTION. Task-wide exchange cannot be created.");
+                        "OmniLocalExchangeFactory is declared as GROUPED_EXECUTION. Task-wide exchange cannot be created.");
             }
             return localExchangeMap.computeIfAbsent(lifespan, ignored -> {
                 checkState(noMoreSinkFactories);
                 LocalExchange localExchange = new OmniLocalExchange(numSinkFactories, bufferCount, partitioning, types,
-                    partitionChannels, partitionHashChannel, maxBufferedBytes);
+                        partitionChannels, partitionHashChannel, maxBufferedBytes);
                 for (LocalExchangeSinkFactoryId closedSinkFactoryId : closedSinkFactories) {
                     localExchange.getSinkFactory(closedSinkFactoryId).close();
                 }

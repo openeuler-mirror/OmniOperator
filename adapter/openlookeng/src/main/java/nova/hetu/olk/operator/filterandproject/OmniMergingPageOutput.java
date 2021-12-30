@@ -4,25 +4,6 @@
 
 package nova.hetu.olk.operator.filterandproject;
 
-import com.google.common.collect.ImmutableList;
-import io.prestosql.spi.Page;
-import io.prestosql.spi.type.Type;
-import nova.hetu.olk.tool.OperatorUtils;
-import nova.hetu.olk.tool.VecBatchToPageIterator;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.VecAllocator;
-import nova.hetu.omniruntime.vector.VecBatch;
-import org.openjdk.jol.info.ClassLayout;
-
-import javax.annotation.Nullable;
-
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.prestosql.spi.block.PageBuilderStatus.DEFAULT_MAX_PAGE_SIZE_IN_BYTES;
@@ -31,24 +12,45 @@ import static nova.hetu.olk.tool.OperatorUtils.createBlankVectors;
 import static nova.hetu.olk.tool.OperatorUtils.merge;
 import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 
+import com.google.common.collect.ImmutableList;
+import io.prestosql.spi.Page;
+import io.prestosql.spi.type.Type;
+import nova.hetu.olk.tool.OperatorUtils;
+import nova.hetu.olk.tool.VecBatchToPageIterator;
+import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.vector.VecAllocator;
+import nova.hetu.omniruntime.vector.VecBatch;
+import org.openjdk.jol.info.ClassLayout;
+
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Queue;
+import javax.annotation.Nullable;
+
 /**
  * This class is intended to be used right after the PageProcessor to ensure
- * that the size of the pages returned by FilterAndProject and ScanFilterAndProject
- * is big enough so it does not introduce considerable synchronization overhead.
+ * that the size of the pages returned by FilterAndProject and
+ * ScanFilterAndProject is big enough so it does not introduce considerable
+ * synchronization overhead.
  * <p>
- * As long as the input page contains more than {@link OmniMergingPageOutput#minRowCount} rows
- * or is bigger than {@link OmniMergingPageOutput#minPageSizeInBytes} it is returned as is without
+ * As long as the input page contains more than
+ * {@link OmniMergingPageOutput#minRowCount} rows or is bigger than
+ * {@link OmniMergingPageOutput#minPageSizeInBytes} it is returned as is without
  * additional memory copy.
  * <p>
- * The page data that has been buffered so far before receiving a "big" page is being flushed
- * before transferring a "big" page.
+ * The page data that has been buffered so far before receiving a "big" page is
+ * being flushed before transferring a "big" page.
  * <p>
- * Although it is still possible that the {@link OmniMergingPageOutput} may return a tiny page,
- * this situation is considered to be rare due to the assumption that filter selectivity may not
- * vary a lot based on the particular input page.
+ * Although it is still possible that the {@link OmniMergingPageOutput} may
+ * return a tiny page, this situation is considered to be rare due to the
+ * assumption that filter selectivity may not vary a lot based on the particular
+ * input page.
  * <p>
- * Considering the CPU time required to process(filter, project) a full (~1MB) page returned by a
- * connector, the CPU cost of memory copying (< 50kb, < 1024 rows) is supposed to be negligible.
+ * Considering the CPU time required to process(filter, project) a full (~1MB)
+ * page returned by a connector, the CPU cost of memory copying (< 50kb, < 1024
+ * rows) is supposed to be negligible.
  *
  * @since 20210930
  */
@@ -76,17 +78,17 @@ public class OmniMergingPageOutput {
         this(types, minPageSizeInBytes, minRowCount, DEFAULT_MAX_PAGE_SIZE_IN_BYTES);
     }
 
-    public OmniMergingPageOutput(
-        Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount, int maxPageSizeInBytes) {
+    public OmniMergingPageOutput(Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount,
+            int maxPageSizeInBytes) {
         List<Type> blockTypes = ImmutableList.copyOf(requireNonNull(types, "types is null"));
         this.vecTypes = blockTypes.stream().map(OperatorUtils::toVecType).toArray(VecType[]::new);
         checkArgument(minPageSizeInBytes >= 0, "minPageSizeInBytes must be greater or equal than zero");
         checkArgument(minRowCount >= 0, "minRowCount must be greater or equal than zero");
         checkArgument(maxPageSizeInBytes > 0, "maxPageSizeInBytes must be greater than zero");
         checkArgument(maxPageSizeInBytes >= minPageSizeInBytes,
-            "maxPageSizeInBytes must be greater or equal than minPageSizeInBytes");
-        checkArgument(minPageSizeInBytes <= MAX_MIN_PAGE_SIZE,
-            "minPageSizeInBytes must be less or equal than %s", MAX_MIN_PAGE_SIZE);
+                "maxPageSizeInBytes must be greater or equal than minPageSizeInBytes");
+        checkArgument(minPageSizeInBytes <= MAX_MIN_PAGE_SIZE, "minPageSizeInBytes must be less or equal than %s",
+                MAX_MIN_PAGE_SIZE);
         this.maxPageSizeInBytes = maxPageSizeInBytes;
         this.minPageSizeInBytes = minPageSizeInBytes;
         this.minRowCount = minRowCount;

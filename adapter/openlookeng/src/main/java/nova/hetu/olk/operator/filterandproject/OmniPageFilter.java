@@ -47,14 +47,14 @@ public class OmniPageFilter implements PageFilter {
     /**
      * Instantiates a new Omni page filter.
      *
-     * @param rowExpression   the row expression
+     * @param rowExpression the row expression
      * @param isDeterministic the is deterministic
-     * @param inputChannels   the input channels
-     * @param inputTypes      the input types
-     * @param projects        the projects
+     * @param inputChannels the input channels
+     * @param inputTypes the input types
+     * @param projects the projects
      */
     public OmniPageFilter(RowExpression rowExpression, boolean isDeterministic, InputChannels inputChannels,
-        List<Type> inputTypes, List<? extends RowExpression> projects, OmniRowExpressionUtil.Format parseFormat) {
+            List<Type> inputTypes, List<? extends RowExpression> projects, OmniRowExpressionUtil.Format parseFormat) {
         RowExpression filterExpression = requireNonNull(rowExpression, "filterExpression is null");
         this.inputChannels = requireNonNull(inputChannels, "inputChannels is null");
         this.isDeterministic = isDeterministic;
@@ -64,10 +64,9 @@ public class OmniPageFilter implements PageFilter {
         VecType[] vecTypes = toVecTypes(inputTypes);
         try {
             this.operatorFactory = new OmniFilterAndProjectOperatorFactory(
-                expressionStringify(filterExpression, parseFormat),
-                vecTypes,
-                projects.stream().map(p -> expressionStringify(p, parseFormat))
-                .collect(Collectors.toList()), parseFormat.ordinal());
+                    expressionStringify(filterExpression, parseFormat), vecTypes,
+                    projects.stream().map(p -> expressionStringify(p, parseFormat)).collect(Collectors.toList()),
+                    parseFormat.ordinal());
             this.isSupported = this.operatorFactory.isSupported();
         } catch (OmniRuntimeException e) {
             isSupported = false;
@@ -98,7 +97,7 @@ public class OmniPageFilter implements PageFilter {
      */
     public OmniPageFilterOperator getOperator(VecAllocator vecAllocator) {
         return new OmniPageFilterOperator(operatorFactory.createOperator(vecAllocator), inputChannels, inputTypes,
-            projects);
+                projects);
     }
 
     /**
@@ -134,13 +133,13 @@ public class OmniPageFilter implements PageFilter {
         /**
          * Instantiates a new Omni page filter operator.
          *
-         * @param operator      the operator
+         * @param operator the operator
          * @param inputChannels the input channels of filter
-         * @param inputTypes    the input types
-         * @param projects      the projects
+         * @param inputTypes the input types
+         * @param projects the projects
          */
         public OmniPageFilterOperator(OmniOperator operator, InputChannels inputChannels, List<Type> inputTypes,
-            List<? extends RowExpression> projects) {
+                List<? extends RowExpression> projects) {
             this.operator = operator;
             this.inputChannels = inputChannels;
             this.inputTypes = inputTypes;

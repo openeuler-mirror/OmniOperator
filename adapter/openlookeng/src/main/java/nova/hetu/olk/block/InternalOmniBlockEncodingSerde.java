@@ -40,7 +40,7 @@ public class InternalOmniBlockEncodingSerde extends InternalBlockEncodingSerde {
      * Instantiates a new Internal omni block encoding serde.
      *
      * @param metadata the metadata
-     * @param taskId
+     * @param taskId the task id
      */
     public InternalOmniBlockEncodingSerde(Metadata metadata, TaskId taskId) {
         super(metadata);

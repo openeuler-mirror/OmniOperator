@@ -4,6 +4,11 @@
 
 package nova.hetu.olk.operator;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
+
 import com.google.common.collect.ImmutableList;
 import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.Operator;
@@ -24,11 +29,6 @@ import nova.hetu.omniruntime.vector.VecBatch;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
 /**
  * The type distinct limit omni operator.

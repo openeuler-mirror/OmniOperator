@@ -83,8 +83,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
             } else {
                 vecBatch.releaseAllVectors();
                 vecBatch.close();
-                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED,
-                        "Unsupported vector type " + vectors[i]);
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Unsupported vector type " + vectors[i]);
             }
         }
         vecBatch.close();
@@ -100,33 +99,33 @@ public class VecBatchToPageIterator implements Iterator<Page> {
             VecType vecType = vecTypes[vecIdx];
             Block block;
             switch (vecType.getId()) {
-                case OMNI_VEC_TYPE_INT:
-                case OMNI_VEC_TYPE_DATE32:
+                case OMNI_VEC_TYPE_INT :
+                case OMNI_VEC_TYPE_DATE32 :
                     block = new IntArrayOmniBlock(positionCount, new IntVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_LONG:
-                case OMNI_VEC_TYPE_DECIMAL64:
+                case OMNI_VEC_TYPE_LONG :
+                case OMNI_VEC_TYPE_DECIMAL64 :
                     block = new LongArrayOmniBlock(positionCount, new LongVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_DOUBLE:
+                case OMNI_VEC_TYPE_DOUBLE :
                     block = new DoubleArrayOmniBlock(positionCount, new DoubleVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_VARCHAR:
-                case OMNI_VEC_TYPE_CHAR:
+                case OMNI_VEC_TYPE_VARCHAR :
+                case OMNI_VEC_TYPE_CHAR :
                     block = new VariableWidthOmniBlock(positionCount, new VarcharVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_DECIMAL128:
+                case OMNI_VEC_TYPE_DECIMAL128 :
                     block = new Int128ArrayOmniBlock(positionCount,
-                        new Decimal128Vec(containerVec.getVector(vecIdx), vecType));
+                            new Decimal128Vec(containerVec.getVector(vecIdx), vecType));
                     rowBlocks[vecIdx] = block;
                     break;
-                default:
+                default :
                     throw new PrestoException(GENERIC_INTERNAL_ERROR,
-                        "Unsupported vector type " + vecTypes[vecIdx].getId());
+                            "Unsupported vector type " + vecTypes[vecIdx].getId());
             }
         }
         int[] fieldBlockOffsets = new int[positionCount + 1];

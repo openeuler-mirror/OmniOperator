@@ -23,8 +23,7 @@ import nova.hetu.omniruntime.vector.VecAllocator;
 public class VariableWidthOmniBlockEncoding extends VariableWidthBlockEncoding {
     private final VecAllocator vecAllocator;
 
-    public VariableWidthOmniBlockEncoding(VecAllocator vecAllocator)
-    {
+    public VariableWidthOmniBlockEncoding(VecAllocator vecAllocator) {
         this.vecAllocator = vecAllocator;
     }
 

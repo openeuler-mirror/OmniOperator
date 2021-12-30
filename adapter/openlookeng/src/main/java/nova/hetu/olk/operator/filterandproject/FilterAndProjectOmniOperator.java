@@ -4,6 +4,10 @@
 
 package nova.hetu.olk.operator.filterandproject;
 
+import static com.google.common.base.Preconditions.checkState;
+import static io.prestosql.memory.context.AggregatedMemoryContext.newSimpleAggregatedMemoryContext;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 
 import io.airlift.units.DataSize;
@@ -19,10 +23,6 @@ import io.prestosql.sql.planner.plan.PlanNodeId;
 
 import java.util.List;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkState;
-import static io.prestosql.memory.context.AggregatedMemoryContext.newSimpleAggregatedMemoryContext;
-import static java.util.Objects.requireNonNull;
 
 public class FilterAndProjectOmniOperator implements Operator {
     private final OperatorContext operatorContext;

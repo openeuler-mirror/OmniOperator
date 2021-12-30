@@ -6,7 +6,6 @@ package nova.hetu.olk.operator.filterandproject;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.prestosql.operator.project.PageFieldsToInputParametersRewriter.rewritePageFieldsToInputParameters;
-import static java.util.Objects.requireNonNull;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -17,16 +16,12 @@ import io.prestosql.metadata.Metadata;
 import io.prestosql.operator.project.PageFieldsToInputParametersRewriter;
 import io.prestosql.operator.project.PageFilter;
 import io.prestosql.operator.project.PageProcessor;
-import io.prestosql.operator.project.PageProjection;
 import io.prestosql.spi.type.Type;
-import io.prestosql.sql.gen.CacheStatsMBean;
 import io.prestosql.sql.gen.ExpressionCompiler;
 import io.prestosql.sql.gen.ExpressionProfiler;
 import io.prestosql.sql.gen.PageFunctionCompiler;
-import io.prestosql.sql.planner.CompilerConfig;
 import io.prestosql.sql.relational.DeterminismEvaluator;
 import io.prestosql.sql.relational.RowExpression;
-import nova.hetu.olk.OmniLocalExecutionPlanner;
 import nova.hetu.olk.OmniLocalExecutionPlanner.OmniLocalExecutionPlanContext;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
@@ -36,7 +31,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
-
 import javax.inject.Inject;
 
 /**
@@ -62,24 +56,18 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
 
         // get this from the config
         int expressionCacheSize = 1000;
-        projectionCache = CacheBuilder.newBuilder()
-                .recordStats()
-                .maximumSize(expressionCacheSize)
+        projectionCache = CacheBuilder.newBuilder().recordStats().maximumSize(expressionCacheSize)
                 .removalListener(notification -> {
-                })
-                .build(CacheLoader.from(cacheKey -> new OmniProjection(cacheKey.projections, cacheKey.inputTypes,
+                }).build(CacheLoader.from(cacheKey -> new OmniProjection(cacheKey.projections, cacheKey.inputTypes,
                         OmniRowExpressionUtil.Format.JSON)));
 
-        filterCache = CacheBuilder.newBuilder()
-                .recordStats()
-                .maximumSize(expressionCacheSize)
+        filterCache = CacheBuilder.newBuilder().recordStats().maximumSize(expressionCacheSize)
                 .removalListener(notification -> {
-                })
-                .build(CacheLoader.from(cacheKey -> {
+                }).build(CacheLoader.from(cacheKey -> {
                     RowExpression re = cacheKey.filter.get();
                     PageFieldsToInputParametersRewriter.Result result = rewritePageFieldsToInputParameters(re);
                     OmniPageFilter omniPageFilter = new OmniPageFilter(re, determinismEvaluator.isDeterministic(re),
-                        result.getInputChannels(), cacheKey.inputTypes, cacheKey.projections,
+                            result.getInputChannels(), cacheKey.inputTypes, cacheKey.projections,
                             OmniRowExpressionUtil.Format.JSON);
                     return omniPageFilter;
                 }));
@@ -89,7 +77,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
      * Instantiates a new PageProcessor.
      *
      * @param filter the row expression filter
-     * @param classNameSuffix (optional) class name suffix used for creating page processor
+     * @param classNameSuffix (optional) class name suffix used for creating page
+     *            processor
      * @param projections the row expression projections
      * @param inputTypes list of input types
      * @param initialBatchSize initial batch size
@@ -107,7 +96,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
      * Instantiates a new PageProcessor.
      *
      * @param filter the row expression filter
-     * @param classNameSuffix (optional) class name suffix used for creating page processor
+     * @param classNameSuffix (optional) class name suffix used for creating page
+     *            processor
      * @param projections the row expression projections
      * @param inputTypes list of input types
      * @param initialBatchSize initial batch size
@@ -116,13 +106,13 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
      * @return Supplier<PageProcessor> supplier page processor
      */
     public Supplier<PageProcessor> compilePageProcessor(Optional<RowExpression> filter,
-        List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
-        List<Type> inputTypes, TaskId taskId, OmniLocalExecutionPlanContext context) {
+            List<? extends RowExpression> projections, Optional<String> classNameSuffix, OptionalInt initialBatchSize,
+            List<Type> inputTypes, TaskId taskId, OmniLocalExecutionPlanContext context) {
         VecAllocator vecAllocator = VecAllocatorFactory.get(taskId.getFullId());
         Optional<PageFilter> pageFilter;
         if (filter.isPresent()) {
-            OmniPageFilter omniPageFilter = filterCache.getUnchecked(
-                new FilterCacheKey(filter, projections, inputTypes));
+            OmniPageFilter omniPageFilter = filterCache
+                    .getUnchecked(new FilterCacheKey(filter, projections, inputTypes));
             if (!omniPageFilter.isSupported()) {
                 return null;
             }
@@ -136,8 +126,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
             return null;
         }
 
-        return () -> new OmniPageProcessor(
-            vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler(), context);
+        return () -> new OmniPageProcessor(vecAllocator, pageFilter, proj, initialBatchSize, new ExpressionProfiler(),
+                context);
     }
 
     private static final class FilterCacheKey {
@@ -145,8 +135,8 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
         private final List<RowExpression> projections;
         private final List<Type> inputTypes;
 
-        private FilterCacheKey(
-            Optional<RowExpression> filter, List<? extends RowExpression> projections, List<Type> inputTypes) {
+        private FilterCacheKey(Optional<RowExpression> filter, List<? extends RowExpression> projections,
+                List<Type> inputTypes) {
             this.filter = filter;
             this.inputTypes = inputTypes;
             this.projections = ImmutableList.copyOf(projections);
@@ -166,18 +156,14 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
                 return false;
             }
             OmniExpressionCompiler.FilterCacheKey other = (OmniExpressionCompiler.FilterCacheKey) obj;
-            return Objects.equals(this.filter, other.filter) &&
-                    Objects.equals(this.projections, other.projections) &&
-                    Objects.equals(this.inputTypes, other.inputTypes);
+            return Objects.equals(this.filter, other.filter) && Objects.equals(this.projections, other.projections)
+                    && Objects.equals(this.inputTypes, other.inputTypes);
         }
 
         @Override
         public String toString() {
-            return toStringHelper(this)
-                    .add("filter", filter)
-                    .add("projections", projections)
-                    .add("inputTypes", inputTypes)
-                    .toString();
+            return toStringHelper(this).add("filter", filter).add("projections", projections)
+                    .add("inputTypes", inputTypes).toString();
         }
     }
 
@@ -204,16 +190,13 @@ public class OmniExpressionCompiler extends ExpressionCompiler {
                 return false;
             }
             OmniExpressionCompiler.ProjectionsCacheKey other = (OmniExpressionCompiler.ProjectionsCacheKey) obj;
-            return Objects.equals(this.projections, other.projections) &&
-                    Objects.equals(this.inputTypes, other.inputTypes);
+            return Objects.equals(this.projections, other.projections)
+                    && Objects.equals(this.inputTypes, other.inputTypes);
         }
 
         @Override
         public String toString() {
-            return toStringHelper(this)
-                    .add("projections", projections)
-                    .add("inputTypes", inputTypes)
-                    .toString();
+            return toStringHelper(this).add("projections", projections).add("inputTypes", inputTypes).toString();
         }
     }
 }

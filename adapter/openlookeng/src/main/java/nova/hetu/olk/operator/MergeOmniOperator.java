@@ -85,17 +85,17 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
          * @param sortOrder the sort order
          */
         public MergeOmniOperatorFactory(int operatorId, int omniMergeId, PlanNodeId sourceId,
-            ExchangeClientSupplier exchangeClientSupplier, PagesSerdeFactory serdeFactory,
-            OrderingCompiler orderingCompiler, List<Type> types, List<Integer> outputChannels,
-            List<Integer> sortChannels, List<SortOrder> sortOrder) {
+                ExchangeClientSupplier exchangeClientSupplier, PagesSerdeFactory serdeFactory,
+                OrderingCompiler orderingCompiler, List<Type> types, List<Integer> outputChannels,
+                List<Integer> sortChannels, List<SortOrder> sortOrder) {
             this.operatorId = operatorId;
             this.sourceId = requireNonNull(sourceId, "sourceId is null");
             this.exchangeClientSupplier = requireNonNull(exchangeClientSupplier, "exchangeClientSupplier is null");
             this.serdeFactory = requireNonNull(serdeFactory, "serdeFactory is null");
-            this.sourceTypes= ImmutableList.copyOf(requireNonNull(types, "sourceTypes is null"));          
+            this.sourceTypes = ImmutableList.copyOf(requireNonNull(types, "sourceTypes is null"));
 
             this.orderByOmniOperatorFactory = createOrderByOmniOperatorFactory(omniMergeId, sourceId, types,
-                outputChannels, sortChannels, sortOrder);
+                    outputChannels, sortChannels, sortOrder);
         }
 
         @Override
@@ -106,13 +106,14 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
         @Override
         public SourceOperator createOperator(DriverContext driverContext) {
             checkState(!closed, "Factory is already closed");
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
 
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, sourceId,
-                MergeOmniOperator.class.getSimpleName());
+                    MergeOmniOperator.class.getSimpleName());
 
             return new MergeOmniOperator(operatorContext, sourceId, exchangeClientSupplier,
-                serdeFactory.createPagesSerde(), orderByOmniOperatorFactory.createOperator(vecAllocator));
+                    serdeFactory.createPagesSerde(), orderByOmniOperatorFactory.createOperator(vecAllocator));
         }
 
         @Override
@@ -161,7 +162,7 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
      * @param orderByOmniOperator the order by omni operator
      */
     public MergeOmniOperator(OperatorContext operatorContext, PlanNodeId sourceId,
-        ExchangeClientSupplier exchangeClientSupplier, PagesSerde pagesSerde, Operator orderByOmniOperator) {
+            ExchangeClientSupplier exchangeClientSupplier, PagesSerde pagesSerde, Operator orderByOmniOperator) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.sourceId = requireNonNull(sourceId, "sourceId is null");
         this.exchangeClientSupplier = requireNonNull(exchangeClientSupplier, "exchangeClientSupplier is null");
@@ -182,8 +183,8 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
         checkState(!blockedOnSplits.isDone(), "noMoreSplits has been called already");
 
         URI location = ((RemoteSplit) split.getConnectorSplit()).getLocation();
-        ExchangeClient exchangeClient = closer.register(
-            exchangeClientSupplier.get(operatorContext.localSystemMemoryContext(), pagesSerde));
+        ExchangeClient exchangeClient = closer
+                .register(exchangeClientSupplier.get(operatorContext.localSystemMemoryContext(), pagesSerde));
         exchangeClient.addLocation(location);
         exchangeClient.setNoMoreLocation();
 
@@ -244,9 +245,8 @@ public class MergeOmniOperator implements SourceOperator, Closeable {
         }
 
         if (!isFinished && isSourceFinished()) {
-            ImmutableList<List<Page>> pageCollections = pageProducers.stream()
-                .map(ExchangeClient::getPages)
-                .collect(toImmutableList());
+            ImmutableList<List<Page>> pageCollections = pageProducers.stream().map(ExchangeClient::getPages)
+                    .collect(toImmutableList());
             for (List<Page> pageList : pageCollections) {
                 for (Page page : pageList) {
                     this.orderByOmniOperator.addInput(page);

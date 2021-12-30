@@ -332,8 +332,8 @@ public class LookupJoinOmniOperator implements Operator {
             VecType[] types = OperatorUtils.toVecTypes(probeTypes);
             VecType[] buildOutputVecTypes = OperatorUtils.toVecTypes(buildOutputTypes);
             this.omniLookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(types,
-                    Ints.toArray(probeOutputChannels), Ints.toArray(probeJoinChannel), Ints.toArray(buildOutputChannels),
-                    buildOutputVecTypes, getOmniJoinType(joinType),
+                    Ints.toArray(probeOutputChannels), Ints.toArray(probeJoinChannel),
+                    Ints.toArray(buildOutputChannels), buildOutputVecTypes, getOmniJoinType(joinType),
                     hashBuilderOmniOperatorFactory.getOmniHashBuilderOperatorFactory());
         }
 

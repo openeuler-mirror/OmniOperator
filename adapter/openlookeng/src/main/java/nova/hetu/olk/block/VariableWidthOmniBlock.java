@@ -16,18 +16,16 @@ import io.airlift.slice.Slices;
 import io.prestosql.spi.block.AbstractVariableWidthBlock;
 import io.prestosql.spi.block.Block;
 import io.prestosql.spi.util.BloomFilter;
-import java.nio.ByteBuffer;
 import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.VarcharVec;
-
 import nova.hetu.omniruntime.vector.Vec;
+import nova.hetu.omniruntime.vector.VecAllocator;
 import org.openjdk.jol.info.ClassLayout;
 
+import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import nova.hetu.omniruntime.vector.VecAllocator;
-
 import javax.annotation.Nullable;
 
 /**
@@ -62,7 +60,8 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param offsets the offsets
      * @param valueIsNull the value is null
      */
-    public VariableWidthOmniBlock(VecAllocator vecAllocator, int positionCount, Slice slice, int[] offsets, Optional<byte[]> valueIsNull) {
+    public VariableWidthOmniBlock(VecAllocator vecAllocator, int positionCount, Slice slice, int[] offsets,
+            Optional<byte[]> valueIsNull) {
         this(vecAllocator, 0, positionCount, slice, offsets, valueIsNull.orElse(null));
     }
 
@@ -76,7 +75,8 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param offsets the offsets
      * @param valueIsNull the value is null
      */
-    VariableWidthOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, Slice slice, int[] offsets, byte[] valueIsNull) {
+    VariableWidthOmniBlock(VecAllocator vecAllocator, int arrayOffset, int positionCount, Slice slice, int[] offsets,
+            byte[] valueIsNull) {
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -114,8 +114,8 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
 
         this.arrayOffset = 0;
 
-        sizeInBytes = offsets[this.arrayOffset + positionCount] - offsets[this.arrayOffset] + (
-            (Integer.BYTES + Byte.BYTES) * (long) positionCount);
+        sizeInBytes = offsets[this.arrayOffset + positionCount] - offsets[this.arrayOffset]
+                + ((Integer.BYTES + Byte.BYTES) * (long) positionCount);
         retainedSizeInBytes = INSTANCE_SIZE + slice.getRetainedSize() + sizeOf(valueIsNull) + sizeOf(offsets);
     }
 
@@ -127,7 +127,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      */
     public VariableWidthOmniBlock(int positionCount, VarcharVec values) {
         this(positionCount, values, values.getRawValueOffset(),
-            values.hasNullValue() ? Optional.of(values.getRawValueNulls()) : Optional.empty());
+                values.hasNullValue() ? Optional.of(values.getRawValueNulls()) : Optional.empty());
     }
 
     /**
@@ -138,8 +138,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param offsets the offsets
      * @param valuesIsNull the values is null
      */
-    public VariableWidthOmniBlock(int positionCount, VarcharVec values, int[] offsets,
-        Optional<byte[]> valuesIsNull) {
+    public VariableWidthOmniBlock(int positionCount, VarcharVec values, int[] offsets, Optional<byte[]> valuesIsNull) {
         this(values.getOffset(), positionCount, values, offsets, valuesIsNull.orElse(null));
     }
 
@@ -153,7 +152,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
      * @param valueIsNull the value is null
      */
     public VariableWidthOmniBlock(int arrayOffset, int positionCount, VarcharVec values, int[] offsets,
-        byte[] valueIsNull) {
+            byte[] valueIsNull) {
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
         }
@@ -186,8 +185,8 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
         this.valueIsNull = valueIsNull;
         this.arrayOffset = arrayOffset;
 
-        sizeInBytes = offsets[arrayOffset + positionCount] - offsets[arrayOffset] + ((Integer.BYTES + Byte.BYTES)
-            * (long) positionCount);
+        sizeInBytes = offsets[arrayOffset + positionCount] - offsets[arrayOffset]
+                + ((Integer.BYTES + Byte.BYTES) * (long) positionCount);
         retainedSizeInBytes = INSTANCE_SIZE + values.getCapacityInBytes() + sizeOf(valueIsNull) + sizeOf(offsets);
     }
 
@@ -224,8 +223,8 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
 
     @Override
     public long getRegionSizeInBytes(int position, int length) {
-        return offsets[arrayOffset + position + length] - offsets[arrayOffset + position] + (
-            (Integer.BYTES + Byte.BYTES) * (long) length);
+        return offsets[arrayOffset + position + length] - offsets[arrayOffset + position]
+                + ((Integer.BYTES + Byte.BYTES) * (long) length);
     }
 
     @Override
@@ -316,7 +315,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
     public boolean[] filter(BloomFilter filter, boolean[] validPositions) {
         for (int i = 0; i < positionCount; i++) {
             byte[] value = values.getData(offsets[i + arrayOffset],
-                offsets[i + arrayOffset + 1] - offsets[i + arrayOffset]);
+                    offsets[i + arrayOffset + 1] - offsets[i + arrayOffset]);
             validPositions[i] = validPositions[i] && filter.test(value);
         }
         return validPositions;
@@ -332,7 +331,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
                 }
             } else {
                 byte[] value = values.getData(offsets[i + arrayOffset],
-                    offsets[i + arrayOffset + 1] - offsets[i + arrayOffset]);
+                        offsets[i + arrayOffset + 1] - offsets[i + arrayOffset]);
                 if (test.apply(value)) {
                     matchedPositions[matchCount++] = positions[i];
                 }
@@ -348,7 +347,7 @@ public class VariableWidthOmniBlock extends AbstractVariableWidthBlock<byte[]> {
             return null;
         }
         return values.getData(offsets[position + arrayOffset],
-            offsets[position + arrayOffset + 1] - offsets[position + arrayOffset]);
+                offsets[position + arrayOffset + 1] - offsets[position + arrayOffset]);
     }
 
     @Override

@@ -12,7 +12,6 @@ import io.prestosql.sql.relational.RowExpression;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * The type Omni projection.
@@ -32,11 +31,11 @@ public class OmniProjection {
      * @param inputTypes the input types
      */
     public OmniProjection(List<? extends RowExpression> expressions, List<Type> inputTypes,
-    OmniRowExpressionUtil.Format parseFormat) {
+            OmniRowExpressionUtil.Format parseFormat) {
         this.projectLength = expressions.size();
         this.omniProjectionFactory = new OmniProjectOperatorFactory(
-            expressions.stream().map(p -> expressionStringify(p, parseFormat))
-            .toArray(String[]::new), toVecTypes(inputTypes), parseFormat.ordinal());
+                expressions.stream().map(p -> expressionStringify(p, parseFormat)).toArray(String[]::new),
+                toVecTypes(inputTypes), parseFormat.ordinal());
         this.isSupported = omniProjectionFactory.isSupported();
     }
 

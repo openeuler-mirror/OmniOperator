@@ -58,46 +58,43 @@ public class LocalMergeSourceOmniOperator implements Operator {
         /**
          * Instantiates a new Local merge source omni operator factory.
          *
-         * @param operatorId           the operator id
-         * @param orderByOmniId        the order by omni id
-         * @param planNodeId           the plan node id
+         * @param operatorId the operator id
+         * @param orderByOmniId the order by omni id
+         * @param planNodeId the plan node id
          * @param localExchangeFactory the local exchange factory
-         * @param types                the types
-         * @param orderingCompiler     the ordering compiler
-         * @param sortChannels         the sort channels
-         * @param orderings            the orderings
-         * @param outputChannels       the output channels
+         * @param types the types
+         * @param orderingCompiler the ordering compiler
+         * @param sortChannels the sort channels
+         * @param orderings the orderings
+         * @param outputChannels the output channels
          */
         public LocalMergeSourceOmniOperatorFactory(int operatorId, int orderByOmniId, PlanNodeId planNodeId,
-                                                   LocalExchange.LocalExchangeFactory localExchangeFactory,
-                                                   List<Type> types, OrderingCompiler orderingCompiler,
-                                                   List<Integer> sortChannels, List<SortOrder> orderings,
-                                                   List<Integer> outputChannels) {
+                LocalExchange.LocalExchangeFactory localExchangeFactory, List<Type> types,
+                OrderingCompiler orderingCompiler, List<Integer> sortChannels, List<SortOrder> orderings,
+                List<Integer> outputChannels) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.localExchangeFactory = requireNonNull(localExchangeFactory, "exchange is null");
             this.sourceTypes = ImmutableList.copyOf(requireNonNull(types, "sourceTypes is null"));
 
             this.orderByOmniOperatorFactory = createOrderByOmniOperatorFactory(orderByOmniId, planNodeId, types,
-                outputChannels, sortChannels, orderings);
+                    outputChannels, sortChannels, orderings);
         }
 
         @Override
         public Operator createOperator(DriverContext driverContext) {
             checkState(!closed, "Factory is already closed");
-            VecAllocator vecAllocator = VecAllocatorHelper.getVecAllocatorFromTaskContext(
-                driverContext.getPipelineContext().getTaskContext());
+            VecAllocator vecAllocator = VecAllocatorHelper
+                    .getVecAllocatorFromTaskContext(driverContext.getPipelineContext().getTaskContext());
 
             LocalExchange localExchange = localExchangeFactory.getLocalExchange(driverContext.getLifespan());
 
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
-                LocalMergeSourceOmniOperator.class.getSimpleName());
-            List<LocalExchangeSource> sources = IntStream.range(0, localExchange.getBufferCount())
-                .boxed()
-                .map(index -> localExchange.getNextSource())
-                .collect(toImmutableList());
+                    LocalMergeSourceOmniOperator.class.getSimpleName());
+            List<LocalExchangeSource> sources = IntStream.range(0, localExchange.getBufferCount()).boxed()
+                    .map(index -> localExchange.getNextSource()).collect(toImmutableList());
             return new LocalMergeSourceOmniOperator(operatorContext, sources,
-                orderByOmniOperatorFactory.createOperator(vecAllocator));
+                    orderByOmniOperatorFactory.createOperator(vecAllocator));
         }
 
         @Override
@@ -132,12 +129,12 @@ public class LocalMergeSourceOmniOperator implements Operator {
     /**
      * Instantiates a new Local merge source omni operator.
      *
-     * @param operatorContext     the operator context
-     * @param sources             the sources
+     * @param operatorContext the operator context
+     * @param sources the sources
      * @param orderByOmniOperator the order by omni operator
      */
     public LocalMergeSourceOmniOperator(OperatorContext operatorContext, List<LocalExchangeSource> sources,
-                                        Operator orderByOmniOperator) {
+            Operator orderByOmniOperator) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.sources = requireNonNull(sources, "sources is null");
 
@@ -184,9 +181,8 @@ public class LocalMergeSourceOmniOperator implements Operator {
     @Override
     public Page getOutput() {
         if (!isFinished && isSourceFinished()) {
-            ImmutableList<List<Page>> pageProducers = sources.stream()
-                .map(LocalExchangeSource::getPages)
-                .collect(toImmutableList());
+            ImmutableList<List<Page>> pageProducers = sources.stream().map(LocalExchangeSource::getPages)
+                    .collect(toImmutableList());
             for (List<Page> pageList : pageProducers) {
                 for (Page page : pageList) {
                     this.orderByOmniOperator.addInput(page);

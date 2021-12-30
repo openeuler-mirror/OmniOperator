@@ -18,13 +18,12 @@ import io.prestosql.spi.block.Block;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.type.IntegerType;
 import io.prestosql.spi.type.Type;
-import java.util.Map;
 import nova.hetu.olk.block.IntArrayOmniBlock;
+import nova.hetu.omniruntime.vector.VecAllocator;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
-
-import nova.hetu.omniruntime.vector.VecAllocator;
 
 /**
  * The type Omni int column reader.
@@ -42,15 +41,14 @@ public class OmniIntColumnReader extends IntegerColumnReader {
      * @param systemMemoryContext the system memory context
      * @throws OrcCorruptionException the orc corruption exception
      */
-    public OmniIntColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext, Map<String, String> extensionColumnReadersProperties)
-        throws OrcCorruptionException {
+    public OmniIntColumnReader(Type type, OrcColumn column, LocalMemoryContext systemMemoryContext,
+            Map<String, String> extensionColumnReadersProperties) throws OrcCorruptionException {
         super(type, column, systemMemoryContext);
         vecAllocator = getVecAllocatorFromExtensionProperties(extensionColumnReadersProperties);
     }
 
     @Override
-    public Block readBlock()
-            throws IOException {
+    public Block readBlock() throws IOException {
         if (!rowGroupOpen) {
             openRowGroup();
         }
