@@ -215,6 +215,9 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         case DECIMAL128D:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
             break;
+        case BOOLD:
+            outVec = std::make_unique<BooleanVector>(vecAllocator, numSelectedRows);
+            break;
         default: {
             LogError("No such data type %d", outType);
             break;
