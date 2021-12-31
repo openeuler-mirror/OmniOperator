@@ -151,13 +151,6 @@ Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
     return make_unique<IsNullExpr>(val).release();
 }
 
-Expr *JSONParser::ParseJsonIsNotNull(Json jsonExpr)
-{   // Is_Not_Null support
-    DataType dt = OrdinalToDataType(jsonExpr["returnType"].get<int32_t>());
-    Expr *val = ParseJSON(jsonExpr["arguments"].at(0));
-    return make_unique<UnaryExpr>(Operator::NOT, val, dt).release();
-}
-
 Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
 {
     string funcName = jsonExpr["function_name"];
@@ -208,8 +201,6 @@ Expr *JSONParser::ParseJSON(Json jsonExpr)
         return ParseJSONCoalesce(jsonExpr);
     } else if (exprTypeStr == "IS_NULL") {
         return ParseJsonIsNull(jsonExpr);
-    } else if (exprTypeStr == "IS_NOT_NULL") {
-        return ParseJsonIsNotNull(jsonExpr);
     } else if (exprTypeStr == "FUNC" || exprTypeStr == "FUNCTION") {
         return ParseJSONFunc(jsonExpr);
     }
