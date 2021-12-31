@@ -181,7 +181,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             "DIVIDE", "MODULUS"));
     private static final  List<String> COM_BIN_OPS = new ArrayList<>(Arrays.asList("GREATER_THAN",
             "GREATER_THAN_OR_EQUAL", "LESS_THAN", "LESS_THAN_OR_EQUAL", "EQUAL", "NOT_EQUAL"));
-    private static final List<String> UNARY_OPS = new ArrayList<>(Arrays.asList("NEGATION","NOT"));
+    private static final List<String> UNARY_OPS = new ArrayList<>(Arrays.asList("NEGATION","not"));
 
     @Override
     public ObjectNode visitCall(CallExpression call, Void context) {
