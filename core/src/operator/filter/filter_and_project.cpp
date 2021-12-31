@@ -97,6 +97,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     std::cout << "String expression in Filter: " << expression << std::endl;
     ExprPrinter printExprTree;
     parsedExpr->Accept(printExprTree);
+    std::cout<<std::endl;
 #endif
     if (parsedExpr != nullptr) {
         this->isSupportedExpr = true;
