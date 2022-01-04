@@ -6,15 +6,16 @@
 
 namespace omniruntime {
 namespace vec {
-ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount, Vector **fieldVectors,
-    int32_t vectorCount, VecType *types)
+ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount,
+                                 std::vector<uintptr_t>& fieldVectors, int32_t vectorCount,
+                                 std::vector<VecType>& types)
     : Vector(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_TYPE_CONTAINER),
       vectorCount(vectorCount),
-      positionCount(positionCount)
+      positionCount(positionCount),
+      vecTypes(types)
 {
     for (int32_t i = 0; i < vectorCount; ++i) {
-        SetValue(i, reinterpret_cast<int64_t>(fieldVectors[i]));
-        this->vecTypes.push_back(types[i]);
+        SetValue(i, fieldVectors[i]);
     }
 }
 
@@ -34,12 +35,11 @@ ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset
     if (length <= 0) {
         return nullptr;
     }
-    Vector **vectorAddresses = new Vector *[length];
-    VecType *copyTypes = new VecType[length];
+    std::vector<uintptr_t> vectorAddresses(length);
+    std::vector<VecType> copyTypes(this->vecTypes.begin(), this->vecTypes.end());
 
     for (int32_t i = offset; i < offset + length; ++i) {
-        vectorAddresses[i] = reinterpret_cast<Vector *>(GetValue(positions[i]));
-        copyTypes[i] = this->vecTypes[positions[i]];
+        vectorAddresses[i] = static_cast<uintptr_t>(GetValue(positions[i]));
     }
     auto containerVec = new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
     for (int32_t i = 0; i < positionCount; ++i) {
@@ -53,12 +53,11 @@ ContainerVector *ContainerVector::CopyRegion(int positionOffset, int length)
     if (length <= 0) {
         return nullptr;
     }
-    Vector **vectorAddresses = new Vector *[length];
-    VecType *copyTypes = new VecType[length];
+    std::vector<uintptr_t> vectorAddresses(length);
+    std::vector<VecType> copyTypes(this->vecTypes.begin(), this->vecTypes.end());
 
     for (int32_t i = positionOffset; i < positionOffset + length; ++i) {
-        vectorAddresses[i] = reinterpret_cast<Vector *>(GetValue(i));
-        copyTypes[i] = this->vecTypes[i];
+        vectorAddresses[i] = static_cast<uintptr_t>(GetValue(i));
     }
     return new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
 }

@@ -115,6 +115,7 @@ LibraryLoader::LibraryLoader() : neededLibs()
             {"pages_index", CoreLibrary("libpages_index.so", "pages_index", 8)},
             {"pages_hash_strategy", CoreLibrary("libpages_hash_strategy.so", "pages_hash_strategy", 8)},
             {"aggregator", CoreLibrary("libaggregator.so", "aggregator", 8)},
+            {"aggregation", CoreLibrary("libaggregation.so", "aggregation", 8)},
             {"join_hash_table", CoreLibrary("libjoin_hash_table.so", "join_hash_table", 8)},
             {"group_aggregation", CoreLibrary("libgroup_aggregation.so", "group_aggregation", 9)},
             {"non_group_aggregation", CoreLibrary("libnon_group_aggregation.so", "non_group_aggregation", 9)},

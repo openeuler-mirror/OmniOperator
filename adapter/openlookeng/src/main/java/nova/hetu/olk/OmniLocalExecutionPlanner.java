@@ -109,6 +109,7 @@ import io.prestosql.operator.ValuesOperator;
 import io.prestosql.operator.WindowFunctionDefinition;
 import io.prestosql.operator.WindowOperator;
 import io.prestosql.operator.aggregation.AccumulatorFactory;
+import io.prestosql.operator.aggregation.GenericAccumulatorFactory;
 import io.prestosql.operator.exchange.LocalExchange;
 import io.prestosql.operator.exchange.LocalExchangeSinkOperator;
 import io.prestosql.operator.exchange.LocalExchangeSourceOperator;
@@ -288,10 +289,61 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         this.omniExpressionCompiler = new OmniExpressionCompiler(metadata, pageFunctionCompiler);
     }
 
+    static List<Integer> getAggregationChannels(Map<Symbol, AggregationNode.Aggregation> aggregations,
+        Map<Symbol, Integer> layout) {
+        ImmutableList.Builder<Integer> builder = ImmutableList.builder();
+        for (Symbol symbol : aggregations.keySet()) {
+            AggregationNode.Aggregation aggregation = aggregations.get(symbol);
+            Symbol aggregationInputSymbol = Symbol.from(aggregation.getArguments().get(0));
+            builder.add(layout.get(aggregationInputSymbol));
+        }
+        return builder.build();
+    }
+
+    static List<Type> getAggregationResultTypes(List<AccumulatorFactory> accumulatorFactories) {
+        ImmutableList.Builder<Type> builder = ImmutableList.builder();
+        for (AccumulatorFactory accumulatorFactory : accumulatorFactories) {
+            builder.add(((GenericAccumulatorFactory) accumulatorFactory)
+                    .getStateDescriptors().get(0).getSerializer().getSerializedType());
+        }
+        return builder.build();
+    }
+
+    static List<AggType> getAggregateTypes(List<Symbol> aggregationOutputSymbols,
+        Map<Symbol, AggregationNode.Aggregation> aggregations) {
+        ImmutableList.Builder<AggType> builder = ImmutableList.builder();
+        for (Symbol aggregationOutputSymbol : aggregationOutputSymbols) {
+            Signature signature = aggregations.get(aggregationOutputSymbol).getSignature();
+            // aggregator type, eg:sum,avg...
+            switch (signature.getName()) {
+                case "sum":
+                    builder.add(OMNI_AGGREGATION_TYPE_SUM);
+                    break;
+                case "avg":
+                    builder.add(OMNI_AGGREGATION_TYPE_AVG);
+                    break;
+                case "count":
+                    builder.add(OMNI_AGGREGATION_TYPE_COUNT);
+                    break;
+                case "min":
+                    builder.add(OMNI_AGGREGATION_TYPE_MIN);
+                    break;
+                case "max":
+                    builder.add(OMNI_AGGREGATION_TYPE_MAX);
+                    break;
+                // TODO count *
+                default:
+                    throw new UnsupportedOperationException(
+                            "unsupported Aggregator type by OmniRuntime: " + signature.getName());
+            }
+        }
+        return builder.build();
+    }
+
     @Override
     public LocalExecutionPlan plan(TaskContext taskContext, PlanNode plan, TypeProvider types,
-            PartitioningScheme partitioningScheme, StageExecutionDescriptor stageExecutionDescriptor,
-            List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
+        PartitioningScheme partitioningScheme, StageExecutionDescriptor stageExecutionDescriptor,
+        List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
         TaskId taskId = taskContext.getTaskId();
         VecAllocator vecAllocator = VecAllocatorFactory.create(taskId.getFullId(), () -> {
             taskContext.getTaskStateMachine().addStateChangeListenerToTail(state -> {
@@ -941,7 +993,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         private OperatorFactory createAggregationOperatorFactory(PlanNodeId planNodeId,
                 Map<Symbol, AggregationNode.Aggregation> aggregations, AggregationNode.Step step,
                 int startOutputChannel, ImmutableMap.Builder<Symbol, Integer> outputMappings, PhysicalOperation source,
-                LocalExecutionPlanContext context, boolean useSystemMemory) {
+            LocalExecutionPlanContext context, boolean useSystemMemory) {
             int outputChannel = startOutputChannel;
             ImmutableList.Builder<AccumulatorFactory> accumulatorFactories = ImmutableList.builder();
             ImmutableList.Builder<AggregationNode.Aggregation> aggregationBuilder = ImmutableList.builder();
@@ -1016,8 +1068,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             }
 
             List<Integer> groupByChannels = getChannelsForSymbols(groupBySymbols, source.getLayout());
+            List<Integer> aggregationChannels = getAggregationChannels(aggregations, source.getLayout());
             List<Type> groupByTypes = groupByChannels.stream().map(entry -> source.getTypes().get(entry))
                     .collect(toImmutableList());
+            List<Type> aggregationSourceTypes = aggregationChannels.stream().map(entry -> source.getTypes().get(entry))
+                    .collect(toImmutableList());
+            List<Type> aggregationResultTypes = getAggregationResultTypes(accumulatorFactories);
 
             if (isStreamable) {
                 return new StreamingAggregationOperator.StreamingAggregationOperatorFactory(context.getNextOperatorId(),
@@ -1029,66 +1085,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     // when omni is turned on there is no hash channel
                     int[] groupByInputChannels = Ints.toArray(groupByChannels);
                     VecType[] groupByInputTypes = OperatorUtils.toVecTypes(groupByTypes);
-                    int aggregationSize = aggregationOutputSymbols.size();
-                    int[] aggregationInputChannels = new int[aggregationSize];
-                    VecType[] aggregationInputTypes = new VecType[aggregationSize];
-                    AggType[] aggregatorTypes = new AggType[aggregationSize];
-                    VecType[] aggregationOutputTypes = new VecType[aggregationSize];
+                    int[] aggregationInputChannels = aggregationChannels.stream().mapToInt(i->i).toArray();
+                    VecType[] aggregationInputTypes = OperatorUtils.toVecTypes(aggregationSourceTypes);
+                    VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
+                    AggType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
+                            .toArray(new AggType[aggregationChannels.size()]);
 
-                    // TODO move this logic to native side
-                    int countStarIndex = -1;
-                    int actualIndex = 0;
-                    for (int i = 0; i < aggregationSize; ++i) {
-                        Signature signature = aggregations.get(aggregationOutputSymbols.get(i)).getSignature();
-                        AccumulatorFactory accumulatorFactory = accumulatorFactories.get(i);
-                        List<Integer> inputChannels = accumulatorFactory.getInputChannels();
-
-                        if ("count".equals(signature.getName()) && inputChannels.size() == 0) {
-                            // for count(*) need to count on another input channel
-                            countStarIndex = groupByInputChannels[0];
-                            aggregationInputTypes[i] = groupByInputTypes[0];
-                            aggregationInputChannels[i] = groupByInputChannels[0];
-                        } else if ("count".equals(signature.getName())) {
-                            actualIndex = groupByChannels.get(0);
-                            aggregationInputTypes[i] = groupByInputTypes[0];
-                            aggregationInputChannels[i] = inputChannels.get(0);
-                        } else if (step == FINAL && "avg".equals(signature.getName())) {
-                            aggregationInputTypes[i] = ContainerVecType.CONTAINER;
-                            actualIndex = i;
-                            aggregationInputChannels[i] = inputChannels.get(0);
-                        } else {
-                            aggregationInputTypes[i] = OperatorUtils.toVecType(signature.getArgumentTypes().get(0));
-                            actualIndex = i;
-                            aggregationInputChannels[i] = inputChannels.get(0);
-                        }
-                        // return types
-                        aggregationOutputTypes[i] = OperatorUtils.toVecType(signature.getReturnType());
-                    }
-
-                    for (int i = 0; i < aggregationSize; i++) {
-                        Signature signature = aggregations.get(aggregationOutputSymbols.get(i)).getSignature();
-                        // aggregator type, eg:sum,avg...
-                        switch (signature.getName()) {
-                            case "sum" :
-                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_SUM;
-                                break;
-                            case "avg" :
-                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_AVG;
-                                break;
-                            case "count" :
-                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_COUNT;
-                                break;
-                            case "min" :
-                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_MIN;
-                                break;
-                            case "max" :
-                                aggregatorTypes[i] = OMNI_AGGREGATION_TYPE_MAX;
-                                break;
-                            default :
-                                throw new UnsupportedOperationException(
-                                        "unsupported Aggregator type by OmniRuntime: " + signature.getName());
-                        }
-                    }
                     return new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(
                             context.getNextOperatorId(), planNodeId, source.getTypes(), groupByInputChannels,
                             groupByInputTypes, aggregationInputChannels, aggregationInputTypes, aggregatorTypes,
@@ -1434,14 +1436,14 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         /**
          * Create omni lookup join operator factory.
          *
-         * @param node the node
+         * @param node                       the node
          * @param lookupSourceFactoryManager the lookup source factory manager
-         * @param context the context
-         * @param probeTypes the probe types
-         * @param probeOutputChannels the probe output channels
-         * @param probeJoinChannels the probe join channels
-         * @param probeHashChannel the probe hash channel
-         * @param totalOperatorsCount the total operators count
+         * @param context                    the context
+         * @param probeTypes                 the probe types
+         * @param probeOutputChannels        the probe output channels
+         * @param probeJoinChannels          the probe join channels
+         * @param probeHashChannel           the probe hash channel
+         * @param totalOperatorsCount        the total operators count
          * @return the operator factory
          */
         public OperatorFactory createOmniLookupJoin(JoinNode node,

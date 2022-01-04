@@ -125,7 +125,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             }
             case OMNI_VEC_TYPE_CONTAINER: {
                 ContainerVec containerVec = (ContainerVec) vec;
-                int vecCount = containerVec.getSize();
+                int vecCount = containerVec.getVecTypes().length;
                 VecType[] subVecTypes = containerVec.getVecTypes();
                 for (int i = 0; i < vecCount; i++) {
                     Vec subVec = VecFactory.create(containerVec.getVector(i), subVecTypes[i]);

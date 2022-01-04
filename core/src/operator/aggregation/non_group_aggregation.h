@@ -7,6 +7,7 @@
 
 #include "aggregation.h"
 #include "vector/vector_types.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
 namespace op {

@@ -31,7 +31,7 @@ public class ContainerVec extends FixedWidthVec {
     }
 
     public ContainerVec(int vectorCount, int positionCount, long[] vectorAddresses, VecType[] vecTypes) {
-        super(vectorCount * BYTES, vectorCount, ContainerVecType.CONTAINER);
+        super(vectorCount * BYTES, positionCount, ContainerVecType.CONTAINER);
         this.positionCount = positionCount;
         this.vecTypes = vecTypes;
         put(vectorAddresses, 0, 0, vectorAddresses.length);
@@ -125,6 +125,13 @@ public class ContainerVec extends FixedWidthVec {
         return get(index);
     }
 
+    /**
+     * @return positionCount
+     */
+    public int getSize() {
+        return positionCount;
+    }
+
     @Override
     public ContainerVec slice(int start, int end) {
         return new ContainerVec(this, start + getOffset(), end - start);
@@ -147,6 +154,6 @@ public class ContainerVec extends FixedWidthVec {
 
     @Override
     public int getRealValueBufCapacityInBytes() {
-        return size * BYTES;
+        return getCapacityInBytes();
     }
 }

@@ -8,10 +8,10 @@
 #ifndef AGGREGATION_H
 #define AGGREGATION_H
 
-#include "../operator_factory.h"
-#include "aggregator.h"
-#include "../../memory/memory_pool.h"
-#include "../status.h"
+#include "operator/operator_factory.h"
+#include "operator/aggregation/aggregator/aggregator.h"
+#include "memory/memory_pool.h"
+#include "operator/status.h"
 
 #include <vector>
 #include <thread>
@@ -20,10 +20,8 @@ namespace omniruntime {
 namespace op {
 class AggregationCommonOperator : public Operator {
 public:
-    AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial)
-        : aggregators(std::move(aggs)), inputRaw(inputRaw), outputPartial(outputPartial)
-    {}
-    ~AggregationCommonOperator() override {}
+    AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw, bool outputPartial);
+    ~AggregationCommonOperator() override {};
 
 protected:
     std::vector<std::unique_ptr<Aggregator>> aggregators;
@@ -36,7 +34,7 @@ public:
     AggregationCommonOperatorFactory(bool inputRaw, bool outputPartial)
         : inputRaw(inputRaw), outputPartial(outputPartial)
     {}
-    ~AggregationCommonOperatorFactory() override {}
+    ~AggregationCommonOperatorFactory() override {};
     virtual OmniStatus Init() = 0;
     virtual OmniStatus Close() = 0;
 

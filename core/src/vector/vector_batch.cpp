@@ -37,12 +37,10 @@ Vector *VectorBatch::NewContainerVec(VectorAllocator *vecAllocator)
 {
     DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
     LongVector *longVector = new LongVector(vecAllocator, rowCount);
-    Vector **vectorAddresses = new Vector *[2];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
-    VecType *vecTypes = new VecType[2];
-    vecTypes[0] = DoubleVecType::Instance();
-    vecTypes[1] = LongVecType::Instance();
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> vecTypes = {DoubleVecType(), LongVecType()};
     return new ContainerVector(vecAllocator, rowCount, vectorAddresses, 2, vecTypes);
 }
 
