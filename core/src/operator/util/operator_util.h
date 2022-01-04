@@ -207,7 +207,7 @@ public:
     static void CreateRequiredProjectFuncs(const VecTypes &intputTypes, omniruntime::expressions::Expr *projectKeys[],
         int32_t projectKeysCount, std::vector<VecType> &newIntputTypes,
         std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-        std::vector<int32_t> &hashAggCols, std::vector<RowProjFunc> &projectFuncs);
+        std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs);
 
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const VecTypes &inputTypes,
         const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols);

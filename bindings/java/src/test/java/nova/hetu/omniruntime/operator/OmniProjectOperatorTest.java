@@ -118,7 +118,7 @@ public class OmniProjectOperatorTest {
         String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
         VecType[] inputTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
-        final int numRows = 2;
+        final int numRows = 3;
         final byte[] byteVal1 = "Wednesday".getBytes(StandardCharsets.UTF_8);
         final byte[] byteVal2 = "Hello World".getBytes(StandardCharsets.UTF_8);
         IntVec col1 = new IntVec(numRows);
@@ -131,6 +131,12 @@ public class OmniProjectOperatorTest {
         col1.set(1, Integer.MAX_VALUE);
         col2.set(1, Double.MIN_VALUE);
         col3.set(1, byteVal2);
+        // null value
+        col1.set(2, Integer.MIN_VALUE);
+        col1.setNull(2);
+        col2.set(2, Double.MAX_VALUE);
+        col2.setNull(2);
+        col3.setNull(2);
 
         OmniOperator op = factory.createOperator();
         ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
@@ -148,6 +154,10 @@ public class OmniProjectOperatorTest {
         assertEquals(((IntVec) res.getVector(0)).get(1), 25);
         assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
         assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
+        // null value check
+        assertEquals(((IntVec) res.getVector(0)).get(2), 15);
+        assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
+        assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
 
         for (VecBatch vecBatch : vecBatches) {
             freeVecBatch(vecBatch);

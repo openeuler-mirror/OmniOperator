@@ -36,7 +36,6 @@ static const int8_t HASH_LONG_RIGHT_SHIFT = 32;
 static const int32_t MM3_SIZE_INT = 4;
 static const int32_t MM3_SIZE_LONG = 8;
 
-static const int8_t MM3_STRING_OFFSET = 0;
 static const int8_t HASH_BYTES_MEMCPY_CNT = 1;
 
 static const int32_t MM3_INT_ONE = 1;
@@ -51,13 +50,13 @@ static const int32_t REVERSE_AND_D = 0xff000000;
 static const int32_t MM3_HALFWORD_INIT = 0;
 
 
-extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, int32_t seed);
+extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isNull, int32_t seed);
 
-extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, int32_t seed);
+extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isNull, int32_t seed);
 
-extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, int32_t seed);
+extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isNull, int32_t seed);
 
-extern "C" DLLEXPORT int32_t Mm3Double(double val, int32_t seed);
+extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isNull, int32_t seed);
 
 // OMNI_RUNTIME_MURMUR3_HASH_H
 #endif

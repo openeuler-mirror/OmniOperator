@@ -1084,6 +1084,9 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
             if (IsStringDataType(fExpr.arguments[i]->dataType)) {
                 argVals.push_back(this->value->length);
             }
+            if (fExpr.funcName == fr->mm3hashStr) {
+                argVals.push_back(this->value->isNull);
+            }
             funcName += "_" + DataTypeString(*(fExpr.arguments[i]));
             if (i == numArgs - 1) {
                 funcName += "_" + DataTypeString(fExpr);

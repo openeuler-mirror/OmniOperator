@@ -317,28 +317,28 @@ void FunctionRegistry::RegisterMm3HashFunctions(const std::string& fn)
 {
     // Mm3Hash functions
     if (fn.find(mm3hashInt32Str) != std::string::npos) {
-        vector<DataType> mm3Int32Types {DataType::INT32D, DataType::INT32D};
+        vector<DataType> mm3Int32Types {DataType::INT32D, DataType::BOOLD, DataType::INT32D};
         FunctionSignature mm3Int32Sig (fn, mm3Int32Types, DataType::INT32D,
                                        reinterpret_cast<void *>(Mm3Int32));
         this->RegisterFunctionFromSignature(mm3Int32Sig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3Int32Sig));
     }
     if (fn.find(mm3hashInt64Str) != std::string::npos) {
-        vector<DataType> mm3Int64Types {DataType::INT64D, DataType::INT32D};
+        vector<DataType> mm3Int64Types {DataType::INT64D, DataType::BOOLD, DataType::INT32D};
         FunctionSignature mm3Int64Sig (fn, mm3Int64Types, DataType::INT32D,
                                        reinterpret_cast<void *>(Mm3Int64));
         this->RegisterFunctionFromSignature(mm3Int64Sig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3Int64Sig));
     }
     if (fn.find(mm3hashDoubleStr) != std::string::npos) {
-        vector<DataType> mm3DoubleTypes {DataType::DOUBLED, DataType::INT32D};
+        vector<DataType> mm3DoubleTypes {DataType::DOUBLED, DataType::BOOLD, DataType::INT32D};
         FunctionSignature mm3DoubleSig (fn, mm3DoubleTypes, DataType::INT32D,
                                         reinterpret_cast<void *>(Mm3Double));
         this->RegisterFunctionFromSignature(mm3DoubleSig);
         funcNameToSignatureMap.insert(pair<string, FunctionSignature>(fn, mm3DoubleSig));
     }
     if (fn.find(mm3hashStringStr) != std::string::npos) {
-        vector<DataType> mm3StringTypes {DataType::INT8PTRD, DataType::INT32D, DataType::INT32D};
+        vector<DataType> mm3StringTypes {DataType::INT8PTRD, DataType::INT32D, DataType::BOOLD, DataType::INT32D};
         FunctionSignature mm3StringSig (fn, mm3StringTypes, DataType::INT32D,
                                         reinterpret_cast<void *>(Mm3String));
         this->RegisterFunctionFromSignature(mm3StringSig);
