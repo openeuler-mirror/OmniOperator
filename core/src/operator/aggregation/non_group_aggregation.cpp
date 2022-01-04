@@ -7,6 +7,7 @@
 #include "operator/optimization.h"
 #include "vector/vector_common.h"
 #include "operator/status.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
 namespace op {
@@ -105,7 +106,7 @@ void AggregationOperator::InLoop(Vector **vectors, uint32_t offset, int32_t colN
 {
     for (int32_t aggIdx = 0; aggIdx < colNum; ++aggIdx) {
         int32_t type = aggDataType[aggIdx];
-        aggregators[aggIdx]->ProcessNonGroup(vectors[aggIdx], type, offset);
+        aggregators[aggIdx]->ProcessNonGroup(vectors[aggIdx], offset);
     }
 }
 
@@ -150,7 +151,7 @@ void AggregationOperator::FillResultVectors(VectorBatch *vecBatch)
         auto &aggregator = aggregators[colIdx];
         auto vector = vecBatch->GetVector(colIdx);
         AggregateType aggType = aggregator->GetType();
-        auto state = aggregator->Evaluate(aggregator->GetNonGroupState(), vector->GetTypeId());
+        auto state = aggregator->Evaluate(aggregator->GetNonGroupState());
         switch (aggType) {
             case OMNI_AGGREGATION_TYPE_SUM:
             case OMNI_AGGREGATION_TYPE_MIN:

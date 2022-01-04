@@ -9,8 +9,6 @@ using namespace omniruntime::vec;
 
 const int32_t POSITION_COUNT = 100;
 const int32_t VECTOR_COUNT = 2;
-const VecType VECTOR_TYPES[] = {DoubleVecType::Instance(), LongVecType::Instance()};
-
 TEST(ContainerVector, sliceVector)
 {
     VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
@@ -18,11 +16,12 @@ TEST(ContainerVector, sliceVector)
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
-    Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> VECTOR_TYPES = {DoubleVecType(), LongVecType()};
     ContainerVector *originalVector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
-        const_cast<VecType *>(VECTOR_TYPES));
+        VECTOR_TYPES);
     for (int i = 0; i < originalVector->GetSize(); i++) {
         originalVector->SetValue(i, i * 2);
     }
@@ -53,11 +52,12 @@ TEST(ContainerVector, setAndGetValue)
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
-    Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> VECTOR_TYPES = {DoubleVecType(), LongVecType()};
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
-        const_cast<VecType *>(VECTOR_TYPES));
+        VECTOR_TYPES);
     for (int i = 0; i < VECTOR_COUNT; i++) {
         vector->SetValue(i, i * 2);
     }
@@ -79,11 +79,13 @@ TEST(ContainerVector, copyPositions)
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
-    Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
+
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> VECTOR_TYPES = {DoubleVecType(), LongVecType()};
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
-        const_cast<VecType *>(VECTOR_TYPES));
+        VECTOR_TYPES);
 
     int *positions = new int[1];
     positions[0] = 1;
@@ -108,11 +110,13 @@ TEST(ContainerVector, copyRegion)
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
-    Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
+
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> VECTOR_TYPES = {DoubleVecType(), LongVecType()};
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
-        const_cast<VecType *>(VECTOR_TYPES));
+        VECTOR_TYPES);
 
     ContainerVector *copyRegionVector = vector->CopyRegion(0, 2);
 
@@ -134,11 +138,13 @@ TEST(ContainerVector, jniFreeVector)
 
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
-    Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
+
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> VECTOR_TYPES = {DoubleVecType(), LongVecType()};
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
-        const_cast<VecType *>(VECTOR_TYPES));
+        VECTOR_TYPES);
     Vector *vec = (Vector *)vector;
     delete vec;
     delete doubleVector;
@@ -152,11 +158,13 @@ TEST(ContainerVector, getVectorAllocator)
     EXPECT_TRUE(allocator != nullptr);
     DoubleVector *doubleVector = new DoubleVector(allocator, POSITION_COUNT);
     LongVector *longVector = new LongVector(allocator, POSITION_COUNT);
-    Vector **vectorAddresses = new Vector *[VECTOR_COUNT];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
+
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> VECTOR_TYPES = {DoubleVecType(), LongVecType()};
     ContainerVector *vector = new ContainerVector(allocator, POSITION_COUNT, vectorAddresses, VECTOR_COUNT,
-        const_cast<VecType *>(VECTOR_TYPES));
+        VECTOR_TYPES);
 
     int64_t doubleVecAddr = vector->GetValue(0);
     auto doubleVec = reinterpret_cast<Vector *>(doubleVecAddr);

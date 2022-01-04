@@ -16,7 +16,7 @@ using namespace std;
 using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
-static void DoubleCheckEqualFuncImp(Vector *inputColVector, const uint32_t rowIndex, GroupBySlot &existedRow,
+static void DoubleCheckEqualFuncImp(Vector *inputColVector, const uint32_t rowIndex, AggregateState &existedRow,
     bool &isSame)
 {
     auto *typeVector = static_cast<DoubleVector *>(inputColVector);
@@ -30,7 +30,7 @@ static void DoubleCheckEqualFuncImp(Vector *inputColVector, const uint32_t rowIn
 }
 
 template <typename VT, typename DT>
-static void FillOutputFuncImp(VectorBatch *outBatch, std::vector<GroupBySlot> &srcRowVector, int32_t rowIndex,
+static void FillOutputFuncImp(VectorBatch *outBatch, std::vector<AggregateState> &srcRowVector, int32_t rowIndex,
     int32_t colIndex)
 {
     // nullptr handle
@@ -44,7 +44,7 @@ static void FillOutputFuncImp(VectorBatch *outBatch, std::vector<GroupBySlot> &s
     typeVector->SetValue(rowIndex, *(static_cast<DT *>(srcRowVector[colIndex].val)));
 }
 
-static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<GroupBySlot> &rowVector, int32_t rowIndex,
+static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector, int32_t rowIndex,
     int32_t colIndex)
 {
     // nullptr handle
@@ -281,7 +281,7 @@ DistinctLimitOperator::~DistinctLimitOperator()
 }
 
 bool IsExistSameRow(const vec::VecTypes *inputTypes, Vector **inputVectors, const int32_t *distinctCols,
-    int32_t distinctColsCount, std::vector<std::vector<GroupBySlot>> &bucket, int rowIndex)
+    int32_t distinctColsCount, std::vector<std::vector<AggregateState>> &bucket, int rowIndex)
 {
     bool isSame = true;
     int32_t columnId;
@@ -292,7 +292,7 @@ bool IsExistSameRow(const vec::VecTypes *inputTypes, Vector **inputVectors, cons
     for (int32_t i = 0; i < bucket.size(); i++) {
         isSame = true;
 
-        std::vector<GroupBySlot> &rowVector = bucket[i];
+        std::vector<AggregateState> &rowVector = bucket[i];
         int32_t originalRowIndex;
         Vector *originalVector = nullptr;
         for (int32_t column = 0; ((column < distinctColsCount) && isSame); ++column) {
@@ -318,7 +318,7 @@ bool IsExistSameRow(const vec::VecTypes *inputTypes, Vector **inputVectors, cons
     return false;
 }
 
-void DistinctLimitOperator::fillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<GroupBySlot> &tuple)
+void DistinctLimitOperator::fillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple)
 {
     const int32_t *vectorTypes = this->sourceTypes->GetIds();
     Vector *inputVector = nullptr;
@@ -352,7 +352,7 @@ void DistinctLimitOperator::InLoop(VectorBatch *vecBatch, uint64_t *combineHashV
 
         existed = IsExistSameRow(sourceTypes, inputVectors, distinctCols, distinctColsCount, bucket, rowIndex);
         if (!existed) {
-            std::vector<GroupBySlot> distinctedTuple(outColsCount);
+            std::vector<AggregateState> distinctedTuple(outColsCount);
             fillDistinctedTuple(inputVectors, rowIndex, distinctedTuple);
             bucket.push_back(distinctedTuple);
 
@@ -395,7 +395,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-void FillOutPutValue(VectorBatch *resultBatch, std::vector<GroupBySlot> &rowVector, const vec::VecTypes *outTypes,
+void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector, const vec::VecTypes *outTypes,
     int32_t rowIndex)
 {
     const int32_t *vecTypeIds = outTypes->GetIds();
@@ -420,7 +420,7 @@ int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages
 
         int32_t rowIndex = 0;
         for (auto item : distinctRowInfo) {
-            std::vector<GroupBySlot> &rowVector = distinctedTable[item->hashValue][item->slotIndex];
+            std::vector<AggregateState> &rowVector = distinctedTable[item->hashValue][item->slotIndex];
             FillOutPutValue(resultBatch, rowVector, this->outTypes, rowIndex++);
         }
 

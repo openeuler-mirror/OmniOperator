@@ -198,7 +198,7 @@ public class VecBatchSerializerTest {
 
         // check result
         ContainerVec checkContainerVec = (ContainerVec)checkVecBatch.getVectors()[0];
-        assertEquals(4, checkContainerVec.getSize());
+        assertEquals(1024, checkContainerVec.getSize());
         LongVec checkLongVec = new LongVec(checkContainerVec.getVector(0));
         IntVec checkIntVec = new IntVec(checkContainerVec.getVector(1));
         VarcharVec checkVarCharVec = new VarcharVec(checkContainerVec.getVector(2));

@@ -123,13 +123,31 @@ OmniStatus WindowOperator::Init()
             case WIN_RANK:
                 windowFunctions.push_back(std::move(make_unique<RankFunction>()));
                 break;
+            // for aggregate function we use AggregateType
             case WIN_SUM:
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
+                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_SUM,
+                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+                break;
             case WIN_COUNT:
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
+                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_COUNT,
+                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+                break;
             case WIN_AVG:
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
+                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_AVG,
+                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+                break;
             case WIN_MAX:
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
+                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_MAX,
+                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+                break;
             case WIN_MIN:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i],
-                    windowFunctionTypes[i], sourceTypes.Get()[argumentChannels[i]])));
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
+                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_MIN,
+                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;

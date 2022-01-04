@@ -38,7 +38,8 @@ target_link_libraries(${OM_TARGET}
 install(TARGETS ${OM_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 message(STATUS "Install libomni_runtime.so into ${CMAKE_INSTALL_PREFIX}")
 
-add_library(aggregator SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp)
+add_library(aggregator SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator/aggregator.cpp)
+add_library(aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregation.cpp)
 add_library(group_aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp)
 add_library(non_group_aggregation SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp)
 add_library(sort SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp)
@@ -85,6 +86,7 @@ set_target_properties(externalfunctions PROPERTIES
 
 install(TARGETS
         aggregator
+        aggregation
         group_aggregation
         non_group_aggregation
         sort
@@ -131,7 +133,8 @@ set(COMPILE_INCLUDE_SOURCE
         -I${CMAKE_CURRENT_LIST_DIR}/../thirdparty)
 
 # add sources file, if you have new source need compile to ir file, pls add it here.
-set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator.cpp
+set(IR_SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregator/aggregator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/aggregation/non_group_aggregation.cpp
         ${CMAKE_CURRENT_LIST_DIR}/operator/sort/sort.cpp

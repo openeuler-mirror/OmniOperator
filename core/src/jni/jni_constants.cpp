@@ -4,7 +4,7 @@
  */
 #include "jni_constants.h"
 #include "../operator/status.h"
-#include "src/operator/aggregation/aggregator.h"
+#include "src/operator/aggregation/aggregator/aggregator.h"
 #include "src/operator/join/lookup_join.h"
 
 using namespace omniruntime::vec;

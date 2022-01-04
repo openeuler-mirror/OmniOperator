@@ -12,7 +12,7 @@
 #include "operator/operator_factory.h"
 #include "operator/status.h"
 #include "operator/hash_util.h"
-#include "operator/aggregation/aggregator.h"
+#include "operator/aggregation/aggregator/aggregator.h"
 
 namespace omniruntime {
 namespace op {
@@ -42,14 +42,14 @@ typedef struct {
 } DistinctRowInfo;
 
 
-using DuplicateValueFunc = void (*)(GroupBySlot &distinctSlot, Vector *inputVector, uint32_t rowIndex,
+using DuplicateValueFunc = void (*)(AggregateState &distinctSlot, Vector *inputVector, uint32_t rowIndex,
     ExecutionContext *context);
 using GenerateHashFunc = void (*)(Vector *vector, const uint32_t rowCount, const int32_t *rowArray,
                                           uint64_t *combinedHash);
 using GenerateHashFuncVect = void (*)(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
-using CheckEqualFunc = void (*)(Vector *vector, const uint32_t offset, GroupBySlot &slot, bool &isSame);
-using FillOutputFunc = void (*)(VectorBatch *resultBatch, std::vector<GroupBySlot> &rowVector, int32_t rowIndex,
+using CheckEqualFunc = void (*)(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame);
+using FillOutputFunc = void (*)(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector, int32_t rowIndex,
     int32_t colIndex);
 
 using DistinctLimitFuncSet = struct {
@@ -77,7 +77,7 @@ public:
     OmniStatus Close() override;
 
 private:
-    void fillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<GroupBySlot> &tuple);
+    void fillDistinctedTuple(Vector **inputVectors, int rowIndex, std::vector<AggregateState> &tuple);
 
     void InLoop(omniruntime::vec::VectorBatch *vecBatch, uint64_t *combineHashVal);
 
@@ -87,7 +87,7 @@ private:
 
 private:
     std::unique_ptr<ExecutionContext> executionContext;
-    std::unordered_map<uint64_t, std::vector<std::vector<GroupBySlot>>, HashUtil>
+    std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil>
         distinctedTable;                            // hashValue=>record vector with distinct
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
     const vec::VecTypes *sourceTypes;

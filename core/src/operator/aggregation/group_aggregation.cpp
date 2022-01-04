@@ -5,15 +5,16 @@
 #include "group_aggregation.h"
 #include <cmath>
 
-#include "../../vector/vector_common.h"
-#include "../../vector/vector_helper.h"
-#include "../status.h"
-#include "../../jit/annotation.h"
-#include "../optimization.h"
-#include "../../vector/container_vector.h"
-#include "../../util/type_util.h"
-#include "../hash_util.h"
-#include "../util/operator_util.h"
+#include "vector/vector_common.h"
+#include "vector/vector_helper.h"
+#include "vector/container_vector.h"
+#include "operator/status.h"
+#include "jit/annotation.h"
+#include "operator/optimization.h"
+#include "util/type_util.h"
+#include "operator/hash_util.h"
+#include "operator/util/operator_util.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
@@ -26,9 +27,9 @@ template void HashFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t r
     uint64_t *combinedHash);
 template void HashFuncVectImpl<BooleanVector, bool>(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
-template void DuplicateKeyValueImpl<BooleanVector, bool>(GroupBySlot &groupBySlot, Vector *vector,
+template void DuplicateKeyValueImpl<BooleanVector, bool>(AggregateState &state, Vector *vector,
     const uint32_t offset, ExecutionContext *context);
-template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, GroupBySlot &slot,
+template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, AggregateState &slot,
     bool &isSame);
 
 static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[VEC_TYPE_MAX_COUNT] = {
@@ -197,16 +198,16 @@ std::vector<BucketIterator> HashAggregationOperator::FindBuckets(uint64_t *hash,
     return bucktes;
 }
 
-static void DuplicateGroupByTuple(GroupBySlot &groupBySlot, Vector *vector, uint32_t offset, ExecutionContext *context)
+static void DuplicateGroupByTuple(AggregateState &state, Vector *vector, uint32_t offset, ExecutionContext *context)
 {
     int32_t originalRowIndex;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, offset, originalRowIndex);
-    GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].duplicateKey(groupBySlot, originalVector, originalRowIndex,
+    GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].duplicateKey(state, originalVector, originalRowIndex,
         context);
 }
 
 static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, const int32_t colNum,
-    std::vector<std::vector<GroupBySlot>> &sameBucket)
+    std::vector<std::vector<AggregateState>> &sameBucket)
 {
     // early break
     if (sameBucket.empty()) {
@@ -260,20 +261,20 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
             auto &bucket = groupedRows[hash];
             isSamePos = IsSameGroupByTuples(groupByVectors, actualOffset, groupByColNum, bucket);
             if (isSamePos == -1) {
-                std::vector<GroupBySlot> groupByTuple(groupByColNum + aggColNum, GroupBySlot());
+                std::vector<AggregateState> groupByTuple(groupByColNum + aggColNum, AggregateState());
                 for (int32_t i = 0; i < groupByColNum; ++i) {
                     DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualOffset, executionContext.get());
                 }
                 bucket.push_back(groupByTuple);
                 size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    aggregators[i]->Insert(bucket[chainLength - 1][groupByColNum + i], aggrByVectors[i], aggrByTypes[i],
-                        actualOffset);
+                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i],
+                                                  aggrByVectors[i], actualOffset);
                 }
             } else {
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], aggrByVectors[i], aggrByTypes[i],
-                        actualOffset);
+                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i],
+                                                 aggrByVectors[i], actualOffset);
                 }
             }
         }
@@ -318,7 +319,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
  * All the output data types are determined in this function. Following allocation for output vectors and filling
  * value should use the 'types' parameter instead of using input vector types.
  */
-int32_t HashAggregationOperator::GetRowSize(std::vector<VecType> &types, int32_t columnCount)
+int32_t HashAggregationOperator::GetRowSizeAndOutputTypes(std::vector<VecType> &types, int32_t columnCount)
 {
     int32_t rowSize = 0;
     int32_t typeIndex = 0;
@@ -327,22 +328,6 @@ int32_t HashAggregationOperator::GetRowSize(std::vector<VecType> &types, int32_t
         rowSize += OperatorUtil::GetTypeSize(i.input);
     }
     for (int32_t i = 0; i < aggCols.size(); ++i) {
-        // currently aggregation type is fixed . should get right type from output types from engine side.
-        if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_COUNT) {
-            types.push_back(LongVecType::Instance());
-            rowSize += sizeof(int64_t);
-            continue;
-        }
-        if (aggregators[i]->GetType() == OMNI_AGGREGATION_TYPE_AVG) {
-            if (aggregators[i]->IsOutputPartial()) {
-                types.push_back(ContainerVecType::Instance());
-                rowSize += sizeof(int64_t);
-            } else {
-                types.push_back(DoubleVecType::Instance());
-            }
-            rowSize += sizeof(double);
-            continue;
-        }
         types.push_back(aggCols[i].output);
         rowSize += OperatorUtil::GetTypeSize(aggCols[i].output);
     }
@@ -359,37 +344,6 @@ void HashAggregationOperator::FillGroupByVectors(VectorBatch *vecBatch, int star
     }
 }
 
-void HashAggregationOperator::FillAvgAgg(VectorBatch *vecBatch, int32_t aggIndex, int32_t colIndex,
-    ChainIterator &rowIterator, int32_t rowIndex)
-{
-    // TODO support average value type which is decimal
-    if (outputPartial) {
-        ContainerVector *vector = static_cast<ContainerVector *>(vecBatch->GetVector(colIndex));
-        if ((*rowIterator)[colIndex].val == nullptr) {
-            vector->SetValueNull(rowIndex);
-            return;
-        }
-        if ((*rowIterator)[colIndex].avgCnt == 0) {
-            LogError("Divisor is zero!");
-        }
-        DoubleVector *doubleVector = reinterpret_cast<DoubleVector *>(vector->GetValue(0));
-        doubleVector->SetValue(rowIndex, *static_cast<double *>((*rowIterator)[colIndex].avgVal));
-        LongVector *longVector = reinterpret_cast<LongVector *>(vector->GetValue(1));
-        longVector->SetValue(rowIndex, (*rowIterator)[colIndex].avgCnt);
-    } else {
-        DoubleVector *vector = static_cast<DoubleVector *>(vecBatch->GetVector(colIndex));
-        if ((*rowIterator)[colIndex].val == nullptr) {
-            vector->SetValueNull(rowIndex);
-            return;
-        }
-        if ((*rowIterator)[colIndex].avgCnt == 0) {
-            LogError("Divisor is zero!");
-        }
-        vector->SetValue(rowIndex,
-                         *static_cast<double *>((*rowIterator)[colIndex].avgVal) / (*rowIterator)[colIndex].avgCnt);
-    }
-}
-
 // TODO currently we need to traverse ColumnNum * RowNum times to build the output.
 // The overhead need to be optimized.
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_AGG_COLUMN)
@@ -397,31 +351,7 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
     ChainIterator &rowIterator, int32_t rowIndex)
 {
     for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex) {
-        AggregateType aggType = this->aggregators[aggIndex]->GetType();
-        switch (aggType) {
-            case OMNI_AGGREGATION_TYPE_SUM:
-            case OMNI_AGGREGATION_TYPE_MIN:
-            case OMNI_AGGREGATION_TYPE_MAX: {
-                auto typeId = vecBatch->GetVector(colIndex)->GetTypeId();
-                GROUP_AGG_FUNCTIONS[typeId].fillValue(vecBatch, rowIndex, rowIterator, colIndex);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_COUNT: {
-                LongVector *vector = static_cast<LongVector *>(vecBatch->GetVector(colIndex));
-                vector->SetValue(rowIndex, (*rowIterator)[colIndex].count);
-                break;
-            }
-            case OMNI_AGGREGATION_TYPE_AVG: { // TODO process intermediate vectors
-                // generate double or row type vector according to the step. Row type if outputPartial == 1 otherwise
-                // double vector.
-                FillAvgAgg(vecBatch, aggIndex, colIndex, rowIterator, rowIndex);
-                break;
-            }
-            default: {
-                LogError("No such aggregate type %d\n", aggType);
-                break;
-            }
-        }
+        aggregators[aggIndex]->ExtractValue(vecBatch->GetVector(colIndex), (*rowIterator)[colIndex], rowIndex);
     }
 }
 
@@ -440,7 +370,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     uint32_t aggColSize = aggCols.size();
     uint32_t colCount = groupByColSize + aggColSize;
     std::vector<VecType> types;
-    int32_t rowByteSize = GetRowSize(types, colCount);
+    int32_t rowByteSize = GetRowSizeAndOutputTypes(types, colCount);
 
     // accumulate whole row count first
     int32_t totalRowCount = 0;
@@ -565,7 +495,7 @@ void HashDecimalFunc(Vector *vector, const uint32_t rowCount, const int32_t *row
 }
 
 template <typename V, typename D>
-void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, GroupBySlot &slot, bool &isSame)
+void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame)
 {
     bool isIntermediateNull = static_cast<D *>(slot.val) == nullptr;
     bool isInputNull = vector->IsValueNull(offset);
@@ -583,7 +513,7 @@ void IsSameNodeFuncImpl(Vector *vector, const uint32_t offset, GroupBySlot &slot
     return;
 }
 
-void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, GroupBySlot &slot, bool &isSame)
+void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame)
 {
     bool isIntermediateNull = slot.strVal == nullptr;
     bool isInputNull = vector->IsValueNull(offset);
@@ -603,7 +533,7 @@ void IsSameNodeFuncVarcharImpl(Vector *vector, const uint32_t offset, GroupBySlo
 }
 
 template <typename V, typename D>
-void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset, ExecutionContext *context)
+void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t offset, ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
         return;
@@ -612,10 +542,10 @@ void DuplicateKeyValueImpl(GroupBySlot &groupBySlot, Vector *vector, const uint3
     uint8_t *ptr = context->getArena()->Allocate(len);
     D data = static_cast<V *>(vector)->GetValue(offset);
     memcpy_s(ptr, len, &data, len);
-    groupBySlot.val = ptr;
+    state.val = ptr;
 }
 
-void DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const uint32_t offset,
+void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset,
     ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
@@ -625,8 +555,8 @@ void DuplicateVarcharKeyValue(GroupBySlot &groupBySlot, Vector *vector, const ui
     int valLen = (static_cast<VarcharVector *>(vector)->GetValue(offset, &tmp));
     uint8_t *data = context->getArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, valLen);
-    groupBySlot.strVal = data;
-    groupBySlot.strLen = valLen;
+    state.strVal = data;
+    state.strLen = valLen;
 }
 
 template <typename V>
@@ -648,10 +578,10 @@ void SetContainerVector(VectorBatch *vecBatch, VecType &type, int32_t columnInde
 {
     DoubleVector *doubleVector = new DoubleVector(vecAllocator, rowCount);
     LongVector *longVector = new LongVector(vecAllocator, rowCount);
-    Vector **vectorAddresses = new Vector *[2];
-    vectorAddresses[0] = doubleVector;
-    vectorAddresses[1] = longVector;
-    VecType *vecTypes = new VecType[2];
+    std::vector<uintptr_t> vectorAddresses(2);
+    vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
+    std::vector<VecType> vecTypes(2);
     vecTypes[0] = DoubleVecType::Instance();
     vecTypes[1] = LongVecType::Instance();
     ContainerVector *containerVector =

@@ -923,7 +923,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
+TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
 {
     using namespace omniruntime::op;
 
@@ -1019,7 +1019,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
 
-TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
+TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
 {
     using namespace omniruntime::op;
 

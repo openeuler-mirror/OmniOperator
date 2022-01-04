@@ -8,7 +8,8 @@
 
 #include "../../vector/vector.h"
 #include "../pages_index.h"
-#include "../aggregation/aggregator.h"
+#include "operator/aggregation/aggregator/aggregator.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 #include <memory>
 
@@ -103,7 +104,7 @@ public:
 class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-        const VecType &dataType);
+        const VecType &inputType, const VecType &outputType);
     ~AggregateWindowFunction();
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
@@ -113,10 +114,11 @@ public:
 private:
     WindowIndex *windowIndex;
     int32_t argumentChannels;
-    int32_t aggregationType;
+    std::unique_ptr<omniruntime::op::AggregatorFactory> aggregatorFactory;
     int32_t currentStart;
     int32_t currentEnd;
-    const VecType &dataType;
+    const VecType &inputType;
+    const VecType &outputType;
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
 
     void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn,
