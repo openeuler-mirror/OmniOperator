@@ -2839,7 +2839,7 @@ TEST(CodeGenTest, Mm3HashLong)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3Int64(v1[0], 42);
+    int32_t expected_res = Mm3Int64(v1[0], false, 42);
     EXPECT_EQ(res, expected_res);
     context->getArena()->Reset();
 
@@ -2886,7 +2886,7 @@ TEST(CodeGenTest, Mm3HashDouble)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3Double(v1[0], 42);
+    int32_t expected_res = Mm3Double(v1[0], false, 42);
     EXPECT_EQ(res, expected_res);
     context->getArena()->Reset();
 
@@ -2934,7 +2934,7 @@ TEST(CodeGenTest, Mm3HashString)
 
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
-    int32_t expected_res = Mm3String(v1.c_str(), v1.size(), 42);
+    int32_t expected_res = Mm3String(v1.c_str(), v1.size(), false, 42);
     EXPECT_EQ(res, expected_res);
     context->getArena()->Reset();
 

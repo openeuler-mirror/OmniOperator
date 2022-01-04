@@ -63,7 +63,7 @@ int32_t ReverseBytes(int32_t x)
            ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
 }
 
-int32_t HashBytesByInt(const string base, int64_t offset, int32_t lengthInBytes, int32_t seed)
+int32_t HashBytesByInt(const string base, int32_t lengthInBytes, int32_t seed)
 {
     int32_t h1 = seed;
     for (int i = 0; i < lengthInBytes; i += MM3_SIZE_INT) {
@@ -103,10 +103,10 @@ int32_t HashLong(int64_t input, int32_t seed)
     return Fmix(h1, MM3_SIZE_LONG);
 }
 
-int32_t HashUnsafeBytes(const string base, int64_t offset, int32_t lengthInBytes, int32_t seed)
+int32_t HashUnsafeBytes(const string base, int32_t lengthInBytes, int32_t seed)
 {
     int32_t lengthAligned = lengthInBytes - lengthInBytes % MM3_SIZE_INT;
-    int32_t h1 = HashBytesByInt(base, offset, lengthAligned, seed);
+    int32_t h1 = HashBytesByInt(base, lengthAligned, seed);
     for (int i = lengthAligned; i < lengthInBytes; i++) {
         int32_t halfWord = MM3_HALFWORD_INIT;
         errno_t ret = memcpy_s(&halfWord, sizeof(halfWord), base.c_str() + i, HASH_BYTES_MEMCPY_CNT);
@@ -119,28 +119,28 @@ int32_t HashUnsafeBytes(const string base, int64_t offset, int32_t lengthInBytes
     return Fmix(h1, lengthInBytes);
 }
 
-extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isNull, int32_t seed)
 {
-    return HashInt(val, seed);
+    return HashInt(val * !isNull, seed);
 }
 
-extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isNull, int32_t seed)
 {
-    return HashLong(val, seed);
+    return HashLong(val * !isNull, seed);
 }
 
-extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isNull, int32_t seed)
 {
-    string as = string(val, valLen);
-    return HashUnsafeBytes(as, MM3_STRING_OFFSET, valLen, seed);
+    string as = string(val, valLen * !isNull);
+    return HashUnsafeBytes(as, valLen, seed);
 }
 
-extern "C" DLLEXPORT int32_t Mm3Double(double val, int32_t seed)
+extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isNull, int32_t seed)
 {
     union {
         int64_t lVal;
         double dVal;
     } uVal = {0};
-    uVal.dVal = val;
+    uVal.dVal = val * !isNull;
     return HashLong(uVal.lVal, seed);
 }

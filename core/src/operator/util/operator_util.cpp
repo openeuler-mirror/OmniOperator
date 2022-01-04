@@ -62,7 +62,7 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
 void OperatorUtil::CreateRequiredProjectFuncs(const VecTypes &inputTypes, omniruntime::expressions::Expr *projectKeys[],
     int32_t projectKeysCount, std::vector<VecType> &newInputTypes,
     std::vector<std::unique_ptr<RowProjection>> &rowProjections,
-    std::vector<int32_t> &projectCols, std::vector<int32_t> &hashAggCols,
+    std::vector<int32_t> &projectCols, std::vector<int32_t> &allCols,
     std::vector<RowProjFunc> &projectFuncs)
 {
     int32_t inputTypesCount = inputTypes.GetSize();
@@ -81,17 +81,17 @@ void OperatorUtil::CreateRequiredProjectFuncs(const VecTypes &inputTypes, omniru
         if (projectCol != -1) {
             if (colIdMap.find(projectCol) != colIdMap.end()) {
                 // already exists
-                hashAggCols.push_back(colIdMap[projectCol]);
+                allCols.push_back(colIdMap[projectCol]);
             } else {
                 projectCols.push_back(projectCol);
-                hashAggCols.push_back(newProjectCol);
+                allCols.push_back(newProjectCol);
                 colIdMap[projectCol] = newProjectCol++;
                 newInputTypes.push_back(inputTypeVec[projectCol]);
             }
         } else {
             // expr col
             projectCols.push_back(projectCol);
-            hashAggCols.push_back(newProjectCol++);
+            allCols.push_back(newProjectCol++);
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
             DataType returnType = rowProjection->GetReturnType();
