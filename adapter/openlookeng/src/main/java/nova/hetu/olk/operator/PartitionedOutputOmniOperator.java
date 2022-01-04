@@ -72,8 +72,6 @@ import java.util.function.Function;
  * @since 20210630
  */
 public class PartitionedOutputOmniOperator implements Operator, Cloneable {
-    private static Iterator<VecBatch> vecBatchIterator;
-
     @Override
     public OperatorContext getOperatorContext() {
         return operatorContext;
@@ -395,8 +393,6 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
             VecBatch originalAndPartitionArgVecBatch = addPartitionFunctionArguments(originalVecBatch);
 
             omniOperator.addInput(originalAndPartitionArgVecBatch);
-            Iterator<VecBatch> partitionedVecBatch = omniOperator.getOutput();
-            vecBatchIterator = partitionedVecBatch;
             flush(true);
 
             originalAndPartitionArgVecBatch.releaseAllVectors();
