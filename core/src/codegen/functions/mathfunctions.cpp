@@ -4,6 +4,7 @@
  */
 #include "mathfunctions.h"
 #include <iostream>
+#include "context_helper.h"
 
 
 #ifdef _WIN32
@@ -50,6 +51,14 @@ extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
 extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
 {
     return static_cast<double>(x);
+}
+
+extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr)
+{
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) + sizeof (long)));
+    result[0] = x;
+    result[1] = 0;
+    return reinterpret_cast<int64_t>(result);
 }
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)

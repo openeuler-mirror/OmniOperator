@@ -158,6 +158,45 @@ TEST(ProjectTest, Cast)
     delete factory;
 }
 
+TEST(ProjectTest, CastInt64ToDecimal128)
+{
+    const int32_t numRows = 1000;
+    int64_t *col1 = MakeLongs(numRows);
+    const int32_t numCols = 1;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
+    DataExpr *data1 = new DataExpr(0, INT64D);
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    FuncExpr *castExpr = new FuncExpr("CAST", args1, DECIMAL128D);
+
+    std::vector<Expr*> exprs = {castExpr};
+
+    VecTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+    }
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        Decimal128 val0 = ((Decimal128Vector*) ret[0]->GetVector(0))->GetValue(i);
+        EXPECT_EQ(val0.HighBits(), 0);
+        EXPECT_EQ(val0.LowBits(), i);
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete op;
+    delete factory;
+}
+
 TEST (ProjectTest, Simple) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows);

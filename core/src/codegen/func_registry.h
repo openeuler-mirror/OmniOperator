@@ -67,6 +67,7 @@ public:
     const std::string castInt64ToDoubleStr = "CAST_int64_double";
     const std::string castInt32ToInt64Str = "CAST_int32_int64";
     const std::string castInt64ToInt32Str = "CAST_int64_int32";
+    const std::string castInt64ToDecimal128Str = "CAST_int64_decimal128";
     const std::string castStringStr = "CAST_string_int32";
     const std::string combineHashInt32Str = "combine_hash_int64_int64_int32";
     const std::string combineHashInt64Str = "combine_hash_int64_int64_int64";

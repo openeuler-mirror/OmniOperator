@@ -28,6 +28,8 @@ extern "C" DLLEXPORT long CastInt32ToInt64(int32_t x);
 
 extern "C" DLLEXPORT int CastInt64ToInt32(int64_t x);
 
+extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr);
+
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
