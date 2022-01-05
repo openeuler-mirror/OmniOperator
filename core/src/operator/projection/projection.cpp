@@ -99,7 +99,7 @@ bool Projection::IsSupported()
 }
 
 Projection::Projection(VecTypes &inputTypes, int32_t nCols, const Expr &expr, bool filter)
-    : inputTypes(inputTypes), inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())), nCols(nCols), expr(&expr)
+    : inputTypes(inputTypes), nCols(nCols), expr(&expr)
 {
     this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
 
@@ -321,10 +321,9 @@ int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
     this->mutated = nullptr;
     return rowCount;
 }
-    ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
-        VecTypes &inputTypes, int32_t nCols): inputTypes(inputTypes),
-                                              inputTypeIds(const_cast<int32_t *>(inputTypes.GetIds())),
-                                              nCols(nCols), nProj(nProj)
+ProjectionOperatorFactory::ProjectionOperatorFactory(const std::vector<Expr *> &exprs, int32_t nProj,
+    VecTypes &inputTypes, int32_t nCols)
+    : inputTypes(inputTypes), nCols(nCols), nProj(nProj)
 {
     this->inputTypeIds = const_cast<int32_t *>(this->inputTypes.GetIds());
     this->SetJitContext(nullptr);
