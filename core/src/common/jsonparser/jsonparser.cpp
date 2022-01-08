@@ -89,7 +89,14 @@ Expr *JSONParser::ParseJSONBinary(Json jsonExpr)
 {
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
     Expr *leftExpr = ParseJSON(jsonExpr["left"]);
+    if (leftExpr == nullptr) {
+        return nullptr;
+    }
     Expr *rightExpr = ParseJSON(jsonExpr["right"]);
+    if (rightExpr == nullptr) {
+        return nullptr;
+    }
+
     OperatorType retType = GetOperatorType(op);
     if (retType == COMPARISON || retType == LOGICAL) {
         return make_unique<BinaryExpr>(op, leftExpr, rightExpr, DataType::BOOLD).release();
@@ -101,6 +108,9 @@ Expr *JSONParser::ParseJSONUnary(Json jsonExpr)
 {
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
     Expr *expr = ParseJSON(jsonExpr["expr"]);
+    if (expr == nullptr) {
+        return nullptr;
+    }
     return make_unique<UnaryExpr>(op, expr, DataType::BOOLD).release();
 }
 
@@ -108,7 +118,12 @@ Expr *JSONParser::ParseJSONIn(Json jsonExpr)
 {
     std::vector<Expr *> args;
     for (const auto &item : jsonExpr["arguments"].items()) {
-        args.push_back(ParseJSON(item.value()));
+        Expr *arg = ParseJSON(item.value());
+        if (arg) {
+            args.push_back(arg);
+        } else {
+            return nullptr;
+        }
     }
     return make_unique<InExpr>(args).release();
 }
@@ -117,7 +132,13 @@ Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
 {
     Expr *val = ParseJSON(jsonExpr["value"]);
     Expr *lowBoundExpr = ParseJSON(jsonExpr["lower_bound"]);
+    if (lowBoundExpr == nullptr) {
+        return nullptr;
+    }
     Expr *upBoundExpr = ParseJSON(jsonExpr["upper_bound"]);
+    if (upBoundExpr == nullptr) {
+        return nullptr;
+    }
 
     return make_unique<BetweenExpr>(val, lowBoundExpr, upBoundExpr).release();
 }
@@ -125,12 +146,21 @@ Expr *JSONParser::ParseJSONBetween(Json jsonExpr)
 Expr *JSONParser::ParseJSONIf(Json jsonExpr)
 {
     Expr *cond = ParseJSON(jsonExpr["condition"]);
+    if (cond == nullptr) {
+        return nullptr;
+    }
     Expr *trueExpr = ParseJSON(jsonExpr["if_true"]);
+    if (trueExpr == nullptr) {
+        return nullptr;
+    }
     Expr *falseExpr = ParseJSON(jsonExpr["if_false"]);
+    if (falseExpr == nullptr) {
+        return nullptr;
+    }
 
-    if ((falseExpr->GetExprDataType() == VARCHARD || falseExpr->GetExprDataType() == CHARD)
-        && falseExpr->GetType() == ExprType::DATA_E
-        && static_cast<DataExpr*>(falseExpr)->stringVal->compare("null") == 0) {
+    if ((falseExpr->GetExprDataType() == VARCHARD || falseExpr->GetExprDataType() == CHARD) &&
+        falseExpr->GetType() == ExprType::DATA_E &&
+        static_cast<DataExpr *>(falseExpr)->stringVal->compare("null") == 0) {
         return make_unique<IfExpr>(cond, trueExpr, ParserHelper().GetDefaultValueForType(trueExpr->dataType)).release();
     }
 
@@ -140,14 +170,24 @@ Expr *JSONParser::ParseJSONIf(Json jsonExpr)
 Expr *JSONParser::ParseJSONCoalesce(Json jsonExpr)
 {
     Expr *val1 = ParseJSON(jsonExpr["value1"]);
+    if (val1 == nullptr) {
+        return nullptr;
+    }
     Expr *val2 = ParseJSON(jsonExpr["value2"]);
+    if (val2 == nullptr) {
+        return nullptr;
+    }
 
     return make_unique<CoalesceExpr>(val1, val2).release();
 }
 
 Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
-{   // Is_Null support
+{ // Is_Null support
     Expr *val = ParseJSON(jsonExpr["arguments"].at(0));
+    if (val == nullptr) {
+        return nullptr;
+    }
+
     return make_unique<IsNullExpr>(val).release();
 }
 
@@ -159,7 +199,12 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     int32_t width = INT32_MAX;
 
     for (const auto &item : jsonExpr["arguments"].items()) {
-        args.push_back(ParseJSON(item.value()));
+        Expr *arg = ParseJSON(item.value());
+        if (arg) {
+            args.push_back(arg);
+        } else {
+            return nullptr;
+        }
     }
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
     if (funcName == "CAST" && args.size() == 1 && retType == args[0]->dataType) {
@@ -173,10 +218,8 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     if (ParserHelper().FuncDeclMatch(funcName, args, true)) {
         return make_unique<FuncExpr>(funcName, args, retType, width).release();
     }
+
     // if operator is not supported, return nullptr
-#ifdef DEBUG
-    cout << "operator is not supported" << endl;
-#endif
     return nullptr;
 }
 
@@ -209,12 +252,15 @@ Expr *JSONParser::ParseJSON(Json jsonExpr)
 }
 
 std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::json *expressions,
-                                                                    int32_t numberOfExpressions)
+    int32_t numberOfExpressions)
 {
     std::vector<Expr *> result;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
         Expr *expr = ParseJSON(expressions[i]);
-        if (expr == nullptr) return {nullptr};
+        if (expr == nullptr) {
+            std::cout<<"The "<<i<<"th expression is not supported: "<<std::endl<<expressions[i].dump(1)<<std::endl;
+            return { nullptr };
+        }
         result.push_back(expr);
     }
     return result;

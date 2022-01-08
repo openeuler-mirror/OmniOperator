@@ -732,7 +732,11 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         return 0;
     }
     omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
-        filterExpr, inputVecTypes, inputLength, projectExprs, projectLength);
+            filterExpr, inputVecTypes, inputLength, projectExprs, projectLength);
+    if (!factory->isSupportedExpr) {
+        delete factory;
+        return 0;
+    }
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
     env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     return (int64_t)factory;
@@ -773,6 +777,11 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
 
     omniruntime::op::ProjectionOperatorFactory *factory =
         new omniruntime::op::ProjectionOperatorFactory(expressions, exprLength, inputVecTypes, inputLength);
+    if (!factory->IsSupported()) {
+        delete factory;
+        return 0;
+    }
+
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
 
     return (int64_t)factory;

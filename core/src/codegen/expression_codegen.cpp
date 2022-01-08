@@ -170,7 +170,9 @@ ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr)
 
 ExpressionCodeGen::~ExpressionCodeGen()
 {
-    eoe(rt->remove());
+    if (rt) {
+        eoe(rt->remove());
+    }
     delete fr;
 }
 
@@ -281,7 +283,7 @@ Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Valu
             return builder->CreateSRem(leftPhi, right, "arithmetic_mod");
         default:
             std::cout << "Unsupported int/long binary operator " << binaryExpr->op << std::endl;
-            return this->CreateConstantBool(false);
+            return nullptr;
     }
 }
 
@@ -315,7 +317,7 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return builder->CreateFDiv(leftPhi, right, "farithmetic_div");
         default:
             std::cout << "Unsupported double binary operator " << binaryExpr->op << std::endl;
-            return this->CreateConstantBool(false);
+            return nullptr;
     }
 }
 
@@ -346,7 +348,7 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
                 builder->CreateICmpNE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
         default:
             std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
-            return this->CreateConstantBool(false);
+            return nullptr;
     }
 }
 
@@ -387,7 +389,7 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, 
             return builder->CreateCall(module->getFunction(fr->divDec128Str), argVals, fr->divDec128Str);
         default:
             std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
-            return this->CreateConstantBool(false);
+            return nullptr;
     }
 }
 
@@ -474,6 +476,9 @@ Function *ExpressionCodeGen::CreateFunction()
 
     // Generate code
     auto result = VisitExpr(*expr);
+    if (result->data == nullptr) {
+        return nullptr;
+    }
     int32_t outputLengthIndex = EXPRFUNC_OUT_LENGTH_ARG_INDEX;
     // Update final output Length
     if (result->length != nullptr) {
@@ -749,6 +754,11 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
     this->value.reset(DataExprConstantHelper(dExpr));
 }
 
+CodeGenValuePtr CreateInvalidCodeGenValue()
+{
+    return make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+}
+
 void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 {
     const BinaryExpr *bExpr = &binaryExpr;
@@ -759,10 +769,18 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         bExpr->right->dataType = biggerType;
     }
     CodeGenValuePtr left = VisitExpr(*(bExpr->left));
+    if (!left->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     Value *leftValue = left->data;
     Value *leftLen = left->length;
     Value *leftNull = left->isNull;
     CodeGenValuePtr right = VisitExpr(*(bExpr->right));
+    if (!right->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     Value *rightValue = right->data;
     Value *rightLen = right->length;
     Value *rightNull = right->isNull;
@@ -802,12 +820,17 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
-    this->value = make_shared<CodeGenValue>(this->CreateConstantBool(false), this->CreateConstantBool(false));
+    this->value = CreateInvalidCodeGenValue();
 }
 
 void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
 {
     auto val = VisitExpr(*(uExpr.exp));
+    if (!val->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+
     switch (uExpr.op) {
         case NOT: {
             Value *notValue = builder->CreateNot(val->data, "logical_not");
@@ -833,12 +856,20 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
     BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
 
     CodeGenValuePtr evCond = VisitExpr(*cond);
+    if (!evCond->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
 
     // If cond evaluates to true, control flow goes to trueBlock, returning evTrue
     // Otherwise goes to falseBlock and returns evFalse
     builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(evCond->isNull), evCond->data), trueBlock, falseBlock);
     builder->SetInsertPoint(trueBlock);
     auto evTrue = VisitExpr(*ifTrue);
+    if (!evTrue->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     Value *evTrueValue = evTrue->data;
     Value *evTrueLength = evTrue->length;
     Value *evTrueNull = evTrue->isNull;
@@ -849,6 +880,10 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
     func->getBasicBlockList().push_back(falseBlock);
     builder->SetInsertPoint(falseBlock);
     auto evFalse = VisitExpr(*ifFalse);
+    if (!evFalse->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     Value *evFalseValue = evFalse->data;
     Value *evFalseLength = evFalse->length;
     Value *evFalseNull = evFalse->isNull;
@@ -896,6 +931,10 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             case INT32D:
             case INT64D: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
+                if (!argiValue->IsValidValue()) {
+                    this->value = CreateInvalidCodeGenValue();
+                    return;
+                }
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
                     builder->CreateAnd(builder->CreateNot(argiValue->isNull),
                     builder->CreateICmpEQ(valueToCompare->data, argiValue->data)));
@@ -904,6 +943,10 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             }
             case DOUBLED: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
+                if (!argiValue->IsValidValue()) {
+                    this->value = CreateInvalidCodeGenValue();
+                    return;
+                }
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
                     builder->CreateAnd(builder->CreateNot(argiValue->isNull),
                     builder->CreateFCmpOEQ(valueToCompare->data, argiValue->data)));
@@ -913,6 +956,10 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             case CHARD:
             case VARCHARD: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
+                if (!argiValue->IsValidValue()) {
+                    this->value = CreateInvalidCodeGenValue();
+                    return;
+                }
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
                     builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
                     valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
@@ -922,8 +969,8 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
             }
             default: {
                 LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->dataType);
-                tmpCmpData = this->CreateConstantBool(false);
-                tmpCmpNull = this->CreateConstantBool(false);
+                this->value = CreateInvalidCodeGenValue();
+                return;
             }
         }
 
@@ -943,14 +990,26 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     bExpr->value->dataType = biggerType;
 
     auto val = VisitExpr(*(bExpr->value));
+    if (!val->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     auto valData = val->data;
     auto valLen = val->length;
     auto valNull = val->isNull;
     auto lowerVal = VisitExpr(*(bExpr->lowerBound));
+    if (!lowerVal->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     auto lowerValData = lowerVal->data;
     auto lowerValLen = lowerVal->length;
     auto lowerValNull = lowerVal->isNull;
     auto upperVal = VisitExpr(*(bExpr->upperBound));
+    if (!upperVal->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     auto upperValData = upperVal->data;
     auto upperValLen = upperVal->length;
     auto upperValNull = upperVal->isNull;
@@ -990,7 +1049,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     }
 
     LLVM_DEBUG_LOG("Error: unsupported data type for between %d", bExpr->value->GetExprDataType());
-    this->value = make_shared<CodeGenValue>(this->CreateConstantBool(false), this->CreateConstantBool(false));
+    this->value = CreateInvalidCodeGenValue();
 }
 
 void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
@@ -998,6 +1057,10 @@ void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
     Expr *value1Expr = cExpr.value1;
     Expr *value2Expr = cExpr.value2;
     CodeGenValuePtr value1 = VisitExpr(*value1Expr);
+    if (!value1->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
 
     BasicBlock *isNullBlock = BasicBlock::Create(*context, "coalesceVal1IsNull", func);
     BasicBlock *isNotNullBlock = BasicBlock::Create(*context, "coalesceVal1IsNotNull");
@@ -1009,6 +1072,10 @@ void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
 
     builder->SetInsertPoint(isNullBlock);
     auto value2 = VisitExpr(*value2Expr);
+    if (!value2->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
     Value *value2Data = value2->data;
     Value *value2Length = value2->length;
     builder->CreateBr(mergeBlock);
@@ -1048,7 +1115,12 @@ void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
 void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
 {
     Expr *valueExpr = isNullExpr.value;
-    Value *isNullValue = VisitExpr(*valueExpr)->isNull;
+    auto value = VisitExpr(*valueExpr);
+    if (!value->IsValidValue()) {
+        this->value = CreateInvalidCodeGenValue();
+        return;
+    }
+    Value *isNullValue = value->isNull;
 
     Value *result = builder->CreateICmpEQ(isNullValue, CreateConstantBool(true), "isNullCompare");
     this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
@@ -1069,10 +1141,18 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
             DataType desiredType = fs.GetParams()[i];
             DataType currType = fExpr.arguments[i]->GetExprDataType();
             resultPtr = VisitExpr(*(fExpr.arguments[i]));
+            if (!resultPtr->IsValidValue()) {
+                this->value = CreateInvalidCodeGenValue();
+                return;
+            }
             argVals.push_back(resultPtr->data);
             isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
         } else {
             resultPtr = VisitExpr(*(fExpr.arguments[i]));
+            if (!resultPtr->IsValidValue()) {
+                this->value = CreateInvalidCodeGenValue();
+                return;
+            }
             argVals.push_back(resultPtr->data);
             isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
             // special case for concat function uses width
@@ -1111,7 +1191,9 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
         outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
     } else {
-        std::cout << "Unable to parse function " << funcName.c_str() << std::endl;
+        std::cout << "Unable to find function " << funcName.c_str() << std::endl;
+        this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
+        return;
     }
     this->value = make_shared<CodeGenValue>(ret, isAnyNull, outputLen);
 }

@@ -109,6 +109,7 @@ public:
         this->codeGen.reset();
         delete this->expr;
     }
+    bool isSupported;
 
     FilterFunc Apply;
 
@@ -168,7 +169,7 @@ public:
 
     Operator *CreateOperator() override;
 
-    bool isSupportedExpr;
+    bool isSupportedExpr = true;
 
 private:
     std::string expression;

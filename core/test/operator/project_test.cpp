@@ -197,6 +197,25 @@ TEST(ProjectTest, CastInt64ToDecimal128)
     delete factory;
 }
 
+TEST(ProjectTest, CastUnsupported)
+{
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_LONG) };
+    DataExpr *data1 = new DataExpr(0, DECIMAL128D);
+    std::vector<Expr *> args1{data1};
+    FuncExpr *castExpr = new FuncExpr("CAST", args1, INT64D);
+    DataExpr *data2 = new DataExpr(1, INT64D);
+    BinaryExpr *addExpr = new BinaryExpr(ADD, castExpr, data2);
+
+    std::vector<Expr*> exprs = {addExpr};
+
+    VecTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    EXPECT_FALSE(factory->IsSupported());
+
+    delete factory;
+}
+
 TEST (ProjectTest, Simple) {
     const int32_t numRows = 1000;
     int32_t* col = MakeInts(numRows);

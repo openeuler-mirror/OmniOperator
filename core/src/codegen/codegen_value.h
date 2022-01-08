@@ -14,6 +14,7 @@ public:
                           llvm::Value *length = nullptr): data(data), isNull(isNull), length(length) {}
 
     virtual ~CodeGenValue() = default;
+    bool IsValidValue() { return this->data != nullptr;}
 
     friend class ExpressionCodeGen;
     friend class RowExpressionCodeGen;
