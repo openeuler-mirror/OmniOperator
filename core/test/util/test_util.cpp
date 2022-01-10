@@ -193,6 +193,14 @@ VectorBatch *CreateVectorBatch(VecTypes &types, int32_t rowCount, ...)
     return vectorBatch;
 }
 
+VectorBatch *createEmptyVectorBatch(std::vector<VecType> &vecTypes)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetGlobalAllocator();
+    VectorBatch *vectorBatch = new VectorBatch(vecTypes.size());
+    vectorBatch->NewVectors(allocator, vecTypes);
+    return vectorBatch;
+}
+
 void AssertDoubleVectorEquals(DoubleVector *vector, double *expectedValues)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {

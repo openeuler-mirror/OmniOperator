@@ -21,6 +21,18 @@ import nova.hetu.omniruntime.vector.VecBatch;
 import java.nio.charset.StandardCharsets;
 
 public class TestUtils {
+
+    public static VecBatch createBlankVecBatch(VecType[] types) {
+        Object[] data = {};
+        Vec[] vecs = new Vec[types.length];
+        for (int i = 0; i < types.length; i++) {
+            vecs[i] = createVec(types[i], data);
+        }
+        VecBatch vecBatch = new VecBatch(vecs, 0);
+        return vecBatch;
+    }
+
+
     public static VecBatch createVecBatch(VecType[] types, Object[][] datas) {
         Vec[] vecs = new Vec[types.length];
         for (int i = 0; i < types.length; i++) {
