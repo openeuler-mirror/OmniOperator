@@ -13,7 +13,6 @@ using namespace omniruntime::expressions;
 
 namespace omniruntime {
 namespace op {
-
 RowProjection::RowProjection(const Expr &expression) : codegen(nullptr), expression(&expression) {}
 
 RowProjection::~RowProjection()
@@ -107,6 +106,12 @@ Projection::Projection(VecTypes &inputTypes, int32_t nCols, const Expr &expr, bo
     if (!initialized) {
         this->isSupported = false;
     }
+#ifdef DEBUG
+    std::cout << "Expression in projection:" << std::endl;
+    ExprPrinter printExprTree;
+    expr.Accept(printExprTree);
+    std::cout << std::endl;
+#endif
 }
 
 int64_t GetProjDecimal128Data(Vector *col, uint32_t nRows)

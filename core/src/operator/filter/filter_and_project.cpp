@@ -15,7 +15,7 @@ using namespace std;
 
 using Uint8vec = std::vector<uint8_t>;
 
-RowFilter::RowFilter(const omniruntime::expressions::Expr &expr): codegen(nullptr), expression(&expr){}
+RowFilter::RowFilter(const Expr &expr) : codegen(nullptr), expression(&expr) {}
 
 RowFilter::~RowFilter()
 {
@@ -33,7 +33,7 @@ RowFilterFunc RowFilter::Create()
     return *castedRef;
 }
 
-SimpleFilter::SimpleFilter(const omniruntime::expressions::Expr &expression)
+SimpleFilter::SimpleFilter(const Expr &expression)
 {
     this->codegen = nullptr;
     this->expression = &expression;
@@ -88,7 +88,8 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 }
 
 FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExpr, VecTypes &inputTypes,
-     int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount): inputVecTypes(inputTypes)
+    int32_t inputVecCount, const std::vector<Expr *> &projectExprs, int32_t projectVecCount)
+    : inputVecTypes(inputTypes)
 {
     this->inputVecCount = inputVecCount;
     this->projectVecCount = projectVecCount;
@@ -97,7 +98,7 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     std::cout << "String expression in Filter: " << expression << std::endl;
     ExprPrinter printExprTree;
     parsedExpr->Accept(printExprTree);
-    std::cout<<std::endl;
+    std::cout << std::endl;
 #endif
     if (parsedExpr != nullptr) {
         this->isSupportedExpr = true;
@@ -147,14 +148,17 @@ int64_t GetDecimal128Data(Vector *col, uint32_t nRows)
 
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetData(VectorBatch *&vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
-    std::vector<omniruntime::vec::Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
+    std::vector<Vector *> &dictionaryVecs, int32_t vectorCount, int64_t dictionaries[])
 {
     std::vector<int64_t> data;
     int64_t valuesAddress;
     int64_t dictVecAddress;
 
     for (int32_t i = 0; i < vectorCount; i++) {
-        omniruntime::vec::Vector *colVec = vecBatch->GetVector(i);
+        Vector *colVec = vecBatch->GetVector(i);
+        if (colVec->GetTypeId() == OMNI_VEC_TYPE_LAZY) {
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
+        }
         dictVecAddress = 0;
         valuesAddress = 0;
         VecTypeId typeId = colVec->GetTypeId();
@@ -236,7 +240,7 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
     return rowCount;
 }
 
-Filter::Filter(const expressions::Expr &expression, int32_t const *inputTypeIds, int32_t inputVecCount)
+Filter::Filter(const expressions::Expr &expression, const int32_t *inputTypeIds, int32_t inputVecCount)
 {
     vector<DataType> dataTypes;
     dataTypes.reserve(inputVecCount);
