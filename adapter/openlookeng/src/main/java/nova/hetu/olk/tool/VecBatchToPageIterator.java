@@ -131,7 +131,7 @@ public class VecBatchToPageIterator implements Iterator<Page> {
         int[] fieldBlockOffsets = new int[positionCount + 1];
         byte[] nulls = containerVec.getRawValueNulls();
         for (int position = 0; position < positionCount; position++) {
-            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position] + nulls[position] == Vec.NULL ? 0 : 1;
+            fieldBlockOffsets[position + 1] = fieldBlockOffsets[position] + (nulls[position] == Vec.NULL ? 0 : 1);
         }
         return new RowOmniBlock(0, positionCount, nulls, fieldBlockOffsets, rowBlocks);
     }

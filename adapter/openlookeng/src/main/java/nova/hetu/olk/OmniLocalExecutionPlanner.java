@@ -43,7 +43,6 @@ import static io.prestosql.sql.planner.SystemPartitioningHandle.FIXED_ARBITRARY_
 import static io.prestosql.sql.planner.SystemPartitioningHandle.FIXED_BROADCAST_DISTRIBUTION;
 import static io.prestosql.sql.planner.SystemPartitioningHandle.SCALED_WRITER_DISTRIBUTION;
 import static io.prestosql.sql.planner.SystemPartitioningHandle.SINGLE_DISTRIBUTION;
-import static io.prestosql.sql.planner.plan.AggregationNode.Step.FINAL;
 import static io.prestosql.sql.planner.plan.ExchangeNode.Scope.LOCAL;
 import static io.prestosql.sql.planner.plan.JoinNode.Type.FULL;
 import static io.prestosql.sql.planner.plan.JoinNode.Type.RIGHT;
@@ -106,11 +105,9 @@ import io.prestosql.operator.TableScanOperator;
 import io.prestosql.operator.TaskContext;
 import io.prestosql.operator.TaskOutputOperator;
 import io.prestosql.operator.TopNOperator;
-import io.prestosql.operator.ValuesOperator;
 import io.prestosql.operator.WindowFunctionDefinition;
 import io.prestosql.operator.WindowOperator;
 import io.prestosql.operator.aggregation.AccumulatorFactory;
-import io.prestosql.operator.aggregation.GenericAccumulatorFactory;
 import io.prestosql.operator.exchange.LocalExchange;
 import io.prestosql.operator.exchange.LocalExchangeSinkOperator;
 import io.prestosql.operator.exchange.LocalExchangeSourceOperator;
@@ -166,7 +163,6 @@ import io.prestosql.sql.planner.plan.GroupIdNode;
 import io.prestosql.sql.planner.plan.IndexJoinNode;
 import io.prestosql.sql.planner.plan.IndexSourceNode;
 import io.prestosql.sql.planner.plan.JoinNode;
-import io.prestosql.sql.planner.plan.LateralJoinNode;
 import io.prestosql.sql.planner.plan.LimitNode;
 import io.prestosql.sql.planner.plan.MarkDistinctNode;
 import io.prestosql.sql.planner.plan.OutputNode;
@@ -214,7 +210,6 @@ import nova.hetu.olk.operator.localexchange.OmniLocalExchange;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.omniruntime.constants.AggType;
-import nova.hetu.omniruntime.type.ContainerVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
@@ -324,11 +319,11 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         return builder.build();
     }
 
-    static List<Type> getAggregationResultTypes(List<AccumulatorFactory> accumulatorFactories) {
+    static List<Type> getAggregationResultTypes(Map<Symbol, AggregationNode.Aggregation> aggregations,
+        LocalExecutionPlanContext context) {
         ImmutableList.Builder<Type> builder = ImmutableList.builder();
-        for (AccumulatorFactory accumulatorFactory : accumulatorFactories) {
-            builder.add(((GenericAccumulatorFactory) accumulatorFactory)
-                    .getStateDescriptors().get(0).getSerializer().getSerializedType());
+        for (Symbol symbol : aggregations.keySet()) {
+            builder.add(context.getTypes().get(symbol));
         }
         return builder.build();
     }
@@ -1337,7 +1332,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     .collect(toImmutableList());
             List<Type> aggregationSourceTypes = aggregationChannels.stream().map(entry -> source.getTypes().get(entry))
                     .collect(toImmutableList());
-            List<Type> aggregationResultTypes = getAggregationResultTypes(accumulatorFactories);
+            List<Type> aggregationResultTypes = getAggregationResultTypes(aggregations, context);
 
             if (isStreamable) {
                 return new StreamingAggregationOperator.StreamingAggregationOperatorFactory(context.getNextOperatorId(),

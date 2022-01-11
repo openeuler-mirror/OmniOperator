@@ -254,27 +254,28 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
             run = rowCount - start;
         }
         GenerateCombinedHashes(groupByVectors, start, run, groupByColNum, combinedHashVal);
-        for (uint32_t offset = 0; offset < run; ++offset) {
-            uint64_t hash = combinedHashVal[offset];
+        int32_t decodedIdx;
+        for (uint32_t rowIdx = 0; rowIdx < run; ++rowIdx) {
+            uint64_t hash = combinedHashVal[rowIdx];
             int32_t isSamePos = -1;
-            int32_t actualOffset = start + offset;
+            int32_t actualIdx = start + rowIdx;
             auto &bucket = groupedRows[hash];
-            isSamePos = IsSameGroupByTuples(groupByVectors, actualOffset, groupByColNum, bucket);
+            isSamePos = IsSameGroupByTuples(groupByVectors, actualIdx, groupByColNum, bucket);
             if (isSamePos == -1) {
                 std::vector<AggregateState> groupByTuple(groupByColNum + aggColNum, AggregateState());
                 for (int32_t i = 0; i < groupByColNum; ++i) {
-                    DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualOffset, executionContext.get());
+                    DuplicateGroupByTuple(groupByTuple[i], groupByVectors[i], actualIdx, executionContext.get());
                 }
                 bucket.push_back(groupByTuple);
                 size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i],
-                                                  aggrByVectors[i], actualOffset);
+                    Vector *decodedVec = VectorHelper::ExpandVectorAndIndex(aggrByVectors[i], actualIdx, decodedIdx);
+                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], decodedVec, decodedIdx);
                 }
             } else {
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i],
-                                                 aggrByVectors[i], actualOffset);
+                    Vector *decodedVec = VectorHelper::ExpandVectorAndIndex(aggrByVectors[i], actualIdx, decodedIdx);
+                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], decodedVec, decodedIdx);
                 }
             }
         }
