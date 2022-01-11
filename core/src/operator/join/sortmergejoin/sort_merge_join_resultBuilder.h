@@ -52,6 +52,7 @@ private:
     std::vector<VectorBatch *> buildVectorBatchs;
 
     SimpleFilter *simpleFilter = nullptr;
+    ExecutionContext *executionContext = nullptr;
 };
 }
 }

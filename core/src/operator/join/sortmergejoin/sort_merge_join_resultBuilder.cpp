@@ -44,6 +44,7 @@ void JoinResultBuilder::JoinFilterCodeGen()
         VecTypes vecTypes(allTypes);
         omniruntime::expressions::Expr *filterExpr =
             parser.ParseRowExpression(filterExpStr, vecTypes, vecTypes.GetSize());
+        executionContext = new ExecutionContext();
         simpleFilter = new SimpleFilter(*filterExpr);
         simpleFilter->Initialize();
     }
@@ -67,7 +68,7 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     return vectorBatch;
 }
 
-template <typename T, typename V>
+template<typename T, typename V>
 void AddFixWidthValueToVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
 {
     T *fixWidthValueVector = static_cast<T *>(inputVector);
@@ -155,7 +156,6 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<int64_t> &streamedT
         int64_t rightAddress = bufferedTableValueAddresses[addressPosition];
         int32_t rightBatchId = DecodeSliceIndex(rightAddress);
         int32_t rightRowId = DecodePosition(rightAddress);
-
         if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
             for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
                 AddValueToBuildVector(leftTablePagesIndex->GetColumns(leftBatchId, leftTableOutputCols[columnIdx]),
@@ -250,9 +250,19 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
     }
 
-    return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(new ExecutionContext()));
+    return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
 }
 
-JoinResultBuilder::~JoinResultBuilder() {}
+JoinResultBuilder::~JoinResultBuilder()
+{
+    if (simpleFilter != nullptr) {
+        delete simpleFilter;
+        simpleFilter = nullptr;
+    }
+    if (executionContext != nullptr) {
+        delete executionContext;
+        executionContext = nullptr;
+    }
+}
 }
 }
