@@ -313,6 +313,41 @@ JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_createDistinctLimitOperatorFactory(
     JNIEnv *env, jclass, jstring, jintArray, jint, jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory
+ * Method:    createSmjStreamedTableWithExprOperatorFactory
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;[IILjava/lang/String;J)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory_createSmjStreamedTableWithExprOperatorFactory(
+    JNIEnv *, jclass, jstring, jobjectArray, jintArray, jint, jstring, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory
+ * Method:    createSmjStreamedTableWithExprJitContext
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;[IILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory_createSmjStreamedTableWithExprJitContext(
+    JNIEnv *, jclass, jstring, jobjectArray, jintArray, jint, jstring);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory
+ * Method:    createSmjBufferedTableWithExprOperatorFactory
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;[IJJ)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprOperatorFactory(
+    JNIEnv *, jclass, jstring, jobjectArray, jintArray, jlong, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory
+ * Method:    createSmjBufferedTableWithExprJitContext
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;[I)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprJitContext(
+    JNIEnv *, jclass, jstring, jobjectArray, jintArray);
 #ifdef __cplusplus
 }
 #endif

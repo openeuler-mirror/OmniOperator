@@ -12,16 +12,10 @@
 #include "../../vector/vector_types.h"
 #include "../../vector/vector_type.h"
 #include "hash_builder.h"
+#include "common_join.h"
 
 namespace omniruntime {
 namespace op {
-using JoinType = enum JoinType {
-    OMNI_JOIN_TYPE_INNER = 0,
-    OMNI_JOIN_TYPE_LEFT,
-    OMNI_JOIN_TYPE_RIGHT,
-    OMNI_JOIN_TYPE_FULL,
-};
-
 class LookupJoinOperatorFactory : public OperatorFactory {
 public:
     LookupJoinOperatorFactory(const vec::VecTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,

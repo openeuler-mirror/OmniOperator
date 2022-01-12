@@ -19,6 +19,7 @@
 #include "../operator/join/lookup_join.h"
 #include "../operator/join/hash_builder_expr.h"
 #include "../operator/join/lookup_join_expr.h"
+#include "../operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include "../operator/topn/topn.h"
 #include "../operator/topn/topn_expr.h"
 #include "../operator/partitionedoutput/partitionedoutput.h"
@@ -2002,4 +2003,104 @@ Java_nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory_creat
     env->ReleaseStringUTFChars(jSoureTypes, sourceTypesCharPtr);
 
     return (int64_t)distinctLimitOperatorFactory;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory_createSmjStreamedTableWithExprJitContext(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jint jJoinType, jstring jFilter)
+{
+    return 0;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactory_createSmjStreamedTableWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jint jJoinType, jstring jFilter, jlong jitContext)
+{
+    if ((JoinType)jJoinType != OMNI_JOIN_TYPE_INNER) {
+        return (int64_t)0;
+    }
+
+    JNI_DEBUG_LOG("create streamed table with expression operator factory starting.");
+    auto start = START();
+
+    auto streamedTypesChars = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto streamedVecTypes = Deserialize(streamedTypesChars);
+    env->ReleaseStringUTFChars(jSourceTypes, streamedTypesChars);
+
+    auto streamedKeyExpsCount = env->GetArrayLength(jEqualKeyExprs);
+    std::string streamedKeyExpsArr[streamedKeyExpsCount];
+    GetExpressions(env, jEqualKeyExprs, streamedKeyExpsArr, streamedKeyExpsCount);
+
+    auto streamedOutputColsCnt = env->GetArrayLength(jOutputChannels);
+    auto streamedOutputCols = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> streamedKeysArrExprs = parser.ParseExpressions(streamedKeyExpsArr,
+                                                                                                 streamedKeyExpsCount,
+                                                                                                 streamedVecTypes,
+                                                                                                 streamedKeyExpsCount);
+
+    std::string filterExpression;
+    if (jFilter == nullptr) {
+        filterExpression = "";
+    } else {
+        auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
+        filterExpression = std::string(filterChars);
+        env->ReleaseStringUTFChars(jFilter, filterChars);
+    }
+
+    JNI_DEBUG_LOG("before create streamed table with expression operator factory elapsed time: %ld ms.", END(start));
+    StreamedTableWithExprOperatorFactory *operatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedVecTypes,
+        streamedKeysArrExprs, streamedKeyExpsCount, streamedOutputCols, streamedOutputColsCnt, (JoinType)jJoinType,
+        filterExpression);
+    operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
+    JNI_DEBUG_LOG("create streamed table with expression operator factory finished, elapsed time: %ld ms.", END(start));
+
+    return (int64_t)operatorFactory;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprJitContext(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels)
+{
+    return 0;
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactory_createSmjBufferedTableWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jlong jSmjStreamedTableWithExprOperatorFactory, jlong jitContext)
+{
+    JNI_DEBUG_LOG("create buffered table with expression operator factory starting.");
+    auto start = START();
+
+    auto bufferedTypesChars = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto bufferedVecTypes = Deserialize(bufferedTypesChars);
+    env->ReleaseStringUTFChars(jSourceTypes, bufferedTypesChars);
+
+    auto bufferedKeyExpsCnt = env->GetArrayLength(jEqualKeyExprs);
+    std::string bufferedKeyExpsArr[bufferedKeyExpsCnt];
+    GetExpressions(env, jEqualKeyExprs, bufferedKeyExpsArr, bufferedKeyExpsCnt);
+
+    auto bufferedOutputCols = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+    auto bufferedOutputColsCnt = env->GetArrayLength(jOutputChannels);
+
+    Parser parser;
+    std::vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs = parser.ParseExpressions(bufferedKeyExpsArr,
+                                                                                                 bufferedKeyExpsCnt,
+                                                                                                 bufferedVecTypes,
+                                                                                                 bufferedKeyExpsCnt);
+
+    JNI_DEBUG_LOG("before create buffered table with expression operator factory elapsed time: %ld ms.", END(start));
+    BufferedTableWithExprOperatorFactory *operatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedVecTypes,
+        bufferedKeysArrExprs, bufferedKeyExpsCnt, bufferedOutputCols, bufferedOutputColsCnt,
+        jSmjStreamedTableWithExprOperatorFactory);
+    operatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
+    JNI_DEBUG_LOG("create buffered table operator with expression factory finished, elapsed time: %ld ms.", END(start));
+
+    return (int64_t)operatorFactory;
 }
