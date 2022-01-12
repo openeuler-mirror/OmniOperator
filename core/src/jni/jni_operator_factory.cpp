@@ -87,7 +87,7 @@ void GetColumnsFromExpressions(JNIEnv *env, jobjectArray &jExpressions, int32_t 
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                     */
+ *                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationJitContext(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -192,7 +192,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an HashAggregationFactory object address.
- *                                                     */
+ *                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactory_createHashAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jobjectArray jGroupByChannel, jstring jGroupByType, jobjectArray jAggChannel,
@@ -255,35 +255,28 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
 /**
  * Return an AggregationFactory object address.
- *                                                     */
+ *                                                       */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
-    jobject jObj, jstring jAggType, jintArray jAggFuncType, jstring jAggOutputTypes, jboolean inputRaw,
-    jboolean outputPartial)
+    jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jstring jAggOutputTypes,
+    jboolean inputRaw, jboolean outputPartial)
 {
-    auto aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
-    auto aggVecTypes = Deserialize(aggTypesCharPtr);
-    jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto sourceTypes = Deserialize(sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
-    auto aggTypeIds = aggVecTypes.GetIds();
-    auto aggNum = static_cast<size_t>(aggVecTypes.GetSize());
+    auto aggFuncTypes = env->GetIntArrayElements(jAggFuncTypes, JNI_FALSE);
+    auto aggInputCols = env->GetIntArrayElements(jAggInputCols, JNI_FALSE);
+    auto aggOutputTypesCharPtr = env->GetStringUTFChars(jAggOutputTypes, JNI_FALSE);
+    auto aggOutputTypes = Deserialize(aggOutputTypesCharPtr);
+    env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
 
-    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggNum };
-    PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
-    int32_t aggColNum = aggTypeContext.len;
+    auto sourceTypeIds = sourceTypes.GetIds();
+    auto sourceTypesCount = sourceTypes.GetSize();
+    auto aggCount = aggOutputTypes.GetSize();
 
     using namespace omniruntime::jit;
-    std::map<std::string, ParamValue *> testParam;
-
-    ParamValue pColType = ParamValue((int32_t *)aggTypeContext.context, aggColNum);
-    ParamValue pAggNum = ParamValue(&aggColNum);
-    ParamValue pAggTypes = ParamValue((int32_t *)aggFuncTypeContext.context, aggColNum);
-
     auto *inloopSp = new Specialization();
-    inloopSp->AddSpecializedParam(3, &pAggNum);
-    inloopSp->AddSpecializedParam(4, &pColType);
-    inloopSp->AddSpecializedParam(5, &pAggTypes);
-
     std::map<std::string, Specialization> nonGroupSps = { { OMNIJIT_NON_GROUP_INLOOP, *inloopSp } };
 
     auto *groupAggregationContext =
@@ -295,38 +288,39 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     JitContext *jitContext = new JitContext;
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
-    env->ReleaseStringUTFChars(jAggType, aggTypesCharPtr);
     return reinterpret_cast<uint64_t>(jitContext);
 }
 
 /**
  * Return an AggregationFactory object address.
- *                                                     */
+ *                                                        */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
-    JNIEnv *env, jobject jObj, jstring jAggType, jintArray jAggFuncType, jstring jAggOutputTypes, jboolean inputRaw,
-    jboolean outputPartial, jlong jitContext)
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
+    jstring jAggOutputTypes, jboolean inputRaw, jboolean outputPartial, jlong jitContext)
 {
-    JNI_DEBUG_LOG("create hashagg operator factory starting.");
-    auto start = START();
-    auto aggTypesCharPtr = env->GetStringUTFChars(jAggType, JNI_FALSE);
-    auto aggVecTypes = Deserialize(aggTypesCharPtr);
-    jint *aggFuncTypes = env->GetIntArrayElements(jAggFuncType, JNI_FALSE);
+    auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto sourceTypes = Deserialize(sourceTypesCharPtr);
+    env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
-    auto aggTypeIds = aggVecTypes.GetIds();
-    auto aggNum = static_cast<size_t>(aggVecTypes.GetSize());
+    auto aggFuncTypes = env->GetIntArrayElements(jAggFuncTypes, JNI_FALSE);
+    auto aggInputCols = env->GetIntArrayElements(jAggInputCols, JNI_FALSE);
+    auto aggOutputTypesCharPtr = env->GetStringUTFChars(jAggOutputTypes, JNI_FALSE);
+    auto aggOutputTypes = Deserialize(aggOutputTypesCharPtr);
+    env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
 
-    PrepareContext aggTypeContext = { (uint32_t *)aggTypeIds, aggNum };
-    PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, aggNum };
-    int32_t aggColNum = aggTypeContext.len;
+    auto sourceTypeIds = sourceTypes.GetIds();
+    auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
-    // TODO get agg output types from java
+    PrepareContext aggInputColsContext = { (uint32_t *)aggInputCols, aggCount };
+    PrepareContext aggFuncTypesContext = { (uint32_t *)aggFuncTypes, aggCount };
+
     omniruntime::op::AggregationOperatorFactory *nativeOperatorFactory =
-        new omniruntime::op::AggregationOperatorFactory(aggVecTypes, aggVecTypes, aggFuncTypeContext, inputRaw,
-        outputPartial);
+        new omniruntime::op::AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
+        aggOutputTypes, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();
-    env->ReleaseStringUTFChars(jAggType, aggTypesCharPtr);
+
     return reinterpret_cast<uint64_t>(nativeOperatorFactory);
 }
 
@@ -738,7 +732,7 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
         return 0;
     }
     omniruntime::op::FilterAndProjectOperatorFactory *factory = new omniruntime::op::FilterAndProjectOperatorFactory(
-            filterExpr, inputVecTypes, inputLength, projectExprs, projectLength);
+        filterExpr, inputVecTypes, inputLength, projectExprs, projectLength);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
     env->ReleaseStringUTFChars(jExpression, expressionCharPtr);
     return (int64_t)factory;
@@ -945,10 +939,10 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
         for (int32_t j = 0; j < buildTypes->GetSize(); j++) {
             allTypes.push_back(buildTypes->Get().at(j));
         }
-        VecTypes VecTypes (allTypes);
+        VecTypes VecTypes(allTypes);
 
-        omniruntime::expressions::Expr *filterExpr = parser.ParseRowExpression(filterExpression, VecTypes,
-                                                                               VecTypes.GetSize());
+        omniruntime::expressions::Expr *filterExpr =
+            parser.ParseRowExpression(filterExpression, VecTypes, VecTypes.GetSize());
         hashTables->SetFilterExpr(*filterExpr);
     }
 
@@ -1289,10 +1283,8 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 
     // parse the expressions
     Parser parser;
-    std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs = parser.ParseExpressions(sortKeysArr,
-                                                                                             sortKeysCount,
-                                                                                             sourceVecTypes,
-                                                                                             sourceVecTypes.GetSize());
+    std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs =
+        parser.ParseExpressions(sortKeysArr, sortKeysCount, sourceVecTypes, sourceVecTypes.GetSize());
 
     JNI_DEBUG_LOG("before create sort with expression operator factory elapsed time: %ld ms.", END(start));
     SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
@@ -1386,10 +1378,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     std::string filterExpression = std::string(filterChars);
     env->ReleaseStringUTFChars(jFilter, filterChars);
     Parser parser;
-    std::vector<omniruntime::expressions::Expr *> buildHashKeysArrExprs = parser.ParseExpressions(buildHashKeysArr,
-                                                                                                  buildHashKeysCount,
-                                                                                                  buildVecTypes,
-                                                                                                  buildHashKeysCount);
+    std::vector<omniruntime::expressions::Expr *> buildHashKeysArrExprs =
+        parser.ParseExpressions(buildHashKeysArr, buildHashKeysCount, buildVecTypes, buildHashKeysCount);
 
     JNI_DEBUG_LOG("before create hash builder with expression operator factory elapsed time: %ld ms.", END(start));
     HashBuilderWithExprOperatorFactory *operatorFactory =
@@ -1509,8 +1499,9 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
 
     // extract the expression and the BuildVecTypes to parse the expression
-    auto hashTables = reinterpret_cast<HashBuilderWithExprOperatorFactory *>(jHashBuilderOperatorFactory)->
-            GetHashBuilderOperatorFactory()->GetHashTables();
+    auto hashTables = reinterpret_cast<HashBuilderWithExprOperatorFactory *>(jHashBuilderOperatorFactory)
+                          ->GetHashBuilderOperatorFactory()
+                          ->GetHashTables();
     std::string filterExpression = hashTables->GetFilterExpression();
     VecTypes *buildTypes = hashTables->GetBuildVecTypes();
     Parser parser;
@@ -1523,15 +1514,15 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
         for (int32_t j = 0; j < buildTypes->GetSize(); j++) {
             allTypes.push_back(buildTypes->Get().at(j));
         }
-        VecTypes VecTypes (allTypes);
+        VecTypes VecTypes(allTypes);
 
-        omniruntime::expressions::Expr *filterExpr = parser.ParseRowExpression(filterExpression, VecTypes,
-            VecTypes.GetSize());
+        omniruntime::expressions::Expr *filterExpr =
+            parser.ParseRowExpression(filterExpression, VecTypes, VecTypes.GetSize());
         hashTables->SetFilterExpr(*filterExpr);
     }
 
-    std::vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs = parser.ParseExpressions(probeHashKeysArr,
-        probeHashKeysCount, probeVecTypes, probeVecTypes.GetSize());
+    std::vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs =
+        parser.ParseExpressions(probeHashKeysArr, probeHashKeysCount, probeVecTypes, probeVecTypes.GetSize());
 
     JNI_DEBUG_LOG("before create lookup join with expression operator factory elapsed time: %ld ms.", END(start));
     LookupJoinWithExprOperatorFactory *operatorFactory =
@@ -1707,10 +1698,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     jint outputTypesCount = outputVecTypes.GetSize();
 
     Parser parser;
-    std::vector<omniruntime::expressions::Expr *> argumentKeysArrExprs = parser.ParseExpressions(argumentKeysArr,
-                                                                                                 argumentKeysArrCount,
-                                                                                                 inputVecTypes,
-                                                                                                 inputTypesCount);
+    std::vector<omniruntime::expressions::Expr *> argumentKeysArrExprs =
+        parser.ParseExpressions(argumentKeysArr, argumentKeysArrCount, inputVecTypes, inputTypesCount);
 
     omniruntime::op::WindowWithExprOperatorFactory *windowWithExprOperatorFactory =
         omniruntime::op::WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(inputVecTypes,
@@ -1845,12 +1834,10 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     auto outVecTypes = Deserialize(outTypesCharPtr);
 
     Parser parser;
-    std::vector<omniruntime::expressions::Expr *> groupByKeysExprs = parser.ParseExpressions(groupByKeys,
-                                                                                             groupByNum, sourceVecTypes,
-                                                                                             sourceVecTypes.GetSize());
-    std::vector<omniruntime::expressions::Expr *> aggKeysExprs = parser.ParseExpressions(aggKeys, aggNum,
-                                                                                         sourceVecTypes,
-                                                                                         sourceVecTypes.GetSize());
+    std::vector<omniruntime::expressions::Expr *> groupByKeysExprs =
+        parser.ParseExpressions(groupByKeys, groupByNum, sourceVecTypes, sourceVecTypes.GetSize());
+    std::vector<omniruntime::expressions::Expr *> aggKeysExprs =
+        parser.ParseExpressions(aggKeys, aggNum, sourceVecTypes, sourceVecTypes.GetSize());
 
     omniruntime::op::HashAggregationWithExprOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprs, aggNum,
@@ -1942,10 +1929,8 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     auto sourceVecTypes = Deserialize(sourceTypesCharPtr);
 
     Parser parser;
-    std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs = parser.ParseExpressions(sortKeysArr,
-                                                                                             sortKeyCount,
-                                                                                             sourceVecTypes,
-                                                                                             sourceVecTypes.GetSize());
+    std::vector<omniruntime::expressions::Expr *> sortKeysArrExprs =
+        parser.ParseExpressions(sortKeysArr, sortKeyCount, sourceVecTypes, sourceVecTypes.GetSize());
 
 
     omniruntime::op::TopNWithExprOperatorFactory *topNWithExprOperatorFactory =

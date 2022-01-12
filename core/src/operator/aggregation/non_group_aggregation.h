@@ -13,41 +13,39 @@ namespace omniruntime {
 namespace op {
 class AggregationOperator : public AggregationCommonOperator {
 public:
-    AggregationOperator(std::vector<ColumnIndex> aggCol, std::vector<std::unique_ptr<Aggregator>> aggs, bool inputRaw,
-        bool outputPartial)
-        : aggCols(aggCol), AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial)
-    {}
+    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs, std::vector<int32_t> &aggInputCols,
+        omniruntime::vec::VecTypes &aggOutputTypes, bool inputRaw, bool outputPartial)
+        : AggregationCommonOperator(std::move(aggs), inputRaw, outputPartial),
+          aggInputCols(aggInputCols),
+          aggOutputTypes(aggOutputTypes)
+    {
+        for (int32_t i = 0; i < aggregators.size(); i++) {
+            aggStates.push_back(AggregateState());
+        }
+    }
 
     ~AggregationOperator() override {}
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
-    void InLoop(omniruntime::vec::Vector **vectors, uint32_t offset, int32_t colNum, const int32_t *aggDataType,
-        const int32_t *aggFuncType);
-    inline void PreLoop(omniruntime::vec::VectorBatch *vecBatch)
-    {
-        sourceTypes = new int32_t[aggCols.size()];
-        int32_t idx = 0;
-        for (auto &c : aggCols) {
-            sourceTypes[idx++] = static_cast<int32_t>(c.input.GetId());
-        }
-    }
-    inline void PostLoop(omniruntime::vec::VectorBatch *vecBatch) const {}
-
-    void FillResultVectors(omniruntime::vec::VectorBatch *vecBatch);
 
 private:
-    std::vector<ColumnIndex> aggCols;
+    std::vector<int32_t> aggInputCols;
+    omniruntime::vec::VecTypes aggOutputTypes;
+    std::vector<AggregateState> aggStates;
 };
 
 class AggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
     Operator *CreateOperator() override;
 
-    AggregationOperatorFactory(vec::VecTypes &aggInput, vec::VecTypes &aggOutput, PrepareContext aggFuncType,
-        bool inputRaw, bool outputPartial)
-        : aggInputTypes(aggInput),
-          aggOutputTypes(aggOutput),
-          aggFuncTypeContext(aggFuncType),
+public:
+    AggregationOperatorFactory(omniruntime::vec::VecTypes &sourceTypes, PrepareContext aggFuncTypesContext,
+        PrepareContext aggInputColsContext, omniruntime::vec::VecTypes &aggOutputTypes, bool inputRaw,
+        bool outputPartial)
+        : sourceTypes(sourceTypes),
+          aggFuncTypesContext(aggFuncTypesContext),
+          aggInputColsContext(aggInputColsContext),
+          aggOutputTypes(aggOutputTypes),
           AggregationCommonOperatorFactory(inputRaw, outputPartial)
     {}
 
@@ -56,9 +54,12 @@ public:
     OmniStatus Close() override;
 
 private:
-    vec::VecTypes aggInputTypes;
-    vec::VecTypes aggOutputTypes;
-    PrepareContext aggFuncTypeContext;
+    omniruntime::vec::VecTypes sourceTypes;
+    PrepareContext aggFuncTypesContext;
+    PrepareContext aggInputColsContext;
+    omniruntime::vec::VecTypes aggOutputTypes;
+    std::vector<omniruntime::vec::VecType> aggInputTypes;
+    std::vector<int32_t> aggInputCols;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
 };
 } // end op

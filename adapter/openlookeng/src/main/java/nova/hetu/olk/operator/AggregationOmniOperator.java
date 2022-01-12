@@ -8,21 +8,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
-import com.google.common.collect.ImmutableList;
-
 import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.Operator;
 import io.prestosql.operator.OperatorContext;
 import io.prestosql.operator.OperatorFactory;
-import io.prestosql.operator.aggregation.AccumulatorFactory;
 import io.prestosql.spi.Page;
-import io.prestosql.spi.function.Signature;
-import io.prestosql.spi.type.Type;
-import io.prestosql.sql.planner.plan.AggregationNode.Aggregation;
 import io.prestosql.sql.planner.plan.AggregationNode.Step;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import nova.hetu.olk.tool.VecAllocatorHelper;
-import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.constants.AggType;
 import nova.hetu.omniruntime.operator.OmniOperator;
@@ -30,8 +23,6 @@ import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
-
-import java.util.List;
 
 /**
  * The type Aggregation omni operator.
@@ -43,8 +34,6 @@ public class AggregationOmniOperator implements Operator {
 
     private final OmniOperator omniOperator;
 
-    private final int[] aggregationChannels;
-
     private State state = State.NEEDS_INPUT;
 
     /**
@@ -52,13 +41,10 @@ public class AggregationOmniOperator implements Operator {
      *
      * @param operatorContext the operator context
      * @param omniOperator the omni operator
-     * @param aggregationChannels the aggregation channels
      */
-    public AggregationOmniOperator(OperatorContext operatorContext, OmniOperator omniOperator,
-            int[] aggregationChannels) {
+    public AggregationOmniOperator(OperatorContext operatorContext, OmniOperator omniOperator) {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.omniOperator = requireNonNull(omniOperator, "omniOperator is null");
-        this.aggregationChannels = aggregationChannels;
     }
 
     @Override
@@ -134,84 +120,38 @@ public class AggregationOmniOperator implements Operator {
      * @since 20210630
      */
     public static class AggregationOmniOperatorFactory implements OperatorFactory {
-        private final OmniAggregationOperatorFactory omniFactory;
-
+        private final int operatorId;
+        private final PlanNodeId planNodeId;
+        private final VecType[] sourceTypes;
         private final Step step;
-        private final ImmutableList<Aggregation> aggregations;
-        private final ImmutableList<AccumulatorFactory> accumulatorFactories;
-
-        /**
-         * The Operator id.
-         */
-        int operatorId;
-
-        /**
-         * The Plan node id.
-         */
-        PlanNodeId planNodeId;
-
-        /**
-         * The Aggregation channels.
-         */
-        int[] aggregationChannels;
-
-        private List<Type> sourceTypes;
+        private final AggType[] aggregatorTypes;
+        private final int[] aggregationInputChannels;
+        private final VecType[] aggregationOutputTypes;
+        private final OmniAggregationOperatorFactory omniFactory;
 
         /**
          * Instantiates a new Aggregation omni operator factory.
          *
          * @param operatorId the operator id
          * @param planNodeId the plan node id
-         * @param types the source types
-         * @param aggregations the aggregations
-         * @param accumulatorFactories the accumulator factories
+         * @param sourceTypes the source types
+         * @param aggregatorTypes the aggregations
+         * @param aggregationInputChannels the accumulator factories
+         * @param aggregationOutputTypes
          * @param step the step
          */
-        public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> types,
-                ImmutableList<Aggregation> aggregations, ImmutableList<AccumulatorFactory> accumulatorFactories,
+        public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, VecType[] sourceTypes,
+                AggType[] aggregatorTypes, int[] aggregationInputChannels, VecType[] aggregationOutputTypes,
                 Step step) {
             this.operatorId = operatorId;
-            this.planNodeId = planNodeId;
+            this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+            this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
             this.step = step;
-            this.aggregations = aggregations;
-            this.accumulatorFactories = accumulatorFactories;
-
-            this.sourceTypes = ImmutableList.copyOf(requireNonNull(types, "sourceTypes is null"));
-            int aggregationSize = aggregations.size();
-
-            this.aggregationChannels = new int[aggregationSize];
-            VecType[] aggregationTypes = new VecType[aggregationSize];
-            AggType[] aggregationFuncTypes = new AggType[aggregationSize];
-            VecType[] aggReturnTypes = new VecType[aggregationSize];
-
-            for (int i = 0; i < aggregationSize; i++) {
-                Signature signature = aggregations.get(i).getSignature();
-                aggregationChannels[i] = accumulatorFactories.get(i).getInputChannels().get(0);
-                aggregationTypes[i] = OperatorUtils.toVecType(signature.getArgumentTypes().get(0));
-                aggReturnTypes[i] = OperatorUtils.toVecType(signature.getReturnType());
-                switch (signature.getName()) {
-                    case "sum" :
-                        aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_SUM;
-                        break;
-                    case "avg" :
-                        aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_AVG;
-                        break;
-                    case "count" :
-                        aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_COUNT;
-                        break;
-                    case "max" :
-                        aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_MAX;
-                        break;
-                    case "min" :
-                        aggregationFuncTypes[i] = AggType.OMNI_AGGREGATION_TYPE_MIN;
-                        break;
-                    default :
-                        throw new UnsupportedOperationException(
-                                "unsupported Aggregator type by OmniRuntime: " + signature.getName());
-                }
-            }
-            this.omniFactory = new OmniAggregationOperatorFactory(aggregationTypes, aggregationFuncTypes,
-                    aggReturnTypes, this.step.isInputRaw(), this.step.isOutputPartial());
+            this.aggregatorTypes = aggregatorTypes;
+            this.aggregationInputChannels = aggregationInputChannels;
+            this.aggregationOutputTypes = aggregationOutputTypes;
+            this.omniFactory = new OmniAggregationOperatorFactory(sourceTypes, aggregatorTypes,
+                    aggregationInputChannels, aggregationOutputTypes, step.isInputRaw(), step.isOutputPartial());
         }
 
         @Override
@@ -221,7 +161,7 @@ public class AggregationOmniOperator implements Operator {
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId,
                     AggregationOmniOperator.class.getSimpleName());
             OmniOperator omniOperator = omniFactory.createOperator(vecAllocator);
-            return new AggregationOmniOperator(operatorContext, omniOperator, aggregationChannels);
+            return new AggregationOmniOperator(operatorContext, omniOperator);
         }
 
         @Override
@@ -230,7 +170,8 @@ public class AggregationOmniOperator implements Operator {
 
         @Override
         public OperatorFactory duplicate() {
-            return new AggregationOmniOperatorFactory(operatorId, planNodeId, sourceTypes, aggregations, accumulatorFactories, step);
+            return new AggregationOmniOperatorFactory(operatorId, planNodeId, sourceTypes, aggregatorTypes,
+                    aggregationInputChannels, aggregationOutputTypes, step);
         }
 
         @Override

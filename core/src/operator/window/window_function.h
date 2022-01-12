@@ -57,18 +57,18 @@ public:
     WindowFunction() = default;
     ~WindowFunction() = default;
     virtual void Reset(WindowIndex *windowIndex) {};
-    virtual void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart,
-        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
+    virtual void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
+        int32_t frameStart, int32_t frameEnd) {};
 };
 
 class RankingWindowFunction : public WindowFunction {
 public:
     void Reset(WindowIndex *pWindowIndex) override;
-    void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
-        int32_t frameStart, int32_t frameEnd) override;
+    void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
+        int32_t frameEnd) override;
     virtual void Reset() {};
-    virtual void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup,
-        int32_t peerGroupCount, int32_t currentPositionIndex) {};
+    virtual void RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) {};
     RankingWindowFunction();
     ~RankingWindowFunction();
 
@@ -103,12 +103,12 @@ public:
 
 class AggregateWindowFunction : public WindowFunction {
 public:
-    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
-        const VecType &inputType, const VecType &outputType);
+    AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType, const VecType &inputType,
+        const VecType &outputType);
     ~AggregateWindowFunction();
     void Reset(WindowIndex *pWindowIndex) override;
-    void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd,
-        int32_t frameStart, int32_t frameEnd) override;
+    void ProcessRow(Vector *column, int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart,
+        int32_t frameEnd) override;
     void ResetAccumulator();
 
 private:
@@ -120,9 +120,9 @@ private:
     const VecType &inputType;
     const VecType &outputType;
     std::unique_ptr<omniruntime::op::Aggregator> aggregator;
+    std::unique_ptr<omniruntime::op::AggregateState> aggregateState;
 
-    void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn,
-        int32_t index) const;
+    void EvaluateFinal(std::unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn, int32_t index) const;
     void Accumulate(Vector **resultVector, VectorAllocator *vecAllocator, int32_t start, int32_t end);
 
     void AccumulateData(int32_t start, Vector *resultVector, int32_t resultVectorPosition,
