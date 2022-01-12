@@ -7,43 +7,22 @@
 #include "aggregator.h"
 namespace omniruntime {
 namespace op {
-    class AverageShortDecimalAggregator : public Aggregator {
-    public:
-        AverageShortDecimalAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out) {}
+class AverageShortDecimalAggregator : public Aggregator {
+public:
+    AverageShortDecimalAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out) {}
 
-        AverageShortDecimalAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-                : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial) {}
+    AverageShortDecimalAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial)
+    {}
 
-        ~AverageShortDecimalAggregator() override {}
+    ~AverageShortDecimalAggregator() override {}
 
-        void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
-        {
-        }
+    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override {}
 
-        void ProcessNonGroup(Vector *vector, uint32_t offset) override {
+    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override {}
 
-        }
-
-        void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
-        {
-
-        }
-
-        void InitiateNonGroup(Vector *vector, uint32_t offset) override
-        {
-
-        }
-
-        void* Evaluate(const AggregateState &state) override
-        {
-            return nullptr;
-        }
-
-        void ExtractValue(Vector *vector, AggregateState &state, int32_t rowIndex) override
-        {
-
-        }
-    };
+    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override {}
+};
 }
 }
-#endif //OMNI_RUNTIME_AVERAGE_SHORT_DECIMAL_AGGREGATOR_H
+#endif // OMNI_RUNTIME_AVERAGE_SHORT_DECIMAL_AGGREGATOR_H

@@ -27,8 +27,8 @@ template void HashFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t r
     uint64_t *combinedHash);
 template void HashFuncVectImpl<BooleanVector, bool>(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
-template void DuplicateKeyValueImpl<BooleanVector, bool>(AggregateState &state, Vector *vector,
-    const uint32_t offset, ExecutionContext *context);
+template void DuplicateKeyValueImpl<BooleanVector, bool>(AggregateState &state, Vector *vector, const uint32_t offset,
+    ExecutionContext *context);
 template void IsSameNodeFuncImpl<BooleanVector, bool>(Vector *vector, const uint32_t offset, AggregateState &slot,
     bool &isSame);
 
@@ -202,8 +202,7 @@ static void DuplicateGroupByTuple(AggregateState &state, Vector *vector, uint32_
 {
     int32_t originalRowIndex;
     Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, offset, originalRowIndex);
-    GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].duplicateKey(state, originalVector, originalRowIndex,
-        context);
+    GROUP_AGG_FUNCTIONS[originalVector->GetTypeId()].duplicateKey(state, originalVector, originalRowIndex, context);
 }
 
 static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, const int32_t colNum,
@@ -352,7 +351,7 @@ void HashAggregationOperator::FillAggVectors(VectorBatch *vecBatch, int startInd
     ChainIterator &rowIterator, int32_t rowIndex)
 {
     for (int32_t aggIndex = 0, colIndex = startIndex; colIndex < endIndex; ++aggIndex, ++colIndex) {
-        aggregators[aggIndex]->ExtractValue(vecBatch->GetVector(colIndex), (*rowIterator)[colIndex], rowIndex);
+        aggregators[aggIndex]->ExtractValue((*rowIterator)[colIndex], vecBatch->GetVector(colIndex), rowIndex);
     }
 }
 
@@ -546,8 +545,7 @@ void DuplicateKeyValueImpl(AggregateState &state, Vector *vector, const uint32_t
     state.val = ptr;
 }
 
-void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset,
-    ExecutionContext *context)
+void DuplicateVarcharKeyValue(AggregateState &state, Vector *vector, const uint32_t offset, ExecutionContext *context)
 {
     if (vector->IsValueNull(offset)) {
         return;

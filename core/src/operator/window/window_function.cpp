@@ -87,13 +87,12 @@ AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32_t aggregationType,
     const VecType &inputType, const VecType &outputType)
-    : inputType(inputType),
-    outputType(outputType)
+    : inputType(inputType), outputType(outputType)
 {
     this->windowIndex = nullptr;
     this->argumentChannels = argumentChannels;
     this->aggregatorFactory =
-            omniruntime::op::CreateAggregatorFactory(static_cast<omniruntime::op::AggregateType>(aggregationType));
+        omniruntime::op::CreateAggregatorFactory(static_cast<omniruntime::op::AggregateType>(aggregationType));
     this->currentStart = 0;
     this->currentEnd = 0;
 }
@@ -137,6 +136,7 @@ void AggregateWindowFunction::ResetAccumulator()
 {
     if (currentStart >= 0) {
         aggregator = aggregatorFactory->CreateAggregator(inputType.GetId(), outputType.GetId());
+        aggregateState = std::make_unique<omniruntime::op::AggregateState>();
         currentStart = -1;
         currentEnd = -1;
     }
@@ -145,23 +145,23 @@ void AggregateWindowFunction::ResetAccumulator()
 void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn,
     int32_t index) const
 {
-    auto state = pAggregator->Evaluate(pAggregator->GetNonGroupState());
-    VectorHelper::SetValue(pColumn, index, state);
+    pAggregator->ExtractValue(aggregateState.operator*(), pColumn, index);
 }
 
-void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator *vecAllocator, int32_t start, int32_t end)
+void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator *vecAllocator, int32_t start,
+    int32_t end)
 {
     if (start > end) {
         return;
     }
     Vector ***vectorBatch = windowIndex->GetPagesIndex()->GetColumns();
     int rowCount = end - start + 1;
-    uint32_t width = (inputType.GetId() == OMNI_VEC_TYPE_VARCHAR || inputType.GetId() == OMNI_VEC_TYPE_CHAR)
-            ? static_cast<const VarcharVecType &>(inputType).GetWidth() : 0;
+    uint32_t width = (inputType.GetId() == OMNI_VEC_TYPE_VARCHAR || inputType.GetId() == OMNI_VEC_TYPE_CHAR) ?
+        static_cast<const VarcharVecType &>(inputType).GetWidth() :
+        0;
 
     // this is important to package data into an extra vector and use it to do the aggregation
-    *resultVector =
-        VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount);
+    *resultVector = VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount);
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
             windowIndex->GetPagesIndex()->GetValueAddresses()[resultVectorPosition + windowIndex->GetStart()];
@@ -173,8 +173,7 @@ void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator 
         // the ExpandVectorAndIndex to ensure we send the right data to aggregation
         Vector *vector = vectorBatch[argumentChannels][vectorIndex];
         int32_t originalVectorPosition;
-        Vector *originalVector =
-                VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
+        Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
         AccumulateData(start, *resultVector, resultVectorPosition, originalVectorPosition, originalVector);
     }
 }
@@ -225,6 +224,6 @@ void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Ve
                 break;
         }
 
-        aggregator->ProcessNonGroup(resultVector, resultVectorPosition - start);
+        aggregator->ProcessGroup(aggregateState.operator*(), resultVector, resultVectorPosition - start);
     }
 }

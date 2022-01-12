@@ -58,21 +58,20 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
  * Method:    createAggregationJitContext
- * Signature: ([I[I[I[I)J
+ * Signature: (Ljava/lang/String;[I[ILjava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *,
-    jobject, jstring, jintArray, jstring, jboolean, jboolean);
-
+    jclass, jstring, jintArray, jintArray, jstring, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
  * Method:    createAggregationOperatorFactory
- * Signature: ([I[I[I[I)J
+ * Signature: (Ljava/lang/String;[I[ILjava/lang/String;ZZJ)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(JNIEnv *,
-    jobject, jstring, jintArray, jstring, jboolean, jboolean, jlong);
+    jclass, jstring, jintArray, jintArray, jstring, jboolean, jboolean, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory
@@ -304,9 +303,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOpera
  * Method:    CreateDistinctLimitOperatorFactory
  * Signature: ([Ljava/lang/String;[Ijava/lang/Int;IL)J
  * Note: out put seq as below:
- *                           1. distinct cols
- *                           2. normal cols
- *                           3. hash col(jHashChannel)
+ * 1. distinct cols
+ * 2. normal cols
+ * 3. hash col(jHashChannel)
  * Note: put jHashChannel to -1 if no precomputed hash value for distinct cols
  */
 JNIEXPORT jlong JNICALL

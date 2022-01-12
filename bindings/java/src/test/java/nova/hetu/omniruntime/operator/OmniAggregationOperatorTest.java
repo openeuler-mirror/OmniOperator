@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
@@ -32,13 +33,13 @@ public class OmniAggregationOperatorTest {
      */
     @Test
     public void testExecuteAggMultiplePage() {
-        VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
-        AggType[] aggFunctionTypes = {
-            OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM
-        };
+        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                OMNI_AGGREGATION_TYPE_SUM};
+        int[] aggInputChannels = {0, 1, 2, 3};
         VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
-        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(aggTypes, aggFunctionTypes,
-            aggOutputTypes, true, false);
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
+                aggInputChannels, aggOutputTypes, true, false);
 
         List<Vec> inputData = new ArrayList<>();
         ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
@@ -61,8 +62,8 @@ public class OmniAggregationOperatorTest {
             VecBatch vecBatch = output.next();
             if (vecBatch.getVectors().length != aggOutputTypes.length) {
                 throw new IllegalArgumentException(
-                    format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
-                        vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+                        format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                                vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
             }
 
             assertNotNull(vecBatch);
@@ -93,18 +94,13 @@ public class OmniAggregationOperatorTest {
         for (int tIdx = 0; tIdx < threadCount; tIdx++) {
             Thread thread = new Thread(() -> {
                 try {
-                    VecType[] aggTypes = {
-                        LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG
-                    };
-                    AggType[] aggFunctionTypes = {
-                        OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-                        OMNI_AGGREGATION_TYPE_SUM
-                    };
-                    VecType[] aggOutputTypes = {
-                        LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG
-                    };
-                    OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(aggTypes,
-                        aggFunctionTypes, aggOutputTypes, true, false);
+                    VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+                    AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                            OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+                    int[] aggInputChannels = {0, 1, 2, 3};
+                    VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+                    OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
+                            aggFunctionTypes, aggInputChannels, aggOutputTypes, true, false);
 
                     List<Vec> inputData = new ArrayList<>();
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
@@ -148,8 +144,8 @@ public class OmniAggregationOperatorTest {
             VecBatch vecBatch = output.next();
             if (vecBatch.getVectors().length != aggOutputTypes.length) {
                 throw new IllegalArgumentException(
-                    format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
-                        vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+                        format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                                vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
             }
 
             assertNotNull(vecBatch);

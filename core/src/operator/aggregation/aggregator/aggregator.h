@@ -65,7 +65,7 @@ public:
     /* Initiate this aggregator, such as setting default values for states.
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
-     *  */
+     *      */
     Aggregator(AggregateType aggregateType, int32_t inputType, int32_t outputType, bool inputRaw = true,
         bool outputParitial = false)
         : type(aggregateType),
@@ -74,20 +74,20 @@ public:
           initiated(false),
           inputRaw(inputRaw),
           outputPartial(outputParitial),
-          nonGroupState({ nullptr }),
-          executionContext(std::make_unique<ExecutionContext>()) {}
+          executionContext(std::make_unique<ExecutionContext>())
+    {}
+
     virtual ~Aggregator() {}
+
     // process input data row by row, e.g. for 'sum' aggregation function, add each input to the intermediate state.
     // TODO seperate data process from hashing in 'inloop'. Change this function to process a input batch instead of
     // only a row.
     virtual void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) = 0;
-    virtual void ProcessNonGroup(Vector *vector, uint32_t offset) = 0;
+
     virtual void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) = 0;
-    virtual void InitiateNonGroup(Vector *vector, uint32_t offset) = 0;
-    // return nullptr if error occurs
-    virtual void* Evaluate(const AggregateState &state) = 0;
+
     // set result to output vector
-    virtual void ExtractValue(Vector *vector, AggregateState &state, int32_t rowIndex) = 0;
+    virtual void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) = 0;
 
     bool IsInputRaw() const
     {
@@ -104,11 +104,6 @@ public:
         return type;
     }
 
-    const AggregateState &GetNonGroupState()
-    {
-        return nonGroupState;
-    }
-
     int32_t GetInputType() const
     {
         return inputType;
@@ -123,8 +118,6 @@ protected:
     AggregateType type;
     int32_t inputType;
     int32_t outputType;
-    // state for non-grouping aggregate
-    AggregateState nonGroupState;
     bool initiated;
     bool inputRaw;
     bool outputPartial;

@@ -7,85 +7,53 @@
 #include "aggregator.h"
 namespace omniruntime {
 namespace op {
-    template<typename V, typename ResultType>
-    class MaxAggregator : public Aggregator {
-    public:
-        MaxAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out) {}
+template <typename V, typename ResultType> class MaxAggregator : public Aggregator {
+public:
+    MaxAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out) {}
 
-        MaxAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-                : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial) {}
+    MaxAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial)
+    {}
 
-        ~MaxAggregator() override {}
+    ~MaxAggregator() override {}
 
-        void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
-        {
-            if (UNLIKELY(vector->IsValueNull(offset))) {
-                return;
-            }
-            if (state.val == nullptr) {
-                InitiateGroup(state, vector, offset);
-                return;
-            }
-            auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
-            auto leftVal = static_cast<ResultType *>(state.val);
-            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
+    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    {
+        if (UNLIKELY(vector->IsValueNull(offset))) {
+            return;
         }
-
-        void ProcessNonGroup(Vector *vector, uint32_t offset) override 
-        {
-            if (UNLIKELY(vector->IsValueNull(offset))) {
-                return;
-            }
-
-            if (nonGroupState.val == nullptr) {
-                InitiateNonGroup(vector, offset);
-                return;
-            }
-            auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
-            auto leftVal = static_cast<ResultType *>(nonGroupState.val);
-            *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
+        if (state.val == nullptr) {
+            InitiateGroup(state, vector, offset);
+            return;
         }
+        auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
+        auto leftVal = static_cast<ResultType *>(state.val);
+        *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
+    }
 
-        void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
-        {
-            if (UNLIKELY(vector->IsValueNull(offset))) {
-                return;
-            }
-            auto rowVal = static_cast<V *>(vector)->GetValue(offset);
-            int32_t len = sizeof(ResultType);
-            auto ptr = executionContext->getArena()->Allocate(len);
-            *reinterpret_cast<ResultType *>(ptr) = rowVal;
-            state.val = ptr;
+    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    {
+        if (UNLIKELY(vector->IsValueNull(offset))) {
+            return;
         }
+        auto rowVal = static_cast<V *>(vector)->GetValue(offset);
+        int32_t len = sizeof(ResultType);
+        auto ptr = executionContext->getArena()->Allocate(len);
+        *reinterpret_cast<ResultType *>(ptr) = rowVal;
+        state.val = ptr;
+    }
 
-        void InitiateNonGroup(Vector *vector, uint32_t offset) override
-        {
-            if (UNLIKELY(vector->IsValueNull(offset))) {
-                return;
-            }
-
-            auto curVal = (static_cast<V *>(vector))->GetValue(offset);
-            auto ptr = executionContext->getArena()->Allocate(sizeof(ResultType));
-            *reinterpret_cast<ResultType *>(ptr) = curVal;
-            nonGroupState.val = ptr;
+    // TOResultTypeO extract common function for sum/min/max
+    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    {
+        auto v = static_cast<V *>(vector);
+        if (state.val == nullptr) {
+            v->SetValueNull(rowIndex);
+            return;
         }
-
-        void* Evaluate(const AggregateState &state) override
-        {
-            return state.val;
-        }
-
-        // TOResultTypeO extract common function for sum/min/max
-        void ExtractValue(Vector *vector, AggregateState &state, int32_t rowIndex) override
-        {
-            auto v = static_cast<V *>(vector);
-            if (state.val == nullptr) {
-                v->SetValueNull(rowIndex);
-                return;
-            }
-            v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
-        }
-    };
+        v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+    }
+};
 }
 }
-#endif //OMNI_RUNTIME_MAX_AGGREGATOR_H
+#endif // OMNI_RUNTIME_MAX_AGGREGATOR_H

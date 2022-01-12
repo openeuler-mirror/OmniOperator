@@ -1250,22 +1250,30 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 int startOutputChannel, ImmutableMap.Builder<Symbol, Integer> outputMappings, PhysicalOperation source,
             LocalExecutionPlanContext context, boolean useSystemMemory) {
             int outputChannel = startOutputChannel;
+            List<Symbol> aggregationOutputSymbols = new ArrayList<>();
             ImmutableList.Builder<AccumulatorFactory> accumulatorFactories = ImmutableList.builder();
-            ImmutableList.Builder<AggregationNode.Aggregation> aggregationBuilder = ImmutableList.builder();
             for (Map.Entry<Symbol, AggregationNode.Aggregation> entry : aggregations.entrySet()) {
                 Symbol symbol = entry.getKey();
                 AggregationNode.Aggregation aggregation = entry.getValue();
-                aggregationBuilder.add(aggregation);
                 accumulatorFactories.add(buildAccumulatorFactory(source, aggregation));
                 outputMappings.put(symbol, outputChannel); // one aggregation per channel
+                aggregationOutputSymbols.add(symbol);
                 outputChannel++;
             }
             ImmutableList<AccumulatorFactory> factories = accumulatorFactories.build();
-            ImmutableList<AggregationNode.Aggregation> aggregationToOmni = aggregationBuilder.build();
+
             if (getOmniAggEnabled(session)) {
                 // use omni aggregation operator
+                List<Integer> aggregationChannels = getAggregationChannels(aggregations, source.getLayout());
+                List<Type> aggregationResultTypes = getAggregationResultTypes(aggregations, context);
+                AggType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
+                        .toArray(new AggType[aggregationChannels.size()]);
+                int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
+                VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
+
                 return new AggregationOmniOperator.AggregationOmniOperatorFactory(context.getNextOperatorId(),
-                        planNodeId, source.getTypes(), aggregationToOmni, factories, step);
+                        planNodeId, OperatorUtils.toVecTypes(source.getTypes()), aggregatorTypes,
+                        aggregationInputChannels, aggregationOutputTypes, step);
             } else if (!isWholeStageFallback(session)) {
                 return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId, step,
                         factories, useSystemMemory);
@@ -1344,7 +1352,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     // when omni is turned on there is no hash channel
                     int[] groupByInputChannels = Ints.toArray(groupByChannels);
                     VecType[] groupByInputTypes = OperatorUtils.toVecTypes(groupByTypes);
-                    int[] aggregationInputChannels = aggregationChannels.stream().mapToInt(i->i).toArray();
+                    int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
                     VecType[] aggregationInputTypes = OperatorUtils.toVecTypes(aggregationSourceTypes);
                     VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
                     AggType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
@@ -1624,7 +1632,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 factoriesBuilder.add(hashBuilderOperatorFactory);
             } else {
                 throw new UnsupportedOperationException(
-                        "HashBuilderOmniOperator is not enabled or not support in omniRuntime");
+                        "HashBuilderOperator is not enabled or not support in omniRuntime");
             }
 
             context.addDriverFactory(buildContext.isInputDriver(), false, factoriesBuilder.build(),
