@@ -147,7 +147,7 @@ static void Insert(Vector *origintVector, int32_t originRowIndex, Vector *curren
 
 void PartitionedOutputOperator::MergeVectorBatch(VectorBatch *vecBatch, int32_t vecCount)
 {
-    for (int i = 0; i < partitionedMap.size(); ++i) {
+    for (int i = 0; i < bucketToPartitionCount; ++i) {
         vector<int> rowList = partitionedMap[i];
         int32_t currentVecBatchRowCount = rowList.size();
         BuildVecBatch(vecCount, currentVecBatchRowCount);
