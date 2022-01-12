@@ -1,22 +1,17 @@
 package nova.hetu.olk.operator;
 
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
-import static io.airlift.slice.Slices.utf8Slice;
 import static io.prestosql.RowPagesBuilder.rowPagesBuilder;
 import static io.prestosql.SessionTestUtils.TEST_SESSION;
 import static io.prestosql.metadata.MetadataManager.createTestMetadataManager;
 import static io.prestosql.operator.OperatorAssertion.assertOperatorEquals;
-import static io.prestosql.spi.block.MethodHandleUtil.methodHandle;
 import static io.prestosql.spi.function.FunctionKind.AGGREGATE;
 import static io.prestosql.spi.type.BigintType.BIGINT;
-import static io.prestosql.spi.type.BooleanType.BOOLEAN;
 import static io.prestosql.spi.type.DoubleType.DOUBLE;
 import static io.prestosql.spi.type.TypeSignature.parseTypeSignature;
 import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.testing.MaterializedResult.resultBuilder;
 import static io.prestosql.testing.TestingTaskContext.createTaskContext;
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.testng.Assert.assertEquals;
@@ -28,16 +23,9 @@ import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.aggregation.AccumulatorFactory;
 import io.prestosql.operator.aggregation.InternalAggregationFunction;
 import io.prestosql.spi.Page;
-import io.prestosql.spi.block.Block;
-import io.prestosql.spi.block.BlockBuilder;
-import io.prestosql.spi.block.RowBlockBuilder;
 import io.prestosql.spi.function.FunctionKind;
 import io.prestosql.spi.function.Signature;
-import io.prestosql.spi.type.ArrayType;
-import io.prestosql.spi.type.MapType;
-import io.prestosql.spi.type.RowType;
 import io.prestosql.spi.type.StandardTypes;
-import io.prestosql.spi.type.TestRowType;
 import io.prestosql.spi.type.Type;
 import io.prestosql.sql.planner.Symbol;
 import io.prestosql.sql.planner.SymbolAllocator;
@@ -50,7 +38,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -160,101 +147,4 @@ public class TestAggregationOmniOperator {
         assertEquals(driverContext.getSystemMemoryUsage(), 0);
         assertEquals(driverContext.getMemoryUsage(), 0);
     }
-
-    @Test(invocationCount = 1)
-    public void testAggregationWithRowBlock() {
-
-        List<Type> fieldTypes = ImmutableList.of(VARCHAR, BIGINT);
-        List<Object>[] testRows = generateTestRows(fieldTypes, 100);
-
-        BlockBuilder blockBuilder = createBlockBuilderWithValues(fieldTypes, testRows);
-        Block block = blockBuilder.build();
-        Block[] blocks = new Block[1];
-        blocks[0] = block;
-
-        Page page1 = new Page(blocks);
-        Page page2 = new Page(blocks);
-        List<Page> input = new ArrayList<>();
-        input.add(page1);
-        input.add(page2);
-
-        AggregationNode.Aggregation aggregation1 = new AggregationNode.Aggregation(
-            new Signature("count", FunctionKind.AGGREGATE, ImmutableList.of(), ImmutableList.of(),
-                BIGINT.getTypeSignature(), ImmutableList.of(BIGINT.getTypeSignature()), false),
-            ImmutableList.of(columnA.toSymbolReference()), false, Optional.empty(), Optional.empty(), Optional.empty());
-
-        ImmutableList<AggregationNode.Aggregation> aggregations = ImmutableList.of(aggregation1);
-        ImmutableList<AccumulatorFactory> accumulatorFactories = ImmutableList.of(
-            COUNT.bind(ImmutableList.of(0), Optional.empty()), LONG_AVERAGE.bind(ImmutableList.of(1), Optional.empty()),
-            LONG_SUM.bind(ImmutableList.of(2), Optional.empty()),
-            maxVarcharColumn.bind(ImmutableList.of(3), Optional.empty()));
-
-        AggregationNode.Step step = AggregationNode.Step.PARTIAL;
-
-        int id = 0;
-        List<Type> types = ImmutableList.of(VARCHAR, BIGINT);
-        AggregationOmniOperator.AggregationOmniOperatorFactory AggregationOmniOperatorFactory
-            = new AggregationOmniOperator.AggregationOmniOperatorFactory(id, new PlanNodeId(String.valueOf(id)), types,
-            aggregations, accumulatorFactories, step);
-
-        DriverContext driverContext = createTaskContext(executor, scheduledExecutor, TEST_SESSION).addPipelineContext(0,
-            true, true, false).addDriverContext();
-
-        MaterializedResult expected = resultBuilder(driverContext.getSession(), BIGINT).row(200L).build();
-        assertOperatorEquals(AggregationOmniOperatorFactory, driverContext, input, expected);
-        assertEquals(driverContext.getSystemMemoryUsage(), 0);
-        assertEquals(driverContext.getMemoryUsage(), 0);
-    }
-
-    private List<Object>[] generateTestRows(List<Type> fieldTypes, int numRows) {
-        List<Object>[] testRows = new List[numRows];
-        for (int i = 0; i < numRows; i++) {
-            List<Object> testRow = new ArrayList<>(fieldTypes.size());
-            for (int j = 0; j < fieldTypes.size(); j++) {
-                int cellId = i * fieldTypes.size() + j;
-                if (cellId % 7 == 3) {
-                    // Put null value for every 7 cells
-                    testRow.add(null);
-                } else {
-                    if (fieldTypes.get(j) == BIGINT) {
-                        testRow.add(i * 100L + j);
-                    } else if (fieldTypes.get(j) == VARCHAR) {
-                        testRow.add(format("field(%s, %s)", i, j));
-                    } else {
-                        throw new IllegalArgumentException();
-                    }
-                }
-            }
-            testRows[i] = testRow;
-        }
-        return testRows;
-    }
-
-    private BlockBuilder createBlockBuilderWithValues(List<Type> fieldTypes, List<Object>[] rows) {
-        BlockBuilder rowBlockBuilder = new RowBlockBuilder(fieldTypes, null, 1);
-        for (List<Object> row : rows) {
-            if (row == null) {
-                rowBlockBuilder.appendNull();
-            } else {
-                BlockBuilder singleRowBlockWriter = rowBlockBuilder.beginBlockEntry();
-                for (Object fieldValue : row) {
-                    if (fieldValue == null) {
-                        singleRowBlockWriter.appendNull();
-                    } else {
-                        if (fieldValue instanceof Long) {
-                            BIGINT.writeLong(singleRowBlockWriter, ((Long) fieldValue).longValue());
-                        } else if (fieldValue instanceof String) {
-                            VARCHAR.writeSlice(singleRowBlockWriter, utf8Slice((String) fieldValue));
-                        } else {
-                            throw new IllegalArgumentException();
-                        }
-                    }
-                }
-                rowBlockBuilder.closeEntry();
-            }
-        }
-
-        return rowBlockBuilder;
-    }
-
 }
