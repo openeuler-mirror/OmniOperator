@@ -62,7 +62,7 @@ public:
         lastOffsetPosition = index;
     }
 
-    VariableWidthVectorImpl *Slice(int startIndex, int length)
+    VariableWidthVectorImpl *Slice(int startIndex, int length) override
     {
         if (startIndex + length > size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", startIndex + length, size);
@@ -71,7 +71,7 @@ public:
         return new VariableWidthVectorImpl(this, length, startIndex);
     }
 
-    VariableWidthVectorImpl *CopyPositions(const int *positions, int offset, int length)
+    VariableWidthVectorImpl *CopyPositions(const int *positions, int offset, int length) override
     {
         int totalDataLen = 0;
         for (int i = 0; i < length; i++) {
@@ -96,7 +96,7 @@ public:
         return vector;
     }
 
-    VariableWidthVectorImpl *CopyRegion(int startIndex, int length)
+    VariableWidthVectorImpl *CopyRegion(int startIndex, int length) override
     {
         if (startIndex + length > size) {
             LogError("copy region out of range(needed size:%d, real size:%d).", startIndex + length, size);
@@ -133,7 +133,7 @@ public:
         return vector;
     }
 
-    void Append(Vector *other, int startIndex, int length)
+    void Append(Vector *other, int startIndex, int length) override
     {
         if (startIndex + length > size) {
             LogError("append vector out of range(needed size:%d, real size:%d).", startIndex + length, size);
