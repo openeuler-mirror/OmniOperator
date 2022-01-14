@@ -309,7 +309,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
     }
 
     static List<Integer> getAggregationChannels(Map<Symbol, AggregationNode.Aggregation> aggregations,
-        Map<Symbol, Integer> layout) {
+            Map<Symbol, Integer> layout) {
         ImmutableList.Builder<Integer> builder = ImmutableList.builder();
         for (Symbol symbol : aggregations.keySet()) {
             AggregationNode.Aggregation aggregation = aggregations.get(symbol);
@@ -320,7 +320,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
     }
 
     static List<Type> getAggregationResultTypes(Map<Symbol, AggregationNode.Aggregation> aggregations,
-        LocalExecutionPlanContext context) {
+            LocalExecutionPlanContext context) {
         ImmutableList.Builder<Type> builder = ImmutableList.builder();
         for (Symbol symbol : aggregations.keySet()) {
             builder.add(context.getTypes().get(symbol));
@@ -329,29 +329,29 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
     }
 
     static List<AggType> getAggregateTypes(List<Symbol> aggregationOutputSymbols,
-        Map<Symbol, AggregationNode.Aggregation> aggregations) {
+            Map<Symbol, AggregationNode.Aggregation> aggregations) {
         ImmutableList.Builder<AggType> builder = ImmutableList.builder();
         for (Symbol aggregationOutputSymbol : aggregationOutputSymbols) {
             Signature signature = aggregations.get(aggregationOutputSymbol).getSignature();
             // aggregator type, eg:sum,avg...
             switch (signature.getName()) {
-                case "sum":
+                case "sum" :
                     builder.add(OMNI_AGGREGATION_TYPE_SUM);
                     break;
-                case "avg":
+                case "avg" :
                     builder.add(OMNI_AGGREGATION_TYPE_AVG);
                     break;
-                case "count":
+                case "count" :
                     builder.add(OMNI_AGGREGATION_TYPE_COUNT);
                     break;
-                case "min":
+                case "min" :
                     builder.add(OMNI_AGGREGATION_TYPE_MIN);
                     break;
-                case "max":
+                case "max" :
                     builder.add(OMNI_AGGREGATION_TYPE_MAX);
                     break;
                 // TODO count *
-                default:
+                default :
                     throw new UnsupportedOperationException(
                             "unsupported Aggregator type by OmniRuntime: " + signature.getName());
             }
@@ -361,8 +361,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
     @Override
     public LocalExecutionPlan plan(TaskContext taskContext, PlanNode plan, TypeProvider types,
-        PartitioningScheme partitioningScheme, StageExecutionDescriptor stageExecutionDescriptor,
-        List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
+            PartitioningScheme partitioningScheme, StageExecutionDescriptor stageExecutionDescriptor,
+            List<PlanNodeId> partitionedSourceOrder, OutputBuffer outputBuffer, List<PageProducer> pageProducers) {
         TaskId taskId = taskContext.getTaskId();
         VecAllocator vecAllocator = VecAllocatorFactory.create(taskId.getFullId(), () -> {
             taskContext.getTaskStateMachine().addStateChangeListenerToTail(state -> {
@@ -1248,7 +1248,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         private OperatorFactory createAggregationOperatorFactory(PlanNodeId planNodeId,
                 Map<Symbol, AggregationNode.Aggregation> aggregations, AggregationNode.Step step,
                 int startOutputChannel, ImmutableMap.Builder<Symbol, Integer> outputMappings, PhysicalOperation source,
-            LocalExecutionPlanContext context, boolean useSystemMemory) {
+                LocalExecutionPlanContext context, boolean useSystemMemory) {
             int outputChannel = startOutputChannel;
             List<Symbol> aggregationOutputSymbols = new ArrayList<>();
             ImmutableList.Builder<AccumulatorFactory> accumulatorFactories = ImmutableList.builder();
@@ -1278,8 +1278,10 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId, step,
                         factories, useSystemMemory);
             } else {
+                List<Signature> signatures = aggregations.values().stream()
+                        .map(AggregationNode.Aggregation::getSignature).collect(Collectors.toList());
                 throw new UnsupportedOperationException(
-                        "AggregationOmniOperator is not enabled or not support in omniRuntime");
+                        "AggregationOmniOperator " + signatures + "is not enabled or not support in omniRuntime");
             }
         }
 
@@ -1501,7 +1503,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         @Override
         public PhysicalOperation visitJoin(JoinNode node, LocalExecutionPlanContext context) {
             if (node.isCrossJoin()) {
-                return createNestedLoopJoin(node, context);
+                if (!isWholeStageFallback(session)) {
+                    return createNestedLoopJoin(node, context);
+                } else {
+                    throw new UnsupportedOperationException(
+                            "NestedLoopJoin for " + node.getType() + " is not enabled or not support in omniRuntime");
+                }
             }
 
             List<JoinNode.EquiJoinClause> clauses = node.getCriteria();
@@ -1632,7 +1639,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 factoriesBuilder.add(hashBuilderOperatorFactory);
             } else {
                 throw new UnsupportedOperationException(
-                        "HashBuilderOperator is not enabled or not support in omniRuntime");
+                        "HashBuilderOmniOperator for " + node.getType() + " is not enabled or not support in omniRuntime");
             }
 
             context.addDriverFactory(buildContext.isInputDriver(), false, factoriesBuilder.build(),
@@ -1720,14 +1727,14 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         /**
          * Create omni lookup join operator factory.
          *
-         * @param node                       the node
+         * @param node the node
          * @param lookupSourceFactoryManager the lookup source factory manager
-         * @param context                    the context
-         * @param probeTypes                 the probe types
-         * @param probeOutputChannels        the probe output channels
-         * @param probeJoinChannels          the probe join channels
-         * @param probeHashChannel           the probe hash channel
-         * @param totalOperatorsCount        the total operators count
+         * @param context the context
+         * @param probeTypes the probe types
+         * @param probeOutputChannels the probe output channels
+         * @param probeJoinChannels the probe join channels
+         * @param probeHashChannel the probe hash channel
+         * @param totalOperatorsCount the total operators count
          * @return the operator factory
          */
         public OperatorFactory createOmniLookupJoin(JoinNode node,
