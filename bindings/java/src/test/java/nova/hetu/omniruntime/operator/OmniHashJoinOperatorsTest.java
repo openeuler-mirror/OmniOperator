@@ -77,8 +77,6 @@ public class OmniHashJoinOperatorsTest {
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 82L, 82L, 82L, 65L},
                 {70L, 70L, 79L, 70L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 79L, 70L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -131,9 +129,6 @@ public class OmniHashJoinOperatorsTest {
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 82L, 82L, 82L, 65L},
                 {70L, 70L, 79L, 70L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 79L, 70L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch1);
-        freeVecBatch(buildVecBatch2);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator1.close();
@@ -181,8 +176,6 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}, {2L, null, 4L, null},
                 {11L, null, 33L, null}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -229,8 +222,6 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null},
                 {"11", null, "33", null}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -277,8 +268,6 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null},
                 {"11", null, "33", null}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -324,8 +313,6 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11, 22, 33, 44}, {2L, null, 4L, null}, {11, null, 33, null}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -372,8 +359,6 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}, {2L, null, 4L, null},
                 {11L, null, 33L, null}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -425,8 +410,6 @@ public class OmniHashJoinOperatorsTest {
         assertVecEquals(resultVecBatch.getVectors()[1], new Object[][]{{11L, 0L}, {22L, 0L}, {33L, 0L}, {44L, 0L}});
         assertVecEquals(resultVecBatch.getVectors()[2], new Object[]{2L, null, 4L, null});
         assertVecEquals(resultVecBatch.getVectors()[3], new Object[][]{{11L, 0L}, null, {33L, 0L}, null});
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -479,8 +462,6 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{null, null}, {11L, 33L}, {null, null}, {11L, 33L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -529,8 +510,6 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{16, 19}, {35709, 35709}, {16, 19}, {31904, 31904}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -580,8 +559,6 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {{20, 16, 19}, {"35709", "35709", "35709"}, {20, 16, 19},
                 {"31904", "31904", "31904"}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -622,9 +599,6 @@ public class OmniHashJoinOperatorsTest {
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
         assertTrue(results != null);
         assertEquals(results.hasNext(), false);
-
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
         lookupJoinOperatorFactory.close();

@@ -48,9 +48,7 @@ TEST(NativeOmniUnionOperator, TestUnionByTwoColum)
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(expVecBatch2);
-    VectorHelper::FreeVecBatch(vecBatch1);
-    VectorHelper::FreeVecBatch(vecBatch2);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    delete unionOperator;
+    Operator::DeleteOperator(unionOperator);
     DeleteOperatorFactory(operatorFactory);
 }

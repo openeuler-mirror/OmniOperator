@@ -39,8 +39,6 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        vecBatch1.releaseAllVectors();
-        vecBatch1.close();
         resultVecBatch1.releaseAllVectors();
         resultVecBatch1.close();
         distinctLimitOperator.close();
@@ -72,8 +70,6 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        vecBatch1.releaseAllVectors();
-        vecBatch1.close();
         resultVecBatch1.releaseAllVectors();
         resultVecBatch1.close();
         distinctLimitOperator.close();
@@ -101,8 +97,6 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        vecBatch1.releaseAllVectors();
-        vecBatch1.close();
         resultVecBatch1.releaseAllVectors();
         resultVecBatch1.close();
         distinctLimitOperator.close();
@@ -128,8 +122,6 @@ public class OmniDistinctLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        vecBatch1.releaseAllVectors();
-        vecBatch1.close();
         resultVecBatch1.releaseAllVectors();
         resultVecBatch1.close();
         distinctLimitOperator.close();

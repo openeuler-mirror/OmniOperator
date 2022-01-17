@@ -60,10 +60,8 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
-    VectorHelper::FreeVecBatch(vecBatch1);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    limitOperator->Close();
-    delete limitOperator;
+    Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -73,7 +71,6 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     // construct data
     const int32_t DATA_SIZE = 3;
     const int64_t LIMIT_COUNT = 40;
-    // table1
 
     // input vecBatch1
     int32_t data01[DATA_SIZE] = {0, 1, 2};
@@ -110,11 +107,8 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
-    VectorHelper::FreeVecBatch(vecBatch1);
-    VectorHelper::FreeVecBatch(vecBatch2);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    limitOperator->Close();
-    delete limitOperator;
+    Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -162,9 +156,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
-    VectorHelper::FreeVecBatch(vecBatch1);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    limitOperator->Close();
-    delete limitOperator;
+    Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
 }

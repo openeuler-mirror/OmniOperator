@@ -101,8 +101,6 @@ public class LimitOmniOperator implements Operator {
         VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, getClass().getSimpleName());
         omniOperator.addInput(vecBatch);
         pages = new VecBatchToPageIterator(omniOperator.getOutput());
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
     }
 
     @Override

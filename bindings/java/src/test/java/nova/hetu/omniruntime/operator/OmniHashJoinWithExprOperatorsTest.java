@@ -65,8 +65,6 @@ public class OmniHashJoinWithExprOperatorsTest {
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 82L, 82L, 82L, 65L},
                 {70L, 70L, 79L, 70L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 79L, 70L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -122,8 +120,6 @@ public class OmniHashJoinWithExprOperatorsTest {
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 82L, 82L, 82L, 65L},
                 {70L, 70L, 79L, 70L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 79L, 70L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -173,8 +169,6 @@ public class OmniHashJoinWithExprOperatorsTest {
         Object[][] expectedDatas = {{20, 16, 19}, {"35709", "35709", "35709"}, {20, 16, 19},
                 {"31904", "31904", "31904"}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(probeVecBatch);
-        freeVecBatch(buildVecBatch);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();

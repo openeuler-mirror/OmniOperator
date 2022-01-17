@@ -2,6 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
  */
 #include "limit.h"
+#include "vector/vector_helper.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -23,21 +24,17 @@ Operator *LimitOperatorFactory::CreateOperator()
     return limitOperator;
 }
 
-LimitOperator::LimitOperator(int64_t limitVal) : remainingLimit(limitVal), inputVecBatch(nullptr) {}
+LimitOperator::LimitOperator(int64_t limitVal) : remainingLimit(limitVal), outputVecBatch(nullptr) {}
 
 LimitOperator::~LimitOperator() {}
 
 int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
 {
-    if ((vecBatch == nullptr) || (vecBatch->GetRowCount() == 0)) {
+    if (vecBatch == nullptr) {
         return 0;
     }
-
-    if (inputVecBatch != nullptr) {
-        return 0;
-    }
-
-    if (remainingLimit <= 0) {
+    if ((vecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) || (remainingLimit <= 0)) {
+        VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
 
@@ -45,20 +42,20 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     int32_t rowCount = vecBatch->GetRowCount();
     int32_t fetchSize = (remainingLimit >= rowCount) ? rowCount : remainingLimit;
 
-    auto outputVecBatch = std::make_unique<VectorBatch>(vectorCount);
+    outputVecBatch = std::make_unique<VectorBatch>(vectorCount).release();
     for (int32_t i = 0; i < vectorCount; ++i) {
-        Vector *outputColVector = vecBatch->GetVector(i);
-        outputVecBatch->SetVector(i, outputColVector->Slice(0, fetchSize));
+        Vector *inputVector = vecBatch->GetVector(i);
+        outputVecBatch->SetVector(i, inputVector->Slice(0, fetchSize));
     }
-    inputVecBatch = outputVecBatch.release();
     remainingLimit -= fetchSize;
+    VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 
 int32_t LimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
-    outputPages.push_back(inputVecBatch);
-    inputVecBatch = nullptr;
+    outputPages.push_back(outputVecBatch);
+    outputVecBatch = nullptr;
 
     if (remainingLimit <= 0) {
         SetStatus(OMNI_STATUS_FINISHED);
@@ -69,10 +66,10 @@ int32_t LimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 
 OmniStatus LimitOperator::Close()
 {
-    if (inputVecBatch != nullptr) {
-        inputVecBatch->ReleaseAllVectors();
-        delete inputVecBatch;
-        inputVecBatch = nullptr;
+    if (outputVecBatch != nullptr) {
+        outputVecBatch->ReleaseAllVectors();
+        delete outputVecBatch;
+        outputVecBatch = nullptr;
     }
 
     return OMNI_STATUS_NORMAL;

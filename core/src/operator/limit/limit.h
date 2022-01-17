@@ -41,7 +41,7 @@ public:
 
 private:
     int64_t remainingLimit;
-    vec::VectorBatch *inputVecBatch;
+    vec::VectorBatch *outputVecBatch;
 };
 }
 }

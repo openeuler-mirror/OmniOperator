@@ -324,6 +324,7 @@ void AssertDictionaryVectorEquals(DictionaryVector *vector, va_list &args)
             AssertDictionaryVectorDoubleEquals(vector, va_arg(args, double *));
             break;
         case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+        case omniruntime::vec::OMNI_VEC_TYPE_CHAR:
             AssertDictionaryVectorVarcharEquals(vector, va_arg(args, std::string *));
             break;
         case omniruntime::vec::OMNI_VEC_TYPE_DECIMAL128:
@@ -366,6 +367,7 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
                 AssertVectorEquals(dynamic_cast<Decimal128Vector *>(vector), va_arg(args, Decimal128 *));
                 break;
             case omniruntime::vec::OMNI_VEC_TYPE_VARCHAR:
+            case omniruntime::vec::OMNI_VEC_TYPE_CHAR:
                 AssertVarcharVectorEquals(dynamic_cast<VarcharVector *>(vector), va_arg(args, std::string *));
                 break;
             case omniruntime::vec::OMNI_VEC_TYPE_DICTIONARY:
@@ -405,11 +407,25 @@ void DeleteOperatorFactory(OperatorFactory *operatorFactory)
     delete operatorFactory;
 }
 
+VectorBatch *DuplicateVectorBatch(VectorBatch *input)
+{
+    auto vecCount = input->GetVectorCount();
+    auto rowCount = input->GetRowCount();
+    auto duplication = new VectorBatch(vecCount, rowCount);
+    for (int32_t i = 0; i < vecCount; i++) {
+        duplication->SetVector(i, input->GetVector(i)->Slice(0, rowCount));
+    }
+    return duplication;
+}
+
 void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<VecType> &vecTypes)
 {
     for (int i = 0; i < vecTypeCount; ++i) {
         if (vecTypeIds[i] == OMNI_VEC_TYPE_VARCHAR) {
             vecTypes.push_back(VarcharVecType(50));
+            continue;
+        } else if (vecTypeIds[i] == OMNI_VEC_TYPE_CHAR) {
+            vecTypes.push_back(CharVecType(50));
             continue;
         }
         vecTypes.push_back(VecType(vecTypeIds[i]));

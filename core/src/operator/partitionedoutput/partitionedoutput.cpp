@@ -196,6 +196,7 @@ int32_t PartitionedOutputOperator::AddInput(VectorBatch *vecBatch)
     if (partitionedMap.size() > 0) {
         MergeVectorBatch(vecBatch, vecCount);
     }
+    VectorHelper::FreeVecBatch(vecBatch);
     return OMNI_STATUS_FINISHED;
 }
 

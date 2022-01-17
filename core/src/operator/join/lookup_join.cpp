@@ -89,6 +89,7 @@ LookupJoinOperator::~LookupJoinOperator()
 
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
+    this->input = vecBatch;
     this->joinProbe = new JoinProbe(vecBatch, probeTypes.GetSize(), probeHashCols.data(), probeHashColTypes.data(),
         probeHashCols.size());
     this->partitionedJoinPosition = -1;
@@ -105,6 +106,8 @@ int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
     SetStatus(OMNI_STATUS_FINISHED);
     delete joinProbe;
     joinProbe = nullptr;
+    VectorHelper::FreeVecBatch(input);
+    input = nullptr;
     return 0;
 }
 

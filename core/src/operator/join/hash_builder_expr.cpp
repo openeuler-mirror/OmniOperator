@@ -67,7 +67,7 @@ int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *inputVecBatch)
         OperatorUtil::ProjectVectors(inputVecBatch, buildTypes, projectFuncs, buildHashCols);
     if (newInputVecBatch != nullptr) {
         hashBuilderOperator->AddInput(newInputVecBatch);
-        inputVecBatches.push_back(newInputVecBatch);
+        VectorHelper::FreeVecBatch(inputVecBatch);
     } else {
         hashBuilderOperator->AddInput(inputVecBatch);
     }
@@ -83,7 +83,7 @@ int32_t HashBuilderWithExprOperator::GetOutput(std::vector<VectorBatch *> &outpu
 
 OmniStatus HashBuilderWithExprOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
+    hashBuilderOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 }

@@ -395,8 +395,6 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
             omniOperator.addInput(originalAndPartitionArgVecBatch);
             flush(true);
 
-            originalAndPartitionArgVecBatch.releaseAllVectors();
-            originalAndPartitionArgVecBatch.close();
             originalVecBatch.close();
         }
 

@@ -81,6 +81,8 @@ public:
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
 
+    OmniStatus Close() override;
+
     int32_t GetTypescount()
     {
         return sourceTypes.GetSize();

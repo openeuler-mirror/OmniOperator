@@ -178,13 +178,9 @@ public class LookupJoinOmniOperator implements Operator {
         // here we get nothing from the native join, we can just keep the state and go on
         if (!result.hasNext()) {
             result = null;
-            vecBatch.releaseAllVectors();
-            vecBatch.close();
             return;
         }
         state = State.HAS_OUTPUT;
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
     }
 
     private boolean tryFetchLookupSourceProvider() {

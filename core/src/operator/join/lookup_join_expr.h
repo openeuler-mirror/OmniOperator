@@ -15,7 +15,6 @@ namespace omniruntime {
 namespace op {
 class LookupJoinWithExprOperatorFactory : public OperatorFactory {
 public:
-
     static LookupJoinWithExprOperatorFactory *CreateLookupJoinWithExprOperatorFactory(const vec::VecTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
@@ -57,7 +56,6 @@ private:
     std::vector<int32_t> probeHashCols;
     std::vector<RowProjFunc> projectFuncs;
     LookupJoinOperator *lookupJoinOperator;
-    omniruntime::vec::VectorBatch *newInputVecBatch;
 };
 }
 }

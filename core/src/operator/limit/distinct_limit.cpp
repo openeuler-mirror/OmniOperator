@@ -373,11 +373,11 @@ void DistinctLimitOperator::InLoop(VectorBatch *vecBatch, uint64_t *combineHashV
 
 int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
 {
-    if ((vecBatch == nullptr) || (vecBatch->GetRowCount() == 0)) {
+    if (vecBatch == nullptr) {
         return 0;
     }
-
-    if (remainingLimit <= 0) {
+    if ((vecBatch->GetRowCount() == 0) || (remainingLimit < 0)) {
+        VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
 
@@ -391,7 +391,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
         this->hashCol);
 
     this->InLoop(vecBatch, combineHashVal.get());
-
+    VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 

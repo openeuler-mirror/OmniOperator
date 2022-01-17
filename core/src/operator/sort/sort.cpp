@@ -109,5 +109,11 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
+
+OmniStatus SortOperator::Close()
+{
+    VectorHelper::FreeVecBatches(inputVecBatches);
+    return OMNI_STATUS_NORMAL;
+}
 } // end of namespace op
 } // end of namespace omniruntime

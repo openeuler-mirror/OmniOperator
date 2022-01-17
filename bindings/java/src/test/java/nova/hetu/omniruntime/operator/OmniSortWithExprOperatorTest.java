@@ -44,7 +44,6 @@ public class OmniSortWithExprOperatorTest {
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
@@ -74,7 +73,6 @@ public class OmniSortWithExprOperatorTest {
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
@@ -104,7 +102,6 @@ public class OmniSortWithExprOperatorTest {
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
@@ -138,7 +135,6 @@ public class OmniSortWithExprOperatorTest {
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();

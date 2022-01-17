@@ -34,8 +34,6 @@ public class OmniLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        vecBatch1.releaseAllVectors();
-        vecBatch1.close();
         resultVecBatch1.releaseAllVectors();
         resultVecBatch1.close();
         limitOperator.close();
@@ -63,8 +61,6 @@ public class OmniLimitOperatorTest {
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
 
-        vecBatch1.releaseAllVectors();
-        vecBatch1.close();
         resultVecBatch1.releaseAllVectors();
         resultVecBatch1.close();
         limitOperator.close();

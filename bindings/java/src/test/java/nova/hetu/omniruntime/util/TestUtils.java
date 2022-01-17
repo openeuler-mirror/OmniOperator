@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.util;
 
 import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DICTIONARY;
@@ -5,7 +6,6 @@ import static nova.hetu.omniruntime.type.VecType.VecTypeId.OMNI_VEC_TYPE_DICTION
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import nova.hetu.omniruntime.type.CharVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -31,7 +31,6 @@ public class TestUtils {
         VecBatch vecBatch = new VecBatch(vecs, 0);
         return vecBatch;
     }
-
 
     public static VecBatch createVecBatch(VecType[] types, Object[][] datas) {
         Vec[] vecs = new Vec[types.length];
@@ -243,6 +242,7 @@ public class TestUtils {
                     assertEquals(Double.compare(vec.getDouble(i), (Double) expectedData[i]), 0);
                     break;
                 case OMNI_VEC_TYPE_VARCHAR :
+                case OMNI_VEC_TYPE_CHAR :
                     assertEquals(vec.getBytes(i), ((String) (expectedData[i])).getBytes(StandardCharsets.UTF_8));
                     break;
                 case OMNI_VEC_TYPE_DECIMAL128 :

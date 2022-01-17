@@ -213,8 +213,6 @@ public class HashBuilderOmniOperator implements Operator {
 
     private final OmniOperator omniOperator;
 
-    private final List<VecBatch> inputVecBatches = new ArrayList<>();
-
     /**
      * Instantiates a new Hash builder omni operator.
      *
@@ -282,8 +280,6 @@ public class HashBuilderOmniOperator implements Operator {
         omniOperator.addInput(vecBatch);
 
         operatorContext.recordOutput(page.getSizeInBytes(), positionCount);
-
-        inputVecBatches.add(vecBatch);
     }
 
     @Override
@@ -358,8 +354,6 @@ public class HashBuilderOmniOperator implements Operator {
         // close() can be called in any state, due for example to query failure, and
         // must clean resource up unconditionally
         omniOperator.close();
-        inputVecBatches.forEach(vecBatch -> vecBatch.releaseAllVectors());
-        inputVecBatches.forEach(vecBatch -> vecBatch.close());
         state = State.CLOSED;
     }
 
