@@ -100,16 +100,18 @@ FilterAndProjectOperatorFactory::FilterAndProjectOperatorFactory(Expr *parsedExp
     parsedExpr->Accept(printExprTree);
     std::cout << std::endl;
 #endif
-    if (parsedExpr != nullptr) {
-        this->isSupportedExpr = true;
-
-        this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes.GetIds(), inputVecCount);
-
-        for (int32_t i = 0; i < this->projectVecCount; i++) {
-            projections.push_back(make_unique<Projection>(inputVecTypes, inputVecCount, *(projectExprs.at(i)), true));
-        }
-    } else {
+    this->filter = make_unique<Filter>(*parsedExpr, inputVecTypes.GetIds(), inputVecCount);
+    if (!this->filter->isSupported) {
         this->isSupportedExpr = false;
+    }
+
+    for (int32_t i = 0; i < this->projectVecCount; i++) {
+        auto projection = make_unique<Projection>(inputVecTypes, inputVecCount, *(projectExprs.at(i)), true);
+        if (!projection->IsSupported()) {
+            this->isSupportedExpr = false;
+            break;
+        }
+        this->projections.push_back(move(projection));
     }
 }
 
@@ -253,6 +255,11 @@ Filter::Filter(const expressions::Expr &expression, const int32_t *inputTypeIds,
     this->expr = &expression;
 
     auto f = this->codeGen->GetFunction();
+    if (f == 0) {
+        this->isSupported = false;
+        return;
+    }
+    this->isSupported = true;
     void *function = &f;
     this->Apply = *static_cast<FilterFunc *>(function);
 }

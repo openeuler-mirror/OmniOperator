@@ -2388,3 +2388,22 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
     delete filter;
     VectorHelper::FreeVecBatch(vecBatch);
 }
+
+TEST(FilterTest, CastUnsupported)
+{
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_LONG) };
+    DataExpr *data1 = new DataExpr(0, DECIMAL128D);
+    std::vector<Expr *> args1{data1};
+    FuncExpr *castExpr = new FuncExpr("CAST", args1, INT64D);
+    DataExpr *data2 = new DataExpr(1, INT64D);
+    BinaryExpr *filterExpr = new BinaryExpr(LT, castExpr, data2);
+
+    std::vector<Expr*> projections = {new DataExpr(0, INT64D), new DataExpr(1, INT64D)};
+    VecTypes inputTypes(vecOfTypes);
+    FilterAndProjectOperatorFactory *factory =
+            new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projections.size());
+    EXPECT_FALSE(factory->isSupportedExpr);
+
+    delete factory;
+}

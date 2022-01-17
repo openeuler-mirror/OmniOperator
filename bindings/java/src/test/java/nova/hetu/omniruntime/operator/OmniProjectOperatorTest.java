@@ -166,4 +166,23 @@ public class OmniProjectOperatorTest {
         op.close();
         factory.close();
     }
+
+    /**
+     * Unsupported expression.
+     */
+    @Test
+    public void unsupportedCast() {
+        VecType[] types = {};
+        String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", " +
+                "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": " +
+                "\"FUNCTION\", \"returnType\": 4, \"function_name\": \"not\", \"arguments\": " +
+                "[{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": true}]}, \"if_true\": " +
+                "{ \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 1}, " +
+                "\"if_false\": { \"exprType\": \"LITERAL\", \"dataType\": 1, \"isNull\": false, \"value\": 0}}]}"};
+
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(projectionsJSON, types, 1);
+
+        assertFalse(factory.isSupported());
+        factory.close();
+    }
 }

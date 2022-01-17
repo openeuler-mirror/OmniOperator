@@ -7,6 +7,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -1290,5 +1291,24 @@ public class OmniFilterAndProjectOperatorTest {
         opJSON.close();
         factory.close();
         factoryJSON.close();
+    }
+
+    /**
+     * Unsupported expression.
+     */
+    @Test
+    public void unsupportedExpr() {
+        VecType[] types = {DoubleVecType.DOUBLE};
+        List<String> projectionsJSON =
+                ImmutableList.of("{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0}");
+
+        OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
+                "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"CAST\"," +
+                        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":0},\"right\"" +
+                        ":{\"exprType\":\"LITERAL\",\"dataType\":3,\"isNull\":false,\"value\":1.0}}",
+                types, projectionsJSON, 1);
+
+        assertFalse(factory.isSupported());
+        factory.close();
     }
 }

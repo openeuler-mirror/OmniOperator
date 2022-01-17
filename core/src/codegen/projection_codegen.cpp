@@ -34,6 +34,9 @@ namespace {
 int64_t ProjectionCodeGen::GetFunction()
 {
     Function *func = this->CreateFunction();
+    if (func == nullptr) {
+        return 0;
+    }
     return this->CreateWrapper(*func);
 }
 
