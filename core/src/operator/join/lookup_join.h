@@ -74,6 +74,7 @@ private:
     // << shiftSize) | partition)
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
     ExecutionContext *executionContext = nullptr;
+    omniruntime::vec::VectorBatch *input = nullptr;
 };
 
 class JoinProbe {

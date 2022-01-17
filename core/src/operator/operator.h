@@ -23,6 +23,12 @@ public:
 
     virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) = 0;
 
+    static void DeleteOperator(Operator *op)
+    {
+        op->Close();
+        delete op;
+    }
+
     int GetStatus()
     {
         return status;

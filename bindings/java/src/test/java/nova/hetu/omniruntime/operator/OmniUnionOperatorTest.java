@@ -49,15 +49,14 @@ public class OmniUnionOperatorTest {
         Iterator<VecBatch> results = unionOperator.getOutput();
 
         Object[][] expectedDatas1 = {{5, 3, 2, 6, 1, 4, 7, 8}, {5.0, 3.0, 2.0, 6.0, 1.0, 4.0, 7.0, 8.0}};
-        Object[][] expectedDatas2 = {{15, 13, 12, 16, 11, 14, 17, 18}, {15.0, 13.0, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
+        Object[][] expectedDatas2 = {{15, 13, 12, 16, 11, 14, 17, 18},
+                {15.0, 13.0, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
 
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
         VecBatch resultVecBatch2 = results.next();
         assertVecBatchEquals(resultVecBatch2, expectedDatas2);
 
-        freeVecBatch(vecBatch1);
-        freeVecBatch(vecBatch2);
         freeVecBatch(resultVecBatch1);
         freeVecBatch(resultVecBatch2);
         unionOperator.close();
@@ -73,7 +72,8 @@ public class OmniUnionOperatorTest {
         Object[][] sourceDatas1 = {{null, 3, 2, 6, 1, 4, 7, 8}, {5.0, 3.0, 2.0, 6.0, 1.0, 4.0, null, 8.0}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
 
-        Object[][] sourceDatas2 = {{15, 13, null, 16, 11, 14, 17, 18}, {15.0, null, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
+        Object[][] sourceDatas2 = {{15, 13, null, 16, 11, 14, 17, 18},
+                {15.0, null, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
         VecBatch vecBatch2 = createVecBatch(sourceTypes, sourceDatas2);
 
         OmniUnionOperatorFactory unionOperatorFactory = new OmniUnionOperatorFactory(sourceTypes, false);
@@ -83,15 +83,14 @@ public class OmniUnionOperatorTest {
         Iterator<VecBatch> results = unionOperator.getOutput();
 
         Object[][] expectedDatas1 = {{null, 3, 2, 6, 1, 4, 7, 8}, {5.0, 3.0, 2.0, 6.0, 1.0, 4.0, null, 8.0}};
-        Object[][] expectedDatas2 = {{15, 13, null, 16, 11, 14, 17, 18}, {15.0, null, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
+        Object[][] expectedDatas2 = {{15, 13, null, 16, 11, 14, 17, 18},
+                {15.0, null, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
 
         VecBatch resultVecBatch1 = results.next();
         assertVecBatchEquals(resultVecBatch1, expectedDatas1);
         VecBatch resultVecBatch2 = results.next();
         assertVecBatchEquals(resultVecBatch2, expectedDatas2);
 
-        freeVecBatch(vecBatch1);
-        freeVecBatch(vecBatch2);
         freeVecBatch(resultVecBatch1);
         freeVecBatch(resultVecBatch2);
         unionOperator.close();
@@ -99,7 +98,8 @@ public class OmniUnionOperatorTest {
     }
 
     /**
-     * Test the correctness of Omni union operator when the data has dictionary type.
+     * Test the correctness of Omni union operator when the data has dictionary
+     * type.
      */
     @Test
     public void testUnionWithDictionaryType() {
@@ -132,8 +132,6 @@ public class OmniUnionOperatorTest {
         VecBatch resultVecBatch2 = results.next();
         assertVecBatchEquals(resultVecBatch2, expectedDatas2);
 
-        freeVecBatch(vecBatch1);
-        freeVecBatch(vecBatch2);
         freeVecBatch(resultVecBatch1);
         freeVecBatch(resultVecBatch2);
         unionOperator.close();

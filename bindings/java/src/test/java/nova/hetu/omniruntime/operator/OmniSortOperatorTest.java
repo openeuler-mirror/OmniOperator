@@ -78,7 +78,6 @@ public class OmniSortOperatorTest {
 
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -114,7 +113,6 @@ public class OmniSortOperatorTest {
 
         Object[][] expectedDatas = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -143,7 +141,6 @@ public class OmniSortOperatorTest {
         VecBatch resultVecBatch = results.next();
         Object[][] expectedDatas = {{5L, 2L, 4L, 1L, 3L, 0L}, {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -172,7 +169,6 @@ public class OmniSortOperatorTest {
         VecBatch resultVecBatch = results.next();
         Object[][] expectedDatas = {{5L, 2L, 4L, 1L, 3L, 0L}, {"1.1", "4.4", "2.2", "5.5", "3.3", "6.6"}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -201,7 +197,6 @@ public class OmniSortOperatorTest {
         VecBatch resultVecBatch = results.next();
         Object[][] expectedDatas = {{5L, 2L, 4L, 1L, 3L, 0L}, {11, 44, 22, 55, 33, 66}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -229,7 +224,6 @@ public class OmniSortOperatorTest {
         VecBatch resultVecBatch = results.next();
         Object[][] expectedDatas = {{5L, 2L, 4L, 1L, 3L, 0L}, {11L, 44L, 22L, 55L, 33L, 66L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -263,7 +257,6 @@ public class OmniSortOperatorTest {
         assertVecEquals(resultVecBatch.getVectors()[0], new Object[]{5L, 2L, 4L, 1L, 3L, 0L});
         assertVecEquals(resultVecBatch.getVectors()[1],
                 new Object[][]{{11L, 0L}, {44L, 0L}, {22L, 0L}, {55L, 0L}, {33L, 0L}, {66L, 0L}});
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -291,7 +284,6 @@ public class OmniSortOperatorTest {
 
         Object[][] expectedDatas = {{null, 0, 1, 2, 3, 4}, {null, 4L, 3L, 2L, 1L, 0L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -319,7 +311,6 @@ public class OmniSortOperatorTest {
 
         Object[][] expectedDatas = {{0, 1, 2, 3, 4, null}, {4L, 3L, 2L, 1L, 0L, null}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -347,7 +338,6 @@ public class OmniSortOperatorTest {
 
         Object[][] expectedDatas = {{null, 2, 1, 0, 3, 4}, {null, null, null, null, 1L, 0L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         sortOperator.close();
         sortOperatorFactory.close();
@@ -378,13 +368,22 @@ public class OmniSortOperatorTest {
         long elapsed = System.currentTimeMillis() - start;
         System.out.println("testOrderByPerformance elapsed time : " + elapsed + "ms");
 
-        vecs.forEach(TestUtils::freeVecBatch);
         while (iterator.hasNext()) {
             VecBatch result = iterator.next();
             freeVecBatch(result);
         }
         sortOperator.close();
         sortOperatorFactory.close();
+    }
+
+    private VecBatch duplicateVecBatch(VecBatch vecBatch) {
+        int vecCount = vecBatch.getVectorCount();
+        int rowCount = vecBatch.getRowCount();
+        Vec[] vecs = new Vec[vecCount];
+        for (int i = 0; i < vecCount; i++) {
+            vecs[i] = vecBatch.getVector(i).slice(0, rowCount);
+        }
+        return new VecBatch(vecs);
     }
 
     /**
@@ -409,7 +408,7 @@ public class OmniSortOperatorTest {
                 try {
                     OmniOperator sortOperator = sortOperatorFactory.createOperator();
                     for (VecBatch vec : vecs) {
-                        sortOperator.addInput(vec);
+                        sortOperator.addInput(duplicateVecBatch(vec));
                     }
                     Iterator<VecBatch> iterator = sortOperator.getOutput();
                     while (iterator.hasNext()) {

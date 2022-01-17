@@ -17,7 +17,7 @@ using namespace std;
 using namespace vec;
 
 static void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
-                                          int32_t currentRowIndex)
+    int32_t currentRowIndex)
 {
     ContainerVector *containerVec = static_cast<ContainerVector *>(origintVector);
     auto *avgValVector = reinterpret_cast<DoubleVector *>(containerVec->GetValue(0));
@@ -32,7 +32,7 @@ static void ALWAYS_INLINE InsertContainer(Vector *origintVector, int32_t originR
 }
 
 static void ALWAYS_INLINE InsertVarchar(Vector *origintVector, int32_t originRowIndex, Vector *currentVector,
-                                        int32_t currentRowIndex)
+    int32_t currentRowIndex)
 {
     uint8_t *value = nullptr;
     int32_t length = static_cast<VarcharVector *>(origintVector)->GetValue(originRowIndex, &value);

@@ -45,7 +45,7 @@ typedef struct {
 using DuplicateValueFunc = void (*)(AggregateState &distinctSlot, Vector *inputVector, uint32_t rowIndex,
     ExecutionContext *context);
 using GenerateHashFunc = void (*)(Vector *vector, const uint32_t rowCount, const int32_t *rowArray,
-                                          uint64_t *combinedHash);
+    uint64_t *combinedHash);
 using GenerateHashFuncVect = void (*)(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
 using CheckEqualFunc = void (*)(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame);
@@ -64,6 +64,7 @@ using DistinctLimitFuncSet = struct {
 class DistinctLimitOperator : public Operator {
 public:
     static const int32_t INVALID_DISTINCT_COL_ID = -1;
+
 public:
     DistinctLimitOperator(const vec::VecTypes *sourceTypes, int32_t *distinctCols, int32_t distinctColsCount,
         int32_t hashCol, int64_t limit);

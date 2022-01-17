@@ -58,7 +58,6 @@ private:
     std::vector<int32_t> buildHashCols;
     std::vector<RowProjFunc> projectFuncs;
     HashBuilderOperator *hashBuilderOperator;
-    std::vector<VectorBatch *> inputVecBatches;
 };
 }
 }

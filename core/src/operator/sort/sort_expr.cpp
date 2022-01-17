@@ -62,7 +62,7 @@ int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
     if (newInputVecBatch != nullptr) {
         sortOperator->AddInput(newInputVecBatch);
-        inputVecBatches.push_back(newInputVecBatch);
+        VectorHelper::FreeVecBatch(inputVecBatch);
     } else {
         sortOperator->AddInput(inputVecBatch);
     }
@@ -78,7 +78,7 @@ int32_t SortWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBat
 
 OmniStatus SortWithExprOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
+    sortOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 }

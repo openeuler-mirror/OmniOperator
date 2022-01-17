@@ -154,9 +154,8 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     delete[] data3;
     delete[] data2;
     delete[] data1;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -195,8 +194,7 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -234,8 +232,7 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
 
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -273,8 +270,7 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
 
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -314,8 +310,7 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -355,15 +350,14 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
 TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
 {
     int32_t rowNum = DISTINCT_VALUE_COUNT * REPEAT_COUNT;
-    VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
+    VectorBatch *vecBatches[VEC_BATCH_COUNT];
     BuildSortTestData(vecBatches, COLUMN_COUNT_2);
     std::cout << "finish build sort data" << endl;
 
@@ -398,9 +392,8 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     std::cout << "testOrderByTwoColumnPerf wall_elapsed time: " << wallElapsed << "s" << std::endl;
     std::cout << "testOrderByTwoColumnPerf cpu_elapsed time: " << cpuElapsed << "s" << std::endl;
 
-    VectorHelper::FreeVecBatches(vecBatches, VEC_BATCH_COUNT);
     VectorHelper::FreeVecBatches(outputVecBatches);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -457,13 +450,13 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
     }
 
     for (int i = 0; i < threadArgs->tableCount; ++i) {
-        sortOperator->AddInput(threadArgs->vecBatches[i]);
+        sortOperator->AddInput(DuplicateVectorBatch(threadArgs->vecBatches[i]));
     }
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
     VectorHelper::FreeVecBatches(outputVecBatches);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
 }
 
 TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
@@ -599,8 +592,7 @@ TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -641,8 +633,7 @@ TEST(NativeOmniSortTest, TestSortTwoCharColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -683,8 +674,7 @@ TEST(NativeOmniSortTest, TestSortTwoDate32Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -725,8 +715,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal64Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -767,8 +756,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal128Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -813,8 +801,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -939,8 +926,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(sourceVecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -988,8 +974,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(sourceVecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -1037,7 +1022,6 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(sourceVecBatch);
-    delete sortOperator;
+    Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }

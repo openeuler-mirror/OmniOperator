@@ -211,8 +211,6 @@ public class OrderByOmniOperator implements Operator {
 
     private final OmniOperator omniOperator;
 
-    private final List<VecBatch> inputVecBatchs = new ArrayList<>();
-
     private Iterator<Optional<Page>> sortedPages;
 
     private State state = State.NEEDS_INPUT;
@@ -250,7 +248,6 @@ public class OrderByOmniOperator implements Operator {
 
         VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
-        inputVecBatchs.add(vecBatch);
     }
 
     @Override
@@ -261,8 +258,6 @@ public class OrderByOmniOperator implements Operator {
 
         if (!sortedPages.hasNext()) {
             state = State.FINISHED;
-            inputVecBatchs.forEach(vecBatch -> vecBatch.releaseAllVectors());
-            inputVecBatchs.forEach(vecBatch -> vecBatch.close());
             return null;
         }
 

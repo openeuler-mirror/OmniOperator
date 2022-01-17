@@ -1,3 +1,4 @@
+
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
@@ -15,8 +16,7 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static org.testng.Assert.assertEquals;
 
-public class OmniPartionOutOperatorTest
-{
+public class OmniPartionOutOperatorTest {
     @Test
     public void testPartionOut() {
         VecType[] sourceTypes = {VarcharVecType.VARCHAR};
@@ -34,8 +34,9 @@ public class OmniPartionOutOperatorTest
         Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(sourceTypes,
-                replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
+                sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
+                isHashPrecomputed, hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -45,7 +46,6 @@ public class OmniPartionOutOperatorTest
 
         Object[][] expectedDatas = {{"abc", "de", "f"}};
         assertVecBatchEquals(result, expectedDatas);
-        TestUtils.freeVecBatch(vecBatch);
         TestUtils.freeVecBatch(result);
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();
@@ -67,8 +67,9 @@ public class OmniPartionOutOperatorTest
         Object[][] buildDatas = {{"abc", "de", null}, {"abc", "de", null}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(sourceTypes,
-                replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
+                sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
+                isHashPrecomputed, hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -78,7 +79,6 @@ public class OmniPartionOutOperatorTest
 
         Object[][] expectedDatas = {{"abc", "de", null}};
         assertVecBatchEquals(result, expectedDatas);
-        TestUtils.freeVecBatch(vecBatch);
         TestUtils.freeVecBatch(result);
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();
@@ -89,7 +89,6 @@ public class OmniPartionOutOperatorTest
         VecType[] sourceTypes = {CharVecType.CHAR};
         boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
-        ;
         int[] partitionChannels = {0};
         int partitionCount = 1;
         int[] bucketToPartition = {0};
@@ -101,8 +100,9 @@ public class OmniPartionOutOperatorTest
         Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
 
-        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(sourceTypes,
-                replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels);
+        OmniPartitionedOutPutOperatorFactory omniPartitionedOutPutOperatorFactory = new OmniPartitionedOutPutOperatorFactory(
+                sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount, bucketToPartition,
+                isHashPrecomputed, hashChannelTypes, hashChannels);
         OmniOperator omniOperator = omniPartitionedOutPutOperatorFactory.createOperator();
         omniOperator.addInput(vecBatch);
 
@@ -112,7 +112,6 @@ public class OmniPartionOutOperatorTest
 
         Object[][] expectedDatas = {{"abc", "de", "f"}};
         assertVecBatchEquals(result, expectedDatas);
-        TestUtils.freeVecBatch(vecBatch);
         TestUtils.freeVecBatch(result);
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();

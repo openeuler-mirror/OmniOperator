@@ -38,6 +38,7 @@ void AssertVarcharVectorEquals(omniruntime::vec::VarcharVector *vector, std::str
 
 omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory);
 void DeleteOperatorFactory(OperatorFactory *operatorFactory);
+omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input);
 
 class Timer {
 public:

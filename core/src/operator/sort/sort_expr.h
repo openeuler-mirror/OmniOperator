@@ -56,7 +56,6 @@ private:
     std::vector<int32_t> sortCols;
     std::vector<RowProjFunc> projectFuncs;
     SortOperator *sortOperator;
-    std::vector<VectorBatch *> inputVecBatches;
 };
 }
 }

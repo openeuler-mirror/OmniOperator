@@ -32,14 +32,13 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const vec::
 {
     std::vector<VecType> newProbeTypes;
     OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->rowProjections,
-                                     this->probeHashCols, this->projectFuncs);
+        this->probeHashCols, this->projectFuncs);
     this->probeTypes = std::make_unique<VecTypes>(newProbeTypes);
     auto hashBuilderWithExprOperatorFactory =
-            reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
-    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        *(this->probeTypes.get()), probeOutputCols, probeOutputColsCount,
-        this->probeHashCols.data(), probeHashKeysCount, buildOutputCols, buildOutputTypes, joinType,
-        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
+        reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
+    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes.get()),
+        probeOutputCols, probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
+        buildOutputTypes, joinType, (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
@@ -74,10 +73,9 @@ int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *inputVecBatch)
         OperatorUtil::ProjectVectors(inputVecBatch, probeTypes, projectFuncs, probeHashCols);
     if (newInputVecBatch != nullptr) {
         lookupJoinOperator->AddInput(newInputVecBatch);
-        this->newInputVecBatch = newInputVecBatch;
+        VectorHelper::FreeVecBatch(inputVecBatch);
     } else {
         lookupJoinOperator->AddInput(inputVecBatch);
-        this->newInputVecBatch = nullptr;
     }
     return 0;
 }
@@ -85,15 +83,13 @@ int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 int32_t LookupJoinWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
     lookupJoinOperator->GetOutput(outputPages);
-    if (newInputVecBatch != nullptr) {
-        VectorHelper::FreeVecBatch(newInputVecBatch);
-    }
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
 OmniStatus LookupJoinWithExprOperator::Close()
 {
+    lookupJoinOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 }
