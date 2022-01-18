@@ -99,7 +99,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -118,10 +117,11 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
         data0[i] = rand();
     }
 
-    VectorBatch *inputVecBatch = new VectorBatch(1);
+    VectorBatch *inputVecBatch1 = new VectorBatch(1);
     IntVector *column0 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), dataSize);
     column0->SetValues(0, data0, dataSize);
-    inputVecBatch->SetVector(0, column0);
+    inputVecBatch1->SetVector(0, column0);
+    VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
 
     std::vector<VecType> types = { IntVecType::Instance() };
     VecTypes sourceTypes(types);
@@ -141,7 +141,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     perfUtil->Init();
     perfUtil->Reset();
     perfUtil->Start();
-    topNOperator->AddInput(inputVecBatch);
+    topNOperator->AddInput(inputVecBatch1);
     perfUtil->Stop();
     long instCount = perfUtil->GetData();
     if (instCount != -1) {
@@ -158,7 +158,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     perfUtil->Init();
     perfUtil->Reset();
     perfUtil->Start();
-    topNOp->AddInput(inputVecBatch);
+    topNOp->AddInput(inputVecBatch2);
     perfUtil->Stop();
      instCount = perfUtil->GetData();
     if (instCount != -1) {
@@ -183,7 +183,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     delete jitContext;
     delete topNOp;
     delete perfUtil;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
     VectorHelper::FreeVecBatches(outputVecorBatchsWithoutJit);
@@ -237,12 +236,12 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
     expectVecorBatch->SetVector(0, expectCol1);
 
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
+    VectorHelper::PrintVecBatch(expectVecorBatch);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -293,7 +292,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -350,7 +348,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -407,7 +404,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -457,7 +453,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -513,7 +508,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -569,7 +563,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -634,7 +627,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -705,7 +697,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -776,7 +767,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -839,7 +829,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -908,7 +897,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar){
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -977,7 +965,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar){
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -1058,7 +1045,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1139,7 +1125,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1203,7 +1188,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -1268,7 +1252,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1330,7 +1313,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1397,7 +1379,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     delete topNOperator;
     delete topNOperatorFactory;
     delete jitContext;
-    VectorHelper::FreeVecBatch(inputVecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1442,7 +1423,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
     delete topNOperator;
     DeleteOperatorFactory(topNOperatorFactory);
 }
@@ -1487,7 +1467,6 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
     delete topNOperator;
     DeleteOperatorFactory(topNOperatorFactory);
 }
@@ -1532,7 +1511,6 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
     delete topNOperator;
     DeleteOperatorFactory(topNOperatorFactory);
 }
@@ -1577,7 +1555,6 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
     delete topNOperator;
     DeleteOperatorFactory(topNOperatorFactory);
 }

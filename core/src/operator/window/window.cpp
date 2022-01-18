@@ -209,6 +209,8 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         position += rowCount;
         outputPages.push_back(vecBatch);
     }
+
+    VectorHelper::FreeVecBatches(this->inputVecBatches);
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

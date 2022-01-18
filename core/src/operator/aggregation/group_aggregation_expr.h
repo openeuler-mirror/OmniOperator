@@ -53,7 +53,6 @@ private:
     std::vector<int32_t> projectCols;
     std::vector<RowProjFunc> projectFuncs;
     HashAggregationOperator *hashAggOperator;
-    std::vector<VectorBatch *> inputVecBatches;
 };
 }
 }

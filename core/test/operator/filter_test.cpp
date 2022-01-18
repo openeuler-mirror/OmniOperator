@@ -173,7 +173,6 @@ TEST(FilterTest, LessThan) {
         int32_t val = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -214,7 +213,6 @@ TEST(FilterTest, LessThanWihtoutParsing) {
         int32_t val = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -258,7 +256,6 @@ TEST(FilterTest, GreaterThan) {
         EXPECT_TRUE(val0 > 20);
         EXPECT_EQ(val1, (int64_t) 3e9);
     }
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -306,7 +303,6 @@ TEST(FilterTest, EqualTo) {
         EXPECT_EQ(val0, 50);
         EXPECT_EQ(val0, val1);
     }
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -352,7 +348,6 @@ TEST(FilterTest, GreaterThanOrEqualTo) {
         int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 >= 30);
     }
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -396,7 +391,6 @@ TEST(FilterTest, NotEqualTo) {
         double val0 = ((DoubleVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, cnt++);
     }
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -432,7 +426,6 @@ TEST(FilterTest, AllPass) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 20000);
 
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -472,8 +465,6 @@ TEST(FilterTest, MultipleInputs) {
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter1));
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatch(in1);
-
     allData[0] = (int64_t) data2;
     VectorBatch *in2 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     op->AddInput(in2);
@@ -481,7 +472,6 @@ TEST(FilterTest, MultipleInputs) {
     EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter1));
     EXPECT_EQ(numReturned, 668);
 
-    VectorHelper::FreeVecBatch(in2);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] data1;
@@ -538,7 +528,6 @@ TEST(FilterTest, NegativeValues) {
     // Both values are negative for every multiple of 35.
     EXPECT_EQ(numReturned, 286);
 
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] data1;
@@ -597,7 +586,6 @@ TEST(FilterTest, AllTypes) {
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter3));
     EXPECT_EQ(numReturned, 100);
 
-    VectorHelper::FreeVecBatch(in1);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] data1;
@@ -660,7 +648,6 @@ TEST(FilterTest, Compile) {
     int32_t numSelectedRows = op->GetOutput(ret);
     EXPECT_EQ(numSelectedRows, 100);
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] data1;
@@ -732,7 +719,6 @@ TEST(FilterTest, LogicalOperators1) {
     EXPECT_EQ(numReturned, 543);
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter4));
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -793,7 +779,6 @@ TEST(FilterTest, LogicalOperators2) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 3498);
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter6));
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -871,7 +856,6 @@ TEST(FilterTest, LogicalOperators3) {
         EXPECT_TRUE(val0 != 0);
         EXPECT_TRUE(val1 == col1[i + 2]);
     }
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -909,7 +893,6 @@ TEST(FilterTest, ArithmeticAdd) {
         int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 + 1 > 4);
     }
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -948,7 +931,6 @@ TEST(FilterTest, ArithmeticSubtract) {
         EXPECT_TRUE(0 < val0 - 5);
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -998,7 +980,6 @@ TEST(FilterTest, ArithmeticMultiply) {
         EXPECT_EQ(val0, 0);
         EXPECT_TRUE(val1 * 2 < 7);
     }
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1042,7 +1023,6 @@ TEST(FilterTest, Conditional) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 5000);
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1089,7 +1069,6 @@ TEST(FilterTest, Conditional2) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2000);
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1137,7 +1116,6 @@ TEST(FilterTest, In) {
         EXPECT_TRUE(val0 == 1 || val0 == 3 || val0 == 5);
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1180,7 +1158,6 @@ TEST(FilterTest, Between) {
         EXPECT_TRUE((val0 <= val1) && (val1 <= val2));
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1218,7 +1195,6 @@ TEST(FilterTest, NotEqualToAbs) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 99998);
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1283,7 +1259,6 @@ TEST(FilterTest, MathFunctionFilter1) {
         EXPECT_TRUE((std::abs(val0) == std::abs(val1)) && (std::abs(val1) == std::abs(val2)));
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1334,7 +1309,6 @@ TEST(FilterTest, MathFunctionFilter2) {
 
     EXPECT_EQ(numReturned, 2000);
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1393,7 +1367,6 @@ TEST(FilterTest, FilterString1) {
         delete s;
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1439,7 +1412,6 @@ TEST(FilterTest, Coalesce1) {
 
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1489,7 +1461,6 @@ TEST(FilterTest, Coalesce2) {
         delete s;
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1547,7 +1518,6 @@ TEST(FilterTest, DISABLED_ExternalMathFunc) {
         EXPECT_TRUE(val0 + 1 == val1);
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1609,7 +1579,6 @@ TEST(FilterTest, DISABLED_ExternalStringFunc) {
         delete s;
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1675,7 +1644,6 @@ TEST(FilterTest, DISABLED_ExternalStringFunc2) {
         delete s;
     }
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
@@ -1770,9 +1738,7 @@ TEST(FilterTest, Multithreading) {
     std::cout << "Total time for multithreading test: ";
     std::cout << std::chrono::duration<double, std::milli>(end - start).count() << std::endl;
 
-    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
-    VectorHelper::FreeVecBatch(t2);
     VectorHelper::FreeVecBatches(ret2);
 
     delete[] col1;
@@ -1815,7 +1781,8 @@ TEST(FilterTest, TestFilterDictionaryVec) {
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
+    op->AddInput(copiedBatch);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 7);
@@ -1863,7 +1830,8 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
+    op->AddInput(copiedBatch);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2);
@@ -1918,7 +1886,8 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
+    op->AddInput(copiedBatch);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 6);
@@ -1972,7 +1941,6 @@ TEST(FilterTest, DecimalFilterBinaryTest) {
     EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter7));
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatch(in1);
 
     allData[0] = (int64_t) data2;
     VectorBatch *in2 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
@@ -1981,7 +1949,6 @@ TEST(FilterTest, DecimalFilterBinaryTest) {
     EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter7));
     EXPECT_EQ(numReturned, 1000);
 
-    VectorHelper::FreeVecBatch(in2);
     VectorHelper::FreeVecBatches(ret);
 
     delete[] data1;
@@ -2046,7 +2013,6 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 1000);
 
-    VectorHelper::FreeVecBatch(in1);
 
     delete[] data1;
     delete[] data2;
@@ -2090,7 +2056,6 @@ TEST(FilterTest, FilterStringWithNull) {
         EXPECT_EQ(actualStr, "hello");
     }
 
-    VectorHelper::FreeVecBatch(batch);
     VectorHelper::FreeVecBatches(ret);
 
     delete op;
@@ -2133,7 +2098,8 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec) {
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(intput);
+    VectorBatch *copiedBatch = DuplicateVectorBatch(intput);
+    op->AddInput(copiedBatch);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 2);
@@ -2195,7 +2161,8 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull) {
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(intput);
+    VectorBatch *copiedBatch = DuplicateVectorBatch(intput);
+    op->AddInput(copiedBatch);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     EXPECT_EQ(numReturned, 4);
@@ -2246,7 +2213,6 @@ TEST(FilterTest, SimpleFilter) {
         }
     }
     delete filter;
-    VectorHelper::FreeVecBatch(in1);
     delete[] col1;
 }
 
@@ -2287,7 +2253,6 @@ TEST(FilterTest, SimpleFilterWithNulls) {
         }
     }
     delete filter;
-    VectorHelper::FreeVecBatch(in1);
     delete[] col1;
 }
 
@@ -2325,7 +2290,6 @@ TEST(FilterTest, SimpleFilterIntWithNulls) {
         EXPECT_FALSE(result);
     }
     delete filter;
-    VectorHelper::FreeVecBatch(vecBatch);
 }
 
 TEST(FilterTest, SimpleFilterCharWithNulls) {
@@ -2386,9 +2350,7 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
         }
     }
     delete filter;
-    VectorHelper::FreeVecBatch(vecBatch);
 }
-
 TEST(FilterTest, CastUnsupported)
 {
     const int32_t numCols = 2;

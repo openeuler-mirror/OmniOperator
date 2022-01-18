@@ -130,7 +130,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     delete hashAggWithExprOperator;
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
 
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -218,7 +217,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     delete hashAggWithExprOperator;
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
 
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -282,7 +280,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     delete hashAggWithExprOperator;
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
 
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }

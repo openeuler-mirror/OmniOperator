@@ -309,6 +309,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         aggColIdx.get(), aggColNum, aggFuncTypes.get());
 
     this->PostLoop(vecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 

@@ -71,6 +71,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
             pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, top);
         }
     }
+    VectorHelper::FreeVecBatch(vectorBatch);
     return 0;
 }
 

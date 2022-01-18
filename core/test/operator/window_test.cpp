@@ -197,7 +197,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -254,7 +253,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -313,7 +311,6 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -372,7 +369,6 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -435,7 +431,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -501,7 +496,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -567,7 +561,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -641,7 +634,6 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -715,7 +707,6 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -816,7 +807,6 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -918,7 +908,6 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1014,7 +1003,6 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1108,7 +1096,6 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1205,7 +1192,6 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1303,7 +1289,6 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1400,7 +1385,6 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1496,7 +1480,6 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     delete jitContext;
     delete windowOperator;
     delete operatorFactory;
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }

@@ -225,6 +225,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         delete dictionaryVec;
     }
     data.clear();
+    VectorHelper::FreeVecBatch(vecBatch);
     delete[] selectedRows;
     context->getArena()->Reset();
     return numSelectedRows;

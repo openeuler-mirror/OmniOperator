@@ -63,7 +63,6 @@ public class OmniFilterAndProjectOperatorTest {
         Object[][] expectDatas = {{0, 1, 2, 3, 4, 0, 1}, {0, 1, 2, 3, 4, 5, 6}, {0, 1, 2, 3, 4, 5, 6}};
         assertVecBatchEquals(resultVecBatch, expectDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         op.close();
         factory.close();
@@ -100,7 +99,6 @@ public class OmniFilterAndProjectOperatorTest {
         Object[][] expectDatas = {{0, 1, 2, 3, 4, 0, 1}, {0, 1, 2, 3, 4, 5, 6}, {3, 4, 5, 6, 6, 6, 6}};
         assertVecBatchEquals(resultVecBatch, expectDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         op.close();
         factory.close();
@@ -127,11 +125,18 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i % 2 == 0 ? 0.5 : 1.5);
         }
+        DoubleVec col2 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, i % 2 == 0 ? 0.5 : 1.5);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col2);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -146,9 +151,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((DoubleVec) resJSON.getVector(0)).get(i) < 1);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -177,11 +179,18 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i);
         }
+        IntVec col2 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, i);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col2);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -196,9 +205,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((IntVec) resJSON.getVector(0)).get(i) < 2000);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -233,7 +239,6 @@ public class OmniFilterAndProjectOperatorTest {
         Object[][] expectDatas = {{0, 3}, {"hello", "world"}};
         assertVecBatchEquals(resultVecBatch, expectDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         op.close();
         factory.close();
@@ -263,11 +268,20 @@ public class OmniFilterAndProjectOperatorTest {
             col1.set(i, i % 25);
             col2.set(i, 3000000000L);
         }
+        IntVec col3 = new IntVec(numRows);
+        LongVec col4 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col3.set(i, i % 25);
+            col4.set(i, 3000000000L);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col3, col4);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -284,9 +298,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertEquals(((LongVec) resJSON.getVector(1)).get(i), 3000000000L);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -319,11 +330,21 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, i % 100);
             col3.set(i, i % 100);
         }
+        IntVec col4 = new IntVec(numRows);
+        LongVec col5 = new LongVec(numRows);
+        DoubleVec col6 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col5.set(i, i % 100);
+            col6.set(i, i % 100);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col4, col5, col6);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -340,9 +361,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertEquals(((DoubleVec) resJSON.getVector(1)).get(i), 50.0);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -377,11 +395,24 @@ public class OmniFilterAndProjectOperatorTest {
             }
             col2.set(i, value);
         }
+        IntVec col3 = new IntVec(numRows);
+        IntVec col4 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col3.set(i, i);
+            int value = (i * (i + 2)) % 40;
+            if (i % 45 == 0) {
+                value = 30;
+            }
+            col4.set(i, value);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col3, col4);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -396,9 +427,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((IntVec) resJSON.getVector(0)).get(i) >= 30);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -427,11 +455,18 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i);
         }
+        DoubleVec col2 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, i);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col2);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -448,9 +483,6 @@ public class OmniFilterAndProjectOperatorTest {
             cnt++;
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -479,11 +511,18 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < numRows; i++) {
             col1.set(i, 9348);
         }
+        IntVec col2 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col2.set(i, 9348);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col2);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -498,9 +537,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertEquals(((IntVec) resJSON.getVector(0)).get(i), 9348);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -534,8 +570,17 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, i % 6 + 1);
         }
         ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        IntVec col3 = new IntVec(numRows);
+        IntVec col4 = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col3.set(i, i % 10);
+            col4.set(i, i % 6 + 1);
+        }
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col3);
         for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -551,9 +596,12 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         // Test multiple inputs
-        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col2);
-        for (VecBatch vecBatch : vecBatches2) {
+        ImmutableList<VecBatch> vecBatches1_ = makeInput(numRows, col2);
+        ImmutableList<VecBatch> vecBatches2_ = makeInput(numRows, col4);
+        for (VecBatch vecBatch : vecBatches1_) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2_) {
             opJSON.addInput(vecBatch);
         }
         assertTrue(op.getOutput().hasNext());
@@ -567,12 +615,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((IntVec) resJSON.getVector(0)).get(i) <= 4);
         }
 
-        for (VecBatch vecBatch : vecBatches1) {
-            freeVecBatch(vecBatch);
-        }
-        for (VecBatch vecBatch : vecBatches2) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -623,9 +665,27 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, val2);
         }
 
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
-        for (VecBatch vecBatch : vecBatches) {
+        IntVec col3 = new IntVec(numRows);
+        LongVec col4 = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            int val1 = i * i + 1;
+            if (i % 5 == 0) {
+                val1 = -val1;
+            }
+            col3.set(i, val1);
+            long val2 = i % 100 + (long) 3e9;
+            if (i % 7 == 0) {
+                val2 = -val2;
+            }
+            col4.set(i, val2);
+        }
+
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col3, col4);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -642,9 +702,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((LongVec) resJSON.getVector(1)).get(i) < 0);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -697,10 +754,21 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, i % 2 == 0 ? (long) 3e9 : 0);
             col3.set(i, i % 10 / 10D);
         }
+        IntVec col4 = new IntVec(numRows);
+        LongVec col5 = new LongVec(numRows);
+        DoubleVec col6 = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col4.set(i, i % 3);
+            col5.set(i, i % 2 == 0 ? (long) 3e9 : 0);
+            col6.set(i, i % 10 / 10D);
+        }
 
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col4, col5, col6);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -719,9 +787,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((DoubleVec) resJSON.getVector(2)).get(i) >= 0.4);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -765,9 +830,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((IntVec) res.getVector(0)).get(i) < 24);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
     }
@@ -835,10 +897,27 @@ public class OmniFilterAndProjectOperatorTest {
             col5.set(i, 50 + i / 10D);
             col6.set(i, i % 55);
         }
+        IntVec col1_ = new IntVec(numRows);
+        IntVec col2_ = new IntVec(numRows);
+        IntVec col3_ = new IntVec(numRows);
+        LongVec col4_ = new LongVec(numRows);
+        DoubleVec col5_ = new DoubleVec(numRows);
+        LongVec col6_ = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1_.set(i, i % 3 == 0 ? 0 : 1);
+            col2_.set(i, i);
+            col3_.set(i, i);
+            col4_.set(i, i % 2 == 0 ? 3000000000L : 2999999999L);
+            col5_.set(i, 50 + i / 10D);
+            col6_.set(i, i % 55);
+        }
 
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4, col5, col6);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3, col4, col5, col6);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_, col3_, col4_, col5_, col6_);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -861,9 +940,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue((resJSON0.get(i) != 1 && resJSON1.get(i) > 4800 && resJSON2.get(i) < 50.8) || resJSON3.get(i) >= 52);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -919,10 +995,23 @@ public class OmniFilterAndProjectOperatorTest {
             col3.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
             col4.set(i, i % 9 - 4);
         }
+        IntVec col1_ = new IntVec(numRows);
+        IntVec col2_ = new IntVec(numRows);
+        LongVec col3_ = new LongVec(numRows);
+        LongVec col4_ = new LongVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1_.set(i, i % 100);
+            col2_.set(i, i % 7 == 0 ? -12 : i);
+            col3_.set(i, i % 8 == 0 ? -i - 3000000000L : i + 3000000000L);
+            col4_.set(i, i % 9 - 4);
+        }
 
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3, col4);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3, col4);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_, col3_, col4_);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -945,9 +1034,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue((resJSON0.get(i) >= 0 || resJSON1.get(i) <= -3000000000L) && (resJSON2.get(i) == -12 || resJSON3.get(i) < 50));
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -1038,10 +1124,28 @@ public class OmniFilterAndProjectOperatorTest {
         col1.set(6, 8);
         col1.set(7, 13);
         col2.set(2, 0);
+        IntVec col1_ = new IntVec(numRows);
+        DoubleVec col2_ = new DoubleVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1_.set(i, 0);
+            col2_.set(i, 1.5);
+        }
+        col1_.set(0, 0);
+        col1_.set(1, 1);
+        col1_.set(2, 1);
+        col1_.set(3, 2);
+        col1_.set(4, 3);
+        col1_.set(5, 5);
+        col1_.set(6, 8);
+        col1_.set(7, 13);
+        col2_.set(2, 0);
 
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -1056,9 +1160,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertEquals(((IntVec) resJSON.getVector(1)).get(i), vals[i]);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -1090,11 +1191,18 @@ public class OmniFilterAndProjectOperatorTest {
         for (int i = 0; i < numRows; i++) {
             col1.set(i, i % 5);
         }
+        IntVec col1_ = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1_.set(i, i % 5);
+        }
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -1109,9 +1217,6 @@ public class OmniFilterAndProjectOperatorTest {
             assertTrue(((IntVec) resJSON.getVector(0)).get(i) + 1 > 4);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();
@@ -1169,7 +1274,6 @@ public class OmniFilterAndProjectOperatorTest {
                 // System.out.println(res.getLength());
                 assertEquals(res.getRowCount(), 501);
 
-                freeVecBatch(vecBatch);
                 freeVecBatch(res);
                 op.close();
             });
@@ -1200,7 +1304,6 @@ public class OmniFilterAndProjectOperatorTest {
                 // System.out.println(resJSON.getLength());
                 assertEquals(resJSON.getRowCount(), 501);
 
-                freeVecBatch(vecBatch);
                 freeVecBatch(resJSON);
                 opJSON.close();
             });
@@ -1268,12 +1371,23 @@ public class OmniFilterAndProjectOperatorTest {
             col2.set(i, i % 5);
             col3.set(i, i % 10);
         }
+        IntVec col1_ = new IntVec(numRows);
+        IntVec col2_ = new IntVec(numRows);
+        IntVec col3_ = new IntVec(numRows);
+        for (int i = 0; i < numRows; i++) {
+            col1_.set(i, i % 2);
+            col2_.set(i, i % 5);
+            col3_.set(i, i % 10);
+        }
 
         OmniOperator op = factory.createOperator();
         OmniOperator opJSON = factoryJSON.createOperator();
-        ImmutableList<VecBatch> vecBatches = makeInput(numRows, col1, col2, col3);
-        for (VecBatch vecBatch : vecBatches) {
+        ImmutableList<VecBatch> vecBatches1 = makeInput(numRows, col1, col2, col3);
+        ImmutableList<VecBatch> vecBatches2 = makeInput(numRows, col1_, col2_, col3_);
+        for (VecBatch vecBatch : vecBatches1) {
             op.addInput(vecBatch);
+        }
+        for (VecBatch vecBatch : vecBatches2) {
             opJSON.addInput(vecBatch);
         }
 
@@ -1283,9 +1397,6 @@ public class OmniFilterAndProjectOperatorTest {
         VecBatch resJSON = opJSON.getOutput().next();
         assertEquals(res.getRowCount(), 2000);
         assertEquals(resJSON.getRowCount(), 2000);
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         opJSON.close();

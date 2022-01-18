@@ -377,7 +377,8 @@ void perfTestOriginal(int64_t moduleAddr, VectorBatch **input)
 
     // execution
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        groupBy->AddInput(input[i]);
+        auto copiedBatch = DuplicateVectorBatch(input[i]);
+        groupBy->AddInput(copiedBatch);
     }
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
@@ -386,8 +387,7 @@ void perfTestOriginal(int64_t moduleAddr, VectorBatch **input)
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
-    groupBy->Close();
-    delete groupBy;
+    Operator::DeleteOperator(groupBy);
 }
 
 void perfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int32_t *rowCount)
@@ -399,7 +399,8 @@ void perfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int3
 
     // execution
     for (int pageIndex = 0; pageIndex < vecBatchNum; ++pageIndex) {
-        auto errNo = groupBy->AddInput(input[pageIndex]);
+        auto copiedBatch = DuplicateVectorBatch(input[pageIndex]);
+        auto errNo = groupBy->AddInput(copiedBatch);
     }
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
@@ -408,8 +409,7 @@ void perfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int3
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
-    groupBy->Close();
-    delete groupBy;
+    Operator::DeleteOperator(groupBy);
 }
 
 void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input, int32_t vecBatchNum, int32_t *rowCount)
@@ -425,7 +425,8 @@ void perfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input,
 
     // execution
     for (int pageIndex = 0; pageIndex < vecBatchNum; ++pageIndex) {
-        auto errNo = aggregation->AddInput(input[pageIndex]);
+        auto copiedBatch = DuplicateVectorBatch(input[pageIndex]);
+        auto errNo = aggregation->AddInput(copiedBatch);
     }
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = aggregation->GetOutput(result);
@@ -447,8 +448,8 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     std::string aggNames[] = {"group", "group", "sum", "avg", "count", "min", "max"};
     std::vector<VecType> groupTypes = { LongVecType(), LongVecType() };
     std::vector<VecType> aggTypes = { LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() };
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_SIZE, CARDINALITY, 2, 5, groupTypes, aggTypes);
-    if (input == nullptr) {
+    VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_SIZE, CARDINALITY, 2, 5, groupTypes, aggTypes);
+    if (input1 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
     // First stage
@@ -476,14 +477,17 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     groupBy1->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        groupBy1->AddInput(input[i]);
+        groupBy1->AddInput(input1[i]);
     }
 
     std::vector<VectorBatch *> result1;
     int32_t vecBatchCount = groupBy1->GetOutput(result1);
-    groupBy1->Close();
-    delete groupBy1;
+    Operator::DeleteOperator(groupBy1);
 
+    VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_SIZE, CARDINALITY, 2, 5, groupTypes, aggTypes);
+    if (input2 == nullptr) {
+        std::cerr << "Building input data failed!" << std::endl;
+    }
     ColumnIndex c7 = { 0, LongVecType::Instance(), LongVecType::Instance() };
     ColumnIndex c8 = { 1, LongVecType::Instance(), LongVecType::Instance() };
     ColumnIndex c9 = { 2, LongVecType::Instance(), LongVecType::Instance() };
@@ -508,13 +512,12 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     groupBy2->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        groupBy2->AddInput(input[i]);
+        groupBy2->AddInput(input2[i]);
     }
 
     std::vector<VectorBatch *> result2;
     int32_t tableCount2 = groupBy2->GetOutput(result2);
-    groupBy2->Close();
-    delete groupBy2;
+    Operator::DeleteOperator(groupBy2);
 
     // Second stage
     ColumnIndex c14 = { 0, LongVecType::Instance(), LongVecType::Instance() };
@@ -547,13 +550,9 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         groupBy3->AddInput(result2[i]);
     }
 
-    VectorHelper::FreeVecBatches(result1);
-    VectorHelper::FreeVecBatches(result2);
-
     std::vector<VectorBatch *> result3;
     groupBy3->GetOutput(result3);
-    groupBy3->Close();
-    delete groupBy3;
+    Operator::DeleteOperator(groupBy3);
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>(
@@ -571,10 +570,8 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     EXPECT_TRUE(VecBatchMatch(result3[0], expectVecBatch));
     EXPECT_EQ(result3[0]->GetVectorCount(), 7);
 
-    for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        VectorHelper::FreeVecBatch(input[i]);
-    }
-    delete[] input;
+    delete[] input1;
+    delete[] input2;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(result3);
 }
@@ -619,14 +616,12 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     }
     std::vector<VectorBatch *> result1;
     int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     auto resBatch = VectorHelper::ConcatVectorBatches(result1);
     for (auto res : result1) {
         VectorHelper::FreeVecBatch(res);
     }
 
-    groupByVarChar->Close();
-    delete groupByVarChar;
+    Operator::DeleteOperator(groupByVarChar);
     std::string expectData1[3] = {"2", "1","0"};
     int64_t expectData2[3] = {2,3,3};
     std::string expectData3[3] = {"2", "1","0"};
@@ -681,14 +676,12 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
     }
     std::vector<VectorBatch *> result1;
     int32_t vecBatchCount = groupByVarChar->GetOutput(result1);
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     auto resBatch = VectorHelper::ConcatVectorBatches(result1);
     for (auto res : result1) {
         VectorHelper::FreeVecBatch(res);
     }
 
-    groupByVarChar->Close();
-    delete groupByVarChar;
+    Operator::DeleteOperator(groupByVarChar);
     std::string expectData1[3] = {"2", "1","0"};
     int64_t expectData2[3] = {2,3,3};
     std::string expectData3[3] = {"2", "1","0"};
@@ -759,12 +752,10 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = groupByNULL->GetOutput(result);
 
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     for (auto &i : aggs1) {
         delete i.release();
     }
-    groupByNULL->Close();
-    delete groupByNULL;
+    Operator::DeleteOperator(groupByNULL);
 
     int64_t expectData1[1] = {0};
     int64_t expectData2[1] = {6};
@@ -824,8 +815,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
 
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
-    groupBy->Close();
-    delete groupBy;
+    Operator::DeleteOperator(groupBy);
 
     EXPECT_EQ(result[0]->GetVectorCount(), 4);
 
@@ -834,11 +824,10 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
         // TODO: print data;
         // col->printColumn();
     }
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     VectorHelper::FreeVecBatches(result);
 }
 
-TEST(HashAggregationOperatorTest, original_multiple_threads)
+TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
 {
     using namespace std;
     const auto processor_count = std::thread::hardware_concurrency();
@@ -898,7 +887,7 @@ TEST(HashAggregationOperatorTest, original_multiple_threads)
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
-TEST(HashAggregationOperatorTest, perf_via_API_multiple_threads)
+TEST(HashAggregationOperatorTest, DISABLED_perf_via_API_multiple_threads)
 {
     using namespace std;
     const auto processor_count = std::thread::hardware_concurrency();
@@ -959,8 +948,8 @@ TEST(AggregationOperatorTest, verify_correctness)
     std::string aggNames[] = {"sum", "avg", "count", "min", "max"};
     std::vector<VecType> groupTypes;
     std::vector<VecType> aggTypes = { LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() };
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, 5, groupTypes, aggTypes);
-    if (input == nullptr) {
+    VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, 5, groupTypes, aggTypes);
+    if (input1 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
 
@@ -980,13 +969,15 @@ TEST(AggregationOperatorTest, verify_correctness)
     auto aggregate1 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        aggregate1->AddInput(input[i]);
+        aggregate1->AddInput(input1[i]);
     }
 
     std::vector<VectorBatch *> result;
     int32_t tableCount1 = aggregate1->GetOutput(result);
     delete aggregate1;
 
+    VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, 5, groupTypes, aggTypes);
+    ASSERT(!input2 == nullptr)
     aggs.clear();
     aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         true, true));
@@ -1000,7 +991,7 @@ TEST(AggregationOperatorTest, verify_correctness)
     auto aggregate2 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        aggregate2->AddInput(input[i]);
+        aggregate2->AddInput(input2[i]);
     }
     int32_t tableCount2 = aggregate2->GetOutput(result);
     delete aggregate2;
@@ -1024,8 +1015,6 @@ TEST(AggregationOperatorTest, verify_correctness)
         aggregate3->AddInput(result[i]);
     }
 
-    VectorHelper::FreeVecBatches(result);
-
     std::vector<VectorBatch *> result1;
     int32_t tableCount3 = aggregate3->GetOutput(result1);
     delete aggregate3;
@@ -1039,7 +1028,6 @@ TEST(AggregationOperatorTest, verify_correctness)
     for (auto vecBatch : result1) {
         VectorHelper::PrintVecBatch(vecBatch);
     }
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     VectorHelper::FreeVecBatches(result1);
 }
 
@@ -1083,11 +1071,11 @@ TEST(AggregationOperatorTest, avg_correctness_test)
         // col->printColumn();
     }
 
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     VectorHelper::FreeVecBatches(result);
+    Operator::DeleteOperator(aggregate);
 }
 
-TEST(AggregationOperatorTest, perf_original)
+TEST(AggregationOperatorTest, DISABLED_perf_original)
 {
     VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     VecTypes aggOutputTypes(
@@ -1143,10 +1131,12 @@ TEST(AggregationOperatorTest, perf_original)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     delete[] rowCount;
+    nativeOperatorFactory->Close();
+    delete nativeOperatorFactory;
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
 
-TEST(AggregationOperatorTest, perf_codegen)
+TEST(AggregationOperatorTest, DISABLED_perf_codegen)
 {
     using namespace std;
 
@@ -1274,15 +1264,10 @@ TEST(HashAggregationOperatorTest, compare_perf)
         reinterpret_cast<HashAggModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
 
     // ------------------------------------------Process Input--------------------------------------------
-    VectorBatch **input =
+    VectorBatch **input1 =
         buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInput.Get());
-    if (input == nullptr) {
+    if (input1 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
-    }
-
-    int32_t *rowCount = new int32_t[VEC_BATCH_NUM];
-    for (int32_t i = 0; i < VEC_BATCH_NUM; i++) {
-        rowCount[i] = ROW_PER_VEC_BATCH;
     }
 
     std::vector<VectorBatch *> jittedResult;
@@ -1296,7 +1281,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     perfUtil->Start();
 
     for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
-        auto errNo = jitGroupBy->AddInput(input[pageIndex]);
+        auto errNo = jitGroupBy->AddInput(input1[pageIndex]);
     }
 
     perfUtil->Stop();
@@ -1317,12 +1302,17 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto groupBy = nativeOperatorFactory2->CreateOperator();
 
     std::vector<VectorBatch *> result;
+    VectorBatch **input2 =
+            buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInput.Get());
+    if (input2 == nullptr) {
+        std::cerr << "Building input data failed!" << std::endl;
+    }
     timer.reset();
 
     perfUtil->Reset();
     perfUtil->Start();
     for (int pageIndex = 0; pageIndex < VEC_BATCH_NUM; ++pageIndex) {
-        groupBy->AddInput(input[pageIndex]);
+        groupBy->AddInput(input2[pageIndex]);
     }
 
     perfUtil->Stop();
@@ -1340,10 +1330,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     std::cout << "wall " << wall_elapsed << " cpu " << cpu_elapsed << std::endl;
     groupBy->GetOutput(result);
 
-    jitGroupBy->Close();
-    groupBy->Close();
-    delete jitGroupBy;
-    delete groupBy;
+    Operator::DeleteOperator(jitGroupBy);
+    Operator::DeleteOperator(groupBy);
     delete nativeOperatorFactory;
     delete nativeOperatorFactory2;
 
@@ -1352,7 +1340,6 @@ TEST(HashAggregationOperatorTest, compare_perf)
         EXPECT_TRUE(VecBatchMatch(jittedResult[i], result[i]));
         VectorHelper::PrintVecBatch(result[i]);
     }
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
     VectorHelper::FreeVecBatches(jittedResult);
     VectorHelper::FreeVecBatches(result);
 }
@@ -1361,8 +1348,8 @@ TEST(HashAggregationOperatorTest, multi_stage)
 {
     std::vector<VecType> groupTypes = { LongVecType(), LongVecType() };
     std::vector<VecType> aggTypes = { LongVecType(), LongVecType() };
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
-    if (input == nullptr) {
+    VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
+    if (input1 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
 
@@ -1370,20 +1357,24 @@ TEST(HashAggregationOperatorTest, multi_stage)
     auto partialFactory1 = reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(partialFactoryAddr1);
     auto partialOperator1 = partialFactory1->CreateOperator();
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        partialOperator1->AddInput(input[i]);
+        partialOperator1->AddInput(input1[i]);
     }
     std::vector<VectorBatch *> resultFromPartial1;
     partialOperator1->GetOutput(resultFromPartial1);
+
+    VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
+    if (input2 == nullptr) {
+        std::cerr << "Building input data failed!" << std::endl;
+    }
 
     uintptr_t partialFactoryAddr2 = CreateHashFactoryWithoutJit(true, true);
     auto partialFactory2 = reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(partialFactoryAddr2);
     auto partialOperator2 = partialFactory2->CreateOperator();
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        partialOperator2->AddInput(input[i]);
+        partialOperator2->AddInput(input2[i]);
     }
     std::vector<VectorBatch *> resultFromPartial2;
     partialOperator2->GetOutput(resultFromPartial2);
-    VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 
     uintptr_t finalFactoryAddr = CreateHashFactoryWithoutJit(false, false);
     auto finalFactory = reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(finalFactoryAddr);
@@ -1397,12 +1388,9 @@ TEST(HashAggregationOperatorTest, multi_stage)
     std::vector<VectorBatch *> resultFromFinal;
     operator2->GetOutput(resultFromFinal);
 
-    partialOperator1->Close();
-    partialOperator2->Close();
-    operator2->Close();
-    delete partialOperator1;
-    delete partialOperator2;
-    delete operator2;
+    Operator::DeleteOperator(partialOperator1);
+    Operator::DeleteOperator(partialOperator2);
+    Operator::DeleteOperator(operator2);
     delete partialFactory1;
     delete partialFactory2;
     delete finalFactory;
@@ -1421,8 +1409,6 @@ TEST(HashAggregationOperatorTest, multi_stage)
         CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3, expectData4);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
     VectorHelper::FreeVecBatches(resultFromFinal);
-    VectorHelper::FreeVecBatches(resultFromPartial1);
-    VectorHelper::FreeVecBatches(resultFromPartial2);
 }
 
 TEST(HashAggregationOperatorTest, supported_type_test)
@@ -1455,12 +1441,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
 
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
-    groupBy->Close();
-    delete groupBy;
-    for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        input[i]->ReleaseAllVectors();
-        delete input[i];
-    }
+    Operator::DeleteOperator(groupBy);
     for (auto batch : result) {
         VectorHelper::PrintVecBatch(batch);
         batch->ReleaseAllVectors();
@@ -1495,12 +1476,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     }
 
     vecBatchCount = groupBy->GetOutput(result);
-    groupBy->Close();
-    delete groupBy;
-    for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        input[i]->ReleaseAllVectors();
-        delete input[i];
-    }
+    Operator::DeleteOperator(groupBy);
     for (auto batch : result) {
         VectorHelper::PrintVecBatch(batch);
         batch->ReleaseAllVectors();
@@ -1539,12 +1515,13 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupBy->Init();
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        groupBy->AddInput(vectorBatch);
+        // create a copy of input
+        VectorBatch *copied = DuplicateVectorBatch(vectorBatch);
+        groupBy->AddInput(copied);
     }
 
     vecBatchCount = groupBy->GetOutput(result);
-    groupBy->Close();
-    delete groupBy;
+    Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatch(vectorBatch);
 
     for (auto batch : result) {

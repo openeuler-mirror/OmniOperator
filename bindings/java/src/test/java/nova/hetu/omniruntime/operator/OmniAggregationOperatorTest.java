@@ -102,10 +102,8 @@ public class OmniAggregationOperatorTest {
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
                             aggFunctionTypes, aggInputChannels, aggOutputTypes, true, false);
 
-                    List<Vec> inputData = new ArrayList<>();
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
                     for (int i = 0; i < pageCount; i++) {
-                        inputData.addAll(build4Columns(rowNum));
                         vecBatchList.add(new VecBatch(build4Columns(rowNum)));
                     }
 
@@ -113,9 +111,6 @@ public class OmniAggregationOperatorTest {
                     for (VecBatch vecBatch : vecBatchList.build()) {
                         omniOperator.addInput(vecBatch);
                     }
-
-                    // release input data memory
-                    releaseVecMemory(inputData.toArray(new Vec[0]));
 
                     assertResult(rowNum, pageCount, aggOutputTypes, omniOperator);
                 } finally {

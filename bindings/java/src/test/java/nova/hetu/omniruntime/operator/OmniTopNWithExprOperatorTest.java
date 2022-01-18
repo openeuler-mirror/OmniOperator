@@ -47,7 +47,6 @@ public class OmniTopNWithExprOperatorTest {
             {20, 18, 13, 13, 13}, {2L, 1L, 0L, 1L, 2L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         operator.close();
     }
@@ -82,7 +81,6 @@ public class OmniTopNWithExprOperatorTest {
             {2L, 1L, 0L, 1L, 2L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         operator.close();
     }
@@ -116,7 +114,6 @@ public class OmniTopNWithExprOperatorTest {
         Object[][] expectedDatas = {{15, 13, 8, 8, 8}, {23L, 0L, 4L, 3L, 5L}, {8L, 7L, 1L, 2L, 3L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
         operator.close();
     }

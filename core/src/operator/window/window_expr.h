@@ -63,7 +63,6 @@ private:
     std::vector<int32_t> argumentChannels;
     std::vector<RowProjFunc> projectFuncs;
     WindowOperator *windowOperator;
-    std::vector<VectorBatch *> newInputVecBatch;
 };
 }
 }
