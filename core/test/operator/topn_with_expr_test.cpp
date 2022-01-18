@@ -110,7 +110,6 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     delete topNWithExprOperator;
     DeleteOperatorFactory(topNWithExprOperatorFactory);
 
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -174,7 +173,6 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     delete topNWithExprOperator;
     DeleteOperatorFactory(topNWithExprOperatorFactory);
 
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }
@@ -231,7 +229,6 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     delete topNWithExprOperator;
     DeleteOperatorFactory(topNWithExprOperatorFactory);
 
-    VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
 }

@@ -93,7 +93,7 @@ int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
         OperatorUtil::ProjectVectors(vecBatch, sourceTypes, projectFuncs, argumentChannels);
     if (newInputVecBatch != nullptr) {
         windowOperator->AddInput(newInputVecBatch);
-        this->newInputVecBatch.push_back(newInputVecBatch);
+        VectorHelper::FreeVecBatch(vecBatch);
     } else {
         windowOperator->AddInput(vecBatch);
     }
@@ -109,7 +109,6 @@ int32_t WindowWithExprOperator::GetOutput(vector<VectorBatch *> &outputPages)
 
 OmniStatus WindowWithExprOperator::Close()
 {
-    VectorHelper::FreeVecBatches(newInputVecBatch);
     return OMNI_STATUS_NORMAL;
 }
 }

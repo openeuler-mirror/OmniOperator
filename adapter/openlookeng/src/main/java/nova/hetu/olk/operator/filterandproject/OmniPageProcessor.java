@@ -120,8 +120,6 @@ public class OmniPageProcessor extends PageProcessor {
         VecBatch inputVecBatch = buildVecBatch(vecAllocator, preloadPage, this);
         if (omniPageFilterOperator.isPresent()) {
             VecBatch filteredVecBatch = omniPageFilterOperator.get().filterAndProject(inputVecBatch);
-            inputVecBatch.releaseAllVectors();
-            inputVecBatch.close();
             if (filteredVecBatch == null) {
                 return WorkProcessor.of();
             }
@@ -185,14 +183,10 @@ public class OmniPageProcessor extends PageProcessor {
             omniProjectionOperator.addInput(vecBatch);
             Iterator<Page> result = new VecBatchToPageIterator(omniProjectionOperator.getOutput());
             if (!result.hasNext()) {
-                vecBatch.releaseAllVectors();
-                vecBatch.close();
                 throw new OmniRuntimeException(OMNI_NATIVE_ERROR, "Filter returns empty result");
             }
             Page projectedPage = result.next();
             isFinished = true;
-            vecBatch.releaseAllVectors();
-            vecBatch.close();
             return ofResult(projectedPage);
         }
     }

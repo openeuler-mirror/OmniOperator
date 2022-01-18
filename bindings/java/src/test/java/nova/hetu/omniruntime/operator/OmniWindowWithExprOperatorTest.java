@@ -63,7 +63,6 @@ public class OmniWindowWithExprOperatorTest {
         };
         assertVecBatchEquals(outputVecBatch, expectedDatas);
         freeVecBatch(outputVecBatch);
-        freeVecBatch(vecBatch);
     }
 
     private VecBatch buildData() {

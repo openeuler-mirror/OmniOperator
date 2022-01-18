@@ -145,7 +145,7 @@ DictionaryVector *DictionaryVector::CopyPositions(const int *positions, int offs
 
 DictionaryVector *DictionaryVector::CopyRegion(int positionOffset, int length)
 {
-    return new DictionaryVector(dictionary, GetIds() + positionOffset, length);
+    return new DictionaryVector(dictionary, GetIds() + positionOffset + this->positionOffset, length);
 }
 
 void DictionaryVector::Append(Vector *other, int positionOffset, int length)

@@ -63,9 +63,6 @@ public class OmniProjectOperatorTest {
             assertEquals(((IntVec) res.getVector(0)).get(i), i + 5);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         factory.close();
@@ -102,9 +99,6 @@ public class OmniProjectOperatorTest {
             assertEquals(((LongVec) res.getVector(1)).get(i), (i + 1) < 500 ? 4000000000L : i + 3000000000L);
         }
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         factory.close();
@@ -159,9 +153,6 @@ public class OmniProjectOperatorTest {
         assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
         assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
 
-        for (VecBatch vecBatch : vecBatches) {
-            freeVecBatch(vecBatch);
-        }
         freeVecBatch(res);
         op.close();
         factory.close();

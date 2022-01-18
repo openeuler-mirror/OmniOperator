@@ -89,7 +89,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
             aggregator->ProcessGroup(state, vector, rowIdx);
         }
     }
-
+    VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 

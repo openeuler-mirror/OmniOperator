@@ -92,7 +92,7 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     VectorBatch *newInputVecBatch = OperatorUtil::ProjectRequiredVectors(inputVecBatch, sourceTypes, projectFuncs,
         projectCols);
     hashAggOperator->AddInput(newInputVecBatch);
-    inputVecBatches.push_back(newInputVecBatch);
+    VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;
 }
 
@@ -105,7 +105,6 @@ int32_t HashAggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &o
 
 OmniStatus HashAggregationWithExprOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
     return OMNI_STATUS_NORMAL;
 }
 }

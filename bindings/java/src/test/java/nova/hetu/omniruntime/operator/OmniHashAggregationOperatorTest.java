@@ -53,9 +53,6 @@ public class OmniHashAggregationOperatorTest {
             omniOperator.addInput(vecBatch);
         }
 
-        // release input data memory
-        releaseVecMemory(inputData.toArray(new Vec[0]));
-
         Iterator<VecBatch> output = omniOperator.getOutput();
         VecBatch vecBatch = null;
         while (output.hasNext()) {
@@ -88,7 +85,7 @@ public class OmniHashAggregationOperatorTest {
     @Test
     public void testExecuteAggMultipleThread() {
         int pageCount = 10;
-        int threadCount = 10;
+        int threadCount = 1;
         int rowNum = 100;
         multiThreadExecution(threadCount, rowNum, pageCount);
     }
@@ -112,15 +109,10 @@ public class OmniHashAggregationOperatorTest {
                     OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel,
                         groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
-                    List<Vec> inputData = new ArrayList<>();
                     OmniOperator omniOperator = factory.createOperator();
                     for (int i = 0; i < pageCount; i++) {
-                        inputData.addAll(build4Columns(rowNum));
                         omniOperator.addInput(new VecBatch(build4Columns(rowNum)));
                     }
-
-                    // release input data memory
-                    releaseVecMemory(inputData.toArray(new Vec[0]));
 
                     assertResult(rowNum, pageCount, aggOutputTypes, omniOperator);
                 } finally {
@@ -160,8 +152,6 @@ public class OmniHashAggregationOperatorTest {
             assertEquals(((LongVec) vectors[1]).get(0), 1);
             assertEquals(((LongVec) vectors[2]).get(0), rowNum * pageCount);
             assertEquals(((LongVec) vectors[3]).get(0), rowNum * pageCount);
-
-            releaseVecMemory(vecBatch.getVectors());
         }
     }
 

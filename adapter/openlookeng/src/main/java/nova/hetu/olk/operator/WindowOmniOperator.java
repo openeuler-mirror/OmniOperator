@@ -61,11 +61,6 @@ public class WindowOmniOperator implements Operator {
     private final OmniOperator omniOperator;
 
     /**
-     * The Input vec batchs.
-     */
-    List<VecBatch> inputVecBatchs = new ArrayList<>();
-
-    /**
      * The Pages.
      */
     Iterator<Page> pages;
@@ -117,7 +112,6 @@ public class WindowOmniOperator implements Operator {
 
         VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
-        inputVecBatchs.add(vecBatch);
     }
 
     @Override
@@ -127,18 +121,11 @@ public class WindowOmniOperator implements Operator {
         }
         if (finishing) {
             if (pages == null) {
-                if (inputVecBatchs.size() > 0) {
-                    pages = new VecBatchToPageIterator(omniOperator.getOutput());
-                } else {
-                    finished = true;
-                    return null;
-                }
+                pages = new VecBatchToPageIterator(omniOperator.getOutput());
             } else {
                 if (pages.hasNext()) {
                     return pages.next();
                 } else {
-                    inputVecBatchs.forEach(inputVecBatch -> inputVecBatch.releaseAllVectors());
-                    inputVecBatchs.forEach(inputVecBatch -> inputVecBatch.close());
                     finished = true;
                     return null;
                 }

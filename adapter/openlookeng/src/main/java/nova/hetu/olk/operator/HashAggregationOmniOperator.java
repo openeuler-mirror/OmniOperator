@@ -102,8 +102,6 @@ public class HashAggregationOmniOperator implements Operator {
         requireNonNull(page, "page is null");
         VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
     }
 
     @Override

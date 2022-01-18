@@ -19,6 +19,8 @@ namespace omniruntime {
 namespace vec {
 class VectorHelper {
 public:
+    VectorHelper() = delete;
+    ~VectorHelper() = delete;
     static void SetValue(Vector *vector, int32_t index, void *value)
     {
         if (value == nullptr) {

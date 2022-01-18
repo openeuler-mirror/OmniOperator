@@ -55,7 +55,6 @@ public class OmniHashAggregationWithExprOperatorTest {
         Object[][] expectedDatas = {{2L}, {5}, {180L}, {4.5}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
     }
 
@@ -90,7 +89,6 @@ public class OmniHashAggregationWithExprOperatorTest {
         Object[][] expectedDatas = {{2L}, {10}, {180L}, {9.5}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
     }
 
@@ -125,7 +123,6 @@ public class OmniHashAggregationWithExprOperatorTest {
         Object[][] expectedDatas = {{2L}, {5}, {36L}, {4.5}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(vecBatch);
         freeVecBatch(resultVecBatch);
     }
 }

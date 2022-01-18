@@ -64,8 +64,6 @@ public class AggregationOmniOperator implements Operator {
 
         VecBatch vecBatch = buildVecBatch(omniOperator.getVecAllocator(), page, this);
         omniOperator.addInput(vecBatch);
-        vecBatch.releaseAllVectors();
-        vecBatch.close();
     }
 
     @Override
