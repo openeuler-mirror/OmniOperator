@@ -16,7 +16,7 @@ import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.testing.MaterializedResult.resultBuilder;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static org.testng.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
@@ -38,7 +38,7 @@ import io.prestosql.sql.planner.plan.PlanNodeId;
 import io.prestosql.testing.MaterializedResult;
 import io.prestosql.testing.TestingTaskContext;
 import nova.hetu.olk.tool.OperatorUtils;
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VecType;
 
@@ -73,7 +73,7 @@ public class TestHashAggregationOmniOperator {
 
     @DataProvider(name = "hashEnabled")
     public static Object[][] hashEnabled() {
-        return new Object[][] {{true}, {false}};
+        return new Object[][]{{true}, {false}};
     }
 
     @AfterMethod(alwaysRun = true)
@@ -127,10 +127,10 @@ public class TestHashAggregationOmniOperator {
         VecType[] omniGroupByTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] omniAggregationChannels = {2, 3};
         VecType[] omniAggregationTypes = {LongVecType.LONG, LongVecType.LONG};
-        AggType[] omniAggregator = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+        FunctionType[] omniAggregator = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         List<VecType[]> inAndOutputTypes = new ArrayList<>();
-        inAndOutputTypes.add(new VecType[] {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
-        inAndOutputTypes.add(new VecType[] {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
 
         // expected
         DriverContext driverContext = createDriverContext(Integer.MAX_VALUE);
@@ -145,13 +145,12 @@ public class TestHashAggregationOmniOperator {
                 try {
                     List<Page> input = builderPage();
                     List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                        input);
+                            input);
                     List<Page> pages;
 
-                    HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory
-                        = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(id,
-                        new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes,
-                        omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);
+                    HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(
+                            id, new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes,
+                            omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);
                     pages = toPages(hashAggregationOmniOperatorFactory, driverContext, offHeapPages, false);
                     resultList.add(pages);
                 } finally {
@@ -174,7 +173,7 @@ public class TestHashAggregationOmniOperator {
 
     private MaterializedResult getExpectedMaterializedRows(DriverContext driverContext) {
         MaterializedResult.Builder expectedBuilder = resultBuilder(driverContext.getSession(), BIGINT, BIGINT, BIGINT,
-            BIGINT);
+                BIGINT);
         long sum = totalPageCount * pageDistinctValueRepeatCount;
         for (int i = 0; i < pageDistinctCount; i++) {
             expectedBuilder.row((long) i, (long) i, sum, sum);
@@ -187,22 +186,21 @@ public class TestHashAggregationOmniOperator {
 
     private HashAggregationOperator.HashAggregationOperatorFactory getOriginalAggFactory(int id) {
         InternalAggregationFunction bigintSum = metadata.getAggregateFunctionImplementation(
-            new Signature("sum", AGGREGATE, BIGINT.getTypeSignature(), BIGINT.getTypeSignature()));
-        HashAggregationOperator.HashAggregationOperatorFactory aggregationOperatorFactory
-            = new HashAggregationOperator.HashAggregationOperatorFactory(id, new PlanNodeId(String.valueOf(id)),
-            ImmutableList.of(BIGINT, BIGINT), Ints.asList(0, 1), ImmutableList.of(), AggregationNode.Step.SINGLE,
-            ImmutableList.of(bigintSum.bind(ImmutableList.of(2), Optional.empty()),
-                bigintSum.bind(ImmutableList.of(3), Optional.empty())), Optional.empty(), Optional.empty(), 100_000,
-            Optional.of(new DataSize(16, MEGABYTE)), JOIN_COMPILER, false);
+                new Signature("sum", AGGREGATE, BIGINT.getTypeSignature(), BIGINT.getTypeSignature()));
+        HashAggregationOperator.HashAggregationOperatorFactory aggregationOperatorFactory = new HashAggregationOperator.HashAggregationOperatorFactory(
+                id, new PlanNodeId(String.valueOf(id)), ImmutableList.of(BIGINT, BIGINT), Ints.asList(0, 1),
+                ImmutableList.of(), AggregationNode.Step.SINGLE,
+                ImmutableList.of(bigintSum.bind(ImmutableList.of(2), Optional.empty()),
+                        bigintSum.bind(ImmutableList.of(3), Optional.empty())),
+                Optional.empty(), Optional.empty(), 100_000, Optional.of(new DataSize(16, MEGABYTE)), JOIN_COMPILER,
+                false);
         return aggregationOperatorFactory;
     }
 
     private DriverContext createDriverContext(long memoryLimit) {
         return TestingTaskContext.builder(executor, scheduledExecutor, TEST_SESSION)
-            .setMemoryPoolSize(succinctBytes(memoryLimit))
-            .build()
-            .addPipelineContext(0, true, true, false)
-            .addDriverContext();
+                .setMemoryPoolSize(succinctBytes(memoryLimit)).build().addPipelineContext(0, true, true, false)
+                .addDriverContext();
     }
 
     @Test(invocationCount = 1)
@@ -211,14 +209,14 @@ public class TestHashAggregationOmniOperator {
         VecType[] omniGroupByTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] omniAggregationChannels = {2, 1};
         VecType[] omniAggregationTypes = {LongVecType.LONG, LongVecType.LONG};
-        AggType[] omniAggregator = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+        FunctionType[] omniAggregator = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         List<VecType[]> inAndOutputTypes = new ArrayList<>();
-        inAndOutputTypes.add(new VecType[] {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
-        inAndOutputTypes.add(new VecType[] {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
+        inAndOutputTypes.add(new VecType[]{LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG});
 
         DriverContext driverContext = createDriverContext(Integer.MAX_VALUE);
         MaterializedResult.Builder expectedBuilder = resultBuilder(driverContext.getSession(), BIGINT, BIGINT, BIGINT,
-            BIGINT);
+                BIGINT);
         long sum = totalPageCount * pageDistinctValueRepeatCount * 10;
         for (int i = 0; i < pageDistinctCount; i++) {
             expectedBuilder.row((long) i + 1, (long) i, sum, sum);
@@ -234,13 +232,12 @@ public class TestHashAggregationOmniOperator {
                 try {
                     List<Page> input = builderPageWithDiffLayout();
                     List<Page> offHeapPages = OperatorUtils.transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR,
-                        input);
+                            input);
                     List<Page> pages;
 
-                    HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory
-                        = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(id,
-                        new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes,
-                        omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);
+                    HashAggregationOmniOperator.HashAggregationOmniOperatorFactory hashAggregationOmniOperatorFactory = new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(
+                            id, new PlanNodeId(String.valueOf(id)), omniGrouByChannels, omniGroupByTypes,
+                            omniAggregationChannels, omniAggregationTypes, omniAggregator, inAndOutputTypes);
                     pages = toPages(hashAggregationOmniOperatorFactory, driverContext, offHeapPages, false);
                     resultList.add(pages);
                 } finally {

@@ -91,8 +91,7 @@ AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannels, int32
 {
     this->windowIndex = nullptr;
     this->argumentChannels = argumentChannels;
-    this->aggregatorFactory =
-        omniruntime::op::CreateAggregatorFactory(static_cast<omniruntime::op::AggregateType>(aggregationType));
+    this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
     this->currentStart = 0;
     this->currentEnd = 0;
 }

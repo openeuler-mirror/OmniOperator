@@ -1,10 +1,11 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
-import nova.hetu.omniruntime.constants.WindowFunctionType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowWithExprOperatorFactory;
 import nova.hetu.omniruntime.type.DoubleVecType;
 import nova.hetu.omniruntime.type.IntVecType;
@@ -33,7 +34,7 @@ public class OmniWindowWithExprOperatorTest {
     public void testMax() {
         VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG, DoubleVecType.DOUBLE};
         int[] outputChannels = {0, 1, 2};
-        WindowFunctionType[] windowFunction = {WindowFunctionType.WIN_MAX};
+        FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -44,9 +45,8 @@ public class OmniWindowWithExprOperatorTest {
         String[] argumentKeys = {"ADD:3(#2, 50:3)"};
         VecType[] windowFunctionReturnType = {DoubleVecType.DOUBLE};
         OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
-            outputChannels,
-            windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
-            preSortedChannelPrefix, expectedPositions, argumentKeys, windowFunctionReturnType);
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, expectedPositions, argumentKeys, windowFunctionReturnType);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
         VecBatch vecBatch = buildData();
@@ -54,13 +54,8 @@ public class OmniWindowWithExprOperatorTest {
         omniOperator.addInput(vecBatch);
         Iterator<VecBatch> output = omniOperator.getOutput();
         VecBatch outputVecBatch = output.next();
-        Object[][] expectedDatas = {
-                {0,  0, 1, 1, 2, 2},
-                {8L, 8L, 4L, 1L, 5L, 2L},
-                {6.6D, 3.3D, 2.2D, 5.5D, 1.1D, 4.4D},
-                {56.6D, 53.3D, 52.2D, 55.5D, 51.1D, 54.4D},
-                {56.6D, 56.6D, 52.2D, 55.5D, 51.1D, 54.4D}
-        };
+        Object[][] expectedDatas = {{0, 0, 1, 1, 2, 2}, {8L, 8L, 4L, 1L, 5L, 2L}, {6.6D, 3.3D, 2.2D, 5.5D, 1.1D, 4.4D},
+                {56.6D, 53.3D, 52.2D, 55.5D, 51.1D, 54.4D}, {56.6D, 56.6D, 52.2D, 55.5D, 51.1D, 54.4D}};
         assertVecBatchEquals(outputVecBatch, expectedDatas);
         freeVecBatch(outputVecBatch);
     }

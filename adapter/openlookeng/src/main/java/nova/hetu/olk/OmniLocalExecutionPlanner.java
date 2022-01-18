@@ -48,11 +48,11 @@ import static io.prestosql.sql.planner.plan.JoinNode.Type.FULL;
 import static io.prestosql.sql.planner.plan.JoinNode.Type.RIGHT;
 import static nova.hetu.olk.operator.OrderByOmniOperator.OrderByOmniOperatorFactory.createOrderByOmniOperatorFactory;
 import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_AVG;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_COUNT;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_MAX;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_MIN;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MAX;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MIN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -209,7 +209,7 @@ import nova.hetu.olk.operator.filterandproject.OmniExpressionCompiler;
 import nova.hetu.olk.operator.localexchange.OmniLocalExchange;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecAllocatorHelper;
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
@@ -328,9 +328,9 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
         return builder.build();
     }
 
-    static List<AggType> getAggregateTypes(List<Symbol> aggregationOutputSymbols,
+    static List<FunctionType> getAggregateTypes(List<Symbol> aggregationOutputSymbols,
             Map<Symbol, AggregationNode.Aggregation> aggregations) {
-        ImmutableList.Builder<AggType> builder = ImmutableList.builder();
+        ImmutableList.Builder<FunctionType> builder = ImmutableList.builder();
         for (Symbol aggregationOutputSymbol : aggregationOutputSymbols) {
             Signature signature = aggregations.get(aggregationOutputSymbol).getSignature();
             // aggregator type, eg:sum,avg...
@@ -1268,8 +1268,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                 // use omni aggregation operator
                 List<Integer> aggregationChannels = getAggregationChannels(aggregations, source.getLayout());
                 List<Type> aggregationResultTypes = getAggregationResultTypes(aggregations, context);
-                AggType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
-                        .toArray(new AggType[aggregationChannels.size()]);
+                FunctionType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
+                        .toArray(new FunctionType[aggregationChannels.size()]);
                 int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
                 VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
 
@@ -1359,8 +1359,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
                     int[] aggregationInputChannels = Ints.toArray(aggregationChannels);
                     VecType[] aggregationInputTypes = OperatorUtils.toVecTypes(aggregationSourceTypes);
                     VecType[] aggregationOutputTypes = OperatorUtils.toVecTypes(aggregationResultTypes);
-                    AggType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
-                            .toArray(new AggType[aggregationChannels.size()]);
+                    FunctionType[] aggregatorTypes = getAggregateTypes(aggregationOutputSymbols, aggregations)
+                            .toArray(new FunctionType[aggregationChannels.size()]);
 
                     return new HashAggregationOmniOperator.HashAggregationOmniOperatorFactory(
                             context.getNextOperatorId(), planNodeId, source.getTypes(), groupByInputChannels,

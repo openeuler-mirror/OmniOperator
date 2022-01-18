@@ -1,13 +1,14 @@
+
 package nova.hetu.omniruntime.operator;
 
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_AVG;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.DoubleVecType;
 import nova.hetu.omniruntime.type.IntVecType;
 import nova.hetu.omniruntime.type.LongVecType;
@@ -29,18 +30,18 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] groupByChanel = {"MODULUS:2(#0, 3:2)", "#2"};
         String[] aggChannels = {"MULTIPLY:2(#1, 5:2)", "#3"};
 
-        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
 
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, IntVecType.INTEGER, IntVecType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-            groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
         OmniOperator omniOperator = factory.createOperator();
 
         Object[][] sourceDatas = {{2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}, {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L},
-            {5, 5, 5, 5, 5, 5, 5, 5}, {5, 3, 2, 6, 1, 4, 7, 8}};
+                {5, 5, 5, 5, 5, 5, 5, 5}, {5, 3, 2, 6, 1, 4, 7, 8}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
         omniOperator.addInput(vecBatch);
 
@@ -63,18 +64,18 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] groupByChanel = {"MODULUS:2(#0, 3:2)", "ADD:1(#2, 5:1)"};
         String[] aggChannels = {"MULTIPLY:2(#1, 5:2)", "ADD:1(#3, 5:1)"};
 
-        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
 
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, IntVecType.INTEGER, IntVecType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
-            groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
         OmniOperator omniOperator = factory.createOperator();
 
         Object[][] sourceDatas = {{2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L}, {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L},
-            {5, 5, 5, 5, 5, 5, 5, 5}, {5, 3, 2, 6, 1, 4, 7, 8}};
+                {5, 5, 5, 5, 5, 5, 5, 5}, {5, 3, 2, 6, 1, 4, 7, 8}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
         omniOperator.addInput(vecBatch);
 
@@ -97,7 +98,7 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] groupByChanel = {"#0", "#2"};
         String[] aggChannels = {"#1", "#3"};
 
-        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
         VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
 
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, IntVecType.INTEGER, IntVecType.INTEGER};

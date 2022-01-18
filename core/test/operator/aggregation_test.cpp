@@ -763,7 +763,7 @@ TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
     std::cout << "core number: " << processor_count << std::endl;
 
 
-    AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     VecTypes groupTypes({ LongVecType::Instance(), LongVecType::Instance() });
     VecTypes aggInputTypes({ LongVecType::Instance(), LongVecType::Instance() });
     VecTypes aggOutputTypes({ LongVecType::Instance(), LongVecType::Instance() });
@@ -1122,7 +1122,7 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
     VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     VecTypes aggOutputTypes(
         { LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance(), LongVecType::Instance() });
-    AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t aggInputCols[] = {0, 1, 2, 3};
     PrepareContext aggFuncTypesContext = { reinterpret_cast<uint32_t *>(aggFunType), 4 };
     PrepareContext aggInputColsContext = { aggInputCols, 4 };
@@ -1238,7 +1238,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     uint32_t aggCols[] = {2, 3};
     VecTypes aggInput({ LongVecType::Instance(), LongVecType::Instance() });
     VecTypes aggOutput({ LongVecType::Instance(), LongVecType::Instance() });
-    AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     uint32_t retTypes[] = {1,1,1,1};
     PrepareContext groupByColContext = { groupCols, 2 };
     PrepareContext groupByTypeContext = { reinterpret_cast<uint32_t *>(const_cast<int32_t *>(groupInputTypes.GetIds())),

@@ -1,12 +1,13 @@
+
 package nova.hetu.omniruntime.constant;
 
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_ERROR;
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_FINISHED;
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 import static org.testng.Assert.assertEquals;
 
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.constants.Status;
 
 import org.testng.annotations.Test;
@@ -27,8 +28,8 @@ public class ConstantLoadTest {
         status = OMNI_STATUS_FINISHED;
         assertEquals(status.getValue(), 1);
 
-        AggType aggType = OMNI_AGGREGATION_TYPE_SUM;
-        assertEquals(aggType.getValue(), 0);
+        FunctionType functionType = OMNI_AGGREGATION_TYPE_SUM;
+        assertEquals(functionType.getValue(), 0);
     }
 
     /**

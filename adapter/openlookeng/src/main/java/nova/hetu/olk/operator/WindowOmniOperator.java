@@ -39,7 +39,7 @@ import io.prestosql.sql.planner.plan.PlanNodeId;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
-import nova.hetu.omniruntime.constants.WindowFunctionType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
@@ -235,7 +235,7 @@ public class WindowOmniOperator implements Operator {
                 List<SortOrder> sortOrder, int preSortedChannelPrefix, int expectedPositions) {
             VecType[] omniSourceTypes = OperatorUtils.toVecTypes(sourceTypes);
             int[] omniOutputChannels = outputChannels.stream().mapToInt(Integer::valueOf).toArray();
-            WindowFunctionType[] windowFunctionType = getWindowFunctionTypes(windowFunctionDefinitions);
+            FunctionType[] windowFunctionType = getWindowFunctionTypes(windowFunctionDefinitions);
             int[] omniPartitionChannels = partitionChannels.stream().mapToInt(Integer::valueOf).toArray();
             int[] omnipreGroupedChannels = preGroupedChannels.stream().mapToInt(Integer::valueOf).toArray();
             int[] omniSortChannels = sortChannels.stream().mapToInt(Integer::valueOf).toArray();
@@ -290,30 +290,30 @@ public class WindowOmniOperator implements Operator {
             return argumentChannels;
         }
 
-        private WindowFunctionType[] getWindowFunctionTypes(List<WindowFunctionDefinition> windowFunctionDefinitions) {
-            WindowFunctionType[] windowFunctionType = new WindowFunctionType[windowFunctionDefinitions.size()];
+        private FunctionType[] getWindowFunctionTypes(List<WindowFunctionDefinition> windowFunctionDefinitions) {
+            FunctionType[] windowFunctionType = new FunctionType[windowFunctionDefinitions.size()];
             for (int i = 0; i < windowFunctionDefinitions.size(); i++) {
                 switch (windowFunctionDefinitions.get(i).getFunctionSupplier().getSignature().getName()) {
                     case "rank" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_RANK;
+                        windowFunctionType[i] = FunctionType.OMNI_WINDOW_TYPE_RANK;
                         break;
                     case "row_number" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_ROW_NUMBER;
+                        windowFunctionType[i] = FunctionType.OMNI_WINDOW_TYPE_ROW_NUMBER;
                         break;
                     case "avg" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_AVG;
+                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_AVG;
                         break;
                     case "sum" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_SUM;
+                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_SUM;
                         break;
                     case "count" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_COUNT;
+                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
                         break;
                     case "max" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_MAX;
+                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_MAX;
                         break;
                     case "min" :
-                        windowFunctionType[i] = WindowFunctionType.WIN_MIN;
+                        windowFunctionType[i] = FunctionType.OMNI_AGGREGATION_TYPE_MIN;
                         break;
                     default :
                         throw new UnsupportedOperationException("unsupported Aggregator type by OmniRuntime: "

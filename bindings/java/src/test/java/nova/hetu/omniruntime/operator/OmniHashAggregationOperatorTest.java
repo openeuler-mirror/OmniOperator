@@ -1,12 +1,13 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
@@ -34,12 +35,12 @@ public class OmniHashAggregationOperatorTest {
         VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
         String[] aggChannels = {"#2", "#3"};
         VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG};
-        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
 
         VecType[] inputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel, groupByTypes,
-            aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
         int rowNum = 40000;
         int pageCount = 10;
         int[] rowNums = new int[pageCount];
@@ -59,8 +60,8 @@ public class OmniHashAggregationOperatorTest {
             vecBatch = output.next();
             if (vecBatch.getVectors().length != aggOutputTypes.length) {
                 throw new IllegalArgumentException(
-                    format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
-                        vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+                        format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                                vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
             }
             assertNotNull(vecBatch);
             assertEquals(vecBatch.getVectors().length, 4);
@@ -99,15 +100,11 @@ public class OmniHashAggregationOperatorTest {
                     VecType[] groupByTypes = {LongVecType.LONG, LongVecType.LONG};
                     String[] aggChannels = {"#2", "#3"};
                     VecType[] aggTypes = {LongVecType.LONG, LongVecType.LONG};
-                    AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-                    VecType[] aggOutputTypes = {
-                        LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG
-                    };
-                    VecType[] inputTypes = {
-                        LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG
-                    };
+                    FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+                    VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
+                    VecType[] inputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
                     OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel,
-                        groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
+                            groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 
                     OmniOperator omniOperator = factory.createOperator();
                     for (int i = 0; i < pageCount; i++) {
@@ -141,8 +138,8 @@ public class OmniHashAggregationOperatorTest {
             VecBatch vecBatch = output.next();
             if (vecBatch.getVectors().length != aggOutputTypes.length) {
                 throw new IllegalArgumentException(
-                    format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
-                        vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
+                        format("output vec size error: result size: %s, outputTypes size: %s,rows: %s",
+                                vecBatch.getVectors().length, aggOutputTypes.length, vecBatch.getRowCount()));
             }
 
             assertNotNull(vecBatch);

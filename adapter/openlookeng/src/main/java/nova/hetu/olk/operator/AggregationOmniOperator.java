@@ -18,7 +18,7 @@ import io.prestosql.sql.planner.plan.AggregationNode.Step;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
@@ -123,12 +123,12 @@ public class AggregationOmniOperator implements Operator {
      */
     public static class AggregationOmniOperatorFactory implements OperatorFactory {
         private static final int INVALID_MASK_CHANNEL = -1;
-        
+
         private final int operatorId;
         private final PlanNodeId planNodeId;
         private final VecType[] sourceTypes;
         private final Step step;
-        private final AggType[] aggregatorTypes;
+        private final FunctionType[] aggregatorTypes;
         private final int[] aggregationInputChannels;
         private final List<Optional<Integer>> maskChannels;
         private final VecType[] aggregationOutputTypes;
@@ -147,7 +147,7 @@ public class AggregationOmniOperator implements Operator {
          * @param step the step
          */
         public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, VecType[] sourceTypes,
-                AggType[] aggregatorTypes, int[] aggregationInputChannels, List<Optional<Integer>> maskChannelList,
+                FunctionType[] aggregatorTypes, int[] aggregationInputChannels, List<Optional<Integer>> maskChannelList,
                 VecType[] aggregationOutputTypes, Step step) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
