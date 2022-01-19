@@ -51,7 +51,6 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
 // Given an expression generates the function for it.
 class ExpressionCodeGen : public ExprVisitor {
-
 public:
     ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expr);
     ~ExpressionCodeGen() override;
@@ -74,39 +73,39 @@ public:
     CodeGenValuePtr VisitExpr(const omniruntime::expressions::Expr &e);
     std::set<int32_t> vectorIndexes;
 
-// TODO: Figure out which of these can be private
+    // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    llvm::Value* CreateConstantBool(bool n);
-    llvm::Value* CreateConstantInt(int32_t n);
-    llvm::Value* CreateConstantLong(int64_t n);
-    llvm::Value* CreateConstantDouble(double n);
-    llvm::Value* GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
-    llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
-    llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
-    llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
-    void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
+    llvm::Value *CreateConstantBool(bool n);
+    llvm::Value *CreateConstantInt(int32_t n);
+    llvm::Value *CreateConstantLong(int64_t n);
+    llvm::Value *CreateConstantDouble(double n);
+    llvm::Value *GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
+    llvm::Type *ToLlvmType(omniruntime::expressions::DataType t);
+    llvm::Type *GetFunctionReturnType(omniruntime::expressions::DataType t);
+    llvm::Type *ToPointerType(omniruntime::expressions::DataType type);
+    void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
-    llvm::Value* StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
-    llvm::Value* Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
+    llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
+    llvm::Value *Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
 
     // Helper functions and main function for parsing binary expressions
-    llvm::Value *BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr,  llvm::Value *left,
-                                     llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+    llvm::Value *BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     llvm::Value *BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-                                        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     llvm::Value *BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
-                                        llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen,
-                                        llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+        llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen, llvm::Value *leftIsNull,
+        llvm::Value *rightIsNull);
     llvm::Value *BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-                                         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     void BinaryExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-                              llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull,
-                              llvm::PHINode **leftPhi, llvm::PHINode **rightPhi, llvm::Value **isNeitherNull);
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
+        llvm::PHINode **rightPhi, llvm::Value **isNeitherNull);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *DataExprConstantHelper(const omniruntime::expressions::DataExpr &dExpr);
 
-    virtual llvm::Function* CreateFunction();
+    virtual llvm::Function *CreateFunction();
     void OptimizeFunctionsAndModule();
 
     const omniruntime::expressions::Expr *expr;
@@ -131,6 +130,8 @@ private:
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
+    void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
+        llvm::Value *rightNull);
 };
 
 #endif

@@ -11,6 +11,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils.h"
 #include "vector"
 #include "expr_info_extractor.h"
 #include "codegen_context.h"
@@ -252,7 +253,7 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
 
 // Helper methods to parse binary expressions
 Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-                                              Value *leftIsNull, Value *rightIsNull)
+    Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
@@ -288,7 +289,7 @@ Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Valu
 }
 
 Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-                                                 Value *leftIsNull,  Value *rightIsNull)
+    Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
@@ -353,7 +354,7 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
 }
 
 Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-                                                  Value *leftIsNull, Value *rightIsNull)
+    Value *leftIsNull, Value *rightIsNull)
 {
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
@@ -540,18 +541,18 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
     bool isNullLiteral = dExpr.isNull;
     switch (dEx->GetExprDataType()) {
         case DataType::INT32D: {
-            codeGenValue = new CodeGenValue(
-                this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(isNullLiteral));
+            codeGenValue =
+                new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::INT64D: {
-            codeGenValue = new CodeGenValue(
-                this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
+            codeGenValue =
+                new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::DOUBLED: {
-            codeGenValue = new CodeGenValue(
-                this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(isNullLiteral));
+            codeGenValue =
+                new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::CHARD:
@@ -565,13 +566,13 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
             break;
         }
         case DataType::BOOLD: {
-            codeGenValue = new CodeGenValue(
-                this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(isNullLiteral));
+            codeGenValue =
+                new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::DECIMAL64D: {
-            codeGenValue = new CodeGenValue(
-                this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
+            codeGenValue =
+                new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
             break;
         }
         case DataType::DECIMAL128D: {
@@ -792,9 +793,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {
-        this->value = make_shared<CodeGenValue>(builder->CreateAnd(builder->CreateNot(leftNull),
-            builder->CreateAnd(builder->CreateNot(rightNull), builder->CreateOr(leftValue, rightValue, "logical_or"))),
-            builder->CreateOr(leftNull, rightNull));
+        CreateOrExprHelper(leftValue, leftNull, rightValue, rightNull);
         return;
     }
 
@@ -821,6 +820,63 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     }
     LLVM_DEBUG_LOG("Unsupported binary operator %d", bExpr->op);
     this->value = CreateInvalidCodeGenValue();
+}
+
+void ExpressionCodeGen::CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
+    llvm::Value *rightNull)
+{
+    Value *trueValue = CreateConstantBool(true);
+    Value *falseValue = CreateConstantBool(false);
+
+    AllocaInst *resultValuePtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "result_value");
+    AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "result_null");
+
+    BasicBlock *neitherNullBlock = BasicBlock::Create(*context, "NEITHER_NULL_BLOCK", func);
+    BasicBlock *eitherNullBlock = BasicBlock::Create(*context, "EITHER_NULL_BLOCK");
+    BasicBlock *mergeBlock = BasicBlock::Create(*context, "END_OF_OR");
+
+    auto isNeitherNull = builder->CreateNot(builder->CreateOr(leftNull, rightNull));
+
+    builder->CreateCondBr(isNeitherNull, neitherNullBlock, eitherNullBlock);
+    builder->SetInsertPoint(neitherNullBlock);
+
+    builder->CreateStore(builder->CreateOr(leftValue, rightValue), resultValuePtr);
+    builder->CreateStore(falseValue, resultNullPtr);
+    builder->CreateBr(mergeBlock);
+
+    func->getBasicBlockList().push_back(eitherNullBlock);
+    builder->SetInsertPoint(eitherNullBlock);
+
+    BasicBlock *leftNotNullBlock = BasicBlock::Create(*context, "LEFT_NOT_NULL_BLOCK", func);
+    BasicBlock *leftNullBlock = BasicBlock::Create(*context, "LEFT_NULL_BLOCK");
+
+    builder->CreateCondBr(builder->CreateNot(leftNull), leftNotNullBlock, leftNullBlock);
+    builder->SetInsertPoint(leftNotNullBlock);
+    builder->CreateStore(leftValue, resultValuePtr);
+    builder->CreateStore(falseValue, resultNullPtr);
+    builder->CreateBr(mergeBlock);
+
+    func->getBasicBlockList().push_back(leftNullBlock);
+    builder->SetInsertPoint(leftNullBlock);
+
+    BasicBlock *rightNotNullBlock = BasicBlock::Create(*context, "RIGHT_NOT_NULL_BLOCK", func);
+    BasicBlock *bothNullBlock = BasicBlock::Create(*context, "BOTH_NULL_BLOCK");
+
+    builder->CreateCondBr(builder->CreateNot(rightNull), rightNotNullBlock, bothNullBlock);
+    builder->SetInsertPoint(rightNotNullBlock);
+    builder->CreateStore(rightValue, resultValuePtr);
+    builder->CreateStore(falseValue, resultNullPtr);
+    builder->CreateBr(mergeBlock);
+
+    func->getBasicBlockList().push_back(bothNullBlock);
+    builder->SetInsertPoint(bothNullBlock);
+    builder->CreateStore(rightValue, resultValuePtr);
+    builder->CreateStore(trueValue, resultNullPtr);
+    builder->CreateBr(mergeBlock);
+
+    func->getBasicBlockList().push_back(mergeBlock);
+    builder->SetInsertPoint(mergeBlock);
+    this->value = make_shared<CodeGenValue>(builder->CreateLoad(resultValuePtr), builder->CreateLoad(resultNullPtr));
 }
 
 void ExpressionCodeGen::Visit(const UnaryExpr &uExpr)
@@ -961,8 +1017,8 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                     return;
                 }
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                    builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
-                    valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
+                    builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(
+                    this->StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
                     CreateConstantInt(0))));
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
@@ -1218,6 +1274,7 @@ void ExpressionCodeGen::OptimizeFunctionsAndModule()
     fpm->add(createMergeICmpsLegacyPass());
     fpm->add(createAggressiveDCEPass());
     fpm->add(createDeadStoreEliminationPass());
+    fpm->add(createPromoteMemoryToRegisterPass());
 
     mpm.add(createFunctionInliningPass());
     mpm.add(createPruneEHPass());
