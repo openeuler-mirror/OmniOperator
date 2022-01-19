@@ -312,7 +312,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;
     }
-
+    VectorHelper::FreeVecBatch(vecBatch);
     return vecBatch->GetRowCount();
 }
 

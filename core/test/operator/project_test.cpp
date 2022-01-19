@@ -140,7 +140,8 @@ TEST(ProjectTest, Cast)
         t->GetVector(1)->SetValueNotNull(i);
     }
 
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -181,7 +182,8 @@ TEST(ProjectTest, CastInt64ToDecimal128)
         t->GetVector(0)->SetValueNotNull(i);
     }
 
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -239,7 +241,8 @@ TEST (ProjectTest, Simple) {
         }
     }
 
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -291,7 +294,9 @@ TEST (ProjectTest, WithNullValues) {
             t->GetVector(1)->SetValueNull(i);
         }
     }
-    op->AddInput(t);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -329,7 +334,8 @@ TEST (ProjectTest, Negatives) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-        op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -360,7 +366,8 @@ TEST (ProjectTest, Longs) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-        op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < 1; i++) {
@@ -392,7 +399,8 @@ TEST (ProjectTest, Doubles) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-        op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < 1; i++) {
@@ -434,7 +442,8 @@ TEST (ProjectTest, MultipleColumns) {
    omniruntime::op::Operator* op = factory->CreateOperator();
    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-       op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
    vector<VectorBatch*> ret;
    int32_t numReturned = op->GetOutput(ret);
    for (int32_t i = 0; i < numReturned; i++) {
@@ -501,7 +510,8 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
     for (int i = 0; i < 10; i++) {
         auto start = std::chrono::system_clock::now();
 
-        op->AddInput(t);
+        auto copy = DuplicateVectorBatch(t);
+        op->AddInput(copy);
         vector<VectorBatch *> ret;
         int32_t numReturned = op->GetOutput(ret);
         VectorHelper::FreeVecBatches(ret);
@@ -538,7 +548,8 @@ TEST (ProjectTest, BenchmarkMultipleColumns) {
     for (int i = 0; i < 10; i++) {
         auto start = std::chrono::system_clock::now();
 
-        op->AddInput(t);
+        auto copy = DuplicateVectorBatch(t);
+        op->AddInput(copy);
         vector<VectorBatch *> ret;
         int32_t numReturned = op->GetOutput(ret);
         VectorHelper::FreeVecBatches(ret);
@@ -592,7 +603,8 @@ TEST (ProjectTest, DependOtherColumn) {
    omniruntime::op::Operator* op = factory->CreateOperator();
    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
    VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-       op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
    vector<VectorBatch*> ret;
    int32_t numReturned = op->GetOutput(ret);
    for (int32_t i = 0; i < numReturned; i++) {
@@ -655,7 +667,8 @@ TEST(ProjectTest, ProjectString1) {
 
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
 
@@ -727,7 +740,8 @@ TEST (ProjectTest, DictionaryVecTest) {
 
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    auto copy = DuplicateVectorBatch(batch);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -776,7 +790,8 @@ TEST(ProjectTest, DictionaryVecDoubleTest)
     std::vector<Expr*> exprs =  {new BinaryExpr(ADD, new DataExpr(0, DOUBLED), addRight, DOUBLED)};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    auto copy = DuplicateVectorBatch(batch);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -830,7 +845,8 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     std::vector<Expr*> exprs = {substrExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    auto copy = DuplicateVectorBatch(batch);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -886,7 +902,8 @@ TEST(ProjectTest, DictionaryVecDecimal128Test)
     std::vector<Expr*> exprs = {addExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    auto copy = DuplicateVectorBatch(batch);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -950,7 +967,8 @@ TEST(ProjectTest, DictionaryVecNestedTest)
 
     auto *factory = new ProjectionOperatorFactory(exprs, numProjs, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(batch);
+    auto copy = DuplicateVectorBatch(batch);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -990,7 +1008,8 @@ TEST (ProjectTest, Decimal128Arithmetic) {
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int64_t i = 0; i < numReturned; i++) {
@@ -1025,7 +1044,8 @@ TEST(ProjectTest, Decimal128Divide)
     omniruntime::op::Operator *op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1};
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int64_t i = 0; i < numReturned; i++) {
@@ -1069,7 +1089,8 @@ TEST(ProjectTest, MultipleDecimal128Columns)
     omniruntime::op::Operator* op = factory->CreateOperator();
     int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
     VectorBatch* t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);;
     vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -1141,7 +1162,8 @@ TEST (ProjectTest, StringSubstr) {
     std::vector<Expr*> exprs = {concatExpr, col0};
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();
-    op->AddInput(t);
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
     std::vector<VectorBatch*> ret;
     int32_t numReturned = op->GetOutput(ret);
 
@@ -1225,7 +1247,8 @@ TEST (ProjectTest, SlicedDictionaryVecTest) {
     std::vector<Expr*> exprs = {addExpr1, addExpr2, addExpr3};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(input);
+    auto copy = DuplicateVectorBatch(input);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     for (int32_t i = 0; i < numReturned; i++) {
@@ -1280,7 +1303,8 @@ TEST (ProjectTest, SlicedDictionaryVecWithNullTest) {
 
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(input);
+    auto copy = DuplicateVectorBatch(input);
+    op->AddInput(copy);
     vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
     auto retVec = (IntVector *)(ret[0]->GetVector(0));
