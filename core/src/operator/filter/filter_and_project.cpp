@@ -209,6 +209,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
             delete dictionaryVec;
         }
         context->getArena()->Reset();
+        VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
     auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
