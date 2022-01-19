@@ -977,7 +977,7 @@ TEST(AggregationOperatorTest, verify_correctness)
     delete aggregate1;
 
     VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, 5, groupTypes, aggTypes);
-    ASSERT(!input2 == nullptr)
+    ASSERT(!(input2 == nullptr));
     aggs.clear();
     aggs.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
         true, true));
