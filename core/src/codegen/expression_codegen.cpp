@@ -4,7 +4,9 @@
  */
 #include "expression_codegen.h"
 
+#include <thread>
 #include <chrono>
+#include <utility>
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -27,6 +29,8 @@ const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int EXPRFUNC_OUT_LENGTH_ARG_INDEX = 4;
 const int EXPRFUNC_OUT_IS_NULL_INDEX = 7;
+
+std::once_flag codegen_target_init_flag;
 }
 
 CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Expr &e)
@@ -144,13 +148,30 @@ void ExpressionCodeGen::PrintValues(std::string format, const std::vector<Value 
 }
 
 ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr)
+    :funcName(std::move(name)), expr(&cpExpr) {}
+
+ExpressionCodeGen::~ExpressionCodeGen()
 {
-    funcName = name;
-    expr = &cpExpr;
+    if (rt) {
+        eoe(rt->remove());
+    }
+    delete fr;
+}
+
+void ExpressionCodeGen::InitializeCodegenTargets()
+{
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
+    llvm::InitializeNativeTargetDisassembler();
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+}
+
+bool ExpressionCodeGen::Initialize()
+{
+    std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
     jit = eoe(LLJITBuilder().create());
+
     context = std::make_unique<LLVMContext>();
     // Create module called the_module
     module = std::make_unique<Module>("the_module", *context);
@@ -163,18 +184,10 @@ ExpressionCodeGen::ExpressionCodeGen(std::string name, const Expr &cpExpr)
     // Only register the necessary functions for the expression
     // Necessary functions are found using RequiredFunctions method
     ExprInfoExtractor exprInfoExtractor;
-    cpExpr.Accept(exprInfoExtractor);
+    expr->Accept(exprInfoExtractor);
     fr->RegisterNecessaryFuncs(exprInfoExtractor.GetFunctions());
     funcNameToSignature = fr->funcNameToSignatureMap;
     this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
-}
-
-ExpressionCodeGen::~ExpressionCodeGen()
-{
-    if (rt) {
-        eoe(rt->remove());
-    }
-    delete fr;
 }
 
 // Other operations which require externed functions

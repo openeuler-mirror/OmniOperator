@@ -4,6 +4,8 @@
  */
 #include "filter_codegen.h"
 
+#include <utility>
+
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
@@ -23,6 +25,14 @@ namespace {
     const int ROW_FILTER_EXECUTION_CONTEXT_INDEX = 4;
     const int ROW_FILTER_DICT_VECTORS_INDEX = 5;
     const int ROW_FILTER_IS_NULL_INDEX = 6;
+}
+
+std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(
+    std::string name, const omniruntime::expressions::Expr &expression)
+{
+    std::unique_ptr<FilterCodeGen> codegen {new FilterCodeGen(std::move(name), expression)};
+    codegen->Initialize();
+    return codegen;
 }
 
 int64_t FilterCodeGen::GetFunction()

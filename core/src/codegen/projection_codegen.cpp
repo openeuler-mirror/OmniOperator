@@ -31,6 +31,14 @@ namespace {
     const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
 
+std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(
+    std::string name, const omniruntime::expressions::Expr &expression, bool filter)
+{
+    std::unique_ptr<ProjectionCodeGen> codegen {new ProjectionCodeGen(std::move(name), expression, filter)};
+    codegen->Initialize();
+    return codegen;
+}
+
 int64_t ProjectionCodeGen::GetFunction()
 {
     Function *func = this->CreateFunction();
