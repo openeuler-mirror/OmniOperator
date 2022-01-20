@@ -312,8 +312,9 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     for (auto &dictionaryVec : dictionaryVecs) {
         delete dictionaryVec;
     }
+    auto resultRowCount = vecBatch->GetRowCount();
     VectorHelper::FreeVecBatch(vecBatch);
-    return vecBatch->GetRowCount();
+    return resultRowCount;
 }
 
 int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
