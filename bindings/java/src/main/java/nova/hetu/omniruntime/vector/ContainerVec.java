@@ -60,28 +60,17 @@ public class ContainerVec extends FixedWidthVec {
         this.vecTypes = VecTypeSerializer.deserialize(getVecTypesNative(nativeVector));
     }
 
-    /**
-     * For slicing
-     *
-     * @param containerVec
-     * @param start
-     * @param end
-     */
-    private ContainerVec(ContainerVec containerVec, int start, int end) {
-        super(containerVec, start, end, true);
-    }
-
-    private ContainerVec(ContainerVec vector, int[] positions, int offset, int length, int positionCount,
-            VecType[] vecTypes) {
-        super(vector, positions, offset, length);
-        this.positionCount = positionCount;
+    private ContainerVec(ContainerVec containerVec, int start, int length, boolean isSlice, VecType[] vecTypes) {
+        super(containerVec, start, length, isSlice);
+        this.positionCount = length;
         this.vecTypes = vecTypes;
+        // for container vec offset is always 0.
+        offset = 0;
     }
 
-    private ContainerVec(ContainerVec vector, int offset, int length, boolean isSlice, int positionCount,
-            VecType[] vecTypes) {
-        super(vector, offset, length, isSlice);
-        this.positionCount = positionCount;
+    private ContainerVec(ContainerVec vector, int[] positions, int offset, int length, VecType[] vecTypes) {
+        super(vector, positions, offset, length);
+        this.positionCount = length;
         this.vecTypes = vecTypes;
     }
 
@@ -134,7 +123,7 @@ public class ContainerVec extends FixedWidthVec {
 
     @Override
     public ContainerVec slice(int start, int end) {
-        return new ContainerVec(this, start + getOffset(), end - start);
+        return new ContainerVec(this, start, end - start, true, vecTypes);
     }
 
     @Override
@@ -143,13 +132,13 @@ public class ContainerVec extends FixedWidthVec {
     }
 
     @Override
-    public Vec copyPositions(int[] positions, int offset, int length) {
-        return new ContainerVec(this, positions, offset, length, positionCount, vecTypes);
+    public ContainerVec copyPositions(int[] positions, int offset, int length) {
+        return new ContainerVec(this, positions, offset, length, vecTypes);
     }
 
     @Override
-    public Vec copyRegion(int positionOffset, int length) {
-        return new ContainerVec(this, positionOffset, length, false, positionCount, vecTypes);
+    public ContainerVec copyRegion(int positionOffset, int length) {
+        return new ContainerVec(this, positionOffset, length, false, vecTypes);
     }
 
     @Override

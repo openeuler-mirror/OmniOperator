@@ -77,10 +77,12 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
         }
         validateConstructorArguments(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets, fieldBlocks);
         // transform field blocks to off-heap
+        Block[] newOffHeapFieldBlocks = new Block[fieldBlocks.length];
         for (int blockIndex = 0; blockIndex < fieldBlocks.length; ++blockIndex) {
-            fieldBlocks[blockIndex] = OperatorUtils.buildOffHeapBlock(vecAllocator, fieldBlocks[blockIndex]);
+            newOffHeapFieldBlocks[blockIndex] = OperatorUtils.buildOffHeapBlock(vecAllocator, fieldBlocks[blockIndex]);
         }
-        return new RowOmniBlock(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets, fieldBlocks);
+        return new RowOmniBlock(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets,
+                newOffHeapFieldBlocks);
     }
 
     /**

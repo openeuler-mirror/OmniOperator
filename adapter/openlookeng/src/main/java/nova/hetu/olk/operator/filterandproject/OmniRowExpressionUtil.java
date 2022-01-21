@@ -99,7 +99,7 @@ public class OmniRowExpressionUtil {
             List<String> args = callExpression.getArguments().stream().map(OmniRowExpressionUtil::expressionStringify)
                     .collect(Collectors.toList());
             return callExpression.getSignature().getName() + ":"
-                    + signatureToVecTypeId(callExpression.getType().getTypeSignature()) + "("
+                    + typeToVecTypeId(callExpression.getType()) + "("
                     + Joiner.on(", ").join(args) + ")";
         }
 
@@ -108,7 +108,7 @@ public class OmniRowExpressionUtil {
             List<String> args = specialForm.getArguments().stream().map(OmniRowExpressionUtil::expressionStringify)
                     .collect(Collectors.toList());
             return specialForm.getForm().name() + ":"
-                    + toVecType(specialForm.getType().getTypeSignature()).getId().ordinal() + "("
+                    + toVecType(specialForm.getType()).getId().ordinal() + "("
                     + Joiner.on(", ").join(args) + ")";
         }
 
@@ -132,16 +132,16 @@ public class OmniRowExpressionUtil {
             if ((type instanceof VarcharType || type instanceof CharType)
                     && constantExpression.getValue() instanceof Slice) {
                 String varcharValue = ((Slice) constantExpression.getValue()).toStringAscii();
-                return "'" + varcharValue + "':" + signatureToVecTypeId(type.getTypeSignature());
+                return "'" + varcharValue + "':" + typeToVecTypeId(type);
             }
 
             if (type instanceof DecimalType && !((DecimalType) type).isShort()
                     && constantExpression.getValue() instanceof Slice) {
                 return Decimals.decodeUnscaledValue((Slice) constantExpression.getValue()) + ":"
-                        + signatureToVecTypeId(type.getTypeSignature());
+                        + typeToVecTypeId(type);
             }
 
-            return constantExpression.getValue() + ":" + signatureToVecTypeId(type.getTypeSignature());
+            return constantExpression.getValue() + ":" + typeToVecTypeId(type);
         }
         return rowExpression.toString();
     }
@@ -149,15 +149,16 @@ public class OmniRowExpressionUtil {
     /**
      * Get VecTypeId with width from the type signature
      *
-     * @param signature Signature from openLooKeng
+     * @param type type from openLooKeng
      * @return VecTypeId corresponding to Type
      */
-    public static String signatureToVecTypeId(TypeSignature signature) {
+    public static String typeToVecTypeId(Type type) {
+        TypeSignature signature = type.getTypeSignature();
         if ("char".equalsIgnoreCase(signature.getBase())) {
             int width = signature.getParameters().get(0).getLongLiteral().intValue();
-            return String.format("%d[%d]", toVecType(signature).getId().ordinal(), width);
+            return String.format("%d[%d]", toVecType(type).getId().ordinal(), width);
         }
-        return String.valueOf(toVecType(signature).getId().ordinal());
+        return String.valueOf(toVecType(type).getId().ordinal());
     }
 
     /**
@@ -191,7 +192,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             callName = callName.substring(OPERATOR_PREFIX.length());
         }
         TypeSignature callSignature = call.getType().getTypeSignature();
-        int returnType = OperatorUtils.toVecType(callSignature).getId().ordinal();
+        int returnType = OperatorUtils.toVecType(call.getType()).getId().ordinal();
         // Binary operator in rowExpression
         if (ARITH_BIN_OPS.contains(callName) || COM_BIN_OPS.contains(callName)) {
             callRoot.put("exprType", "BINARY").put("returnType", returnType).put("operator", callName).set("left",
@@ -221,7 +222,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     public ObjectNode visitSpecialForm(SpecialForm specialForm, Void context) {
         ObjectNode specialFormRoot = MAPPER.createObjectNode();
         String formName = specialForm.getForm().name();
-        int returnType = OperatorUtils.toVecType(specialForm.getType().getTypeSignature()).getId().ordinal();
+        int returnType = OperatorUtils.toVecType(specialForm.getType()).getId().ordinal();
         switch (formName) {
             case "AND" :
             case "OR" :
@@ -261,7 +262,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     @Override
     public ObjectNode visitInputReference(InputReferenceExpression reference, Void context) {
         ObjectNode inputRefRoot = MAPPER.createObjectNode();
-        VecType vecType = OperatorUtils.toVecType(reference.getType().getTypeSignature());
+        VecType vecType = OperatorUtils.toVecType(reference.getType());
         inputRefRoot.put("exprType", "FIELD_REFERENCE").put("dataType", vecType.getId().ordinal()).put("colVal",
                 reference.getField());
         if (vecType instanceof CharVecType) {
@@ -276,7 +277,7 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     @Override
     public ObjectNode visitConstant(ConstantExpression literal, Void context) {
         ObjectNode constantRoot = MAPPER.createObjectNode();
-        VecType literalType = OperatorUtils.toVecType(literal.getType().getTypeSignature());
+        VecType literalType = OperatorUtils.toVecType(literal.getType());
         constantRoot.put("exprType", "LITERAL").put("dataType", literalType.getId().ordinal());
         // Null check on expression value
         if (literal.getValue() == null) {
@@ -349,9 +350,9 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
     @Override
     public ObjectNode visitVariableReference(VariableReferenceExpression reference, Void context) {
         ObjectNode varRefRoot = MAPPER.createObjectNode();
-        VecType vecType = OperatorUtils.toVecType(reference.getType().getTypeSignature());
+        VecType vecType = OperatorUtils.toVecType(reference.getType());
         varRefRoot.put("exprType", "VARIABLE_REFERENCE")
-                .put("dataType", OperatorUtils.toVecType(reference.getType().getTypeSignature()).getId().ordinal())
+                .put("dataType", OperatorUtils.toVecType(reference.getType()).getId().ordinal())
                 .put("varName", reference.getName());
         if (vecType instanceof CharVecType) {
             varRefRoot.put("width", ((CharVecType) vecType).getWidth());

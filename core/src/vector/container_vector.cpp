@@ -7,8 +7,7 @@
 namespace omniruntime {
 namespace vec {
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount,
-                                 std::vector<uintptr_t>& fieldVectors, int32_t vectorCount,
-                                 std::vector<VecType>& types)
+    std::vector<uintptr_t> &fieldVectors, int32_t vectorCount, std::vector<VecType> &types)
     : Vector(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_TYPE_CONTAINER),
       vectorCount(vectorCount),
       positionCount(positionCount),
@@ -23,11 +22,32 @@ ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t capacityInB
     : vectorCount(capacityInBytes / BYTES),
       positionCount(positionCount),
       Vector(allocator, capacityInBytes, positionCount, OMNI_VEC_TYPE_CONTAINER)
-{}
+{
+    // init vec is null in container
+    for (int i = 0; i < vectorCount; i++) {
+        SetValue(i, 0);
+    }
+}
 
 ContainerVector *ContainerVector::Slice(int32_t positionOffset, int32_t length)
 {
-    return new ContainerVector(this, length, positionOffset, this->vecTypes.data());
+    // get fieldVecOffsets
+    std::vector<int32_t> fieldVecOffsets = GetFieldVecOffsets();
+
+    int32_t fieldVecStartIndex = fieldVecOffsets[positionOffset];
+    int32_t filedVecEndIndex = fieldVecOffsets[positionOffset + length];
+    int32_t fieldVecLength = filedVecEndIndex - fieldVecStartIndex;
+
+    // get new fieldVec
+    std::vector<uintptr_t> newVecAddr(vectorCount);
+    for (int32_t i = 0; i < vectorCount; ++i) {
+        newVecAddr[i] = reinterpret_cast<uintptr_t>(
+            (reinterpret_cast<Vector *>(GetValue(i)))->Slice(fieldVecStartIndex, fieldVecLength));
+    }
+
+    auto newContainerVec = new ContainerVector(GetAllocator(), length, newVecAddr, vectorCount, vecTypes);
+    newContainerVec->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
+    return newContainerVec;
 }
 
 ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset, int length)
@@ -35,17 +55,32 @@ ContainerVector *ContainerVector::CopyPositions(const int *positions, int offset
     if (length <= 0) {
         return nullptr;
     }
-    std::vector<uintptr_t> vectorAddresses(length);
-    std::vector<VecType> copyTypes(this->vecTypes.begin(), this->vecTypes.end());
+    // get fieldVecOffsets
+    std::vector<int32_t> fieldVecOffsets = GetFieldVecOffsets();
 
-    for (int32_t i = offset; i < offset + length; ++i) {
-        vectorAddresses[i] = static_cast<uintptr_t>(GetValue(positions[i]));
+    // get fieldVecPositions
+    std::vector<int32_t> fieldVecPositions;
+    for (int i = 0; i < length; i++) {
+        int position = positions[offset + i];
+        if (!IsValueNull(position)) {
+            fieldVecPositions.push_back(fieldVecOffsets[position]);
+        }
     }
-    auto containerVec = new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
-    for (int32_t i = 0; i < positionCount; ++i) {
-        containerVec->SetValueNull(i, IsValueNull(i));
+
+    // get new fieldVec
+    std::vector<uintptr_t> vecAddr(vectorCount);
+    for (int32_t i = 0; i < vectorCount; ++i) {
+        vecAddr[i] =
+            reinterpret_cast<uintptr_t>((reinterpret_cast<Vector *>(GetValue(i)))
+                                            ->CopyPositions(fieldVecPositions.data(), 0, fieldVecPositions.size()));
     }
-    return containerVec;
+
+    auto newContainerVec = new ContainerVector(GetAllocator(), length, vecAddr, vectorCount, vecTypes);
+    for (int32_t i = 0; i < length; ++i) {
+        int position = positions[offset + i];
+        newContainerVec->SetValueNull(position, IsValueNull(position));
+    }
+    return newContainerVec;
 }
 
 ContainerVector *ContainerVector::CopyRegion(int positionOffset, int length)
@@ -53,15 +88,61 @@ ContainerVector *ContainerVector::CopyRegion(int positionOffset, int length)
     if (length <= 0) {
         return nullptr;
     }
-    std::vector<uintptr_t> vectorAddresses(length);
-    std::vector<VecType> copyTypes(this->vecTypes.begin(), this->vecTypes.end());
 
-    for (int32_t i = positionOffset; i < positionOffset + length; ++i) {
-        vectorAddresses[i] = static_cast<uintptr_t>(GetValue(i));
+    // get fieldVecOffsets
+    std::vector<int32_t> fieldVecOffsets = GetFieldVecOffsets();
+
+    int32_t fieldVecStartIndex = fieldVecOffsets[positionOffset];
+    int32_t filedVecEndIndex = fieldVecOffsets[positionOffset + length];
+    int32_t fieldVecLength = filedVecEndIndex - fieldVecStartIndex;
+
+    // get new fieldVec
+    std::vector<uintptr_t> newVecAddr(vectorCount);
+    for (int32_t i = 0; i < vectorCount; ++i) {
+        newVecAddr[i] = reinterpret_cast<uintptr_t>(
+            (reinterpret_cast<Vector *>(GetValue(i)))->CopyRegion(fieldVecStartIndex, fieldVecLength));
     }
-    return new ContainerVector(GetAllocator(), positionCount, vectorAddresses, length, copyTypes);
+
+    auto newContainerVec = new ContainerVector(GetAllocator(), length, newVecAddr, vectorCount, vecTypes);
+    newContainerVec->SetValueNulls(0, (bool *)valueNullsAddress + positionOffset + this->positionOffset, length);
+    return newContainerVec;
 }
 
-void ContainerVector::Append(Vector *other, int positionOffset, int length) {}
+void ContainerVector::Append(Vector *other, int positionOffset, int length)
+{
+    auto *otherContainer = reinterpret_cast<ContainerVector *>(other);
+    if (otherContainer->GetVectorCount() != vectorCount) {
+        LogError("this vec count %d is not equal other vec count %d, container vec append failed.", vectorCount,
+                 otherContainer->GetVectorCount());
+        return;
+    }
+    if (other->GetTypeId() != typeId) {
+        LogError("this vec type %d is not equal other type %d, container vec append failed.", typeId,
+            other->GetTypeId());
+        return;
+    }
+
+    for (int32_t i = 0; i < vectorCount; i++) {
+        auto *thisVector = reinterpret_cast<Vector *>(GetValue(i));
+        auto *otherVector = reinterpret_cast<Vector *>(otherContainer->GetValue(i));
+        thisVector->Append(otherVector, positionOffset, length);
+    }
+    // set nulls
+    bool *otherValueNulls = static_cast<bool *>(other->GetValueNulls()) + other->GetPositionOffset();
+    SetValueNulls(positionOffset, otherValueNulls, length);
+}
+
+ContainerVector::~ContainerVector()
+{
+    // release the vector in container vector
+    for (int32_t i = 0; i < vectorCount; i++) {
+        auto *field = reinterpret_cast<Vector *>(GetValue(i));
+        if (field != nullptr) {
+            delete field;
+            // set null vec
+            SetValue(i, 0);
+        }
+    }
+}
 } // namespace vec
 } // namespace omniruntime

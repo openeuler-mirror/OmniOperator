@@ -20,6 +20,7 @@ import io.prestosql.spi.block.LazyBlock;
 import io.prestosql.spi.block.RowBlock;
 import io.prestosql.spi.block.RunLengthEncodedBlock;
 import io.prestosql.spi.block.VariableWidthBlock;
+import io.prestosql.spi.type.RowType;
 import io.prestosql.spi.type.StandardTypes;
 import io.prestosql.spi.type.Type;
 import io.prestosql.spi.type.TypeSignature;
@@ -44,6 +45,7 @@ import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VarcharVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.BooleanVec;
+import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
@@ -86,16 +88,7 @@ public final class OperatorUtils {
      * @return the vec type
      */
     public static VecType toVecType(Type type) {
-        return toVecType(type.getTypeSignature());
-    }
-
-    /**
-     * To vec type vec type.
-     *
-     * @param signature the signature
-     * @return the vec type
-     */
-    public static VecType toVecType(TypeSignature signature) {
+        TypeSignature signature = type.getTypeSignature();
         String base = signature.getBase();
         switch (base) {
             case StandardTypes.INTEGER :
@@ -125,7 +118,8 @@ public final class OperatorUtils {
             case StandardTypes.DATE :
                 return Date32VecType.DATE32;
             case StandardTypes.ROW :
-                return ContainerVecType.CONTAINER;
+                RowType rowType = (RowType) type;
+                return new ContainerVecType(toVecTypes(rowType.getTypeParameters()));
             default :
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + base);
         }
@@ -190,11 +184,29 @@ public final class OperatorUtils {
                 case OMNI_VEC_TYPE_DECIMAL128 :
                     vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
                     break;
+                case OMNI_VEC_TYPE_CONTAINER :
+                    vecsResult.add(createBlankContainerVector(vecAllocator, type, totalPositions));
+                    break;
                 default :
                     throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + type);
             }
         }
         return vecsResult;
+    }
+
+    private static ContainerVec createBlankContainerVector(VecAllocator vecAllocator, VecType type,
+            int totalPositions) {
+        if (!(type instanceof ContainerVecType)) {
+            throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "type is not container type:" + type);
+        }
+        ContainerVecType containerVecType = (ContainerVecType) type;
+        List<Vec> fieldVecs = createBlankVectors(vecAllocator, containerVecType.getFieldTypes(), totalPositions);
+        long[] nativeVec = new long[fieldVecs.size()];
+        for (int i = 0; i < fieldVecs.size(); i++) {
+            nativeVec[i] = fieldVecs.get(i).getNativeVector();
+        }
+        return new ContainerVec(vecAllocator, containerVecType.size(), totalPositions, nativeVec,
+                containerVecType.getFieldTypes());
     }
 
     /**

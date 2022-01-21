@@ -61,13 +61,22 @@ public:
 
     void Append(Vector *other, int positionOffset, int length) override;
 
-    ~ContainerVector() override {};
+    ~ContainerVector() override;
 
 private:
     static const int BYTES = sizeof(T);
     std::vector<VecType> vecTypes;
     int32_t vectorCount;
     int32_t positionCount;
+
+    std::vector<int32_t> GetFieldVecOffsets()
+    {
+        std::vector<int32_t> fieldVecOffsets(positionCount + 1);
+        for (int position = 0; position < positionCount; position++) {
+            fieldVecOffsets[position + 1] = fieldVecOffsets[position] + (IsValueNull(position) ? 0 : 1);
+        }
+        return fieldVecOffsets;
+    }
 
     ContainerVector(ContainerVector *vector, int32_t vectorCount, int32_t positionOffset, VecType types[])
         : Vector(vector, vectorCount, positionOffset)
