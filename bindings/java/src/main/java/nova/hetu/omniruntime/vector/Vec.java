@@ -42,7 +42,7 @@ public abstract class Vec implements Closeable {
      * When a vector has been sliced,
      * this value will point to where is the new slice {@link Vec} start.
      */
-    protected final int offset;
+    protected int offset;
 
     /**
      * The value buffer.
