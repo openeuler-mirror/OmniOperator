@@ -107,10 +107,12 @@ Projection::Projection(VecTypes &inputTypes, int32_t nCols, const Expr &expr, bo
         this->isSupported = false;
     }
 #ifdef DEBUG
-    std::cout << "Expression in projection:" << std::endl;
-    ExprPrinter printExprTree;
-    expr.Accept(printExprTree);
-    std::cout << std::endl;
+    if (initialized) {
+        std::cout << "Expression in projection:" << std::endl;
+        ExprPrinter printExprTree;
+        expr.Accept(printExprTree);
+        std::cout << std::endl;
+    }
 #endif
 }
 

@@ -211,7 +211,7 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
     if (op == LT || op == GT || op == LTE || op == GTE || op == EQ || op == NEQ) {
         *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
     }
-    if (op == ADD || op == SUB || op == MUL || op == DIV || op == MOD) {
+    if (op == ADD || op == SUB || op == MUL) {
         std::vector<Value *> argLeftVals { left, left, this->codegenContext->executionContext };
         std::vector<Value *> argRightVals { right, right, this->codegenContext->executionContext };
         incomingBlock = builder->GetInsertBlock();
@@ -249,6 +249,56 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
         (*rightPhi)->addIncoming(rightZero, nullBlock);
         (*rightPhi)->addIncoming(right, incomingBlock);
     }
+    if (op == DIV || op == MOD) {
+        DivExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, leftPhi, rightPhi);
+    }
+}
+
+void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+    Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi)
+{
+    BasicBlock *incomingBlock, *nullBlock, *nextInst;
+    Value *nullCond, *leftZero, *rightOne;
+
+    std::vector<Value *> argLeftVals { left, left, this->codegenContext->executionContext };
+    std::vector<Value *> argRightVals { right, right, this->codegenContext->executionContext };
+    incomingBlock = builder->GetInsertBlock();
+    nullBlock = BasicBlock::Create(*context, "nullBlock", builder->GetInsertBlock()->getParent());
+    nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
+    nullCond = builder->CreateOr(leftIsNull, rightIsNull);
+    builder->CreateCondBr(nullCond, nullBlock, nextInst);
+    builder->SetInsertPoint(nullBlock);
+    switch (binaryExpr->left->GetExprDataType()) {
+        case INT32D:
+            leftZero = builder->CreateSub(left, left);
+            rightOne = builder->CreateSub(builder->CreateAdd(right, CreateConstantInt(1)), right);
+            break;
+        case INT64D:
+            leftZero = builder->CreateSub(left, left);
+            rightOne = builder->CreateSub(builder->CreateAdd(right, CreateConstantLong(1)), right);
+            break;
+        case DOUBLED:
+            leftZero = builder->CreateFSub(left, left);
+            rightOne = builder->CreateFSub(builder->CreateFAdd(right, CreateConstantDouble(1.0)), right);
+            break;
+        case DECIMAL128D:
+            leftZero = builder->CreateCall(module->getFunction(fr->subDec128Str), argLeftVals, fr->subDec128Str);
+            rightOne = builder->CreateCall(module->getFunction(fr->divDec128Str), argRightVals, fr->divDec128Str);
+            break;
+        default:
+            // Unsupported data-types left as-is
+            leftZero = left;
+            rightOne = right;
+    }
+    builder->CreateBr(nextInst);
+    builder->SetInsertPoint(nextInst);
+    int numberOfPaths = 2;
+    *leftPhi = builder->CreatePHI(left->getType(), numberOfPaths, "iftmp");
+    *rightPhi = builder->CreatePHI(right->getType(), numberOfPaths, "iftmp");
+    (*leftPhi)->addIncoming(leftZero, nullBlock);
+    (*leftPhi)->addIncoming(left, incomingBlock);
+    (*rightPhi)->addIncoming(rightOne, nullBlock);
+    (*rightPhi)->addIncoming(right, incomingBlock);
 }
 
 // Helper methods to parse binary expressions
@@ -279,9 +329,9 @@ Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Valu
         case MUL:
             return builder->CreateMul(leftPhi, right, "arithmetic_mul");
         case DIV:
-            return builder->CreateSDiv(leftPhi, right, "arithmetic_div");
+            return builder->CreateSDiv(leftPhi, rightPhi, "arithmetic_div");
         case MOD:
-            return builder->CreateSRem(leftPhi, right, "arithmetic_mod");
+            return builder->CreateSRem(leftPhi, rightPhi, "arithmetic_mod");
         default:
             std::cout << "Unsupported int/long binary operator " << binaryExpr->op << std::endl;
             return nullptr;
@@ -315,7 +365,7 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
         case MUL:
             return builder->CreateFMul(leftPhi, right, "farithmetic_mul");
         case DIV:
-            return builder->CreateFDiv(leftPhi, right, "farithmetic_div");
+            return builder->CreateFDiv(leftPhi, rightPhi, "farithmetic_div");
         default:
             std::cout << "Unsupported double binary operator " << binaryExpr->op << std::endl;
             return nullptr;
