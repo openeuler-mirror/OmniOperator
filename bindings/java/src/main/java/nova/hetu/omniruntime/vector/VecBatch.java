@@ -36,6 +36,13 @@ public class VecBatch implements Closeable {
         this.nativeVectorBatch = newVectorBatchNative(nativeVectors, rowCount);
     }
 
+    /**
+     * it is recommended to use the VecBatch(Vec[] vectors, rowCount) construct to
+     * prevent exceptions caused by empty vectors
+     *
+     * @param vectors vectors in vecBatch,it may be empty
+     */
+    @Deprecated
     public VecBatch(Vec[] vectors) {
         this(vectors, vectors[0].getSize());
     }
@@ -44,6 +51,13 @@ public class VecBatch implements Closeable {
         this(vectors.toArray(new Vec[vectors.size()]), rowCount);
     }
 
+    /**
+     * it is recommended to use the VecBatch(List<Vec>, rowCount) construct to
+     * prevent exceptions caused by empty vectors
+     *
+     * @param vectors vectors in vecBatch,it may be empty
+     */
+    @Deprecated
     public VecBatch(List<Vec> vectors) {
         this(vectors.toArray(new Vec[vectors.size()]));
     }

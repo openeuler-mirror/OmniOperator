@@ -419,7 +419,7 @@ public class PartitionedOutputOmniOperator implements Operator, Cloneable {
                     vecList.add(vecList.get(partitionChannels.get(i)).slice(0, positionCount));
                 }
             }
-            return new VecBatch(vecList);
+            return new VecBatch(vecList, positionCount);
         }
 
         /**
