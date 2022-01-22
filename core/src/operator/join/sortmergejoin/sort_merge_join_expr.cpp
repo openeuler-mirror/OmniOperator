@@ -1,12 +1,8 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * @Description: sort merge join interface layer implementations
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Sort merge join interface layer implementations
  */
-
 #include "sort_merge_join_expr.h"
-#include <memory>
-#include <vector>
-#include "../../../vector/vector_helper.h"
 #include "../../util/operator_util.h"
 
 namespace omniruntime {
@@ -79,7 +75,6 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
         OperatorUtil::ProjectVectors(vecBatch, this->streamedTypes, this->projectFuncs, this->streamedKeyCols);
     if (newInputVecBatch != nullptr) {
         retCode = smjOperator->AddStreamedTableInput(newInputVecBatch);
-        inputVecBatches.push_back(newInputVecBatch);
     } else {
         retCode = smjOperator->AddStreamedTableInput(vecBatch);
     }
@@ -93,7 +88,6 @@ int32_t StreamedTableWithExprOperator::GetOutput(std::vector<omniruntime::vec::V
 
 OmniStatus StreamedTableWithExprOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
     return smjOperator->Close();
 }
 
@@ -159,7 +153,6 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
         OperatorUtil::ProjectVectors(vecBatch, this->bufferedTypes, this->projectFuncs, this->bufferedKeyCols);
     if (newInputVecBatch != nullptr) {
         retCode = smjOperator->AddBufferedTableInput(newInputVecBatch);
-        inputVecBatches.push_back(newInputVecBatch);
     } else {
         retCode = smjOperator->AddBufferedTableInput(vecBatch);
     }
@@ -173,7 +166,6 @@ int32_t BufferedTableWithExprOperator::GetOutput(std::vector<omniruntime::vec::V
 
 OmniStatus BufferedTableWithExprOperator::Close()
 {
-    VectorHelper::FreeVecBatches(inputVecBatches);
     return smjOperator->Close();
 }
 }

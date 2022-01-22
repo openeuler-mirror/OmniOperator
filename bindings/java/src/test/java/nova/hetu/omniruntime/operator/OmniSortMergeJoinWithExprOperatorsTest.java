@@ -84,7 +84,6 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         assertEquals(intputResult, 5);
         System.out.println("add streamed table intput eof");
 
-
         Iterator<VecBatch> results = bufferedTableOperator.getOutput();
         VecBatch resultVecBatch = results.next();
         System.out.println("fetch table output");
@@ -97,10 +96,6 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         };
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
-        freeVecBatch(streamedVecBatch1);
-        freeVecBatch(bufferedVecBatch1);
-        freeVecBatch(streamedVecBatchEof);
-        freeVecBatch(bufferedVecBatchEof);
         freeVecBatch(resultVecBatch);
         bufferedTableOperator.close();
         bufferedWithExprOperatorFactory.close();

@@ -64,7 +64,6 @@ private:
     const omniruntime::vec::VecTypes &streamedTypes;
     std::vector<int32_t> streamedKeyCols;
     std::vector<RowProjFunc> projectFuncs;
-    std::vector<VectorBatch *> inputVecBatches;
 };
 
 class BufferedTableWithExprOperatorFactory : public OperatorFactory {
@@ -111,7 +110,6 @@ private:
     const omniruntime::vec::VecTypes &bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<RowProjFunc> projectFuncs;
-    std::vector<VectorBatch *> inputVecBatches;
 };
 }
 }

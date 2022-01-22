@@ -22,6 +22,8 @@ SortMergeJoinOperator::~SortMergeJoinOperator()
 {
     delete streamedTypes;
     delete bufferedTypes;
+    streamedTblPagesIndex->FreeAllRemainingVecBatch();
+    bufferedTblPagesIndex->FreeAllRemainingVecBatch();
     delete streamedTblPagesIndex;
     delete bufferedTblPagesIndex;
     delete smjScanner;
@@ -90,11 +92,13 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     // 1)put matched rows to result builder, and cache the result
     auto matchResultRet = DecodeJoinResult(joinScannerRet);
     if (matchResultRet == HAS_RESULT) {
+        std::vector<bool> isPreKeyMatched;
         std::vector<int64_t> streamedTblMatchedValueAddresses;
         std::vector<int64_t> bufferedTblMatchedValueAddresses;
-        smjScanner->GetMatchedValueAddresses(streamedTblMatchedValueAddresses, bufferedTblMatchedValueAddresses);
-        auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses(streamedTblMatchedValueAddresses,
+        smjScanner->GetMatchedValueAddresses(isPreKeyMatched, streamedTblMatchedValueAddresses,
             bufferedTblMatchedValueAddresses);
+        auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses(isPreKeyMatched,
+            streamedTblMatchedValueAddresses, bufferedTblMatchedValueAddresses);
         if (joinResultBuilderRet == 1) {
             joinResultBuilder->GetOutput(returnVectorBatchs);
         }
@@ -118,7 +122,11 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     }
 
     // 5)finish the join scan
-    return returnVectorBatchs.empty() ? SMJ_NO_RESULT : SMJ_FETCH_JOIN_DATA;
+    SortMergeJoinAddInputCode returnCode = returnVectorBatchs.empty() ? SMJ_NO_RESULT : SMJ_FETCH_JOIN_DATA;
+    if (returnCode == SMJ_NO_RESULT) {
+        joinResultBuilder->Finish();
+    }
+    return returnCode;
 }
 
 int32_t SortMergeJoinOperator::AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch)

@@ -21,15 +21,19 @@ public:
         const vec::VecTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
         DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator);
 
-    int32_t AddJoinValueAddresses(std::vector<int64_t> &streamedTableValueAddresses,
+    int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
+        std::vector<int64_t> &streamedTableValueAddresses,
         std::vector<int64_t> &bufferedTableValueAddresses);
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages);
+
+    void Finish();
 
     ~JoinResultBuilder();
 
 private:
     void JoinFilterCodeGen();
+    void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     VectorBatch *NewEmptyVectorBatch() const;
 
@@ -43,6 +47,9 @@ private:
     DynamicPagesIndex *rightTablePagesIndex;
     std::string filterExpStr;
 
+    int32_t lastUnMatchedStreamedBatchId = -1;
+
+    bool isFinished = false;
     int32_t maxRowCount;
 
     vec::VectorAllocator *vecAllocator;

@@ -19,6 +19,9 @@ DynamicPagesIndex::DynamicPagesIndex(const omniruntime::vec::VecTypes &types)
 
 int32_t DynamicPagesIndex::AddVecBatches(const std::vector<VectorBatch *> &vecBatches)
 {
+    if (finishAddData) {
+        return 0;
+    }
     int32_t vecBatchCount = vecBatches.size();
     int32_t vecBatchLastIndex = this->vecBatchFreeFlagDeque.size();
     int32_t columnCount = this->typesCount;
@@ -29,6 +32,8 @@ int32_t DynamicPagesIndex::AddVecBatches(const std::vector<VectorBatch *> &vecBa
         // no more vector batch will add
         if (rowCount == 0) {
             this->finishAddData = true;
+            this->vecBatchFreeFlagDeque.push_back(false);
+            this->vectorBatchDeque.push_back(vecBatch);
             return 0;
         }
 
@@ -51,14 +56,25 @@ int32_t DynamicPagesIndex::AddVecBatches(const std::vector<VectorBatch *> &vecBa
     return 0;
 }
 
-void DynamicPagesIndex::FreeVecBatch(int32_t vecBatchIdx)
+void DynamicPagesIndex::FreeBeforeVecBatch(int32_t vecBatchIdx)
 {
-    if (vecBatchIdx >= this->vecBatchFreeFlagDeque.size()) {
+    if (vecBatchIdx >= this->vecBatchFreeFlagDeque.size() || vecBatchIdx - 1 <= lastFreedVecBatchIdx) {
         return;
     }
-    // free input vector, only free by call(outside, inside not do this kind thing)
-    this->vecBatchFreeFlagDeque[vecBatchIdx] = true;
-    VectorHelper::FreeVecBatch(this->vectorBatchDeque[vecBatchIdx]);
+    for (int batchIdx = lastFreedVecBatchIdx + 1; batchIdx < vecBatchIdx; batchIdx++) {
+        this->vecBatchFreeFlagDeque[batchIdx] = true;
+        VectorHelper::FreeVecBatch(this->vectorBatchDeque[batchIdx]);
+    }
+    lastFreedVecBatchIdx = vecBatchIdx - 1;
+}
+
+void DynamicPagesIndex::FreeAllRemainingVecBatch()
+{
+    for (int idx = lastFreedVecBatchIdx + 1; idx < vectorBatchDeque.size(); idx++) {
+        this->vecBatchFreeFlagDeque[idx] = true;
+        VectorHelper::FreeVecBatch(this->vectorBatchDeque[idx]);
+    }
+    lastFreedVecBatchIdx = vectorBatchDeque.size() - 1;
 }
 
 DynamicPagesIndex::~DynamicPagesIndex() {}

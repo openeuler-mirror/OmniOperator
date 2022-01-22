@@ -63,8 +63,8 @@ public:
 
     int64_t FindNextJoinRows();
 
-    int32_t GetMatchedValueAddresses(std::vector<int64_t> &streamedTblValueAddresses,
-        std::vector<int64_t> &bufferedTblValueAddresses);
+    int32_t GetMatchedValueAddresses(std::vector<bool> &isPreKeyMatched,
+        std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses);
 
     ~SortMergeJoinScanner();
 
@@ -93,7 +93,7 @@ private:
 
     void BufferMatchingRows();
 
-    void SavePrevMatchingRows();
+    void SavePrevMatchingRows(bool isMatched);
 
     bool PreKeyMatched();
 
@@ -122,6 +122,8 @@ private:
 
     // for non-inner-join
     bool firstMatch;
+
+    std::vector<bool> isPreKeyMatched;
 
     std::vector<int64_t> streamedValueAddress;
 
