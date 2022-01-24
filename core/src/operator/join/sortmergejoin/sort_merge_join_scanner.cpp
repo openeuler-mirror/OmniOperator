@@ -2,9 +2,9 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: sort merge join scanner implementations
  */
+
 #include "sort_merge_join_scanner.h"
 #include "../../pages_index.h"
-#include "../../util/operator_util.h"
 
 #include <memory>
 
@@ -44,13 +44,15 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
     }
 }
 
-int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<int64_t> &streamedTblValueAddresses,
-    std::vector<int64_t> &bufferedTblValueAddresses)
+int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatched,
+    std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses)
 {
+    isMatched.insert(isMatched.end(), isPreKeyMatched.begin(), isPreKeyMatched.end());
     streamedTblValueAddresses.insert(streamedTblValueAddresses.end(), streamedValueAddress.begin(),
         streamedValueAddress.end());
     bufferedTblValueAddresses.insert(bufferedTblValueAddresses.end(), bufferedValueAddress.begin(),
         bufferedValueAddress.end());
+    isPreKeyMatched.clear();
     streamedValueAddress.clear();
     bufferedValueAddress.clear();
     return 0;
@@ -67,7 +69,7 @@ void SortMergeJoinScanner::InnerJoin()
             return;
         }
         if (PreKeyMatched()) {
-            SavePrevMatchingRows();
+            SavePrevMatchingRows(true);
             return RunInnerJoin();
         }
     } else if (preStatus->NewBufferedDataAdded()) {
@@ -84,7 +86,7 @@ void SortMergeJoinScanner::InnerJoin()
             return;
         }
         if (PreKeyMatched()) {
-            SavePrevMatchingRows();
+            SavePrevMatchingRows(true);
             return RunInnerJoin();
         }
     }
@@ -101,7 +103,7 @@ void SortMergeJoinScanner::RunInnerJoin()
         return;
     }
     if (PreKeyMatched()) {
-        SavePrevMatchingRows();
+        SavePrevMatchingRows(true);
         return RunInnerJoin();
     }
     if (!FindMatchingRows()) {
@@ -192,7 +194,7 @@ void SortMergeJoinScanner::BufferMatchingRows()
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
         preBufferedValueAddress.push_back(bufferedValueAddr);
     } while (AdvancedBufferedToRowWithNullFreeJoinKey() && (CompareCurRowKeys() == 0));
-    SavePrevMatchingRows();
+    SavePrevMatchingRows(false);
 }
 
 int32_t SortMergeJoinScanner::FindNextMatchPos()
@@ -205,7 +207,7 @@ int32_t SortMergeJoinScanner::FindNextMatchPos()
         // todo no need?
         // cur-stream-key duplicate with pre-key, also save although buffer not match cur-stream-key
         if (compare != 0 && (streamedPagesIndexPosition > cur) && PreKeyMatched()) {
-            SavePrevMatchingRows();
+            SavePrevMatchingRows(true);
         }
     }
     return compare;
@@ -217,16 +219,18 @@ bool SortMergeJoinScanner::PreKeyMatched()
         return false;
     }
     auto curValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
-    return CompareRowKeys(preStreamedValueAddress, streamedPagesIndex, streamedTableKeysCols, curValueAddr,
-        streamedPagesIndex, streamedTableKeysCols) == 0;
+    bool isMatched = CompareRowKeys(preStreamedValueAddress, streamedPagesIndex, streamedTableKeysCols, curValueAddr,
+                                    streamedPagesIndex, streamedTableKeysCols) == 0;
+    return isMatched;
 }
 
-void SortMergeJoinScanner::SavePrevMatchingRows()
+void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
 {
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
+    isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);
 }
 
 bool SortMergeJoinScanner::HasResult()

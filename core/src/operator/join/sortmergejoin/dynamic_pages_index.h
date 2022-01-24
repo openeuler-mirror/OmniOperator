@@ -69,12 +69,17 @@ public:
         return this->columnsDeque[vectorBatchIndex][columnIndex];
     }
 
-    void FreeVecBatch(int32_t vecBatchIdx);
+    // free vecBatch until vecBatchIdx
+    void FreeBeforeVecBatch(int32_t vecBatchIdx);
+
+    // free all vecBatch
+    void FreeAllRemainingVecBatch();
 
 private:
     const VecType *vecTypes;
     const int32_t *vecTypeIds;
     int32_t typesCount;
+    int32_t lastFreedVecBatchIdx = -1;
 
     // vector  first Level：vectorBatch second Level: columnar vector
     std::deque<std::deque<Vector *>> columnsDeque;

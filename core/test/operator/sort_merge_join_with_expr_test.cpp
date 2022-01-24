@@ -77,6 +77,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     std::vector<omniruntime::vec::VectorBatch *> result;
     streamedTblWithExprOperator->GetOutput(result);
 
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, SMJ_NO_RESULT);
+
     // check the join result
     int32_t index = 0;
     for (auto i = 0; i < result.size(); i++) {
@@ -94,10 +97,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
         VectorHelper::FreeVecBatch(result[i]);
     }
 
-    VectorHelper::FreeVecBatch(streamedTblVecBatch1);
-    VectorHelper::FreeVecBatch(bufferedTblVecBatch1);
-    VectorHelper::FreeVecBatch(streamedTblVecBatchEof);
-    VectorHelper::FreeVecBatch(bufferedTblVecBatchEof);
     delete bufferedTblWithExprOperator;
     delete streamedTblWithExprOperator;
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);
@@ -111,7 +110,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     // bufferedTbl t2:  int c21, Long c22, varchar c23;
     // streamedTbl t1:  int c11, Long c12, varchar c13;
     std::string blank = "";
-    std::vector<VecType> streamTypeVector = { IntVecType(), LongVecType(), VarcharVecType(20) };
+    std::vector<VecType> streamTypeVector = { IntVecType(), LongVecType() };
     VecTypes streamedTblTypes(streamTypeVector);
     //    std::string streamedEqualKeyExprs[1] = {"#0"};
     DataExpr *col0 = new DataExpr(0, INT32D);
@@ -148,7 +147,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatch1);
     ASSERT_EQ(addInputRetCode, SMJ_NEED_ADD_BUFFER_TBL_DATA);
 
-
     const int32_t bufferedTblSize = 6;
     double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     int32_t bufferedTblDataCol2[bufferedTblSize] =  {  0,   1,   2,   3,   4,   5};
@@ -171,6 +169,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     std::vector<omniruntime::vec::VectorBatch *> result;
     streamedTblWithExprOperator->GetOutput(result);
 
+    addInputRetCode = streamedTblWithExprOperator->AddInput(streamedTblVecBatchEof);
+    ASSERT_EQ(addInputRetCode, SMJ_NO_RESULT);
+
     // check the join result
     int32_t index = 0;
     for (auto i = 0; i < result.size(); i++) {
@@ -188,10 +189,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
         VectorHelper::FreeVecBatch(result[i]);
     }
 
-    VectorHelper::FreeVecBatch(streamedTblVecBatch1);
-    VectorHelper::FreeVecBatch(bufferedTblVecBatch1);
-    VectorHelper::FreeVecBatch(streamedTblVecBatchEof);
-    VectorHelper::FreeVecBatch(bufferedTblVecBatchEof);
     delete bufferedTblWithExprOperator;
     delete streamedTblWithExprOperator;
     DeleteOperatorFactory(bufferedWithExprOperatorFactory);

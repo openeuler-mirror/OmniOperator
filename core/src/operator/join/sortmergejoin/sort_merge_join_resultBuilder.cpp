@@ -130,7 +130,8 @@ void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outp
     }
 }
 
-int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<int64_t> &streamedTableValueAddresses,
+int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
+    std::vector<int64_t> &streamedTableValueAddresses,
     std::vector<int64_t> &bufferedTableValueAddresses)
 {
     bool isFillOneBatch = false;
@@ -156,6 +157,9 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<int64_t> &streamedT
         int64_t rightAddress = bufferedTableValueAddresses[addressPosition];
         int32_t rightBatchId = DecodeSliceIndex(rightAddress);
         int32_t rightRowId = DecodePosition(rightAddress);
+
+        FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+
         if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
             for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
                 AddValueToBuildVector(leftTablePagesIndex->GetColumns(leftBatchId, leftTableOutputCols[columnIdx]),
@@ -184,29 +188,28 @@ int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<int64_t> &streamedT
     return isFillOneBatch ? 1 : 0;
 }
 
+void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId)
+{
+    if (!isPreMatched && leftBatchId > lastUnMatchedStreamedBatchId) {
+        leftTablePagesIndex->FreeBeforeVecBatch(leftBatchId);
+        rightTablePagesIndex->FreeBeforeVecBatch(rightBatchId);
+        lastUnMatchedStreamedBatchId = leftBatchId;
+    }
+}
+
 VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
 {
     int32_t outputColCount = vectorBatch->GetVectorCount();
     VectorBatch *sliceBatch = std::make_unique<VectorBatch>(outputColCount).release();
-    Vector *column = nullptr;
-    Vector *outputColumn = nullptr;
     Vector **vectors = vectorBatch->GetVectors();
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
-        column = vectors[columnIdx];
-        outputColumn = column->Slice(0, rowCount);
-        sliceBatch->SetVector(columnIdx, outputColumn);
+        sliceBatch->SetVector(columnIdx, vectors[columnIdx]->Slice(0, rowCount));
     }
     return sliceBatch;
 }
 
 int32_t JoinResultBuilder::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
-    int32_t outputVectorBatchCount = 0;
-    for (int32_t batchIdx = 0; batchIdx < buildVectorBatchCount; batchIdx++) {
-        if (buildVectorBatchRowCount[batchIdx] > 0) {
-            outputVectorBatchCount++;
-        }
-    }
     for (int32_t batchIdx = 0; batchIdx < buildVectorBatchCount; batchIdx++) {
         if (buildVectorBatchRowCount[batchIdx] > 0) {
             if (buildVectorBatchRowCount[batchIdx] == maxRowCount) {
@@ -214,7 +217,10 @@ int32_t JoinResultBuilder::GetOutput(std::vector<omniruntime::vec::VectorBatch *
             } else {
                 outputPages.push_back(
                     GetVectorBatchFromSlice(buildVectorBatchs[batchIdx], buildVectorBatchRowCount[batchIdx]));
+                VectorHelper::FreeVecBatch(buildVectorBatchs[batchIdx]);
             }
+        } else {
+            VectorHelper::FreeVecBatch(buildVectorBatchs[batchIdx]);
         }
     }
     this->buildVectorBatchCount = 0;
@@ -251,6 +257,15 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
+}
+
+void JoinResultBuilder::Finish()
+{
+    if (!isFinished) {
+        leftTablePagesIndex->FreeAllRemainingVecBatch();
+        rightTablePagesIndex->FreeAllRemainingVecBatch();
+        isFinished = true;
+    }
 }
 
 JoinResultBuilder::~JoinResultBuilder()
