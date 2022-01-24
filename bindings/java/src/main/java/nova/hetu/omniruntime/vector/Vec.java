@@ -558,6 +558,16 @@ public abstract class Vec implements Closeable {
         return size * Byte.BYTES;
     }
 
+    /**
+     * returns the number of bytes of the offsets, for VarcharVec
+     * returned according to size calculation, other types of vec return 0
+     *
+     * @return length in bytes
+     */
+    public int getRealOffsetBufCapacityInBytes() {
+        return 0;
+    }
+
     @VisibleForTesting
     void setType(VecType type) {
         this.type = type;

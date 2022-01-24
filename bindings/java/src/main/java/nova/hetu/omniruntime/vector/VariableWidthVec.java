@@ -179,6 +179,7 @@ public abstract class VariableWidthVec extends Vec {
      *
      * @return length in bytes
      */
+    @Override
     public int getRealOffsetBufCapacityInBytes() {
         return (size + 1) * Integer.BYTES;
     }
