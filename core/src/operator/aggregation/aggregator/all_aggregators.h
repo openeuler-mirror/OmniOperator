@@ -15,4 +15,5 @@
 #include "operator/aggregation/aggregator/max_aggregator.h"
 #include "operator/aggregation/aggregator/max_varchar_aggregator.h"
 #include "operator/aggregation/aggregator/count_aggregator.h"
+#include "operator/aggregation/aggregator/mask_column_assistant_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

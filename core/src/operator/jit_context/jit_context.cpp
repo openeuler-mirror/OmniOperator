@@ -748,8 +748,8 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
 #endif
 }
 
-JitContext *CreateAggregationJitContext(VecTypes &sourceVecTypes, int32_t *aggCols, int32_t *aggFuncTypes,
-    int32_t aggFuncsCount, VecTypes &outputVecTypes)
+JitContext *CreateAggregationJitContext(VecTypes &sourceVecTypes, int32_t *aggCols, int32_t *aggMaskCols,
+    int32_t *aggFuncTypes, int32_t aggFuncsCount, VecTypes &outputVecTypes)
 {
 #if defined(DISABLE_JIT)
     return nullptr;

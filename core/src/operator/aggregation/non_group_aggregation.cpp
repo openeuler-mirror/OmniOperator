@@ -12,13 +12,24 @@
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+
+template <class T> void AggregationOperatorFactory::CreateAggregatorFactory(int32_t maskCol)
+{
+    if (maskCol == Aggregator::INVALID_MASK_COL) {
+        aggregatorFactories.push_back(std::make_unique<T>());
+    } else {
+        aggregatorFactories.push_back(std::make_unique<MaskAggregatorFactory<T>>(maskCol));
+    }
+}
+
 OmniStatus AggregationOperatorFactory::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
     uint32_t *aggInputColsPtr = aggInputColsContext.context;
     std::vector<VecType> types = sourceTypes.Get();
-    for (int32_t i = 0; i < aggInputColsContext.len; i++) {
+    for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
         aggInputCols.push_back(aggInputColsPtr[i]);
+        maskCols.push_back(maskColsContext.context[i]);
         aggInputTypes.push_back(types[aggInputColsPtr[i]]);
     }
 
@@ -26,23 +37,23 @@ OmniStatus AggregationOperatorFactory::Init()
     for (int32_t i = 0; i < aggFuncTypesContext.len; i++) {
         switch (aggFuncTypesPtr[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
-                aggregatorFactories.push_back(std::make_unique<SumAggregatorFactory>());
+                CreateAggregatorFactory<SumAggregatorFactory>(maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_COUNT: {
-                aggregatorFactories.push_back(std::make_unique<CountAggregatorFactory>());
+                CreateAggregatorFactory<CountAggregatorFactory>(maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_MAX: {
-                aggregatorFactories.push_back(std::make_unique<MaxAggregatorFactory>());
+                CreateAggregatorFactory<MaxAggregatorFactory>(maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_MIN: {
-                aggregatorFactories.push_back(std::make_unique<MinAggregatorFactory>());
+                CreateAggregatorFactory<MinAggregatorFactory>(maskCols[i]);
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
-                aggregatorFactories.push_back(std::make_unique<AverageAggregatorFactory>());
+                CreateAggregatorFactory<AverageAggregatorFactory>(maskCols[i]);
                 break;
             }
             default: {
@@ -72,7 +83,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
     }
 
     AggregationOperator *aggOp =
-        new AggregationOperator(std::move(aggs), aggInputCols, aggOutputTypes, inputRaw, outputPartial);
+        new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggOutputTypes, inputRaw, outputPartial);
     return aggOp;
 }
 

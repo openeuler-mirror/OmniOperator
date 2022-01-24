@@ -194,7 +194,6 @@ public:
     }
 };
 
-
 class CountAggregatorFactory : public AggregatorFactory {
 public:
     CountAggregatorFactory() {}
@@ -204,6 +203,23 @@ public:
     {
         return std::make_unique<CountAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
     }
+};
+
+template <class T> class MaskAggregatorFactory : public AggregatorFactory {
+public:
+    MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
+    ~MaskAggregatorFactory() override {}
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t inputChannel,
+        bool inputRaw = true, bool outputPartial = false) override
+    {
+        std::unique_ptr<Aggregator> realAggregator =
+            realFactory->CreateAggregator(inputType, outputType, inputChannel, inputRaw, outputPartial);
+        return std::make_unique<MaskColAggregator>(maskColumnId, std::move(realAggregator));
+    }
+
+private:
+    int maskColumnId;
+    std::unique_ptr<AggregatorFactory> realFactory;
 };
 
 static std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(AggregateType aggType)

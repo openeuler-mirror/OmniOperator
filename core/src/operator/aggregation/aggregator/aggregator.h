@@ -115,6 +115,14 @@ public:
         return outputType;
     }
 
+    int32_t GetInputChannel() const
+    {
+        return channel;
+    }
+
+public:
+    static const int32_t INVALID_MASK_COL = -1;
+
 protected:
     AggregateType type;
     int32_t inputType;

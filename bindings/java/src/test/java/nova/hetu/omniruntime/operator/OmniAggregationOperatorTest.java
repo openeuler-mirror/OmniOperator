@@ -37,9 +37,10 @@ public class OmniAggregationOperatorTest {
         AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                 OMNI_AGGREGATION_TYPE_SUM};
         int[] aggInputChannels = {0, 1, 2, 3};
+        int[] maskChannels = {-1, -1, -1, -1};
         VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
-                aggInputChannels, aggOutputTypes, true, false);
+                aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
         List<Vec> inputData = new ArrayList<>();
         ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
@@ -98,9 +99,10 @@ public class OmniAggregationOperatorTest {
                     AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                             OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
                     int[] aggInputChannels = {0, 1, 2, 3};
+                    int[] maskChannels = {-1, -1, -1, -1};
                     VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
                     OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
-                            aggFunctionTypes, aggInputChannels, aggOutputTypes, true, false);
+                            aggFunctionTypes, aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
                     ImmutableList.Builder<VecBatch> vecBatchList = ImmutableList.builder();
                     for (int i = 0; i < pageCount; i++) {

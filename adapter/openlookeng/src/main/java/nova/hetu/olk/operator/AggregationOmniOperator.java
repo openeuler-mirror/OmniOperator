@@ -8,6 +8,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.buildVecBatch;
 
+import com.google.common.collect.ImmutableList;
 import io.prestosql.operator.DriverContext;
 import io.prestosql.operator.Operator;
 import io.prestosql.operator.OperatorContext;
@@ -23,6 +24,9 @@ import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * The type Aggregation omni operator.
@@ -118,12 +122,15 @@ public class AggregationOmniOperator implements Operator {
      * @since 20210630
      */
     public static class AggregationOmniOperatorFactory implements OperatorFactory {
+        private static final int INVALID_MASK_CHANNEL = -1;
+        
         private final int operatorId;
         private final PlanNodeId planNodeId;
         private final VecType[] sourceTypes;
         private final Step step;
         private final AggType[] aggregatorTypes;
         private final int[] aggregationInputChannels;
+        private final List<Optional<Integer>> maskChannels;
         private final VecType[] aggregationOutputTypes;
         private final OmniAggregationOperatorFactory omniFactory;
 
@@ -135,12 +142,13 @@ public class AggregationOmniOperator implements Operator {
          * @param sourceTypes the source types
          * @param aggregatorTypes the aggregations
          * @param aggregationInputChannels the accumulator factories
+         * @param maskChannelList mask channel list for aggregators
          * @param aggregationOutputTypes
          * @param step the step
          */
         public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, VecType[] sourceTypes,
-                AggType[] aggregatorTypes, int[] aggregationInputChannels, VecType[] aggregationOutputTypes,
-                Step step) {
+                AggType[] aggregatorTypes, int[] aggregationInputChannels, List<Optional<Integer>> maskChannelList,
+                VecType[] aggregationOutputTypes, Step step) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
@@ -148,8 +156,19 @@ public class AggregationOmniOperator implements Operator {
             this.aggregatorTypes = aggregatorTypes;
             this.aggregationInputChannels = aggregationInputChannels;
             this.aggregationOutputTypes = aggregationOutputTypes;
+            this.maskChannels = requireNonNull(maskChannelList, "mask channels is null");
+            int[] maskChannelArray = new int[maskChannelList.size()];
+            for (int i = 0; i < maskChannelList.size(); i++) {
+                Optional<Integer> channel = maskChannelList.get(i);
+                if (channel.isPresent()) {
+                    maskChannelArray[i] = channel.get().intValue();
+                } else {
+                    maskChannelArray[i] = INVALID_MASK_CHANNEL;
+                }
+            }
             this.omniFactory = new OmniAggregationOperatorFactory(sourceTypes, aggregatorTypes,
-                    aggregationInputChannels, aggregationOutputTypes, step.isInputRaw(), step.isOutputPartial());
+                    aggregationInputChannels, maskChannelArray, aggregationOutputTypes, step.isInputRaw(),
+                    step.isOutputPartial());
         }
 
         @Override
@@ -169,7 +188,7 @@ public class AggregationOmniOperator implements Operator {
         @Override
         public OperatorFactory duplicate() {
             return new AggregationOmniOperatorFactory(operatorId, planNodeId, sourceTypes, aggregatorTypes,
-                    aggregationInputChannels, aggregationOutputTypes, step);
+                    aggregationInputChannels, maskChannels, aggregationOutputTypes, step);
         }
 
         @Override

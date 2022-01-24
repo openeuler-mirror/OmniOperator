@@ -56,6 +56,6 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
     omniruntime::vec::VecTypes &outputVecTypes);
 
 JitContext *CreateAggregationJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *aggCols,
-    int32_t *aggFuncTypes, int32_t aggFuncsCount, omniruntime::vec::VecTypes &outputVecTypes);
+    int32_t *aggMaskCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, omniruntime::vec::VecTypes &outputVecTypes);
 
 #endif // OMNI_RUNTIME_JIT_CONTEXT_H
