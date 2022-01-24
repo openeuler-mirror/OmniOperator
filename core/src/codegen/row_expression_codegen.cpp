@@ -13,6 +13,14 @@ namespace {
     const string FUNCTION_NAME = "ROW_EXPR_EVALUATOR";
 }
 
+std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(
+    std::string name, const omniruntime::expressions::Expr &expression)
+{
+    std::unique_ptr<RowExpressionCodeGen> codegen {new RowExpressionCodeGen(std::move(name), expression)};
+    codegen->Initialize();
+    return codegen;
+}
+
 void RowExpressionCodeGen::Visit(const omniruntime::expressions::DataExpr &dataExpr)
 {
     if (dataExpr.isColumn) {

@@ -27,7 +27,7 @@ RowProjFunc RowProjection::Create()
     if (this->expression == nullptr) {
         return nullptr;
     }
-    this->codegen = std::make_unique<ProjectionCodeGen>("single_row_project", *this->expression, false);
+    this->codegen = ProjectionCodeGen::Create("single_row_project", *this->expression, false);
     int64_t fPtr = this->codegen->GetExpressionEvaluator();
     void *refFunc = &fPtr;
     auto castedRef = static_cast<RowProjFunc *>(refFunc);
@@ -79,8 +79,7 @@ bool Projection::Initialize(bool filter)
         }
     }
 
-    this->codegen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), filter);
-
+    this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter);
     auto f = this->codegen->GetFunction();
     if (f == 0) {
         return false;

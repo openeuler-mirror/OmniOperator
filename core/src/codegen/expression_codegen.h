@@ -12,6 +12,8 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
+#include <thread>
+#include <mutex>
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
@@ -55,6 +57,7 @@ public:
     ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expr);
     ~ExpressionCodeGen() override;
 
+    bool Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
 
@@ -130,6 +133,7 @@ private:
     std::string funcName;
     std::map<std::string, FunctionSignature> funcNameToSignature;
 
+    static void InitializeCodegenTargets();
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);

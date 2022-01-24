@@ -25,6 +25,11 @@ using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::op;
 
+const string defaultTestFunctionName = "test-function";
+
+typedef int32_t (*FilterFunc)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+typedef int32_t (*ProjectFunc)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
+
 // Filter is basically just a projection that must return a boolean.
 // The logic for filtering out rows from final output is handled in C++ when
 // processing each row individually, so to LLVM it is exactly the same as a projection.
@@ -63,9 +68,9 @@ TEST(CodeGenTest, SimpleFilter)
         offsets[col] = new int32_t[numRows];
     }
 
-    RowProjection lc(*lessThanExpr);
-    RowProjFunc func = lc.Create();
-    EXPECT_EQ(lc.GetReturnType(), BOOLD);
+    RowProjection rowProjection(*lessThanExpr);
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType(), BOOLD);
 
     int32_t *dataLength = new int32_t(0);
     int64_t dictionaries[numCols] = {};
@@ -85,7 +90,8 @@ TEST(CodeGenTest, SimpleFilter)
     for (int i = 0; i < numCols; i++) {
         delete[] bitmap[i];
         delete[] offsets[i];
-    }    delete[] col1;
+    }
+    delete[] col1;
     delete[] table;
     delete[] bitmap;
     delete[] offsets;
@@ -125,9 +131,9 @@ TEST(CodeGenTest, SimpleProject)
         offsets[col] = new int32_t[numRows];
     }
 
-    RowProjection lc(*addExpr);
-    RowProjFunc func = lc.Create();
-    EXPECT_EQ(lc.GetReturnType(), INT32D);
+    RowProjection rowProjection(*addExpr);
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
     bool isNull = false;
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -200,9 +206,9 @@ TEST(CodeGenTest, SingleProject)
         offsets[col] = new int32_t[numRows];
     }
 
-    RowProjection lc(*ifExpr);
-    RowProjFunc func = lc.Create();
-    EXPECT_EQ(lc.GetReturnType(), INT32D);
+    RowProjection rowProjection(*ifExpr);
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -264,10 +270,10 @@ TEST(CodeGenTest, ShortCircuitProject)
         offsets[col] = new int32_t[numRows];
     }
 
-    RowProjection lc(*colExpr1);
-    RowProjFunc func = lc.Create();
-    EXPECT_TRUE(lc.IsColumnProjection());
-    EXPECT_EQ(lc.GetIndexIfColumnProjection(), 1);
+    RowProjection rowProjection(*colExpr1);
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_TRUE(rowProjection.IsColumnProjection());
+    EXPECT_EQ(rowProjection.GetIndexIfColumnProjection(), 1);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -384,7 +390,6 @@ TEST (CodeGenTest, RowFilterString) {
         offsets[col][1] = 11;
     }
 
-    string testname = "stringTest1";
     vector<DataType> typeVec = vector<DataType>(types, types + 2);
 
     DataExpr *substrCol = new DataExpr(0, VARCHARD);
@@ -520,13 +525,9 @@ TEST(CodeGenTest, Operators1)
 
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
 
-    string testname = "simpleTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
-
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     // number of rows that passed filter
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
@@ -553,14 +554,13 @@ TEST(CodeGenTest, Operators1)
     delete[] offsets;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
 
 TEST(CodeGenTest, MathFunctions1)
 {
-
     // create the expression objects
     DataExpr *col01 = new DataExpr(0, INT32D);
     DataExpr *col2 = new DataExpr(2, INT32D);
@@ -581,9 +581,7 @@ TEST(CodeGenTest, MathFunctions1)
     args4.push_back(col1);
     FuncExpr *abs4 = new FuncExpr("abs", args4, INT32D);
     BinaryExpr *eq2 = new BinaryExpr(EQ, abs3, abs4, BOOLD);
-
     BinaryExpr *expr = new BinaryExpr(AND, eq1, eq2, BOOLD);
-
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -611,14 +609,11 @@ TEST(CodeGenTest, MathFunctions1)
     for (int col = 0; col < 3; col++) {
         offsets[col] = new int32_t[1];
     }
-    string testname = "simpleTest2";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
 
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
@@ -646,14 +641,13 @@ TEST(CodeGenTest, MathFunctions1)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
 
 TEST(CodeGenTest, MathFunctions2)
 {
-
     //create expression
     DataExpr *valueExpr = new DataExpr(1, INT32D);
     DataExpr *lowerExpr = new DataExpr(0, INT32D);
@@ -688,14 +682,11 @@ TEST(CodeGenTest, MathFunctions2)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "simpleTest2";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
@@ -732,7 +723,7 @@ TEST(CodeGenTest, MathFunctions2)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
@@ -753,7 +744,6 @@ TEST(CodeGenTest, MathFunctions3)
     BinaryExpr *fexp = new BinaryExpr(LT, col03, data03, BOOLD);
 
     IfExpr *expr = new IfExpr(condition, texp, fexp);
-
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_INT) };
     VecTypes types(vecOfTypes);
@@ -781,14 +771,11 @@ TEST(CodeGenTest, MathFunctions3)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "simpleTest2";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -835,7 +822,7 @@ TEST(CodeGenTest, MathFunctions3)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
@@ -877,14 +864,11 @@ TEST(CodeGenTest, MathFunctions4)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "simpleTest2";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -941,7 +925,7 @@ TEST(CodeGenTest, MathFunctions4)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
@@ -949,7 +933,6 @@ TEST(CodeGenTest, MathFunctions4)
 // For testing different types
 TEST(CodeGenTest, CastNumbers1)
 {
-
     // create expression objects
     DataExpr *col0 = new DataExpr(0, INT32D);
     std::vector<Expr *> args01;
@@ -975,7 +958,6 @@ TEST(CodeGenTest, CastNumbers1)
     expr->Accept(printExprTree);
     cout << endl;
 
-
     int32_t v1[1] = {10000};
     int64_t v2[1] = {10000};
     double v3[1] = {12.34};
@@ -996,14 +978,11 @@ TEST(CodeGenTest, CastNumbers1)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "simpleTest3";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -1039,14 +1018,13 @@ TEST(CodeGenTest, CastNumbers1)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
 
 TEST(CodeGenTest, CastNumbers2)
 {
-
     //create expression objects
     DataExpr *col1 = new DataExpr(1, INT64D);
     std::vector<Expr *> args;
@@ -1081,14 +1059,11 @@ TEST(CodeGenTest, CastNumbers2)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "simpleTest3";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
@@ -1124,7 +1099,7 @@ TEST(CodeGenTest, CastNumbers2)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
@@ -1172,14 +1147,11 @@ TEST(CodeGenTest, Like)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    string testname = "stringTest1";
-    auto lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -1207,14 +1179,13 @@ TEST(CodeGenTest, Like)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 
 TEST(CodeGenTest, DateCast)
 {
-
     // create expression objects
     DataExpr *col2 = new DataExpr(2, VARCHARD);
     std::vector<Expr *> args;
@@ -1228,7 +1199,6 @@ TEST(CodeGenTest, DateCast)
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
-
 
     string s1[1];
     string s2[1];
@@ -1257,14 +1227,11 @@ TEST(CodeGenTest, DateCast)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    string testname = "stringTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
@@ -1307,7 +1274,7 @@ TEST(CodeGenTest, DateCast)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -1340,7 +1307,6 @@ TEST(CodeGenTest, SubstrIn)
     expr->Accept(printExprTree);
     cout << endl;
 
-
     string s1[1];
     string s2[1];
 
@@ -1370,14 +1336,11 @@ TEST(CodeGenTest, SubstrIn)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    string testname = "stringTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
@@ -1421,13 +1384,12 @@ TEST(CodeGenTest, SubstrIn)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, ConcatStr)
 {
-
     DataExpr *col1 = new DataExpr(1, VARCHARD);
     DataExpr *col2 = new DataExpr(2, VARCHARD);
     std::vector<Expr*> concatArgs;
@@ -1443,7 +1405,6 @@ TEST(CodeGenTest, ConcatStr)
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
-
 
     string s1[1];
     string s2[1];
@@ -1473,14 +1434,11 @@ TEST(CodeGenTest, ConcatStr)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    string testname = "stringTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
@@ -1524,13 +1482,12 @@ TEST(CodeGenTest, ConcatStr)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, ConcatChars)
 {
-
     // create expression objects
     DataExpr *col1 = new DataExpr(1, CHARD);
     col1->width = 30;
@@ -1586,14 +1543,11 @@ TEST(CodeGenTest, ConcatChars)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    string testname = "stringTestConcat";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
 
@@ -1639,7 +1593,7 @@ TEST(CodeGenTest, ConcatChars)
     delete charTypeA;
     delete charTypeB;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -1691,14 +1645,10 @@ TEST(CodeGenTest, StringWithOps)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-
-    string testname = "stringTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -1738,7 +1688,7 @@ TEST(CodeGenTest, StringWithOps)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -1782,14 +1732,11 @@ TEST(CodeGenTest, Coalesce)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "coalesceTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -1810,7 +1757,7 @@ TEST(CodeGenTest, Coalesce)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -1848,15 +1795,14 @@ TEST(CodeGenTest, ProjectionCoalesce)
     bool newNullValues[3];
     int newLengths[3];
 
-    string testname = "CoalesceProjectTest";
-    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
     bool oVec[3];
     auto context = new ExecutionContext();
+    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -1885,13 +1831,12 @@ TEST(CodeGenTest, ProjectionCoalesce)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, ProjectionIsNull)
 {
-
     DataExpr *col0 = new DataExpr(0, INT64D);
     IsNullExpr *expr = new IsNullExpr(col0);
 
@@ -1915,15 +1860,14 @@ TEST(CodeGenTest, ProjectionIsNull)
     bool newNullValues[3];
     int newLengths[3];
 
-    string testname = "IsNullProjectTest";
-    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
     bool oVec[3];
     auto context = new ExecutionContext();
+    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
     EXPECT_EQ(newNullValues[1], false);
     EXPECT_EQ(newNullValues[2], false);
@@ -1952,7 +1896,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -1980,14 +1924,11 @@ TEST(CodeGenTest, IsNull)
         offsets[col] = new int32_t[1];
     }
 
-    string testName = "isNullTest";
-    auto *lc = new FilterCodeGen(testName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, false);
@@ -2006,13 +1947,12 @@ TEST(CodeGenTest, IsNull)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, IsNotNull)
 {
-
     DataExpr *col0 = new DataExpr(0, INT64D);
     IsNullExpr *isNull = new IsNullExpr(col0);
     UnaryExpr *expr = new UnaryExpr(NOT, isNull, BOOLD);
@@ -2035,14 +1975,11 @@ TEST(CodeGenTest, IsNotNull)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[1];
     }
-    string testName = "isNotNullTest";
-    auto *lc = new FilterCodeGen(testName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
@@ -2061,13 +1998,12 @@ TEST(CodeGenTest, IsNotNull)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, DecimalOperators1)
 {
-
     // create expression objects
     DataExpr *addLeft = new DataExpr(0, DECIMAL128D);
     DataExpr *addRight = new DataExpr(5);
@@ -2107,14 +2043,11 @@ TEST(CodeGenTest, DecimalOperators1)
         offsets[col] = new int32_t[2];
     }
 
-    string testname = "DecimalTest1";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -2129,7 +2062,7 @@ TEST(CodeGenTest, DecimalOperators1)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -2175,13 +2108,10 @@ TEST(CodeGenTest, DecimalOperators2)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "DecimalBetweenTest";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 0);
@@ -2195,7 +2125,7 @@ TEST(CodeGenTest, DecimalOperators2)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -2255,14 +2185,11 @@ TEST(CodeGenTest, DecimalOperators3)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "DecimalBetweenTest";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -2277,13 +2204,12 @@ TEST(CodeGenTest, DecimalOperators3)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, ProjectionSubtractNulls)
 {
-
     // create expression objects
     DataExpr *subLeft = new DataExpr(0, INT64D);
     DataExpr *subRight = new DataExpr(100);
@@ -2313,8 +2239,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     bool newNullValues[3];
     int newLengths[3];
 
-    string testname = "SubtractNullProjectTest";
-    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
     vector<int64_t> oVec(3);
@@ -2322,9 +2247,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_EQ(newNullValues[0], false);
@@ -2354,7 +2277,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
@@ -2377,7 +2300,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     int64_t c1[6] = {10, 0, 20, 0, 30, 0};
     int64_t c[3] = {(int64_t) c1, (int64_t) (c1 + 2), (int64_t) (c1 + 4)};
 
-
     int64_t *vals = new int64_t[1];
     vals[0] = (int64_t)c;
 
@@ -2393,8 +2315,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     bool newNullValues[3];
     int newLengths[3];
 
-    string testname = "DecimalProjectTest";
-    auto *lc = new ProjectionCodeGen(testname, *expr, false);
+    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false);
     int64_t dictionaryVectors[1] = {};
 
     vector<int64_t> oVec(3);
@@ -2402,9 +2323,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *, int32_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     int64_t *result = reinterpret_cast<int64_t *>(oVec[0]);
@@ -2452,16 +2371,15 @@ TEST(CodeGenTest, ProjectionCodeGen)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    delete lc;
+    codegen.reset();
     delete context;
 }
 
 TEST(CodeGenTest, TestRowProjectLong)
 {
     int64_t values[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    omniruntime::vec::LongVector * vector = CreateVector<LongVector>(values, 10);
+    auto * vector = CreateVector<LongVector>(values, 10);
     auto slicedVector = vector->Slice(4, 6);
-
 
     // create expression objects
     DataExpr *addLeft = new DataExpr(0, INT64D);
@@ -2555,9 +2473,7 @@ TEST(CodeGenTest, TestRowProjectVarchar)
 
 TEST(CodeGenTest, CastNumbers3)
 {
-
     // create expression objects
-
     std::vector<Expr *> args;
     DataExpr *col1 =  new DataExpr(1, DOUBLED);
 
@@ -2590,14 +2506,11 @@ TEST(CodeGenTest, CastNumbers3)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "castTest3";
-    auto *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
@@ -2634,7 +2547,7 @@ TEST(CodeGenTest, CastNumbers3)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    delete lc;
+    codegen.reset();
     delete expr;
     delete context;
 }
@@ -2671,8 +2584,6 @@ TEST (CodeGenTest, Substr) {
         offsets[col][1] = 15;
     }
 
-    string testname = "stringTest";
-
     // create expression objects
     DataExpr *substrData1 = new DataExpr(0, VARCHARD);
     DataExpr *substrIndex1 = new DataExpr(-5 );
@@ -2696,7 +2607,6 @@ TEST (CodeGenTest, Substr) {
     EXPECT_EQ(res, true);
     delete filter;
 
-
     // create expression objects
     DataExpr *substrData2 = new DataExpr(1, VARCHARD);
     DataExpr *substrIndex2 = new DataExpr(-5);
@@ -2707,7 +2617,6 @@ TEST (CodeGenTest, Substr) {
 
     DataExpr *ubsterExpr= new DataExpr(new std::string("UBSTR"));
     BinaryExpr *expr2 = new BinaryExpr(EQ, substrExp2, ubsterExpr, BOOLD);
-
 
     filter = new RowFilter(*expr2);
     EXPECT_FALSE(filter == nullptr);
@@ -2781,15 +2690,12 @@ TEST(CodeGenTest, Mm3HashInt)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-
-    string testName = "mm3hashTest";
-    auto *lc = new FilterCodeGen(testName, *expr);
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
@@ -2802,7 +2708,7 @@ TEST(CodeGenTest, Mm3HashInt)
     delete[] selected;
     delete context;
     delete expr;
-    delete lc;
+    codegen.reset();
 }
 
 TEST(CodeGenTest, Mm3HashLong)
@@ -2826,9 +2732,9 @@ TEST(CodeGenTest, Mm3HashLong)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-    RowProjection lc(*expr);
-    RowProjFunc func = lc.Create();
-    EXPECT_EQ(lc.GetReturnType(), INT32D);
+    RowProjection rowProjection(*expr);
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -2873,9 +2779,9 @@ TEST(CodeGenTest, Mm3HashDouble)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-    RowProjection lc(*expr);
-    RowProjFunc func = lc.Create();
-    EXPECT_EQ(lc.GetReturnType(), INT32D);
+    RowProjection rowProjection(*expr);
+    RowProjFunc func = rowProjection.Create();
+    EXPECT_EQ(rowProjection.GetReturnType(), INT32D);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -2921,9 +2827,9 @@ TEST(CodeGenTest, Mm3HashString)
     offsets[0][0] = 0;
     offsets[0][1] = v1.size();
 
-    RowProjection lc(*expr);
-    RowProjFunc func = lc.Create();
-    EXPECT_EQ(lc.GetReturnType(), INT32D);
+    RowProjection codegen(*expr);
+    RowProjFunc func = codegen.Create();
+    EXPECT_EQ(codegen.GetReturnType(), INT32D);
 
     int32_t *dataLength = new int32_t[1];
     dataLength[0] = 0;
@@ -2980,7 +2886,6 @@ TEST(CodeGenTest, SubstrWithChars)
         offsets[col][1] = 15;
     }
 
-    string testname = "stringTest";
     // create expression objects
     DataExpr *substrData1 = new DataExpr(0, CHARD);
     substrData1->width = 0;
@@ -2992,7 +2897,6 @@ TEST(CodeGenTest, SubstrWithChars)
     args1.push_back(substrLen1);
     FuncExpr *substrExpr1 = new FuncExpr("substr", args1, CHARD);
     substrExpr1->width = 10;
-
 
     DataExpr *substrData2 = new DataExpr(1, CHARD);
     substrData2->width = 0;
@@ -3032,7 +2936,6 @@ TEST(CodeGenTest, SubstrWithChars)
 
 TEST(CodeGenTest, CombineHash)
 {
-
     DataExpr *col0 = new DataExpr(0, INT64D);
     DataExpr *col1 = new DataExpr(1, INT64D);
     std::vector<Expr*> args;
@@ -3068,13 +2971,11 @@ TEST(CodeGenTest, CombineHash)
         offsets[i][0] = false;
     }
 
-    string testName = "CombineHashTest";
-    auto *lc = new FilterCodeGen(testName, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, true);
     context->getArena()->Reset();
@@ -3093,7 +2994,7 @@ TEST(CodeGenTest, CombineHash)
     delete[] selected;
     delete context;
     delete expr;
-    delete lc;
+    codegen.reset();
 }
 TEST(CodeGenTest, JSONFunc)
 {
@@ -3162,16 +3063,13 @@ TEST(CodeGenTest, JSONFunc)
         offsets[col] = new int32_t[1];
     }
 
-    string testname = "JSONFuncTest";
-    FilterCodeGen *lc = new FilterCodeGen(testname, *expr);
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-    func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(intptr_t)lc->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
     EXPECT_EQ(result, 1);
-
 
     v1[0] = -1;
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
@@ -3189,5 +3087,5 @@ TEST(CodeGenTest, JSONFunc)
     delete[] vals;
     delete[] selected;
     delete expr;
-    delete lc;
+    codegen.reset();
 }
