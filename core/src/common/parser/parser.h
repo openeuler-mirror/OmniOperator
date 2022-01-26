@@ -7,6 +7,7 @@
 
 #include "../parserhelper.h"
 #include "../../vector/vector_types.h"
+#include "../../codegen/func_registry.h"
 
 using namespace omniruntime::vec;
 
@@ -35,7 +36,6 @@ public:
 
 private:
     ParserHelper ph;
-
     // Helper function to strip a string but keep spaces intact inside string literals
     static std::string StripString(const std::string& input);
 };

@@ -26,5 +26,5 @@ private:
 };
 
 
-#endif //OMNI_RUNTIME_CODEGEN_VALUE_H
+#endif // OMNI_RUNTIME_CODEGEN_VALUE_H
 

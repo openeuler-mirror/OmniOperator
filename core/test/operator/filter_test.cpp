@@ -8,7 +8,6 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include "../../src/vector/vector_helper.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -1179,9 +1178,14 @@ TEST(FilterTest, NotEqualToAbs) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     //filter
+    ParserHelper ph;
+    FunctionRegistry fr;
+    DataType retType = INT32D;
+    std::string funcStr = "abs";
     std::vector<Expr *> args;
     args.push_back(new DataExpr(0, INT32D));
-    FuncExpr *absExpr = new FuncExpr("abs", args, INT32D);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
+    FuncExpr *absExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(NEQ, absExpr, new DataExpr(4), BOOLD);
     const int32_t projectCount = 1;
@@ -1221,22 +1225,30 @@ TEST(FilterTest, MathFunctionFilter1) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     //filters
+    ParserHelper ph;
+    FunctionRegistry fr;
+    DataType retType = INT32D;
+    std::string funcStr = "abs";
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, INT32D));
-    FuncExpr *abs1Expr = new FuncExpr("abs", args1, INT32D);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
+    FuncExpr *abs1Expr = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
     args2.push_back(new DataExpr(2, INT32D));
-    FuncExpr *abs2Expr = new FuncExpr("abs", args2, INT32D);
+    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
+    FuncExpr *abs2Expr = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
     BinaryExpr *eq1Expr = new BinaryExpr(EQ, abs1Expr, abs2Expr, BOOLD);
 
     std::vector<Expr *> args3;
     args3.push_back(new DataExpr(0, INT32D));
-    FuncExpr *abs3Expr = new FuncExpr("abs", args3, INT32D);
+    funcID = ph.GetFnIdentifier(funcStr, args3, retType);
+    FuncExpr *abs3Expr = new FuncExpr(funcStr, args3, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args4;
     args4.push_back(new DataExpr(1, INT32D));
-    FuncExpr *abs4Expr = new FuncExpr("abs", args4, INT32D);
+    funcID = ph.GetFnIdentifier(funcStr, args4, retType);
+    FuncExpr *abs4Expr = new FuncExpr(funcStr, args4, retType, retType, *fr.LookupFunction(funcID));
     BinaryExpr *eq2Expr = new BinaryExpr(EQ, abs3Expr, abs4Expr, BOOLD);
 
     BinaryExpr *filterExpr = new BinaryExpr(AND, eq1Expr, eq2Expr, BOOLD);
@@ -1287,13 +1299,19 @@ TEST(FilterTest, MathFunctionFilter2) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     // filters
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string castStr = "CAST";
+    DataType retType = DOUBLED;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, INT32D));
-    FuncExpr *cast1 = new FuncExpr("CAST", args1, DOUBLED);
+    std::string funcID = ph.GetFnIdentifier(castStr, args1, retType);
+    FuncExpr *cast1 = new FuncExpr(castStr, args1, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
     args2.push_back(new DataExpr(1, INT64D));
-    FuncExpr *cast2 = new FuncExpr("CAST", args2, DOUBLED);
+    funcID = ph.GetFnIdentifier(castStr, args2, retType);
+    FuncExpr *cast2 = new FuncExpr(castStr, args2, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(EQ, cast1, cast2, BOOLD);
 
@@ -1487,19 +1505,27 @@ TEST(FilterTest, DISABLED_ExternalMathFunc) {
     VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
 
     // filter
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "Add1Int32";
+    DataType retType;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, INT32D));
-    FuncExpr *add1Int1Expr = new FuncExpr("Add1Int32", args1);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
+    FuncExpr *add1Int1Expr = new FuncExpr(funcStr, args1, *fr.LookupFunction(funcID));
     std::vector<Expr *> args2;
     args2.push_back(add1Int1Expr);
-    FuncExpr *eqLeft = new FuncExpr("Add1Int32", args2);
+    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
+    FuncExpr *eqLeft = new FuncExpr(funcStr, args2, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args3;
     args3.push_back(new DataExpr(1, INT32D));
-    FuncExpr *add1Int2Expr = new FuncExpr("Add1Int32", args3);
+    funcID = ph.GetFnIdentifier(funcStr, args3, retType);
+    FuncExpr *add1Int2Expr = new FuncExpr(funcStr, args3, *fr.LookupFunction(funcID));
     std::vector<Expr *> args4;
     args4.push_back(add1Int2Expr);
-    FuncExpr *eqRight = new FuncExpr("Add1Int32", args4);
+    funcID = ph.GetFnIdentifier(funcStr, args4, retType);
+    FuncExpr *eqRight = new FuncExpr(funcStr, args4, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BOOLD);
 
@@ -1559,9 +1585,14 @@ TEST(FilterTest, DISABLED_ExternalStringFunc) {
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(30)}));
     VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
 
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "LengthStr";
+    DataType retType;
     std::vector<Expr *> args;
     args.push_back(new DataExpr(0, VARCHARD));
-    FuncExpr *eqLeft = new FuncExpr("LengthStr", args);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
+    FuncExpr *eqLeft = new FuncExpr(funcStr, args, *fr.LookupFunction(funcID));
     BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new DataExpr(5), BOOLD);
 
     const int32_t PROJECT_COUNT = 1;
@@ -1619,13 +1650,19 @@ TEST(FilterTest, DISABLED_ExternalStringFunc2) {
     VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
 
     // filter
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "FirstCharStr";
+    DataType retType;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, VARCHARD));
-    FuncExpr *eqLeft = new FuncExpr("FirstCharStr", args1);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
+    FuncExpr *eqLeft = new FuncExpr(funcStr, args1, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
     args2.push_back(new DataExpr(new std::string("apple")));
-    FuncExpr *eqRight = new FuncExpr("FirstCharStr", args2);
+    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
+    FuncExpr *eqRight = new FuncExpr(funcStr, args2, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BOOLD);
 
@@ -1693,19 +1730,28 @@ TEST(FilterTest, Multithreading) {
     auto start = std::chrono::high_resolution_clock::now();
 
     // filters
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string castStr = "CAST";
+    std::string absStr = "abs";
+    DataType retType = DOUBLED;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, INT32D));
-    FuncExpr *cast1Expr = new FuncExpr("CAST", args1, DOUBLED);
+    std::string funcID = ph.GetFnIdentifier(castStr, args1, retType);
+    FuncExpr *cast1Expr = new FuncExpr(castStr, args1, retType, *fr.LookupFunction(funcID));
     std::vector<Expr *> args2;
     args2.push_back(cast1Expr);
-    FuncExpr *eqLeft = new FuncExpr("abs", args2, DOUBLED);
+    funcID = ph.GetFnIdentifier(absStr, args2, retType);
+    FuncExpr *eqLeft = new FuncExpr(absStr, args2, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args3;
     args3.push_back(new DataExpr(1, INT64D));
-    FuncExpr *cast2Expr = new FuncExpr("CAST", args3, DOUBLED);
+    funcID = ph.GetFnIdentifier(castStr, args3, retType);
+    FuncExpr *cast2Expr = new FuncExpr(castStr, args3, retType, *fr.LookupFunction(funcID));
     std::vector<Expr *> args4;
     args4.push_back(cast2Expr);
-    FuncExpr *eqRight = new FuncExpr("abs", args4, DOUBLED);
+    funcID = ph.GetFnIdentifier(absStr, args4, retType);
+    FuncExpr *eqRight = new FuncExpr(absStr, args4, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr1 = new BinaryExpr(EQ, eqLeft, eqRight, BOOLD);
 
@@ -1979,26 +2025,38 @@ TEST(FilterTest, DecimalFilterAbsTest) {
 
     const int32_t projectCount = 3;
     std::vector<Expr*> projections = {new DataExpr(0, DECIMAL128D), new DataExpr(1,
-                                       DECIMAL128D), new DataExpr(2, DECIMAL128D)};
+                                                                                 DECIMAL128D), new DataExpr(2, DECIMAL128D)};
 
     // filters
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string absStr = "abs";
+    DataType retType = DECIMAL128D;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, DECIMAL128D));
-    FuncExpr *absExpr1 = new FuncExpr("abs", args1, DECIMAL128D);
+    //std::string funcID = ph.GetFnIdentifier(absStr, args1, retType);
+    std::string funcID = "abs_int64_int64";
+    FuncExpr *absExpr1 = new FuncExpr(absStr, args1, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
     args2.push_back(new DataExpr(2, DECIMAL128D));
-    FuncExpr *absExpr2 = new FuncExpr("abs", args2, DECIMAL128D);
+    //funcID = ph.GetFnIdentifier(absStr, args2, retType);
+    funcID = "abs_int64_int64";
+    FuncExpr *absExpr2 = new FuncExpr(absStr, args2, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2, DECIMAL128D);
 
     std::vector<Expr *> args3;
     args3.push_back(new DataExpr(1, DECIMAL128D));
-    FuncExpr *absExpr3 = new FuncExpr("abs", args3, DECIMAL128D);
+    //funcID = ph.GetFnIdentifier(absStr, args3, retType);
+    funcID = "abs_int64_int64";
+    FuncExpr *absExpr3 = new FuncExpr(absStr, args3, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args4;
     args4.push_back(new DataExpr(2, DECIMAL128D));
-    FuncExpr *absExpr4 = new FuncExpr("abs", args4, DECIMAL128D);
+    //funcID = ph.GetFnIdentifier(absStr, args4, retType);
+    funcID = "abs_int64_int64";
+    FuncExpr *absExpr4 = new FuncExpr(absStr, args4, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4, DECIMAL128D);
 
@@ -2312,17 +2370,23 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
 
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(5), VarcharVecType(5)}));
     //filter expression object
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, VARCHARD));
     args1.push_back(new DataExpr(1));
     args1.push_back(new DataExpr(5));
-    FuncExpr *substrExpr1 = new FuncExpr("substr", args1, VARCHARD);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
+    FuncExpr *substrExpr1 = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
     args2.push_back(new DataExpr(1, VARCHARD));
     args2.push_back(new DataExpr(1));
     args2.push_back(new DataExpr(5));
-    FuncExpr *substrExpr2 = new FuncExpr("substr", args2, VARCHARD);
+    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
+    FuncExpr *substrExpr2 = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BOOLD);
 
@@ -2350,22 +2414,4 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
         }
     }
     delete filter;
-}
-TEST(FilterTest, CastUnsupported)
-{
-    const int32_t numCols = 2;
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_LONG) };
-    DataExpr *data1 = new DataExpr(0, DECIMAL128D);
-    std::vector<Expr *> args1{data1};
-    FuncExpr *castExpr = new FuncExpr("CAST", args1, INT64D);
-    DataExpr *data2 = new DataExpr(1, INT64D);
-    BinaryExpr *filterExpr = new BinaryExpr(LT, castExpr, data2);
-
-    std::vector<Expr*> projections = {new DataExpr(0, INT64D), new DataExpr(1, INT64D)};
-    VecTypes inputTypes(vecOfTypes);
-    FilterAndProjectOperatorFactory *factory =
-            new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projections.size());
-    EXPECT_FALSE(factory->isSupportedExpr);
-
-    delete factory;
 }

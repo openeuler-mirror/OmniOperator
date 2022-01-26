@@ -29,4 +29,6 @@ extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr)
 
 extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr);
 
+extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr);
+
 #endif // OMNI_RUNTIME_DECIMALFUNCTIONS_H

@@ -13,4 +13,4 @@ typedef enum {
 }OmniStatus;
 
 
-#endif //OMNI_RUNTIME_STATUS_H
+#endif // OMNI_RUNTIME_STATUS_H

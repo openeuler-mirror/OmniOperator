@@ -21,12 +21,12 @@ Expr *parseRowExpression(string input, DataType *inputVecTypes, int32_t veccount
 In `core/src/common/parserhelper.h` and its corresponding `.cpp` file, there are a few methods to help with parsing. 
 
 ```c++
-DataType FuncRetTypeMap(string fnName, vector<Expr*> args);
+DataType FuncRetTypeMap(string funcID, vector<Expr*> args);
 ```
-The `FuncRetTypeMap` method takes in a function name `fnName` and a vector containing its arguments (which are all `Expr*`), and returns a `DataType` denoting the returned type of the function. 
+The `FuncRetTypeMap` method takes in a function name `funcID` and a vector containing its arguments (which are all `Expr*`), and returns a `DataType` denoting the returned type of the function. 
 
 ```
-bool FuncDeclMatch(string fnName, vector<Expr*> args, bool checkTypes);
+bool HasValidArguments(string funcID, vector<Expr*> args, bool checkTypes);
 ```
 
-The `FuncDeclMatch` method checks whether or not a `FuncExpr*` (i.e. an expression representing a function call) is valid, in terms of whether the number of arguments match up with the function name. If `true` is passed to the `checkTypes` argument, then the types will be checked as well, although types will not be checked for external developer functions. 
+The `HasValidArguments` method checks whether or not a `FuncExpr*` (i.e. an expression representing a function call) is valid, in terms of whether the number of arguments match up with the function name. If `true` is passed to the `checkTypes` argument, then the types will be checked as well, although types will not be checked for external developer functions. 

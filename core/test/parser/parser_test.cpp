@@ -606,12 +606,12 @@ namespace project_test {
     // Test combine hash
     TEST (ParseTest, parseCombineHashOperation) {
         int vecTypeCount = 1;
-        string expr = "combine_hash:1(#0, 2:1)";
-        std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT)};
+        string expr = "combine_hash:2(#0, 2:2)";
+        std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG)};
         VecTypes inputTypes(vecOfTypes);
         Parser parser;
         Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-        EXPECT_EQ(result->dataType, INT32D);
+        EXPECT_EQ(result->dataType, INT64D);
         FuncExpr *absExpr = static_cast<FuncExpr *>(result);
         EXPECT_STREQ(absExpr->funcName.c_str(), "combine_hash");
         auto args = absExpr->arguments;
@@ -620,11 +620,11 @@ namespace project_test {
 
         EXPECT_TRUE(value->isColumn);
         EXPECT_EQ(value->colVal, 0);
-        EXPECT_EQ(value->dataType, INT32D);
+        EXPECT_EQ(value->dataType, INT64D);
 
         EXPECT_FALSE(index->isColumn);
-        EXPECT_EQ(index->intVal, 2);
-        EXPECT_EQ(index->dataType, INT32D);
+        EXPECT_EQ(index->longVal, 2);
+        EXPECT_EQ(index->dataType, INT64D);
     }
 
     // Test pmod hash

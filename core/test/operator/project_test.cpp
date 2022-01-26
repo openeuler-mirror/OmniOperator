@@ -113,14 +113,19 @@ TEST(ProjectTest, Cast)
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG), VecType(OMNI_VEC_TYPE_INT) };
     DataExpr *data1 = new DataExpr(0, INT64D);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string castStr = "CAST";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    FuncExpr *castExpr1 = new FuncExpr("CAST", args1, INT32D);
+    std::string funcID = ph.GetFnIdentifier(castStr, args1, INT32D);
+    FuncExpr *castExpr1 = new FuncExpr(castStr, args1, INT32D, *fr.LookupFunction(funcID));
 
     DataExpr *data2 = new DataExpr(1, INT32D);
     std::vector<Expr *> args2;
     args2.push_back(data2);
-    FuncExpr *castExpr2 = new FuncExpr("CAST", args2, INT64D);
+    funcID = ph.GetFnIdentifier(castStr, args2, INT64D);
+    FuncExpr *castExpr2 = new FuncExpr(castStr, args2, INT64D, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> exprs = { castExpr1, castExpr2 };
 
@@ -161,11 +166,14 @@ TEST(ProjectTest, CastInt64ToDecimal128)
     const int32_t numCols = 1;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_LONG) };
     DataExpr *data1 = new DataExpr(0, INT64D);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string castStr = "CAST";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    FuncExpr *castExpr = new FuncExpr("CAST", args1, DECIMAL128D);
-
-    std::vector<Expr *> exprs = { castExpr };
+    std::string funcID = ph.GetFnIdentifier(castStr, args1, DECIMAL128D);
+    FuncExpr *castExpr = new FuncExpr(castStr, args1, DECIMAL128D, *fr.LookupFunction(funcID));
+    std::vector<Expr*> exprs = {castExpr};
 
     VecTypes inputTypes(vecOfTypes);
     auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
@@ -191,25 +199,6 @@ TEST(ProjectTest, CastInt64ToDecimal128)
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete op;
-    delete factory;
-}
-
-TEST(ProjectTest, CastUnsupported)
-{
-    const int32_t numCols = 2;
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DECIMAL128), VecType(OMNI_VEC_TYPE_LONG) };
-    DataExpr *data1 = new DataExpr(0, DECIMAL128D);
-    std::vector<Expr *> args1 { data1 };
-    FuncExpr *castExpr = new FuncExpr("CAST", args1, INT64D);
-    DataExpr *data2 = new DataExpr(1, INT64D);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, castExpr, data2);
-
-    std::vector<Expr *> exprs = { addExpr };
-
-    VecTypes inputTypes(vecOfTypes);
-    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
-    EXPECT_FALSE(factory->IsSupported());
-
     delete factory;
 }
 
@@ -268,14 +257,19 @@ TEST(ProjectTest, WithNullValues)
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG) };
     DataExpr *data1 = new DataExpr(0, INT32D);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "abs";
     std::vector<Expr *> args1;
     args1.push_back(data1);
-    FuncExpr *absExpr1 = new FuncExpr("abs", args1, INT32D);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args1, INT32D);
+    FuncExpr *absExpr1 = new FuncExpr(funcStr, args1, INT32D, *fr.LookupFunction(funcID));
 
     DataExpr *data2 = new DataExpr(1, INT64D);
     std::vector<Expr *> args2;
     args2.push_back(data2);
-    FuncExpr *absExpr2 = new FuncExpr("abs", args2, INT64D);
+    funcID = ph.GetFnIdentifier(funcStr, args2, INT64D);
+    FuncExpr *absExpr2 = new FuncExpr(funcStr, args2, INT64D, *fr.LookupFunction(funcID));
 
 
     std::vector<Expr *> exprs = { absExpr1, absExpr2 };
@@ -533,11 +527,16 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     DataExpr *substData = new DataExpr(3, VARCHARD);
     DataExpr *substrIndex = new DataExpr(1);
     DataExpr *substrLen = new DataExpr(3);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
     std::vector<Expr *> args;
     args.push_back(substData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
+    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> exprs2 = { subExpr2, substrExpr };
 
@@ -656,11 +655,16 @@ TEST(ProjectTest, ProjectString1)
     DataExpr *substrData = new DataExpr(0, VARCHARD);
     DataExpr *substrIndex = new DataExpr(1);
     DataExpr *substrLen = new DataExpr(3);
-    std::vector<Expr *> args;
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
+    std::vector<Expr *>args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
+    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
+    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
 
     DataExpr *col0 = new DataExpr(0, VARCHARD);
     std::vector<Expr *> exprs = { substrExpr, col0 };
@@ -837,14 +841,17 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
     batch->SetVector(0, varcharDicVector);
 
     const int32_t numProject = 1;
-std:
-    vector<Expr *> args;
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
+std:vector<Expr *> args;
     args.push_back(new DataExpr(0, VARCHARD));
     args.push_back(new DataExpr(1));
     args.push_back(new DataExpr(3));
-
-    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
-    std::vector<Expr *> exprs = { substrExpr };
+    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType);
+    FuncExpr *substrExpr = new FuncExpr(funcStr, args, retType, *fr.LookupFunction(funcID));
+    std::vector<Expr*> exprs = {substrExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto copy = DuplicateVectorBatch(batch);
@@ -1150,16 +1157,23 @@ TEST(ProjectTest, StringSubstr)
     DataExpr *substrData = new DataExpr(0, VARCHARD);
     DataExpr *substrIndex = new DataExpr(1);
     DataExpr *substrLen = new DataExpr(5);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string substrStr = "substr";
+    DataType retType = VARCHARD;
     std::vector<Expr *> args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    FuncExpr *substrExpr = new FuncExpr("substr", args, VARCHARD);
+    std::string funcID = ph.GetFnIdentifier(substrStr, args, retType);
+    FuncExpr *substrExpr = new FuncExpr(substrStr, args, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> concatArgs;
+    std::string concatStr = "concat";
     concatArgs.push_back(substrExpr);
     concatArgs.push_back(new DataExpr(new std::string(" world")));
-    FuncExpr *concatExpr = new FuncExpr("concat", concatArgs, VARCHARD);
+    funcID = ph.GetFnIdentifier(concatStr, concatArgs, retType);
+    FuncExpr *concatExpr = new FuncExpr(concatStr, concatArgs, retType, *fr.LookupFunction(funcID));
 
     DataExpr *col0 = new DataExpr(0, VARCHARD);
     std::vector<Expr*> exprs = {concatExpr, col0};

@@ -36,17 +36,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 #include "./codegen_context.h"
 #include "../common/expressions.h"
 #include "../common/parser/parser.h"
 #include "../common/expr_printer.h"
-#include "./functions/mathfunctions.h"
-#include "./functions/stringfunctions.h"
-#include "./functions/murmur3_hash.h"
-#include "./functions/decimalfunctions.h"
-#include "./functions/external_func_registry.h"
-#include "./func_registry.h"
 #include "../util/debug.h"
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
@@ -54,7 +49,7 @@ using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 // Given an expression generates the function for it.
 class ExpressionCodeGen : public ExprVisitor {
 public:
-    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &expr);
+    ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
     ~ExpressionCodeGen() override;
 
     bool Initialize();
@@ -79,15 +74,16 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    llvm::Value *CreateConstantBool(bool n);
-    llvm::Value *CreateConstantInt(int32_t n);
-    llvm::Value *CreateConstantLong(int64_t n);
-    llvm::Value *CreateConstantDouble(double n);
-    llvm::Value *GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
-    llvm::Type *ToLlvmType(omniruntime::expressions::DataType t);
-    llvm::Type *GetFunctionReturnType(omniruntime::expressions::DataType t);
-    llvm::Type *ToPointerType(omniruntime::expressions::DataType type);
-    void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
+    llvm::Value* CreateConstantBool(bool n);
+    llvm::Value* CreateConstantInt(int32_t n);
+    llvm::Value* CreateConstantLong(int64_t n);
+    llvm::Value* CreateConstantDouble(double n);
+    llvm::Value* GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
+    llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
+    llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
+    llvm::Type* GetFunctionArgType(omniruntime::expressions::DataType t);
+    llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
+    void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     llvm::Value *Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
@@ -123,7 +119,6 @@ protected:
     llvm::legacy::PassManager mpm;
     std::unique_ptr<llvm::orc::LLJIT> jit;
     llvm::orc::ResourceTrackerSP rt;
-    FunctionRegistry *fr;
     llvm::Function *func = nullptr;
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
@@ -132,8 +127,9 @@ protected:
 private:
     std::string funcName;
     std::map<std::string, FunctionSignature> funcNameToSignature;
-
     static void InitializeCodegenTargets();
+    void RegisterFunctions(std::vector<omniruntime::Function> func);
+    void RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);

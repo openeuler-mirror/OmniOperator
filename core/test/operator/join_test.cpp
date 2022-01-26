@@ -1413,6 +1413,23 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
 {
     using namespace omniruntime::expressions;
+
+    const int32_t DATA_SIZE = 10;
+    VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
+    int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
+    std::string buildData1[DATA_SIZE] = {"35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904"};
+    auto buildVecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData0, buildData1);
+
+    int32_t buildJoinCols[1] = {0};
+    int32_t joinColsCount = 1;
+    int32_t operatorCount = 1;
+    string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+
+    // create the filter expression
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
     DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
     DataExpr *leftSubstrIndex = new DataExpr(1);
     DataExpr *leftSubstrLen = new DataExpr(5);
@@ -1420,7 +1437,8 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
     leftSubstrArgs.push_back(leftSubstrColumn);
     leftSubstrArgs.push_back(leftSubstrIndex);
     leftSubstrArgs.push_back(leftSubstrLen);
-    FuncExpr *leftSubstrExpr = new FuncExpr("substr", leftSubstrArgs, VARCHARD);
+    std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType);
+    FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, retType, *fr.LookupFunction(funcID));
 
     DataExpr *rightSubstrColumn = new DataExpr(3, VARCHARD);
     DataExpr *rightSubstrIndex = new DataExpr(1);
@@ -1429,7 +1447,8 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
     rightSubstrArgs.push_back(rightSubstrColumn);
     rightSubstrArgs.push_back(rightSubstrIndex);
     rightSubstrArgs.push_back(rightSubstrLen);
-    FuncExpr *rightSubstrExpr = new FuncExpr("substr", rightSubstrArgs, VARCHARD);
+    funcID = ph.GetFnIdentifier(funcStr, rightSubstrArgs, retType);
+    FuncExpr *rightSubstrExpr = new FuncExpr(funcStr, rightSubstrArgs, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BOOLD);
     return notEqualExpr;
@@ -1517,6 +1536,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
 
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
 {
+    using namespace omniruntime::expressions;
+
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {20, 16, 13, 4, 20, 4, 22, 19, 8, 7};
@@ -1535,6 +1556,32 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
+    // create the filter expression
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
+    DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
+    DataExpr *leftSubstrIndex = new DataExpr(1);
+    DataExpr *leftSubstrLen = new DataExpr(5);
+    std::vector<Expr *> leftSubstrArgs;
+    leftSubstrArgs.push_back(leftSubstrColumn);
+    leftSubstrArgs.push_back(leftSubstrIndex);
+    leftSubstrArgs.push_back(leftSubstrLen);
+    std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType);
+    FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, retType, *fr.LookupFunction(funcID));
+
+    DataExpr *rightSubstrColumn = new DataExpr(3, VARCHARD);
+    DataExpr *rightSubstrIndex = new DataExpr(1);
+    DataExpr *rightSubstrLen = new DataExpr(5);
+    std::vector<Expr *> rightSubstrArgs;
+    rightSubstrArgs.push_back(rightSubstrColumn);
+    rightSubstrArgs.push_back(rightSubstrIndex);
+    rightSubstrArgs.push_back(rightSubstrLen);
+    funcID = ph.GetFnIdentifier(funcStr, rightSubstrArgs, retType);
+    FuncExpr *rightSubstrExpr = new FuncExpr(funcStr, rightSubstrArgs, retType, *fr.LookupFunction(funcID));
+
+    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BOOLD);
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
@@ -1599,6 +1646,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
 // left join with filter
 TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
 {
+    using namespace omniruntime::expressions;
+
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
@@ -1610,6 +1659,27 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
 
+    // create filter expression object
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string funcStr = "substr";
+    DataType retType = VARCHARD;
+    std::vector<Expr *> args1;
+    args1.push_back(new DataExpr(1, VARCHARD));
+    args1.push_back(new DataExpr(1));
+    args1.push_back(new DataExpr(5));
+    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
+    FuncExpr *neqLeft = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
+
+    std::vector<Expr *> args2;
+    args2.push_back(new DataExpr(3, VARCHARD));
+    args2.push_back(new DataExpr(1));
+    args2.push_back(new DataExpr(5));
+    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
+    FuncExpr *neqRight = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
+
+    BinaryExpr *filterExpr = new BinaryExpr(NEQ, neqLeft, neqRight, BOOLD);
+    
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     // create filter expression object

@@ -4,7 +4,11 @@
  * Description: Extract essential information from the expression tree
  */
 #include "../common/expr_visitor.h"
-#include <set>
+#include "func_registry_string.h"
+#include "func_registry_dictionary.h"
+#include "func_registry_decimal.h"
+#include "func_registry_context.h"
+#include "function.h"
 
 class ExprInfoExtractor : public ExprVisitor {
 public:
@@ -17,10 +21,10 @@ public:
     void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
-    std::set<std::string> GetFunctions();
+    void PopulateFunctions(const std::vector<omniruntime::Function>& functionsToPopulate);
+    std::vector<omniruntime::Function*> GetFunctions();
     std::set<int32_t> GetVectorIndexes();
 private:
-    // all functions used in the expression
-    std::set<std::string> functions;
+    std::vector<omniruntime::Function*> functions;
     std::set<int32_t> vectorIndexes;
 };
