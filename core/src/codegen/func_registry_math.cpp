@@ -13,21 +13,21 @@ std::vector<Function> GetMathFunctionRegistry()
     std::string castFnStr = "CAST";
     static std::vector<Function> mathFnRegistry = {
         // insert native functions for each absolute math function
-        Function(reinterpret_cast<void*>(Abs<int32_t>), absFnStr, {}, {INT32D}, INT32D, true),
-        Function(reinterpret_cast<void*>(Abs<int64_t>), absFnStr, {}, {INT64D}, INT64D, true),
-        Function(reinterpret_cast<void*>(Abs<double>), absFnStr, {}, {DOUBLED}, DOUBLED, true),
+        Function(reinterpret_cast<void*>(Abs<int32_t>), absFnStr, {}, {INT32D}, INT32D),
+        Function(reinterpret_cast<void*>(Abs<int64_t>), absFnStr, {}, {INT64D}, INT64D),
+        Function(reinterpret_cast<void*>(Abs<double>), absFnStr, {}, {DOUBLED}, DOUBLED),
 
         // insert native functions for each cast math function
-        Function(reinterpret_cast<void*>(CastInt32ToDouble), castFnStr, {}, {INT32D}, DOUBLED, true),
-        Function(reinterpret_cast<void*>(CastInt64ToDouble), castFnStr, {}, {INT64D}, DOUBLED, true),
-        Function(reinterpret_cast<void*>(CastInt32ToInt64), castFnStr, {}, {INT32D}, INT64D, true),
-        Function(reinterpret_cast<void*>(CastInt64ToInt32), castFnStr, {}, {INT64D}, INT32D, true),
+        Function(reinterpret_cast<void*>(CastInt32ToDouble), castFnStr, {}, {INT32D}, DOUBLED),
+        Function(reinterpret_cast<void*>(CastInt64ToDouble), castFnStr, {}, {INT64D}, DOUBLED),
+        Function(reinterpret_cast<void*>(CastInt32ToInt64), castFnStr, {}, {INT32D}, INT64D),
+        Function(reinterpret_cast<void*>(CastInt64ToInt32), castFnStr, {}, {INT64D}, INT32D),
 
         // insert native function for combine hash math function
-        Function(reinterpret_cast<void*>(CombineHash), "combine_hash", {}, {INT64D, INT64D}, INT64D, true),
+        Function(reinterpret_cast<void*>(CombineHash), "combine_hash", {}, {INT64D, INT64D}, INT64D),
 
         // insert pmod function for project operator support
-        Function(reinterpret_cast<void*>(Pmod), "pmod", {}, {INT32D, INT32D}, INT32D, true)
+        Function(reinterpret_cast<void*>(Pmod), "pmod", {}, {INT32D, INT32D}, INT32D)
 
     };
     return mathFnRegistry;

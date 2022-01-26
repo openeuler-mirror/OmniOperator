@@ -14,26 +14,26 @@ std::vector<Function> GetStringFunctionRegistry()
     static std::vector<Function> stringFnRegistry = {
         // substr functions
         Function(reinterpret_cast<void*>(SubstrExt), substrStr + DataTypeString(INT32D),
-                 {}, {VARCHARD, INT32D, INT32D, INT32PTRD, INT64D}, VARCHARD, false),
+                 {}, {VARCHARD, INT32D, INT32D, INT32PTRD}, VARCHARD, false, true),
         Function(reinterpret_cast<void*>(SubstrExt64), substrStr + DataTypeString(INT64D),
-                 {}, {VARCHARD, INT64D, INT64D, INT32PTRD, INT64D}, VARCHARD, false),
+                 {}, {VARCHARD, INT64D, INT64D, INT32PTRD}, VARCHARD, false, true),
 
         // substr with start index functions
         Function(reinterpret_cast<void*>(SubstrWithStartExt), substrWithStartStr + DataTypeString(INT32D),
-                 {}, {VARCHARD, INT32D, INT32PTRD, INT64D}, VARCHARD, false),
+                 {}, {VARCHARD, INT32D, INT32PTRD}, VARCHARD, false, true),
         Function(reinterpret_cast<void*>(SubstrWithStartExt64), substrWithStartStr + DataTypeString(INT64D),
-                 {}, {VARCHARD, INT64D, INT32PTRD, INT64D}, VARCHARD, false),
+                 {}, {VARCHARD, INT64D, INT32PTRD}, VARCHARD, false, true),
 
         // concat functions
         Function(reinterpret_cast<void*>(ConcatStrExt), "concat_string",
-                 {}, {VARCHARD, VARCHARD, INT32PTRD, INT64D}, VARCHARD, false),
+                 {}, {VARCHARD, VARCHARD, INT32PTRD}, VARCHARD, false, true),
         Function(reinterpret_cast<void*>(ConcatCharExt), "concat_char",
-                 {}, {CHARD, VARCHARD, INT32PTRD, INT64D}, VARCHARD, false),
+                 {}, {CHARD, VARCHARD, INT32PTRD}, VARCHARD, false, true),
 
         Function(reinterpret_cast<void*>(LikeExt), "LIKE",
                  {}, {VARCHARD, VARCHARD}, BOOLD, false),
         Function(reinterpret_cast<void*>(CastString), "CAST",
-                 {}, {VARCHARD}, INT32D, true)
+                 {}, {VARCHARD}, INT32D)
     };
     return stringFnRegistry;
 }

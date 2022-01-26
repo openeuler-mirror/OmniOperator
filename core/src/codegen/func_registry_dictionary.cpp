@@ -22,7 +22,7 @@ std::vector<Function> GetDictionaryFunctionRegistry()
         Function(reinterpret_cast<void*>(GetVarcharFromDictionaryVector),
                  "DictionaryGetVarchar", {}, {INT64D, INT32D, INT32PTRD}, INT8PTRD, false),
         Function(reinterpret_cast<void*>(GetDecimalFromDictionaryVector),
-                 "DictionaryGetDecimal", {}, {INT64D, INT32D, INT64D}, INT64D, false)
+                 "DictionaryGetDecimal", {}, {INT64D, INT32D}, DECIMAL128D, false, true)
     };
     return dictionaryFnRegistry;
 }

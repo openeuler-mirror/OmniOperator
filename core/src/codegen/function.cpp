@@ -52,10 +52,11 @@ namespace omniruntime {
     }
 
     Function::Function(void* address, const std::string& fnID, const std::vector<std::string>& aliases, const
-        std::vector<DataType>& paramTypes, const DataType& retType, bool generateFuncID = false)
+    std::vector<DataType>& paramTypes, const DataType& retType, bool generateFuncID, bool setExecutionContext)
     {
         // update function name used for lookup in codegen
         this->funcID = fnID;
+        this->isExecContextSet = setExecutionContext;
         // number of args expected for a valid function
         int32_t numArgs;
         if (FUNC_TO_NUM_ARGS.count(fnID)) {
@@ -68,6 +69,8 @@ namespace omniruntime {
         }
         // update paramTypes for signature
         std::vector<DataType> args = paramTypes;
+        if (setExecutionContext)
+            args.push_back(INT64D);
         ReplaceArgDataTypes(args, fnID);
         // update ret for signature
         DataType ret = retType;
@@ -96,5 +99,10 @@ namespace omniruntime {
     std::string Function::GetFuncID() const
     {
         return this->funcID;
+    }
+
+    bool Function::IsExecutionContextSet() const
+    {
+        return this->isExecContextSet;
     }
 }

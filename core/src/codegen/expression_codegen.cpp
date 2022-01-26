@@ -1340,9 +1340,8 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     if (IsStringDataType(fExpr.GetExprDataType())) {
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         argVals.push_back(outputLenPtr);
-        argVals.push_back(this->codegenContext->executionContext);
     }
-    if (fExpr.GetExprDataType() == DataType::DECIMAL128D && fExpr.funcName != decimal128CompareExtStr) {
+    if (fExpr.function->IsExecutionContextSet()) {
         argVals.push_back(this->codegenContext->executionContext);
     }
     auto f = module->getFunction(fExpr.function->GetFuncID());

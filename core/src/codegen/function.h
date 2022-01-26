@@ -10,21 +10,22 @@
 
 // used by parser to validate the number of args in each function
 const std::map<std::string, int32_t> FUNC_TO_NUM_ARGS = {
-        {"CAST", 1},
-        {"substr_start", 2},
-        {"substr", 3},
-        {"concat", 2},
-        {"abs", 1},
-        {"LIKE", 2},
-        {"combine_hash", 2},
-        {"mm3hash", 2},
-        {"pmod", 2}
+    {"CAST", 1},
+    {"substr_start", 2},
+    {"substr", 3},
+    {"concat", 2},
+    {"abs", 1},
+    {"LIKE", 2},
+    {"combine_hash", 2},
+    {"mm3hash", 2},
+    {"pmod", 2}
 };
 
 namespace omniruntime {
     class Function {
     public:
         Function() = default;
+
         /**
          * Constructs a omni-runtime Function object that contains the functionality and attributes of an omni-runtime
          * function
@@ -37,16 +38,18 @@ namespace omniruntime {
          * function signature equivalents to contain value and length for VARCHAR and value, length and width for CHAR
          * @param retType datatype of return value
          * @param generateFuncID if true - unique funcID is generated to match funcID in parser
+         * @param setExecutionContext if true - pass the execution context to func signature as a param
          */
         Function(void *address, const std::string &fnID, const std::vector<std::string> &aliases, const
         std::vector<omniruntime::expressions::DataType> &paramTypes, const omniruntime::expressions::DataType
-        &retType, bool generateFuncID);
+        &retType, bool generateFuncID = true, bool setExecutionContext = false);
 
-        Function(const std::string &fnID , const FunctionSignature &signature);
+        Function(const std::string &fnID, const FunctionSignature &signature);
 
         // Copy constructor
-        Function &operator=(Function other) {
-            std::swap(funcID , other.funcID );
+        Function &operator=(Function other)
+        {
+            std::swap(funcID, other.funcID);
             std::swap(signatures, other.signatures);
             return *this;
         }
@@ -54,10 +57,12 @@ namespace omniruntime {
         ~Function();
         const std::vector<FunctionSignature> &GetSignatures() const;
         std::string GetFuncID() const;
+        bool IsExecutionContextSet() const;
     private:
         // signatures corresponding to that function
         std::vector<FunctionSignature> signatures = {};
         std::string funcID  = "";
+        bool isExecContextSet = false;
     };
 }
 
