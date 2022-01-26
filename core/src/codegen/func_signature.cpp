@@ -10,7 +10,8 @@ FunctionSignature::FunctionSignature()
 {
 }
 
-FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType, void* address)
+FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType,
+                                     void *address = nullptr)
 {
     this->funcName = name;
     this->paramTypes = params;

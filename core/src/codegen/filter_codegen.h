@@ -6,7 +6,6 @@
 #define FILTER_CODEGEN_H
 
 #include <utility>
-
 #include "expression_codegen.h"
 
 class FilterCodeGen : public ExpressionCodeGen {

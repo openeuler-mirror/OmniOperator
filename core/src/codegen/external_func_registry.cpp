@@ -6,12 +6,11 @@
 #include <map>
 #include <set>
 #include <string>
-#include <iostream>
 #include <algorithm>
 #include <dlfcn.h>
 
 #include "./external_func_registry.h"
-#include "../../util/debug.h"
+#include "util/debug.h"
 
 using namespace std;
 using namespace omniruntime::expressions;
@@ -25,10 +24,7 @@ ExternalFuncRegistry::ExternalFuncRegistry()
     }
 }
 
-ExternalFuncRegistry::~ExternalFuncRegistry()
-{
-}
-
+ExternalFuncRegistry::~ExternalFuncRegistry() = default;
 
 // Returns a set containing strings of all the external function names
 set<string> ExternalFuncRegistry::GetAllExternalFunctionNames() const
@@ -36,13 +32,11 @@ set<string> ExternalFuncRegistry::GetAllExternalFunctionNames() const
     return g_allExtFnNames;
 }
 
-
 // Returns a map from function name to return type
 map<string, DataType> ExternalFuncRegistry::GetFuncReturnTypeMap() const
 {
     return g_nameToRetType;
 }
-
 
 // Add the signatures for your own functions here
 // Create a new conditional branch for it
@@ -80,7 +74,6 @@ ifstream ExternalFuncRegistry::FetchExternalFunctionInfo(int64_t handlePtr) cons
         LLVM_DEBUG_LOG("Could not find externalregistration.txt file\n");
         LLVM_DEBUG_LOG("Error occurred with external functions. No external functions will be registered\n");
     }
-
     return readRegistration;
 }
 
@@ -154,8 +147,6 @@ void ExternalFuncRegistry::UpdateFuncSigMap() const
         // Create FunctionSignature and add to funcSignatureMap with function address retrieved via dlsym
         FunctionSignature funcSig (fnName, argTypes, retType, dlsym(handle, fnName.c_str()));
         g_funcSignatureMap[fnName] = funcSig;
-
     }
-
     readRegistration.close();
 }

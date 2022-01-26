@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <codegen/function.h>
+#include "datatype.h"
 #include "../vector/type/decimal128.h"
 
 class ExprVisitor;
@@ -51,22 +53,6 @@ enum OperatorType {
 };
 
 
-enum DataType {
-    UNKNOWND = 0,
-    INT32D = 1,
-    INT64D = 2,
-    DOUBLED = 3,
-    BOOLD = 4,
-    DECIMAL64D = 6,
-    DECIMAL128D = 7,
-    VARCHARD = 15,
-    CHARD = 16,
-    INT32PTRD,
-    INT8PTRD,
-    VOIDD,
-    INVALIDDATAD
-};
-
 
 enum ExprType {
     DATA_E,
@@ -99,17 +85,9 @@ const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
     {"MODULUS", Operator::MOD},
 };
 
-// Helper function to get DataType from a string representing the type
-DataType StringToDataType(std::string dt);
-
-bool IsStringDataType(DataType type);
 bool IsNullLiteral(const std::string& value);
-
-// Helper function to get DataType from the enum ordinal value of the type
-DataType OrdinalToDataType(const int32_t& dt);
-
-// Helper function to get Operator enum from string representing operator
 Operator StringToOperator(std::string opStr);
+
 
 class Expr {
 public:
@@ -148,13 +126,6 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
-
-// Helper function for debugging DataType
-std::string DataTypeString(const Expr &expr);
-
-// Helper function to translate from jni type number to DataType
-DataType ColTypeTrans(int32_t colType);
-
 
 class UnaryExpr : public Expr {
 public:
@@ -259,17 +230,19 @@ class FuncExpr : public Expr {
 public:
     std::string funcName;
     std::vector<Expr*> arguments;
+    omniruntime::Function *function;
 
     FuncExpr();
     ~FuncExpr() override;
     FuncExpr(std::string fnName, std::vector<Expr*> args);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt);
     FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width);
-
+    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, omniruntime::Function &function);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, omniruntime::Function &function);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width, omniruntime::Function &function);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };
-
 }
 }
 #endif

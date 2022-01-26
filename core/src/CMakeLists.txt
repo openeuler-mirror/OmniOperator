@@ -59,7 +59,7 @@ add_library(filter_and_project SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/filter/
 add_library(operator_util SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/util/operator_util.cpp)
 add_library(expr_visitor SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_visitor.cpp)
 add_library(expr_printer SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expr_printer.cpp)
-add_library(expressions SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp)
+add_library(expressions SHARED ${CMAKE_CURRENT_LIST_DIR}/common/expressions.cpp ${CMAKE_CURRENT_LIST_DIR}/common/datatype.cpp)
 add_library(parserhelper SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parserhelper.cpp)
 add_library(parser SHARED ${CMAKE_CURRENT_LIST_DIR}/common/parser/parser.cpp)
 add_library(jsonparser SHARED ${CMAKE_CURRENT_LIST_DIR}/common/jsonparser/jsonparser.cpp)
@@ -73,7 +73,7 @@ add_library(limit SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/limit/limit.cpp)
 add_library(distinct_limit SHARED ${CMAKE_CURRENT_LIST_DIR}/operator/limit/distinct_limit.cpp)
 
 set(EXTERNAL_FUNCTIONS
-        ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/external_func_registry.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/codegen/external_func_registry.cpp
         ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/externalfunctions.cpp
         ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/mathfunctions.cpp
         ${CMAKE_CURRENT_LIST_DIR}/codegen/functions/stringfunctions.cpp

@@ -2,8 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: registry external function
  */
-#ifndef __EXTERNAL_FUNC_REGISTRY_H__
-#define __EXTERNAL_FUNC_REGISTRY_H__
+#ifndef EXTERNAL_FUNC_REGISTRY_H
+#define EXTERNAL_FUNC_REGISTRY_H
 
 #include <map>
 #include <set>
@@ -11,9 +11,9 @@
 #include <fstream>
 
 
-#include "../../common/expressions.h"
-#include "../func_signature.h"
-#include "../../../libconfig.h"
+#include "common/expressions.h"
+#include "func_signature.h"
+#include "../../libconfig.h"
 
 #include <memory>
 

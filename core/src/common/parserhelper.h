@@ -6,7 +6,7 @@
 
 #ifndef __EXPRESSION_H__
 #endif
-#include "../codegen/functions/external_func_registry.h"
+#include "codegen/external_func_registry.h"
 #include <string>
 #include <set>
 #include <iostream>
@@ -21,16 +21,15 @@ public:
     ~ParserHelper();
     omniruntime::expressions::DataType FuncRetTypeMap(std::string fnName,
                                                       std::vector<omniruntime::expressions::Expr *> args);
-    bool FuncDeclMatch(const std::string& fnName, std::vector<omniruntime::expressions::Expr *> args, bool checkTypes);
+    bool HasValidArguments(const std::string& fnName, std::vector<omniruntime::expressions::Expr *> args);
     static omniruntime::expressions::DataExpr *GetDefaultValueForType(omniruntime::expressions::DataType destType);
+    std::string GetFnIdentifier(std::string opStr, std::vector<omniruntime::expressions::Expr *> args,
+                            omniruntime::expressions::DataType ret);
 private:
     ExternalFuncRegistry efr;
     std::set<std::string> externalFuncNames;
     std::map<std::string, omniruntime::expressions::DataType> externalFuncRetTypeMap;
-
     static bool IsIntType(omniruntime::expressions::DataType dt);
 };
-
-
 
 #endif

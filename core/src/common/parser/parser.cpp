@@ -206,17 +206,20 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     }
     // When casting to the same type, the result is the argument itself
     // Treat argument as constant DataExpr instead of returning FuncExpr
-    if (opStr == "CAST" && args.size() == 1 && (type == args[0]->dataType)) {
+    if (opStr == "CAST" && args.size() == 1 && (type == args[0]->dataType))
         return static_cast<DataExpr *>(args[0]);
-    }
 
     // Function
     // Check that the signature matches
-    if (ph.FuncDeclMatch(opStr, args, true)) {
-        return std::make_unique<FuncExpr>(opStr, args, type, width).release();
+    std::string funcID = ph.GetFnIdentifier(opStr, args, type);
+    if (!funcID.empty()) {
+        auto function = FunctionRegistry::LookupFunction(funcID);
+        if (function != nullptr)
+            return make_unique<FuncExpr>(opStr, args, type, width, *function).release();
     }
-    // if operator is not supported, return nullptr
-    LogError("operator is not supported: %s", opStr.c_str());
+#ifdef DEBUG
+    cout << "operator is not supported" << endl;
+#endif
     return nullptr;
 }
 

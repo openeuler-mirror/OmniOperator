@@ -52,4 +52,4 @@ private:
 };
 }
 }
-#endif //OMNI_RUNTIME_TOPN_EXPR_H
+#endif // OMNI_RUNTIME_TOPN_EXPR_H

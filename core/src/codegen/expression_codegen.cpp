@@ -14,12 +14,14 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "vector"
 #include "expr_info_extractor.h"
 #include "codegen_context.h"
 
 using namespace llvm;
 using namespace orc;
+using namespace omniruntime;
 using namespace omniruntime::expressions;
 using namespace omniruntime::vec;
 using std::make_shared;
@@ -111,6 +113,29 @@ Type *ExpressionCodeGen::GetFunctionReturnType(DataType type)
     }
 }
 
+Type *ExpressionCodeGen::GetFunctionArgType(DataType type)
+{
+    switch (type) {
+        case DataType::VOIDD:
+            return Type::getVoidTy(*context);
+        case DataType::INT32D:
+        case DataType::INT64D:
+        case DataType::DOUBLED:
+        case DataType::BOOLD:
+        case DataType::DECIMAL128D:
+            return ToLlvmType(type);
+        case DataType::VARCHARD:
+            return Type::getInt64Ty(*context);
+        case DataType::INT32PTRD:
+            return Type::getInt32PtrTy(*context);
+        case DataType::INT8PTRD:
+            return Type::getInt8PtrTy(*context);
+        default:
+            LLVM_DEBUG_LOG("Error: Unknown argument datatype %d", type);
+            return nullptr;
+    }
+}
+
 /**
  * Usage example: std::vector<Value *> values;
  * values.push_back(value1);
@@ -155,7 +180,6 @@ ExpressionCodeGen::~ExpressionCodeGen()
     if (rt) {
         eoe(rt->remove());
     }
-    delete fr;
 }
 
 void ExpressionCodeGen::InitializeCodegenTargets()
@@ -180,22 +204,63 @@ bool ExpressionCodeGen::Initialize()
     builder = std::make_unique<IRBuilder<>>(*context);
     fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
 
-    fr = std::make_unique<FunctionRegistry>(jit, context, module).release();
-    // Only register the necessary functions for the expression
-    // Necessary functions are found using RequiredFunctions method
     ExprInfoExtractor exprInfoExtractor;
-    expr->Accept(exprInfoExtractor);
-    fr->RegisterNecessaryFuncs(exprInfoExtractor.GetFunctions());
-    funcNameToSignature = fr->funcNameToSignatureMap;
+    this->expr->Accept(exprInfoExtractor);
     this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
+    // get functions used in funcExpr  RegisterFunctions(exprInfoExtractor.GetFunctions());
+    RegisterFunctions(FunctionRegistry::GetFunctions());
 }
+
+void ExpressionCodeGen::RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs)
+{
+    for (auto &funcSignature: func.GetSignatures()) {
+        if (jitRegisteredFuncs.find(funcSignature.GetName()) == jitRegisteredFuncs.end()) {
+            auto &jd = jit->getMainJITDylib();
+            auto &dl = jit->getDataLayout();
+            llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
+            std::vector<Type *> args;
+            std::vector<DataType> params = funcSignature.GetParams();
+            args.reserve(params.size());
+            for (auto type: params) {
+                args.push_back(this->GetFunctionArgType(type));
+            }
+            auto s = llvm::orc::absoluteSymbols({
+                {mangle(funcSignature.GetName()),
+                 JITEvaluatedSymbol(pointerToJITTargetAddress(funcSignature.GetFunctionAddress()),
+                                    JITSymbolFlags::Exported)
+                }
+            }
+            );
+            auto ign = jd.define(s);
+            if (ign) {
+                std::cerr << "Error while defining absolute symbol in jd" << std::endl;
+            }
+            auto ret = this->GetFunctionArgType(funcSignature.GetReturnType());
+            llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
+            auto linkage = llvm::Function::ExternalLinkage;
+            llvm::Function *fn = llvm::Function::Create(ft, linkage, funcSignature.GetName(), *module);
+            FunctionCallee callee = module->getOrInsertFunction(funcSignature.GetName(), ft);
+            jitRegisteredFuncs.insert(funcSignature.GetName());
+        }
+    }
+}
+
+// Register function in JIT
+void ExpressionCodeGen::RegisterFunctions(std::vector<omniruntime::Function> functions)
+{
+    std::set<std::string> jitRegisteredFuncs;
+    for (auto &func : functions) {
+        RegisterFunctionsHelper(func, jitRegisteredFuncs);
+    }
+}
+
 
 // Other operations which require externed functions
 Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
 {
     // call function
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
-    auto f = module->getFunction(fr->strCompareExtStr);
+    auto f = module->getFunction(strCompareExtStr);
     auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
     auto inlinedFunction = llvm::InlineFunction(*ret, inlineFunctionInfo);
@@ -209,7 +274,7 @@ Value *ExpressionCodeGen::Decimal128Cmp(const Value &lhs, const Value &rhs)
     std::vector<Value *> argVals;
     argVals.push_back(const_cast<Value *>(&lhs));
     argVals.push_back(const_cast<Value *>(&rhs));
-    auto f = module->getFunction(fr->decimal128CompareExtStr);
+    auto f = module->getFunction(decimal128CompareExtStr);
     Value *ret = builder->CreateCall(f, argVals, "call_decimal_cmp");
     return ret;
 }
@@ -244,8 +309,8 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
                 rightZero = builder->CreateFSub(right, right);
                 break;
             case DECIMAL128D:
-                leftZero = builder->CreateCall(module->getFunction(fr->subDec128Str), argLeftVals, fr->subDec128Str);
-                rightZero = builder->CreateCall(module->getFunction(fr->subDec128Str), argRightVals, fr->subDec128Str);
+                leftZero = builder->CreateCall(module->getFunction(subDec128Str), argLeftVals, subDec128Str);
+                rightZero = builder->CreateCall(module->getFunction(subDec128Str), argRightVals, subDec128Str);
                 break;
             default:
                 // Unsupported data-types left as-is
@@ -295,8 +360,8 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
             rightOne = builder->CreateFSub(builder->CreateFAdd(right, CreateConstantDouble(1.0)), right);
             break;
         case DECIMAL128D:
-            leftZero = builder->CreateCall(module->getFunction(fr->subDec128Str), argLeftVals, fr->subDec128Str);
-            rightOne = builder->CreateCall(module->getFunction(fr->divDec128Str), argRightVals, fr->divDec128Str);
+            leftZero = builder->CreateCall(module->getFunction("Sub_decimal128"), argLeftVals, "Sub_decimal128");
+            rightOne = builder->CreateCall(module->getFunction("Div_decimal128"), argRightVals, "Div_decimal128");
             break;
         default:
             // Unsupported data-types left as-is
@@ -444,13 +509,13 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, 
             return builder->CreateAnd(isNeitherNull,
                 builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
         case ADD:
-            return builder->CreateCall(module->getFunction(fr->addDec128Str), argVals, fr->addDec128Str);
+            return builder->CreateCall(module->getFunction(addDec128Str), argVals, addDec128Str);
         case SUB:
-            return builder->CreateCall(module->getFunction(fr->subDec128Str), argVals, fr->subDec128Str);
+            return builder->CreateCall(module->getFunction(subDec128Str), argVals, subDec128Str);
         case MUL:
-            return builder->CreateCall(module->getFunction(fr->mulDec128Str), argVals, fr->mulDec128Str);
+            return builder->CreateCall(module->getFunction(mulDec128Str), argVals, mulDec128Str);
         case DIV:
-            return builder->CreateCall(module->getFunction(fr->divDec128Str), argVals, fr->divDec128Str);
+            return builder->CreateCall(module->getFunction(divDec128Str), argVals, divDec128Str);
         default:
             std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
             return nullptr;
@@ -466,7 +531,7 @@ std::string ExpressionCodeGen::DumpCode()
     return ir;
 }
 
-bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)
+bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<llvm::Function::arg_iterator> args)
 {
     this->codegenContext = std::make_unique<CodegenContext>();
     for (auto &arg : args) {
@@ -497,7 +562,7 @@ bool ExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_it
     return true;
 }
 
-Function *ExpressionCodeGen::CreateFunction()
+llvm::Function *ExpressionCodeGen::CreateFunction()
 {
     int32_t argsSize = 8;
     std::vector<Type *> args;
@@ -519,7 +584,7 @@ Function *ExpressionCodeGen::CreateFunction()
     std::cout << std::endl;
 #endif
     FunctionType *prototype = FunctionType::get(GetFunctionReturnType(expr->GetExprDataType()), args, false);
-    func = Function::Create(prototype, Function::ExternalLinkage, funcName, module.get());
+    func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, funcName, module.get());
 
     std::string argNames[] = {
         "data", "nullBitmap", "offsets", "rowIdx",
@@ -666,26 +731,26 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
 Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr,
     AllocaInst *&lengthAllocaInst)
 {
-    Function *dictionaryFunc = nullptr;
+    llvm::Function *dictionaryFunc = nullptr;
     switch (vectorType) {
         case omniruntime::expressions::INT32D:
-            dictionaryFunc = module->getFunction(fr->dictionaryGetIntStr);
+            dictionaryFunc = module->getFunction(dictionaryGetIntStr);
             break;
         case omniruntime::expressions::INT64D:
-            dictionaryFunc = module->getFunction(fr->dictionaryGetLongStr);
+            dictionaryFunc = module->getFunction(dictionaryGetLongStr);
             break;
         case omniruntime::expressions::DECIMAL128D:
-            dictionaryFunc = module->getFunction(fr->dictionaryGetDecimalStr);
+            dictionaryFunc = module->getFunction(dictionaryGetDecimalStr);
             break;
         case omniruntime::expressions::DOUBLED:
-            dictionaryFunc = module->getFunction(fr->dictionaryGetDoubleStr);
+            dictionaryFunc = module->getFunction(dictionaryGetDoubleStr);
             break;
         case omniruntime::expressions::BOOLD:
-            dictionaryFunc = module->getFunction(fr->dictionaryGetBooleanStr);
+            dictionaryFunc = module->getFunction(dictionaryGetBooleanStr);
             break;
         case omniruntime::expressions::CHARD:
         case omniruntime::expressions::VARCHARD:
-            dictionaryFunc = module->getFunction(fr->dictionaryGetVarcharStr);
+            dictionaryFunc = module->getFunction(dictionaryGetVarcharStr);
             break;
         default:
             LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", vectorType);
@@ -1246,50 +1311,27 @@ void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
 }
 
 // Handles all functions
-// Only calls them; registration is done in function registry
 void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
 {
     std::vector<Value *> argVals;
-    std::string funcName = fExpr.funcName;
     int numArgs = fExpr.arguments.size();
     CodeGenValuePtr resultPtr;
     Value *isAnyNull = this->CreateConstantBool(false);
     for (int i = 0; i < numArgs; i++) {
-        if (funcNameToSignature.count(fExpr.funcName)) {
-            FunctionSignature fs = funcNameToSignature[fExpr.funcName];
-            DataType desiredType = fs.GetParams()[i];
-            DataType currType = fExpr.arguments[i]->GetExprDataType();
-            resultPtr = VisitExpr(*(fExpr.arguments[i]));
-            if (!resultPtr->IsValidValue()) {
-                this->value = CreateInvalidCodeGenValue();
-                return;
+        resultPtr = VisitExpr(*(fExpr.arguments[i]));
+        argVals.push_back(resultPtr->data);
+        isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
+        if (fExpr.dataType == DataType::CHARD && fExpr.funcName.compare("concat") == 0) {
+            if (i == 0) {
+                argVals.push_back(CreateConstantInt(fExpr.arguments[i]->width));
             }
-            argVals.push_back(resultPtr->data);
-            isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-        } else {
-            resultPtr = VisitExpr(*(fExpr.arguments[i]));
-            if (!resultPtr->IsValidValue()) {
-                this->value = CreateInvalidCodeGenValue();
-                return;
-            }
-            argVals.push_back(resultPtr->data);
-            isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-            // special case for concat function uses width
-            if (fExpr.dataType == DataType::CHARD && fExpr.funcName.compare("concat") == 0) {
-                if (i == 0) {
-                    argVals.push_back(CreateConstantInt(fExpr.arguments[i]->width));
-                }
-            }
-            if (IsStringDataType(fExpr.arguments[i]->dataType)) {
-                argVals.push_back(this->value->length);
-            }
-            if (fExpr.funcName == fr->mm3hashStr) {
-                argVals.push_back(this->value->isNull);
-            }
-            funcName += "_" + DataTypeString(*(fExpr.arguments[i]));
-            if (i == numArgs - 1) {
-                funcName += "_" + DataTypeString(fExpr);
-            }
+        }
+        if ((IsStringDataType(fExpr.arguments[i]->dataType))) {
+            argVals.push_back(this->value->length);
+        }
+
+        if (fExpr.funcName == mm3hashStr) {
+            argVals.push_back(this->value->isNull);
         }
     }
     Value *ret = nullptr;
@@ -1300,17 +1342,17 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         argVals.push_back(outputLenPtr);
         argVals.push_back(this->codegenContext->executionContext);
     }
-    if (fExpr.GetExprDataType() == DataType::DECIMAL128D && fExpr.funcName != fr->decimal128CompareExtStr) {
+    if (fExpr.GetExprDataType() == DataType::DECIMAL128D && fExpr.funcName != decimal128CompareExtStr) {
         argVals.push_back(this->codegenContext->executionContext);
     }
-    auto f = module->getFunction(funcName);
+    auto f = module->getFunction(fExpr.function->GetFuncID());
     if (f) {
-        ret = builder->CreateCall(f, argVals, funcName);
+        ret = builder->CreateCall(f, argVals, fExpr.function->GetFuncID());
         InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
         outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);
     } else {
-        std::cout << "Unable to find function " << funcName.c_str() << std::endl;
+        std::cout << "Unable to parse function " << fExpr.funcName.c_str() << std::endl;
         this->value = make_shared<CodeGenValue>(nullptr, nullptr, nullptr);
         return;
     }

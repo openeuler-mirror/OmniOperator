@@ -11,6 +11,8 @@
 #include <iostream>
 
 #include <nlohmann/json.hpp>
+#include <common/parserhelper.h>
+#include <codegen/func_registry.h>
 
 class JSONParser {
 public:

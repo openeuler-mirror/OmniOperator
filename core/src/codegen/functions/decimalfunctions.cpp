@@ -116,3 +116,11 @@ extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr)
 
     return reinterpret_cast<int64_t>(result);
 }
+
+extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr)
+{
+    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) + sizeof (long)));
+    result[0] = x;
+    result[1] = 0;
+    return reinterpret_cast<int64_t>(result);
+}

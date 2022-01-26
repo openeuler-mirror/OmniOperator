@@ -48,9 +48,9 @@ int64_t ProjectionCodeGen::GetFunction()
     return this->CreateWrapper(*func);
 }
 
-int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
+int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 {
-    Function *proj = &projFunc;
+    llvm::Function *proj = &projFunc;
 
     std::vector<Type*> args;
     /*
@@ -85,7 +85,8 @@ int64_t ProjectionCodeGen::CreateWrapper(Function &projFunc)
     args.push_back(Type::getInt64PtrTy(*context));
 
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
-    Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "PROJECT_WRAPPER", module.get());
+    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
+        "PROJECT_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *addToOutput = BasicBlock::Create(*context, "ADD_OUTPUT", funcDecl);
@@ -323,9 +324,10 @@ int64_t ProjectionCodeGen::GetExpressionEvaluator()
 {
     // Array of addresses, bitmap, row index
     std::vector<Type*> args = GetSingleProjectArguments(*context);
-    Function* baseFunc = this->CreateFunction();
+    llvm::Function* baseFunc = this->CreateFunction();
     FunctionType* funcSignature = FunctionType::get(ToPointerType(expr->GetExprDataType()), args, false);
-    Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
+    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
+        "FUNC_WRAPPER", module.get());
     builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
     // Name the arguments
     Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);

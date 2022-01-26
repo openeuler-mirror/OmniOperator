@@ -689,3 +689,13 @@ TEST(JSONParserTest, UnsupportedFunctionExprs)
     EXPECT_EQ(res[0], nullptr);
     delete res[0];
 }
+
+TEST(JSONParserTest, UnsupportedDecimal128FunctionExprs)
+{
+    vector<string> argsJson = { getFieldRefTestJson(DECIMAL128D, 1)};
+    string castJson = getFuncTestJson(INT64D, "CAST", argsJson);
+
+    auto parsedExpr = JSONParser::ParseJSON(nlohmann::json::parse(castJson));
+    EXPECT_EQ(parsedExpr, nullptr);
+    delete parsedExpr;
+}

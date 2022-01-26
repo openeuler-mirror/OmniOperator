@@ -3,22 +3,32 @@
  * Description: Extract essential information from the expression tree
  */
 #include <string>
-
 #include "expr_info_extractor.h"
-#include "functions/external_func_registry.h"
 
 using namespace omniruntime::expressions;
 using namespace std;
 
+void ExprInfoExtractor::PopulateFunctions(const vector<omniruntime::Function>& functionsToPopulate)
+{
+    for (auto func : functionsToPopulate) {
+        this->functions.push_back(&func);
+    }
+}
+
 void ExprInfoExtractor::Visit(const DataExpr &e)
 {
+    PopulateFunctions(GetDecimalFunctionRegistry());
     if (e.isColumn) {
         this->vectorIndexes.insert(e.colVal);
+        PopulateFunctions(GetDictionaryFunctionRegistry());
     }
 }
 
 void ExprInfoExtractor::Visit(const BinaryExpr &e)
 {
+    if (IsStringDataType(e.left->GetExprDataType())) {
+        this->functions.push_back(&GetStringCmpFn().front());
+    }
     e.left->Accept(*this);
     e.right->Accept(*this);
 }
@@ -37,6 +47,9 @@ void ExprInfoExtractor::Visit(const IfExpr &e)
 
 void ExprInfoExtractor::Visit(const InExpr &e)
 {
+    if (IsStringDataType(e.arguments[0]->GetExprDataType())) {
+        this->functions.push_back(&GetStringCmpFn().front());
+    }
     for (auto arg : e.arguments) {
         arg->Accept(*this);
     }
@@ -44,6 +57,9 @@ void ExprInfoExtractor::Visit(const InExpr &e)
 
 void ExprInfoExtractor::Visit(const BetweenExpr &e)
 {
+    if (IsStringDataType(e.value->GetExprDataType())) {
+        this->functions.push_back(&GetStringCmpFn().front());
+    }
     e.value->Accept(*this);
     e.lowerBound->Accept(*this);
     e.upperBound->Accept(*this);
@@ -62,23 +78,14 @@ void ExprInfoExtractor::Visit(const IsNullExpr &e)
 
 void ExprInfoExtractor::Visit(const FuncExpr &e)
 {
-    std::string fn = e.funcName;
-    ExternalFuncRegistry efr;
-    std::set<std::string> externalFuncNames = efr.GetAllExternalFunctionNames();
-    if (externalFuncNames.find(e.funcName) == externalFuncNames.end()) {
-        for (auto &argument : e.arguments) {
-            fn += "_" + DataTypeString(*argument);
-        }
-        fn += "_" + DataTypeString(e);
-    }
-    this->functions.insert(fn);
+    this->functions.push_back(e.function);
     // Recurse on the arguments
     for (auto arg : e.arguments) {
         arg->Accept(*this);
     }
 }
 
-std::set<std::string> ExprInfoExtractor::GetFunctions()
+std::vector<omniruntime::Function*> ExprInfoExtractor::GetFunctions()
 {
     return this->functions;
 }

@@ -30,4 +30,4 @@ private:
     llvm::FunctionCallee print;
 };
 
-#endif //OMNI_RUNTIME_CODEGEN_CONTEXT_H
+#endif // OMNI_RUNTIME_CODEGEN_CONTEXT_H

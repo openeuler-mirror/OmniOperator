@@ -44,9 +44,9 @@ int64_t FilterCodeGen::GetFunction()
     return this->CreateWrapper(*func);
 }
 
-int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
+int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 {
-    Function *filterFunc = &filterFn;
+    llvm::Function *filterFunc = &filterFn;
 
     std::vector<Type *> args;
     Type *ptrArg = Type::getInt64PtrTy(*context); // table
@@ -61,7 +61,8 @@ int64_t FilterCodeGen::CreateWrapper(Function &filterFn)
     args.push_back(Type::getInt64PtrTy(*context)); // dictionary vectors
 
     FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
-    Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FILTER_WRAPPER", module.get());
+    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
+        "FILTER_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);
@@ -196,9 +197,10 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
 {
     // Array of addresses, bitmap, row index
     std::vector<Type*> args = GetSingleFilterArguments(*context);
-    Function* baseFunc = this->CreateFunction();
+    llvm::Function* baseFunc = this->CreateFunction();
     FunctionType* funcSignature = FunctionType::get(Type::getInt1Ty(*context), args, false);
-    Function *funcDecl = Function::Create(funcSignature, Function::ExternalLinkage, "FUNC_WRAPPER", module.get());
+    llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
+        "FUNC_WRAPPER", module.get());
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
     builder->SetInsertPoint(wrapperBody);
     // Name the arguments

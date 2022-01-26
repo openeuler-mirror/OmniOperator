@@ -14,4 +14,4 @@ constexpr int32_t AVG_VECTOR_COUNT = 2;
 
 }
 }
-#endif //OMNI_RUNTIME_DEFINITIONS_H
+#endif // OMNI_RUNTIME_DEFINITIONS_H

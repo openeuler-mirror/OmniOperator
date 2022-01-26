@@ -5,7 +5,6 @@
 #include "jsonparser.h"
 #include <vector>
 #include <fstream> // for testing
-#include <common/parserhelper.h>
 
 using namespace std;
 
@@ -213,10 +212,13 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     if (retType == CHARD) {
         width = jsonExpr["width"].get<int32_t>();
     }
-
     // Check that the signature matches
-    if (ParserHelper().FuncDeclMatch(funcName, args, true)) {
-        return make_unique<FuncExpr>(funcName, args, retType, width).release();
+    std::string funcID = ParserHelper().GetFnIdentifier(funcName, args, retType);
+    if (!funcID.empty()) {
+        auto function = FunctionRegistry::LookupFunction(funcID);
+        if (function != nullptr) {
+            return make_unique<FuncExpr>(funcName, args, retType, width, *function).release();
+        }
     }
 
     // if operator is not supported, return nullptr

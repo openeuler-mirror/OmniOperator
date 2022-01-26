@@ -16,22 +16,6 @@ namespace {
     const int COMBINE_HASH_VALUE = 31;
 }
 
-// Absolute value
-extern "C" DLLEXPORT int32_t AbsInt32(int32_t x)
-{
-    return std::abs(x);
-}
-
-extern "C" DLLEXPORT int64_t AbsInt64(int64_t x)
-{
-    return std::abs(x);
-}
-
-extern "C" DLLEXPORT double AbsDouble(double x)
-{
-    return std::abs(x);
-}
-
 extern "C" DLLEXPORT long CastInt32ToInt64(int32_t x)
 {
     return static_cast<long>(x);
@@ -51,14 +35,6 @@ extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
 extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
 {
     return static_cast<double>(x);
-}
-
-extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr)
-{
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) + sizeof (long)));
-    result[0] = x;
-    result[1] = 0;
-    return reinterpret_cast<int64_t>(result);
 }
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)
