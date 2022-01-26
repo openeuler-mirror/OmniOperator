@@ -25,7 +25,7 @@ std::vector<Function> GetDecimalFunctionRegistry()
     decimalFnRegistry.insert(decimalFnRegistry.end(), {
             Function(reinterpret_cast<void*>(Decimal128CompareExt), "Decimal128CompareExt", {}, paramTypes,
                      INT32D, false),
-            Function(reinterpret_cast<void *>(AbsDecimal128), "abs", {}, {DECIMAL128D, INT64D}, DECIMAL128D, true),
+            Function(reinterpret_cast<void *>(AbsDecimal128), "abs_decimal128_decimal128", {}, {DECIMAL128D, INT64D}, DECIMAL128D, false),
             Function(reinterpret_cast<void*>(CastInt64ToDecimal128), "CAST_int64_decimal128", {},
                      {INT64D, INT64D}, DECIMAL128D, false),
     });

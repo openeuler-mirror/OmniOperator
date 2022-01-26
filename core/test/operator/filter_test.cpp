@@ -2034,28 +2034,24 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     DataType retType = DECIMAL128D;
     std::vector<Expr *> args1;
     args1.push_back(new DataExpr(0, DECIMAL128D));
-    //std::string funcID = ph.GetFnIdentifier(absStr, args1, retType);
-    std::string funcID = "abs_int64_int64";
+    std::string funcID = ph.GetFnIdentifier(absStr, args1, retType);
     FuncExpr *absExpr1 = new FuncExpr(absStr, args1, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
     args2.push_back(new DataExpr(2, DECIMAL128D));
-    //funcID = ph.GetFnIdentifier(absStr, args2, retType);
-    funcID = "abs_int64_int64";
+    funcID = ph.GetFnIdentifier(absStr, args2, retType);
     FuncExpr *absExpr2 = new FuncExpr(absStr, args2, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2, DECIMAL128D);
 
     std::vector<Expr *> args3;
     args3.push_back(new DataExpr(1, DECIMAL128D));
-    //funcID = ph.GetFnIdentifier(absStr, args3, retType);
-    funcID = "abs_int64_int64";
+    funcID = ph.GetFnIdentifier(absStr, args3, retType);
     FuncExpr *absExpr3 = new FuncExpr(absStr, args3, retType, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args4;
     args4.push_back(new DataExpr(2, DECIMAL128D));
-    //funcID = ph.GetFnIdentifier(absStr, args4, retType);
-    funcID = "abs_int64_int64";
+    funcID = ph.GetFnIdentifier(absStr, args4, retType);
     FuncExpr *absExpr4 = new FuncExpr(absStr, args4, retType, *fr.LookupFunction(funcID));
 
     BinaryExpr *eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4, DECIMAL128D);
