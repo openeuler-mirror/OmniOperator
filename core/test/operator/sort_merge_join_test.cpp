@@ -1306,7 +1306,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder) {
     Vector *leftVector2 = CreateVector<IntVector, int32_t>(leftData2_1, DATA_SIZE);
     double leftData2_2[DATA_SIZE] = {6.6, 7.7, 8.8, 9.9, 10.1, 11.1};
     Vector *dataVector2 = CreateVector<DoubleVector, double>(leftData2_2, DATA_SIZE);
-    int32_t ids2[DATA_SIZE] = {6, 7, 8, 9, 10, 11};
+    int32_t ids2[DATA_SIZE] = {0, 1, 2, 3, 4, 5};
     auto dicVector2 = new DictionaryVector(dataVector2, ids2, DATA_SIZE);
     auto *leftVecBatch2 = new VectorBatch(2, DATA_SIZE);
     leftVecBatch2->SetVector(0, leftVector2);
