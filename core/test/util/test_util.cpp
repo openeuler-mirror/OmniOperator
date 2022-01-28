@@ -207,7 +207,7 @@ void AssertDoubleVectorEquals(DoubleVector *vector, double *expectedValues)
         if (vector->IsValueNull(i)) {
             continue;
         }
-        EXPECT_TRUE(vector->GetValue(i) - expectedValues[i] <= DBL_EPSILON);
+        EXPECT_TRUE(std::fabs(vector->GetValue(i) - expectedValues[i]) <= DBL_EPSILON);
     }
 }
 
@@ -269,7 +269,7 @@ void AssertDictionaryVectorDoubleEquals(DictionaryVector *vector, double *values
         if (originalVec->IsValueNull(rowIndex)) {
             continue;
         }
-        EXPECT_TRUE(vector->GetDouble(i) - values[i] <= DBL_EPSILON);
+        EXPECT_TRUE(std::fabs(vector->GetDouble(i) - values[i]) <= DBL_EPSILON);
     }
 }
 
