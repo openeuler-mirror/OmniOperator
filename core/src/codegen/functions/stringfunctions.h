@@ -108,4 +108,9 @@ extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char 
     return SubstrWithStart(contextPtr, str, strLen, startIdx, outLen);
 }
 
+extern DLLEXPORT const char *ToUpper(int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen);
+
+extern DLLEXPORT const char *ToUpperChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+                                         int32_t *outLen);
+
 #endif

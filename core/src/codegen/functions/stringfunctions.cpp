@@ -122,3 +122,23 @@ extern DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
     std::time_t desiredTime = std::mktime(&t);
     return static_cast<int32_t>(std::difftime(desiredTime, epochTime) / SECOND_OF_DAY);
 }
+
+extern DLLEXPORT const char* ToUpper (int64_t contextPtr, const char *str, int32_t strLen, int32_t *outLen)
+{
+    auto ret = ArenaAllocatorMalloc(contextPtr, strLen);
+    for (int i = 0; i < strLen; i++) {
+        if (*(str + i) > 96 && *(str + i) < 123) {
+            *(ret + i) = *(str + i) - 32;
+        } else {
+            *(ret + i) = *(str + i);
+        }
+    }
+    *outLen = strLen;
+    return ret;
+}
+
+extern DLLEXPORT const char* ToUpperChar (int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+                                          int32_t *outLen)
+{
+    return ToUpper(contextPtr, str, strLen, outLen);
+}

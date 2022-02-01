@@ -43,6 +43,11 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void*>(CastString), "CAST",
                  {}, {OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_INT),
 
+        Function(reinterpret_cast<void*>(ToUpper), "upper",
+                 {}, {OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(ToUpperChar), "upper",
+                 {}, {OMNI_VEC_TYPE_CHAR}, OMNI_VEC_TYPE_CHAR, true),
+
         Function(reinterpret_cast<void *>(StrCompare), "compare",
                  {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_INT)
     };

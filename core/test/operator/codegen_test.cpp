@@ -1603,6 +1603,129 @@ TEST(CodeGenTest, ConcatChars)
     delete context;
 }
 
+TEST(CodeGenTest, ToUpper)
+{
+    std::string funcStr = "upper";
+    auto *col1 = new FieldExpr(1, VarCharType());
+    std::vector<Expr*> toUpperArgs;
+    toUpperArgs.push_back(col1);
+    VecTypePtr retType = VarCharType();
+    auto toUpperExpr = GetFuncExpr(funcStr, toUpperArgs, VarCharType());
+
+    auto upperTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."), VarCharType(80));
+    auto expr = new BinaryExpr(EQ, toUpperExpr, upperTestExpr, BooleanType());
+
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+    cout << endl;
+
+    string s1[] = {"[\\]^_abcdefghijklmnopqrstuvwxyz{|} The quick brown fox jumps over the lazy dog."};
+    int32_t v1[] = {8766};
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)s1->c_str();
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[2];
+    offsets[0] = new int32_t[1];
+    offsets[1] = new int32_t[2];
+    offsets[0][0] = 0;
+    offsets[1][0] = 0;
+    offsets[1][1] = s1[0].length();
+
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    int64_t dictionaries[2] = {};
+
+    auto context = new ExecutionContext();
+
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+
+    EXPECT_EQ(result, 1);
+
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 2; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] offsets;
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    codegen.reset();
+    delete context;
+}
+
+TEST(CodeGenTest, ToUpperChar)
+{
+    std::string funcStr = "upper";
+    auto *col1 = new FieldExpr(1, CharType(80));
+    std::vector<Expr*> toUpperCharArgs;
+    toUpperCharArgs.push_back(col1);
+    auto toUpperCharExpr = GetFuncExpr(funcStr, toUpperCharArgs, CharType(80));
+
+    auto upperCharTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."), CharType(80));
+    auto expr = new BinaryExpr(EQ, toUpperCharExpr, upperCharTestExpr, BooleanType());
+
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+    cout << endl;
+
+    string s1[] = {"[\\]^_abcdefghijklmnopqrstuvwxyz{|} The quick brown fox jumps over the lazy dog."};
+    int32_t v1[] = {8766};
+    int64_t *vals = new int64_t[2];
+    vals[0] = (int64_t)v1;
+    vals[1] = (int64_t)s1->c_str();
+    int32_t *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[2];
+    for (int i = 0; i < 2; i++) {
+        bitmap[i] = new bool[1];
+        bitmap[i][0] = false;
+    }
+
+    auto **offsets = new int32_t *[2];
+    offsets[0] = new int32_t[1];
+    offsets[1] = new int32_t[2];
+    offsets[0][0] = 0;
+    offsets[1][0] = 0;
+    offsets[1][1] = s1[0].length();
+
+    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr);
+    int64_t dictionaries[2] = {};
+
+    auto context = new ExecutionContext();
+
+    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+
+    int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context), dictionaries);
+
+    EXPECT_EQ(result, 1);
+
+    context->getArena()->Reset();
+
+    for (int i = 0; i < 2; i++) {
+        delete[] bitmap[i];
+        delete[] offsets[i];
+    }
+    delete[] offsets;
+    delete[] bitmap;
+    delete[] vals;
+    delete[] selected;
+    delete expr;
+    codegen.reset();
+    delete context;
+}
+
 TEST(CodeGenTest, StringWithOps)
 {
     // create expression objects
