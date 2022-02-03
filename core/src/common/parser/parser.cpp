@@ -239,16 +239,16 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // Function
     // Check that the signature matches
-    std::string funcID = ph.GetFnIdentifier(opStr, args, type->GetId());
-    if (!funcID.empty()) {
-        auto function = FunctionRegistry::LookupFunction(funcID);
-        if (function != nullptr) {
-            return make_unique<FuncExpr>(opStr, args, std::move(type), *function).release();
-        }
+    vector<VecTypeId> argTypes(args.size());
+    std::transform(args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    auto signature = FunctionSignature(opStr, argTypes, type->GetId());
+    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
+    if (function != nullptr) {
+        return make_unique<FuncExpr>(opStr, args, std::move(type), function).release();
     }
-#ifdef DEBUG
-    cout << "operator is not supported" << endl;
-#endif
+
+    // No expression can be matched
+    LogWarn("operator is not supported: %s", opStr.c_str());
     return nullptr;
 }
 

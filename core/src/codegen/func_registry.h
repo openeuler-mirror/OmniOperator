@@ -12,17 +12,35 @@
 #include "func_registry_math.h"
 #include "func_registry_hash.h"
 #include "func_registry_string.h"
+#include <unordered_map>
+#include <memory>
 
-class FunctionRegistry {
-public:
-    ~FunctionRegistry();
-    static omniruntime::Function *LookupFunction(const std::string& fnID);
-    static std::vector<omniruntime::Function> &GetFunctions();
+namespace omniruntime {
 
-private:
-    ExternalFuncRegistry efr;
-    static std::vector<omniruntime::Function> functionRegistry;
+    struct Hash {
+        std::size_t operator()(const FunctionSignature* signature) const { return signature->HashCode(); }
+    };
+    struct Equals {
+        bool operator()(const FunctionSignature* s1, const FunctionSignature* s2) const { return *s1 == *s2; }
+    };
 
-    static std::vector<omniruntime::Function> Initialize();
-};
+    typedef std::unique_ptr<std::unordered_map<const FunctionSignature*, const Function*, Hash, Equals>> FunctionMapPtr;
+
+    class FunctionRegistry {
+    public:
+        ~FunctionRegistry();
+
+        static const Function *LookupFunction(FunctionSignature *signature);
+
+        static std::vector<std::unique_ptr<BaseFunctionRegistry>> GetFunctionRegistries();
+
+        static std::vector<Function> &GetFunctions();
+
+    private:
+        static std::vector<Function> registeredFunctions;
+        static FunctionMapPtr functionRegistry;
+
+        static std::vector<Function> Initialize();
+    };
+}
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_H

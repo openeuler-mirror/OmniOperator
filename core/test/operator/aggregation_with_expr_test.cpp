@@ -8,6 +8,7 @@
 #include "../../src/vector/vector_helper.h"
 #include "operator/jit_context/jit_context.h"
 #include "../util/test_util.h"
+#include "../../libconfig.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;

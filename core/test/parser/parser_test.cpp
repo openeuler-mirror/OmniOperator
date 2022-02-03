@@ -578,12 +578,12 @@ TEST(ParseTest, parseConcatOperation)
 TEST(ParseTest, parseLikeOperation)
 {
     int vecTypeCount = 1;
-    string expr = "LIKE:15(#0, '%hello':15)";
+    string expr = "LIKE:4(#0, '%hello':15)";
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
+    EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "LIKE");
     auto args = absExpr->arguments;

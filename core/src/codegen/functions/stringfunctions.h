@@ -20,20 +20,24 @@
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen);
-extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen);
-extern "C" DLLEXPORT const char *SubstrExt(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx, int32_t length,
-                                           int32_t *outLen);
-extern "C" DLLEXPORT const char *SubstrExt64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx, int64_t length,
+extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen);
+extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen);
+extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx, int32_t length,
+                                        int32_t *outLen);
+extern DLLEXPORT const char *SubstrChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, int32_t startIdx,
+                                        int32_t length, int32_t *outLen);
+extern DLLEXPORT const char *Substr_int64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx, int64_t length,
+                                         int32_t *outLen);
+extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx,
                                              int32_t *outLen);
-extern "C" DLLEXPORT const char *SubstrWithStartExt(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx,
-                                                    int32_t *outLen);
-extern "C" DLLEXPORT const char *SubstrWithStartExt64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx,
-                                                      int32_t *outLen);
-extern "C" DLLEXPORT const char *ConcatStrExt(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
-                                              int32_t *outLen);
-extern "C" DLLEXPORT const char *ConcatCharExt(int64_t contextPtr, const char *ap, int32_t width, int32_t apLen, const char *bp,
-                                               int32_t bpLen, int32_t *outLen);
-extern "C" DLLEXPORT const char *CastString(const char *str, int32_t strLen);
+extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+                                                int32_t startIdx, int32_t *outLen);
+extern DLLEXPORT const char *SubstrWithStart_int64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx,
+                                                   int32_t *outLen);
+extern DLLEXPORT const char *ConcatStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
+                                       int32_t *outLen);
+extern DLLEXPORT const char *ConcatChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen, const char *bp,
+                                        int32_t bWidth, int32_t bpLen, int32_t *outLen);
+extern DLLEXPORT const char *CastString(const char *str, int32_t strLen);
 
 #endif

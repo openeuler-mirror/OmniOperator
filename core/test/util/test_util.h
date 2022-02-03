@@ -13,6 +13,9 @@
 #include "../../src/vector/vector_types.h"
 #include "../../src/vector/vector_type.h"
 #include "../../src/vector/vector_allocator_factory.h"
+#include "codegen/func_signature.h"
+#include "codegen/func_registry.h"
+#include "common/expressions.h"
 
 using namespace omniruntime::vec;
 
@@ -130,6 +133,9 @@ void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<
 
 void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols);
+
+omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
+    std::vector<omniruntime::expressions::Expr*> args, omniruntime::expressions::VecTypePtr returnType);
 
 std::unique_ptr<VecType> IntType();
 

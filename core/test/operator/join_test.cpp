@@ -1261,30 +1261,26 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
 {
     // create the filter expression
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "substr";
     VecTypePtr retType = VarCharType();
 
-    FieldExpr *leftSubstrColumn = new FieldExpr(1, VarCharType());
-    LiteralExpr *leftSubstrIndex = new LiteralExpr(1, IntType());
-    LiteralExpr *leftSubstrLen = new LiteralExpr(5, IntType());
+    auto leftSubstrColumn = new FieldExpr(1, VarCharType());
+    auto leftSubstrIndex = new LiteralExpr(1, IntType());
+    auto leftSubstrLen = new LiteralExpr(5, IntType());
     std::vector<Expr *> leftSubstrArgs;
     leftSubstrArgs.push_back(leftSubstrColumn);
     leftSubstrArgs.push_back(leftSubstrIndex);
     leftSubstrArgs.push_back(leftSubstrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType->GetId());
-    FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, std::make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto leftSubstrExpr = GetFuncExpr(funcStr, leftSubstrArgs, VarCharType());
 
-    FieldExpr *rightSubstrColumn = new FieldExpr(3, VarCharType());
-    LiteralExpr *rightSubstrIndex = new LiteralExpr(1, IntType());
-    LiteralExpr *rightSubstrLen = new LiteralExpr(5, IntType());
+    auto rightSubstrColumn = new FieldExpr(3, VarCharType());
+    auto rightSubstrIndex = new LiteralExpr(1, IntType());
+    auto rightSubstrLen = new LiteralExpr(5, IntType());
     std::vector<Expr *> rightSubstrArgs;
     rightSubstrArgs.push_back(rightSubstrColumn);
     rightSubstrArgs.push_back(rightSubstrIndex);
     rightSubstrArgs.push_back(rightSubstrLen);
-    funcID = ph.GetFnIdentifier(funcStr, rightSubstrArgs, retType->GetId());
-    FuncExpr *rightSubstrExpr = new FuncExpr(funcStr, rightSubstrArgs, std::make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto rightSubstrExpr = GetFuncExpr(funcStr, rightSubstrArgs, VarCharType());
 
     BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BooleanType());
     return notEqualExpr;

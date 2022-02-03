@@ -22,10 +22,7 @@ public:
     void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
-    void PopulateFunctions(const std::vector<omniruntime::Function>& functionsToPopulate);
-    std::vector<omniruntime::Function*> GetFunctions();
     std::set<int32_t> GetVectorIndexes();
 private:
-    std::vector<omniruntime::Function*> functions;
     std::set<int32_t> vectorIndexes;
 };

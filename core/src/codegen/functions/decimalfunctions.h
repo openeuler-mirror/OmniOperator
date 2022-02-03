@@ -17,7 +17,7 @@
 #define DLLEXPORT
 #endif
 
-extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y);
+extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t x, int64_t y);
 
 extern "C" DLLEXPORT int64_t AddDec128(int64_t contextPtr, int64_t x, int64_t y);
 

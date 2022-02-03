@@ -143,45 +143,35 @@ void ExpressionCodeGen::Initialize()
     RegisterFunctions(FunctionRegistry::GetFunctions());
 }
 
-void ExpressionCodeGen::RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs)
-{
-
-    for (auto &funcSignature: func.GetSignatures()) {
-        if (jitRegisteredFuncs.find(funcSignature.GetName()) == jitRegisteredFuncs.end()) {
-            auto &jd = jit->getMainJITDylib();
-            auto &dl = jit->getDataLayout();
-            llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
-            std::vector<VecTypeId> params = funcSignature.GetParams();
-            VecTypeId retType = funcSignature.GetReturnType();
-            std::vector<Type*> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
-            auto s = llvm::orc::absoluteSymbols(
-                {
-                    {
-                        mangle(funcSignature.GetName()), JITEvaluatedSymbol(pointerToJITTargetAddress
-                            (funcSignature.GetFunctionAddress()), JITSymbolFlags::Exported)
-                    }
-                }
-                );
-            auto ign = jd.define(s);
-            if (ign) {
-                std::cerr << "Error while defining absolute symbol in jd" << std::endl;
-            }
-            llvm::Type *ret = llvmTypes->ToLLVMType(retType);
-            llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
-            auto linkage = llvm::Function::ExternalLinkage;
-            llvm::Function *fn = llvm::Function::Create(ft, linkage, funcSignature.GetName(), *module);
-            FunctionCallee callee = module->getOrInsertFunction(funcSignature.GetName(), ft);
-            jitRegisteredFuncs.insert(funcSignature.GetName());
-        }
-    }
-}
-
 // Register function in JIT
-void ExpressionCodeGen::RegisterFunctions(std::vector<omniruntime::Function> functions)
+void ExpressionCodeGen::RegisterFunctions(const std::vector<omniruntime::Function>& functions)
 {
     std::set<std::string> jitRegisteredFuncs;
     for (auto &func : functions) {
-        RegisterFunctionsHelper(func, jitRegisteredFuncs);
+        auto &jd = jit->getMainJITDylib();
+        auto &dl = jit->getDataLayout();
+        llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
+        std::vector<VecTypeId> params = func.GetParamTypes();
+        VecTypeId retType = func.GetReturnType();
+        std::vector<Type*> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
+        auto s = llvm::orc::absoluteSymbols(
+            {
+                {
+                    mangle(func.GetId()),
+                    JITEvaluatedSymbol(pointerToJITTargetAddress(func.GetAddress()), JITSymbolFlags::Exported)
+                }
+            }
+        );
+        LogDebug("register: %s", func.GetId().c_str());
+        auto ign = jd.define(s);
+        if (ign) {
+            LogError("Error while defining absolute symbol in jd");
+        }
+        llvm::Type *ret = llvmTypes->ToLLVMType(retType);
+        llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
+        auto linkage = llvm::Function::ExternalLinkage;
+        llvm::Function *fn = llvm::Function::Create(ft, linkage, func.GetId(), *module);
+        FunctionCallee callee = module->getOrInsertFunction(func.GetId(), ft);
     }
 }
 
@@ -190,7 +180,9 @@ Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *
 {
     // call function
     std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
-    auto f = module->getFunction(strCompareExtStr);
+    auto signature = FunctionSignature(strCompareStr,
+       std::vector<VecTypeId>{OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_VARCHAR}, OMNI_VEC_TYPE_INT);
+    auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
     auto ret = builder->CreateCall(f, argVals, "call_str_cmp");
     InlineFunctionInfo inlineFunctionInfo;
     auto inlinedFunction = llvm::InlineFunction(*ret, inlineFunctionInfo);
@@ -204,7 +196,9 @@ Value *ExpressionCodeGen::Decimal128Cmp(const Value &lhs, const Value &rhs)
     std::vector<Value *> argVals;
     argVals.push_back(const_cast<Value *>(&lhs));
     argVals.push_back(const_cast<Value *>(&rhs));
-    auto f = module->getFunction(decimal128CompareExtStr);
+    auto signature = FunctionSignature(decimal128CompareStr,
+       std::vector<VecTypeId>{OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128}, OMNI_VEC_TYPE_INT);
+    auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
     Value *ret = builder->CreateCall(f, argVals, "call_decimal_cmp");
     return ret;
 }
@@ -240,10 +234,14 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
                 leftZero = builder->CreateFSub(left, left);
                 rightZero = builder->CreateFSub(right, right);
                 break;
-            case OMNI_VEC_TYPE_DECIMAL128:
-                leftZero = builder->CreateCall(module->getFunction(subDec128Str), argLeftVals, subDec128Str);
-                rightZero = builder->CreateCall(module->getFunction(subDec128Str), argRightVals, subDec128Str);
+            case OMNI_VEC_TYPE_DECIMAL128: {
+                auto signature = FunctionSignature(subDec128Str,
+           std::vector<VecTypeId>{OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128}, OMNI_VEC_TYPE_DECIMAL128);
+                auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
+                leftZero = builder->CreateCall(f, argLeftVals, subDec128Str);
+                rightZero = builder->CreateCall(f, argRightVals, subDec128Str);
                 break;
+            }
             default:
                 // Unsupported data-types left as-is
                 leftZero = left;
@@ -293,10 +291,18 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
             leftZero = builder->CreateFSub(left, left);
             rightOne = builder->CreateFSub(builder->CreateFAdd(right, llvmTypes->CreateConstantDouble(1.0)), right);
             break;
-        case OMNI_VEC_TYPE_DECIMAL128:
-            leftZero = builder->CreateCall(module->getFunction("Sub_decimal128"), argLeftVals, "Sub_decimal128");
-            rightOne = builder->CreateCall(module->getFunction("Div_decimal128"), argRightVals, "Div_decimal128");
+        case OMNI_VEC_TYPE_DECIMAL128: {
+            auto subSignature = FunctionSignature(subDec128Str,
+                std::vector<VecTypeId>{OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128}, OMNI_VEC_TYPE_DECIMAL128);
+            auto f = module->getFunction(FunctionRegistry::LookupFunction(&subSignature)->GetId());
+            leftZero = builder->CreateCall(f, argLeftVals, "Sub_decimal128");
+
+            auto divSignature = FunctionSignature(divDec128Str,
+                std::vector<VecTypeId>{OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128}, OMNI_VEC_TYPE_DECIMAL128);
+            f = module->getFunction(FunctionRegistry::LookupFunction(&subSignature)->GetId());
+            rightOne = builder->CreateCall(f, argRightVals, "Div_decimal128");
             break;
+        }
         default:
             // Unsupported data-types left as-is
             leftZero = left;
@@ -422,6 +428,7 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, 
     Value *isNeitherNull;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
     std::vector<Value *> argVals { this->codegenContext->executionContext, leftPhi, rightPhi };
+    std::vector<VecTypeId> binaryFuncParamTypes{OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_DECIMAL128};
 
     switch (binaryExpr->op) {
         case LT:
@@ -442,14 +449,26 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, 
         case NEQ:
             return builder->CreateAnd(isNeitherNull,
                 builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
-        case ADD:
-            return builder->CreateCall(module->getFunction(addDec128Str), argVals, addDec128Str);
-        case SUB:
-            return builder->CreateCall(module->getFunction(subDec128Str), argVals, subDec128Str);
-        case MUL:
-            return builder->CreateCall(module->getFunction(mulDec128Str), argVals, mulDec128Str);
-        case DIV:
-            return builder->CreateCall(module->getFunction(divDec128Str), argVals, divDec128Str);
+        case ADD: {
+            auto signature = FunctionSignature(addDec128Str, binaryFuncParamTypes, OMNI_VEC_TYPE_DECIMAL128);
+            auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
+            return builder->CreateCall(f, argVals, addDec128Str);
+        }
+        case SUB: {
+            auto signature = FunctionSignature(subDec128Str, binaryFuncParamTypes, OMNI_VEC_TYPE_DECIMAL128);
+            auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
+            return builder->CreateCall(f, argVals, subDec128Str);
+        }
+        case MUL: {
+            auto signature = FunctionSignature(mulDec128Str, binaryFuncParamTypes, OMNI_VEC_TYPE_DECIMAL128);
+            auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
+            return builder->CreateCall(f, argVals, mulDec128Str);
+        }
+        case DIV: {
+            auto signature = FunctionSignature(divDec128Str, binaryFuncParamTypes, OMNI_VEC_TYPE_DECIMAL128);
+            auto f = module->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
+            return builder->CreateCall(f, argVals, divDec128Str);
+        }
         default:
             std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
             return nullptr;
@@ -665,34 +684,36 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
 Value *ExpressionCodeGen::GetDictionaryVectorValue(VecType vectorType, Value *rowIdx, Value *dictionaryVectorPtr,
     AllocaInst *&lengthAllocaInst)
 {
+    std::vector<VecTypeId> paramTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT};
     VecTypeId typeId = vectorType.GetId();
-    llvm::Function *dictionaryFunc = nullptr;
+    FunctionSignature dictionaryFuncSignature;
     switch (typeId) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32:
-            dictionaryFunc = module->getFunction(dictionaryGetIntStr);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetIntStr, paramTypes, OMNI_VEC_TYPE_INT);
             break;
         case OMNI_VEC_TYPE_LONG:
         case OMNI_VEC_TYPE_DECIMAL64:
-            dictionaryFunc = module->getFunction(dictionaryGetLongStr);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_VEC_TYPE_LONG);
             break;
         case OMNI_VEC_TYPE_DECIMAL128:
-            dictionaryFunc = module->getFunction(dictionaryGetDecimalStr);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetDecimalStr, paramTypes, OMNI_VEC_TYPE_DECIMAL128);
             break;
         case OMNI_VEC_TYPE_DOUBLE:
-            dictionaryFunc = module->getFunction(dictionaryGetDoubleStr);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_VEC_TYPE_DOUBLE);
             break;
         case OMNI_VEC_TYPE_BOOLEAN:
-            dictionaryFunc = module->getFunction(dictionaryGetBooleanStr);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_VEC_TYPE_BOOLEAN);
             break;
         case OMNI_VEC_TYPE_CHAR:
         case OMNI_VEC_TYPE_VARCHAR:
-            dictionaryFunc = module->getFunction(dictionaryGetVarcharStr);
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VEC_TYPE_VARCHAR);
             break;
         default:
             LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", typeId);
             return nullptr;
     }
+    auto dictionaryFunc = module->getFunction(FunctionRegistry::LookupFunction(&dictionaryFuncSignature)->GetId());
     std::vector<Value *> funcArgs;
 
     if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
@@ -1283,12 +1304,10 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         resultPtr = VisitExpr(*(fExpr.arguments[i]));
         argVals.push_back(resultPtr->data);
         isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-        if (fExpr.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR && fExpr.funcName.compare("concat") == 0) {
-            if (i == 0) {
+        if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
+            if (fExpr.arguments[i]->GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
                 argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType().GetWidth()));
             }
-        }
-        if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
             argVals.push_back(this->value->length);
         }
 
@@ -1303,9 +1322,9 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         argVals.push_back(outputLenPtr);
     }
-    auto f = module->getFunction(fExpr.function->GetFuncID());
+    auto f = module->getFunction(fExpr.function->GetId());
     if (f) {
-        ret = builder->CreateCall(f, argVals, fExpr.function->GetFuncID());
+        ret = builder->CreateCall(f, argVals, fExpr.function->GetId());
         InlineFunctionInfo inlineFunctionInfo;
         auto inlinedFunction = llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
         outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(outputLenPtr);

@@ -30,7 +30,7 @@ namespace {
     const int ONE = 3;
 }
 
-extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
+extern DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {
     int min = bpLen;
     if (apLen < min) {
@@ -45,7 +45,7 @@ extern "C" DLLEXPORT int32_t StrCompareExt(const char *ap, int32_t apLen, const 
     }
 }
 
-extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
+extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen)
 {
     string s = string(str, strLen);
     string r = string(regexToMatch, regexLen);
@@ -57,8 +57,8 @@ extern "C" DLLEXPORT bool LikeExt(const char *str, int32_t strLen, const char *r
     return regex_match(s, re);
 }
 
-extern "C" DLLEXPORT const char *SubstrWithStartExt(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx,
-                                                    int32_t *outLen)
+extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx,
+                                                 int32_t *outLen)
 {
     if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
         *outLen = 0;
@@ -82,14 +82,20 @@ extern "C" DLLEXPORT const char *SubstrWithStartExt(int64_t contextPtr, const ch
     return ret;
 }
 
-extern "C" DLLEXPORT const char *SubstrWithStartExt64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx,
-                                                    int32_t *outLen)
+extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+                                                 int32_t startIdx, int32_t *outLen)
 {
-    return SubstrWithStartExt(contextPtr, str, strLen, static_cast<int32_t>(startIdx), outLen);
+    return SubstrWithStart(contextPtr, str, strLen, static_cast<int32_t>(startIdx), outLen);
 }
 
-extern "C" DLLEXPORT const char *SubstrExt(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx, int32_t length,
-                                           int32_t *outLen)
+extern DLLEXPORT const char *SubstrWithStart_int64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx,
+                                                   int32_t *outLen)
+{
+    return SubstrWithStart(contextPtr, str, strLen, static_cast<int32_t>(startIdx), outLen);
+}
+
+extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx, int32_t length,
+                                        int32_t *outLen)
 {
     if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
         *outLen = 0;
@@ -125,14 +131,20 @@ extern "C" DLLEXPORT const char *SubstrExt(int64_t contextPtr, const char *str, 
     return ret;
 }
 
-extern "C" DLLEXPORT const char *SubstrExt64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx, int64_t length,
-                                             int32_t *outLen)
+extern DLLEXPORT const char *SubstrChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, int32_t startIdx,
+                                        int32_t length, int32_t *outLen)
 {
-    return SubstrExt(contextPtr, str, strLen, static_cast<int32_t>(startIdx), static_cast<int32_t>(length), outLen);
+    return Substr(contextPtr, str, strLen, startIdx, length, outLen);
 }
 
-extern "C" DLLEXPORT const char *ConcatStrExt(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
-                                              int32_t *outLen)
+extern DLLEXPORT const char *Substr_int64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx, int64_t length,
+                                             int32_t *outLen)
+{
+    return Substr(contextPtr, str, strLen, static_cast<int32_t>(startIdx), static_cast<int32_t>(length), outLen);
+}
+
+extern DLLEXPORT const char *ConcatStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,
+                                       int32_t *outLen)
 {
     *outLen = apLen + bpLen;
     if (*outLen <= 0) {
@@ -149,19 +161,19 @@ extern "C" DLLEXPORT const char *ConcatStrExt(int64_t contextPtr, const char *ap
     return ret;
 }
 
-extern "C" DLLEXPORT const char *ConcatCharExt(int64_t contextPtr, const char *ap, int32_t width, int32_t apLen, const char *bp,
-                                               int32_t bpLen, int32_t *outLen)
+extern DLLEXPORT const char *ConcatChar(int64_t contextPtr, const char *ap, int32_t aWidth, int32_t apLen, const char *bp,
+                                        int32_t bWidth, int32_t bpLen, int32_t *outLen)
 {
     if (bpLen == 0) {
         *outLen = apLen;
         return ap;
     }
-    int32_t apPaddedLen;
-    if (apLen <= width) {
+    int32_t apPaddedLen = 0;
+    if (apLen <= aWidth) {
         if (apPaddedLen == apLen) {
             apPaddedLen = apLen;
         } else {
-            apPaddedLen = width;
+            apPaddedLen = aWidth;
         }
     }
     *outLen = apPaddedLen + bpLen;
@@ -180,7 +192,7 @@ extern "C" DLLEXPORT const char *ConcatCharExt(int64_t contextPtr, const char *a
     return ret;
 }
 
-extern "C" DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
+extern DLLEXPORT int32_t CastString(const char *str, int32_t strLen)
 {
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings

@@ -86,7 +86,6 @@ LiteralExpr::LiteralExpr(std::string *val, VecTypePtr dt)
 {
     dataType = std::move(dt);
     stringVal = val;
-    width = val->length() + 1;
 }
 LiteralExpr::LiteralExpr(int64_t *val, VecTypePtr dt)
 {
@@ -311,19 +310,19 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt)
     dataType = std::move(dt);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, Function &function)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, const Function *function)
 {
     funcName = fnName;
     arguments = args;
     dataType = std::move(dt);
-    this->function = &function;
+    this->function = function;
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, Function &function)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, const Function *function)
 {
     funcName = fnName;
     arguments = args;
-    this->function = &function;
+    this->function = function;
 }
 
 ExprType FuncExpr::GetType() const

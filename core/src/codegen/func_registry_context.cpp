@@ -8,14 +8,14 @@ using namespace omniruntime::vec;
 using namespace omniruntime;
 
 
-std::vector<Function> GetContextFunctionRegistry()
+std::vector<Function> ContextFunctionRegistry::GetFunctions()
 {
-    static std::vector<Function> contextFnRegistry = {
+    std::vector<Function> contextFnRegistry = {
         Function(reinterpret_cast<void*>(ArenaAllocatorMalloc), "ArenaAllocatorMalloc", {},
                  {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT},
-                 OMNI_VEC_TYPE_CHAR, false),
+                 OMNI_VEC_TYPE_CHAR),
         Function(reinterpret_cast<void*>(ArenaAllocatorReset), "ArenaAllocatorReset", {}, {OMNI_VEC_TYPE_LONG},
-                 OMNI_VEC_TYPE_BOOLEAN, false)
+                 OMNI_VEC_TYPE_BOOLEAN)
     };
     return contextFnRegistry;
 }

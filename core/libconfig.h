@@ -21,16 +21,6 @@ static std::string GetLibPath()
     }
 }
 
-static std::string GetConfPath()
-{
-    auto omniHome = std::getenv("OMNI_HOME");
-    if (omniHome) {
-        return std::string(omniHome) + "/conf/";
-    } else {
-        return DEFAULT_FILE_PATH;
-    }
-}
-
 static std::string GenerateOperatorTemplatePath(std::string operatorName)
 {
     return GetLibPath() + IR_FOLDER + operatorName + IR_SUFFIX;

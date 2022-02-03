@@ -7,23 +7,22 @@
 using namespace omniruntime;
 using namespace omniruntime::vec;
 
-std::vector<Function> GetDictionaryFunctionRegistry()
+std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
 {
     std::vector<VecTypeId> paramTypes = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT};
-    static std::vector<Function> dictionaryFnRegistry = {
+    std::vector<Function> dictionaryFnRegistry = {
         Function(reinterpret_cast<void*>(GetIntFromDictionaryVector), "DictionaryGetInt", {}, paramTypes,
-                 OMNI_VEC_TYPE_INT, false),
+                 OMNI_VEC_TYPE_INT),
         Function(reinterpret_cast<void*>(GetLongFromDictionaryVector), "DictionaryGetLong", {}, paramTypes,
-                 OMNI_VEC_TYPE_LONG, false),
+                 OMNI_VEC_TYPE_LONG),
         Function(reinterpret_cast<void*>(GetDoubleFromDictionaryVector), "DictionaryGetDouble", {},
-                 paramTypes, OMNI_VEC_TYPE_DOUBLE, false),
+                 paramTypes, OMNI_VEC_TYPE_DOUBLE),
         Function(reinterpret_cast<void*>(GetBooleanFromDictionaryVector), "DictionaryGetBoolean", {},
-                 paramTypes, OMNI_VEC_TYPE_BOOLEAN, false),
+                 paramTypes, OMNI_VEC_TYPE_BOOLEAN),
         Function(reinterpret_cast<void*>(GetVarcharFromDictionaryVector),
-                 "DictionaryGetVarchar", {}, {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_VARCHAR, false),
+                 "DictionaryGetVarchar", {}, paramTypes, OMNI_VEC_TYPE_VARCHAR),
         Function(reinterpret_cast<void*>(GetDecimalFromDictionaryVector),
-                 "DictionaryGetDecimal", {}, {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_DECIMAL128,
-                 false, true)
+                 "DictionaryGetDecimal", {}, paramTypes, OMNI_VEC_TYPE_DECIMAL128, true)
     };
     return dictionaryFnRegistry;
 }

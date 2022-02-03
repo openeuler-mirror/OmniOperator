@@ -7,11 +7,11 @@
 using namespace omniruntime;
 using namespace omniruntime::vec;
 
-std::vector<Function> GetMathFunctionRegistry()
+std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     std::string absFnStr = "abs";
     std::string castFnStr = "CAST";
-    static std::vector<Function> mathFnRegistry = {
+    std::vector<Function> mathFnRegistry = {
         // insert native functions for each absolute math function
         Function(reinterpret_cast<void*>(Abs<int32_t>), absFnStr, {}, {OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_INT),
         Function(reinterpret_cast<void*>(Abs<int64_t>), absFnStr, {}, {OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_LONG),

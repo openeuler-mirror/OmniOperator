@@ -5,13 +5,18 @@
 #ifndef OMNI_RUNTIME_FUNC_REGISTRY_STRING_H
 #define OMNI_RUNTIME_FUNC_REGISTRY_STRING_H
 #include "function.h"
+#include "func_registry_base.h"
 #include "util/type_util.h"
-
-std::vector<omniruntime::Function> GetStringFunctionRegistry();
-std::vector<omniruntime::Function> GetStringCmpFn();
 
 // functions called directly from codegen
 const std::string mm3hashStr = "mm3hash";
-const std::string strCompareExtStr = "StrCompareExt";
+const std::string strCompareStr = "compare";
+
+namespace omniruntime {
+    class StringFunctionRegistry : public BaseFunctionRegistry {
+    public:
+        std::vector<Function> GetFunctions() override;
+    };
+}
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_STRING_H

@@ -1178,16 +1178,13 @@ TEST(FilterTest, NotEqualToAbs) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     //filter
-    ParserHelper ph;
-    FunctionRegistry fr;
     VecTypePtr retType = IntType();
     std::string funcStr = "abs";
     std::vector<Expr *> args;
-        args.push_back(new FieldExpr(0, IntType()));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType->GetId());
-    FuncExpr *absExpr = new FuncExpr(funcStr, args, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    args.push_back(new FieldExpr(0, IntType()));
+    auto absExpr = GetFuncExpr(funcStr, args, IntType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(NEQ, absExpr, new LiteralExpr(4, IntType()), BooleanType());
+    auto filterExpr = new BinaryExpr(NEQ, absExpr, new LiteralExpr(4, IntType()), BooleanType());
     const int32_t projectCount = 1;
     std::vector<Expr*> projections = {new FieldExpr(0, IntType())};
 
@@ -1225,33 +1222,27 @@ TEST(FilterTest, MathFunctionFilter1) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     //filters
-    ParserHelper ph;
-    FunctionRegistry fr;
     VecTypePtr retType = IntType();
     std::string funcStr = "abs";
     std::vector<Expr *> args1;
     args1.push_back(new FieldExpr(0, IntType()));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *abs1Expr = new FuncExpr(funcStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto abs1Expr = GetFuncExpr(funcStr, args1, IntType());
 
     std::vector<Expr *> args2;
     args2.push_back(new FieldExpr(2, IntType()));
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *abs2Expr = new FuncExpr(funcStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
-    BinaryExpr *eq1Expr = new BinaryExpr(EQ, abs1Expr, abs2Expr, BooleanType());
+    auto abs2Expr = GetFuncExpr(funcStr, args2, IntType());
+    auto eq1Expr = new BinaryExpr(EQ, abs1Expr, abs2Expr, BooleanType());
 
     std::vector<Expr *> args3;
     args3.push_back(new FieldExpr(0, IntType()));
-    funcID = ph.GetFnIdentifier(funcStr, args3, retType->GetId());
-    FuncExpr *abs3Expr = new FuncExpr(funcStr, args3, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto abs3Expr = GetFuncExpr(funcStr, args3, IntType());
 
     std::vector<Expr *> args4;
     args4.push_back(new FieldExpr(1, IntType()));
-    funcID = ph.GetFnIdentifier(funcStr, args4, retType->GetId());
-    FuncExpr *abs4Expr = new FuncExpr(funcStr, args4, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
-    BinaryExpr *eq2Expr = new BinaryExpr(EQ, abs3Expr, abs4Expr, BooleanType());
+    auto abs4Expr = GetFuncExpr(funcStr, args4, IntType());
+    auto eq2Expr = new BinaryExpr(EQ, abs3Expr, abs4Expr, BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(AND, eq1Expr, eq2Expr, BooleanType());
+    auto filterExpr = new BinaryExpr(AND, eq1Expr, eq2Expr, BooleanType());
 
     const int32_t projectCount = 3;
         std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
@@ -1300,21 +1291,17 @@ TEST(FilterTest, MathFunctionFilter2) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     // filters
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string castStr = "CAST";
     VecTypePtr retType = DoubleType();
     std::vector<Expr *> args1;
     args1.push_back(new FieldExpr(0, IntType()));
-    std::string funcID = ph.GetFnIdentifier(castStr, args1, retType->GetId());
-    FuncExpr *cast1 = new FuncExpr(castStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto cast1 = GetFuncExpr(castStr, args1, DoubleType());
 
     std::vector<Expr *> args2;
     args2.push_back(new FieldExpr(1, LongType()));
-    funcID = ph.GetFnIdentifier(castStr, args2, retType->GetId());
-    FuncExpr *cast2 = new FuncExpr(castStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto cast2 = GetFuncExpr(castStr, args2, DoubleType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, cast1, cast2, BooleanType());
+    auto filterExpr = new BinaryExpr(EQ, cast1, cast2, BooleanType());
 
     const int32_t projectCount = 3;
         std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
@@ -1493,77 +1480,48 @@ BinaryExpr *filterExpr = new BinaryExpr(EQ, coalesceExpr, new LiteralExpr(new st
 }
 
 
-// To run this test, ensure that externalfunctions.so has been compiled and is placed in the correct folder
-// For full instructions, see the README in core/src/codegen/functions
-TEST(FilterTest, DISABLED_ExternalMathFunc) {
-    const int32_t NUM_COLS = 3;
+TEST(FilterTest, ExternalMathFunc) {
+    const int32_t NUM_COLS = 2;
     const int32_t NUM_ROWS = 1000;
     int32_t *col1 = new int32_t[NUM_ROWS];
     int32_t *col2 = new int32_t[NUM_ROWS];
-    int32_t *col3 = new int32_t[NUM_ROWS];
     for (int32_t i = 0; i < NUM_ROWS; i++) {
-        col1[i] = i % 2;
-        col2[i] = 2;
-        col3[i] = 10;
+        col1[i] = i;
+        col2[i] = i + 2;
     }
-    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2, (int64_t) col3};
-    VecTypes inputTypes(std::vector<VecType>({IntVecType(), IntVecType(), IntVecType()}));
+    int64_t allData[NUM_COLS] = {(int64_t) col1, (int64_t) col2};
+    VecTypes inputTypes(std::vector<VecType>({IntVecType(), IntVecType()}));
     VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
 
     // filter
-    ParserHelper ph;
-    FunctionRegistry fr;
-    std::string funcStr = "Add1Int32";
+    std::string funcStr = "Increment";
     VecTypePtr retType = IntType();
-    std::vector<Expr *> args1;
-    args1.push_back(new FieldExpr(0, IntType()));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *add1Int1Expr = new FuncExpr(funcStr, args1, *fr.LookupFunction(funcID));
-    std::vector<Expr *> args2;
-    args2.push_back(add1Int1Expr);
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *eqLeft = new FuncExpr(funcStr, args2, *(fr.LookupFunction(funcID)));
+    auto col0 = new FieldExpr(0, IntType());
+    auto add1Int1Expr = GetFuncExpr(funcStr, vector<Expr*>{col0}, IntType());
+    auto eqLeft = GetFuncExpr(funcStr, vector<Expr*>{add1Int1Expr}, IntType());
+    auto eqRight = new FieldExpr(1, IntType());
 
-    std::vector<Expr *> args3;
-    args3.push_back(new FieldExpr(1, IntType()));
-    funcID = ph.GetFnIdentifier(funcStr, args3, retType->GetId());
-    FuncExpr *add1Int2Expr = new FuncExpr(funcStr, args3, *fr.LookupFunction(funcID));
-    std::vector<Expr *> args4;
-    args4.push_back(add1Int2Expr);
-    funcID = ph.GetFnIdentifier(funcStr, args4, retType->GetId());
-    FuncExpr *eqRight = new FuncExpr(funcStr, args4, *(fr.LookupFunction(funcID)));
+    auto filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
-
-    const int32_t PROJECT_COUNT = 3;
-        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
-                                          new FieldExpr(2, IntType())};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType())};
     OperatorFactory *factory =
-            new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
+            new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, projections.size());
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
     int32_t numReturned = op->GetOutput(ret);
-    EXPECT_EQ(numReturned, 500);
-    for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *) ret[0]->GetVector(0))->GetValue(i);
-        int32_t val1 = ((IntVector *) ret[0]->GetVector(1))->GetValue(i);
-        EXPECT_TRUE(val0 + 1 == val1);
-    }
+    EXPECT_EQ(numReturned, NUM_ROWS);
 
     VectorHelper::FreeVecBatches(ret);
 
     delete[] col1;
     delete[] col2;
-    delete[] col3;
     delete op;
     delete factory;
 }
 
 
-// To run this test, ensure that externalfunctions.so has been compiled and is placed in the correct folder
-// For full instructions, see the README in core/src/codegen/functions
-TEST(FilterTest, DISABLED_ExternalStringFunc) {
+TEST(FilterTest, ExternalStringFunc) {
     const int32_t NUM_COLS = 1;
     const int32_t NUM_ROWS = 1000;
     vector<string *> strings;
@@ -1592,15 +1550,12 @@ TEST(FilterTest, DISABLED_ExternalStringFunc) {
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(30)}));
     VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
 
-    ParserHelper ph;
-    FunctionRegistry fr;
-    std::string funcStr = "LengthStr";
+    std::string funcStr = "length";
     VecTypePtr retType = IntType();
     std::vector<Expr *> args;
     args.push_back(new FieldExpr(0, VarCharType()));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args, retType->GetId());
-    FuncExpr *eqLeft = new FuncExpr(funcStr, args, *fr.LookupFunction(funcID));
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
+    auto eqLeft = GetFuncExpr(funcStr, args, IntType());
+    auto filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
 
     const int32_t PROJECT_COUNT = 1;
     std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
@@ -1623,78 +1578,6 @@ TEST(FilterTest, DISABLED_ExternalStringFunc) {
     delete op;
     delete factory;
 }
-
-
-// To run this test, ensure that externalfunctions.so has been compiled and is placed in the correct folder
-// For full instructions, see the README in core/src/codegen/functions
-TEST(FilterTest, DISABLED_ExternalStringFunc2) {
-    const int32_t NUM_COLS = 1;
-    const int32_t NUM_ROWS = 1000;
-    vector<string *> strings;
-    int64_t *col1 = new int64_t[NUM_ROWS];
-
-    // column looks like:
-    // hello, bye, hello, bye, hello, bye, ...
-    for (int32_t i = 0; i < NUM_ROWS; i++) {
-        if (i % 2 == 0) {
-            std::string *s = new std::string("hello");
-            col1[i] = (int64_t) (s->c_str());
-            strings.push_back(s);
-        } else {
-            if (i % 4 == 1) {
-                std::string *s = new std::string("bye");
-                col1[i] = (int64_t) (s->c_str());
-                strings.push_back(s);
-            } else {
-                std::string *s = new std::string("asdf");
-                col1[i] = (int64_t) (s->c_str());
-                strings.push_back(s);
-            }
-        }
-    }
-    int64_t allData[NUM_COLS] = {(int64_t) col1};
-    VecTypes inputTypes(std::vector<VecType>({VarcharVecType(30)}));
-    VectorBatch *t = CreateInput(NUM_ROWS, NUM_COLS, inputTypes.GetIds(), allData);
-
-    // filter
-    ParserHelper ph;
-    FunctionRegistry fr;
-    std::string funcStr = "FirstCharStr";
-    VecTypePtr retType = BooleanType();
-    std::vector<Expr *> args1;
-    args1.push_back(new FieldExpr(0, VarCharType()));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *eqLeft = new FuncExpr(funcStr, args1, *fr.LookupFunction(funcID));
-
-    std::vector<Expr *> args2;
-    args2.push_back(new LiteralExpr(new std::string("apple"), VarCharType()));
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *eqRight = new FuncExpr(funcStr, args2, *fr.LookupFunction(funcID));
-
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
-
-    const int32_t PROJECT_COUNT = 1;
-    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
-    OperatorFactory *factory =
-            new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
-    omniruntime::op::Operator *op = factory->CreateOperator();
-    op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-
-    EXPECT_EQ(numReturned, 250);
-
-    for (auto &s : strings) {
-        delete s;
-    }
-
-    VectorHelper::FreeVecBatches(ret);
-
-    delete[] col1;
-    delete op;
-    delete factory;
-}
-
 
 // Testing multithreading
 // Two operators running at once
@@ -1737,30 +1620,24 @@ TEST(FilterTest, Multithreading) {
     auto start = std::chrono::high_resolution_clock::now();
 
     // filters
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string castStr = "CAST";
     std::string absStr = "abs";
     VecTypePtr retType = DoubleType();
     std::vector<Expr *> args1;
     args1.push_back(new FieldExpr(0, IntType()));
-    std::string funcID = ph.GetFnIdentifier(castStr, args1, retType->GetId());
-    FuncExpr *cast1Expr = new FuncExpr(castStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto cast1Expr = GetFuncExpr(castStr, args1, DoubleType());
     std::vector<Expr *> args2;
     args2.push_back(cast1Expr);
-    funcID = ph.GetFnIdentifier(absStr, args2, retType->GetId());
-    FuncExpr *eqLeft = new FuncExpr(absStr, args2, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    auto eqLeft = GetFuncExpr(absStr, args2, DoubleType());
 
     std::vector<Expr *> args3;
     args3.push_back(new FieldExpr(1, LongType()));
-    funcID = ph.GetFnIdentifier(castStr, args3, retType->GetId());
-    FuncExpr *cast2Expr = new FuncExpr(castStr, args3, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto cast2Expr = GetFuncExpr(castStr, args3, DoubleType());
     std::vector<Expr *> args4;
     args4.push_back(cast2Expr);
-    funcID = ph.GetFnIdentifier(absStr, args4, retType->GetId());
-    FuncExpr *eqRight = new FuncExpr(absStr, args4, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    auto eqRight = GetFuncExpr(absStr, args4, DoubleType());
 
-    BinaryExpr *filterExpr1 = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
+    auto filterExpr1 = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
 
     const int32_t PROJECT_COUNT = 3;
         std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
@@ -1771,9 +1648,9 @@ TEST(FilterTest, Multithreading) {
     std::thread thread1(process, op, t, ret, numReturned);
 
     // filter2
-    LiteralExpr *eqRight2 = new LiteralExpr(4, LongType());
+    auto eqRight2 = new LiteralExpr(4, LongType());
     eqRight2->longVal = 4;
-    BinaryExpr *filterExpr2 = new BinaryExpr(EQ, new FieldExpr(1, LongType()), eqRight2, BooleanType());
+    auto filterExpr2 = new BinaryExpr(EQ, new FieldExpr(1, LongType()), eqRight2, BooleanType());
     std::vector<Expr*> projections2 = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
                                        new FieldExpr(2, IntType())};
 
@@ -2040,35 +1917,28 @@ TEST(FilterTest, DecimalFilterAbsTest) {
                                       new FieldExpr(1, Decimal128Type(38, 0)), new FieldExpr(2, Decimal128Type(38, 0))};
 
     // filters
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string absStr = "abs";
     VecTypePtr retType =  Decimal128Type(38, 0);
     std::vector<Expr *> args1;
     args1.push_back(new FieldExpr(0, Decimal128Type(38, 0)));
-    std::string funcID = ph.GetFnIdentifier(absStr, args1, retType->GetId());
-    FuncExpr *absExpr1 = new FuncExpr(absStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto absExpr1 = GetFuncExpr(absStr, args1, Decimal128Type(38, 0));
 
     std::vector<Expr *> args2;
     args2.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
-    funcID = ph.GetFnIdentifier(absStr, args2, retType->GetId());
-    FuncExpr *absExpr2 = new FuncExpr(absStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto absExpr2 = GetFuncExpr(absStr, args2, Decimal128Type(38, 0));
 
-    BinaryExpr *eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2,  Decimal128Type(38, 0));
+    auto eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2,  Decimal128Type(38, 0));
 
     std::vector<Expr *> args3;
     args3.push_back(new FieldExpr(1, Decimal128Type(38, 0)));
-    funcID = ph.GetFnIdentifier(absStr, args3, retType->GetId());
-    FuncExpr *absExpr3 = new FuncExpr(absStr, args3, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto absExpr3 = GetFuncExpr(absStr, args3, Decimal128Type(38, 0));
 
     std::vector<Expr *> args4;
     args4.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
-    funcID = ph.GetFnIdentifier(absStr, args4, retType->GetId());
-    FuncExpr *absExpr4 = new FuncExpr(absStr, args4, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto absExpr4 = GetFuncExpr(absStr, args4, Decimal128Type(38, 0));
 
-    BinaryExpr *eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4,  Decimal128Type(38, 0));
-
-    BinaryExpr *filterExpr = new BinaryExpr(AND, eqExpr1, eqExpr2, BooleanType());
+    auto eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4,  Decimal128Type(38, 0));
+    auto filterExpr = new BinaryExpr(AND, eqExpr1, eqExpr2, BooleanType());
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(
             filterExpr, inputTypes, numCols, projections, projectCount);
@@ -2383,24 +2253,20 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
 
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(5), VarcharVecType(5)}));
     //filter expression object
-    ParserHelper ph;
-    FunctionRegistry fr;
     std::string funcStr = "substr";
     VecTypePtr retType = VarCharType();
     std::vector<Expr *> args1;
     args1.push_back(new FieldExpr(0, VarCharType()));
     args1.push_back(new LiteralExpr(1, IntType()));
     args1.push_back(new LiteralExpr(5, IntType()));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *substrExpr1 = new FuncExpr(funcStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
+    auto substrExpr1 = GetFuncExpr(funcStr, args1, VarCharType());
 
     std::vector<Expr *> args2;
     args2.push_back(new FieldExpr(1, VarCharType()));
     args2.push_back(new LiteralExpr(1, IntType()));
     args2.push_back(new LiteralExpr(5, IntType()));
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *substrExpr2 = new FuncExpr(funcStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
-    BinaryExpr *filterExpr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
+    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarCharType());
+    auto filterExpr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
 
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();

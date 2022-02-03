@@ -8,11 +8,11 @@
 using namespace omniruntime;
 using namespace omniruntime::vec;
 
-std::vector<Function> GetHashRegistry()
+std::vector<Function> HashFunctionRegistry::GetFunctions()
 {
     VecTypeId retType = OMNI_VEC_TYPE_INT;
     std::string mm3fnStr = "mm3hash";
-    static std::vector<Function> hashRegistry = {
+    std::vector<Function> hashRegistry = {
         Function(reinterpret_cast<void *>(Mm3Int32), mm3fnStr, {}, {OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT}, retType),
         Function(reinterpret_cast<void *>(Mm3Int64), mm3fnStr, {}, {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT}, retType),
         Function(reinterpret_cast<void *>(Mm3Double), mm3fnStr, {}, {OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_INT}, retType),

@@ -5,8 +5,7 @@
 #ifndef OMNI_RUNTIME_FUNC_REGISTRY_DICTIONARY_H
 #define OMNI_RUNTIME_FUNC_REGISTRY_DICTIONARY_H
 #include "function.h"
-
-std::vector<omniruntime::Function> GetDictionaryFunctionRegistry();
+#include "func_registry_base.h"
 
 // functions called directly from codegen
 const std::string dictionaryGetIntStr = "DictionaryGetInt";
@@ -15,5 +14,12 @@ const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";
 const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
 const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
 const std::string dictionaryGetDecimalStr = "DictionaryGetDecimal";
+
+namespace omniruntime {
+    class DictionaryFunctionRegistry : public BaseFunctionRegistry {
+    public:
+        std::vector<Function> GetFunctions() override;
+    };
+}
 
 #endif // OMNI_RUNTIME_FUNC_REGISTRY_DICTIONARY_H

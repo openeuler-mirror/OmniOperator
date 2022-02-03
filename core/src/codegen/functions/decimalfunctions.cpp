@@ -15,7 +15,7 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
+extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t x, int64_t y)
 {
     auto *l = reinterpret_cast<int64_t*>(x);
     auto *r = reinterpret_cast<int64_t*>(y);

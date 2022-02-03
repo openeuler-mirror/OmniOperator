@@ -246,10 +246,11 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
         }
     }
     // Check that the signature matches
-    std::string funcID = ParserHelper().GetFnIdentifier(funcName, args, retTypeId);
-    if (!funcID.empty()) {
-        auto function = FunctionRegistry::LookupFunction(funcID);
-        if (TypeUtil::IsStringType(retTypeId)) {
+    vector<VecTypeId> argTypes(args.size());
+    std::transform(args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    auto signature = FunctionSignature(funcName, argTypes, retTypeId);
+    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
+    if (TypeUtil::IsStringType(retTypeId)) {
             width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
             if (retTypeId == OMNI_VEC_TYPE_CHAR) {
                 retType = make_unique<CharVecType>(width);
@@ -266,10 +267,8 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
             }
         } else {
             retType = make_unique<VecType>(retTypeId);
-        }
-        if (function != nullptr) {
-            return make_unique<FuncExpr>(funcName, args, std::move(retType), *function).release();
-        }
+        }if (function != nullptr) {
+        return make_unique<FuncExpr>(funcName, args, std::move(retType), function).release();
     }
 
     // if operator is not supported, return nullptr

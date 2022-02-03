@@ -78,10 +78,7 @@ protected:
     // Util functions
     std::vector<llvm::Type*> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
                                                 bool needsContext);
-    llvm::Value* CreateConstantBool(bool n);
-    llvm::Value* CreateConstantInt(int32_t n);
-    llvm::Value* CreateConstantLong(int64_t n);
-    llvm::Value* CreateConstantDouble(double n);
+
     llvm::Value* GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
     void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
     // Helper functions for generating IR for operators and special forms
@@ -127,10 +124,8 @@ protected:
 
 private:
     std::string funcName;
-    std::map<std::string, FunctionSignature> funcNameToSignature;
     static void InitializeCodegenTargets();
-    void RegisterFunctions(std::vector<omniruntime::Function> func);
-    void RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs);
+    void RegisterFunctions(const std::vector<omniruntime::Function>& func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::vec::VecType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);

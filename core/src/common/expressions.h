@@ -93,7 +93,6 @@ typedef std::unique_ptr<VecType> VecTypePtr;
 class Expr {
 public:
     VecTypePtr dataType;   // dataType of returned value
-    int32_t width = INT32_MAX;
     VecType &GetReturnType() const;
     VecTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;
@@ -239,14 +238,14 @@ class FuncExpr : public Expr {
 public:
     std::string funcName;
     std::vector<Expr*> arguments;
-    omniruntime::Function *function;
+    const omniruntime::Function *function;
 
     FuncExpr();
     ~FuncExpr() override;
     FuncExpr(std::string fnName, std::vector<Expr*> args);
     FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, omniruntime::Function &function);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, omniruntime::Function &function);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, const omniruntime::Function *function);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, const omniruntime::Function *function);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;

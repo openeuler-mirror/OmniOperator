@@ -181,7 +181,7 @@ void ExprPrinter::Visit(const FieldExpr &e)
 {
     string indent = GenerateIndentation();
     if (e.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
-        printf(indent.append("#%d[%d]").c_str(), e.colVal, e.width);
+        printf(indent.append("#%d[%d]").c_str(), e.colVal, e.GetReturnType().GetWidth());
     } else {
         printf(indent.append("#%d").c_str(), e.colVal);
     }

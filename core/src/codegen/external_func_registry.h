@@ -5,56 +5,14 @@
 #ifndef EXTERNAL_FUNC_REGISTRY_H
 #define EXTERNAL_FUNC_REGISTRY_H
 
-#include <map>
-#include <set>
-#include <string>
-#include <fstream>
+#include "function.h"
+#include "func_registry_base.h"
 
-
-#include "common/expressions.h"
-#include "func_signature.h"
-#include "../../libconfig.h"
-
-#include <memory>
-
-namespace {
-    // Only updated once
-    // Initialized in external_func_registry.cpp
-    static std::set<std::string> g_allExtFnNames;
-    static std::map<std::string, omniruntime::vec::VecTypeId> g_nameToRetType;
-    static std::map<std::string, FunctionSignature> g_funcSignatureMap;
-
-    // Tells whether UpdateFuncSigMap has been called so that it only needs to be called once
-    // Initialized in external_func_registry.cpp
-    static bool g_hasInitialized;
-
-    const std::string EXTERNAL_FUNCTIONS_FILE_PATH = GetConfPath() + "externalfunctions/externalregistration.conf";
-    const std::string EXTERNAL_FUNCTIONS_LIB_PATH = GetLibPath() + "externalfunctions.so";
-    const int32_t PAREN_LENGTH = 1;
+namespace omniruntime {
+    class ExternalFunctionRegistry : public BaseFunctionRegistry {
+    public:
+        std::vector<Function> GetFunctions() override;
+    };
 }
-
-class ExternalFuncRegistry {
-public:
-    ExternalFuncRegistry();
-    ~ExternalFuncRegistry();
-    
-    // Returns a set containing strings of all the external function names
-    std::set<std::string> GetAllExternalFunctionNames() const;
-
-    // Returns a map from function name to return type
-    std::map<std::string, omniruntime::vec::VecTypeId> GetFuncReturnTypeMap() const;
-
-    // Add the signatures for your own functions here
-    FunctionSignature GetExternalSignature(std::string funcName) const;
-
-    // Helper functions for UpdateFuncSigMap
-    int64_t FetchHandle() const;
-    std::ifstream FetchExternalFunctionInfo(int64_t handle) const;
-
-    // Uses externalregistration.txt to update funcSignatureMap
-    // Also updates allExtFnNames and FuncRetTypeMap
-    void UpdateFuncSigMap() const;
-};
-
 
 #endif
