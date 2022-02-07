@@ -6,7 +6,7 @@
 #define OMNI_RUNTIME_FUNCTION_H
 
 #include "func_signature.h"
-#include "../common/datatype.h"
+#include "util/type_util.h"
 
 // used by parser to validate the number of args in each function
 const std::map<std::string, int32_t> FUNC_TO_NUM_ARGS = {
@@ -41,7 +41,7 @@ namespace omniruntime {
          * @param setExecutionContext if true - pass the execution context to func signature as a param
          */
         Function(void *address, const std::string &fnID, const std::vector<std::string> &aliases, const
-        std::vector<omniruntime::expressions::DataType> &paramTypes, const omniruntime::expressions::DataType
+        std::vector<omniruntime::vec::VecTypeId> &paramTypes, const omniruntime::vec::VecTypeId
         &retType, bool generateFuncID = true, bool setExecutionContext = false);
 
         Function(const std::string &fnID, const FunctionSignature &signature);

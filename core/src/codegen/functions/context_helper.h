@@ -14,7 +14,7 @@
 
 extern "C" DLLEXPORT {
 char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);
-void ArenaAllocatorReset(int64_t contextPtr);
+bool ArenaAllocatorReset(int64_t contextPtr);
 }
 
 #endif

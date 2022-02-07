@@ -6,6 +6,7 @@
 #define __TEST_UTIL_H__
 
 #include <time.h>
+#include <common/expressions.h>
 #include "../../src/vector/vector_common.h"
 #include "../../src/operator/operator.h"
 #include "../../src/operator/operator_factory.h"
@@ -129,5 +130,25 @@ void ToVectorTypes(const int32_t *vecTypeIds, int32_t vecTypeCount, std::vector<
 
 void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t projectKeysCount,
     std::vector<int32_t> &typeIds, int32_t *projectCols);
+
+std::unique_ptr<VecType> IntType();
+
+std::unique_ptr<VecType> Date32Type();
+
+std::unique_ptr<VecType> LongType();
+
+std::unique_ptr<VecType> DoubleType();
+
+std::unique_ptr<VecType> BooleanType();
+
+std::unique_ptr<VecType> VarCharType();
+
+std::unique_ptr<VecType> VarCharType(int32_t width);
+
+std::unique_ptr<VecType> CharType(int32_t width);
+
+std::unique_ptr<VecType> Decimal64Type(int32_t precision, int32_t scale);
+
+std::unique_ptr<VecType> Decimal128Type(int32_t precision, int32_t scale);
 
 #endif

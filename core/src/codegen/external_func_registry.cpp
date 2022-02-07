@@ -11,6 +11,7 @@
 
 #include "./external_func_registry.h"
 #include "util/debug.h"
+#include "util/type_util.h"
 
 using namespace std;
 using namespace omniruntime::expressions;
@@ -33,7 +34,7 @@ set<string> ExternalFuncRegistry::GetAllExternalFunctionNames() const
 }
 
 // Returns a map from function name to return type
-map<string, DataType> ExternalFuncRegistry::GetFuncReturnTypeMap() const
+map<string, VecTypeId> ExternalFuncRegistry::GetFuncReturnTypeMap() const
 {
     return g_nameToRetType;
 }
@@ -122,28 +123,27 @@ void ExternalFuncRegistry::UpdateFuncSigMap() const
         if (arrowIdx == string::npos) {
             continue;
         }
-        DataType retType = StringToDataType(currLine.substr(arrowIdx + PAREN_LENGTH + 1));
+        VecTypeId retType = TypeUtil::StringToType(currLine.substr(arrowIdx + PAREN_LENGTH + 1));
         currLine = currLine.substr(0, arrowIdx).substr(1, arrowIdx - PAREN_LENGTH - 1); // remove parentheses
 
         // Get the argument types
-        vector<DataType> argTypes;
+        vector<VecTypeId> argTypes;
         int leftIdx = 0;
 
         for (int i = 0; i < currLine.size(); i++) {
             if (currLine[i] == ',') {
                 string typeStr = currLine.substr(leftIdx, i - leftIdx);
                 leftIdx = i + 1;
-                argTypes.push_back(StringToDataType(typeStr));
+                argTypes.push_back(TypeUtil::StringToType(typeStr));
             }
         }
         // last argument
-        argTypes.push_back(StringToDataType(currLine.substr(leftIdx, currLine.size() - leftIdx)));
+        argTypes.push_back(TypeUtil::StringToType(currLine.substr(leftIdx, currLine.size() - leftIdx)));
 
         // Add to allExtFnNames
         g_allExtFnNames.insert(fnName);
         // Add mapping to nameToRetType map
         g_nameToRetType[fnName] = retType;
-
         // Create FunctionSignature and add to funcSignatureMap with function address retrieved via dlsym
         FunctionSignature funcSig (fnName, argTypes, retType, dlsym(handle, fnName.c_str()));
         g_funcSignatureMap[fnName] = funcSig;

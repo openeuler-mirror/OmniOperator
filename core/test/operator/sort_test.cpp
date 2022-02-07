@@ -94,7 +94,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     delete[] data2;
     delete[] data1;
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -132,7 +132,7 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -169,7 +169,7 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
 
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -206,7 +206,7 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
 
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -245,7 +245,7 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 
     // free memory
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -284,7 +284,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -326,7 +326,7 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     std::cout << "testOrderByTwoColumnPerf cpu_elapsed time: " << cpuElapsed << "s" << std::endl;
 
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -387,7 +387,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
     sortOperator->GetOutput(outputVecBatches);
 
     VectorHelper::FreeVecBatches(outputVecBatches);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
 }
 
 TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
@@ -522,7 +522,7 @@ TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -562,7 +562,7 @@ TEST(NativeOmniSortTest, TestSortTwoCharColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -602,7 +602,7 @@ TEST(NativeOmniSortTest, TestSortTwoDate32Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -642,7 +642,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal64Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -682,7 +682,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal128Column)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -726,7 +726,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -851,7 +851,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -899,7 +899,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
 
@@ -947,6 +947,6 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    Operator::DeleteOperator(sortOperator);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }

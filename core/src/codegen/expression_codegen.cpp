@@ -41,99 +41,30 @@ CodeGenValuePtr ExpressionCodeGen::VisitExpr(const omniruntime::expressions::Exp
     return this->value;
 }
 
-Value *ExpressionCodeGen::CreateConstantBool(bool v)
+// TODO:: define size of a vector
+std::vector<Type*> ExpressionCodeGen::GetFunctionArgTypeVector(std::vector<VecTypeId> &params,
+                                                               VecTypeId &retTypeId, bool needsContext)
 {
-    return ConstantInt::get(*context, APInt(1, v));
-}
-
-Value *ExpressionCodeGen::CreateConstantInt(int32_t v)
-{
-    return ConstantInt::get(*context, APInt(INT32_VALUE, v, true));
-}
-
-Value *ExpressionCodeGen::CreateConstantLong(int64_t v)
-{
-    return ConstantInt::get(*context, APInt(INT64_VALUE, v, true));
-}
-
-Value *ExpressionCodeGen::CreateConstantDouble(double v)
-{
-    return ConstantFP::get(*context, APFloat(v));
-}
-
-
-Type *ExpressionCodeGen::ToLlvmType(DataType t)
-{
-    switch (t) {
-        case DataType::INT32D:
-            return Type::getInt32Ty(*context);
-        case DataType::INT64D:
-            return Type::getInt64Ty(*context);
-        case DataType::DOUBLED:
-            return Type::getDoubleTy(*context);
-        case DataType::BOOLD:
-            return Type::getInt1Ty(*context);
-        case DataType::CHARD:
-        case DataType::VARCHARD:
-            return Type::getInt8PtrTy(*context);
-        case DataType::DECIMAL128D:
-            return Type::getInt64Ty(*context);
-        default:
-            LLVM_DEBUG_LOG("Error: Unknown argument datatype %d", t);
-            return nullptr;
+    std::vector<Type*> outTypeVector;
+    if (needsContext) {
+        outTypeVector.push_back(llvmTypes->I64Type());
     }
-}
-
-Type *ExpressionCodeGen::ToPointerType(DataType type)
-{
-    switch (type) {
-        case DataType::BOOLD:
-            return Type::getInt1PtrTy(*context);
-        case DataType::INT32D:
-            return Type::getInt32PtrTy(*context);
-        case DataType::INT64D:
-            return Type::getInt64PtrTy(*context);
-        case DataType::DOUBLED:
-            return Type::getDoublePtrTy(*context);
-        case DataType::CHARD:
-        case DataType::VARCHARD:
-            return Type::getInt64PtrTy(*context);
-        default:
-            LLVM_DEBUG_LOG("Unsupported column data type %d", type);
-            return Type::getInt64PtrTy(*context);
+    for (auto type: params) {
+        outTypeVector.push_back(llvmTypes->ToLLVMType(type));
+        if (TypeUtil::IsStringType(type)) {
+            if (type == OMNI_VEC_TYPE_CHAR) {
+                // Add Type for width support
+                outTypeVector.push_back(llvmTypes->I32Type());
+            }
+            // Add Type for Length of the string
+            outTypeVector.push_back(llvmTypes->I32Type());
+        }
     }
-}
-
-Type *ExpressionCodeGen::GetFunctionReturnType(DataType type)
-{
-    if (IsStringDataType(type)) {
-        return Type::getInt64Ty(*context);
-    } else {
-        return this->ToLlvmType(expr->GetExprDataType());
+    // return arguments
+    if (TypeUtil::IsStringType(retTypeId)) {
+        outTypeVector.push_back(llvmTypes->I32PtrType());
     }
-}
-
-Type *ExpressionCodeGen::GetFunctionArgType(DataType type)
-{
-    switch (type) {
-        case DataType::VOIDD:
-            return Type::getVoidTy(*context);
-        case DataType::INT32D:
-        case DataType::INT64D:
-        case DataType::DOUBLED:
-        case DataType::BOOLD:
-        case DataType::DECIMAL128D:
-            return ToLlvmType(type);
-        case DataType::VARCHARD:
-            return Type::getInt64Ty(*context);
-        case DataType::INT32PTRD:
-            return Type::getInt32PtrTy(*context);
-        case DataType::INT8PTRD:
-            return Type::getInt8PtrTy(*context);
-        default:
-            LLVM_DEBUG_LOG("Error: Unknown argument datatype %d", type);
-            return nullptr;
-    }
+    return outTypeVector;
 }
 
 /**
@@ -197,6 +128,7 @@ void ExpressionCodeGen::Initialize()
     jit = eoe(LLJITBuilder().create());
 
     context = std::make_unique<LLVMContext>();
+    llvmTypes = std::make_unique<LLVMTypes>(*context);
     // Create module called the_module
     module = std::make_unique<Module>("the_module", *context);
     module->setDataLayout(jit->getDataLayout());
@@ -213,29 +145,28 @@ void ExpressionCodeGen::Initialize()
 
 void ExpressionCodeGen::RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs)
 {
+
     for (auto &funcSignature: func.GetSignatures()) {
         if (jitRegisteredFuncs.find(funcSignature.GetName()) == jitRegisteredFuncs.end()) {
             auto &jd = jit->getMainJITDylib();
             auto &dl = jit->getDataLayout();
             llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), dl);
-            std::vector<Type *> args;
-            std::vector<DataType> params = funcSignature.GetParams();
-            args.reserve(params.size());
-            for (auto type: params) {
-                args.push_back(this->GetFunctionArgType(type));
-            }
-            auto s = llvm::orc::absoluteSymbols({
-                {mangle(funcSignature.GetName()),
-                 JITEvaluatedSymbol(pointerToJITTargetAddress(funcSignature.GetFunctionAddress()),
-                                    JITSymbolFlags::Exported)
+            std::vector<VecTypeId> params = funcSignature.GetParams();
+            VecTypeId retType = funcSignature.GetReturnType();
+            std::vector<Type*> args = this->GetFunctionArgTypeVector(params, retType, func.IsExecutionContextSet());
+            auto s = llvm::orc::absoluteSymbols(
+                {
+                    {
+                        mangle(funcSignature.GetName()), JITEvaluatedSymbol(pointerToJITTargetAddress
+                            (funcSignature.GetFunctionAddress()), JITSymbolFlags::Exported)
+                    }
                 }
-            }
-            );
+                );
             auto ign = jd.define(s);
             if (ign) {
                 std::cerr << "Error while defining absolute symbol in jd" << std::endl;
             }
-            auto ret = this->GetFunctionArgType(funcSignature.GetReturnType());
+            llvm::Type *ret = llvmTypes->ToLLVMType(retType);
             llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
             auto linkage = llvm::Function::ExternalLinkage;
             llvm::Function *fn = llvm::Function::Create(ft, linkage, funcSignature.GetName(), *module);
@@ -253,7 +184,6 @@ void ExpressionCodeGen::RegisterFunctions(std::vector<omniruntime::Function> fun
         RegisterFunctionsHelper(func, jitRegisteredFuncs);
     }
 }
-
 
 // Other operations which require externed functions
 Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
@@ -290,25 +220,27 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
         *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
     }
     if (op == ADD || op == SUB || op == MUL) {
-        std::vector<Value *> argLeftVals { left, left, this->codegenContext->executionContext };
-        std::vector<Value *> argRightVals { right, right, this->codegenContext->executionContext };
+        std::vector<Value *> argLeftVals {this->codegenContext->executionContext, left, left};
+        std::vector<Value *> argRightVals { this->codegenContext->executionContext, right, right };
         incomingBlock = builder->GetInsertBlock();
         nullBlock = BasicBlock::Create(*context, "nullBlock", builder->GetInsertBlock()->getParent());
         nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
         nullCond = builder->CreateOr(leftIsNull, rightIsNull);
         builder->CreateCondBr(nullCond, nullBlock, nextInst);
         builder->SetInsertPoint(nullBlock);
-        switch (binaryExpr->left->GetExprDataType()) {
-            case INT32D:
-            case INT64D:
+        switch (binaryExpr->left->GetReturnType().GetId()) {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_VEC_TYPE_LONG:
+            case OMNI_VEC_TYPE_DECIMAL64:
                 leftZero = builder->CreateSub(left, left);
                 rightZero = builder->CreateSub(right, right);
                 break;
-            case DOUBLED:
+            case OMNI_VEC_TYPE_DOUBLE:
                 leftZero = builder->CreateFSub(left, left);
                 rightZero = builder->CreateFSub(right, right);
                 break;
-            case DECIMAL128D:
+            case OMNI_VEC_TYPE_DECIMAL128:
                 leftZero = builder->CreateCall(module->getFunction(subDec128Str), argLeftVals, subDec128Str);
                 rightZero = builder->CreateCall(module->getFunction(subDec128Str), argRightVals, subDec128Str);
                 break;
@@ -338,28 +270,30 @@ void ExpressionCodeGen::DivExprNullHelper(const BinaryExpr *binaryExpr, Value *l
     BasicBlock *incomingBlock, *nullBlock, *nextInst;
     Value *nullCond, *leftZero, *rightOne;
 
-    std::vector<Value *> argLeftVals { left, left, this->codegenContext->executionContext };
-    std::vector<Value *> argRightVals { right, right, this->codegenContext->executionContext };
+    std::vector<Value *> argLeftVals { this->codegenContext->executionContext, left, left } ;
+    std::vector<Value *> argRightVals { this->codegenContext->executionContext, right, right };
     incomingBlock = builder->GetInsertBlock();
     nullBlock = BasicBlock::Create(*context, "nullBlock", builder->GetInsertBlock()->getParent());
     nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
     nullCond = builder->CreateOr(leftIsNull, rightIsNull);
     builder->CreateCondBr(nullCond, nullBlock, nextInst);
     builder->SetInsertPoint(nullBlock);
-    switch (binaryExpr->left->GetExprDataType()) {
-        case INT32D:
+    switch (binaryExpr->left->GetReturnTypeId()) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
             leftZero = builder->CreateSub(left, left);
-            rightOne = builder->CreateSub(builder->CreateAdd(right, CreateConstantInt(1)), right);
+            rightOne = builder->CreateSub(builder->CreateAdd(right, llvmTypes->CreateConstantInt(1)), right);
             break;
-        case INT64D:
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
             leftZero = builder->CreateSub(left, left);
-            rightOne = builder->CreateSub(builder->CreateAdd(right, CreateConstantLong(1)), right);
+            rightOne = builder->CreateSub(builder->CreateAdd(right, llvmTypes->CreateConstantLong(1)), right);
             break;
-        case DOUBLED:
+        case OMNI_VEC_TYPE_DOUBLE:
             leftZero = builder->CreateFSub(left, left);
-            rightOne = builder->CreateFSub(builder->CreateFAdd(right, CreateConstantDouble(1.0)), right);
+            rightOne = builder->CreateFSub(builder->CreateFAdd(right, llvmTypes->CreateConstantDouble(1.0)), right);
             break;
-        case DECIMAL128D:
+        case OMNI_VEC_TYPE_DECIMAL128:
             leftZero = builder->CreateCall(module->getFunction("Sub_decimal128"), argLeftVals, "Sub_decimal128");
             rightOne = builder->CreateCall(module->getFunction("Div_decimal128"), argRightVals, "Div_decimal128");
             break;
@@ -459,22 +393,22 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
     switch (binaryExpr->op) {
         case LT:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSLT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
+                builder->CreateICmpSLT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case GT:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSGT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
+                builder->CreateICmpSGT(this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case LTE:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSLE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
+                builder->CreateICmpSLE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case GTE:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSGE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
+                builder->CreateICmpSGE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case EQ:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpEQ(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
+                builder->CreateICmpEQ(this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case NEQ:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpNE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), CreateConstantInt(0)));
+                builder->CreateICmpNE(this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         default:
             std::cout << "Unsupported string binary operator " << binaryExpr->op << std::endl;
             return nullptr;
@@ -487,27 +421,27 @@ Value *ExpressionCodeGen::BinaryExprDecimalHelper(const BinaryExpr *binaryExpr, 
     PHINode *leftPhi, *rightPhi;
     Value *isNeitherNull;
     BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi, &isNeitherNull);
-    std::vector<Value *> argVals { leftPhi, rightPhi, this->codegenContext->executionContext };
+    std::vector<Value *> argVals { this->codegenContext->executionContext, leftPhi, rightPhi };
 
     switch (binaryExpr->op) {
         case LT:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSLT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
+                builder->CreateICmpSLT(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
         case GT:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSGT(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
+                builder->CreateICmpSGT(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
         case LTE:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSLE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
+                builder->CreateICmpSLE(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
         case GTE:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpSGE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
+                builder->CreateICmpSGE(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
         case EQ:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpEQ(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
+                builder->CreateICmpEQ(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
         case NEQ:
             return builder->CreateAnd(isNeitherNull,
-                builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), CreateConstantInt(0)));
+                builder->CreateICmpNE(this->Decimal128Cmp(*left, *right), llvmTypes->CreateConstantInt(0)));
         case ADD:
             return builder->CreateCall(module->getFunction(addDec128Str), argVals, addDec128Str);
         case SUB:
@@ -583,7 +517,7 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     expr->Accept(p);
     std::cout << std::endl;
 #endif
-    FunctionType *prototype = FunctionType::get(GetFunctionReturnType(expr->GetExprDataType()), args, false);
+    FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
     func = llvm::Function::Create(prototype, llvm::Function::ExternalLinkage, funcName, module.get());
 
     std::string argNames[] = {
@@ -612,15 +546,15 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(outputLengthIndex);
-        Value *lengthGep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 
     builder->CreateStore(result->isNull, func->getArg(EXPRFUNC_OUT_IS_NULL_INDEX));
 
     // cast char* to int64 for output
-    if (expr->GetExprDataType() == DataType::VARCHARD) {
-        result->data = builder->CreatePtrToInt(result->data, Type::getInt64Ty(*context));
+    if (expr->GetReturnTypeId() == VecTypeId::OMNI_VEC_TYPE_VARCHAR) {
+        result->data = builder->CreatePtrToInt(result->data, llvmTypes->I64Type());
     }
     // Return value
     builder->CreateRet(result->data);
@@ -633,29 +567,31 @@ Value *ExpressionCodeGen::GetIntToPtr(const DataExpr &dExpr, Value *elementAddr)
     Value *elementPtr = nullptr;
     const DataExpr *dEx = &dExpr;
     // Convert the column address to array of proper datatype.
-    switch (dEx->GetExprDataType()) {
-        case DataType::BOOLD:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt1PtrTy(*context));
+    switch (dEx->GetReturnTypeId()) {
+        case OMNI_VEC_TYPE_BOOLEAN:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I1PtrType());
             break;
-        case DataType::INT32D:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt32PtrTy(*context));
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I32PtrType());
             break;
-        case DataType::INT64D:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
-        case DataType::DOUBLED:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getDoublePtrTy(*context));
+        case OMNI_VEC_TYPE_DOUBLE:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->DoublePtrType());
             break;
-        case DataType::CHARD:
-        case DataType::VARCHARD:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt8PtrTy(*context));
+        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VEC_TYPE_VARCHAR:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I8PtrType());
             break;
-        case DataType::DECIMAL128D:
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+        case OMNI_VEC_TYPE_DECIMAL128:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
         default:
-            LLVM_DEBUG_LOG("Unsupported column data type %d", dEx->GetExprDataType());
-            elementPtr = builder->CreateIntToPtr(elementAddr, Type::getInt64PtrTy(*context));
+            LLVM_DEBUG_LOG("Unsupported column data type %d", dEx->GetReturnTypeId());
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
     }
     return elementPtr;
@@ -667,43 +603,44 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
     const DataExpr *dEx = &dExpr;
     CodeGenValue *codeGenValue = nullptr;
     bool isNullLiteral = dExpr.isNull;
-    switch (dEx->GetExprDataType()) {
-        case DataType::INT32D: {
-            codeGenValue =
-                new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(isNullLiteral));
+    switch (dEx->GetReturnTypeId()) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32: {
+            codeGenValue = new CodeGenValue(
+                    llvmTypes->CreateConstantInt(dEx->intVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case DataType::INT64D: {
-            codeGenValue =
-                new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
+        case OMNI_VEC_TYPE_LONG: {
+            codeGenValue = new CodeGenValue(
+                    llvmTypes->CreateConstantLong(dEx->longVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case DataType::DOUBLED: {
-            codeGenValue =
-                new CodeGenValue(this->CreateConstantDouble(dEx->doubleVal), this->CreateConstantBool(isNullLiteral));
+        case OMNI_VEC_TYPE_DOUBLE: {
+            codeGenValue = new CodeGenValue(
+                    llvmTypes->CreateConstantDouble(dEx->doubleVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case DataType::CHARD:
-        case DataType::VARCHARD: {
+        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VEC_TYPE_VARCHAR: {
             Constant *strValConst =
                 ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
-            Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, Type::getInt8PtrTy(*context));
+            Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, llvmTypes->I8PtrType());
             Constant *strLenConst =
                 ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
-            codeGenValue = new CodeGenValue(strValPtr, this->CreateConstantBool(isNullLiteral), strLenConst);
+            codeGenValue = new CodeGenValue(strValPtr, llvmTypes->CreateConstantBool(isNullLiteral), strLenConst);
             break;
         }
-        case DataType::BOOLD: {
-            codeGenValue =
-                new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(isNullLiteral));
+        case OMNI_VEC_TYPE_BOOLEAN: {
+            codeGenValue = new CodeGenValue(
+                    llvmTypes->CreateConstantBool(dEx->boolVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case DataType::DECIMAL64D: {
-            codeGenValue =
-                new CodeGenValue(this->CreateConstantLong(dEx->longVal), this->CreateConstantBool(isNullLiteral));
+        case OMNI_VEC_TYPE_DECIMAL64: {
+            codeGenValue = new CodeGenValue(
+                    llvmTypes->CreateConstantLong(dEx->longVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case DataType::DECIMAL128D: {
+        case OMNI_VEC_TYPE_DECIMAL128: {
             int32_t length = 2;
             Decimal128 decValue = dEx->longVal;
             auto decimal = std::make_unique<int64_t[]>(length).release();
@@ -712,60 +649,65 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
             decimal[1] = decValue.HighBits();
 
             Constant *addr = ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(decimal)));
-            codeGenValue = new CodeGenValue(addr, this->CreateConstantBool(isNullLiteral));
+            codeGenValue = new CodeGenValue(addr, llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
-        case DataType::UNKNOWND: {
-            codeGenValue = new CodeGenValue(this->CreateConstantInt(dEx->intVal), this->CreateConstantBool(true));
+        case OMNI_VEC_TYPE_NONE: {
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantInt(dEx->intVal), llvmTypes->CreateConstantBool(true));
             break;
         }
         default: {
-            LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", dEx->GetExprDataType());
-            codeGenValue = new CodeGenValue(this->CreateConstantBool(dEx->boolVal), this->CreateConstantBool(false));
+            LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", dEx->GetReturnTypeId());
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantBool(dEx->boolVal), llvmTypes->CreateConstantBool(false));
             break;
         }
     }
     return codeGenValue;
 }
 
-Value *ExpressionCodeGen::GetDictionaryVectorValue(DataType vectorType, Value *rowIdx, Value *dictionaryVectorPtr,
+Value *ExpressionCodeGen::GetDictionaryVectorValue(VecType vectorType, Value *rowIdx, Value *dictionaryVectorPtr,
     AllocaInst *&lengthAllocaInst)
 {
+    VecTypeId typeId = vectorType.GetId();
     llvm::Function *dictionaryFunc = nullptr;
-    switch (vectorType) {
-        case omniruntime::expressions::INT32D:
+    switch (typeId) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
             dictionaryFunc = module->getFunction(dictionaryGetIntStr);
             break;
-        case omniruntime::expressions::INT64D:
+        case OMNI_VEC_TYPE_LONG:
+        case OMNI_VEC_TYPE_DECIMAL64:
             dictionaryFunc = module->getFunction(dictionaryGetLongStr);
             break;
-        case omniruntime::expressions::DECIMAL128D:
+        case OMNI_VEC_TYPE_DECIMAL128:
             dictionaryFunc = module->getFunction(dictionaryGetDecimalStr);
             break;
-        case omniruntime::expressions::DOUBLED:
+        case OMNI_VEC_TYPE_DOUBLE:
             dictionaryFunc = module->getFunction(dictionaryGetDoubleStr);
             break;
-        case omniruntime::expressions::BOOLD:
+        case OMNI_VEC_TYPE_BOOLEAN:
             dictionaryFunc = module->getFunction(dictionaryGetBooleanStr);
             break;
-        case omniruntime::expressions::CHARD:
-        case omniruntime::expressions::VARCHARD:
+        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VEC_TYPE_VARCHAR:
             dictionaryFunc = module->getFunction(dictionaryGetVarcharStr);
             break;
         default:
-            LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", vectorType);
+            LLVM_DEBUG_LOG("Unsupported dictionary value type: %d", typeId);
             return nullptr;
     }
     std::vector<Value *> funcArgs;
+
+    if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
+        funcArgs.push_back(this->codegenContext->executionContext);
+    }
+
     funcArgs.push_back(dictionaryVectorPtr);
     funcArgs.push_back(rowIdx);
-
-    if (IsStringDataType(vectorType)) {
-        lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "varchar_length");
-        builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
+    if (TypeUtil::IsStringType(typeId)) {
+        lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "varchar_length");
+        builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthAllocaInst);
         funcArgs.push_back(lengthAllocaInst);
-    } else if (vectorType == DataType::DECIMAL128D) {
-        funcArgs.push_back(this->codegenContext->executionContext);
     }
 
     auto call = builder->CreateCall(dictionaryFunc, funcArgs, "get_dictionary_value");
@@ -785,7 +727,7 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
         Value *offsets = this->codegenContext->offsets;
         Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
 
-        Value *colIdx = this->CreateConstantInt(dEx->colVal);
+        Value *colIdx = llvmTypes->CreateConstantInt(dEx->colVal);
         // Find address of this column in the addresses array argument.
         Value *gep = builder->CreateGEP(vecBatch, colIdx);
         Value *length = nullptr;
@@ -806,13 +748,13 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
 
         AllocaInst *lengthAllocaInst = nullptr;
         Value *dictionaryValue =
-            this->GetDictionaryVectorValue(dExpr.GetExprDataType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
+            this->GetDictionaryVectorValue(dExpr.GetReturnType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
         if (dictionaryValue == nullptr) {
             return;
         }
 
         Value *dictionaryLength = nullptr;
-        if (IsStringDataType(dEx->GetExprDataType())) {
+        if (TypeUtil::IsStringType(dEx->GetReturnTypeId())) {
             dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
         }
 
@@ -828,14 +770,14 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
 
         Value *elementPtr = GetIntToPtr(dExpr, elementAddr);
         Value *dataValue = nullptr;
-        if (IsStringDataType(dEx->GetExprDataType())) {
+        if (TypeUtil::IsStringType(dEx->GetReturnTypeId())) {
             // Get offset for varchar
             auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
             Value *offsetPtr = builder->CreateLoad(offsetsGEP);
-            offsetPtr = builder->CreateIntToPtr(offsetPtr, Type::getInt32PtrTy(*context));
+            offsetPtr = builder->CreateIntToPtr(offsetPtr, llvmTypes->I32PtrType());
             auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
             Value *startOffset = builder->CreateLoad(colOffsetGEP);
-            colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, CreateConstantInt(1)));
+            colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
             Value *endOffset = builder->CreateLoad(colOffsetGEP);
             // Get length for varchar
             length = builder->CreateSub(endOffset, startOffset);
@@ -853,7 +795,7 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
 
         // Get merged data value and length
         int32_t numReservedValues = 2;
-        Type *phiType = this->ToLlvmType(dEx->GetExprDataType());
+        Type *phiType = llvmTypes->ToLLVMType(dEx->GetReturnTypeId());
         func->getBasicBlockList().push_back(mergeBlock);
         builder->SetInsertPoint(mergeBlock);
 
@@ -863,8 +805,8 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
 
         // Length is only valid for varchar type
         PHINode *phiLength = nullptr;
-        if (IsStringDataType(dEx->GetExprDataType())) {
-            phiLength = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
+        if (TypeUtil::IsStringType(dEx->GetReturnTypeId())) {
+            phiLength = builder->CreatePHI(llvmTypes->I32Type(), numReservedValues, "length");
             phiLength->addIncoming(dictionaryLength, trueBlock);
             phiLength->addIncoming(length, falseBlock);
         }
@@ -872,7 +814,7 @@ void ExpressionCodeGen::Visit(const DataExpr &dExpr)
         // Get isNull value
         auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
         Value *bitmapValue = builder->CreateLoad(bitmapGEP);
-        bitmapValue = builder->CreateIntToPtr(bitmapValue, Type::getInt1PtrTy(*context));
+        bitmapValue = builder->CreateIntToPtr(bitmapValue, llvmTypes->I1PtrType());
         bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
         bitmapValue = builder->CreateLoad(bitmapGEP);
 
@@ -892,10 +834,14 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 {
     const BinaryExpr *bExpr = &binaryExpr;
 
+    int32_t leftId = static_cast<int32_t>(bExpr->left->GetReturnTypeId());
+    int32_t rightId = static_cast<int32_t>(bExpr->right->GetReturnTypeId());
     if (bExpr->left->GetType() == ExprType::DATA_E || bExpr->right->GetType() == ExprType::DATA_E) {
-        DataType biggerType = std::max(bExpr->left->GetExprDataType(), bExpr->right->GetExprDataType());
-        bExpr->left->dataType = biggerType;
-        bExpr->right->dataType = biggerType;
+        if (leftId != rightId) {
+            VecType &biggerType = leftId < rightId ? bExpr->right->GetReturnType() : bExpr->left->GetReturnType();
+            bExpr->left->dataType = std::make_unique<VecType>(biggerType);
+            bExpr->right->dataType = std::make_unique<VecType>(biggerType);
+        }
     }
     CodeGenValuePtr left = VisitExpr(*(bExpr->left));
     if (!left->IsValidValue()) {
@@ -925,22 +871,23 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     }
 
-    if (bExpr->left->GetExprDataType() == DataType::INT32D || bExpr->left->GetExprDataType() == DataType::INT64D) {
+    if (bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_INT || bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_LONG
+        || bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DATE32 || bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprIntHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (bExpr->left->GetExprDataType() == DOUBLED) {
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprDoubleHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (IsStringDataType(bExpr->left->GetExprDataType())) {
+    } else if (TypeUtil::IsStringType(bExpr->left->GetReturnTypeId())) {
         this->value = make_shared<CodeGenValue>(
             this->BinaryExprStringHelper(bExpr, leftValue, leftLen, rightValue, rightLen, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
         return;
-    } else if (bExpr->left->GetExprDataType() == DECIMAL128D) {
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
         this->value =
             make_shared<CodeGenValue>(this->BinaryExprDecimalHelper(bExpr, leftValue, rightValue, leftNull, rightNull),
             builder->CreateOr(leftNull, rightNull));
@@ -953,8 +900,8 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 void ExpressionCodeGen::CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
     llvm::Value *rightNull)
 {
-    Value *trueValue = CreateConstantBool(true);
-    Value *falseValue = CreateConstantBool(false);
+    Value *trueValue = llvmTypes->CreateConstantBool(true);
+    Value *falseValue = llvmTypes->CreateConstantBool(false);
 
     AllocaInst *resultValuePtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "result_value");
     AllocaInst *resultNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "result_null");
@@ -1076,7 +1023,7 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
     falseBlock = builder->GetInsertBlock();
     int32_t numReservedValues = 2;
     // Emit merge block.
-    Type *phiType = this->ToLlvmType(ifExpr.GetExprDataType());
+    Type *phiType = llvmTypes->VectorToLLVMType(ifExpr.GetReturnType());
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
     PHINode *pn = builder->CreatePHI(phiType, numReservedValues, "iftmp");
@@ -1088,7 +1035,7 @@ void ExpressionCodeGen::Visit(const IfExpr &ifExpr)
     phiNull->addIncoming(evFalseNull, falseBlock);
 
     PHINode *lengthPhi = nullptr;
-    if (IsStringDataType(ifExpr.GetExprDataType())) {
+    if (TypeUtil::IsStringType(ifExpr.GetReturnTypeId())) {
         lengthPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
         lengthPhi->addIncoming(evTrueLength, trueBlock);
         lengthPhi->addIncoming(evFalseLength, falseBlock);
@@ -1108,12 +1055,14 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
     // Handle types correctly
     for (int i = 1; i < iExpr->arguments.size(); i++) {
         // initialize tmpCmpData
-        Value *tmpCmpData = this->CreateConstantBool(false);
-        Value *tmpCmpNull = this->CreateConstantBool(false);
+        Value *tmpCmpData = llvmTypes->CreateConstantBool(false);
+        Value *tmpCmpNull = llvmTypes->CreateConstantBool(false);
 
-        switch (iExpr->arguments[0]->dataType) {
-            case INT32D:
-            case INT64D: {
+        switch (iExpr->arguments[0]->GetReturnTypeId()) {
+            case OMNI_VEC_TYPE_INT:
+            case OMNI_VEC_TYPE_DATE32:
+            case OMNI_VEC_TYPE_DECIMAL64:
+            case OMNI_VEC_TYPE_LONG: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
                 if (!argiValue->IsValidValue()) {
                     this->value = CreateInvalidCodeGenValue();
@@ -1125,7 +1074,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
             }
-            case DOUBLED: {
+            case OMNI_VEC_TYPE_DOUBLE: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
                 if (!argiValue->IsValidValue()) {
                     this->value = CreateInvalidCodeGenValue();
@@ -1137,22 +1086,22 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
             }
-            case CHARD:
-            case VARCHARD: {
+            case OMNI_VEC_TYPE_CHAR:
+            case OMNI_VEC_TYPE_VARCHAR: {
                 argiValue = VisitExpr(*(iExpr->arguments[i]));
                 if (!argiValue->IsValidValue()) {
                     this->value = CreateInvalidCodeGenValue();
                     return;
                 }
                 tmpCmpData = builder->CreateAnd(builder->CreateNot(valueToCompare->isNull),
-                    builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(
-                    this->StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
-                    CreateConstantInt(0))));
+                    builder->CreateAnd(builder->CreateNot(argiValue->isNull), builder->CreateICmpEQ(this->StringCmp(
+                        valueToCompare->data, valueToCompare->length, argiValue->data, this->value->length),
+                                                                                                    llvmTypes->CreateConstantInt(0))));
                 tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
                 break;
             }
             default: {
-                LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->dataType);
+                LLVM_DEBUG_LOG("Unsupported data type in IN expr %d", iExpr->arguments[0]->GetReturnTypeId());
                 this->value = CreateInvalidCodeGenValue();
                 return;
             }
@@ -1167,11 +1116,22 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
 void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
 {
     const BetweenExpr *bExpr = &btExpr;
-    DataType biggerType = std::max(std::max(bExpr->lowerBound->GetExprDataType(), bExpr->upperBound->GetExprDataType()),
-        bExpr->value->GetExprDataType());
-    bExpr->lowerBound->dataType = biggerType;
-    bExpr->upperBound->dataType = biggerType;
-    bExpr->value->dataType = biggerType;
+    int32_t biggerTypeId = std::max(std::max(bExpr->lowerBound->GetReturnTypeId(),
+        bExpr->upperBound->GetReturnTypeId()), bExpr->value->GetReturnTypeId());
+    VecType biggerType;
+    if (biggerTypeId == static_cast<int32_t>(bExpr->lowerBound->GetReturnTypeId())) {
+        biggerType = bExpr->lowerBound->GetReturnType();
+    } else {
+        if (biggerTypeId == static_cast<int32_t>(bExpr->upperBound->GetReturnTypeId())) {
+            biggerType = bExpr->upperBound->GetReturnType();
+        } else {
+            biggerType = bExpr->value->GetReturnType();
+        }
+    }
+
+    bExpr->lowerBound->dataType = std::make_unique<VecType>(biggerType);
+    bExpr->upperBound->dataType = std::make_unique<VecType>(biggerType);
+    bExpr->value->dataType = std::make_unique<VecType>(biggerType);
 
     auto val = VisitExpr(*(bExpr->value));
     if (!val->IsValidValue()) {
@@ -1202,23 +1162,24 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
     auto isNeitherNull = builder->CreateNot(isAnyNull);
     Value *cmpLeft, *cmpRight;
     bool supportedType = false;
-    if (bExpr->value->GetExprDataType() == DataType::INT32D || bExpr->value->GetExprDataType() == DataType::INT64D) {
+    if (bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_INT || bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_LONG
+        || bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DATE32 || bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL64) {
         cmpLeft = builder->CreateICmpSLE(lowerValData, valData, "between_cmpleft");
         cmpRight = builder->CreateICmpSLE(valData, upperValData, "between_cmpright");
         supportedType = true;
-    } else if (bExpr->value->GetExprDataType() == DOUBLED) {
+    } else if (bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE) {
         cmpLeft = builder->CreateFCmpULE(lowerValData, valData, "between_cmpleft");
         cmpRight = builder->CreateFCmpULE(valData, upperValData, "between_cmpright");
         supportedType = true;
-    } else if (IsStringDataType(bExpr->value->GetExprDataType())) {
+    } else if (TypeUtil::IsStringType(bExpr->value->GetReturnTypeId())) {
         cmpLeft =
-            builder->CreateICmpSLE(this->StringCmp(lowerValData, lowerValLen, valData, valLen), CreateConstantInt(0));
+            builder->CreateICmpSLE(this->StringCmp(lowerValData, lowerValLen, valData, valLen), llvmTypes->CreateConstantInt(0));
         cmpRight =
-            builder->CreateICmpSLE(this->StringCmp(valData, valLen, upperValData, upperValLen), CreateConstantInt(0));
+            builder->CreateICmpSLE(this->StringCmp(valData, valLen, upperValData, upperValLen), llvmTypes->CreateConstantInt(0));
         supportedType = true;
-    } else if (bExpr->value->GetExprDataType() == DECIMAL128D) {
-        cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerValData, *valData), CreateConstantInt(0));
-        cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*valData, *upperValData), CreateConstantInt(0));
+    } else if (bExpr->value->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
+        cmpLeft = builder->CreateICmpSLE(this->Decimal128Cmp(*lowerValData, *valData), llvmTypes->CreateConstantInt(0));
+        cmpRight = builder->CreateICmpSLE(this->Decimal128Cmp(*valData, *upperValData), llvmTypes->CreateConstantInt(0));
         supportedType = true;
     }
 
@@ -1232,7 +1193,7 @@ void ExpressionCodeGen::Visit(const BetweenExpr &btExpr)
         return;
     }
 
-    LLVM_DEBUG_LOG("Error: unsupported data type for between %d", bExpr->value->GetExprDataType());
+    LLVM_DEBUG_LOG("Error: unsupported data type for between %d", bExpr->value->GetReturnTypeId());
     this->value = CreateInvalidCodeGenValue();
 }
 
@@ -1276,14 +1237,14 @@ void ExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
     int32_t numReservedValues = 2;
 
     // Emit merge block.
-    Type *phiType = this->ToLlvmType(cExpr.GetExprDataType());
+    Type *phiType = llvmTypes->VectorToLLVMType(cExpr.GetReturnType());
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
     PHINode *pn = builder->CreatePHI(phiType, numReservedValues, "iftmp");
     PHINode *pnNull = builder->CreatePHI(value1->isNull->getType(), numReservedValues, "iftmp");
 
     PHINode *lengthPhi = nullptr;
-    if (IsStringDataType(cExpr.GetExprDataType())) {
+    if (TypeUtil::IsStringType(cExpr.GetReturnTypeId())) {
         lengthPhi = builder->CreatePHI(Type::getInt32Ty(*context), numReservedValues, "length");
         lengthPhi->addIncoming(value1Length, isNotNullBlock);
         lengthPhi->addIncoming(value2Length, isNullBlock);
@@ -1306,8 +1267,8 @@ void ExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
     }
     Value *isNullValue = value->isNull;
 
-    Value *result = builder->CreateICmpEQ(isNullValue, CreateConstantBool(true), "isNullCompare");
-    this->value = make_shared<CodeGenValue>(result, this->CreateConstantBool(false));
+    Value *result = builder->CreateICmpEQ(isNullValue, llvmTypes->CreateConstantBool(true), "isNullCompare");
+    this->value = make_shared<CodeGenValue>(result, llvmTypes->CreateConstantBool(false));
 }
 
 // Handles all functions
@@ -1316,17 +1277,21 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     std::vector<Value *> argVals;
     int numArgs = fExpr.arguments.size();
     CodeGenValuePtr resultPtr;
-    Value *isAnyNull = this->CreateConstantBool(false);
+    Value *isAnyNull = llvmTypes->CreateConstantBool(false);
+    // set execution context
+    if (fExpr.function->IsExecutionContextSet()) {
+        argVals.push_back(this->codegenContext->executionContext);
+    }
     for (int i = 0; i < numArgs; i++) {
         resultPtr = VisitExpr(*(fExpr.arguments[i]));
         argVals.push_back(resultPtr->data);
         isAnyNull = builder->CreateOr(isAnyNull, resultPtr->isNull);
-        if (fExpr.dataType == DataType::CHARD && fExpr.funcName.compare("concat") == 0) {
+        if (fExpr.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR && fExpr.funcName.compare("concat") == 0) {
             if (i == 0) {
-                argVals.push_back(CreateConstantInt(fExpr.arguments[i]->width));
+                argVals.push_back(llvmTypes->CreateConstantInt(fExpr.arguments[i]->GetReturnType().GetWidth()));
             }
         }
-        if ((IsStringDataType(fExpr.arguments[i]->dataType))) {
+        if ((TypeUtil::IsStringType(fExpr.arguments[i]->GetReturnTypeId()))) {
             argVals.push_back(this->value->length);
         }
 
@@ -1337,12 +1302,9 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     Value *ret = nullptr;
     Value *outputLen = nullptr;
     AllocaInst *outputLenPtr = nullptr;
-    if (IsStringDataType(fExpr.GetExprDataType())) {
+    if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
         outputLenPtr = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "output_len");
         argVals.push_back(outputLenPtr);
-    }
-    if (fExpr.function->IsExecutionContextSet()) {
-        argVals.push_back(this->codegenContext->executionContext);
     }
     auto f = module->getFunction(fExpr.function->GetFuncID());
     if (f) {

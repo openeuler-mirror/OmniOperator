@@ -29,10 +29,9 @@ public:
     omniruntime::expressions::Expr *ParseRowExpressionHelper(std::string opStr,
         std::vector<omniruntime::expressions::Expr *> args);
 
-    static omniruntime::expressions::DataExpr *GenerateData(std::string dataStr, const VecTypes &inputTypes);
+    static omniruntime::expressions::DataExpr *GenerateData(std::string dataStr, VecTypes& inputTypes);
     static omniruntime::expressions::DataExpr *GenerateDataHelper(const std::string &dataStr,
-        omniruntime::expressions::DataType currDataType);
-
+        omniruntime::expressions::VecTypePtr inputType );
 private:
     ParserHelper ph;
     // Helper function to strip a string but keep spaces intact inside string literals

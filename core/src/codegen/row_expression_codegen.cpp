@@ -28,7 +28,7 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::DataExpr &dataE
         Value *isNulls = this->codegenContext->nullBitmap;
         Value *lengths = this->codegenContext->offsets;
 
-        Value *colIdx = this->CreateConstantInt(dataExpr.colVal);
+        Value *colIdx = llvmTypes->CreateConstantInt(dataExpr.colVal);
         // Find address of this column in the addresses array argument.
         Value *gep = builder->CreateGEP(data, colIdx);
         // Load the address value.
@@ -37,7 +37,7 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::DataExpr &dataE
 
         Value *dataValue = nullptr;
         Value *length = nullptr;
-        if (IsStringDataType(dataExpr.GetExprDataType())) {
+        if (TypeUtil::IsStringType(dataExpr.GetReturnTypeId())) {
             // Get length for varchar/char type
             auto lengthGEP = builder->CreateGEP(lengths, colIdx);
             length = builder->CreateLoad(lengthGEP);
@@ -92,19 +92,19 @@ Function *RowExpressionCodeGen::CreateFunction()
     args.reserve(argsSize);
     // Values in args vector follow the format:
     // valueArray*, isNullArray*, lengthArray*, isResultNull*, outputLength*, executionContext
-    args.push_back(Type::getInt64PtrTy(*context));
-    args.push_back(Type::getInt1PtrTy(*context));
-    args.push_back(Type::getInt32PtrTy(*context));
-    args.push_back(Type::getInt1PtrTy(*context));
-    args.push_back(Type::getInt32PtrTy(*context));
-    args.push_back(Type::getInt64Ty(*context));
+    args.push_back(llvmTypes->I64PtrType());
+    args.push_back(llvmTypes->I1PtrType());
+    args.push_back(llvmTypes->I32PtrType());
+    args.push_back(llvmTypes->I1PtrType());
+    args.push_back(llvmTypes->I32PtrType());
+    args.push_back(llvmTypes->I64Type());
 #ifdef DEBUG_LLVM
     std::cout << "exprtree: ";
     ExprPrinter p;
     expr->Accept(p);
     std::cout << std::endl;
 #endif
-    FunctionType *prototype = FunctionType::get(GetFunctionReturnType(expr->GetExprDataType()), args, false);
+    FunctionType *prototype = FunctionType::get(llvmTypes->GetFunctionReturnType(expr->GetReturnTypeId()), args, false);
     func = Function::Create(prototype, Function::ExternalLinkage, FUNCTION_NAME, module.get());
 
     std::string argNames[] = {
@@ -130,7 +130,7 @@ Function *RowExpressionCodeGen::CreateFunction()
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(outputLengthIndex);
-        Value *lengthGep = builder->CreateGEP(outputLength, this->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 

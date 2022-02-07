@@ -31,13 +31,13 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    DataExpr *addLeft = new DataExpr(0, INT32D);
-    DataExpr *addRight = new DataExpr(5);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
-    DataExpr *modLeft = new DataExpr(2, INT64D);
-    DataExpr *modRight = new DataExpr(3);
+    DataExpr *addLeft = new DataExpr(0, IntType(), true);
+    DataExpr *addRight = new DataExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
+    DataExpr *modLeft = new DataExpr(2, LongType(), true);
+    DataExpr *modRight = new DataExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
 
     auto jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs, ascendings, nullFirsts);
@@ -88,11 +88,11 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    DataExpr *col0 = new DataExpr(0, INT32D);
-    DataExpr *modLeft = new DataExpr(2, INT64D);
-    DataExpr *modRight = new DataExpr(3);
+    DataExpr *col0 = new DataExpr(0, IntType(), true);
+    DataExpr *modLeft = new DataExpr(2, LongType(), true);
+    DataExpr *modRight = new DataExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
 
     JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortKeys, ascendings, nullFirsts);
@@ -142,8 +142,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    DataExpr *col0 = new DataExpr(0, INT32D);
-    DataExpr *col2 = new DataExpr(2, INT64D);
+    DataExpr *col0 = new DataExpr(0, IntType(), true);
+    DataExpr *col2 = new DataExpr(2, LongType(), true);
     std::vector<Expr *> sortExprs = { col0, col2 };
 
     JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs, ascendings, nullFirsts);

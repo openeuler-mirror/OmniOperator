@@ -26,7 +26,7 @@ void ExprInfoExtractor::Visit(const DataExpr &e)
 
 void ExprInfoExtractor::Visit(const BinaryExpr &e)
 {
-    if (IsStringDataType(e.left->GetExprDataType())) {
+    if (TypeUtil::IsStringType(e.left->GetReturnTypeId())) {
         this->functions.push_back(&GetStringCmpFn().front());
     }
     e.left->Accept(*this);
@@ -47,7 +47,7 @@ void ExprInfoExtractor::Visit(const IfExpr &e)
 
 void ExprInfoExtractor::Visit(const InExpr &e)
 {
-    if (IsStringDataType(e.arguments[0]->GetExprDataType())) {
+    if (TypeUtil::IsStringType(e.arguments[0]->GetReturnTypeId())) {
         this->functions.push_back(&GetStringCmpFn().front());
     }
     for (auto arg : e.arguments) {
@@ -57,7 +57,7 @@ void ExprInfoExtractor::Visit(const InExpr &e)
 
 void ExprInfoExtractor::Visit(const BetweenExpr &e)
 {
-    if (IsStringDataType(e.value->GetExprDataType())) {
+    if (TypeUtil::IsStringType(e.value->GetReturnTypeId())) {
         this->functions.push_back(&GetStringCmpFn().front());
     }
     e.value->Accept(*this);

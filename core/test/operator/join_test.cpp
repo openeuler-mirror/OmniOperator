@@ -1192,9 +1192,9 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     string filterExpression = "$operator$NOT_EQUAL:4(#1, #3)";
 
     // create the expression for the filter
-    DataExpr *notEqualLeft = new DataExpr(1, INT32D);
-    DataExpr *notEqualRight = new DataExpr(3, INT32D);
-    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, notEqualLeft, notEqualRight, BOOLD);
+    DataExpr *notEqualLeft = new DataExpr(1, IntType(), true);
+    DataExpr *notEqualRight = new DataExpr(3, IntType(), true);
+    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, notEqualLeft, notEqualRight, BooleanType());
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
@@ -1264,29 +1264,29 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
     ParserHelper ph;
     FunctionRegistry fr;
     std::string funcStr = "substr";
-    DataType retType = VARCHARD;
+    VecTypePtr retType = VarCharType();
 
-    DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
-    DataExpr *leftSubstrIndex = new DataExpr(1);
-    DataExpr *leftSubstrLen = new DataExpr(5);
+    DataExpr *leftSubstrColumn = new DataExpr(1, VarCharType(), true);
+    DataExpr *leftSubstrIndex = new DataExpr(1, IntType());
+    DataExpr *leftSubstrLen = new DataExpr(5, IntType());
     std::vector<Expr *> leftSubstrArgs;
     leftSubstrArgs.push_back(leftSubstrColumn);
     leftSubstrArgs.push_back(leftSubstrIndex);
     leftSubstrArgs.push_back(leftSubstrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType);
-    FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, retType, *fr.LookupFunction(funcID));
+    std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType->GetId());
+    FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, std::make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
-    DataExpr *rightSubstrColumn = new DataExpr(3, VARCHARD);
-    DataExpr *rightSubstrIndex = new DataExpr(1);
-    DataExpr *rightSubstrLen = new DataExpr(5);
+    DataExpr *rightSubstrColumn = new DataExpr(3, VarCharType(), true);
+    DataExpr *rightSubstrIndex = new DataExpr(1, IntType());
+    DataExpr *rightSubstrLen = new DataExpr(5, IntType());
     std::vector<Expr *> rightSubstrArgs;
     rightSubstrArgs.push_back(rightSubstrColumn);
     rightSubstrArgs.push_back(rightSubstrIndex);
     rightSubstrArgs.push_back(rightSubstrLen);
-    funcID = ph.GetFnIdentifier(funcStr, rightSubstrArgs, retType);
-    FuncExpr *rightSubstrExpr = new FuncExpr(funcStr, rightSubstrArgs, retType, *fr.LookupFunction(funcID));
+    funcID = ph.GetFnIdentifier(funcStr, rightSubstrArgs, retType->GetId());
+    FuncExpr *rightSubstrExpr = new FuncExpr(funcStr, rightSubstrArgs, std::make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
-    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BOOLD);
+    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BooleanType());
     return notEqualExpr;
 }
 

@@ -10,27 +10,6 @@ using namespace omniruntime::vec;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 
-VecType CreateVecTypeFromDataType(DataType dataType)
-{
-    switch (dataType) {
-        case DataType::BOOLD:
-            return BooleanVecType();
-        case DataType::INT32D:
-            return IntVecType();
-        case DataType::INT64D:
-            return LongVecType();
-        case DataType::DOUBLED:
-            return DoubleVecType();
-        case DataType::DECIMAL64D:
-            return LongVecType();
-        case DataType::VARCHARD:
-            return VarcharVecType(200);
-        default:
-            return IntVecType();
-    }
-}
-
-
 void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTypes,
     std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
     std::vector<omniruntime::vec::VecType> &newInputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
@@ -39,10 +18,6 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
     newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
     const int32_t *inputTypeIds = inputTypes.GetIds();
     int32_t inputTypesCount = inputTypes.GetSize();
-    std::vector<DataType> inputDataTypes;
-    for (int32_t i = 0; i < inputTypesCount; i++) {
-        inputDataTypes.push_back(static_cast<const DataType>(inputTypeIds[i]));
-    }
     for (int32_t i = 0; i < projectKeysCount; i++) {
         auto rowProjection = std::make_unique<RowProjection>(*(projectKeys[i]));
         int32_t projectCol = rowProjection->GetIndexIfColumnProjection();
@@ -52,8 +27,8 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
             projectCols.push_back(inputTypesCount + projectFuncs.size());
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
-            DataType returnType = rowProjection->GetReturnType();
-            newInputTypes.push_back(CreateVecTypeFromDataType(returnType));
+            VecType returnType = rowProjection->GetReturnType();
+            newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
     }
@@ -65,13 +40,6 @@ void OperatorUtil::CreateRequiredProjectFuncs(const VecTypes &inputTypes, omniru
     std::vector<int32_t> &projectCols, std::vector<int32_t> &allCols,
     std::vector<RowProjFunc> &projectFuncs)
 {
-    int32_t inputTypesCount = inputTypes.GetSize();
-    const int32_t *inputTypeIds = inputTypes.GetIds();
-    std::vector<DataType> inputDataTypes;
-    for (int32_t i = 0; i < inputTypesCount; i++) {
-        inputDataTypes.push_back(static_cast<const DataType>(inputTypeIds[i]));
-    }
-
     std::vector<VecType> inputTypeVec = inputTypes.Get();
     int32_t newProjectCol = 0;
     std::map<int32_t, int32_t> colIdMap;
@@ -94,8 +62,8 @@ void OperatorUtil::CreateRequiredProjectFuncs(const VecTypes &inputTypes, omniru
             allCols.push_back(newProjectCol++);
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
-            DataType returnType = rowProjection->GetReturnType();
-            newInputTypes.push_back(CreateVecTypeFromDataType(returnType));
+            VecType returnType = rowProjection->GetReturnType();
+            newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
     }

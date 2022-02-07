@@ -5,54 +5,21 @@
 #include <algorithm>
 #include "function.h"
 
-using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
 namespace omniruntime {
-    void ReplaceArgDataTypes(std::vector<DataType>& vec, std::string fnID)
-    {
-        if (fnID == "mm3hash") {
-            vec.insert(vec.begin() + vec.size() - 1, DataType::BOOLD);
-        }
-        // replace all decimal128 datatypes to int64 for signature
-        std::replace(vec.begin(), vec.end(), DECIMAL128D, INT64D);
-
-        // replace varchar data type in argument to int8ptr and length of string for signature
-        while (std::count(vec.begin(), vec.end(), VARCHARD) != 0) {
-            auto itr = std::find(vec.begin(), vec.end(), VARCHARD);
-            vec.insert(++itr, INT32D);
-            std::replace(vec.begin(), ++(std::find(vec.begin(), vec.end(), VARCHARD)), VARCHARD, INT8PTRD);
-        }
-
-        // replace char data type in argument to int8ptr, length and width for signature
-        while (std::count(vec.begin(), vec.end(), CHARD) != 0) {
-            auto itr = std::find(vec.begin(), vec.end(), CHARD);
-            vec.insert(++itr, INT32D);
-            vec.insert(++itr, INT32D);
-            std::replace(vec.begin(), ++(std::find(vec.begin(), vec.end(), CHARD)), CHARD, INT8PTRD);
-        }
-    }
-
-    void ReplaceRetDataType(DataType& ret)
-    {
-        if (ret == DECIMAL128D) {
-            ret = INT64D;
-        }
-        if (ret == VARCHARD || ret == CHARD) {
-            ret = INT8PTRD;
-        }
-    }
-
-    std::string GetFuncIdSuffix(const std::vector<DataType>& paramTypes, const DataType& retType, int32_t numArgs)
+    std::string GetFuncIdSuffix(const std::vector<VecTypeId>& paramTypes, const omniruntime::vec::VecTypeId &retType, int32_t numArgs)
     {
         std::string id;
-        for (std::vector<DataType>::size_type i = 0; i != numArgs; i++) {
-            id += "_" + DataTypeString(paramTypes[i]);
+        for (std::vector<VecTypeId>::size_type i = 0; i != numArgs; i++) {
+            id += "_" + TypeUtil::TypeToString(paramTypes[i]);
         }
-        return id += "_" + DataTypeString(retType);
+        return id += "_" + TypeUtil::TypeToString(retType);
     }
 
-    Function::Function(void* address, const std::string& fnID, const std::vector<std::string>& aliases, const
-    std::vector<DataType>& paramTypes, const DataType& retType, bool generateFuncID, bool setExecutionContext)
+    Function::Function(void* address, const std::string& fnID, const std::vector<std::string>& aliases,
+         const std::vector<VecTypeId>& paramTypes, const omniruntime::vec::VecTypeId &retType, bool generateFuncID,
+         bool setExecutionContext)
     {
         // update function name used for lookup in codegen
         this->funcID = fnID;
@@ -67,19 +34,12 @@ namespace omniruntime {
         if (generateFuncID) {
             this->funcID += GetFuncIdSuffix(paramTypes, retType, numArgs);
         }
-        // update paramTypes for signature
-        std::vector<DataType> args = paramTypes;
-        if (setExecutionContext)
-            args.push_back(INT64D);
-        ReplaceArgDataTypes(args, fnID);
-        // update ret for signature
-        DataType ret = retType;
-        ReplaceRetDataType(ret);
-        // create a function sig to register for codegen
-        this->signatures.emplace_back(this->funcID, args, ret, address);
+        std::vector<VecTypeId> args = paramTypes;
+        // create function sig to register for codegen
+        this->signatures.emplace_back(this->funcID, args, retType, address);
         // create function sigs for different functions calls in omni-runtime
         for (auto& alias : aliases) {
-            this->signatures.emplace_back(alias, args, ret, address);
+            this->signatures.emplace_back(alias, args, retType, address);
         }
     }
 

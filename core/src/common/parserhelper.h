@@ -11,6 +11,7 @@
 #include <set>
 #include <iostream>
 #include <algorithm>
+#include "util/type_util.h"
 
 class ParserHelper {
 public:
@@ -19,17 +20,17 @@ public:
     {
     };
     ~ParserHelper();
-    omniruntime::expressions::DataType FuncRetTypeMap(std::string fnName,
+    omniruntime::vec::VecType FuncRetTypeMap(std::string fnName,
                                                       std::vector<omniruntime::expressions::Expr *> args);
     bool HasValidArguments(const std::string& fnName, std::vector<omniruntime::expressions::Expr *> args);
-    static omniruntime::expressions::DataExpr *GetDefaultValueForType(omniruntime::expressions::DataType destType);
+    static omniruntime::expressions::DataExpr *GetDefaultValueForType(VecTypeId destTypeId);
     std::string GetFnIdentifier(std::string opStr, std::vector<omniruntime::expressions::Expr *> args,
-                            omniruntime::expressions::DataType ret);
+                                VecTypeId retTypeId);
 private:
     ExternalFuncRegistry efr;
     std::set<std::string> externalFuncNames;
-    std::map<std::string, omniruntime::expressions::DataType> externalFuncRetTypeMap;
-    static bool IsIntType(omniruntime::expressions::DataType dt);
+    std::map<std::string, omniruntime::vec::VecTypeId> externalFuncRetTypeMap;
+    static bool IsIntType(VecTypeId typeId);
 };
 
 #endif

@@ -32,16 +32,16 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
     // groupByKeys
-    DataExpr *modRight = new DataExpr(3);
+    DataExpr *modRight = new DataExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, new DataExpr(0, INT64D), modRight, INT64D);
-    std::vector<Expr *> groupByKeys = { modExpr, new DataExpr(2, INT32D) };
+    BinaryExpr *modExpr = new BinaryExpr(MOD, new DataExpr(0, LongType(), true), modRight, LongType());
+    std::vector<Expr *> groupByKeys = { modExpr, new DataExpr(2, IntType(), true) };
 
     // aggKeys
-    DataExpr *mulRight = new DataExpr(5);
+    DataExpr *mulRight = new DataExpr(5, LongType());
     mulRight->longVal = 5;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, new DataExpr(1, INT64D), mulRight, INT64D);
-    std::vector<Expr *> aggKeys = { mulExpr, new DataExpr(3, INT32D) };
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, new DataExpr(1, LongType(), true), mulRight, LongType());
+    std::vector<Expr *> aggKeys = { mulExpr, new DataExpr(3, IntType(), true) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
@@ -94,22 +94,22 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    DataExpr *modLeft = new DataExpr(0, INT64D);
-    DataExpr *modRight = new DataExpr(3);
+    DataExpr *modLeft = new DataExpr(0, LongType(), true);
+    DataExpr *modRight = new DataExpr(3, LongType());
     modRight->longVal = 3;
-    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
-    DataExpr *addLeft = new DataExpr(2, INT32D);
-    DataExpr *addRight = new DataExpr(5);
-    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
+    BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
+    DataExpr *addLeft = new DataExpr(2, IntType(), true);
+    DataExpr *addRight = new DataExpr(5, IntType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
     std::vector<Expr *> groupByKeys = { modExpr, addExpr };
 
-    DataExpr *mulLeft = new DataExpr(1, INT64D);
-    DataExpr *mulRight = new DataExpr(5);
+    DataExpr *mulLeft = new DataExpr(1, LongType(), true);
+    DataExpr *mulRight = new DataExpr(5, LongType());
     mulRight->longVal = 5;
-    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT64D);
-    DataExpr *addLeft2 = new DataExpr(3, INT32D);
-    DataExpr *addRight2 = new DataExpr(5);
-    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+    BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, LongType());
+    DataExpr *addLeft2 = new DataExpr(3, IntType(), true);
+    DataExpr *addRight2 = new DataExpr(5, IntType());
+    BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, IntType());
     std::vector<Expr *> aggKeys = { mulExpr, addExpr2 };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
@@ -163,8 +163,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::vector<Expr *> groupByKeys = { new DataExpr(0, INT64D), new DataExpr(2, INT32D) };
-    std::vector<Expr *> aggKeys = { new DataExpr(1, INT64D), new DataExpr(3, INT32D) };
+    std::vector<Expr *> groupByKeys = { new DataExpr(0, LongType(), true), new DataExpr(2, IntType(), true) };
+    std::vector<Expr *> aggKeys = { new DataExpr(1, LongType(), true), new DataExpr(3, IntType(), true) };
 
     FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 

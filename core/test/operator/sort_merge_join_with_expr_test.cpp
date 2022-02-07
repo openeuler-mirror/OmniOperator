@@ -21,7 +21,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     std::vector<VecType> streamTypeVector = { IntVecType::Instance(), LongVecType::Instance() };
     VecTypes streamedTblTypes(streamTypeVector);
     //    std::string streamedEqualKeyExprs[1] = {"#0"};
-    DataExpr *col0 = new DataExpr(0, INT32D);
+    DataExpr *col0 = new DataExpr(0, IntType(), true);
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
     int streamedOutputCols[1] = {1};
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
@@ -33,7 +33,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     std::vector<VecType> bufferTypesVector = { DoubleVecType::Instance(), IntVecType::Instance() };
     VecTypes bufferedTblTypes(bufferTypesVector);
     //    std::string bufferedEqualKeyExprs[1] = {"#1"};
-    DataExpr *col1 = new DataExpr(1, INT32D);
+    DataExpr *col1 = new DataExpr(1, IntType(), true);
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
     int64_t streamedWithExprOperatorFactoryAddr = (int64_t)streamedWithExprOperatorFactory;
@@ -113,7 +113,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     std::vector<VecType> streamTypeVector = { IntVecType(), LongVecType() };
     VecTypes streamedTblTypes(streamTypeVector);
     //    std::string streamedEqualKeyExprs[1] = {"#0"};
-    DataExpr *col0 = new DataExpr(0, INT32D);
+    DataExpr *col0 = new DataExpr(0, IntType(), true);
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
     int streamedOutputCols[1] = {1};
@@ -126,7 +126,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     std::vector<VecType> bufferTypesVector = { DoubleVecType::Instance(), IntVecType::Instance() };
     VecTypes bufferedTblTypes(bufferTypesVector);
     //    std::string bufferedEqualKeyExprs[1] = {"#1"};
-    DataExpr *col1 = new DataExpr(1, INT32D);
+    DataExpr *col1 = new DataExpr(1, IntType(), true);
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
     int64_t streamedWithExprOperatorFactoryAddr = (int64_t)streamedWithExprOperatorFactory;

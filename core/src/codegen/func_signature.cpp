@@ -4,14 +4,14 @@
  */
 #include "./func_signature.h"
 
-using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
 FunctionSignature::FunctionSignature()
 {
 }
 
-FunctionSignature::FunctionSignature(std::string name, std::vector<DataType> params, DataType returnType,
-                                     void *address = nullptr)
+FunctionSignature::FunctionSignature(const std::string name, std::vector<VecTypeId> params,
+                                     const omniruntime::vec::VecTypeId &returnType, void* address = nullptr)
 {
     this->funcName = name;
     this->paramTypes = params;
@@ -33,12 +33,12 @@ std::string FunctionSignature::GetName() const
     return this->funcName;
 }
 
-std::vector<DataType> FunctionSignature::GetParams() const
+std::vector<VecTypeId> FunctionSignature::GetParams() const
 {
     return this->paramTypes;
 }
 
-DataType FunctionSignature::GetReturnType() const
+VecTypeId FunctionSignature::GetReturnType() const
 {
     return this-> retType;
 }

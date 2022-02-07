@@ -49,18 +49,18 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     llvm::Function *filterFunc = &filterFn;
 
     std::vector<Type *> args;
-    Type *ptrArg = Type::getInt64PtrTy(*context); // table
+    Type *ptrArg = llvmTypes->I64PtrType(); // table
     args.push_back(ptrArg);
-    args.push_back(Type::getInt32Ty(*context)); // no of rows
-    args.push_back(Type::getInt32PtrTy(*context)); // output array
+    args.push_back(llvmTypes->I32Type()); // no of rows
+    args.push_back(llvmTypes->I32PtrType()); // output array
     // bitmap is a 2d array of booleans
-    Type *bitmapArg = Type::getInt64PtrTy(*context); // record nullk values
+    Type *bitmapArg = llvmTypes->I64PtrType(); // record nullk values
     args.push_back(bitmapArg);
-    args.push_back(Type::getInt64PtrTy(*context)); // offsets
-    args.push_back(Type::getInt64Ty(*context)); // execution_context address
-    args.push_back(Type::getInt64PtrTy(*context)); // dictionary vectors
+    args.push_back(llvmTypes->I64PtrType()); // offsets
+    args.push_back(llvmTypes->I64Type()); // execution_context address
+    args.push_back(llvmTypes->I64PtrType()); // dictionary vectors
 
-    FunctionType *funcSignature = FunctionType::get(Type::getInt32Ty(*context), args, false);
+    FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
         "FILTER_WRAPPER", module.get());
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
@@ -84,8 +84,8 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
     offsets->setName("DICTIONARY_VECTORS");
 
-    Value *zero = this->CreateConstantInt(0);
-    Value *one = this->CreateConstantInt(1);
+    Value *zero = llvmTypes->CreateConstantInt(0);
+    Value *one = llvmTypes->CreateConstantInt(1);
     std::vector<Value*> filterFuncArgs;
     // filterFuncArgs contains the values of the arguments to the filter function
     // value*, bitmap*, offset*, rowIdx, length*, execution_context_ptr, dictionary_vectors*, isNull
@@ -96,7 +96,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     // pre loop body
     builder->SetInsertPoint(preLoop);
     // Pointer to the current row index to be processed.
-    AllocaInst *indexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "INDEX_COUNTER");
+    AllocaInst *indexStore = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "INDEX_COUNTER");
     // Initialize row index to 0.
     builder->CreateStore(zero, indexStore);
     // Value of the current row index to be processed.
@@ -104,7 +104,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     // Temp value for next row index.
     Value *nextIndexVal;
     // Pointer to the index of the selected positions array to be filled next.
-    AllocaInst *selectedIndexStore = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "SELECTED_INDEX_PTR");
+    AllocaInst *selectedIndexStore = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "SELECTED_INDEX_PTR");
     // Initialize index to 0.
     builder->CreateStore(zero, selectedIndexStore);
     // Value of the selected positions index.
@@ -115,8 +115,8 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     Value *nextSelectedIndexVal;
 
     // Create a int pointer to store data length
-    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "DATA_LENGTH");
-    auto isNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_NULL_PTR");
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "DATA_LENGTH");
+    auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), nullptr, "IS_NULL_PTR");
 
     builder->CreateBr(loopBody);
     // loop body
@@ -124,8 +124,8 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
 
-    builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
-    builder->CreateStore(CreateConstantBool(false), isNullPtr);
+    builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthAllocaInst);
+    builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
 
     filterFuncArgs.push_back(data);
     filterFuncArgs.push_back(bitmap);
@@ -198,7 +198,7 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     // Array of addresses, bitmap, row index
     std::vector<Type*> args = GetSingleFilterArguments(*context);
     llvm::Function* baseFunc = this->CreateFunction();
-    FunctionType* funcSignature = FunctionType::get(Type::getInt1Ty(*context), args, false);
+    FunctionType* funcSignature = FunctionType::get(llvmTypes->I1Type(), args, false);
     llvm::Function *funcDecl = llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage,
         "FUNC_WRAPPER", module.get());
     BasicBlock *wrapperBody = BasicBlock::Create(*context, "DATA_ACCESS", funcDecl);
@@ -224,10 +224,10 @@ int64_t FilterCodeGen::GetExpressionEvaluator()
     funcArgs.push_back(rowIndex);
 
     // Create a boolean pointer to store result null value
-    AllocaInst *lengthAllocaInst = builder->CreateAlloca(Type::getInt32Ty(*context), nullptr, "LENGTH_PTR");
-    builder->CreateStore(CreateConstantInt(0), lengthAllocaInst);
-    auto isNullPtr = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "IS_NULL_PTR");
-    builder->CreateStore(CreateConstantBool(false), isNullPtr);
+    AllocaInst *lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "LENGTH_PTR");
+    builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthAllocaInst);
+    auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), nullptr, "IS_NULL_PTR");
+    builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
     funcArgs.push_back(lengthAllocaInst);
     funcArgs.push_back(executionContext);
     funcArgs.push_back(dictionaryVectors);

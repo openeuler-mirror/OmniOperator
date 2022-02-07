@@ -5,6 +5,7 @@
 #ifndef OMNI_RUNTIME_FUNC_REGISTRY_STRING_H
 #define OMNI_RUNTIME_FUNC_REGISTRY_STRING_H
 #include "function.h"
+#include "util/type_util.h"
 
 std::vector<omniruntime::Function> GetStringFunctionRegistry();
 std::vector<omniruntime::Function> GetStringCmpFn();

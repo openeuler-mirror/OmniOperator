@@ -39,7 +39,7 @@ public:
     explicit RowProjection(const omniruntime::expressions::Expr &expression);
     ~RowProjection();
     RowProjFunc Create();
-    expressions::DataType GetReturnType();
+    VecType GetReturnType();
     bool IsColumnProjection();
     int GetIndexIfColumnProjection();
 
@@ -75,9 +75,9 @@ public:
         std::vector<int64_t> const &vecData, int64_t *bitmap,
         int64_t *offsets, ExecutionContext *context, int64_t *dictionaryVectors) const;
 
-    omniruntime::expressions::DataType GetOutputType() const
+    omniruntime::vec::VecType GetOutputType() const
     {
-        return this->expr->GetExprDataType();
+        return this->expr->GetReturnType();
     }
 
 private:

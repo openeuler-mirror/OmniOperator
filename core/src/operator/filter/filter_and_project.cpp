@@ -55,8 +55,8 @@ bool SimpleFilter::Initialize()
         return false;
     }
 
-    if (this->expression->GetExprDataType() != BOOLD) {
-        LogWarn("Filter expression can only return boolean, current type: %d", this->expression->GetExprDataType());
+    if (this->expression->GetReturnTypeId() != OMNI_VEC_TYPE_BOOLEAN) {
+        LogWarn("Filter expression can only return boolean, current type: %d", this->expression->GetReturnTypeId());
         return false;
     }
 
@@ -246,12 +246,6 @@ int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
 
 Filter::Filter(const expressions::Expr &expression, const int32_t *inputTypeIds, int32_t inputVecCount)
 {
-    vector<DataType> dataTypes;
-    dataTypes.reserve(inputVecCount);
-    for (int32_t i = 0; i < inputVecCount; i++) {
-        dataTypes.push_back(expressions::ColTypeTrans(inputTypeIds[i]));
-    }
-
     this->codeGen = FilterCodeGen::Create("filterFunc", expression);
     this->expr = &expression;
 

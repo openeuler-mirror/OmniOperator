@@ -53,7 +53,7 @@ void GetTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys, vector<
         auto projectCol = GetProjectCol(projectKeys[i]);
         projectCols[i] = projectCol;
         if (projectCol == -1) {
-            auto returnType = projectKeys[i]->GetExprDataType();
+            auto returnType = projectKeys[i]->GetReturnTypeId();
             typeIds.push_back(returnType);
             projectCols[i] = newProjectCol++;
         }
@@ -73,7 +73,7 @@ void GetRequiredTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys,
         auto projectCol = GetProjectCol(projectKeys[i]);
         if (projectCol == -1) {
             // expression col
-            auto returnType = projectKeys[i]->GetExprDataType();
+            auto returnType = projectKeys[i]->GetReturnTypeId();
             typeIds.push_back(returnType);
             projectCols[i] = newProjectCol++;
         } else {

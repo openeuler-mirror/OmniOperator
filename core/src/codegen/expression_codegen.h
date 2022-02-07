@@ -43,6 +43,7 @@
 #include "../common/parser/parser.h"
 #include "../common/expr_printer.h"
 #include "../util/debug.h"
+#include "llvm_types.h"
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -74,15 +75,9 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    llvm::Value* CreateConstantBool(bool n);
-    llvm::Value* CreateConstantInt(int32_t n);
-    llvm::Value* CreateConstantLong(int64_t n);
-    llvm::Value* CreateConstantDouble(double n);
     llvm::Value* GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
-    llvm::Type* ToLlvmType(omniruntime::expressions::DataType t);
-    llvm::Type* GetFunctionReturnType(omniruntime::expressions::DataType t);
-    llvm::Type* GetFunctionArgType(omniruntime::expressions::DataType t);
-    llvm::Type* ToPointerType(omniruntime::expressions::DataType type);
+    std::vector<llvm::Type*> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
+                                                bool needsContext);
     void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
@@ -123,6 +118,7 @@ protected:
     CodeGenValuePtr value = nullptr;
     std::unique_ptr<CodegenContext> codegenContext;
     int numGlobalValues = 0;
+    std::unique_ptr<LLVMTypes> llvmTypes;
 
 private:
     std::string funcName;
@@ -131,7 +127,7 @@ private:
     void RegisterFunctions(std::vector<omniruntime::Function> func);
     void RegisterFunctionsHelper(omniruntime::Function &func, std::set<std::string> jitRegisteredFuncs);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(omniruntime::expressions::DataType vectorType, llvm::Value *rowIdx,
+    llvm::Value *GetDictionaryVectorValue(omniruntime::vec::VecType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);
     void CreateOrExprHelper(llvm::Value *leftValue, llvm::Value *leftNull, llvm::Value *rightValue,
         llvm::Value *rightNull);

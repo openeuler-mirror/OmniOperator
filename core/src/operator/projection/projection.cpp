@@ -35,12 +35,12 @@ RowProjFunc RowProjection::Create()
 }
 
 // Return INVALIDDATAD if expression is unsupported
-DataType RowProjection::GetReturnType()
+VecType RowProjection::GetReturnType()
 {
     if (this->expression == nullptr) {
-        return INVALIDDATAD;
+        return VecType(OMNI_VEC_TYPE_INVALID);
     }
-    return this->expression->GetExprDataType();
+    return this->expression->GetReturnType();
 }
 
 bool RowProjection::IsColumnProjection()
@@ -62,12 +62,6 @@ int RowProjection::GetIndexIfColumnProjection()
 
 bool Projection::Initialize(bool filter)
 {
-    std::vector<DataType> dataTypes;
-    dataTypes.reserve(nCols);
-    for (int32_t i = 0; i < nCols; i++) {
-        dataTypes.push_back(expressions::ColTypeTrans(inputTypeIds[i]));
-    }
-
     // short-circuit logic for column projections
     // no need to go through codegen
     if (expr->GetType() == DATA_E) {
@@ -195,43 +189,43 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
         }
     }
 
-    DataType outType = expr->GetExprDataType();
+    VecTypeId outTypeId = expr->GetReturnTypeId();
     std::unique_ptr<Vector> outVec;
     int32_t avgStringLength = 200;
-    switch (outType) {
-        case INT32D:
+    switch (outTypeId) {
+        case vec::OMNI_VEC_TYPE_INT:
             outVec = std::make_unique<IntVector>(vecAllocator, numSelectedRows);
             break;
-        case INT64D:
+        case vec::OMNI_VEC_TYPE_LONG:
             outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
             break;
-        case DOUBLED:
+        case vec::OMNI_VEC_TYPE_DOUBLE:
             outVec = std::make_unique<DoubleVector>(vecAllocator, numSelectedRows);
             break;
-        case VARCHARD:
-        case CHARD:
+        case vec::OMNI_VEC_TYPE_VARCHAR:
+        case vec::OMNI_VEC_TYPE_CHAR:
             // Must set capacity appropriately (to do)
             // capacity = numSelectedRows * 50 cannot handle vectors with average string length over 50
             outVec = std::make_unique<VarcharVector>(vecAllocator, numSelectedRows * avgStringLength, numSelectedRows);
             break;
-        case DECIMAL64D:
+        case vec::OMNI_VEC_TYPE_DECIMAL64:
             // FIXME: Support Decimal64Vector in the future
             outVec = std::make_unique<LongVector>(vecAllocator, numSelectedRows);
             break;
-        case DECIMAL128D:
+        case vec::OMNI_VEC_TYPE_DECIMAL128:
             outVec = std::make_unique<Decimal128Vector>(vecAllocator, numSelectedRows);
             break;
-        case BOOLD:
+        case vec::OMNI_VEC_TYPE_BOOLEAN:
             outVec = std::make_unique<BooleanVector>(vecAllocator, numSelectedRows);
             break;
         default: {
-            LogError("No such data type %d", outType);
+            LogError("No such data type %d", outTypeId);
             break;
         }
     }
 
     Vector *projectedVec = nullptr;
-    if (outType == VARCHARD) {
+    if (outTypeId == OMNI_VEC_TYPE_VARCHAR) {
         projectedVec = ProjectHelperVarWidth(*vecBatch, vecData, bitmap, offsets, outVec.release(), numSelectedRows,
             selectedRows, context, dictionaryVectors);
     } else {

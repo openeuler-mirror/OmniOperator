@@ -39,8 +39,8 @@ extern "C" DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(
     return result;
 }
 
-extern "C" DLLEXPORT int64_t GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index,
-                                                            int64_t contextPtr) {
+extern "C" DLLEXPORT int64_t GetDecimalFromDictionaryVector(int64_t contextPtr, int64_t dictionaryVectorAddr,
+                                                            int32_t index) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     Decimal128 value = dictionaryVectorPtr->GetDecimal128(index);
     auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));

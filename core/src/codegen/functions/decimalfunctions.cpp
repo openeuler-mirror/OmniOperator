@@ -30,7 +30,7 @@ extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y)
     }
     return 0;
 }
-extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y, int64_t contextPtr)
+extern "C" DLLEXPORT int64_t AddDec128(int64_t contextPtr, int64_t x, int64_t y)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -48,7 +48,7 @@ extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y, int64_t contextPtr)
+extern "C" DLLEXPORT int64_t SubDec128(int64_t contextPtr, int64_t x, int64_t y)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -66,7 +66,7 @@ extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y, int64_t contextPtr)
+extern "C" DLLEXPORT int64_t DivDec128(int64_t contextPtr, int64_t x, int64_t y)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -84,7 +84,7 @@ extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr)
+extern "C" DLLEXPORT int64_t MulDec128(int64_t contextPtr, int64_t x, int64_t y)
 {
     int32_t length = 2;
     auto *left = reinterpret_cast<int64_t*>(x);
@@ -102,7 +102,7 @@ extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr)
+extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t contextPtr, int64_t x)
 {
     int32_t length = 2;
     auto *valueAdd = reinterpret_cast<int64_t*>(x);
@@ -117,7 +117,7 @@ extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr)
     return reinterpret_cast<int64_t>(result);
 }
 
-extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr)
+extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t contextPtr, int64_t x)
 {
     auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) + sizeof (long)));
     result[0] = x;

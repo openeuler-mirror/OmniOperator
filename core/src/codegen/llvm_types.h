@@ -1,0 +1,71 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: Expression code generator
+ */
+#include <llvm/IR/Constant.h>
+#include <llvm/IR/DerivedTypes.h>
+#include "util/type_util.h"
+#include "../vector/vector_type.h"
+
+#ifndef OMNI_RUNTIME_LLVM_TYPES_H
+#define OMNI_RUNTIME_LLVM_TYPES_H
+
+class LLVMTypes {
+public:
+    explicit LLVMTypes(llvm::LLVMContext& context);
+
+    LLVMTypes();
+
+    llvm::Type* I1Type();
+
+    llvm::Type* I8Type();
+
+    llvm::Type* I16Type();
+
+    llvm::Type* I32Type();
+
+    llvm::Type* I64Type();
+
+    llvm::Type* I128Type();
+
+    llvm::Type* DoubleType();
+
+    llvm::PointerType* PtrType(llvm::Type* type);
+
+    llvm::PointerType* I1PtrType();
+
+    llvm::PointerType* I8PtrType();
+
+    llvm::PointerType* I32PtrType();
+
+    llvm::PointerType* I64PtrType();
+
+    llvm::PointerType* DoublePtrType();
+
+    llvm::PointerType* I128PtrType();
+
+    llvm::Value* CreateConstantBool(bool n);
+
+    llvm::Value* CreateConstantInt(int32_t n);
+
+    llvm::Value* CreateConstantLong(int64_t n);
+
+    llvm::Value* CreateConstantDouble(double n);
+
+    /// For a given Vector type, find the corresponding ir type.
+    llvm::Type* ToLLVMType(VecTypeId id);
+
+    llvm::Type* VectorToLLVMType(VecType type);
+
+    llvm::Type* ToPointerType(VecTypeId typeId);
+
+    llvm::Type* GetFunctionReturnType(VecTypeId typeId);
+
+    virtual ~LLVMTypes();
+
+private:
+    std::map<VecTypeId, llvm::Type*> VectorToLLVMTypeMap;
+    llvm::LLVMContext& context;
+};
+
+#endif // OMNI_RUNTIME_LLVM_TYPES_H

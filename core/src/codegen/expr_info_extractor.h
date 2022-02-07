@@ -9,6 +9,7 @@
 #include "func_registry_decimal.h"
 #include "func_registry_context.h"
 #include "function.h"
+#include "util/type_util.h"
 
 class ExprInfoExtractor : public ExprVisitor {
 public:

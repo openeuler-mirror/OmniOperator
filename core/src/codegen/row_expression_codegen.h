@@ -6,6 +6,7 @@
 #define OMNI_RUNTIME_ROW_EXPRESSION_CODEGEN_H
 
 #include "expression_codegen.h"
+#include "util/type_util.h"
 
 #include <utility>
 

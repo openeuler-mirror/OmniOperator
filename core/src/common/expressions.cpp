@@ -37,9 +37,14 @@ ExprType Expr::GetType() const
     return INVALID_E;
 }
 
-DataType Expr::GetExprDataType() const
+VecType &Expr::GetReturnType() const
 {
-    return dataType;
+    return *dataType;
+}
+
+VecTypeId Expr::GetReturnTypeId() const
+{
+    return dataType->GetId();
 }
 
 
@@ -47,7 +52,7 @@ DataExpr::DataExpr() {}
 
 DataExpr::~DataExpr()
 {
-    if (dataType == VARCHARD && !isColumn) {
+    if (dataType->GetId() == VecTypeId::OMNI_VEC_TYPE_VARCHAR && !isColumn) {
         delete stringVal;
     }
 }
@@ -58,61 +63,52 @@ ExprType DataExpr::GetType() const
 }
 
 // Helper constructors for different data types
-DataExpr::DataExpr(bool val)
+DataExpr::DataExpr(bool val, VecTypePtr dt)
 {
     isColumn = false;
-    dataType = BOOLD;
     boolVal = val;
+    dataType = std::move(dt);
 }
-DataExpr::DataExpr(int32_t val)
+DataExpr::DataExpr(int32_t val, VecTypePtr dt)
 {
     isColumn = false;
-    dataType = INT32D;
     intVal = val;
+    dataType = std::move(dt);
 }
-DataExpr::DataExpr(int64_t val)
+DataExpr::DataExpr(int64_t val, VecTypePtr dt)
 {
     isColumn = false;
-    dataType = INT64D;
     longVal = val;
+    dataType = std::move(dt);
 }
-DataExpr::DataExpr(double val)
+DataExpr::DataExpr(double val, VecTypePtr dt)
 {
     isColumn = false;
-    dataType = DOUBLED;
     doubleVal = val;
+    dataType = std::move(dt);
 }
-DataExpr::DataExpr(std::string* val)
+DataExpr::DataExpr(std::string* val, VecTypePtr dt)
 {
     isColumn = false;
-    dataType = VARCHARD;
     stringVal = val;
-    width = val->length() + 1;
+    dataType = std::move(dt);
 }
-DataExpr::DataExpr(int64_t *val)
+DataExpr::DataExpr(int64_t *val, VecTypePtr dt)
 {
     isColumn = false;
-    dataType = DECIMAL128D;
     dec128Val = val;
+    dataType = std::move(dt);
 }
-DataExpr::DataExpr(int32_t colIdx, DataType dt)
+DataExpr::DataExpr(int32_t colIdx, VecTypePtr colType, bool isCol)
 {
-    isColumn = true;
-    dataType = dt;
+    isColumn = isCol;
+    dataType = std::move(colType);
     colVal = colIdx;
-}
-
-DataExpr::DataExpr(int32_t colIdx, DataType dt, int32_t width)
-{
-    isColumn = true;
-    dataType = dt;
-    colVal = colIdx;
-    this->width = width;
 }
 
 BinaryExpr::BinaryExpr()
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(OMNI_VEC_TYPE_BOOLEAN);
 }
 
 BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
@@ -121,15 +117,16 @@ BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
     left = leftExpr;
     right = rightExpr;
     // use the more encompassing DataType
-    dataType = std::max(leftExpr->GetExprDataType(), rightExpr->GetExprDataType());
+    dataType = std::make_unique<VecType>(leftExpr->GetReturnTypeId() <= rightExpr->GetReturnTypeId()
+            ? rightExpr->GetReturnType() : leftExpr->GetReturnType());
 }
 
-BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataType dt)
+BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, VecTypePtr dt)
 {
     op = bop;
     left = leftExpr;
     right = rightExpr;
-    dataType = dt;
+    dataType = std::move(dt);
 }
 
 BinaryExpr::~BinaryExpr()
@@ -146,7 +143,7 @@ ExprType BinaryExpr::GetType() const
 
 UnaryExpr::UnaryExpr()
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
 }
 
 UnaryExpr::UnaryExpr(Operator uop, Expr *expr)
@@ -155,11 +152,11 @@ UnaryExpr::UnaryExpr(Operator uop, Expr *expr)
     exp = expr;
 }
 
-UnaryExpr::UnaryExpr(Operator uop, Expr *expr, DataType dt)
+UnaryExpr::UnaryExpr(Operator uop, Expr *expr, VecTypePtr dt)
 {
     op = uop;
     exp = expr;
-    dataType = dt;
+    dataType = std::move(dt);
 }
 
 UnaryExpr::~UnaryExpr()
@@ -175,7 +172,7 @@ ExprType UnaryExpr::GetType() const
 
 InExpr::InExpr()
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
 }
 
 InExpr::~InExpr()
@@ -187,7 +184,7 @@ InExpr::~InExpr()
 
 InExpr::InExpr(std::vector<Expr*> args)
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
     arguments = args;
 }
 
@@ -199,7 +196,7 @@ ExprType InExpr::GetType() const
 
 BetweenExpr::BetweenExpr()
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
 }
 
 BetweenExpr::~BetweenExpr()
@@ -211,7 +208,7 @@ BetweenExpr::~BetweenExpr()
 
 BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound)
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
     value = val;
     lowerBound = lowBound;
     upperBound = upBound;
@@ -235,7 +232,7 @@ IfExpr::~IfExpr()
 
 IfExpr::IfExpr(Expr* cond, Expr* texp, Expr* fexp)
 {
-    dataType = texp->dataType;
+    dataType = std::make_unique<VecType>(texp->GetReturnType());
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
@@ -258,7 +255,7 @@ CoalesceExpr::~CoalesceExpr()
 
 CoalesceExpr::CoalesceExpr(Expr* val1, Expr* val2)
 {
-    dataType = val1->dataType;
+    dataType = std::make_unique<VecType>(val1->GetReturnType());
     value1 = val1;
     value2 = val2;
 }
@@ -278,7 +275,7 @@ IsNullExpr::~IsNullExpr()
 
 IsNullExpr::IsNullExpr(Expr* value)
 {
-    dataType = BOOLD;
+    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
     this->value = value;
 }
 
@@ -302,26 +299,18 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args)
     arguments = args;
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt)
 {
     funcName = fnName;
     arguments = args;
-    dataType = dt;
+    dataType = std::move(dt);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, Function &function)
 {
     funcName = fnName;
     arguments = args;
-    dataType = dt;
-    this->width = width;
-}
-
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, Function &function)
-{
-    funcName = fnName;
-    arguments = args;
-    dataType = dt;
+    dataType = std::move(dt);
     this->function = &function;
 }
 
@@ -329,15 +318,6 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, Function &functi
 {
     funcName = fnName;
     arguments = args;
-    this->function = &function;
-}
-
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, DataType dt, int32_t width, Function &function)
-{
-    funcName = fnName;
-    arguments = args;
-    dataType = dt;
-    this->width = width;
     this->function = &function;
 }
 

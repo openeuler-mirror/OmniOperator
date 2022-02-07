@@ -19,16 +19,16 @@
 
 extern "C" DLLEXPORT int32_t Decimal128CompareExt(int64_t x, int64_t y);
 
-extern "C" DLLEXPORT int64_t AddDec128(int64_t x, int64_t y, int64_t contextPtr);
+extern "C" DLLEXPORT int64_t AddDec128(int64_t contextPtr, int64_t x, int64_t y);
 
-extern "C" DLLEXPORT int64_t SubDec128(int64_t x, int64_t y, int64_t contextPtr);
+extern "C" DLLEXPORT int64_t SubDec128(int64_t contextPtr, int64_t x, int64_t y);
 
-extern "C" DLLEXPORT int64_t DivDec128(int64_t x, int64_t y, int64_t contextPtr);
+extern "C" DLLEXPORT int64_t DivDec128(int64_t contextPtr, int64_t x, int64_t y);
 
-extern "C" DLLEXPORT int64_t MulDec128(int64_t x, int64_t y, int64_t contextPtr);
+extern "C" DLLEXPORT int64_t MulDec128(int64_t contextPtr, int64_t x, int64_t y);
 
-extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t x, int64_t contextPtr);
+extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t contextPtr, int64_t x);
 
-extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t x, int64_t contextPtr);
+extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t contextPtr, int64_t x);
 
 #endif // OMNI_RUNTIME_DECIMALFUNCTIONS_H

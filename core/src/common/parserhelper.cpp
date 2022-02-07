@@ -14,9 +14,9 @@ ParserHelper::~ParserHelper() {
 }
 
 // Helper function to determine if a type is INT32D or INT64D
-bool ParserHelper::IsIntType(DataType dt)
+bool ParserHelper::IsIntType(VecTypeId typeId)
 {
-    return (dt == INT32D || dt == INT64D);
+    return (typeId == OMNI_VEC_TYPE_INT || typeId == OMNI_VEC_TYPE_LONG || typeId == OMNI_VEC_TYPE_DATE32);
 }
 
 bool IsStringFn(std::string opStr)
@@ -29,7 +29,7 @@ bool IsStringFn(std::string opStr)
 }
 
 std::string ParserHelper::GetFnIdentifier(std::string opStr, std::vector<omniruntime::expressions::Expr*> args,
-                                          omniruntime::expressions::DataType ret)
+                                          VecTypeId retTypeId)
 {
     std::string delimeter = "_";
     std::string funcID = opStr;
@@ -39,7 +39,7 @@ std::string ParserHelper::GetFnIdentifier(std::string opStr, std::vector<omnirun
     if (IsStringFn(opStr)) {
         if (opStr == "concat") {
             // unique ID for concat_char(requires width) and concat_string(no width)
-            funcID += delimeter + DataTypeString(args[0]->GetExprDataType());
+            funcID += delimeter + TypeUtil::TypeToString(args[0]->GetReturnTypeId());
         } else if (opStr == "substr") {
             // unique ID for substr and substr with start index (substr_start)
             if (args.size() == ARGS_2) {
@@ -47,14 +47,14 @@ std::string ParserHelper::GetFnIdentifier(std::string opStr, std::vector<omnirun
                 funcName = funcID;
             }
             // unique ID for substr functions with length arg of long dt
-            funcID += delimeter + DataTypeString(args.back()->GetExprDataType());
+            funcID += delimeter + TypeUtil::TypeToString(args.back()->GetReturnTypeId());
         }
     } else if (externalFuncNames.find(opStr) == externalFuncNames.end()) {
         // get funcIDs for built-in functions
         for (auto &argument: args) {
-            funcID += delimeter + DataTypeString(argument->GetExprDataType());
+            funcID += delimeter + TypeUtil::TypeToString(argument->GetReturnTypeId());
         }
-        funcID += delimeter + DataTypeString(ret);
+        funcID += delimeter + TypeUtil::TypeToString(retTypeId);
     }
 
     // check if arguments number of arguments and argument data type match function
@@ -72,24 +72,27 @@ bool ParserHelper::HasValidArguments(const string &fnName, vector<Expr *> args)
     if (FUNC_TO_NUM_ARGS.find(fnName)->second == args.size()) {
         // check datatypes of arguments
         if (fnName == "substr") {
-            return ((args[0]->dataType == VARCHARD || args[0]->dataType == CHARD) &&
-                    IsIntType(args[1]->dataType) && IsIntType(args[ARGS_2]->dataType));
+            return ((args[0]->GetReturnTypeId() == OMNI_VEC_TYPE_VARCHAR
+            || args[0]->GetReturnTypeId() == OMNI_VEC_TYPE_CHAR)
+                    && IsIntType(args[1]->GetReturnTypeId()) && IsIntType(args[ARGS_2]->GetReturnTypeId()));
         } else if (fnName == "substr_start") {
-            return ((args[0]->dataType == VARCHARD || args[0]->dataType == CHARD) &&
-                    IsIntType(args[1]->dataType));
+            return (TypeUtil::IsStringType(args[0]->GetReturnTypeId()) &&
+                    IsIntType(args[1]->GetReturnTypeId()));
         } else if (fnName == "concat") {
-            return (args[0]->dataType == VARCHARD || args[0]->dataType == CHARD)
-                   && (args[1]->dataType == VARCHARD || args[1]->dataType == CHARD);
+            return (TypeUtil::IsStringType(args[0]->GetReturnTypeId())
+                   && TypeUtil::IsStringType(args[1]->GetReturnTypeId()));
         } else if (fnName == "abs") {
-            return (args[0]->dataType == INT32D || args[0]->dataType == INT64D
-                    || args[0]->dataType == DOUBLED || args[0]->dataType == DECIMAL128D);
+            return (IsIntType(args[0]->GetReturnTypeId())
+                    || args[0]->GetReturnTypeId() == OMNI_VEC_TYPE_DOUBLE
+                    || args[0]->GetReturnTypeId() == OMNI_VEC_TYPE_DECIMAL128);
         } else if (fnName == "LIKE") {
             // Assuming that like patterns are represented with strings
-            return ((args[0]->dataType == VARCHARD || args[0]->dataType == CHARD) && args[1]->dataType == VARCHARD);
+            return (TypeUtil::IsStringType(args[0]->GetReturnTypeId())
+            && args[1]->GetReturnTypeId() == OMNI_VEC_TYPE_VARCHAR);
         } else if (fnName == "combine_hash") {
-            return (IsIntType(args[0]->dataType) && IsIntType(args[1]->dataType));
+            return (IsIntType(args[0]->GetReturnTypeId()) && IsIntType(args[1]->GetReturnTypeId()));
         } else if (fnName == "pmod") {
-            return (args[0]->dataType == INT32D && args[1]->dataType == INT32D);
+            return (args[0]->GetReturnTypeId() == OMNI_VEC_TYPE_INT && args[1]->GetReturnTypeId() == OMNI_VEC_TYPE_INT);
         } else {
             return true;
         }
@@ -97,24 +100,26 @@ bool ParserHelper::HasValidArguments(const string &fnName, vector<Expr *> args)
     return false;
 }
 
-omniruntime::expressions::DataExpr *ParserHelper::GetDefaultValueForType(omniruntime::expressions::DataType destType)
+omniruntime::expressions::DataExpr *ParserHelper::GetDefaultValueForType(VecTypeId destTypeId)
 {
-    switch (destType) {
-        case DataType::INT32D:
-            return std::make_unique<DataExpr>(0).release();
-        case DataType::INT64D:
-            return std::make_unique<DataExpr>(0L).release();
-        case DataType::DOUBLED:
-            return std::make_unique<DataExpr>(0.000).release();
-        case DataType::BOOLD:
-            return std::make_unique<DataExpr>(true).release();
-        case DataType::CHARD:
-        case DataType::VARCHARD:
-            return std::make_unique<DataExpr>(make_unique<string>("NULL").release()).release();
-        case DataType::DECIMAL128D:
-            return std::make_unique<DataExpr>(0L).release();
-        case DataType::UNKNOWND:
-            return std::make_unique<DataExpr>(0).release();
+    VecTypePtr destType = make_unique<VecType>(destTypeId);
+    switch (destTypeId) {
+        case OMNI_VEC_TYPE_INT:
+        case OMNI_VEC_TYPE_DATE32:
+            return std::make_unique<DataExpr>(0, std::move(destType)).release();
+        case OMNI_VEC_TYPE_LONG:
+            return std::make_unique<DataExpr>(0L, std::move(destType)).release();
+        case OMNI_VEC_TYPE_DOUBLE:
+            return std::make_unique<DataExpr>(0.000, std::move(destType)).release();
+        case OMNI_VEC_TYPE_BOOLEAN:
+            return std::make_unique<DataExpr>(true, std::move(destType)).release();
+        case OMNI_VEC_TYPE_CHAR:
+        case OMNI_VEC_TYPE_VARCHAR:
+            return std::make_unique<DataExpr>(make_unique<string>("NULL").release(), std::move(destType)).release();
+        case OMNI_VEC_TYPE_DECIMAL128:
+            return std::make_unique<DataExpr>(0L, std::move(destType)).release();
+        case OMNI_VEC_TYPE_NONE:
+            return std::make_unique<DataExpr>(0, std::move(destType)).release();
         default:
             return nullptr;
     }

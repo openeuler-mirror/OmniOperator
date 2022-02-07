@@ -21,7 +21,7 @@ namespace {
     // Only updated once
     // Initialized in external_func_registry.cpp
     static std::set<std::string> g_allExtFnNames;
-    static std::map<std::string, omniruntime::expressions::DataType> g_nameToRetType;
+    static std::map<std::string, omniruntime::vec::VecTypeId> g_nameToRetType;
     static std::map<std::string, FunctionSignature> g_funcSignatureMap;
 
     // Tells whether UpdateFuncSigMap has been called so that it only needs to be called once
@@ -42,7 +42,7 @@ public:
     std::set<std::string> GetAllExternalFunctionNames() const;
 
     // Returns a map from function name to return type
-    std::map<std::string, omniruntime::expressions::DataType> GetFuncReturnTypeMap() const;
+    std::map<std::string, omniruntime::vec::VecTypeId> GetFuncReturnTypeMap() const;
 
     // Add the signatures for your own functions here
     FunctionSignature GetExternalSignature(std::string funcName) const;
