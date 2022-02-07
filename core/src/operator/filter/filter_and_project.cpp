@@ -212,7 +212,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
         VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
-    auto projectedData = make_unique<VectorBatch>(this->projectVecCount);
+    auto projectedData = make_unique<VectorBatch>(this->projectVecCount, numSelectedRows);
 
     for (int32_t i = 0; i < this->projectVecCount; i++) {
         // vecData and bitmap won't be used for filter projection

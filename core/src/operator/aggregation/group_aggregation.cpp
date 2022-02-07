@@ -384,7 +384,7 @@ int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
 
     // create all output vector batches
     for (int32_t batchId = 0; batchId < expectedBatchSize; ++batchId) {
-        auto vecBatch = new VectorBatch(colCount);
+        auto vecBatch = new VectorBatch(colCount, std::min(rowsPerBatch, leftRowCount));
         SetVectors(this->vecAllocator, vecBatch, types, std::min(rowsPerBatch, leftRowCount));
         result.push_back(vecBatch);
         leftRowCount -= rowsPerBatch;

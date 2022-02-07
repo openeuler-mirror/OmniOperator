@@ -200,7 +200,7 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
 VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
 {
     int32_t outputColCount = vectorBatch->GetVectorCount();
-    VectorBatch *sliceBatch = std::make_unique<VectorBatch>(outputColCount).release();
+    VectorBatch *sliceBatch = std::make_unique<VectorBatch>(outputColCount, rowCount).release();
     Vector **vectors = vectorBatch->GetVectors();
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
         sliceBatch->SetVector(columnIdx, vectors[columnIdx]->Slice(0, rowCount));

@@ -295,6 +295,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     int64_t offsets[vectorCount];
     int64_t bitmap[vectorCount];
     int64_t dictionaries[vectorCount];
+    int32_t rowCount = vecBatch->GetRowCount();
 
     // when the dictionary vector is processed it will be restored to an original vector
     // needs to be released
@@ -303,7 +304,7 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     // contents of bitmap are modified in getProjData method
     std::vector<int64_t> vecData = GetProjData(*vecBatch, bitmap, offsets, dictionaryVecs, vectorCount, dictionaries);
 
-    auto outBatch = std::make_unique<VectorBatch>(nProj);
+    auto outBatch = std::make_unique<VectorBatch>(nProj, rowCount);
     for (int32_t i = 0; i < nProj; i++) {
         Vector *outCol = proj[i]->Project(vecAllocator, vecBatch, vecData, bitmap, offsets, context, dictionaries);
         outBatch->SetVector(i, outCol);

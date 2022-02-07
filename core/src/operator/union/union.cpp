@@ -36,7 +36,8 @@ UnionOperator::~UnionOperator() {}
 int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
 {
     int32_t vectorCount = vecBatch->GetVectorCount();
-    auto outBatch = std::make_unique<VectorBatch>(vectorCount);
+    int32_t rowCount = vecBatch->GetRowCount();
+    auto outBatch = std::make_unique<VectorBatch>(vectorCount, rowCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
         Vector *inputVector = vecBatch->GetVector(i);
         outBatch->SetVector(i, inputVector->Slice(0, inputVector->GetSize()));
