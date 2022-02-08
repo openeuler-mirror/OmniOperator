@@ -3,70 +3,17 @@
  */
 
 #include <gtest/gtest.h>
-#include "../../src/operator/aggregation/aggregation.h"
-#include "../../src/operator/aggregation/group_aggregation_expr.h"
+#include "operator/aggregation/aggregation.h"
+#include "operator/aggregation/group_aggregation_expr.h"
 #include "../../src/vector/vector_helper.h"
-#include "../../src/jit/jit.h"
-#include "../../src/operator/optimization.h"
+#include "operator/jit_context/jit_context.h"
 #include "../util/test_util.h"
 
 using namespace omniruntime::vec;
-using namespace omniruntime::jit;
 using namespace omniruntime::op;
-
-JitContext *CreateHashAggregationWithExprJitContext(int32_t colNum, int32_t groupColNum, int32_t aggColNum,
-    const int32_t* aggFuncTypes, int32_t* projectTypes)
-{
-    using namespace std;
-
-    PrepareContext aggFuncTypeContext = { (uint32_t *)aggFuncTypes, static_cast<size_t>(aggColNum) };
-
-    ParamValue pColType = ParamValue(projectTypes, colNum);
-    ParamValue pColCount = ParamValue(&colNum);
-    ParamValue pGroupNum = ParamValue(&groupColNum);
-    ParamValue pAggNum = ParamValue(&aggColNum);
-    ParamValue pAggTypes = ParamValue((int32_t *)aggFuncTypeContext.context, aggColNum);
-
-    auto *inloopSp = new Specialization();
-    inloopSp->AddSpecializedParam(3, &pColType);
-    inloopSp->AddSpecializedParam(4, &pColCount);
-    inloopSp->AddSpecializedParam(6, &pGroupNum);
-    inloopSp->AddSpecializedParam(8, &pAggNum);
-    inloopSp->AddSpecializedParam(9, &pAggTypes);
-
-    auto *processAggSp = new Specialization();
-    processAggSp->AddSpecializedParam(2, &pAggNum);
-    processAggSp->AddSpecializedParam(3, &pColType);
-
-    map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, *inloopSp },
-        { OMNIJIT_HASH_GROUPBY_PROCESS_AGG, *processAggSp } };
-
-    auto *groupAggWithExprContext = new omniruntime::jit::Context(
-        GenerateOperatorTemplatePath("group_aggregation_expr"),
-        map<string, Specialization>());
-    auto *groupAggContext = new omniruntime::jit::Context(
-        GenerateOperatorTemplatePath("group_aggregation"), hashGroupbySps);
-    Jit *jit = new Jit(vector<omniruntime::jit::Context> { *groupAggWithExprContext, *groupAggContext });
-    jit->Specialize(vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP,
-        Optimization::EARLY_CSE, Optimization::SROA, Optimization::AGGRESIVE_DCE },
-        vector<ModuleOptimization> { ModuleOptimization::PRUNE_EH });
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-
-    auto *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
-    delete inloopSp;
-    delete processAggSp;
-    delete groupAggWithExprContext;
-    delete groupAggContext;
-    delete jit;
-
-    return jitContext;
-}
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {
-    using namespace omniruntime::op;
     using namespace omniruntime::expressions;
 
     const int32_t dataSize = 8;
@@ -80,36 +27,31 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t data3[] = {5, 5, 5, 5, 5, 5, 5, 5};
     int32_t data4[] = {5, 3, 2, 6, 1, 4, 7, 8};
 
-    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType()}));
+    VecTypes sourceTypes(std::vector<VecType>({ LongVecType(), LongVecType(), IntVecType(), IntVecType() }));
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+
     // groupByKeys
     DataExpr *modRight = new DataExpr(3);
     modRight->longVal = 3;
     BinaryExpr *modExpr = new BinaryExpr(MOD, new DataExpr(0, INT64D), modRight, INT64D);
-    std::vector<Expr *> groupByKeys = {modExpr, new DataExpr(2, INT32D)};
+    std::vector<Expr *> groupByKeys = { modExpr, new DataExpr(2, INT32D) };
 
     // aggKeys
     DataExpr *mulRight = new DataExpr(5);
     mulRight->longVal = 5;
     BinaryExpr *mulExpr = new BinaryExpr(MUL, new DataExpr(1, INT64D), mulRight, INT64D);
-    std::vector<Expr *> aggKeys = {mulExpr, new DataExpr(3, INT32D)};
+    std::vector<Expr *> aggKeys = { mulExpr, new DataExpr(3, INT32D) };
 
-    AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    AggregateType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
-    int32_t colNum = 4;
-    int32_t aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-    int32_t projectTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT,
-        OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG};
-
-    JitContext *jitContext = CreateHashAggregationWithExprJitContext(colNum, groupByNum, aggNum, aggFuncTypes,
-        projectTypes);
-    auto *hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum, sourceTypes,
-        aggOutputTypes, (uint32_t *) aggFunType, true, false);
+    JitContext *jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
+        (int32_t *)aggFuncTypes, 2, aggOutputTypes);
+    auto *hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
-    auto *hashAggWithExprOperator = dynamic_cast<HashAggregationWithExprOperator *>(
-        CreateTestOperator(hashAggWithExprOperatorFactory));
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatchs;
@@ -119,15 +61,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {180};
     int32_t expData4[] = {36};
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(),
-        IntVecType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3,
-        expData4);
+    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(), IntVecType() }));
+    VectorBatch *expectVecorBatch =
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
-    delete hashAggWithExprOperator;
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
 
     VectorHelper::FreeVecBatch(expectVecorBatch);
@@ -136,7 +77,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
 {
-    using namespace omniruntime::op;
     using namespace omniruntime::expressions;
 
     const int32_t dataSize = 8;
@@ -158,45 +98,29 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     DataExpr *modRight = new DataExpr(3);
     modRight->longVal = 3;
     BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, INT64D);
-
     DataExpr *addLeft = new DataExpr(2, INT32D);
     DataExpr *addRight = new DataExpr(5);
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, INT32D);
-
+    std::vector<Expr *> groupByKeys = { modExpr, addExpr };
 
     DataExpr *mulLeft = new DataExpr(1, INT64D);
     DataExpr *mulRight = new DataExpr(5);
     mulRight->longVal = 5;
     BinaryExpr *mulExpr = new BinaryExpr(MUL, mulLeft, mulRight, INT64D);
-
     DataExpr *addLeft2 = new DataExpr(3, INT32D);
     DataExpr *addRight2 = new DataExpr(5);
     BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
+    std::vector<Expr *> aggKeys = { mulExpr, addExpr2 };
 
+    AggregateType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
-
-
-
-    std::vector<Expr *> groupByKeys = {modExpr, addExpr};
-    std::vector<Expr *> aggKeys = {mulExpr, addExpr2};
-
-    AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-
-    int32_t colNum = 4;
-    int32_t groupColNum = 2;
-    int32_t aggColNum = 2;
-    int32_t aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-    int32_t projectTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT,
-                              OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT};
-
-    JitContext *jitContext = CreateHashAggregationWithExprJitContext(colNum, groupColNum, aggColNum, aggFuncTypes,
-                                                                     projectTypes);
-    auto *hashAggWithExprOperatorFactory =
-            new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum, sourceTypes,
-                                                       aggOutputTypes, (uint32_t *) aggFunType, true, false);
+    auto jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
+        (int32_t *)aggFuncTypes, 2, aggOutputTypes);
+    auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
-    auto *hashAggWithExprOperator = dynamic_cast<HashAggregationWithExprOperator *>(
-            CreateTestOperator(hashAggWithExprOperatorFactory));
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatchs;
@@ -206,15 +130,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     int32_t expData2[] = {10};
     int64_t expData3[] = {180};
     int32_t expData4[] = {76};
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(),
-                                                IntVecType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3,
-                                                      expData4);
+    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(), IntVecType() }));
+    VectorBatch *expectVecorBatch =
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
-    delete hashAggWithExprOperator;
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
 
     VectorHelper::FreeVecBatch(expectVecorBatch);
@@ -223,7 +146,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 {
-    using namespace omniruntime::op;
     using namespace omniruntime::expressions;
 
     const int32_t dataSize = 8;
@@ -241,25 +163,18 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VecTypes aggOutputTypes(std::vector<VecType>({ LongVecType(), IntVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 
-    std::vector<Expr *> groupByKeys = {new DataExpr(0, INT64D), new DataExpr(2, INT32D)};
-    std::vector<Expr *> aggKeys = {new DataExpr(1, INT64D), new DataExpr(3, INT32D)};
+    std::vector<Expr *> groupByKeys = { new DataExpr(0, INT64D), new DataExpr(2, INT32D) };
+    std::vector<Expr *> aggKeys = { new DataExpr(1, INT64D), new DataExpr(3, INT32D) };
 
-    AggregateType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    AggregateType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
-    int32_t colNum = 4;
-    int32_t groupColNum = 2;
-    int32_t aggColNum = 2;
-    int32_t aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-    int32_t projectTypes[] = {OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT};
-
-    JitContext *jitContext = CreateHashAggregationWithExprJitContext(colNum, groupColNum, aggColNum, aggFuncTypes,
-        projectTypes);
-    auto *hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys, aggNum, sourceTypes,
-        aggOutputTypes, (uint32_t *) aggFunType, true, false);
+    auto jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
+        (int32_t *)aggFuncTypes, 2, aggOutputTypes);
+    auto hashAggWithExprOperatorFactory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggKeys,
+        aggNum, sourceTypes, aggOutputTypes, (uint32_t *)aggFuncTypes, true, false);
     hashAggWithExprOperatorFactory->SetJitContext(jitContext);
-    auto *hashAggWithExprOperator = dynamic_cast<HashAggregationWithExprOperator *>(
-        CreateTestOperator(hashAggWithExprOperatorFactory));
+    auto hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatchs;
@@ -269,15 +184,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     int32_t expData2[] = {5};
     int64_t expData3[] = {36};
     int32_t expData4[] = {36};
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(),
-        IntVecType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3,
-        expData4);
+    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), IntVecType(), LongVecType(), IntVecType() }));
+    VectorBatch *expectVecorBatch =
+        CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
     VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
-    delete hashAggWithExprOperator;
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
 
     VectorHelper::FreeVecBatch(expectVecorBatch);

@@ -10,16 +10,14 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 
 
-Parser::Parser() {
-}
+Parser::Parser() {}
 
-Parser::~Parser() {
-}
+Parser::~Parser() {}
 
 namespace {
-    const string OPERATOR_PREFIX = "$operator$";
-    const int32_t SUBSTR_LEN = 10;
-    const int32_t ARG2 = 2;
+const string OPERATOR_PREFIX = "$operator$";
+const int32_t SUBSTR_LEN = 10;
+const int32_t ARG2 = 2;
 }
 
 // Helper function to remove operator prefix if it is there
@@ -33,26 +31,32 @@ string DemangleOperator(string opStr)
 
 OperatorType GetBinaryOperatorType(string opStr)
 {
-    vector<string> allCmpOps{"LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "EQUAL",
-                              "NOT_EQUAL"};
-    vector<string> allLogOps{"AND", "OR"};
-    vector<string> allArithOps{"ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS"};
-    for (const string& cmpOp : allCmpOps) {
-        if (opStr == cmpOp) {return OperatorType::COMPARISON; }
+    vector<string> allCmpOps { "LESS_THAN", "LESS_THAN_OR_EQUAL", "GREATER_THAN", "GREATER_THAN_OR_EQUAL",
+        "EQUAL",     "NOT_EQUAL" };
+    vector<string> allLogOps { "AND", "OR" };
+    vector<string> allArithOps { "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "MODULUS" };
+    for (const string &cmpOp : allCmpOps) {
+        if (opStr == cmpOp) {
+            return OperatorType::COMPARISON;
+        }
     }
-    for (const string& logOp : allLogOps) {
-        if (opStr == logOp) {return OperatorType::LOGICAL; }
+    for (const string &logOp : allLogOps) {
+        if (opStr == logOp) {
+            return OperatorType::LOGICAL;
+        }
     }
-    for (const string& arithOp : allArithOps) {
-        if (opStr == arithOp) {return OperatorType::ARITHMETIC; }
+    for (const string &arithOp : allArithOps) {
+        if (opStr == arithOp) {
+            return OperatorType::ARITHMETIC;
+        }
     }
     return OperatorType::INVALIDOPTTYPE;
 }
 
-bool IsUnaryOperator(const string& opStr)
+bool IsUnaryOperator(const string &opStr)
 {
-    vector<string> allUnaryOps{"NOT", "not"};
-    for (const string& unaryOp : allUnaryOps) {
+    vector<string> allUnaryOps { "NOT", "not" };
+    for (const string &unaryOp : allUnaryOps) {
         if (opStr == unaryOp) {
             return true;
         }
@@ -60,7 +64,7 @@ bool IsUnaryOperator(const string& opStr)
     return false;
 }
 
-string Parser::StripString(const string& input)
+string Parser::StripString(const string &input)
 {
     // remove spaces from input but not from inside strings
     string newInput;
@@ -80,7 +84,7 @@ string Parser::StripString(const string& input)
     return newInput;
 }
 
-DataType ParseReturnType(const string& typeString)
+DataType ParseReturnType(const string &typeString)
 {
     int endIdx = 2;
     int widthIdx = typeString.find('[');
@@ -97,20 +101,20 @@ DataType ParseReturnType(const string& typeString)
     return INVALIDDATAD;
 }
 
-std::vector<omniruntime::expressions::Expr *>
-Parser::ParseExpressions(const string expressions[], int32_t numberOfExpressions, VecTypes inputTypes,
-                         int32_t vecCount)
+std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const string expressions[],
+    int32_t numberOfExpressions, VecTypes inputTypes)
 {
     std::vector<Expr *> vExprs;
     for (int32_t i = 0; i < numberOfExpressions; i++) {
-        Expr *expr = ParseRowExpression(expressions[i], inputTypes, vecCount);
-        if (expr == nullptr) return {nullptr};
+        Expr *expr = ParseRowExpression(expressions[i], inputTypes, inputTypes.GetSize());
+        if (expr == nullptr)
+            return { nullptr };
         vExprs.push_back(expr);
     }
     return vExprs;
 }
 
-Expr *Parser::ParseRowExpression(const string& inputStr, VecTypes inputTypes, int32_t vecCount)
+Expr *Parser::ParseRowExpression(const string &inputStr, VecTypes inputTypes, int32_t vecCount)
 {
     string input = this->StripString(inputStr);
     int firstParenInd = input.find('(');
@@ -133,9 +137,15 @@ Expr *Parser::ParseRowExpression(const string& inputStr, VecTypes inputTypes, in
             commaPositions.push_back(i);
             numCommas++;
         }
-        if (exprStr[i] == '\'') {outsideQuotes = !outsideQuotes; }
-        if (exprStr[i] == '(') {parenCount++; }
-        if (exprStr[i] == ')') {parenCount--; }
+        if (exprStr[i] == '\'') {
+            outsideQuotes = !outsideQuotes;
+        }
+        if (exprStr[i] == '(') {
+            parenCount++;
+        }
+        if (exprStr[i] == ')') {
+            parenCount--;
+        }
     }
     commaPositions.push_back(exprStr.size());
 
@@ -175,8 +185,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // BinaryExpr
     OperatorType binRetType = GetBinaryOperatorType(opStr);
     if (binRetType != OperatorType::INVALIDOPTTYPE && args.size() == ARG2) {
-        return std::make_unique<BinaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0],
-                                            args[1], type).release();
+        return std::make_unique<BinaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], args[1], type)
+            .release();
     }
 
     // UnaryExpr
@@ -187,21 +197,25 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // Special form
     // Special forms are IN, BETWEEN, IF, COALESCE
-    if (opStr == "BETWEEN") return std::make_unique<BetweenExpr>(args[0], args[1], args[ARG2]).release();
-    if (opStr == "IN") return std::make_unique<InExpr>(args).release();
-    if (opStr == "COALESCE") return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
+    if (opStr == "BETWEEN")
+        return std::make_unique<BetweenExpr>(args[0], args[1], args[ARG2]).release();
+    if (opStr == "IN")
+        return std::make_unique<InExpr>(args).release();
+    if (opStr == "COALESCE")
+        return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
     if (opStr == "IF") {
-        if ((args[ARG2]->GetExprDataType() == VARCHARD || args[ARG2]->GetExprDataType() == CHARD)
-            && args[ARG2]->GetType() == ExprType::DATA_E
-            && static_cast<DataExpr*>(args[ARG2])->stringVal->compare("null") == 0) {
-            return std::make_unique<IfExpr>(
-                args[0], args[1], ParserHelper::GetDefaultValueForType(args[1]->dataType)).release();
+        if ((args[ARG2]->GetExprDataType() == VARCHARD || args[ARG2]->GetExprDataType() == CHARD) &&
+            args[ARG2]->GetType() == ExprType::DATA_E &&
+            static_cast<DataExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
+            return std::make_unique<IfExpr>(args[0], args[1], ParserHelper::GetDefaultValueForType(args[1]->dataType))
+                .release();
         }
         return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
     }
-    if (opStr == "IS_NULL") return std::make_unique<IsNullExpr>(args[0]).release();
+    if (opStr == "IS_NULL")
+        return std::make_unique<IsNullExpr>(args[0]).release();
     if (opStr == "IS_NOT_NULL") {
-        auto isNullExpr =  std::make_unique<IsNullExpr>(args[0]).release();
+        auto isNullExpr = std::make_unique<IsNullExpr>(args[0]).release();
         return std::make_unique<UnaryExpr>(Operator::NOT, isNullExpr, type).release();
     }
     // When casting to the same type, the result is the argument itself
@@ -224,7 +238,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 }
 
 // Helper function to turn all % to .* for regex wildcard matching
-string *FixString(const string& dataStr)
+string *FixString(const string &dataStr)
 {
     string *fixedStr = std::make_unique<string>("").release();
     for (char i : dataStr) {
@@ -233,12 +247,12 @@ string *FixString(const string& dataStr)
             fixedStr->push_back('*');
         } else {
             fixedStr->push_back(i);
-}
+        }
     }
     return fixedStr;
 }
 
-DataExpr *Parser::GenerateDataHelper(const string& dataStr, DataType currDataType)
+DataExpr *Parser::GenerateDataHelper(const string &dataStr, DataType currDataType)
 {
     switch (currDataType) {
         // handle boolean as int32
@@ -254,7 +268,7 @@ DataExpr *Parser::GenerateDataHelper(const string& dataStr, DataType currDataTyp
         // Need to handle decimals properly
         case DECIMAL128D:
         case INT64D: {
-            return  std::make_unique<DataExpr>(stol(dataStr)).release();
+            return std::make_unique<DataExpr>(stol(dataStr)).release();
         }
         case DOUBLED: {
             return std::make_unique<DataExpr>(stod(dataStr)).release();
@@ -298,8 +312,10 @@ DataExpr *Parser::GenerateData(string dataStr, const VecTypes &inputTypes)
     }
 
     // Case with boolean true/false
-    if (dataStr == "true") return std::make_unique<DataExpr>(true).release();
-    if (dataStr == "false") return std::make_unique<DataExpr>(false).release();
+    if (dataStr == "true")
+        return std::make_unique<DataExpr>(true).release();
+    if (dataStr == "false")
+        return std::make_unique<DataExpr>(false).release();
 
     // trim the single quotes for string values if there is any
     if (IsStringDataType(currDataType) && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {

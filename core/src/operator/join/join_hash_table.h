@@ -87,9 +87,9 @@ public:
         return simpleFilter;
     }
 
-    void SetFilterExpr(omniruntime::expressions::Expr &filterExpr)
+    void SetFilterExpr(omniruntime::expressions::Expr *filterExpr)
     {
-        this->filterExpr = &filterExpr;
+        this->filterExpr = filterExpr;
     }
 
     void AddHashTable(int32_t partitionIndex, const JoinHashTable *hashTable);

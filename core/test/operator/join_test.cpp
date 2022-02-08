@@ -6,11 +6,8 @@
 #include "../../src/operator/join/hash_builder.h"
 #include "../../src/operator/join/lookup_join.h"
 #include "../../src/operator/hash_util.h"
+#include "../../src/operator/jit_context/jit_context.h"
 #include "../util/test_util.h"
-#include "../../src/jit/param_value.h"
-#include "../../src/jit/jit.h"
-#include "../../src/operator/optimization.h"
-#include "../../libconfig.h"
 #include <vector>
 #include <chrono>
 #include <thread>
@@ -18,8 +15,8 @@
 #include <src/vector/dictionary_vector.h>
 
 using namespace omniruntime::op;
-using namespace omniruntime::jit;
 using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
 using std::map;
 using std::string;
 using std::vector;
@@ -34,133 +31,6 @@ void DeleteJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFa
     if (lookupJoinOperatorFactory != nullptr) {
         DeleteOperatorFactory(lookupJoinOperatorFactory);
     }
-}
-
-JitContext *CreateTestHashBuilderJitContext(const int32_t *buildTypes, int32_t buildTypesCount,
-    const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
-{
-    if (buildHashColsCount <= 0) {
-        return nullptr;
-    }
-    int32_t hashColTypes[buildHashColsCount];
-    for (int32_t i = 0; i < buildHashColsCount; i++) {
-        hashColTypes[i] = buildTypes[buildHashCols[i]];
-    }
-
-    ParamValue pHashColTypes = ParamValue(hashColTypes, buildHashColsCount);
-    ParamValue pHashColCount = ParamValue(&buildHashColsCount);
-    auto processColumnsSp = new Specialization();
-    processColumnsSp->AddSpecializedParam(PARAM_OFFSET_4, &pHashColTypes);
-    processColumnsSp->AddSpecializedParam(PARAM_OFFSET_5, &pHashColCount);
-    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS,
-        *processColumnsSp } };
-
-    auto *positionEqualsPositionIgnoreNullsSp = new Specialization();
-    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_5, &pHashColTypes);
-    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_6, &pHashColCount);
-    std::map<std::string, Specialization> hashStrategySps = {
-        { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS, *positionEqualsPositionIgnoreNullsSp }
-    };
-
-    auto *hashBuilderContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("hash_builder"),
-        std::map<std::string, Specialization>());
-    auto *joinHashTableContext =
-        new omniruntime::jit::Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
-    auto *pagesHashStrategyContext =
-        new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *hashBuilderContext, *joinHashTableContext,
-        *pagesHashStrategyContext });
-    jit->Specialize();
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-    JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
-    delete processColumnsSp;
-    delete positionEqualsPositionIgnoreNullsSp;
-    delete hashBuilderContext;
-    delete joinHashTableContext;
-    delete pagesHashStrategyContext;
-    delete jit;
-
-    return jitContext;
-}
-
-Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &hashColCount);
-Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOutputCols,
-    ParamValue &probeOutputColsCount, ParamValue &buildOutputTypes, ParamValue &buildOutputCols,
-    ParamValue &buildOutputColsCount, ParamValue &pHashColTypes, ParamValue &pHashColCount);
-
-JitContext *CreateTestLookupJoinJitContext(const int32_t *probeTypes, int32_t probeTypesCount, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-    const int32_t *buildOutputTypes, int32_t buildOutputColsCount, int64_t hashBuilderFactoryAddr)
-{
-    ParamValue pProbeTypes = ParamValue(probeTypes, probeTypesCount);
-    ParamValue pProbeOutputCols = ParamValue(probeOutputCols, probeOutputColsCount);
-    ParamValue pProbeOutputColsCount = ParamValue(&probeOutputColsCount);
-    ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
-    ParamValue pBuildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
-    ParamValue pBuildOutputColsCount = ParamValue(&buildOutputColsCount);
-
-    int32_t hashColTypes[probeHashColsCount];
-    for (int32_t i = 0; i < probeHashColsCount; i++) {
-        hashColTypes[i] = probeTypes[probeHashCols[i]];
-    }
-    ParamValue pHashColTypes = ParamValue(hashColTypes, probeHashColsCount);
-    ParamValue pHashColCount = ParamValue(&probeHashColsCount);
-
-    auto *lookupJoinContext = CreateTestLookupJoinContext(pProbeTypes, pProbeOutputCols, pProbeOutputColsCount,
-        pBuildOutputTypes, pBuildOutputCols, pBuildOutputColsCount, pHashColTypes, pHashColCount);
-    auto *pagesHashStrategyContext = CreateTestHashStrategyContext(pHashColTypes, pHashColCount);
-
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *lookupJoinContext, *pagesHashStrategyContext });
-    jit->Specialize();
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-    JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
-    delete lookupJoinContext;
-    delete pagesHashStrategyContext;
-    delete jit;
-
-    return jitContext;
-}
-
-Context *CreateTestLookupJoinContext(ParamValue &probeTypes, ParamValue &probeOutputCols,
-    ParamValue &probeOutputColsCount, ParamValue &buildOutputTypes, ParamValue &buildOutputCols,
-    ParamValue &buildOutputColsCount, ParamValue &pHashColTypes, ParamValue &pHashColCount)
-{
-    auto *buildBuildColumnsSp = new Specialization();
-    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_3, &buildOutputTypes);
-    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_4, &buildOutputCols);
-    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_5, &buildOutputColsCount);
-    buildBuildColumnsSp->AddSpecializedParam(PARAM_OFFSET_6, &probeOutputColsCount);
-
-    auto *populateHashesSp = new Specialization();
-    populateHashesSp->AddSpecializedParam(PARAM_OFFSET_2, &pHashColTypes);
-    populateHashesSp->AddSpecializedParam(PARAM_OFFSET_3, &pHashColCount);
-
-    map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
-        { OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
-    auto *lookupJoinContext = new Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
-
-    delete buildBuildColumnsSp;
-    delete populateHashesSp;
-
-    return lookupJoinContext;
-}
-
-Context *CreateTestHashStrategyContext(ParamValue &hashColTypes, ParamValue &hashColCount)
-{
-    auto *positionEqualsRowIgnoreNullsSp = new Specialization();
-    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_5, &hashColTypes);
-    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(PARAM_OFFSET_6, &hashColCount);
-
-    map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
-        *positionEqualsRowIgnoreNullsSp } };
-
-    auto *pagesHashStrategyContext = new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-    delete positionEqualsRowIgnoreNullsSp;
-    return pagesHashStrategyContext;
 }
 
 VectorBatch *ConstructSimpleBuildData()
@@ -230,8 +100,7 @@ HashBuilderOperatorFactory *CreateSimpleBuildFactory(int32_t operatorCount)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     return hashBuilderFactory;
 }
@@ -246,13 +115,12 @@ LookupJoinOperatorFactory *CreateSimpleProbeFactory(const HashBuilderOperatorFac
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType() }));
     int32_t buildOutputCols[1] = {1};
 
-    int64_t hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     return lookupJoinFactory;
 }
@@ -378,8 +246,8 @@ HashBuilderOperatorFactory *PrepareHashBuilder(int32_t operatorCount, bool isOri
     if (isOriginal) {
         hashBuilderOperatorFactory->SetJitContext(nullptr);
     } else {
-        JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-            buildHashCols, buildHashColsCount, operatorCount);
+        auto hashBuilderJitContext =
+            CreateHashBuilderJitContext(buildTypes, buildHashCols, buildHashColsCount, operatorCount);
         hashBuilderOperatorFactory->SetJitContext(hashBuilderJitContext);
     }
     return hashBuilderOperatorFactory;
@@ -395,16 +263,15 @@ LookupJoinOperatorFactory *PrepareLookupJoin(const HashBuilderOperatorFactory *h
     int32_t probeHashColsCount = 2;
     int32_t buildOutputCols[] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
-    int64_t hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderOperatorFactory);
-    LookupJoinOperatorFactory *lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderOperatorFactory);
+    auto lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes,
+        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
     if (isOriginal) {
         lookupJoinOperatorFactory->SetJitContext(nullptr);
     } else {
-        JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-            probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-            buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+        auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+            probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
         lookupJoinOperatorFactory->SetJitContext(lookupJoinJitContext);
     }
     return lookupJoinOperatorFactory;
@@ -772,8 +639,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoin)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -793,15 +659,14 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoin)
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputColsCount, hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
+        hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -839,8 +704,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinChar)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -860,15 +724,14 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinChar)
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), VarcharVecType(3) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
+        hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -905,8 +768,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDate32)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -926,15 +788,14 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDate32)
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), Date32VecType(DAY) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
+        hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -971,8 +832,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal64)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -992,15 +852,14 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal64)
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), Decimal64VecType(3, 0) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
+        hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -1037,8 +896,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal128)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -1058,15 +916,14 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal128)
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), Decimal128VecType(3, 0) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
+        hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -1107,8 +964,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -1131,15 +987,14 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputColsCount, hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -1179,8 +1034,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNulls)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -1207,9 +1061,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNulls)
     LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
         buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -1261,8 +1114,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
     string filterExpression = "";
     HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
         buildTypes, buildJoinCols, joinColsCount, filterExpression, operatorCount);
-    JitContext *hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     HashBuilderOperator *hashBuilderOperator =
         dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
@@ -1285,15 +1137,14 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), CharVecType(3) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-        probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    JitContext *lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
+        probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
+        OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
-    LookupJoinOperator *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> output;
     lookupJoinOperator->GetOutput(output);
@@ -1329,7 +1180,6 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
 
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 {
-    using namespace omniruntime::expressions;
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
     int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
@@ -1348,9 +1198,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
-    hashBuilderFactory->GetHashTables()->SetFilterExpr(*notEqualExpr);
-    auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(notEqualExpr);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
     hashBuilderOperator->AddInput(buildVecBatch);
@@ -1377,13 +1226,12 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ IntVecType(), IntVecType() }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
         OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -1412,24 +1260,12 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
 
 omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
 {
-    using namespace omniruntime::expressions;
-
-    const int32_t DATA_SIZE = 10;
-    VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
-    int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
-    std::string buildData1[DATA_SIZE] = {"35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904", "35709", "31904"};
-    auto buildVecBatch = CreateVectorBatch(buildTypes, DATA_SIZE, buildData0, buildData1);
-
-    int32_t buildJoinCols[1] = {0};
-    int32_t joinColsCount = 1;
-    int32_t operatorCount = 1;
-    string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
-
     // create the filter expression
     ParserHelper ph;
     FunctionRegistry fr;
     std::string funcStr = "substr";
     DataType retType = VARCHARD;
+
     DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
     DataExpr *leftSubstrIndex = new DataExpr(1);
     DataExpr *leftSubstrLen = new DataExpr(5);
@@ -1471,9 +1307,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
         joinColsCount, filterExpression, operatorCount);
     // create the filter expression
     omniruntime::expressions::Expr *joinFilter = CreateJoinFilterExprWithChar();
-    hashBuilderFactory->GetHashTables()->SetFilterExpr(*joinFilter);
-    auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(joinFilter);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
     hashBuilderOperator->AddInput(buildVecBatch);
@@ -1501,13 +1336,12 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
         OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -1536,8 +1370,6 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
 
 TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
 {
-    using namespace omniruntime::expressions;
-
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {20, 16, 13, 4, 20, 4, 22, 19, 8, 7};
@@ -1556,40 +1388,13 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     int32_t joinColsCount = 1;
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
-    // create the filter expression
-    ParserHelper ph;
-    FunctionRegistry fr;
-    std::string funcStr = "substr";
-    DataType retType = VARCHARD;
-    DataExpr *leftSubstrColumn = new DataExpr(1, VARCHARD);
-    DataExpr *leftSubstrIndex = new DataExpr(1);
-    DataExpr *leftSubstrLen = new DataExpr(5);
-    std::vector<Expr *> leftSubstrArgs;
-    leftSubstrArgs.push_back(leftSubstrColumn);
-    leftSubstrArgs.push_back(leftSubstrIndex);
-    leftSubstrArgs.push_back(leftSubstrLen);
-    std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType);
-    FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, retType, *fr.LookupFunction(funcID));
-
-    DataExpr *rightSubstrColumn = new DataExpr(3, VARCHARD);
-    DataExpr *rightSubstrIndex = new DataExpr(1);
-    DataExpr *rightSubstrLen = new DataExpr(5);
-    std::vector<Expr *> rightSubstrArgs;
-    rightSubstrArgs.push_back(rightSubstrColumn);
-    rightSubstrArgs.push_back(rightSubstrIndex);
-    rightSubstrArgs.push_back(rightSubstrLen);
-    funcID = ph.GetFnIdentifier(funcStr, rightSubstrArgs, retType);
-    FuncExpr *rightSubstrExpr = new FuncExpr(funcStr, rightSubstrArgs, retType, *fr.LookupFunction(funcID));
-
-    BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BOOLD);
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     // create the filter expression
     omniruntime::expressions::Expr *joinFilter = CreateJoinFilterExprWithChar();
-    hashBuilderFactory->GetHashTables()->SetFilterExpr(*joinFilter);
-    auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(joinFilter);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
     hashBuilderOperator->AddInput(buildVecBatch);
@@ -1613,9 +1418,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes,
         OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -1646,8 +1450,6 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
 // left join with filter
 TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
 {
-    using namespace omniruntime::expressions;
-
     const int32_t DATA_SIZE = 10;
     VecTypes buildTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
     int32_t buildData0[DATA_SIZE] = {19, 14, 7, 19, 1, 20, 10, 13, 20, 16};
@@ -1659,34 +1461,12 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     int32_t operatorCount = 1;
     string filterExpression = "$operator$NOT_EQUAL:4(substr:15(#1, 1:1, 5:1), substr:15(#3, 1:1, 5:1))";
 
-    // create filter expression object
-    ParserHelper ph;
-    FunctionRegistry fr;
-    std::string funcStr = "substr";
-    DataType retType = VARCHARD;
-    std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(1, VARCHARD));
-    args1.push_back(new DataExpr(1));
-    args1.push_back(new DataExpr(5));
-    std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType);
-    FuncExpr *neqLeft = new FuncExpr(funcStr, args1, retType, *fr.LookupFunction(funcID));
-
-    std::vector<Expr *> args2;
-    args2.push_back(new DataExpr(3, VARCHARD));
-    args2.push_back(new DataExpr(1));
-    args2.push_back(new DataExpr(5));
-    funcID = ph.GetFnIdentifier(funcStr, args2, retType);
-    FuncExpr *neqRight = new FuncExpr(funcStr, args2, retType, *fr.LookupFunction(funcID));
-
-    BinaryExpr *filterExpr = new BinaryExpr(NEQ, neqLeft, neqRight, BOOLD);
-    
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, filterExpression, operatorCount);
     // create filter expression object
     omniruntime::expressions::Expr *joinFilter = CreateJoinFilterExprWithChar();
-    hashBuilderFactory->GetHashTables()->SetFilterExpr(*joinFilter);
-    auto hashBuilderJitContext = CreateTestHashBuilderJitContext(buildTypes.GetIds(), buildTypes.GetSize(),
-        buildJoinCols, joinColsCount, operatorCount);
+    hashBuilderFactory->GetHashTables()->SetFilterExpr(joinFilter);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(buildTypes, buildJoinCols, joinColsCount, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
     hashBuilderOperator->AddInput(buildVecBatch);
@@ -1717,13 +1497,12 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     int32_t probeHashColsCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     VecTypes buildOutputTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(5) }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_LEFT,
         hashBuilderFactoryAddr);
-    auto lookupJoinJitContext = CreateTestLookupJoinJitContext(probeTypes.GetIds(), probeTypes.GetSize(),
-        probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols,
-        buildOutputTypes.GetIds(), buildOutputTypes.GetSize(), hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashCols, probeHashColsCount, buildOutputTypes, buildOutputCols);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -1900,8 +1679,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
     string filterExpression = "";
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinTypes, joinColumns,
         joinTypesSize, filterExpression, operatorCount);
-    auto hashBuilderJitContext =
-        CreateTestHashBuilderJitContext(joinTypeIds, joinTypesSize, joinColumns, joinTypesSize, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(joinTypes, joinColumns, joinTypesSize, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
     hashBuilderOperator->AddInput(buildVecBatch);
@@ -1909,12 +1687,12 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
     hashBuilderOperator->GetOutput(hashBuildOutput);
     hashBuilderFactory->GetHashTables()->GetHashTable(0)->PrintHashTable(0);
 
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory =
         LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinTypes, joinColumns, joinTypesSize, joinColumns,
         joinTypesSize, joinColumns, joinTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto lookupJoinJitContext = CreateTestLookupJoinJitContext(joinTypeIds, joinTypesSize, joinColumns, joinTypesSize,
-        joinColumns, joinTypesSize, joinColumns, joinTypeIds, joinTypesSize, hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(joinTypes, joinColumns, joinTypesSize, joinColumns,
+        joinTypesSize, joinTypes, joinColumns);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -1960,8 +1738,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
     string filterExpression = "";
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinTypes, joinColumns,
         joinTypesSize, filterExpression, operatorCount);
-    auto hashBuilderJitContext =
-        CreateTestHashBuilderJitContext(joinTypeIds, joinTypesSize, joinColumns, joinTypesSize, operatorCount);
+    auto hashBuilderJitContext = CreateHashBuilderJitContext(joinTypes, joinColumns, joinTypesSize, operatorCount);
     hashBuilderFactory->SetJitContext(hashBuilderJitContext);
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
     hashBuilderOperator->AddInput(buildVecBatch);
@@ -1969,12 +1746,12 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
     hashBuilderOperator->GetOutput(hashBuildOutput);
     hashBuilderFactory->GetHashTables()->GetHashTable(0)->PrintHashTable(0);
 
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory =
         LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinTypes, joinColumns, joinTypesSize, joinColumns,
         joinTypesSize, joinColumns, joinTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    auto lookupJoinJitContext = CreateTestLookupJoinJitContext(joinTypeIds, joinTypesSize, joinColumns, joinTypesSize,
-        joinColumns, joinTypesSize, joinColumns, joinTypeIds, joinTypesSize, hashBuilderFactoryAddr);
+    auto lookupJoinJitContext = CreateLookupJoinJitContext(joinTypes, joinColumns, joinTypesSize, joinColumns,
+        joinTypesSize, joinTypes, joinColumns);
     lookupJoinFactory->SetJitContext(lookupJoinJitContext);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
     lookupJoinOperator->AddInput(probeVecBatch);

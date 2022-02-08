@@ -9,53 +9,23 @@
 #include "../../src/operator/topn/topn.h"
 #include "../util/test_util.h"
 #include "../../src/vector/vector_helper.h"
-#include <src/operator/optimization.h>
 #include <perf_util.h>
-#include "../../src/jit/jit.h"
 #include "../../libconfig.h"
+#include "src/operator/jit_context/jit_context.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::op;
+using namespace std;
 
-JitContext *CreateTestTopNJitContext(VecTypes &sourceTypes, int32_t *sortCols, int32_t sourceTypesCount,
-    int32_t sortColsCount)
+TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 {
-    using namespace omniruntime::jit;
-    ParamValue pSourceTypes = ParamValue(sourceTypes.GetIds(), sourceTypesCount);
-    ParamValue pSortCols = ParamValue(sortCols, sortColsCount);
-    ParamValue pSortColCount = ParamValue(&sortColsCount);
-
-    auto *topNCompareSp = new Specialization();
-    topNCompareSp->AddSpecializedParam(4, &pSortColCount);
-    topNCompareSp->AddSpecializedParam(5, &pSortCols);
-    topNCompareSp->AddSpecializedParam(6, &pSourceTypes);
-
-    std::map<std::string, Specialization> topNCompareSps = { { OMNIJIT_TOPN_COMPARE, *topNCompareSp } };
-
-    auto *topNContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("topn"), topNCompareSps);
-
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *topNContext });
-    jit->Specialize(std::vector<Optimization>());
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-
-            JitContext *jitContext = new JitContext;
-    jitContext->func = createOperatorFunc;
-    delete jit;
-    delete topNContext;
-    delete topNCompareSp;
-    return jitContext;
-}
-
-TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
-    using namespace omniruntime::op;
-    using namespace std;
-
     // construct input data
     const int32_t dataSize = 100000000;
     const int32_t expectedDataSize = 5;
 
     // prepare data
-    int32_t *data0=new int32_t[dataSize] ;
-    for (int i = 0; i < dataSize; ++i){
+    int32_t *data0 = new int32_t[dataSize];
+    for (int i = 0; i < dataSize; ++i) {
         data0[i] = rand();
     }
 
@@ -70,13 +40,12 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
-                                                                     1);
-    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,1, 1);
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
-
-    auto s=clock();
+    auto s = clock();
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -85,7 +54,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     topNOperator->GetOutput(outputVecorBatchs);
 
     auto e = clock();
-    cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
+    cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
     IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
@@ -96,24 +65,22 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance) {
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    delete[] data0;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
-TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
-    using namespace omniruntime::op;
-    using namespace std;
-
+TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
+{
     // construct input data
     const int32_t dataSize = 100000000;
     const int32_t expectedDataSize = 5;
 
     // prepare data
-    int32_t *data0=new int32_t[dataSize] ;
-    for (int i = 0; i < dataSize; ++i){
+    int32_t *data0 = new int32_t[dataSize];
+    for (int i = 0; i < dataSize; ++i) {
         data0[i] = rand();
     }
 
@@ -129,11 +96,11 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
-                                                                     1);
-    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols,1, 1);
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
-    auto s=clock();
+    auto s = clock();
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -150,24 +117,24 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     auto e = clock();
-    cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
+    cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
-    TopNOperatorFactory *topNOperatorFactoryWithoutJit=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts,
-                                                                               1);
-    auto topNOp=topNOperatorFactoryWithoutJit->CreateOperator();
+    TopNOperatorFactory *topNOperatorFactoryWithoutJit =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    auto topNOp = topNOperatorFactoryWithoutJit->CreateOperator();
     perfUtil->Init();
     perfUtil->Reset();
     perfUtil->Start();
     topNOp->AddInput(inputVecBatch2);
     perfUtil->Stop();
-     instCount = perfUtil->GetData();
+    instCount = perfUtil->GetData();
     if (instCount != -1) {
         printf("TopN without OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
     vector<VectorBatch *> outputVecorBatchsWithoutJit;
     topNOp->GetOutput(outputVecorBatchsWithoutJit);
     auto e2 = clock();
-    cout<<"topn performance takes: "<<(double)(e2-s)/CLOCKS_PER_SEC<<endl;
+    cout << "topn performance takes: " << (double)(e2 - s) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
     IntVector *expectCol1 = new IntVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize);
@@ -177,20 +144,18 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct) {
 
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete topNOperatorFactoryWithoutJit;
-    delete jitContext;
-    delete topNOp;
+    delete[] data0;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
+    DeleteOperatorFactory(topNOperatorFactoryWithoutJit);
+    Operator::DeleteOperator(topNOp);
     delete perfUtil;
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
     VectorHelper::FreeVecBatches(outputVecorBatchsWithoutJit);
 }
-TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
-    using namespace omniruntime::op;
-    using namespace std;
-
+TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
+{
     // construct input data
     const int32_t dataSize = 1000;
     const int32_t expectedDataSize = 5;
@@ -210,12 +175,12 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
 
-    TopNOperatorFactory *topNOperatorFactory=new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols,
-                                                                     ascendings, nullFirsts, 1);
-    JitContext *jitContext=CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    TopNOperatorFactory *topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
-    auto s=clock();
+    auto s = clock();
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -224,10 +189,11 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
     topNOperator->GetOutput(outputVecorBatchs);
 
     auto e = clock();
-    cout<<"topn performance takes: "<<(double)(e-s)/CLOCKS_PER_SEC<<endl;
+    cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     string expectData1[expectedDataSize] = {"0", "0", "0", "0", "0"};
-    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
+    VarcharVector *expectCol1 =
+        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -239,19 +205,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar) {
     VectorHelper::PrintVecBatch(expectVecorBatch);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
-
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
 {
-    using namespace omniruntime::op;
-    using namespace std;
-
     // construct input data
     const int32_t dataSize = 7;
     const int32_t expectedDataSize = 5;
@@ -272,7 +233,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -289,18 +250,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
 {
-    using namespace omniruntime::op;
-    using namespace std;
-
     // construct input data
     const int32_t dataSize = 7;
     const int32_t expectedDataSize = 5;
@@ -324,7 +281,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -333,8 +290,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
-    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize,
-                                                  expectedDataSize);
+    VarcharVector *expectCol1 =
+        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -345,18 +302,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
 {
-    using namespace omniruntime::op;
-    using namespace std;
-
     // construct input data
     const int32_t dataSize = 7;
     const int32_t expectedDataSize = 5;
@@ -379,8 +332,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -389,8 +342,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
-    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize,
-                                                  expectedDataSize);
+    VarcharVector *expectCol1 =
+        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -401,16 +354,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
 {
-    using namespace omniruntime::op;
     // construct input data
     const int32_t dataSize = 6;
     const int32_t expectedDataSize = 5;
@@ -432,11 +383,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator =static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVecorBatchs;
@@ -450,16 +400,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
 {
-    using namespace omniruntime::op;
     // construct input data
     const int32_t dataSize = 6;
     const int32_t expectedDataSize = 5;
@@ -483,18 +431,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator =static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
-    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize,
-                                                  expectedDataSize);
+    VarcharVector *expectCol1 =
+        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         std::string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -505,16 +452,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
 TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
 {
-    using namespace omniruntime::op;
     // construct input data
     const int32_t dataSize = 6;
     const int32_t expectedDataSize = 5;
@@ -537,19 +482,18 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
-
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 1, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
-    TopNOperator *topNOperator =static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
     std::vector<VectorBatch *> outputVecorBatchs;
     topNOperator->GetOutput(outputVecorBatchs);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
-    VarcharVector *expectCol1 = new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize,
-                                                  expectedDataSize);
+    VarcharVector *expectCol1 =
+        new VarcharVector(VectorAllocatorFactory::GetGlobalAllocator(), expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         std::string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
@@ -560,9 +504,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -598,7 +541,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -624,9 +567,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
 
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -665,7 +607,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -694,9 +636,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
 
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -734,8 +675,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -764,14 +705,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
 
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
-TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
+TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
+{
     using namespace omniruntime::op;
     // construct input data
     const int32_t dataSize = 6;
@@ -801,7 +742,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -826,14 +767,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn){
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
-TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar){
+TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
+{
     using namespace omniruntime::op;
     // construct input data
     const int32_t dataSize = 6;
@@ -866,7 +807,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar){
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -894,14 +835,14 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar){
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
 
-TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar){
+TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
+{
     using namespace omniruntime::op;
     // construct input data
     const int32_t dataSize = 6;
@@ -933,8 +874,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar){
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -962,9 +903,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar){
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -994,22 +934,22 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(3),DoubleVecType() }));
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), VarcharVecType(3), DoubleVecType() }));
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {true, true};
     const int32_t expectedDataSize = 5;
     inputVecBatch->GetVector(0)->SetValueNull(dataSize - 1);
-    inputVecBatch->GetVector(1)->SetValueNull(dataSize -1);
+    inputVecBatch->GetVector(1)->SetValueNull(dataSize - 1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VecType vecType = sourceTypes.Get()[2];
     inputVecBatch->SetVector(2, CreateDictionaryVector(vecType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1042,9 +982,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
     EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1074,22 +1013,22 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     inputVecBatch->SetVector(1, column1);
     inputVecBatch->SetVector(2, column2);
 
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), CharVecType(3),DoubleVecType() }));
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), CharVecType(3), DoubleVecType() }));
 
     int32_t sortCols[2] = {0, 1};
     int32_t ascendings[2] = {true, true};
     int32_t nullFirsts[2] = {true, true};
     const int32_t expectedDataSize = 5;
     inputVecBatch->GetVector(0)->SetValueNull(dataSize - 1);
-    inputVecBatch->GetVector(1)->SetValueNull(dataSize -1);
+    inputVecBatch->GetVector(1)->SetValueNull(dataSize - 1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VecType vecType = sourceTypes.Get()[2];
     inputVecBatch->SetVector(2, CreateDictionaryVector(vecType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1122,9 +1061,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
     EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1159,8 +1097,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 1);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1185,9 +1123,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     VectorHelper::PrintVecBatch(outputVecorBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecorBatchs);
 }
@@ -1202,7 +1139,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(),DoubleVecType() }));
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
     VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 1};
@@ -1210,15 +1147,15 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int32_t nullFirsts[2] = {true, true};
     const int32_t expectedDataSize = 5;
     static_cast<IntVector *>(inputVecBatch->GetVector(0))->SetValueNull(dataSize - 1);
-    static_cast<LongVector *>(inputVecBatch->GetVector(1))->SetValueNull(dataSize -1);
+    static_cast<LongVector *>(inputVecBatch->GetVector(1))->SetValueNull(dataSize - 1);
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     VecType vecType = sourceTypes.Get()[2];
     inputVecBatch->SetVector(2, CreateDictionaryVector(vecType, dataSize, ids, dataSize, data2));
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1249,9 +1186,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
     EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1266,7 +1202,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(),DoubleVecType() }));
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
     VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 1};
@@ -1274,12 +1210,11 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     int32_t nullFirsts[2] = {true, true};
     const int32_t expectedDataSize = 5;
     inputVecBatch->GetVector(0)->SetValueNull(dataSize - 1);
-    inputVecBatch->GetVector(1)->SetValueNull(dataSize -1);
-
+    inputVecBatch->GetVector(1)->SetValueNull(dataSize - 1);
 
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1310,9 +1245,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
     EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1328,7 +1262,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, -1};
     double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
 
-    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(),DoubleVecType() }));
+    VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType() }));
     VectorBatch *inputVecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
     int32_t sortCols[2] = {0, 1};
@@ -1340,10 +1274,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     inputVecBatch->GetVector(0)->SetValueNull(0);
     inputVecBatch->GetVector(1)->SetValueNull(5);
 
-
     TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1376,9 +1309,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(3));
     EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
 
-    delete topNOperator;
-    delete topNOperatorFactory;
-    delete jitContext;
+    Operator::DeleteOperator(topNOperator);
+    DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVectorBatches);
 }
@@ -1389,21 +1321,21 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
 
     // construct input data
     const int32_t dataSize = 6;
-    const int32_t expectedDataSize=5;
+    const int32_t expectedDataSize = 5;
 
     // prepare data
     int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     int64_t data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    VecTypes sourceTypes(std::vector<VecType>({ Date32VecType(DAY), LongVecType(), Decimal64VecType(2,0) }));
+    VecTypes sourceTypes(std::vector<VecType>({ Date32VecType(DAY), LongVecType(), Decimal64VecType(2, 0) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1416,14 +1348,15 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     int32_t expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     int64_t expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
-    VecTypes expectedTypes(std::vector<VecType>({ Date32VecType(DAY), LongVecType(), Decimal64VecType(2,1) }));
-    VectorBatch *expectVecBatch = CreateVectorBatch(sourceTypes, expectedDataSize, expectData0,expectData1, expectData2);
+    VecTypes expectedTypes(std::vector<VecType>({ Date32VecType(DAY), LongVecType(), Decimal64VecType(2, 1) }));
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    delete topNOperator;
+    Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
 }
 
@@ -1433,21 +1366,21 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
 
     // construct input data
     const int32_t dataSize = 6;
-    const int32_t expectedDataSize=5;
+    const int32_t expectedDataSize = 5;
 
     // prepare data
     Decimal128 data0[dataSize] = {0, 1, 2, 0, 1, 2};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
     Decimal128 data2[dataSize] = {66, 55, 44, 33, 22, 11};
-    VecTypes sourceTypes(std::vector<VecType>({ Decimal128VecType(2,1), LongVecType(), Decimal128VecType(2,1) }));
+    VecTypes sourceTypes(std::vector<VecType>({ Decimal128VecType(2, 1), LongVecType(), Decimal128VecType(2, 1) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
     int32_t sortCols[2] = {0, 2};
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1460,17 +1393,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     Decimal128 expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     Decimal128 expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
-    VecTypes expectedTypes(std::vector<VecType>({ Decimal64VecType(2,1), LongVecType(), Decimal64VecType(2,1) }));
-    VectorBatch *expectVecBatch = CreateVectorBatch(sourceTypes, expectedDataSize, expectData0,expectData1, expectData2);
+    VecTypes expectedTypes(std::vector<VecType>({ Decimal64VecType(2, 1), LongVecType(), Decimal64VecType(2, 1) }));
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    delete topNOperator;
+    Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
 }
-
 
 TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
 {
@@ -1478,7 +1411,7 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
 
     // construct input data
     const int32_t dataSize = 6;
-    const int32_t expectedDataSize=5;
+    const int32_t expectedDataSize = 5;
     // prepare data
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
@@ -1491,8 +1424,8 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     int32_t nullFirsts[2] = {true, true};
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, 2);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1505,13 +1438,14 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     std::string expectData0[expectedDataSize]={"2","2","1","1","0"};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     std::string expectData2[expectedDataSize] = {"1.1", "4.4", "2.2", "5.5", "3.3"};
-    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1),LongVecType(), VarcharVecType(3) }));
-    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedDataSize, expectData0,expectData1, expectData2);
+    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(), VarcharVecType(3) }));
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    delete topNOperator;
+    Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
 }
 
@@ -1521,7 +1455,7 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
 
     // construct input data
     const int32_t dataSize = 6;
-    const int32_t expectedDataSize=5;
+    const int32_t expectedDataSize = 5;
     // prepare data
     std::string data0[dataSize] = {"0", "1", "2", "0", "1", "2"};
     int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
@@ -1529,14 +1463,14 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     VecTypes sourceTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(), BooleanVecType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
 
-    const int32_t sortColCount=2;
+    const int32_t sortColCount = 2;
     int32_t sortCols[sortColCount] = {0, 2};
     int32_t ascendings[sortColCount] = {false, false};
     int32_t nullFirsts[sortColCount] = {true, true};
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, sortColCount);
-    JitContext *jitContext = CreateTestTopNJitContext(sourceTypes, sortCols, 3, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, sortColCount);
+    JitContext *jitContext = CreateTopNJitContext(sourceTypes, sortCols, ascendings, nullFirsts, sortColCount);
     topNOperatorFactory->SetJitContext(jitContext);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -1549,12 +1483,13 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     std::string expectData0[expectedDataSize]={"2","2","1","1","0"};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
     bool expectData2[expectedDataSize] = {true, false, true, false, true};
-    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1),LongVecType(), BooleanVecType() }));
-    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedDataSize, expectData0,expectData1, expectData2);
+    VecTypes expectedTypes(std::vector<VecType>({ VarcharVecType(1), LongVecType(), BooleanVecType() }));
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    delete topNOperator;
+    Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
 }

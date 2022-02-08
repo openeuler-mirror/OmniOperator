@@ -33,7 +33,12 @@ public:
 
     Operator *CreateOperator() override;
 
-    int32_t *GetSourceTypes() const
+    VecTypes *GetSourceTypes()
+    {
+        return sourceTypes.get();
+    }
+
+    int32_t *GetSourceTypeIds() const
     {
         return const_cast<int32_t *>(sourceTypes->GetIds());
     }

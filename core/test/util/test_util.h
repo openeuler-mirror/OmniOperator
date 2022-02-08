@@ -15,14 +15,6 @@
 
 using namespace omniruntime::vec;
 
-const int32_t PARAM_OFFSET_0 = 0;
-const int32_t PARAM_OFFSET_1 = 1;
-const int32_t PARAM_OFFSET_2 = 2;
-const int32_t PARAM_OFFSET_3 = 3;
-const int32_t PARAM_OFFSET_4 = 4;
-const int32_t PARAM_OFFSET_5 = 5;
-const int32_t PARAM_OFFSET_6 = 6;
-
 bool VecBatchMatch(omniruntime::vec::VectorBatch *outputPages, omniruntime::vec::VectorBatch *expectPage);
 omniruntime::vec::VectorBatch *CreateVectorBatch(omniruntime::vec::VecTypes &types, int32_t rowCount, ...);
 omniruntime::vec::VectorBatch *createEmptyVectorBatch(std::vector<VecType> &vecTypes);

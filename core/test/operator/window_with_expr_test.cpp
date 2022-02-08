@@ -6,99 +6,12 @@
 #include "../../src/operator/window/window_expr.h"
 #include "../util/test_util.h"
 #include "../../src/vector/vector_helper.h"
-#include "../../src/jit/jit.h"
-#include "../../src/operator/optimization.h"
+#include "../../src/operator/jit_context/jit_context.h"
 
 using namespace std;
 using namespace omniruntime::vec;
 
 const int32_t DATA_SIZE = 6;
-
-JitContext *CreateWindowWithExprJitContext(VecTypes &sourceTypesTmp, int32_t typesCount, int32_t *outputCols,
-    int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortColsCount, VecTypes &outputTypes, string* argumentKeys,
-    int argumentKeysCount)
-{
-    using namespace omniruntime::jit;
-    std::vector<VecType> allTypesVec;
-    allTypesVec.insert(allTypesVec.end(), sourceTypesTmp.Get().begin(), sourceTypesTmp.Get().end());
-    allTypesVec.insert(allTypesVec.end(), outputTypes.Get().begin(), outputTypes.Get().end());
-
-    VecTypes allTypes(allTypesVec);
-    auto sourceTypes = const_cast<int32_t *>(sourceTypesTmp.GetIds());
-    int32_t finalSortColsCount = sortColsCount + partitionCount;
-    int32_t finalSortCols[finalSortColsCount];
-    int32_t finalSortAscendings[finalSortColsCount];
-    int32_t finalSortNullFirsts[finalSortColsCount];
-    for (int32_t i = 0; i < partitionCount; i++) {
-        finalSortCols[i] = partitionCols[i];
-        finalSortAscendings[i] = true;
-        finalSortNullFirsts[i] = false;
-    }
-    for (int32_t i = partitionCount; i < partitionCount + sortColsCount; i++) {
-        finalSortCols[i] = sortCols[i - partitionCount];
-        finalSortAscendings[i] = sortAscendings[i - partitionCount];
-        finalSortNullFirsts[i] = sortNullFirsts[i - partitionCount];
-    }
-
-    int32_t finalSortColTypes[finalSortColsCount];
-    for (int32_t i = 0; i < finalSortColsCount; i++) {
-        finalSortColTypes[i] = sourceTypes[finalSortCols[i]];
-    }
-    auto allCount = allTypes.GetSize();
-    int32_t finalOutputCols[allCount];
-    int32_t finalOutputColsCount = 0;
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        finalOutputCols[finalOutputColsCount] = outputCols[i];
-        finalOutputColsCount++;
-    }
-    for (int32_t i = typesCount; i < allCount; i++) {
-        finalOutputCols[finalOutputColsCount] = i;
-        finalOutputColsCount++;
-    }
-
-    ParamValue pSortCols = ParamValue(finalSortCols, finalSortColsCount);
-    ParamValue pSortColTypes = ParamValue(finalSortColTypes, finalSortColsCount);
-    ParamValue pSortAscendings = ParamValue(finalSortAscendings, finalSortColsCount);
-    ParamValue pSortNullFirsts = ParamValue(finalSortNullFirsts, finalSortColsCount);
-    ParamValue pSortColCount = ParamValue(&finalSortColsCount);
-
-    ParamValue pSourceTypes = ParamValue(sourceTypes, typesCount);
-    ParamValue pOutputCols = ParamValue(outputCols, outputColsCount);
-    ParamValue pOutputColCount = ParamValue(&outputColsCount);
-
-    auto *compareToSp = new Specialization();
-    compareToSp->AddSpecializedParam(0, &pSortCols);
-    compareToSp->AddSpecializedParam(1, &pSortColTypes);
-    compareToSp->AddSpecializedParam(2, &pSortAscendings);
-    compareToSp->AddSpecializedParam(3, &pSortNullFirsts);
-    compareToSp->AddSpecializedParam(4, &pSortColCount);
-    auto *getOutputSp = new Specialization();
-    getOutputSp->AddSpecializedParam(1, &pOutputCols);
-    getOutputSp->AddSpecializedParam(2, &pOutputColCount);
-    getOutputSp->AddSpecializedParam(4, &pSourceTypes);
-    std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
-                                                            { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
-    auto windowWithExprContext =
-        new omniruntime::jit::Context(GenerateOperatorTemplatePath("window_expr"), std::map<std::string, Specialization>());
-    auto windowContext =
-        new omniruntime::jit::Context(GenerateOperatorTemplatePath("window"), std::map<std::string, Specialization>());
-    auto *pagesIndexContext = new omniruntime::jit::Context(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
-    Jit *jit = new Jit(std::vector<omniruntime::jit::Context> { *windowWithExprContext, *windowContext, *pagesIndexContext });
-    jit->Specialize();
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-    JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
-    delete compareToSp;
-    delete getOutputSp;
-    delete windowWithExprContext;
-    delete windowContext;
-    delete pagesIndexContext;
-    delete jit;
-
-    return jitContext;
-}
 
 TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
 {
@@ -123,26 +36,22 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(),
-                                             DoubleVecType() }));
+    VecTypes allTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), DoubleVecType() }));
     VecTypes outputTypes(std::vector<VecType>({ DoubleVecType() }));
 
     std::string argumentChannels[1] = { "ADD:3(#2, 50:3)" };
 
     // create expression objects
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 1, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 1, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols, 3,
-            windowFunctionTypes, 1, partitionCols, 1, preGroupedCols,
-            0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 3,
-        partitionCols, 1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 1);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     WindowWithExprOperator *windowOperator =
         dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
@@ -152,21 +61,20 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     windowOperator->GetOutput(outputVecBatches);
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(),
-                                                DoubleVecType(), DoubleVecType()}));
+    VecTypes expectTypes(
+        std::vector<VecType>({ IntVecType(), LongVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
     double expectData4[DATA_SIZE] = {56.6, 53.3, 52.2, 55.5, 51.1, 54.4};
     double expectData5[DATA_SIZE] = {56.6, 56.6, 52.2, 55.5, 51.1, 54.4};
-    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
-        expectData4, expectData5);
+    VectorBatch *expectVecBatch =
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -198,17 +106,15 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
 
     VecTypes outputTypes(std::vector<VecType>({ LongVecType() }));
     string argumentChannels[0] = {};
-    std::vector<Expr*> argumentChannelsExprs = {};
-
+    std::vector<Expr *> argumentChannelsExprs = {};
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols, 3,
-            windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols,
-            ascendings, nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 3,
-        partitionCols, 1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -227,9 +133,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -262,15 +167,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
 
     VecTypes outputTypes(std::vector<VecType>({ LongVecType() }));
     string argumentChannels[0] = {};
-    std::vector<Expr*> argumentChannelsExprs= {};
+    std::vector<Expr *> argumentChannelsExprs = {};
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 0,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 2, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 0, outputTypes, argumentChannels, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 2, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 0, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 2, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 0, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto test = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
     WindowWithExprOperator *windowOperator = test;
@@ -287,9 +191,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -322,15 +225,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
 
     VecTypes outputTypes(std::vector<VecType>({ LongVecType() }));
     string argumentChannels[0] = {};
-    std::vector<Expr*> argumentChannelsExprs = {};
+    std::vector<Expr *> argumentChannelsExprs = {};
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 3, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -349,9 +251,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -384,15 +285,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
 
     VecTypes outputTypes(std::vector<VecType>({ LongVecType() }));
     string argumentChannels[0] = {};
-    std::vector<Expr*> argumentChannelsExprs = {};
+    std::vector<Expr *> argumentChannelsExprs = {};
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 3, partitionCols,
-        0, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 1, partitionCols, 0, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 0, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -411,9 +311,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -445,23 +344,20 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(
-        std::vector<VecType>({ LongVecType(), LongVecType() }));
+    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
     string argumentChannels[2] = {"-1", "-1"};
 
-    //create expression objects
+    // create expression objects
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 2, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 2, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 3, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -482,9 +378,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -517,22 +412,19 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(
-        std::vector<VecType>({ LongVecType(), LongVecType() }));
+    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
     string argumentChannels[2] = {"-1", "-1"};
 
-    //create expression objects
+    // create expression objects
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 2, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 2, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 3, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 3, windowFunctionTypes, 2, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 3, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -555,9 +447,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -569,8 +460,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
 
     // construct the input data
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -599,19 +490,17 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(),
-                                             LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     string argumentChannels[0] = {};
-    std::vector<Expr*> argumentChannelsExprs = {};
-
+    std::vector<Expr *> argumentChannelsExprs = {};
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-        9, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -621,9 +510,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
-                                                LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -649,9 +538,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -695,17 +583,17 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(),
-                                             LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     string argumentChannels[0] = {};
-    std::vector<Expr*> argumentChannelsExprs = {};
+    std::vector<Expr *> argumentChannelsExprs = {};
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-        9, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 0);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 9, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 0);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -715,9 +603,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
-                                                LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -743,9 +631,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -757,8 +644,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
 
     // construct the input data
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t data2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -787,23 +674,21 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
     int32_t expectedPositions = 10000;
 
     VecTypes outputTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                             Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-                                             Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal128VecType(1, 1), DoubleVecType(),
+        Decimal128VecType(2, 2) }));
     string argumentChannels[7] = {"ADD:1(2:1, #0)", "#1", "#2", "#3", "#4", "#5", "#8"};
 
-    //create expression objects
+    // create expression objects
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7);
 
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 7);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -813,10 +698,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(), IntVecType(),
-                                                Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-                                                Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(), IntVecType(),
+        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
+        Decimal128VecType(1, 1), DoubleVecType(), Decimal128VecType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -841,9 +726,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testSumWithAllDataTypes)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -855,8 +739,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
 
     // construct the input data
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -884,22 +768,20 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({  DoubleVecType(), DoubleVecType(), DoubleVecType(),
-                                             DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
+    VecTypes outputTypes(std::vector<VecType>({ DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType(),
+        DoubleVecType(), DoubleVecType(), DoubleVecType() }));
     string argumentChannels[7] = {"#0", "ADD:1(2:1, #1)", "#2", "#3", "#4", "#5", "#8"};
 
-    //create expression objects
+    // create expression objects
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 7);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -909,9 +791,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType(),
-                                                DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(), DoubleVecType(), DoubleVecType(),
+        DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType(), DoubleVecType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -934,9 +816,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, DISABLED_testAvgWithAllDataTypes)
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -948,8 +829,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
 
     // construct the input data
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -977,22 +858,21 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({IntVecType(), Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-                                             Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+    VecTypes outputTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        VarcharVecType(3), Decimal128VecType(2, 2) }));
     string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     // create expression objects
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 8);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -1002,10 +882,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), IntVecType(),
-                                                Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-                                                Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), IntVecType(),
+        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
+        Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1030,9 +910,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1044,8 +923,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
     // construct the input data
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1073,22 +952,21 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-                                             Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+    VecTypes outputTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        VarcharVecType(3), Decimal128VecType(2, 2) }));
     string argumentChannels[8] = {"#0", "#1", "#2", "ADD:2(#3, 2:2)", "#4", "#5", "#7", "#8"};
 
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes,
-                                                                       sourceTypes.GetSize());
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes);
 
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 8);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -1098,10 +976,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), IntVecType(),
-                                                Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
-                                                Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), IntVecType(),
+        Date32VecType(omniruntime::vec::DAY), Date32VecType(omniruntime::vec::MILLI), LongVecType(),
+        Decimal64VecType(1, 1), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1126,9 +1004,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1140,8 +1017,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 
     // construct the input data
     VecTypes sourceTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t data2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1169,21 +1046,18 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(),
-                                             LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     string argumentChannels[8] = {"#0", "#1", "SUBTRACT:1(#2, 2:1)", "#3", "#4", "#5", "#7", "#8"};
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes,
-                                                                       sourceTypes.GetSize());
-
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 8, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory =
-        WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-            9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-            preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 8);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 8, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 8);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -1193,9 +1067,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(), LongVecType(), LongVecType(), LongVecType(),
-                                                LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), IntVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType(), LongVecType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1220,9 +1094,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }
@@ -1268,21 +1141,19 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(),
-                                             LongVecType(), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+    VecTypes outputTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), LongVecType(),
+        DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     string argumentChannels[7] = {"#0", "#1", "ADD:2(2:2, #3)", "#4", "#5", "#7", "#8"};
 
     Parser parser;
-    std::vector<Expr*> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes,
-                                                                       sourceTypes.GetSize());
-
+    std::vector<Expr *> argumentChannelsExprs = parser.ParseExpressions(argumentChannels, 7, sourceTypes);
 
     // dealing data with the operator
-    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(sourceTypes, outputCols,
-        9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
-        preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7);
-    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, sourceTypes.GetSize(), outputCols, 9, partitionCols,
-        1, sortCols, ascendings, nullFirsts, 1, outputTypes, argumentChannels, 7);
+    WindowWithExprOperatorFactory *operatorFactory = WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+        sourceTypes, outputCols, 9, windowFunctionTypes, 7, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings,
+        nullFirsts, 1, preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 7);
+    JitContext *jitContext = CreateWindowWithExprJitContext(sourceTypes, outputCols, 9, partitionCols, 1, sortCols,
+        ascendings, nullFirsts, 1, outputTypes, argumentChannelsExprs);
     operatorFactory->SetJitContext(jitContext);
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
@@ -1292,9 +1163,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     // construct the output data
     VecTypes expectTypes(std::vector<VecType>({ IntVecType(), Date32VecType(omniruntime::vec::DAY),
-                                                Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
-                                                BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(), LongVecType(),
-                                                LongVecType(), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
+        Date32VecType(omniruntime::vec::MILLI), LongVecType(), Decimal64VecType(1, 1), DoubleVecType(),
+        BooleanVecType(), VarcharVecType(3), Decimal128VecType(2, 2), LongVecType(), LongVecType(), LongVecType(),
+        LongVecType(), LongVecType(), DoubleVecType(), VarcharVecType(3), Decimal128VecType(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
     int32_t expectData2[DATA_SIZE] = {111, 333, 333, 555, 555, 777};
@@ -1318,9 +1189,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
-    delete jitContext;
-    delete windowOperator;
-    delete operatorFactory;
+    omniruntime::op::Operator::DeleteOperator(windowOperator);
+    DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatches(outputVecBatches);
 }

@@ -4,4 +4,4 @@ set(OP_TARGET operator)
 add_library(${OP_TARGET} ${OPERATOR_LIST})
 
 #dependent library
-target_link_libraries(${OP_TARGET} PUBLIC codegen common omni_vector)
+target_link_libraries(${OP_TARGET} PUBLIC jit codegen common omni_vector)
