@@ -377,8 +377,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
     if (threadArgs->isOriginal) {
         sortOperator = dynamic_cast<SortOperator *>(operatorFactory->CreateOperator());
     } else {
-        opt_module sortModule = reinterpret_cast<opt_module>(operatorFactory->GetJitContext()->func);
-        sortOperator = dynamic_cast<SortOperator *>(sortModule(operatorFactory));
+        sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     }
 
     for (int i = 0; i < threadArgs->tableCount; ++i) {

@@ -1140,8 +1140,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->SetJitContext(jitContext);
     // create operator
-    auto jitGroupBy =
-        reinterpret_cast<HashAggModule>(nativeOperatorFactory->GetJitContext()->func)(nativeOperatorFactory);
+    auto jitGroupBy = CreateTestOperator(nativeOperatorFactory);
 
     // ------------------------------------------Process Input--------------------------------------------
     VectorBatch **input1 =
