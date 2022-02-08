@@ -8,15 +8,7 @@
 #include "../../src/operator/join/lookup_join_expr.h"
 #include "../util/test_util.h"
 #include "../../src/vector/vector_helper.h"
-#include "../../src/jit/jit.h"
-#include "../../src/operator/optimization.h"
-
-using omniruntime::jit::Context;
-using omniruntime::jit::Jit;
-using omniruntime::jit::ModuleOptimization;
-using omniruntime::jit::Optimization;
-using omniruntime::jit::ParamValue;
-using omniruntime::jit::Specialization;
+#include "../../src/operator/jit_context/jit_context.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -32,116 +24,6 @@ void DeleteJoinExprOperatorFactory(HashBuilderWithExprOperatorFactory *hashBuild
     if (lookupJoinOperatorFactory != nullptr) {
         DeleteOperatorFactory(lookupJoinOperatorFactory);
     }
-}
-
-JitContext *CreateTestHashBuilderExprJitContext(VecTypes &buildVecTypes, string *buildHashKeys,
-    int32_t buildHashKeysCount, int32_t operatorCount)
-{
-    vector<int32_t> buildTypes;
-    int32_t buildHashCols[buildHashKeysCount];
-    GetTestTypeIds(buildVecTypes, buildHashKeys, buildHashKeysCount, buildTypes, buildHashCols);
-
-    int32_t hashColTypes[buildHashKeysCount];
-    for (int32_t i = 0; i < buildHashKeysCount; i++) {
-        hashColTypes[i] = buildTypes[buildHashCols[i]];
-    }
-
-    ParamValue pHashColTypes = ParamValue(hashColTypes, buildHashKeysCount);
-    ParamValue pHashColCount = ParamValue(&buildHashKeysCount);
-    auto processColumnsSp = new Specialization();
-    processColumnsSp->AddSpecializedParam(PARAM_OFFSET_4, &pHashColTypes);
-    processColumnsSp->AddSpecializedParam(PARAM_OFFSET_5, &pHashColCount);
-    std::map<std::string, Specialization> joinHashTableSps = { { OMNIJIT_JOIN_HASH_TABLE_PROCESS_COLUMNS,
-        *processColumnsSp } };
-
-    auto positionEqualsPositionIgnoreNullsSp = new Specialization();
-    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
-    positionEqualsPositionIgnoreNullsSp->AddSpecializedParam(6, &pHashColCount);
-    map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_POSITION_IGNORE_NULLS,
-        *positionEqualsPositionIgnoreNullsSp } };
-
-    auto hashBuilderWithExprContext =
-        new Context(GenerateOperatorTemplatePath("hash_builder_expr"), map<string, Specialization>());
-    auto hashBuilderContext = new Context(GenerateOperatorTemplatePath("hash_builder"), map<string, Specialization>());
-    auto joinHashTableContext = new Context(GenerateOperatorTemplatePath("join_hash_table"), joinHashTableSps);
-    auto pagesHashStrategyContext = new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-
-    Jit *jit = new Jit(vector<Context> { *hashBuilderWithExprContext, *hashBuilderContext, *joinHashTableContext,
-        *pagesHashStrategyContext });
-    jit->Specialize();
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-    JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
-    delete processColumnsSp;
-    delete positionEqualsPositionIgnoreNullsSp;
-    delete hashBuilderWithExprContext;
-    delete hashBuilderContext;
-    delete joinHashTableContext;
-    delete pagesHashStrategyContext;
-    delete jit;
-
-    return jitContext;
-}
-
-JitContext *CreateTestLookupJoinExprJitContext(VecTypes &probeVecTypes, int32_t *probeOutputCols,
-    int32_t probeOutputColsCount, string *probeHashKeys, int32_t probeHashKeysCount, int32_t *buildOutputCols,
-    const int32_t *buildOutputTypes, int32_t buildOutputColsCount)
-{
-    vector<int32_t> probeTypes;
-    int32_t probeHashCols[probeHashKeysCount];
-    GetTestTypeIds(probeVecTypes, probeHashKeys, probeHashKeysCount, probeTypes, probeHashCols);
-
-    int32_t hashColTypes[probeHashKeysCount];
-    for (int32_t i = 0; i < probeHashKeysCount; i++) {
-        hashColTypes[i] = probeTypes[probeHashCols[i]];
-    }
-
-    ParamValue pProbeOutputColsCount = ParamValue(&probeOutputColsCount);
-    ParamValue pBuildOutputTypes = ParamValue(buildOutputTypes, buildOutputColsCount);
-    ParamValue pBuildOutputCols = ParamValue(buildOutputCols, buildOutputColsCount);
-    ParamValue pBuildOutputColsCount = ParamValue(&buildOutputColsCount);
-    ParamValue pHashColTypes = ParamValue(hashColTypes, probeHashKeysCount);
-    ParamValue pHashColCount = ParamValue(&probeHashKeysCount);
-
-    auto buildBuildColumnsSp = new Specialization();
-    buildBuildColumnsSp->AddSpecializedParam(3, &pBuildOutputTypes);
-    buildBuildColumnsSp->AddSpecializedParam(4, &pBuildOutputCols);
-    buildBuildColumnsSp->AddSpecializedParam(5, &pBuildOutputColsCount);
-    buildBuildColumnsSp->AddSpecializedParam(6, &pProbeOutputColsCount);
-
-    auto populateHashesSp = new Specialization();
-    populateHashesSp->AddSpecializedParam(2, &pHashColTypes);
-    populateHashesSp->AddSpecializedParam(3, &pHashColCount);
-    map<string, Specialization> lookupJoinSps = { { OMNIJIT_CONSTRUCT_BUILD_COLUMNS, *buildBuildColumnsSp },
-        { OMNIJIT_LOOKUP_JOIN_POPULATE_HASHES, *populateHashesSp } };
-
-    auto positionEqualsRowIgnoreNullsSp = new Specialization();
-    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(5, &pHashColTypes);
-    positionEqualsRowIgnoreNullsSp->AddSpecializedParam(6, &pHashColCount);
-    map<string, Specialization> hashStrategySps = { { OMNIJIT_HASH_STRATEGY_POSITION_EQUALS_ROW_IGNORE_NULLS,
-        *positionEqualsRowIgnoreNullsSp } };
-
-    auto lookupJoinWithExprContext =
-        new Context(GenerateOperatorTemplatePath("lookup_join_expr"), map<string, Specialization>());
-    auto lookupJoinContext = new Context(GenerateOperatorTemplatePath("lookup_join"), lookupJoinSps);
-    auto pagesHashStrategyContext = new Context(GenerateOperatorTemplatePath("pages_hash_strategy"), hashStrategySps);
-
-    Jit *jit = new Jit(vector<Context> { *lookupJoinWithExprContext, *lookupJoinContext, *pagesHashStrategyContext });
-    jit->Specialize();
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-    JitContext *jitContext = new JitContext;
-    jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
-
-    delete buildBuildColumnsSp;
-    delete populateHashesSp;
-    delete positionEqualsRowIgnoreNullsSp;
-    delete lookupJoinWithExprContext;
-    delete lookupJoinContext;
-    delete pagesHashStrategyContext;
-    delete jit;
-
-    return jitContext;
 }
 
 std::vector<omniruntime::expressions::Expr *> CreateBuildHashKeys()
@@ -181,15 +63,14 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     int32_t ids[] = {0, 1, 2, 3};
     buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
-    std::string buildHashKeys[1] = {"ADD:2(#1, 50:2)"};
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
     int32_t hashKeysCount = 1;
     std::string filter = "";
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, CreateBuildHashKeys(),
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
         hashKeysCount, filter, hashTableCount);
-    JitContext *buildContext =
-        CreateTestHashBuilderExprJitContext(buildTypes, buildHashKeys, hashKeysCount, hashTableCount); // here
+    JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys, hashTableCount); // here
     hashBuilderWithExprOperatorFactory->SetJitContext(buildContext);
     Operator *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
@@ -206,20 +87,19 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
-    std::string probeHashKeys[1] = {"ADD:2(50:2, #1)"};
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = CreateProbeHashKeys();
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    LookupJoinWithExprOperatorFactory *lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, CreateProbeHashKeys(), probeHashKeysCount, buildOutputCols, buildOutputTypes,
-        OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    JitContext *probeContext = CreateTestLookupJoinExprJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
-        probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputTypes.GetIds(), buildOutputTypes.GetSize());
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    auto probeContext = CreateLookupJoinWithExprJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashKeys, buildOutputTypes, buildOutputCols);
     lookupJoinWithExprOperatorFactory->SetJitContext(probeContext);
-    Operator *lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     lookupJoinWithExprOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> lookupJoinOutput;
     lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
@@ -254,17 +134,15 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int32_t ids[] = {0, 1, 2, 3};
     buildVecBatch->SetVector(1, CreateDictionaryVector(vecType, DATA_SIZE, ids, DATA_SIZE, buildData1));
 
-    std::string buildHashKeys[1] = {"#1"};
-    std::vector<omniruntime::expressions::Expr *> buildHashKeysExprs = { new omniruntime::expressions::DataExpr(1,
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::DataExpr(1,
         omniruntime::expressions::INT64D) };
     int32_t hashKeysCount = 1;
     std::string filter = "";
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeysExprs,
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
         hashKeysCount, filter, hashTableCount);
-    JitContext *buildContext =
-        CreateTestHashBuilderExprJitContext(buildTypes, buildHashKeys, hashKeysCount, hashTableCount);
+    JitContext *buildContext = CreateHashBuilderWithExprJitContext(buildTypes, buildHashKeys, hashTableCount);
     hashBuilderWithExprOperatorFactory->SetJitContext(buildContext);
     Operator *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
@@ -281,22 +159,20 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
-    std::string probeHashKeys[1] = {"#1"};
-    std::vector<omniruntime::expressions::Expr *> probeHashKeysExprs = { new omniruntime::expressions::DataExpr(1,
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = { new omniruntime::expressions::DataExpr(1,
         omniruntime::expressions::INT64D) };
     int32_t probeHashKeysCount = 1;
     int32_t buildOutputCols[2] = {0, 1};
     int32_t buildOutputColsCount = 2;
     VecTypes buildOutputTypes(std::vector<VecType>({ LongVecType(), LongVecType() }));
-    int64_t hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    LookupJoinWithExprOperatorFactory *lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeysExprs, probeHashKeysCount, buildOutputCols, buildOutputTypes,
-        OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
-    JitContext *probeContext = CreateTestLookupJoinExprJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
-        probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputTypes.GetIds(), buildOutputTypes.GetSize());
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputTypes, OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr);
+    auto probeContext = CreateLookupJoinWithExprJitContext(probeTypes, probeOutputCols, probeOutputColsCount,
+        probeHashKeys, buildOutputTypes, buildOutputCols);
     lookupJoinWithExprOperatorFactory->SetJitContext(probeContext);
-    Operator *lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     lookupJoinWithExprOperator->AddInput(probeVecBatch);
     std::vector<VectorBatch *> lookupJoinOutput;
     lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);

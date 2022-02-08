@@ -34,7 +34,7 @@ public:
     }
 
 private:
-    JitContext *jitContext;
+    JitContext *jitContext = nullptr;
 };
 
 typedef omniruntime::op::Operator *(*opt_module)(OperatorFactory *);

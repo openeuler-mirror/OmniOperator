@@ -7,85 +7,14 @@
 #include "../../src/operator/sort/sort_expr.h"
 #include "../../src/vector/vector_helper.h"
 #include "../util/test_util.h"
-#include "../../src/jit/jit.h"
-#include "../../src/operator/optimization.h"
-
-using omniruntime::jit::Context;
-using omniruntime::jit::Jit;
-using omniruntime::jit::ModuleOptimization;
-using omniruntime::jit::Optimization;
-using omniruntime::jit::ParamValue;
-using omniruntime::jit::Specialization;
+#include "../../src/operator/jit_context/jit_context.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
-
-JitContext *CreateTestSortExprJitContext(VecTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
-    std::string *sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount)
-{
-    std::vector<int32_t> newTypeIds;
-    int32_t sortCols[sortKeysCount];
-    GetTestTypeIds(sourceTypes, sortKeys, sortKeysCount, newTypeIds, sortCols);
-
-    int sortColTypes[sortKeysCount];
-    for (int32_t i = 0; i < sortKeysCount; ++i) {
-        sortColTypes[i] = newTypeIds[sortCols[i]];
-    }
-
-    int32_t newTypeIdsCount = newTypeIds.size();
-    ParamValue pSourceTypes = ParamValue(newTypeIds.data(), newTypeIdsCount);
-    ParamValue pTypeCount = ParamValue(&newTypeIdsCount);
-    ParamValue pOutputCols = ParamValue(outputCols, outputColsCount);
-    ParamValue pOutputColCount = ParamValue(&outputColsCount);
-    ParamValue pSortCols = ParamValue(sortCols, sortKeysCount);
-    ParamValue pSortColTypes = ParamValue(sortColTypes, sortKeysCount);
-    ParamValue pSortAscendings = ParamValue(sortAscendings, sortKeysCount);
-    ParamValue pSortNullFirsts = ParamValue(sortNullFirsts, sortKeysCount);
-    ParamValue pSortColCount = ParamValue(&sortKeysCount);
-
-    Specialization *compareToSp = std::make_unique<Specialization>().release();
-    compareToSp->AddSpecializedParam(PARAM_OFFSET_0, &pSortCols);
-    compareToSp->AddSpecializedParam(PARAM_OFFSET_1, &pSortColTypes);
-    compareToSp->AddSpecializedParam(PARAM_OFFSET_2, &pSortAscendings);
-    compareToSp->AddSpecializedParam(PARAM_OFFSET_3, &pSortNullFirsts);
-    compareToSp->AddSpecializedParam(PARAM_OFFSET_4, &pSortColCount);
-
-    Specialization *getOutputSp = std::make_unique<Specialization>().release();
-    getOutputSp->AddSpecializedParam(PARAM_OFFSET_1, &pOutputCols);
-    getOutputSp->AddSpecializedParam(PARAM_OFFSET_2, &pOutputColCount);
-    getOutputSp->AddSpecializedParam(PARAM_OFFSET_4, &pSourceTypes);
-
-    std::map<std::string, Specialization> pagesIndexSps = { { OMNIJIT_PAGE_INDEX_COMPARE_TO, *compareToSp },
-        { OMNIJIT_PAGE_INDEX_GET_OUTPUT, *getOutputSp } };
-
-    auto sortExprContext =
-        new Context(GenerateOperatorTemplatePath("sort_expr"), std::map<std::string, Specialization>());
-    auto sortContext = new Context(GenerateOperatorTemplatePath("sort"), std::map<std::string, Specialization>());
-    auto pagesIndexContext = new Context(GenerateOperatorTemplatePath("pages_index"), pagesIndexSps);
-
-    Jit *jit = new Jit(std::vector<Context> { *sortExprContext, *sortContext, *pagesIndexContext });
-    jit->Specialize(std::vector<Optimization> { Optimization::LOOP_UNROLL, Optimization::SCCP, Optimization::EARLY_CSE,
-        Optimization::SROA, Optimization::AGGRESIVE_DCE },
-        std::vector<ModuleOptimization> { ModuleOptimization::FUNCTION_INLINING, ModuleOptimization::PRUNE_EH,
-        ModuleOptimization::CONSTANT_MERGE });
-    auto createOperatorFunc = jit->GetJitedFunction("CreateOperator");
-
-    JitContext *jitContext = new JitContext;
-    jitContext->func = static_cast<uintptr_t>(createOperatorFunc);
-
-    delete compareToSp;
-    delete getOutputSp;
-    delete sortExprContext;
-    delete sortContext;
-    delete pagesIndexContext;
-    delete jit;
-
-    return jitContext;
-}
+using namespace omniruntime::expressions;
 
 TEST(SortWithExprTest, TestSortZeroExprColumns)
 {
-    using namespace omniruntime::expressions;
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
@@ -95,23 +24,22 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     int outputCols[2] = {0, 1};
     std::string sortKeys[2] = {"#0", "#1"};
     Parser parser;
-    std::vector<Expr *> sortKeysExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes, sourceTypes.GetSize());
+    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
-    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceTypes, outputCols, 2, sortKeysExprs, ascendings, nullFirsts, 2);
-    JitContext *jitContext =
-        CreateTestSortExprJitContext(sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 2);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
     operatorFactory->SetJitContext(jitContext);
-    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    VectorBatch *expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     // free memory
@@ -123,8 +51,6 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
 
 TEST(SortWithExprTest, TestSortOneExprColumns)
 {
-    using namespace omniruntime::expressions;
-
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
@@ -134,23 +60,22 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     int outputCols[2] = {0, 1};
     std::string sortKeys[2] = {"#0", "ADD:2(#1, 50:2)"};
     Parser parser;
-    std::vector<Expr *> sortKeysExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes, sourceTypes.GetSize());
+    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
-    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceTypes, outputCols, 2, sortKeysExprs, ascendings, nullFirsts, 2);
-    JitContext *jitContext =
-        CreateTestSortExprJitContext(sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 2);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
     operatorFactory->SetJitContext(jitContext);
-    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    VectorBatch *expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     // free memory
@@ -162,8 +87,6 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
 
 TEST(SortWithExprTest, TestSortTwoExprColumns)
 {
-    using namespace omniruntime::expressions;
-
     const int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
@@ -173,23 +96,22 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     int outputCols[2] = {0, 1};
     std::string sortKeys[2] = {"ADD:1(#0, 50:1)", "ADD:2(#1, 50:2)"};
     Parser parser;
-    std::vector<Expr *> sortKeysExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes, sourceTypes.GetSize());
+    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
     int ascendings[2] = {true, false};
     int nullFirsts[2] = {true, true};
 
-    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceTypes, outputCols, 2, sortKeysExprs, ascendings, nullFirsts, 2);
-    JitContext *jitContext =
-        CreateTestSortExprJitContext(sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 2);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
     operatorFactory->SetJitContext(jitContext);
-    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    VectorBatch *expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     // free memory
@@ -201,7 +123,6 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
 
 TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 {
-    using namespace omniruntime::expressions;
     // construct input data
     const int32_t dataSize = 6;
     // prepare data
@@ -220,16 +141,15 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int32_t outputCols[2] = {1, 2};
     std::string sortKeys[2] = {"ADD:1(#0, 50:1)", "ADD:2(50:2, #2)"};
     Parser parser;
-    std::vector<Expr *> sortKeysExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes, sourceTypes.GetSize());
+    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
 
-    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceTypes, outputCols, 2, sortKeysExprs, ascendings, nullFirsts, 2);
-    JitContext *jitContext =
-        CreateTestSortExprJitContext(sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 2);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
     operatorFactory->SetJitContext(jitContext);
-    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
@@ -237,7 +157,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
     VecTypes expectedTypes(std::vector<VecType> { LongVecType(), LongVecType() });
-    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
     VectorHelper::FreeVecBatches(outputVecBatches);
@@ -248,7 +168,6 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
 
 TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 {
-    using namespace omniruntime::expressions;
     VarcharVecType type(10);
     const int32_t dataSize = 4;
     const int32_t vecCount = 1;
@@ -261,24 +180,24 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     int32_t outputCols[vecCount] = {0};
     std::string sortKeys[vecCount] = {"substr:15(#0, 1:1, 4:1)"};
     Parser parser;
-    std::vector<Expr *> sortKeysExprs = parser.ParseExpressions(sortKeys, 1, sourceTypes, sourceTypes.GetSize());
+    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 1, sourceTypes);
     int32_t ascendings[vecCount] = {true};
     int32_t nullFirsts[vecCount] = {true};
 
-    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceTypes, outputCols, vecCount, sortKeysExprs, ascendings, nullFirsts, vecCount);
-    JitContext *jitContext =
-        CreateTestSortExprJitContext(sourceTypes, outputCols, vecCount, sortKeys, ascendings, nullFirsts, vecCount);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols,
+        vecCount, sortExprs, ascendings, nullFirsts, vecCount);
+    auto jitContext =
+        CreateSortWithExprJitContext(sourceTypes, outputCols, vecCount, sortExprs, ascendings, nullFirsts);
     operatorFactory->SetJitContext(jitContext);
-    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
     VectorHelper::PrintVecBatch(outputVecBatches[0]);
 
     std::string expectValues[dataSize] = {"hello", "omni", "runtime", "world"};
-    VarcharVector *expectVector = CreateVarcharVector(type, expectValues, dataSize);
-    VectorBatch *expectVecBatch = new VectorBatch(vecCount, dataSize);
+    auto expectVector = CreateVarcharVector(type, expectValues, dataSize);
+    auto expectVecBatch = new VectorBatch(vecCount, dataSize);
     expectVecBatch->SetVector(0, expectVector);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 
@@ -290,7 +209,6 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
 
 TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
 {
-    using namespace omniruntime::expressions;
     // construct input data
     const int32_t dataSize = 6;
     // prepare data
@@ -328,15 +246,14 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     int32_t outputCols[2] = {1, 2};
     std::string sortKeys[2] = {"ADD:1(#0, 50:1)", "ADD:2(50:2, #2)"};
     Parser parser;
-    std::vector<Expr *> sortKeysExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes, sourceTypes.GetSize());
+    std::vector<Expr *> sortExprs = parser.ParseExpressions(sortKeys, 2, sourceTypes);
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
-    SortWithExprOperatorFactory *operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        sourceTypes, outputCols, 2, sortKeysExprs, ascendings, nullFirsts, 2);
-    JitContext *jitContext =
-        CreateTestSortExprJitContext(sourceTypes, outputCols, 2, sortKeys, ascendings, nullFirsts, 2);
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
+        sortExprs, ascendings, nullFirsts, 2);
+    auto jitContext = CreateSortWithExprJitContext(sourceTypes, outputCols, 2, sortExprs, ascendings, nullFirsts);
     operatorFactory->SetJitContext(jitContext);
-    SortWithExprOperator *sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
     sortOperator->GetOutput(outputVecBatches);
@@ -344,7 +261,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     int64_t expectData1[5] = {0, 0, 5, 1, 3};
     int64_t expectData2[5] = {0, 0, 11, 55, 33};
     VecTypes expectedTypes(std::vector<VecType> { LongVecType(), LongVecType() });
-    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
+    auto expectVecBatch = CreateVectorBatch(expectedTypes, 5, expectData1, expectData2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
     expectVecBatch->GetVector(0)->SetValueNull(1);
     expectVecBatch->GetVector(1)->SetValueNull(0);

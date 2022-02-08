@@ -15,20 +15,20 @@ using namespace omniruntime::vec;
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
     const VecTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount)
-    {
+{
     auto operatorFactory = std::make_unique<HashBuilderWithExprOperatorFactory>(buildTypes, buildHashKeys,
         buildHashKeysCount, filter, hashTableCount);
     return operatorFactory.release();
-        }
+}
 
 
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const VecTypes &buildTypes,
-    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
-    std::string &filter, int32_t hashTableCount)
+    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
+    int32_t hashTableCount)
 {
     std::vector<VecType> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes,
-                                     this->rowProjections, this->buildHashCols, this->projectFuncs);
+    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
+        this->buildHashCols, this->projectFuncs);
     this->buildTypes = std::make_unique<VecTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes.get()),
         this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);
@@ -42,8 +42,8 @@ HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 {
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(operatorFactory->CreateOperator());
-    auto hashBuilderWithExprOperator = std::make_unique<HashBuilderWithExprOperator>(*(buildTypes.get()),
-        buildHashCols, projectFuncs, hashBuilderOperator);
+    auto hashBuilderWithExprOperator = std::make_unique<HashBuilderWithExprOperator>(*(buildTypes.get()), buildHashCols,
+        projectFuncs, hashBuilderOperator);
     return hashBuilderWithExprOperator.release();
 }
 
