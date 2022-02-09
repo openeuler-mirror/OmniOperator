@@ -234,22 +234,11 @@ int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
         auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
-        auto currOffset = builder->CreateLoad(offsetStore);
-
-        // memcpy returned varchar to result vector
-        gep = builder->CreateGEP(outColPtr, currOffset, "OUTPUT_ADDRESS");
-        auto stringPtr = builder->CreateIntToPtr(ret, llvmTypes->I8PtrType());
-        auto stringGEP = builder->CreateGEP(stringPtr, llvmTypes->CreateConstantInt(0));
-        builder->CreateMemCpy(gep, MaybeAlign(1), stringGEP, MaybeAlign(1), outputLen);
-
-        // update offsets for varchar type
-        Value *newOffset = builder->CreateAdd(currOffset, outputLen);
-        gep = builder->CreateGEP(outputOffsetsAddress, builder->CreateAdd(
-            curIndexVal, llvmTypes->CreateConstantInt(1)), "OUTPUT_OFFSETS_POINTER_ADDRESS");
-        builder->CreateStore(newOffset, gep);
-
-        // update offset counter
-        builder->CreateStore(newOffset, offsetStore);
+        auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
+        // call wrap_varchar_vector function
+        std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen};
+        auto f = module->getFunction(WrapVarcharVectorStr);
+        builder->CreateCall(f, argVals);
     } else {
         // x* gep = gep x* outColPtr, i32 counter
         gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");

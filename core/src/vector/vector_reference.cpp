@@ -16,14 +16,15 @@ VectorReference::VectorReference(int capacityInBytes, int size, VecTypeId typeId
 {
     // for empty vector, like lazy vector.
     if (capacityInBytes == -1) {
-        chunk = zeroChunk;
-        values = chunk->GetAddress();
-        nulls = chunk->GetAddress();
+        valueChunk = zeroChunk;
+        values = valueChunk->GetAddress();
+        nullAndOffsetChunk = zeroChunk;
+        nulls = nullAndOffsetChunk->GetAddress();
         offsets = nullptr;
         return;
     }
 
-    int valuesCapacityInBytes = capacityInBytes;
+    valueChunk = new Chunk(capacityInBytes);
     int nullsCapacityInBytes = size;
     int offsetsCapacityInBytes = 0;
     bool isVariableType = IsVariableWidthType(typeId);
@@ -31,28 +32,31 @@ VectorReference::VectorReference(int capacityInBytes, int size, VecTypeId typeId
         offsetsCapacityInBytes += (size + 1) * sizeof(int32_t);
     }
 
-    int allocateSize = valuesCapacityInBytes + nullsCapacityInBytes + offsetsCapacityInBytes;
+    int32_t nullsAndOffsetsCapacityInBytes = nullsCapacityInBytes + offsetsCapacityInBytes;
 
-    chunk = new Chunk(allocateSize);
-    char *baseAddress = (char *)chunk->GetAddress() + valuesCapacityInBytes;
-    int nullsAndOffsetsCapacityInBytes = nullsCapacityInBytes + offsetsCapacityInBytes;
+    nullAndOffsetChunk = new Chunk(nullsAndOffsetsCapacityInBytes);
+    char *baseAddress = static_cast<char *>(nullAndOffsetChunk->GetAddress());
     if (memset_s(baseAddress, nullsAndOffsetsCapacityInBytes, 0, nullsAndOffsetsCapacityInBytes) != EOK) {
         std::cerr << "init nulls and offsets failed." << std::endl;
-        delete chunk;
+        delete nullAndOffsetChunk;
         return;
     }
 
-    values = chunk->GetAddress();
-    nulls = (char *)chunk->GetAddress() + valuesCapacityInBytes;
-    offsets = isVariableType ? (char *)nulls + nullsCapacityInBytes : nullptr;
+    values = valueChunk->GetAddress();
+    nulls = static_cast<char *>(nullAndOffsetChunk->GetAddress());
+    offsets = isVariableType ? (static_cast<char *>(nulls) + nullsCapacityInBytes) : nullptr;
 }
 
 VectorReference::~VectorReference()
 {
-    if (chunk != nullptr && chunk != zeroChunk) {
-        delete chunk;
-        chunk = nullptr;
+    if (valueChunk != nullptr && valueChunk != zeroChunk) {
+        delete valueChunk;
+        valueChunk = nullptr;
         values = nullptr;
+    }
+    if (nullAndOffsetChunk != nullptr && nullAndOffsetChunk != zeroChunk) {
+        delete nullAndOffsetChunk;
+        nullAndOffsetChunk = nullptr;
         nulls = nullptr;
         offsets = nullptr;
     }
@@ -98,6 +102,24 @@ void *VectorReference::GetValueNullsAddress()
 void *VectorReference::GetValueOffsetsAddress()
 {
     return offsets;
+}
+
+void VectorReference::ResizeValueChunk(int32_t currentCapacityInBytes, int32_t toCapacityInBytes)
+{
+    Chunk *oldChunk = valueChunk;
+    valueChunk = new Chunk(toCapacityInBytes);
+    // copy data
+    char *newAddr = static_cast<char *>(valueChunk->GetAddress());
+    char *oldAddr = static_cast<char *>(oldChunk->GetAddress());
+    errno_t ret = memcpy_s(newAddr, toCapacityInBytes, oldAddr, currentCapacityInBytes);
+    if (ret != EOK) {
+        LogError("Resize Value chunk failed. error code is %d", ret);
+        delete valueChunk;
+        valueChunk = oldChunk;
+        return;
+    }
+    delete oldChunk;
+    values = valueChunk->GetAddress();
 }
 
 bool VectorReference::IsWritable()

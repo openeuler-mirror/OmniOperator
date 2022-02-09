@@ -1640,6 +1640,100 @@ TEST(ProjectTest, ConcatStrAndChar)
     delete op;
     delete factory;
 }
+
+TEST(ProjectTest, varcharExpand)
+{
+    vector<string *> strings;
+
+    const int32_t numCols = 1;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
+    VecTypes inputTypes(vecOfTypes);
+
+    const int32_t numRows = 100;
+    int64_t *col1 = new int64_t[numRows];
+
+    for (int32_t i = 0; i < numRows; i++) {
+        if (i % 2 == 0) {
+            std::string *s = new std::string("helloasdf");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        } else {
+            std::string *s = new std::string("Bonjour");
+            col1[i] = (int64_t)(s->c_str());
+            strings.push_back(s);
+        }
+    }
+    int64_t allData[numCols] = {(int64_t) col1};
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+
+
+    const int32_t numProject = 2;
+    DataExpr *substrData = new DataExpr(0, VARCHARD);
+    DataExpr *substrIndex = new DataExpr(1);
+    DataExpr *substrLen = new DataExpr(5);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string substrStr = "substr";
+    DataType retType = VARCHARD;
+    std::vector<Expr *> args;
+    args.push_back(substrData);
+    args.push_back(substrIndex);
+    args.push_back(substrLen);
+    std::string funcID = ph.GetFnIdentifier(substrStr, args, retType);
+    FuncExpr *substrExpr = new FuncExpr(substrStr, args, retType, *fr.LookupFunction(funcID));
+
+    std::string baseStr(" world");
+    int32_t avgStrLen = 200;
+    int32_t strLen = 0;
+    for (int i = 0; i < 1000000; i++) {
+        baseStr.append(std::to_string(i));
+        strLen = baseStr.length();
+        if (strLen > avgStrLen) {
+            break;
+        }
+    }
+    std::vector<Expr *> concatArgs;
+    std::string concatStr = "concat";
+    concatArgs.push_back(substrExpr);
+    concatArgs.push_back(new DataExpr(new std::string(baseStr)));
+    funcID = ph.GetFnIdentifier(concatStr, concatArgs, retType);
+    FuncExpr *concatExpr = new FuncExpr(concatStr, concatArgs, retType, *fr.LookupFunction(funcID));
+
+    DataExpr *col0 = new DataExpr(0, VARCHARD);
+    std::vector<Expr *> exprs = { concatExpr, col0 };
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    std::vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+
+    EXPECT_GT(ret[0]->GetVector(0)->GetCapacityInBytes(), avgStrLen * numReturned);
+    string expected1 = "hello" + baseStr;
+    string expected2 = "Bonjo" + baseStr;
+    for (int32_t i = 0; i < numReturned; i++) {
+        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+
+        uint8_t *actualChar = nullptr;
+        int len = vcVec->GetValue(i, &actualChar);
+
+        string actualStr((char *)actualChar, 0, len);
+        if (i % 2 == 0) {
+            EXPECT_EQ(actualStr, expected1);
+        } else {
+            EXPECT_EQ(actualStr, expected2);
+        }
+    }
+
+    for (auto &s : strings) {
+        delete s;
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+
+    delete[] col1;
+    delete op;
+    delete factory;
 }
-
-
+}

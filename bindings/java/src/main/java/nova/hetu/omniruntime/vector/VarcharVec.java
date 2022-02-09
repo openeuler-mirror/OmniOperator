@@ -12,6 +12,13 @@ import nova.hetu.omniruntime.type.VarcharVecType;
  * @since 2021-07-17
  */
 public class VarcharVec extends VariableWidthVec {
+    private static final int INIT_CAPACITY_IN_BYTES = 32 * 1024; // 32K
+    private static final int EXPAND_FACTOR = 2;
+
+    public VarcharVec(VecAllocator allocator, int size) {
+        super(INIT_CAPACITY_IN_BYTES, size, VarcharVecType.VARCHAR);
+    }
+
     public VarcharVec(int capacityInBytes, int size) {
         super(capacityInBytes, size, VarcharVecType.VARCHAR);
     }
@@ -89,6 +96,21 @@ public class VarcharVec extends VariableWidthVec {
         lastOffsetPosition = index;
     }
 
+    private void checkCapacity(int needCapacityInBytes) {
+        int toCapacityInBytes = capacityInBytes;
+        // the capacity is doubled for each calculation
+        while (toCapacityInBytes < needCapacityInBytes) {
+            toCapacityInBytes *= EXPAND_FACTOR;
+        }
+        if (toCapacityInBytes != capacityInBytes) {
+            // expand Data Capacity
+            long newValuesAddress = expandDataCapacity(getNativeVector(), toCapacityInBytes);
+            capacityInBytes = toCapacityInBytes;
+            // update data address
+            valuesBuf = OmniBufFactory.create(newValuesAddress, capacityInBytes);
+        }
+    }
+
     /**
      * Batch sets the specified bytes at the specified absolute
      *
@@ -124,6 +146,7 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     private void setData(int offsetInBytes, byte[] data, int start, int length) {
+        checkCapacity(offsetInBytes + length);
         valuesBuf.setBytes(offsetInBytes, data, start, length);
     }
 
@@ -146,4 +169,17 @@ public class VarcharVec extends VariableWidthVec {
     public VarcharVec copyRegion(int positionOffset, int length) {
         return new VarcharVec(this, positionOffset, length, false);
     }
+
+    @Override
+    public void append(Vec other, int offset, int length) {
+        super.append(other, offset, length);
+        int newCapacityInBytes = getCapacityInBytesNative(nativeVector);
+        // check expand
+        if (newCapacityInBytes != capacityInBytes) {
+            capacityInBytes = newCapacityInBytes;
+            valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
+        }
+    }
+
+    private static native long expandDataCapacity(long nativeVector, int toCapacityInBytes);
 }

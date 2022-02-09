@@ -33,9 +33,12 @@ public:
 
     bool IsWritable();
 
+    void ResizeValueChunk(int32_t currentCapacityInBytes, int32_t toCapacityInBytes);
+
 private:
     bool IsVariableWidthType(int type);
-    Chunk *chunk;
+    Chunk *valueChunk;
+    Chunk *nullAndOffsetChunk;
     void *values;
     void *nulls;
     void *offsets;

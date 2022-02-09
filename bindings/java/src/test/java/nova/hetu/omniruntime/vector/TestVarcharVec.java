@@ -314,6 +314,71 @@ public class TestVarcharVec {
         copyPosition.close();
     }
 
+    @Test
+    public void testSetExpandCapacity() {
+        int rowCount = 4;
+        VarcharVec varcharVec = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 1, 100);
+        String baseStr = "test";
+        for (int i = 0; i < rowCount; i++) {
+            String str = baseStr.substring(0, i);
+            str  += i;
+            varcharVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+        int expectedExpandedCapacity = 16;
+        Assert.assertEquals(varcharVec.getCapacityInBytes(), expectedExpandedCapacity);
+
+        for(int i = 0; i < rowCount; i++) {
+            String str = baseStr.substring(0, i);
+            str  += i;
+            Assert.assertEquals(new String(varcharVec.get(i)), str);
+        }
+
+        // no capacity specified when created, init capacity is 32K
+        rowCount = 8000;
+        VarcharVec vector1 = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rowCount);
+        for (int i = 0; i < rowCount; i++) {
+            String str = baseStr + i;
+            vector1.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        // init capacity is 32K, expansion to 64k at a time
+        int expectedExpandedCapacity1 = 32 * 1024 * 2;
+        Assert.assertEquals(vector1.getCapacityInBytes(), expectedExpandedCapacity1);
+        for (int i = 0; i < rowCount; i++) {
+            Assert.assertEquals(getString(vector1.get(i)), baseStr + i);
+        }
+
+        varcharVec.close();
+        vector1.close();
+    }
+
+    @Test
+    public void testAppendExpandCapacity() {
+        int rowCount = 5;
+        VarcharVec src1 = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10, rowCount);
+        VarcharVec src2 = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10, rowCount);
+
+        for (int i = 0; i < rowCount; i++) {
+            src1.set(i, String.valueOf(i + 1).getBytes(StandardCharsets.UTF_8));
+            src2.set(i, String.valueOf(i + 6).getBytes(StandardCharsets.UTF_8));
+        }
+
+        VarcharVec appended = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10, 10);
+        appended.append(src1, 0, rowCount);
+        appended.append(src2, 5, rowCount);
+
+        int expectedExpandCapacity = 20;
+        Assert.assertEquals(appended.getCapacityInBytes(), expectedExpandCapacity);
+
+        for (int i = 0; i < 10; i++) {
+            Assert.assertEquals(getString(appended.get(i)), String.valueOf(i + 1));
+        }
+
+        src1.close();
+        src2.close();
+        appended.close();
+    }
+
     private String getString(byte[] strInBytes)
     {
         return new String(strInBytes, StandardCharsets.UTF_8);

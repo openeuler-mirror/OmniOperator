@@ -269,3 +269,92 @@ TEST(VarcharVector, appendVector)
     VectorAllocatorFactory::DeleteAllocator(&allocator);
     EXPECT_TRUE(allocator == nullptr);
 }
+
+TEST(VarcharVector, setValueExpand)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("varchar");
+    EXPECT_TRUE(allocator != nullptr);
+
+    // specify initial capacity expansion
+    int32_t rows = 4;
+    auto *vector = new VarcharVector(allocator, 1, rows);
+    std::string s = "test";
+    for (int i = 0; i < rows; i++) {
+        std::string str(s, 0, i);
+        str.append(std::to_string(i));
+        vector->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+    }
+
+    const int32_t expectedExpandedCapacity = 16;
+    EXPECT_EQ(vector->GetCapacityInBytes(), expectedExpandedCapacity);
+
+    for (int i = 0; i < rows; i++) {
+        std::string str(s, 0, i);
+        str.append(std::to_string(i));
+        uint8_t *actualChar = nullptr;
+        int len = vector->GetValue(i, &actualChar);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        EXPECT_EQ(actualStr, str);
+    }
+
+    // no capacity specified when created
+    rows = 8000;
+    auto *vector1 = new VarcharVector(allocator, rows);
+    for (int i = 0; i < rows; i++) {
+        std::string str(s, 0, s.length());
+        str.append(std::to_string(i));
+        vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+    }
+
+    // init capacity is 32K, expansion to 64k at a time
+    const int32_t expectedExpandedCapacity1 = 32 * 1024 * 2;
+    EXPECT_EQ(vector1->GetCapacityInBytes(), expectedExpandedCapacity1);
+
+    for (int i = 0; i < rows; i++) {
+        std::string str(s, 0, s.length());
+        str.append(std::to_string(i));
+        uint8_t *actualChar = nullptr;
+        int len = vector1->GetValue(i, &actualChar);
+        std::string actualStr(reinterpret_cast<char *>(actualChar), 0, len);
+        EXPECT_EQ(actualStr, str);
+    }
+
+    delete vector;
+    delete vector1;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
+}
+
+TEST(VarcharVector, appendExpand)
+{
+    VectorAllocator *allocator = VectorAllocatorFactory::GetOrCreateAllocator("test");
+    EXPECT_TRUE(allocator != nullptr);
+
+    auto *src1 = new VarcharVector(allocator, 1024, 5);
+    auto *src2 = new VarcharVector(allocator, 1024, 5);
+
+    for (int i = 0; i < 5; i++) {
+        std::string str = std::to_string(i + 1);
+        src1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string str1 = std::to_string(i + 6);
+        src2->SetValue(i, reinterpret_cast<const uint8_t *>(str1.c_str()), str1.length());
+    }
+
+    auto *appended = new VarcharVector(allocator, 10, 10);
+    appended->Append(src1, 0, 5);
+    appended->Append(src2, 5, 5);
+
+    const int32_t expectedExpandCapacity = 20;
+    EXPECT_EQ(appended->GetCapacityInBytes(), expectedExpandCapacity);
+    for (int i = 0; i < 10; i++) {
+        uint8_t *actualChar = nullptr;
+        int32_t len = appended->GetValue(i, &actualChar);
+        std::string result(actualChar, actualChar + len);
+        EXPECT_EQ(result, std::to_string(i + 1));
+    }
+
+    delete src1;
+    delete src2;
+    delete appended;
+    VectorAllocatorFactory::DeleteAllocator(&allocator);
+    EXPECT_TRUE(allocator == nullptr);
+}

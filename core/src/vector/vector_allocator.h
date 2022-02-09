@@ -25,6 +25,8 @@ public:
 
     void DeleteVector(Vector *vector);
 
+    void ResizeVectorData(Vector *vector, int32_t toCapacityInBytes);
+
     std::string GetScope() const;
 
     int64_t GetAllocatedBytes() const;

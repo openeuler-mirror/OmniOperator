@@ -131,6 +131,12 @@ public:
 
     virtual void Append(Vector *other, int positionOffset, int length) = 0;
 
+    virtual int64_t ExpandDataCapacity(int32_t toCapacityInBytes)
+    {
+        LogInfo("%s", "unsupported expandDataCapacity");
+        return 0;
+    }
+
     void RecordStack(std::string &stack, VecOpType opType);
 
     void SetVectorTracer(VectorTracer *tracer);
