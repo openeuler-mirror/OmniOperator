@@ -51,7 +51,7 @@ Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
     } else {
         retType = make_unique<VecType>(typeId);
     }
-    return make_unique<DataExpr>(colVal, std::move(retType), true).release();
+    return make_unique<FieldExpr>(colVal, std::move(retType)).release();
 }
 
 Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
@@ -67,34 +67,34 @@ Expr *JSONParser::ParseJSONLiteral(Json jsonExpr)
     // proceed with non-null value
     if (typeId == OMNI_VEC_TYPE_BOOLEAN) {
         bool boolVal = jsonExpr["value"].get<bool>();
-        return make_unique<DataExpr>(boolVal, make_unique<BooleanVecType>()).release();
+        return make_unique<LiteralExpr>(boolVal, make_unique<BooleanVecType>()).release();
     } else if (typeId == OMNI_VEC_TYPE_INT) {
         auto intVal = jsonExpr["value"].get<int32_t>();
-        return make_unique<DataExpr>(intVal, make_unique<IntVecType>()).release();
+        return make_unique<LiteralExpr>(intVal, make_unique<IntVecType>()).release();
     } else if (typeId == OMNI_VEC_TYPE_DATE32) {
         auto intVal = jsonExpr["value"].get<int32_t>();
-        return make_unique<DataExpr>(intVal, make_unique<VecType>(OMNI_VEC_TYPE_DATE32)).release();
+        return make_unique<LiteralExpr>(intVal, make_unique<VecType>(OMNI_VEC_TYPE_DATE32)).release();
     } else if (typeId == OMNI_VEC_TYPE_LONG) {
         auto longVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<DataExpr>(longVal, make_unique<LongVecType>()).release();
+        return make_unique<LiteralExpr>(longVal, make_unique<LongVecType>()).release();
     } else if (typeId == OMNI_VEC_TYPE_DOUBLE) {
         auto doubleVal = jsonExpr["value"].get<double>();
-        return make_unique<DataExpr>(doubleVal, make_unique<DoubleVecType>()).release();
+        return make_unique<LiteralExpr>(doubleVal, make_unique<DoubleVecType>()).release();
     } else if (typeId == OMNI_VEC_TYPE_DECIMAL64) {
         auto decimalVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<DataExpr>(decimalVal, make_unique<Decimal64VecType>(jsonExpr["precision"].get<int32_t>(),
+        return make_unique<LiteralExpr>(decimalVal, make_unique<Decimal64VecType>(jsonExpr["precision"].get<int32_t>(),
                 jsonExpr["scale"].get<int32_t>())).release();
     } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
         // FIXME: Currently only support up to long; Support 128 bits in the future
         auto decimalVal = jsonExpr["value"].get<int64_t>();
-        return make_unique<DataExpr>(decimalVal, make_unique<Decimal128VecType>(jsonExpr["precision"].get<int32_t>(),
+        return make_unique<LiteralExpr>(decimalVal, make_unique<Decimal128VecType>(jsonExpr["precision"].get<int32_t>(),
                 jsonExpr["scale"].get<int32_t>())).release();
     } else if (typeId == OMNI_VEC_TYPE_NONE) {
-        return make_unique<DataExpr>(0, make_unique<VecType>()).release();
+        return make_unique<LiteralExpr>(0, make_unique<VecType>()).release();
     } else {
         string *stringVal = make_unique<string>(jsonExpr["value"].get<string>()).release();
         int32_t width = jsonExpr["width"].get<int32_t>();
-        return make_unique<DataExpr>(stringVal, make_unique<VarcharVecType>(width)).release();
+        return make_unique<LiteralExpr>(stringVal, make_unique<VarcharVecType>(width)).release();
     }
 }
 
@@ -171,8 +171,8 @@ Expr *JSONParser::ParseJSONIf(Json jsonExpr)
         return nullptr;
     }
     if (TypeUtil::IsStringType(falseExpr->GetReturnTypeId())
-        && falseExpr->GetType() == ExprType::DATA_E
-        && static_cast<DataExpr*>(falseExpr)->stringVal->compare("null") == 0) {
+        && falseExpr->GetType() == ExprType::LITERAL_E
+        && static_cast<LiteralExpr*>(falseExpr)->stringVal->compare("null") == 0) {
         return make_unique<IfExpr>(cond, trueExpr, ParserHelper().GetDefaultValueForType(trueExpr->GetReturnTypeId())).release();
     }
 
@@ -228,8 +228,14 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
         }
     }
     // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
-    if (funcName == "CAST" && args.size() == 1 && retTypeId == args[0]->GetReturnTypeId()) {
-        return static_cast<DataExpr *>(args[0]);
+        if (funcName == "CAST" && args.size() == 1 && retTypeId == args[0]->GetReturnTypeId()) {
+        if (args[0]->GetType() == LITERAL_E) {
+            return static_cast<LiteralExpr *>(args[0]);
+        } else if (args[0]->GetType() == FIELD_E) {
+            return static_cast<FieldExpr *>(args[0]);
+        } else {
+            return nullptr;
+        }
     }
     // Check that the signature matches
     std::string funcID = ParserHelper().GetFnIdentifier(funcName, args, retTypeId);

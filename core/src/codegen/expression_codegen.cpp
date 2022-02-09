@@ -562,12 +562,11 @@ llvm::Function *ExpressionCodeGen::CreateFunction()
     return func;
 }
 
-Value *ExpressionCodeGen::GetIntToPtr(const DataExpr &dExpr, Value *elementAddr)
+Value *ExpressionCodeGen::GetIntToPtr(omniruntime::vec::VecTypeId vecTypeId, Value *elementAddr)
 {
     Value *elementPtr = nullptr;
-    const DataExpr *dEx = &dExpr;
     // Convert the column address to array of proper datatype.
-    switch (dEx->GetReturnTypeId()) {
+    switch (vecTypeId) {
         case OMNI_VEC_TYPE_BOOLEAN:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I1PtrType());
             break;
@@ -590,59 +589,57 @@ Value *ExpressionCodeGen::GetIntToPtr(const DataExpr &dExpr, Value *elementAddr)
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
         default:
-            LLVM_DEBUG_LOG("Unsupported column data type %d", dEx->GetReturnTypeId());
+            LLVM_DEBUG_LOG("Unsupported column data type %d", vecTypeId);
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;
     }
     return elementPtr;
 }
 
-
-CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
+CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lExpr)
 {
-    const DataExpr *dEx = &dExpr;
     CodeGenValue *codeGenValue = nullptr;
-    bool isNullLiteral = dExpr.isNull;
-    switch (dEx->GetReturnTypeId()) {
+    bool isNullLiteral = lExpr.isNull;
+    switch (lExpr.GetReturnTypeId()) {
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
             codeGenValue = new CodeGenValue(
-                    llvmTypes->CreateConstantInt(dEx->intVal), llvmTypes->CreateConstantBool(isNullLiteral));
+                    llvmTypes->CreateConstantInt(lExpr.intVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
         case OMNI_VEC_TYPE_LONG: {
             codeGenValue = new CodeGenValue(
-                    llvmTypes->CreateConstantLong(dEx->longVal), llvmTypes->CreateConstantBool(isNullLiteral));
+                    llvmTypes->CreateConstantLong(lExpr.longVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
         case OMNI_VEC_TYPE_DOUBLE: {
             codeGenValue = new CodeGenValue(
-                    llvmTypes->CreateConstantDouble(dEx->doubleVal), llvmTypes->CreateConstantBool(isNullLiteral));
+                    llvmTypes->CreateConstantDouble(lExpr.doubleVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
         case OMNI_VEC_TYPE_CHAR:
         case OMNI_VEC_TYPE_VARCHAR: {
             Constant *strValConst =
-                ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(dEx->stringVal->c_str())));
+                    ConstantInt::get(*context, APInt(INT64_VALUE, reinterpret_cast<int64_t>(lExpr.stringVal->c_str())));
             Value *strValPtr = ConstantExpr::getIntToPtr(strValConst, llvmTypes->I8PtrType());
             Constant *strLenConst =
-                ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(dEx->stringVal->length())));
+                    ConstantInt::get(*context, APInt(INT32_VALUE, static_cast<int32_t>(lExpr.stringVal->length())));
             codeGenValue = new CodeGenValue(strValPtr, llvmTypes->CreateConstantBool(isNullLiteral), strLenConst);
             break;
         }
         case OMNI_VEC_TYPE_BOOLEAN: {
             codeGenValue = new CodeGenValue(
-                    llvmTypes->CreateConstantBool(dEx->boolVal), llvmTypes->CreateConstantBool(isNullLiteral));
+                    llvmTypes->CreateConstantBool(lExpr.boolVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL64: {
             codeGenValue = new CodeGenValue(
-                    llvmTypes->CreateConstantLong(dEx->longVal), llvmTypes->CreateConstantBool(isNullLiteral));
+                    llvmTypes->CreateConstantLong(lExpr.longVal), llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
         case OMNI_VEC_TYPE_DECIMAL128: {
             int32_t length = 2;
-            Decimal128 decValue = dEx->longVal;
+            Decimal128 decValue = lExpr.longVal;
             auto decimal = std::make_unique<int64_t[]>(length).release();
 
             decimal[0] = decValue.LowBits();
@@ -653,12 +650,12 @@ CodeGenValue *ExpressionCodeGen::DataExprConstantHelper(const DataExpr &dExpr)
             break;
         }
         case OMNI_VEC_TYPE_NONE: {
-            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantInt(dEx->intVal), llvmTypes->CreateConstantBool(true));
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantInt(lExpr.intVal), llvmTypes->CreateConstantBool(true));
             break;
         }
         default: {
-            LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", dEx->GetReturnTypeId());
-            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantBool(dEx->boolVal), llvmTypes->CreateConstantBool(false));
+            LLVM_DEBUG_LOG("Unsupported data type in Data Expr %d", lExpr.GetReturnTypeId());
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantBool(lExpr.boolVal), llvmTypes->CreateConstantBool(false));
             break;
         }
     }
@@ -716,113 +713,112 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(VecType vectorType, Value *ro
     return call;
 }
 
-void ExpressionCodeGen::Visit(const DataExpr &dExpr)
+void ExpressionCodeGen::Visit(const LiteralExpr &lExpr)
 {
-    const DataExpr *dEx = &dExpr;
+    this->value.reset(LiteralExprConstantHelper(lExpr));
+}
 
-    if (dEx->isColumn) {
-        Value *rowIdx = this->codegenContext->rowIdx;
-        Value *vecBatch = this->codegenContext->data;
-        Value *bitmap = this->codegenContext->nullBitmap;
-        Value *offsets = this->codegenContext->offsets;
-        Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
+void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
+{
+    Value *rowIdx = this->codegenContext->rowIdx;
+    Value *vecBatch = this->codegenContext->data;
+    Value *bitmap = this->codegenContext->nullBitmap;
+    Value *offsets = this->codegenContext->offsets;
+    Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
 
-        Value *colIdx = llvmTypes->CreateConstantInt(dEx->colVal);
-        // Find address of this column in the addresses array argument.
-        Value *gep = builder->CreateGEP(vecBatch, colIdx);
-        Value *length = nullptr;
+    Value *colIdx = llvmTypes->CreateConstantInt(fExpr.colVal);
+    // Find address of this column in the addresses array argument.
+    Value *gep = builder->CreateGEP(vecBatch, colIdx);
+    Value *length = nullptr;
 
-        auto dictionaryVectorGEP = builder->CreateGEP(dictionaryVectors, colIdx);
-        Value *dictionaryVectorPtr = builder->CreateLoad(dictionaryVectorGEP);
-        auto condition = builder->CreateIsNotNull(dictionaryVectorPtr);
+    auto dictionaryVectorGEP = builder->CreateGEP(dictionaryVectors, colIdx);
+    Value *dictionaryVectorPtr = builder->CreateLoad(dictionaryVectorGEP);
+    auto condition = builder->CreateIsNotNull(dictionaryVectorPtr);
 
-        BasicBlock *trueBlock = BasicBlock::Create(*context, "DICTIONARY_NOT_NULL", func);
-        BasicBlock *falseBlock = BasicBlock::Create(*context, "DICTIONARY_IS_NULL");
-        BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
+    BasicBlock *trueBlock = BasicBlock::Create(*context, "DICTIONARY_NOT_NULL", func);
+    BasicBlock *falseBlock = BasicBlock::Create(*context, "DICTIONARY_IS_NULL");
+    BasicBlock *mergeBlock = BasicBlock::Create(*context, "ifcont");
 
-        builder->CreateCondBr(condition, trueBlock, falseBlock);
+    builder->CreateCondBr(condition, trueBlock, falseBlock);
 
-        // If dictionary vector is present, call DictionaryVector methods
-        // to get encoded values and length if varchar type
-        builder->SetInsertPoint(trueBlock);
+    // If dictionary vector is present, call DictionaryVector methods
+    // to get encoded values and length if varchar type
+    builder->SetInsertPoint(trueBlock);
 
-        AllocaInst *lengthAllocaInst = nullptr;
-        Value *dictionaryValue =
-            this->GetDictionaryVectorValue(dExpr.GetReturnType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
-        if (dictionaryValue == nullptr) {
-            return;
-        }
-
-        Value *dictionaryLength = nullptr;
-        if (TypeUtil::IsStringType(dEx->GetReturnTypeId())) {
-            dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
-        }
-
-        builder->CreateBr(mergeBlock);
-        trueBlock = builder->GetInsertBlock();
-        func->getBasicBlockList().push_back(falseBlock);
-
-        // If dictionary vector is not present, get vector values
-        // using valuesAddress and length using offsets if varchar type
-        builder->SetInsertPoint(falseBlock);
-        // Load the address value.
-        Value *elementAddr = builder->CreateLoad(gep);
-
-        Value *elementPtr = GetIntToPtr(dExpr, elementAddr);
-        Value *dataValue = nullptr;
-        if (TypeUtil::IsStringType(dEx->GetReturnTypeId())) {
-            // Get offset for varchar
-            auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
-            Value *offsetPtr = builder->CreateLoad(offsetsGEP);
-            offsetPtr = builder->CreateIntToPtr(offsetPtr, llvmTypes->I32PtrType());
-            auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
-            Value *startOffset = builder->CreateLoad(colOffsetGEP);
-            colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
-            Value *endOffset = builder->CreateLoad(colOffsetGEP);
-            // Get length for varchar
-            length = builder->CreateSub(endOffset, startOffset);
-            // Find the address of the row to be processed.
-            dataValue = builder->CreateGEP(elementPtr, startOffset);
-        } else {
-            // Find the address of the row to be processed.
-            gep = builder->CreateGEP(elementPtr, rowIdx);
-            // Value to be processed.
-            dataValue = builder->CreateLoad(gep);
-        }
-
-        builder->CreateBr(mergeBlock);
-        falseBlock = builder->GetInsertBlock();
-
-        // Get merged data value and length
-        int32_t numReservedValues = 2;
-        Type *phiType = llvmTypes->ToLLVMType(dEx->GetReturnTypeId());
-        func->getBasicBlockList().push_back(mergeBlock);
-        builder->SetInsertPoint(mergeBlock);
-
-        PHINode *phiValue = builder->CreatePHI(phiType, numReservedValues, "iftmp");
-        phiValue->addIncoming(dictionaryValue, trueBlock);
-        phiValue->addIncoming(dataValue, falseBlock);
-
-        // Length is only valid for varchar type
-        PHINode *phiLength = nullptr;
-        if (TypeUtil::IsStringType(dEx->GetReturnTypeId())) {
-            phiLength = builder->CreatePHI(llvmTypes->I32Type(), numReservedValues, "length");
-            phiLength->addIncoming(dictionaryLength, trueBlock);
-            phiLength->addIncoming(length, falseBlock);
-        }
-
-        // Get isNull value
-        auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
-        Value *bitmapValue = builder->CreateLoad(bitmapGEP);
-        bitmapValue = builder->CreateIntToPtr(bitmapValue, llvmTypes->I1PtrType());
-        bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
-        bitmapValue = builder->CreateLoad(bitmapGEP);
-
-        this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
+    AllocaInst *lengthAllocaInst = nullptr;
+    Value *dictionaryValue =
+            this->GetDictionaryVectorValue(fExpr.GetReturnType(), rowIdx, dictionaryVectorPtr, lengthAllocaInst);
+    if (dictionaryValue == nullptr) {
         return;
     }
 
-    this->value.reset(DataExprConstantHelper(dExpr));
+    Value *dictionaryLength = nullptr;
+    if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
+        dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
+    }
+
+    builder->CreateBr(mergeBlock);
+    trueBlock = builder->GetInsertBlock();
+    func->getBasicBlockList().push_back(falseBlock);
+
+    // If dictionary vector is not present, get vector values
+    // using valuesAddress and length using offsets if varchar type
+    builder->SetInsertPoint(falseBlock);
+    // Load the address value.
+    Value *elementAddr = builder->CreateLoad(gep);
+
+    Value *elementPtr = GetIntToPtr(fExpr.GetReturnTypeId(), elementAddr);
+    Value *dataValue = nullptr;
+    if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
+        // Get offset for varchar
+        auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
+        Value *offsetPtr = builder->CreateLoad(offsetsGEP);
+        offsetPtr = builder->CreateIntToPtr(offsetPtr, llvmTypes->I32PtrType());
+        auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
+        Value *startOffset = builder->CreateLoad(colOffsetGEP);
+        colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
+        Value *endOffset = builder->CreateLoad(colOffsetGEP);
+        // Get length for varchar
+        length = builder->CreateSub(endOffset, startOffset);
+        // Find the address of the row to be processed.
+        dataValue = builder->CreateGEP(elementPtr, startOffset);
+    } else {
+        // Find the address of the row to be processed.
+        gep = builder->CreateGEP(elementPtr, rowIdx);
+        // Value to be processed.
+        dataValue = builder->CreateLoad(gep);
+    }
+
+    builder->CreateBr(mergeBlock);
+    falseBlock = builder->GetInsertBlock();
+
+    // Get merged data value and length
+    int32_t numReservedValues = 2;
+    Type *phiType = llvmTypes->ToLLVMType(fExpr.GetReturnTypeId());
+    func->getBasicBlockList().push_back(mergeBlock);
+    builder->SetInsertPoint(mergeBlock);
+
+    PHINode *phiValue = builder->CreatePHI(phiType, numReservedValues, "iftmp");
+    phiValue->addIncoming(dictionaryValue, trueBlock);
+    phiValue->addIncoming(dataValue, falseBlock);
+
+    // Length is only valid for varchar type
+    PHINode *phiLength = nullptr;
+    if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
+        phiLength = builder->CreatePHI(llvmTypes->I32Type(), numReservedValues, "length");
+        phiLength->addIncoming(dictionaryLength, trueBlock);
+        phiLength->addIncoming(length, falseBlock);
+    }
+
+    // Get isNull value
+    auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
+    Value *bitmapValue = builder->CreateLoad(bitmapGEP);
+    bitmapValue = builder->CreateIntToPtr(bitmapValue, llvmTypes->I1PtrType());
+    bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
+    bitmapValue = builder->CreateLoad(bitmapGEP);
+
+    this->value.reset(new CodeGenValue(phiValue, bitmapValue, phiLength));
+    return;
 }
 
 CodeGenValuePtr CreateInvalidCodeGenValue()
@@ -836,7 +832,8 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
 
     int32_t leftId = static_cast<int32_t>(bExpr->left->GetReturnTypeId());
     int32_t rightId = static_cast<int32_t>(bExpr->right->GetReturnTypeId());
-    if (bExpr->left->GetType() == ExprType::DATA_E || bExpr->right->GetType() == ExprType::DATA_E) {
+    if (bExpr->left->GetType() == ExprType::LITERAL_E || bExpr->right->GetType() == ExprType::LITERAL_E ||
+        bExpr->left->GetType() == ExprType::FIELD_E || bExpr->right->GetType() == ExprType::FIELD_E) {
         if (leftId != rightId) {
             VecType &biggerType = leftId < rightId ? bExpr->right->GetReturnType() : bExpr->left->GetReturnType();
             bExpr->left->dataType = std::make_unique<VecType>(biggerType);

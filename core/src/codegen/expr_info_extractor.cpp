@@ -15,13 +15,16 @@ void ExprInfoExtractor::PopulateFunctions(const vector<omniruntime::Function>& f
     }
 }
 
-void ExprInfoExtractor::Visit(const DataExpr &e)
+void ExprInfoExtractor::Visit(const LiteralExpr &e)
 {
     PopulateFunctions(GetDecimalFunctionRegistry());
-    if (e.isColumn) {
-        this->vectorIndexes.insert(e.colVal);
-        PopulateFunctions(GetDictionaryFunctionRegistry());
-    }
+}
+
+void ExprInfoExtractor::Visit(const FieldExpr &e)
+{
+    PopulateFunctions(GetDecimalFunctionRegistry());
+    this->vectorIndexes.insert(e.colVal);
+    PopulateFunctions(GetDictionaryFunctionRegistry());
 }
 
 void ExprInfoExtractor::Visit(const BinaryExpr &e)

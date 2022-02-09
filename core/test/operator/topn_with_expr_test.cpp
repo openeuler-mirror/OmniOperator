@@ -31,11 +31,11 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    DataExpr *addLeft = new DataExpr(0, IntType(), true);
-    DataExpr *addRight = new DataExpr(5, IntType());
+    FieldExpr *addLeft = new FieldExpr(0, IntType());
+    LiteralExpr *addRight = new LiteralExpr(5, IntType());
     BinaryExpr *addExpr = new BinaryExpr(ADD, addLeft, addRight, IntType());
-    DataExpr *modLeft = new DataExpr(2, LongType(), true);
-    DataExpr *modRight = new DataExpr(3, LongType());
+    FieldExpr *modLeft = new FieldExpr(2, LongType());
+    LiteralExpr *modRight = new LiteralExpr(3, LongType());
     modRight->longVal = 3;
     BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortExprs = { addExpr, modExpr };
@@ -88,9 +88,9 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    DataExpr *col0 = new DataExpr(0, IntType(), true);
-    DataExpr *modLeft = new DataExpr(2, LongType(), true);
-    DataExpr *modRight = new DataExpr(3, LongType());
+    FieldExpr *col0 = new FieldExpr(0, IntType());
+    FieldExpr *modLeft = new FieldExpr(2, LongType());
+    LiteralExpr *modRight = new LiteralExpr(3, LongType());
     modRight->longVal = 3;
     BinaryExpr *modExpr = new BinaryExpr(MOD, modLeft, modRight, LongType());
     std::vector<Expr *> sortKeys = { col0, modExpr };
@@ -142,8 +142,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     int32_t ascendings[sortKeyCnt] = {false, true};
     int32_t nullFirsts[sortKeyCnt] = {false, false};
 
-    DataExpr *col0 = new DataExpr(0, IntType(), true);
-    DataExpr *col2 = new DataExpr(2, LongType(), true);
+    FieldExpr *col0 = new FieldExpr(0, IntType());
+    FieldExpr *col2 = new FieldExpr(2, LongType());
     std::vector<Expr *> sortExprs = { col0, col2 };
 
     JitContext *jitContext = CreateTopNWithExprJitContext(sourceTypes, sortExprs, ascendings, nullFirsts);

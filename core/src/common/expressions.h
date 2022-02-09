@@ -46,7 +46,6 @@ enum Operator {
     INVALIDOP
 };
 
-
 enum OperatorType {
     COMPARISON,
     LOGICAL,
@@ -54,10 +53,9 @@ enum OperatorType {
     INVALIDOPTTYPE
 };
 
-
-
 enum ExprType {
-    DATA_E,
+    LITERAL_E,
+    FIELD_E,
     BINARY_E,
     UNARY_E,
     IN_E,
@@ -104,28 +102,36 @@ public:
 
 };
 
-
-class DataExpr : public Expr {
+class LiteralExpr : public Expr {
 public:
-    bool isColumn = false;
     bool isNull = false;
     bool boolVal = false;
     int32_t intVal = 0;
     int64_t longVal = 0;
     double doubleVal = 0;
     std::string* stringVal = nullptr;
-    int32_t colVal = 0;
     int64_t* dec128Val = nullptr;
 
-    DataExpr();
-    ~DataExpr() override;
-    explicit DataExpr(bool val, VecTypePtr colType);
-    explicit DataExpr(int32_t val, VecTypePtr colType);
-    explicit DataExpr(int64_t val, VecTypePtr colType);
-    explicit DataExpr(double val, VecTypePtr colType);
-    explicit DataExpr(std::string* val, VecTypePtr colType);
-    explicit DataExpr(int64_t* val, VecTypePtr colType);
-    DataExpr(int32_t colIdx, VecTypePtr colType, bool isCol);
+    LiteralExpr();
+    ~LiteralExpr() override;
+    explicit LiteralExpr(bool val, VecTypePtr colType);
+    explicit LiteralExpr(int32_t val, VecTypePtr colType);
+    explicit LiteralExpr(int64_t val, VecTypePtr colType);
+    explicit LiteralExpr(double val, VecTypePtr colType);
+    explicit LiteralExpr(std::string* val, VecTypePtr colType);
+    explicit LiteralExpr(int64_t* val, VecTypePtr colType);
+    void Accept(ExprVisitor &visitor) const override;
+    ExprType GetType() const override;
+};
+
+class FieldExpr : public Expr {
+public:
+    bool isNull = false;
+    int32_t colVal = 0;
+
+    FieldExpr();
+    ~FieldExpr() override;
+    FieldExpr(int32_t colIdx, VecTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 };

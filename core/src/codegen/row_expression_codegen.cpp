@@ -21,41 +21,41 @@ std::unique_ptr<RowExpressionCodeGen> RowExpressionCodeGen::Create(
     return codegen;
 }
 
-void RowExpressionCodeGen::Visit(const omniruntime::expressions::DataExpr &dataExpr)
+void RowExpressionCodeGen::Visit(const omniruntime::expressions::LiteralExpr &literalData)
 {
-    if (dataExpr.isColumn) {
-        Value *data = this->codegenContext->data;
-        Value *isNulls = this->codegenContext->nullBitmap;
-        Value *lengths = this->codegenContext->offsets;
+    this->value.reset(LiteralExprConstantHelper(literalData));
+}
+void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fieldExpr)
+{
+    Value *data = this->codegenContext->data;
+    Value *isNulls = this->codegenContext->nullBitmap;
+    Value *lengths = this->codegenContext->offsets;
 
-        Value *colIdx = llvmTypes->CreateConstantInt(dataExpr.colVal);
-        // Find address of this column in the addresses array argument.
-        Value *gep = builder->CreateGEP(data, colIdx);
-        // Load the address value.
-        Value *elementAddr = builder->CreateLoad(gep);
-        Value *elementPtr = GetIntToPtr(dataExpr, elementAddr);
+    Value *colIdx = llvmTypes->CreateConstantInt(fieldExpr.colVal);
+    // Find address of this column in the addresses array argument.
+    Value *gep = builder->CreateGEP(data, colIdx);
+    // Load the address value.
+    Value *elementAddr = builder->CreateLoad(gep);
+    Value *elementPtr = GetIntToPtr(fieldExpr.GetReturnTypeId(), elementAddr);
 
-        Value *dataValue = nullptr;
-        Value *length = nullptr;
-        if (TypeUtil::IsStringType(dataExpr.GetReturnTypeId())) {
-            // Get length for varchar/char type
-            auto lengthGEP = builder->CreateGEP(lengths, colIdx);
-            length = builder->CreateLoad(lengthGEP);
-            // For varchar, only need to get the pointer
-            dataValue = elementPtr;
-        } else {
-            dataValue = builder->CreateLoad(elementPtr);
-        }
-
-        // Get isNull value
-        auto isNullGEP = builder->CreateGEP(isNulls, colIdx);
-        Value *isNull = builder->CreateLoad(isNullGEP);
-
-        this->value.reset(new CodeGenValue(dataValue, isNull, length));
-        return;
+    Value *dataValue = nullptr;
+    Value *length = nullptr;
+    if (TypeUtil::IsStringType(fieldExpr.GetReturnTypeId())) {
+        // Get length for varchar/char type
+        auto lengthGEP = builder->CreateGEP(lengths, colIdx);
+        length = builder->CreateLoad(lengthGEP);
+        // For varchar, only need to get the pointer
+        dataValue = elementPtr;
+    } else {
+        dataValue = builder->CreateLoad(elementPtr);
     }
 
-    this->value.reset(DataExprConstantHelper(dataExpr));
+    // Get isNull value
+    auto isNullGEP = builder->CreateGEP(isNulls, colIdx);
+    Value *isNull = builder->CreateLoad(isNullGEP);
+
+    this->value.reset(new CodeGenValue(dataValue, isNull, length));
+    return;
 }
 
 bool RowExpressionCodeGen::InitializeCodegenContext(iterator_range<Function::arg_iterator> args)

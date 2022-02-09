@@ -16,14 +16,14 @@
 class ParserHelper {
 public:
     ParserHelper() : efr(), externalFuncNames(efr.GetAllExternalFunctionNames()),
-    externalFuncRetTypeMap(efr.GetFuncReturnTypeMap())
-    {
-    };
+        externalFuncRetTypeMap(efr.GetFuncReturnTypeMap())
+        {
+        };
     ~ParserHelper();
     omniruntime::vec::VecType FuncRetTypeMap(std::string fnName,
                                                       std::vector<omniruntime::expressions::Expr *> args);
     bool HasValidArguments(const std::string& fnName, std::vector<omniruntime::expressions::Expr *> args);
-    static omniruntime::expressions::DataExpr *GetDefaultValueForType(VecTypeId destTypeId);
+static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(VecTypeId destTypeId);
     std::string GetFnIdentifier(std::string opStr, std::vector<omniruntime::expressions::Expr *> args,
                                 VecTypeId retTypeId);
 private:

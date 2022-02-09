@@ -26,12 +26,12 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
             EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
         }
         EXPECT_EQ(binaryExpr->op, op);
-        DataExpr *left = static_cast<DataExpr *>(binaryExpr->left);
-        EXPECT_EQ(left->isColumn, true);
+        FieldExpr *left = static_cast<FieldExpr *>(binaryExpr->left);
+        EXPECT_EQ(left->GetType(), FIELD_E);
         EXPECT_EQ(left->colVal, i);
 
-        DataExpr *right = static_cast<DataExpr *>(binaryExpr->right);
-        EXPECT_EQ(right->isColumn, false);
+        LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
+        EXPECT_EQ(right->GetType(), LITERAL_E);
         if (i == 3) {
             EXPECT_EQ(right->GetReturnTypeId(), OMNI_VEC_TYPE_DECIMAL128);
         } else if (i == 5) {
@@ -62,12 +62,12 @@ void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::ex
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
         EXPECT_EQ(binaryExpr->op, op);
-        DataExpr *left = static_cast<DataExpr *>(binaryExpr->left);
-        EXPECT_EQ(left->isColumn, true);
+        FieldExpr *left = static_cast<FieldExpr *>(binaryExpr->left);
+        EXPECT_EQ(left->GetType(), FIELD_E);
         EXPECT_EQ(left->colVal, i);
 
-        DataExpr *right = static_cast<DataExpr *>(binaryExpr->right);
-        EXPECT_EQ(right->isColumn, false);
+        LiteralExpr *right = static_cast<LiteralExpr *>(binaryExpr->right);
+        EXPECT_EQ(right->GetType(), LITERAL_E);
         if (i == 3) {
             EXPECT_EQ(right->GetReturnTypeId(), OMNI_VEC_TYPE_DECIMAL128);
         } else {
@@ -95,8 +95,8 @@ TEST(ParseTest, parseNotOperation)
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     UnaryExpr *notExpr = static_cast<UnaryExpr *>(result);
     EXPECT_EQ(notExpr->op, NOT);
-    DataExpr *colExpr = static_cast<DataExpr *>(notExpr->exp);
-    EXPECT_EQ(colExpr->isColumn, true);
+    FieldExpr *colExpr = static_cast<FieldExpr *>(notExpr->exp);
+    EXPECT_EQ(colExpr->GetType() , FIELD_E);
     EXPECT_EQ(colExpr->colVal, 0);
 }
 
@@ -298,39 +298,39 @@ TEST(ParseTest, parseNEQOperation)
     }
 }
 
-// Test Logic Operations
-TEST(ParseTest, parseLogicOperations)
-{
-    const int PROJECT_COUNT = 2;
-    int vecTypeCount = 2;
-    string exprs[PROJECT_COUNT] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
-    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_BOOLEAN), VecType(OMNI_VEC_TYPE_BOOLEAN) };
-    VecTypes inputTypes(vecOfTypes);
-    Parser parser;
-    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-    EXPECT_EQ(result.size(), PROJECT_COUNT);
-    for (int i = 0; i < PROJECT_COUNT; i++) {
-        BinaryExpr *logExpr = static_cast<BinaryExpr *>(result.at(i));
-        EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
-        DataExpr *logLeft = static_cast<DataExpr *>(logExpr->left);
-        DataExpr *logRight = static_cast<DataExpr *>(logExpr->right);
-        EXPECT_TRUE(logLeft->isColumn);
-        EXPECT_EQ(logLeft->colVal, i);
-        EXPECT_FALSE(logRight->isColumn);
-        if (i == 0) {
-            EXPECT_TRUE(logRight->boolVal);
-            EXPECT_EQ(logExpr->op, AND);
+    // Test Logic Operations
+    TEST (ParseTest, parseLogicOperations)
+    {
+        const int PROJECT_COUNT = 2;
+        int vecTypeCount = 2;
+        string exprs[PROJECT_COUNT] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
+        std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_BOOLEAN), VecType(OMNI_VEC_TYPE_BOOLEAN)};
+        VecTypes inputTypes(vecOfTypes);
+        Parser parser;
+        std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
+        EXPECT_EQ(result.size(), PROJECT_COUNT);
+        for (int i = 0; i < PROJECT_COUNT; i++) {
+            BinaryExpr *logExpr = static_cast<BinaryExpr *>(result.at(i));
+            EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+            FieldExpr *logLeft = static_cast<FieldExpr *>(logExpr->left);
+            LiteralExpr *logRight = static_cast<LiteralExpr *>(logExpr->right);
+            EXPECT_EQ(logLeft->GetType(), FIELD_E);
+            EXPECT_EQ(logLeft->colVal, i);
+            EXPECT_EQ(logRight->GetType(), LITERAL_E);
+            if (i == 0) {
+                EXPECT_TRUE(logRight->boolVal);
+                EXPECT_EQ(logExpr->op, AND);
+            }
+            if (i == 1) {
+                EXPECT_FALSE(logRight->boolVal);
+                EXPECT_EQ(logExpr->op, OR);
+            }
         }
-        if (i == 1) {
-            EXPECT_FALSE(logRight->boolVal);
-            EXPECT_EQ(logExpr->op, OR);
-        }
-    }
 
-    for (int i = 0; i < PROJECT_COUNT; i++) {
-        delete result.at(i);
+        for (int i = 0; i < PROJECT_COUNT; i++) {
+            delete result.at(i);
+        }
     }
-}
 
 // Test Between expression
 TEST(ParseTest, parseBetweenOperation)
@@ -344,19 +344,19 @@ TEST(ParseTest, parseBetweenOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     BetweenExpr *betweenExpr = static_cast<BetweenExpr *>(result);
-    DataExpr *valueExpr = static_cast<DataExpr *>(betweenExpr->value);
-    DataExpr *lowerExpr = static_cast<DataExpr *>(betweenExpr->lowerBound);
-    DataExpr *upperExpr = static_cast<DataExpr *>(betweenExpr->upperBound);
+    FieldExpr *valueExpr = static_cast<FieldExpr *>(betweenExpr->value);
+    FieldExpr *lowerExpr = static_cast<FieldExpr *>(betweenExpr->lowerBound);
+    FieldExpr *upperExpr = static_cast<FieldExpr *>(betweenExpr->upperBound);
 
-    EXPECT_TRUE(valueExpr->isColumn);
+    EXPECT_EQ(valueExpr->GetType(), FIELD_E);
     EXPECT_EQ(valueExpr->colVal, 1);
     EXPECT_EQ(valueExpr->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
 
-    EXPECT_TRUE(lowerExpr->isColumn);
+    EXPECT_EQ(lowerExpr->GetType(), FIELD_E);
     EXPECT_EQ(lowerExpr->colVal, 0);
     EXPECT_EQ(lowerExpr->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 
-    EXPECT_TRUE(upperExpr->isColumn);
+    EXPECT_EQ(upperExpr->GetType(), FIELD_E);
     EXPECT_EQ(upperExpr->colVal, 2);
     EXPECT_EQ(upperExpr->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
 }
@@ -374,19 +374,19 @@ TEST(ParseTest, parseInOperation)
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     InExpr *inExpr = static_cast<InExpr *>(result);
     auto args = inExpr->arguments;
-    DataExpr *arg0 = static_cast<DataExpr *>(args[0]);
-    DataExpr *arg1 = static_cast<DataExpr *>(args[1]);
-    DataExpr *arg2 = static_cast<DataExpr *>(args[2]);
+    FieldExpr *arg0 = static_cast<FieldExpr *>(args[0]);
+    FieldExpr *arg1 = static_cast<FieldExpr *>(args[1]);
+    FieldExpr *arg2 = static_cast<FieldExpr *>(args[2]);
 
-    EXPECT_TRUE(arg0->isColumn);
+    EXPECT_EQ(arg0->GetType(), FIELD_E);
     EXPECT_EQ(arg0->colVal, 1);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
 
-    EXPECT_TRUE(arg1->isColumn);
+    EXPECT_EQ(arg1->GetType(), FIELD_E);
     EXPECT_EQ(arg1->colVal, 0);
     EXPECT_EQ(arg1->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 
-    EXPECT_TRUE(arg2->isColumn);
+    EXPECT_EQ(arg2->GetType(), FIELD_E);
     EXPECT_EQ(arg2->colVal, 2);
     EXPECT_EQ(arg2->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
 }
@@ -402,14 +402,14 @@ TEST(ParseTest, parseCoalesceOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
     CoalesceExpr *coalesceExpr = static_cast<CoalesceExpr *>(result);
-    DataExpr *value1 = static_cast<DataExpr *>(coalesceExpr->value1);
-    DataExpr *value2 = static_cast<DataExpr *>(coalesceExpr->value2);
+    FieldExpr *value1 = static_cast<FieldExpr *>(coalesceExpr->value1);
+    FieldExpr *value2 = static_cast<FieldExpr *>(coalesceExpr->value2);
 
-    EXPECT_TRUE(value1->isColumn);
+    EXPECT_EQ(value1->GetType(), FIELD_E);
     EXPECT_EQ(value1->colVal, 1);
     EXPECT_EQ(value1->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 
-    EXPECT_TRUE(value2->isColumn);
+    EXPECT_EQ(value2->GetType(), FIELD_E);
     EXPECT_EQ(value2->colVal, 0);
     EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 }
@@ -425,19 +425,19 @@ TEST(ParseTest, parseIfOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
     IfExpr *ifExpr = static_cast<IfExpr *>(result);
-    DataExpr *condition = static_cast<DataExpr *>(ifExpr->condition);
-    DataExpr *tExpr = static_cast<DataExpr *>(ifExpr->trueExpr);
-    DataExpr *fExpr = static_cast<DataExpr *>(ifExpr->falseExpr);
+    LiteralExpr *condition = static_cast<LiteralExpr *>(ifExpr->condition);
+    FieldExpr *tExpr = static_cast<FieldExpr *>(ifExpr->trueExpr);
+    LiteralExpr *fExpr = static_cast<LiteralExpr *>(ifExpr->falseExpr);
 
-    EXPECT_FALSE(condition->isColumn);
     EXPECT_EQ(condition->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+    EXPECT_EQ(condition->GetType(), LITERAL_E);
     EXPECT_EQ(condition->boolVal, true);
 
-    EXPECT_TRUE(tExpr->isColumn);
+    EXPECT_EQ(tExpr->GetType(), FIELD_E);
     EXPECT_EQ(tExpr->colVal, 0);
     EXPECT_EQ(tExpr->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 
-    EXPECT_FALSE(fExpr->isColumn);
+    EXPECT_EQ(fExpr->GetType(), LITERAL_E);
     EXPECT_STREQ(fExpr->stringVal->c_str(), "hello");
 }
 
@@ -452,9 +452,9 @@ TEST(ParseTest, parseIsNullOperation)
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
     EXPECT_EQ(result->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
     IsNullExpr *isNullExpr = static_cast<IsNullExpr *>(result);
-    DataExpr *value = static_cast<DataExpr *>(isNullExpr->value);
+    FieldExpr *value = static_cast<FieldExpr *>(isNullExpr->value);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_CHAR);
 }
@@ -472,9 +472,9 @@ TEST(ParseTest, parseIsNotNullOperation)
     UnaryExpr *unaryExpr = static_cast<UnaryExpr *>(result);
     EXPECT_EQ(unaryExpr->op, NOT);
     IsNullExpr *isNullExpr = static_cast<IsNullExpr *>(unaryExpr->exp);
-    DataExpr *value = static_cast<DataExpr *>(isNullExpr->value);
+    FieldExpr *value = static_cast<FieldExpr *>(isNullExpr->value);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_CHAR);
 }
@@ -492,9 +492,9 @@ TEST(ParseTest, parseCastOperation)
     FuncExpr *castExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(castExpr->funcName.c_str(), "CAST");
     auto args = castExpr->arguments;
-    DataExpr *arg0 = static_cast<DataExpr *>(args[0]);
+    FieldExpr *arg0 = static_cast<FieldExpr *>(args[0]);
 
-    EXPECT_TRUE(arg0->isColumn);
+    EXPECT_EQ(arg0->GetType(), FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 }
@@ -512,9 +512,9 @@ TEST(ParseTest, parseAbsOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "abs");
     auto args = absExpr->arguments;
-    DataExpr *arg0 = static_cast<DataExpr *>(args[0]);
+    FieldExpr *arg0 = static_cast<FieldExpr *>(args[0]);
 
-    EXPECT_TRUE(arg0->isColumn);
+    EXPECT_EQ(arg0->GetType(), FIELD_E);
     EXPECT_EQ(arg0->colVal, 0);
     EXPECT_EQ(arg0->GetReturnTypeId(), OMNI_VEC_TYPE_DOUBLE);
 }
@@ -532,19 +532,19 @@ TEST(ParseTest, parseSubstrOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "substr");
     auto args = absExpr->arguments;
-    DataExpr *value = static_cast<DataExpr *>(args[0]);
-    DataExpr *index = static_cast<DataExpr *>(args[1]);
-    DataExpr *length = static_cast<DataExpr *>(args[2]);
+    FieldExpr *value = static_cast<FieldExpr *>(args[0]);
+    LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
+    LiteralExpr *length = static_cast<LiteralExpr *>(args[2]);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 
-    EXPECT_FALSE(index->isColumn);
+    EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->intVal, 1);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 
-    EXPECT_FALSE(length->isColumn);
+    EXPECT_EQ(length->GetType(), LITERAL_E);
     EXPECT_EQ(length->intVal, 6);
     EXPECT_EQ(length->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 }
@@ -562,14 +562,14 @@ TEST(ParseTest, parseConcatOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "concat");
     auto args = absExpr->arguments;
-    DataExpr *value1 = static_cast<DataExpr *>(args[0]);
-    DataExpr *value2 = static_cast<DataExpr *>(args[1]);
+    FieldExpr *value1 = static_cast<FieldExpr *>(args[0]);
+    LiteralExpr *value2 = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_TRUE(value1->isColumn);
+    EXPECT_EQ(value1->GetType(), FIELD_E);
     EXPECT_EQ(value1->colVal, 0);
     EXPECT_EQ(value1->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 
-    EXPECT_FALSE(value2->isColumn);
+    EXPECT_EQ(value2->GetType(), LITERAL_E);
     EXPECT_STREQ(value2->stringVal->c_str(), "hello");
     EXPECT_EQ(value2->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 }
@@ -587,14 +587,14 @@ TEST(ParseTest, parseLikeOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "LIKE");
     auto args = absExpr->arguments;
-    DataExpr *value = static_cast<DataExpr *>(args[0]);
-    DataExpr *index = static_cast<DataExpr *>(args[1]);
+    FieldExpr *value = static_cast<FieldExpr *>(args[0]);
+    LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 
-    EXPECT_FALSE(index->isColumn);
+    EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_STREQ(index->stringVal->c_str(), ".*hello");
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 }
@@ -612,14 +612,14 @@ TEST(ParseTest, parseMM3HashOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "mm3hash");
     auto args = absExpr->arguments;
-    DataExpr *value = static_cast<DataExpr *>(args[0]);
-    DataExpr *index = static_cast<DataExpr *>(args[1]);
+    FieldExpr *value = static_cast<FieldExpr *>(args[0]);
+    LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_VARCHAR);
 
-    EXPECT_FALSE(index->isColumn);
+    EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->intVal, 2);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 }
@@ -637,14 +637,14 @@ TEST(ParseTest, parseCombineHashOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "combine_hash");
     auto args = absExpr->arguments;
-    DataExpr *value = static_cast<DataExpr *>(args[0]);
-    DataExpr *index = static_cast<DataExpr *>(args[1]);
+    FieldExpr *value = static_cast<FieldExpr *>(args[0]);
+    LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
 
-    EXPECT_FALSE(index->isColumn);
+    EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->longVal, 2);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_LONG);
 }
@@ -662,14 +662,14 @@ TEST(ParseTest, parsePmodOperation)
     FuncExpr *absExpr = static_cast<FuncExpr *>(result);
     EXPECT_STREQ(absExpr->funcName.c_str(), "pmod");
     auto args = absExpr->arguments;
-    DataExpr *value = static_cast<DataExpr *>(args[0]);
-    DataExpr *index = static_cast<DataExpr *>(args[1]);
+    FieldExpr *value = static_cast<FieldExpr *>(args[0]);
+    LiteralExpr *index = static_cast<LiteralExpr *>(args[1]);
 
-    EXPECT_TRUE(value->isColumn);
+    EXPECT_EQ(value->GetType(), FIELD_E);
     EXPECT_EQ(value->colVal, 0);
     EXPECT_EQ(value->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 
-    EXPECT_FALSE(index->isColumn);
+    EXPECT_EQ(index->GetType(), LITERAL_E);
     EXPECT_EQ(index->intVal, 5);
     EXPECT_EQ(index->GetReturnTypeId(), OMNI_VEC_TYPE_INT);
 }
@@ -695,7 +695,7 @@ TEST(ParseTest, parseNullStringOperation)
     VecTypes inputTypes(vecOfTypes);
     Parser parser;
     Expr *result = parser.ParseRowExpression(expr, inputTypes, vecTypeCount);
-    DataExpr *nullExpr = static_cast<DataExpr *>(result);
+    FieldExpr *nullExpr = static_cast<FieldExpr *>(result);
     EXPECT_TRUE(nullExpr->isNull);
 }
 
@@ -710,24 +710,22 @@ TEST(ParseTest, ParseExpressions)
     EXPECT_EQ(result.at(0)->GetType(), BINARY_E);
     BinaryExpr *subtractExpr = static_cast<BinaryExpr *>(result.at(0));
     EXPECT_EQ(subtractExpr->op, SUB);
-    EXPECT_EQ(subtractExpr->left->GetType(), DATA_E);
-    DataExpr *subtractLeft = static_cast<DataExpr *>(subtractExpr->left);
-    DataExpr *subtractRight = static_cast<DataExpr *>(subtractExpr->right);
-    EXPECT_EQ(subtractLeft->isColumn, true);
+    FieldExpr *subtractLeft = static_cast<FieldExpr *>(subtractExpr->left);
+    LiteralExpr *subtractRight = static_cast<LiteralExpr *>(subtractExpr->right);
+    EXPECT_EQ(subtractLeft->GetType(), FIELD_E);
     EXPECT_EQ(subtractLeft->colVal, 0);
-    EXPECT_EQ(subtractRight->isColumn, false);
+    EXPECT_EQ(subtractRight->GetType(), LITERAL_E);
     EXPECT_EQ(subtractRight->intVal, 10);
 
     // check add expression
     EXPECT_EQ(result.at(1)->GetType(), BINARY_E);
     BinaryExpr *addExpr = static_cast<BinaryExpr *>(result.at(1));
     EXPECT_EQ(addExpr->op, ADD);
-    EXPECT_EQ(addExpr->left->GetType(), DATA_E);
-    DataExpr *addLeft = static_cast<DataExpr *>(addExpr->left);
-    DataExpr *addRight = static_cast<DataExpr *>(addExpr->right);
-    EXPECT_EQ(addLeft->isColumn, true);
+    FieldExpr *addLeft = static_cast<FieldExpr *>(addExpr->left);
+    LiteralExpr *addRight = static_cast<LiteralExpr *>(addExpr->right);
+    EXPECT_EQ(addLeft->GetType(), FIELD_E);
     EXPECT_EQ(addLeft->colVal, 1);
-    EXPECT_EQ(addRight->isColumn, false);
+    EXPECT_EQ(addRight->GetType(), LITERAL_E);
     EXPECT_EQ(addRight->longVal, 1);
 }
 }

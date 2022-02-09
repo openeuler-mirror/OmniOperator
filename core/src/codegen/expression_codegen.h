@@ -58,7 +58,8 @@ public:
     virtual int64_t GetFunction() = 0;
 
     // visitor methods
-    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
+    void Visit(const omniruntime::expressions::FieldExpr &e) override;
     void Visit(const omniruntime::expressions::UnaryExpr &e) override;
     void Visit(const omniruntime::expressions::BinaryExpr &e) override;
     void Visit(const omniruntime::expressions::InExpr &e) override;
@@ -75,9 +76,13 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    llvm::Value* GetIntToPtr(const omniruntime::expressions::DataExpr &dExpr, llvm::Value *elementAddr);
     std::vector<llvm::Type*> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
                                                 bool needsContext);
+    llvm::Value* CreateConstantBool(bool n);
+    llvm::Value* CreateConstantInt(int32_t n);
+    llvm::Value* CreateConstantLong(int64_t n);
+    llvm::Value* CreateConstantDouble(double n);
+    llvm::Value* GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
     void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
@@ -100,7 +105,7 @@ protected:
                               llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull,
                               llvm::PHINode **leftPhi, llvm::PHINode **rightPhi);
     // Helper functions and main function for parsing constant data expressions
-    CodeGenValue *DataExprConstantHelper(const omniruntime::expressions::DataExpr &dExpr);
+    CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
 
     virtual llvm::Function *CreateFunction();
     void OptimizeFunctionsAndModule();

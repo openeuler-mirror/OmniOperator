@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Extract essential information from the expression tree
@@ -13,7 +12,8 @@
 
 class ExprInfoExtractor : public ExprVisitor {
 public:
-    void Visit(const omniruntime::expressions::DataExpr &e) override;
+    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
+    void Visit(const omniruntime::expressions::FieldExpr &e) override;
     void Visit(const omniruntime::expressions::UnaryExpr &e) override;
     void Visit(const omniruntime::expressions::BinaryExpr &e) override;
     void Visit(const omniruntime::expressions::InExpr &e) override;

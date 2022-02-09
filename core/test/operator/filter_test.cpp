@@ -14,7 +14,8 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace std;
 
-VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData) {
+VectorBatch *CreateInput(const int32_t numRows, const int32_t numCols, const int32_t *inputTypeIds, int64_t *allData)
+{
     auto *vecBatch = new VectorBatch(numCols, numRows);
     vector<VecType> inputTypes;
     ToVectorTypes(inputTypeIds, numCols, inputTypes);
@@ -158,8 +159,8 @@ TEST(FilterTest, LessThan) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true)};
-    BinaryExpr *filterExpr = new BinaryExpr(LT, new DataExpr(0, IntType(), true), new DataExpr(2000, IntType()), BooleanType());
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType())};
+    BinaryExpr *filterExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(2000, IntType()), BooleanType());
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr, inputTypes,
                                                                    numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -192,10 +193,9 @@ TEST(FilterTest, LessThanWihtoutParsing) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
-    DataExpr *column = new DataExpr(0, IntType(), true);
-
-    DataExpr *left = new DataExpr(0, IntType(), true);
-    DataExpr *right = new DataExpr(2000, IntType());
+    FieldExpr *column = new FieldExpr(0, IntType());
+    FieldExpr *left = new FieldExpr(0, IntType());
+    LiteralExpr *right = new LiteralExpr(2000, IntType());
     BinaryExpr *LTExpr = new BinaryExpr(LT, left, right);
 
     std::vector<Expr*> projections = {column};
@@ -233,12 +233,12 @@ TEST(FilterTest, GreaterThan) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 2;
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
-    DataExpr *col1Expr = new DataExpr(1, LongType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, IntType());
+    FieldExpr *col1Expr = new FieldExpr(1, LongType());
     std::vector<Expr*> projections = {col0Expr, col1Expr};
 
-    DataExpr *gtLeft = new DataExpr(0, IntType(), true);
-    DataExpr *gtRight = new DataExpr(20, IntType());
+    FieldExpr *gtLeft = new FieldExpr(0, IntType());
+    LiteralExpr *gtRight = new LiteralExpr(20, IntType());
     BinaryExpr *gtExpr = new BinaryExpr(GT, gtLeft, gtRight, BooleanType());
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(gtExpr, inputTypes, numCols, projections,
@@ -278,12 +278,12 @@ TEST(FilterTest, EqualTo) {
 
     const int32_t projectCount = 2;
 
-    DataExpr *col1Expr = new DataExpr(1, LongType(), true);
-    DataExpr *col2Expr = new DataExpr(2, DoubleType(), true);
+    FieldExpr *col1Expr = new FieldExpr(1, LongType());
+    FieldExpr *col2Expr = new FieldExpr(2, DoubleType());
     std::vector<Expr*> projections = {col2Expr, col1Expr};
 
-    DataExpr *eqLeft = new DataExpr(2, DoubleType(), true);
-    DataExpr *eqRight = new DataExpr(50, IntType());
+    FieldExpr *eqLeft = new FieldExpr(2, DoubleType());
+    LiteralExpr *eqRight = new LiteralExpr(50, IntType());
     eqRight->doubleVal = 50;
 
     BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
@@ -329,11 +329,11 @@ TEST(FilterTest, GreaterThanOrEqualTo) {
 
     const int32_t projectCount = 1;
 
-    DataExpr *col1Expr = new DataExpr(1, IntType(), true);
+    FieldExpr *col1Expr = new FieldExpr(1, IntType());
     std::vector<Expr*> projections = {col1Expr};
 
-    DataExpr *gteLeft = new DataExpr(1, IntType(), true);
-    DataExpr *gteRight = new DataExpr(30, IntType());
+    FieldExpr *gteLeft = new FieldExpr(1, IntType());
+    LiteralExpr *gteRight = new LiteralExpr(30, IntType());
     BinaryExpr *gteExpr = new BinaryExpr(GTE, gteLeft, gteRight, BooleanType());
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(gteExpr, inputTypes, numCols, projections,
@@ -368,11 +368,11 @@ TEST(FilterTest, NotEqualTo) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
-    DataExpr *col0Expr = new DataExpr(0, DoubleType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, DoubleType());
     std::vector<Expr*> projections = {col0Expr};
 
-    DataExpr *neqLeft = new DataExpr(0, DoubleType(), true);
-    DataExpr *neqRight = new DataExpr(0, IntType());
+    FieldExpr *neqLeft = new FieldExpr(0, DoubleType());
+    LiteralExpr *neqRight = new LiteralExpr(0, IntType());
     neqRight->doubleVal = 0;
 
     BinaryExpr *neqExpr = new BinaryExpr(NEQ, neqLeft, neqRight, BooleanType());
@@ -410,11 +410,11 @@ TEST(FilterTest, AllPass) {
 
     const int32_t projectCount = 1;
 
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, IntType());
     std::vector<Expr*> projections = {col0Expr};
 
-    DataExpr *eqLeft = new DataExpr(0, IntType(), true);
-    DataExpr *eqRight = new DataExpr(9348, IntType());
+    FieldExpr *eqLeft = new FieldExpr(0, IntType());
+    LiteralExpr *eqRight = new LiteralExpr(9348, IntType());
     BinaryExpr *eqExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(eqExpr, inputTypes, numCols,
                                                                    projections, projectCount);
@@ -447,11 +447,11 @@ TEST(FilterTest, MultipleInputs) {
 
     const int32_t projectCount = 1;
 
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
+        FieldExpr *col0Expr = new FieldExpr(0, IntType());
     std::vector<Expr*> projections = {col0Expr};
 
-    DataExpr *lteLeft = new DataExpr(0, IntType(), true);
-    DataExpr *lteRight = new DataExpr(4, IntType());
+    FieldExpr *lteLeft = new FieldExpr(0, IntType());
+    LiteralExpr *lteRight = new LiteralExpr(4, IntType());
     BinaryExpr *lteExpr = new BinaryExpr(LTE, lteLeft, lteRight, BooleanType());
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(lteExpr, inputTypes,
@@ -500,17 +500,17 @@ TEST(FilterTest, NegativeValues) {
 
     const int32_t projectCount = 2;
 
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
-    DataExpr *col1Expr = new DataExpr(1, LongType(), true);
+        FieldExpr *col0Expr = new FieldExpr(0, IntType());
+    FieldExpr *col1Expr = new FieldExpr(1, LongType());
     std::vector<Expr*> projections = {col0Expr, col1Expr};
 
     // create the filter expression object
-    DataExpr *lte1Left = new DataExpr(0, IntType(), true);
-    DataExpr * lte1Right = new DataExpr(-1, IntType());
+    FieldExpr *lte1Left = new FieldExpr(0, IntType());
+    LiteralExpr * lte1Right = new LiteralExpr(-1, IntType());
     BinaryExpr *lte1Expr = new BinaryExpr(LTE, lte1Left, lte1Right, BooleanType());
 
-    DataExpr *lte2Left = new DataExpr(1, LongType(), true);
-    DataExpr * lte2Right = new DataExpr(-1, IntType());
+    FieldExpr *lte2Left = new FieldExpr(1, LongType());
+    LiteralExpr * lte2Right = new LiteralExpr(-1, IntType());
     lte2Right->longVal = -1;
     BinaryExpr *lte2Expr = new BinaryExpr(LTE, lte2Left, lte2Right, BooleanType());
 
@@ -552,26 +552,26 @@ TEST(FilterTest, AllTypes) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 3;
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
-    DataExpr *col1Expr = new DataExpr(1, LongType(), true);
-    DataExpr *col2Expr = new DataExpr(2, DoubleType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, IntType());
+    FieldExpr *col1Expr = new FieldExpr(1, LongType());
+    FieldExpr *col2Expr = new FieldExpr(2, DoubleType());
     std::vector<Expr*> projections = {col0Expr, col1Expr, col2Expr};
 
     // create the filter expression object
-    DataExpr *eq2Left = new DataExpr(1, LongType(), true);
-    DataExpr * eq2Right = new DataExpr(3000000000, LongType());
+    FieldExpr *eq2Left = new FieldExpr(1, LongType());
+    LiteralExpr * eq2Right = new LiteralExpr(3000000000, LongType());
     eq2Right->longVal = 3000000000;
     BinaryExpr *eq2Expr = new BinaryExpr(EQ, eq2Left, eq2Right, BooleanType());
 
-    DataExpr *gteLeft = new DataExpr(2, DoubleType(), true);
-    DataExpr * gteRight = new DataExpr(0.4, DoubleType());
+    FieldExpr *gteLeft = new FieldExpr(2, DoubleType());
+    LiteralExpr * gteRight = new LiteralExpr(0.4, DoubleType());
     gteRight->doubleVal = 0.4;
     BinaryExpr *gteExpr = new BinaryExpr(GTE, gteLeft, gteRight, BooleanType());
 
     BinaryExpr *innerAndExpr = new BinaryExpr(AND, eq2Expr, gteExpr, BooleanType());
 
-    DataExpr *eq1Left = new DataExpr(0, IntType(), true);
-    DataExpr * eq1Right = new DataExpr(0, IntType());
+    FieldExpr *eq1Left = new FieldExpr(0, IntType());
+    LiteralExpr * eq1Right = new LiteralExpr(0, IntType());
     BinaryExpr *eq1Expr = new BinaryExpr(EQ, eq1Left, eq1Right, BooleanType());
 
     Expr *filterExpr = new BinaryExpr(AND, eq1Expr, innerAndExpr, BooleanType());
@@ -612,26 +612,26 @@ TEST(FilterTest, Compile) {
     VecTypes inputTypes(std::vector<VecType>({DoubleVecType(), IntVecType(), DoubleVecType(), DoubleVecType()}));
     VectorBatch *t = CreateInput(dataSize, numCols, inputTypes.GetIds(), datas);
     // TPCH 6
-    DataExpr *col0Expr = new DataExpr(0, DoubleType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, DoubleType());
     std::vector<Expr*> projections = {col0Expr};
 
-    DataExpr *gtRight = new DataExpr(8766, DoubleType());
+    LiteralExpr *gtRight = new LiteralExpr(8766, DoubleType());
     gtRight->doubleVal = 8766;
-    BinaryExpr *gtExpr = new BinaryExpr(GT, new DataExpr(3, DoubleType(), true), gtRight, BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(GT, new FieldExpr(3, DoubleType()), gtRight, BooleanType());
 
-    DataExpr *lt1Right = new DataExpr(9131, DoubleType());
+    LiteralExpr *lt1Right = new LiteralExpr(9131, DoubleType());
     lt1Right->doubleVal = 9131;
-    BinaryExpr *lt1Expr = new BinaryExpr(LT, new DataExpr(3, DoubleType(), true), lt1Right, BooleanType());
+    BinaryExpr *lt1Expr = new BinaryExpr(LT, new FieldExpr(3, DoubleType()), lt1Right, BooleanType());
     BinaryExpr *and1Expression = new BinaryExpr(AND, gtExpr, lt1Expr, BooleanType());
 
-    DataExpr *lt2Right = new DataExpr(24, DoubleType());
+    LiteralExpr *lt2Right = new LiteralExpr(24, DoubleType());
     lt2Right->doubleVal = 24.0;
-    BinaryExpr *lt2expr = new BinaryExpr(LT, new DataExpr(0, DoubleType(), true), lt2Right, BooleanType());
+    BinaryExpr *lt2expr = new BinaryExpr(LT, new FieldExpr(0, DoubleType()), lt2Right, BooleanType());
 
-    DataExpr *data = new DataExpr(2, DoubleType(), true);
-    DataExpr *lower = new DataExpr(0.05, DoubleType());
+    FieldExpr *data = new FieldExpr(2, DoubleType());
+    LiteralExpr *lower = new LiteralExpr(0.05, DoubleType());
     lower->doubleVal = 0.05;
-    DataExpr *upper = new DataExpr(0.07, DoubleType());
+    LiteralExpr *upper = new LiteralExpr(0.07, DoubleType());
     upper->doubleVal = 0.07;
     std::vector<Expr *> args;
     BetweenExpr *betweenExpr = new BetweenExpr(data, lower, upper);
@@ -681,32 +681,32 @@ TEST(FilterTest, LogicalOperators1) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     const int32_t projectCount = 4;
     // projection objects:
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
-    DataExpr *col2Expr = new DataExpr(2, IntType(), true);
-    DataExpr *col4Expr = new DataExpr(4, DoubleType(), true);
-    DataExpr *col5Expr = new DataExpr(5, LongType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, IntType());
+    FieldExpr *col2Expr = new FieldExpr(2, IntType());
+    FieldExpr *col4Expr = new FieldExpr(4, DoubleType());
+    FieldExpr *col5Expr = new FieldExpr(5, LongType());
     std::vector<Expr*> projections = {col0Expr, col2Expr, col4Expr, col5Expr};
 
-    DataExpr *eqRight = new DataExpr(3000000000, LongType());
+    LiteralExpr *eqRight = new LiteralExpr(3000000000, LongType());
     eqRight->longVal = 3000000000;
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, new DataExpr(3, LongType(), true), eqRight, BooleanType());
-    BinaryExpr *neqExpr = new BinaryExpr(NEQ, new DataExpr(0, IntType(), true), new DataExpr(1, IntType()), BooleanType());
+    BinaryExpr *eqExpr = new BinaryExpr(EQ, new FieldExpr(3, LongType()), eqRight, BooleanType());
+    BinaryExpr *neqExpr = new BinaryExpr(NEQ, new FieldExpr(0, IntType()), new LiteralExpr(1, IntType()), BooleanType());
     BinaryExpr *andExpr1 = new BinaryExpr(AND, neqExpr, eqExpr, BooleanType());
 
-    BinaryExpr *gtExpr = new BinaryExpr(GT, new DataExpr(2, IntType(), true), new DataExpr(4800, IntType()), BooleanType());
-    BinaryExpr *lteExpr = new BinaryExpr(LTE, new DataExpr(1, IntType(), true), new DataExpr(9990, IntType()), BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(GT, new FieldExpr(2, IntType()), new LiteralExpr(4800, IntType()), BooleanType());
+    BinaryExpr *lteExpr = new BinaryExpr(LTE, new FieldExpr(1, IntType()), new LiteralExpr(9990, IntType()), BooleanType());
     BinaryExpr *andExpr2 = new BinaryExpr(AND, gtExpr, lteExpr, BooleanType());
 
     BinaryExpr *andExpr3 = new BinaryExpr(AND, andExpr2, andExpr1, BooleanType());
 
-    DataExpr *ltRight = new DataExpr(50.8, DoubleType());
+        LiteralExpr *ltRight = new LiteralExpr(50.8, DoubleType());
     ltRight->doubleVal = 50.8;
-    BinaryExpr *ltExpr = new BinaryExpr(LT, new DataExpr(4, DoubleType(), true), ltRight, BooleanType());
+    BinaryExpr *ltExpr = new BinaryExpr(LT, new FieldExpr(4, DoubleType()), ltRight, BooleanType());
     BinaryExpr *andExpr4 = new BinaryExpr(AND, ltExpr, andExpr3, BooleanType());
 
-    DataExpr *gteRight = new DataExpr(52, LongType());
+    LiteralExpr *gteRight = new LiteralExpr(52, LongType());
     gteRight->longVal = 52;
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, new DataExpr(5, LongType(), true), gteRight, BooleanType());
+    BinaryExpr *gteExpr = new BinaryExpr(GTE, new FieldExpr(5, LongType()), gteRight, BooleanType());
     BinaryExpr *filterExpr = new BinaryExpr(OR, gteExpr, andExpr4, BooleanType());
 
     OperatorFactory *factory =
@@ -749,23 +749,23 @@ TEST(FilterTest, LogicalOperators2) {
     const int32_t projectCount = 4;
 
     // projections
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
-    DataExpr *col1Expr = new DataExpr(1, IntType(), true);
-    DataExpr *col2Expr = new DataExpr(2, LongType(), true);
-    DataExpr *col3Expr = new DataExpr(3, LongType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, IntType());
+    FieldExpr *col1Expr = new FieldExpr(1, IntType());
+    FieldExpr *col2Expr = new FieldExpr(2, LongType());
+    FieldExpr *col3Expr = new FieldExpr(3, LongType());
 
     std::vector<Expr*> projections = {col3Expr, col2Expr, col1Expr, col0Expr};
 
-    DataExpr *lteRight = new DataExpr(-3000000000, LongType());
+    LiteralExpr *lteRight = new LiteralExpr(-3000000000, LongType());
     lteRight->longVal = -3000000000;
-    BinaryExpr *lteExpr = new BinaryExpr(LTE, new DataExpr(2, LongType(), true), lteRight, BooleanType());
-    DataExpr *gteRight = new DataExpr(-0, LongType());
+    BinaryExpr *lteExpr = new BinaryExpr(LTE, new FieldExpr(2, LongType()), lteRight, BooleanType());
+    LiteralExpr *gteRight = new LiteralExpr(-0, LongType());
     gteRight->longVal = 0;
-    BinaryExpr *gteExpr = new BinaryExpr(GTE, new DataExpr(3, LongType(), true), gteRight, BooleanType());
+    BinaryExpr *gteExpr = new BinaryExpr(GTE, new FieldExpr(3, LongType()), gteRight, BooleanType());
     BinaryExpr *orExpr1 = new BinaryExpr(OR, lteExpr, gteExpr, BooleanType());
 
-    BinaryExpr *ltExpr = new BinaryExpr(LT, new DataExpr(0, IntType(), true), new DataExpr(50, IntType()), BooleanType());
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, new DataExpr(1, IntType(), true), new DataExpr(-12, IntType()), BooleanType());
+    BinaryExpr *ltExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(50, IntType()), BooleanType());
+    BinaryExpr *eqExpr = new BinaryExpr(EQ, new FieldExpr(1, IntType()), new LiteralExpr(-12, IntType()), BooleanType());
     BinaryExpr *orExpr2 = new BinaryExpr(OR, ltExpr, eqExpr, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(AND, orExpr1, orExpr2, BooleanType());
@@ -812,33 +812,33 @@ TEST(FilterTest, LogicalOperators3) {
     const int32_t projectCount = 2;
 
     // projections
-    DataExpr *col0Expr = new DataExpr(0, IntType(), true);
-    DataExpr *col1Expr = new DataExpr(1, IntType(), true);
+    FieldExpr *col0Expr = new FieldExpr(0, IntType());
+    FieldExpr *col1Expr = new FieldExpr(1, IntType());
     std::vector<Expr*> projections = {col1Expr, col0Expr};
 
-    BinaryExpr *eq1Expr = new BinaryExpr(EQ, new DataExpr(55, IntType()), new DataExpr(0, IntType(), true), BooleanType());
-    BinaryExpr *eq2Expr = new BinaryExpr(EQ, new DataExpr(5, IntType()), new DataExpr(0, IntType(), true), BooleanType());
+    BinaryExpr *eq1Expr = new BinaryExpr(EQ, new LiteralExpr(55, IntType()), new FieldExpr(0, IntType()), BooleanType());
+    BinaryExpr *eq2Expr = new BinaryExpr(EQ, new LiteralExpr(5, IntType()), new FieldExpr(0, IntType()), BooleanType());
     BinaryExpr *or1Expr = new BinaryExpr(OR, eq1Expr, eq2Expr, BooleanType());
 
-    BinaryExpr *eq3Expr = new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(8, IntType()), BooleanType());
+    BinaryExpr *eq3Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(8, IntType()), BooleanType());
     BinaryExpr *or2Expr = new BinaryExpr(OR, or1Expr, eq3Expr, BooleanType());
 
-    BinaryExpr *eq4Expr = new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(13, IntType()), BooleanType());
+    BinaryExpr *eq4Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(13, IntType()), BooleanType());
     BinaryExpr *or3Expr = new BinaryExpr(OR, or2Expr, eq4Expr, BooleanType());
 
 
-    BinaryExpr *eq5Expr = new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(1, IntType()), BooleanType());
-    BinaryExpr *eq6Expr = new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(2, IntType()), BooleanType());
+    BinaryExpr *eq5Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(1, IntType()), BooleanType());
+    BinaryExpr *eq6Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(2, IntType()), BooleanType());
     BinaryExpr *or4Expr = new BinaryExpr(OR, eq5Expr, eq6Expr, BooleanType());
 
-    BinaryExpr *eq7Expr = new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(3, IntType()), BooleanType());
+    BinaryExpr *eq7Expr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(3, IntType()), BooleanType());
     BinaryExpr *or5Expr = new BinaryExpr(OR, or4Expr, eq7Expr, BooleanType());
 
     BinaryExpr *or6Expr = new BinaryExpr(OR, or5Expr, or3Expr, BooleanType());
 
-    DataExpr *neqRight = new DataExpr(0, LongType());
+    LiteralExpr *neqRight = new LiteralExpr(0, LongType());
     neqRight->longVal = 0;
-    BinaryExpr *neqExpr = new BinaryExpr(NEQ, new DataExpr(1, LongType(), true), neqRight, BooleanType());
+    BinaryExpr *neqExpr = new BinaryExpr(NEQ, new FieldExpr(1, LongType()), neqRight, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(AND, neqExpr, or6Expr, BooleanType());
 
@@ -876,11 +876,11 @@ TEST(FilterTest, ArithmeticAdd) {
 
     const int32_t projectCount = 1;
 
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType())};
 
     // filter
-    BinaryExpr *addExpr = new BinaryExpr(ADD, new DataExpr(0, IntType(), true), new DataExpr(1, IntType()), IntType());
-    BinaryExpr *filterExpr = new BinaryExpr(GT, addExpr, new DataExpr(4, IntType()), BooleanType());
+    BinaryExpr *addExpr = new BinaryExpr(ADD, new FieldExpr(0, IntType()), new LiteralExpr(1, IntType()), IntType());
+    BinaryExpr *filterExpr = new BinaryExpr(GT, addExpr, new LiteralExpr(4, IntType()), BooleanType());
     OperatorFactory *factory = new FilterAndProjectOperatorFactory( filterExpr, inputTypes, numCols, projections,
                                                                     projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -913,10 +913,10 @@ TEST(FilterTest, ArithmeticSubtract) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 2;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, LongType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType())};
 
-    BinaryExpr *subExpr = new BinaryExpr(SUB, new DataExpr(0, IntType(), true), new DataExpr(5, IntType()), IntType());
-    BinaryExpr *filterExpr = new BinaryExpr(LT, new DataExpr(0, IntType()), subExpr, BooleanType());
+    BinaryExpr *subExpr = new BinaryExpr(SUB, new FieldExpr(0, IntType()), new LiteralExpr(5, IntType()), IntType());
+    BinaryExpr *filterExpr = new BinaryExpr(LT, new LiteralExpr(0, IntType()), subExpr, BooleanType());
 
     OperatorFactory *factory = new FilterAndProjectOperatorFactory( filterExpr, inputTypes, numCols, projections,
                                                                     projectCount);
@@ -953,18 +953,18 @@ TEST(FilterTest, ArithmeticMultiply) {
 
     const int32_t projectCount = 2;
 
-    BinaryExpr *mul1Expr = new BinaryExpr(MUL, new DataExpr(0, IntType(), true), new DataExpr(0, IntType(), true), IntType());
-    BinaryExpr *eqExpr = new BinaryExpr(EQ, new DataExpr(0, IntType()), mul1Expr, BooleanType());
+    BinaryExpr *mul1Expr = new BinaryExpr(MUL, new FieldExpr(0, IntType()), new FieldExpr(0, IntType()), IntType());
+    BinaryExpr *eqExpr = new BinaryExpr(EQ, new LiteralExpr(0, IntType()), mul1Expr, BooleanType());
 
-    DataExpr *mulLeft= new DataExpr(2, LongType());
+    LiteralExpr *mulLeft= new LiteralExpr(2, LongType());
     mulLeft->longVal = 2;
-    BinaryExpr *mul2Expr = new BinaryExpr(MUL, mulLeft, new DataExpr(1, LongType(), true), LongType());
-    DataExpr *gtLeft= new DataExpr(7, LongType());
+    BinaryExpr *mul2Expr = new BinaryExpr(MUL, mulLeft, new FieldExpr(1, LongType()), LongType());
+    LiteralExpr *gtLeft= new LiteralExpr(7, LongType());
     gtLeft->longVal = 7;
     BinaryExpr *gtExpr=  new BinaryExpr(GT, gtLeft, mul2Expr, BooleanType());
     BinaryExpr *filterExpr = new BinaryExpr(AND, eqExpr, gtExpr, BooleanType());
 
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, LongType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1003,16 +1003,16 @@ TEST(FilterTest, Conditional) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     const int32_t projectCount = 3;
 
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true), new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()), new FieldExpr(2, IntType())};
 
     // filters
-    BinaryExpr *condition = new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(0, IntType()), BooleanType());
-    BinaryExpr *texp = new BinaryExpr(ADD, new DataExpr(1, IntType(), true), new DataExpr(5, IntType()), IntType());
-    DataExpr *fexp = new DataExpr(2, IntType(), true);
+    BinaryExpr *condition = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(0, IntType()), BooleanType());
+    BinaryExpr *texp = new BinaryExpr(ADD, new FieldExpr(1, IntType()), new LiteralExpr(5, IntType()), IntType());
+    FieldExpr *fexp = new FieldExpr(2, IntType());
 
     IfExpr *eqLeft = new IfExpr(condition, texp, fexp);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new DataExpr(55, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(55, IntType()), BooleanType());
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1047,18 +1047,18 @@ TEST(FilterTest, Conditional2) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     // filters
-    BinaryExpr *condition =  new BinaryExpr(EQ, new DataExpr(0, IntType(), true), new DataExpr(0, IntType()), BooleanType());
-    BinaryExpr *texp =  new BinaryExpr(LT, new DataExpr(1, IntType(), true), new DataExpr(3, IntType()), BooleanType());
-    BinaryExpr *fexp =  new BinaryExpr(EQ, new DataExpr(1, IntType(), true), new DataExpr(4, IntType()), BooleanType());
+    BinaryExpr *condition =  new BinaryExpr(EQ, new FieldExpr(0, IntType()), new LiteralExpr(0, IntType()), BooleanType());
+    BinaryExpr *texp =  new BinaryExpr(LT, new FieldExpr(1, IntType()), new LiteralExpr(3, IntType()), BooleanType());
+    BinaryExpr *fexp =  new BinaryExpr(EQ, new FieldExpr(1, IntType()), new LiteralExpr(4, IntType()), BooleanType());
     IfExpr *ifExpr = new IfExpr(condition, texp, fexp);
 
-    BinaryExpr *gtExpr = new BinaryExpr(GT, new DataExpr(2, IntType(), true), new DataExpr(3, IntType()), BooleanType());
+    BinaryExpr *gtExpr = new BinaryExpr(GT, new FieldExpr(2, IntType()), new LiteralExpr(3, IntType()), BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(AND, ifExpr, gtExpr, BooleanType());
 
     //filters
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true), new DataExpr(2, IntType(), true)};
+        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()), new FieldExpr(2, IntType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1094,15 +1094,15 @@ TEST(FilterTest, In) {
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
     //filter
     std::vector<Expr *> args;
-    args.push_back(new DataExpr(0, IntType(), true));
-    args.push_back(new DataExpr(1, IntType()));
-    args.push_back(new DataExpr(3, IntType()));
-    args.push_back(new DataExpr(5, IntType()));
+    args.push_back(new FieldExpr(0, IntType()));
+    args.push_back(new LiteralExpr(1, IntType()));
+    args.push_back(new LiteralExpr(3, IntType()));
+    args.push_back(new LiteralExpr(5, IntType()));
 
     InExpr *filterExpr = new InExpr(args);
 
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true), new DataExpr(2, IntType(), true)};
+        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()), new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1139,10 +1139,9 @@ TEST(FilterTest, Between) {
     VecTypes inputTypes(std::vector<VecType>({IntVecType(), IntVecType(), IntVecType()}));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BetweenExpr *filterExpr = new BetweenExpr(new DataExpr(1, IntType(), true), new DataExpr(0, IntType(), true),
-                                              new DataExpr(2, IntType(), true));
+    BetweenExpr *filterExpr = new BetweenExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()), new FieldExpr(2, IntType()));
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true), new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()), new FieldExpr(2, IntType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1184,13 +1183,13 @@ TEST(FilterTest, NotEqualToAbs) {
     VecTypePtr retType = IntType();
     std::string funcStr = "abs";
     std::vector<Expr *> args;
-    args.push_back(new DataExpr(0, IntType(), true));
+        args.push_back(new FieldExpr(0, IntType()));
     std::string funcID = ph.GetFnIdentifier(funcStr, args, retType->GetId());
     FuncExpr *absExpr = new FuncExpr(funcStr, args, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
-    BinaryExpr *filterExpr = new BinaryExpr(NEQ, absExpr, new DataExpr(4, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(NEQ, absExpr, new LiteralExpr(4, IntType()), BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1231,32 +1230,32 @@ TEST(FilterTest, MathFunctionFilter1) {
     VecTypePtr retType = IntType();
     std::string funcStr = "abs";
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0, IntType(), true));
+    args1.push_back(new FieldExpr(0, IntType()));
     std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *abs1Expr = new FuncExpr(funcStr, args1, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *abs1Expr = new FuncExpr(funcStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
-    args2.push_back(new DataExpr(2, IntType(), true));
+    args2.push_back(new FieldExpr(2, IntType()));
     funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *abs2Expr = new FuncExpr(funcStr, args2, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *abs2Expr = new FuncExpr(funcStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
     BinaryExpr *eq1Expr = new BinaryExpr(EQ, abs1Expr, abs2Expr, BooleanType());
 
     std::vector<Expr *> args3;
-    args3.push_back(new DataExpr(0, IntType(), true));
+    args3.push_back(new FieldExpr(0, IntType()));
     funcID = ph.GetFnIdentifier(funcStr, args3, retType->GetId());
-    FuncExpr *abs3Expr = new FuncExpr(funcStr, args3, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *abs3Expr = new FuncExpr(funcStr, args3, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args4;
-    args4.push_back(new DataExpr(1, IntType(), true));
+    args4.push_back(new FieldExpr(1, IntType()));
     funcID = ph.GetFnIdentifier(funcStr, args4, retType->GetId());
-    FuncExpr *abs4Expr = new FuncExpr(funcStr, args4, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *abs4Expr = new FuncExpr(funcStr, args4, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
     BinaryExpr *eq2Expr = new BinaryExpr(EQ, abs3Expr, abs4Expr, BooleanType());
 
     BinaryExpr *filterExpr = new BinaryExpr(AND, eq1Expr, eq2Expr, BooleanType());
 
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true),
-                                      new DataExpr(2, IntType(), true)};
+        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
+                                          new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1306,20 +1305,20 @@ TEST(FilterTest, MathFunctionFilter2) {
     std::string castStr = "CAST";
     VecTypePtr retType = DoubleType();
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0, IntType(), true));
+    args1.push_back(new FieldExpr(0, IntType()));
     std::string funcID = ph.GetFnIdentifier(castStr, args1, retType->GetId());
-    FuncExpr *cast1 = new FuncExpr(castStr, args1, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *cast1 = new FuncExpr(castStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
-    args2.push_back(new DataExpr(1, LongType(), true));
+    args2.push_back(new FieldExpr(1, LongType()));
     funcID = ph.GetFnIdentifier(castStr, args2, retType->GetId());
-    FuncExpr *cast2 = new FuncExpr(castStr, args2, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *cast2 = new FuncExpr(castStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(EQ, cast1, cast2, BooleanType());
 
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, LongType(), true),
-                                      new DataExpr(2, IntType(), true)};
+        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
+                                          new FieldExpr(2, IntType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1360,9 +1359,10 @@ TEST(FilterTest, FilterString1) {
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(30)}));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new DataExpr(0, VarCharType(), true), new DataExpr(new std::string("hello"), VarCharType()), BooleanType());
+        BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarCharType()),
+                                                new LiteralExpr(new std::string("hello"), VarCharType()), BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, VarCharType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1420,11 +1420,11 @@ TEST(FilterTest, Coalesce1) {
         }
     }
 
-    CoalesceExpr *coalesceExpr = new CoalesceExpr(new DataExpr(1, IntType(), true), new DataExpr(0, IntType(), true));
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new DataExpr(21, IntType()), coalesceExpr, BooleanType());
+    CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()));
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, new LiteralExpr(21, IntType()), coalesceExpr, BooleanType());
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true),
-                                      new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
+                                      new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1465,10 +1465,12 @@ TEST(FilterTest, Coalesce2) {
             t->GetVector(0)->SetValueNotNull(i);
         };
     }
-    CoalesceExpr *coalesceExpr = new CoalesceExpr(new DataExpr(0, VarCharType(), true), new DataExpr(new std::string("bye"), VarCharType()));
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, coalesceExpr, new DataExpr(new std::string("hello"), VarCharType()), BooleanType());
+        CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(0, VarCharType()),
+                                                      new LiteralExpr(new std::string("bye"), VarCharType()));
+BinaryExpr *filterExpr = new BinaryExpr(EQ, coalesceExpr, new LiteralExpr(new std::string("hello"), VarCharType()),
+                                        BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, VarCharType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1514,18 +1516,18 @@ TEST(FilterTest, DISABLED_ExternalMathFunc) {
     std::string funcStr = "Add1Int32";
     VecTypePtr retType = IntType();
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0, IntType(), true));
+    args1.push_back(new FieldExpr(0, IntType()));
     std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *add1Int1Expr = new FuncExpr(funcStr, args1, *(fr.LookupFunction(funcID)));
+    FuncExpr *add1Int1Expr = new FuncExpr(funcStr, args1, *fr.LookupFunction(funcID));
     std::vector<Expr *> args2;
     args2.push_back(add1Int1Expr);
     funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
     FuncExpr *eqLeft = new FuncExpr(funcStr, args2, *(fr.LookupFunction(funcID)));
 
     std::vector<Expr *> args3;
-    args3.push_back(new DataExpr(1, IntType(), true));
+    args3.push_back(new FieldExpr(1, IntType()));
     funcID = ph.GetFnIdentifier(funcStr, args3, retType->GetId());
-    FuncExpr *add1Int2Expr = new FuncExpr(funcStr, args3, *(fr.LookupFunction(funcID)));
+    FuncExpr *add1Int2Expr = new FuncExpr(funcStr, args3, *fr.LookupFunction(funcID));
     std::vector<Expr *> args4;
     args4.push_back(add1Int2Expr);
     funcID = ph.GetFnIdentifier(funcStr, args4, retType->GetId());
@@ -1534,8 +1536,8 @@ TEST(FilterTest, DISABLED_ExternalMathFunc) {
     BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
 
     const int32_t PROJECT_COUNT = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true),
-                                      new DataExpr(2, IntType(), true)};
+        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
+                                          new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1595,13 +1597,13 @@ TEST(FilterTest, DISABLED_ExternalStringFunc) {
     std::string funcStr = "LengthStr";
     VecTypePtr retType = IntType();
     std::vector<Expr *> args;
-    args.push_back(new DataExpr(0, VarCharType(), true));
+    args.push_back(new FieldExpr(0, VarCharType()));
     std::string funcID = ph.GetFnIdentifier(funcStr, args, retType->GetId());
-    FuncExpr *eqLeft = new FuncExpr(funcStr, args, *(fr.LookupFunction(funcID)));
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new DataExpr(5, IntType()), BooleanType());
+    FuncExpr *eqLeft = new FuncExpr(funcStr, args, *fr.LookupFunction(funcID));
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
 
     const int32_t PROJECT_COUNT = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, VarCharType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1660,19 +1662,19 @@ TEST(FilterTest, DISABLED_ExternalStringFunc2) {
     std::string funcStr = "FirstCharStr";
     VecTypePtr retType = BooleanType();
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0, VarCharType(), true));
+    args1.push_back(new FieldExpr(0, VarCharType()));
     std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *eqLeft = new FuncExpr(funcStr, args1, *(fr.LookupFunction(funcID)));
+    FuncExpr *eqLeft = new FuncExpr(funcStr, args1, *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
-    args2.push_back(new DataExpr(new std::string("apple"), VarCharType()));
+    args2.push_back(new LiteralExpr(new std::string("apple"), VarCharType()));
     funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *eqRight = new FuncExpr(funcStr, args2, *(fr.LookupFunction(funcID)));
+    FuncExpr *eqRight = new FuncExpr(funcStr, args2, *fr.LookupFunction(funcID));
 
     BinaryExpr *filterExpr = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
 
     const int32_t PROJECT_COUNT = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, VarCharType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1741,18 +1743,18 @@ TEST(FilterTest, Multithreading) {
     std::string absStr = "abs";
     VecTypePtr retType = DoubleType();
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0, IntType(), true));
+    args1.push_back(new FieldExpr(0, IntType()));
     std::string funcID = ph.GetFnIdentifier(castStr, args1, retType->GetId());
-    FuncExpr *cast1Expr = new FuncExpr(castStr, args1, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *cast1Expr = new FuncExpr(castStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
     std::vector<Expr *> args2;
     args2.push_back(cast1Expr);
     funcID = ph.GetFnIdentifier(absStr, args2, retType->GetId());
     FuncExpr *eqLeft = new FuncExpr(absStr, args2, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
 
     std::vector<Expr *> args3;
-    args3.push_back(new DataExpr(1, LongType(), true));
+    args3.push_back(new FieldExpr(1, LongType()));
     funcID = ph.GetFnIdentifier(castStr, args3, retType->GetId());
-    FuncExpr *cast2Expr = new FuncExpr(castStr, args3, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *cast2Expr = new FuncExpr(castStr, args3, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
     std::vector<Expr *> args4;
     args4.push_back(cast2Expr);
     funcID = ph.GetFnIdentifier(absStr, args4, retType->GetId());
@@ -1761,18 +1763,19 @@ TEST(FilterTest, Multithreading) {
     BinaryExpr *filterExpr1 = new BinaryExpr(EQ, eqLeft, eqRight, BooleanType());
 
     const int32_t PROJECT_COUNT = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, LongType(), true),
-                                      new DataExpr(2, IntType(), true)};
+        std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
+                                          new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr1, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator *op = factory->CreateOperator();
     std::thread thread1(process, op, t, ret, numReturned);
 
     // filter2
-    DataExpr *eqRight2 = new DataExpr(4, LongType());
+    LiteralExpr *eqRight2 = new LiteralExpr(4, LongType());
     eqRight2->longVal = 4;
-    BinaryExpr *filterExpr2 = new BinaryExpr(EQ, new DataExpr(1, LongType(), true), eqRight2, BooleanType());
-    std::vector<Expr*> projections2 = {new DataExpr(0, IntType(), true), new DataExpr(1, LongType(), true), new DataExpr(2, IntType(), true)};
+    BinaryExpr *filterExpr2 = new BinaryExpr(EQ, new FieldExpr(1, LongType()), eqRight2, BooleanType());
+    std::vector<Expr*> projections2 = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()),
+                                       new FieldExpr(2, IntType())};
 
     OperatorFactory *factory2 = new FilterAndProjectOperatorFactory(filterExpr2, inputTypes2, NUM_COLS, projections2, 3);
     omniruntime::op::Operator *op2 = factory2->CreateOperator();
@@ -1827,11 +1830,10 @@ TEST(FilterTest, TestFilterDictionaryVec) {
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryVector);
 
-    BetweenExpr *filterExpr = new BetweenExpr(new DataExpr(1, IntType(), true), new DataExpr(0, IntType(), true),
-                                              new DataExpr(2, IntType(), true));
+        BetweenExpr *filterExpr = new BetweenExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()),
+                                                  new FieldExpr(2, IntType()));
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, LongType(), true),
-                                      new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, LongType()), new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1878,9 +1880,9 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
     batch->SetVector(0, col1);
     batch->SetVector(1, dictionaryVector);
 
-    BinaryExpr *filterExpr = new BinaryExpr(LT, new DataExpr(0, IntType(), true), new DataExpr(6, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(6, IntType()), BooleanType());
     const int32_t projectCount = 2;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, VarCharType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, VarCharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1934,11 +1936,11 @@ TEST(FilterTest, TestFilterDictionaryVecNested) {
     batch->SetVector(1, col2);
     batch->SetVector(2, dictionaryNested);
 
-    BetweenExpr *filterExpr = new BetweenExpr(new DataExpr(1, IntType(), true), new DataExpr(0, IntType(), true),
-                                              new DataExpr(2, IntType(), true));
+        BetweenExpr *filterExpr = new BetweenExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()),
+                                                  new FieldExpr(2, IntType()));
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true),
-                                      new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
+                                      new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1983,10 +1985,10 @@ TEST(FilterTest, DecimalFilterBinaryTest) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, Decimal128Type(38, 0), true)};
-    DataExpr *lteRight = new DataExpr(500000, LongType());
+        std::vector<Expr*> projections = {new FieldExpr(0, Decimal128Type(38, 0))};
+    LiteralExpr *lteRight = new LiteralExpr(500000, LongType());
     lteRight->longVal = 500000;
-    BinaryExpr *filterExpr = new BinaryExpr(LTE, new DataExpr(0, Decimal128Type(38, 0), true), lteRight, BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(LTE, new FieldExpr(0, Decimal128Type(38, 0)), lteRight, BooleanType());
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections,
                                                                    projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2034,8 +2036,8 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, Decimal128Type(38, 0), true), new DataExpr(1, Decimal128Type(38, 0), true),
-                                      new DataExpr(2, Decimal128Type(38, 0), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, Decimal128Type(38, 0)),
+                                      new FieldExpr(1, Decimal128Type(38, 0)), new FieldExpr(2, Decimal128Type(38, 0))};
 
     // filters
     ParserHelper ph;
@@ -2043,26 +2045,26 @@ TEST(FilterTest, DecimalFilterAbsTest) {
     std::string absStr = "abs";
     VecTypePtr retType =  Decimal128Type(38, 0);
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0,  Decimal128Type(38, 0), true));
+    args1.push_back(new FieldExpr(0, Decimal128Type(38, 0)));
     std::string funcID = ph.GetFnIdentifier(absStr, args1, retType->GetId());
-    FuncExpr *absExpr1 = new FuncExpr(absStr, args1, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *absExpr1 = new FuncExpr(absStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
-    args2.push_back(new DataExpr(2,  Decimal128Type(38, 0), true));
+    args2.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
     funcID = ph.GetFnIdentifier(absStr, args2, retType->GetId());
-    FuncExpr *absExpr2 = new FuncExpr(absStr, args2, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *absExpr2 = new FuncExpr(absStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     BinaryExpr *eqExpr1 = new BinaryExpr(EQ, absExpr1, absExpr2,  Decimal128Type(38, 0));
 
     std::vector<Expr *> args3;
-    args3.push_back(new DataExpr(1,  Decimal128Type(38, 0), true));
+    args3.push_back(new FieldExpr(1, Decimal128Type(38, 0)));
     funcID = ph.GetFnIdentifier(absStr, args3, retType->GetId());
-    FuncExpr *absExpr3 = new FuncExpr(absStr, args3, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *absExpr3 = new FuncExpr(absStr, args3, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args4;
-    args4.push_back(new DataExpr(2,  Decimal128Type(38, 0), true));
+    args4.push_back(new FieldExpr(2, Decimal128Type(38, 0)));
     funcID = ph.GetFnIdentifier(absStr, args4, retType->GetId());
-    FuncExpr *absExpr4 = new FuncExpr(absStr, args4, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *absExpr4 = new FuncExpr(absStr, args4, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     BinaryExpr *eqExpr2 = new BinaryExpr(EQ, absExpr3, absExpr4,  Decimal128Type(38, 0));
 
@@ -2099,9 +2101,10 @@ TEST(FilterTest, FilterStringWithNull) {
     batch->NewVectors(vecAllocator, inputTypes.Get());
     batch->SetVector(0, col0);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new DataExpr(0, VarCharType(), true), new DataExpr(new std::string("hello"), VarCharType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarCharType()),
+                                            new LiteralExpr(new std::string("hello"), VarCharType()), BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new DataExpr(0, VarCharType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2156,11 +2159,11 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec) {
     intput->SetVector(1, slicedCol2);
     intput->SetVector(2, slicedCol3);
 
-    BetweenExpr *filterExpr = new BetweenExpr(new DataExpr(1, IntType(), true), new DataExpr(0, IntType(), true),
-                                              new DataExpr(2, IntType(), true));
+    BetweenExpr *filterExpr = new BetweenExpr(new FieldExpr(1, IntType()), new FieldExpr(0, IntType()),
+                                              new FieldExpr(2, IntType()));
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true),
-                                      new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
+                                      new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2221,10 +2224,10 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull) {
     intput->SetVector(1, slicedCol2);
     intput->SetVector(2, slicedCol3);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new DataExpr(2, IntType(), true), new DataExpr(6, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(2, IntType()), new LiteralExpr(6, IntType()), BooleanType());
     const int32_t projectCount = 3;
-    std::vector<Expr*> projections = {new DataExpr(0, IntType(), true), new DataExpr(1, IntType(), true),
-                                      new DataExpr(2, IntType(), true)};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, IntType()),
+                                      new FieldExpr(2, IntType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2260,7 +2263,8 @@ TEST(FilterTest, SimpleFilter) {
     VecTypes inputTypes(std::vector<VecType>({IntVecType()}));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BinaryExpr *filterExpr = new BinaryExpr(LT, new DataExpr(0, IntType(), true), new DataExpr(2000, IntType()), BooleanType());
+        BinaryExpr *filterExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(2000, IntType()),
+                                                BooleanType());
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();
     EXPECT_TRUE(initialized);
@@ -2294,7 +2298,7 @@ TEST(FilterTest, SimpleFilterWithNulls) {
     VecTypes inputTypes(std::vector<VecType>({IntVecType()}));
     VectorBatch *in1 = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-    BinaryExpr *filterExpr = new BinaryExpr(LT, new DataExpr(0, IntType(), true), new DataExpr(2000, IntType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(2000, IntType()), BooleanType());
 
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();
@@ -2331,8 +2335,7 @@ TEST(FilterTest, SimpleFilterIntWithNulls) {
     VecTypes inputTypes(std::vector<VecType>({IntVecType(), IntVecType()}));
     auto vecBatch = CreateVectorBatch(inputTypes, numRows, data0, data1);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new DataExpr(0, IntType(), true),
-                                            new DataExpr(1, IntType(), true), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, IntType()), new FieldExpr(1, IntType()), BooleanType());
     auto filter = new SimpleFilter(*filterExpr);
     bool initialized = filter->Initialize();
     EXPECT_TRUE(initialized);
@@ -2385,19 +2388,18 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
     std::string funcStr = "substr";
     VecTypePtr retType = VarCharType();
     std::vector<Expr *> args1;
-    args1.push_back(new DataExpr(0, VarCharType(), true));
-    args1.push_back(new DataExpr(1, IntType()));
-    args1.push_back(new DataExpr(5, IntType()));
+    args1.push_back(new FieldExpr(0, VarCharType()));
+    args1.push_back(new LiteralExpr(1, IntType()));
+    args1.push_back(new LiteralExpr(5, IntType()));
     std::string funcID = ph.GetFnIdentifier(funcStr, args1, retType->GetId());
-    FuncExpr *substrExpr1 = new FuncExpr(funcStr, args1, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
+    FuncExpr *substrExpr1 = new FuncExpr(funcStr, args1, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
     std::vector<Expr *> args2;
-    args2.push_back(new DataExpr(1, VarCharType(), true));
-    args2.push_back(new DataExpr(1, IntType()));
-    args2.push_back(new DataExpr(5, IntType()));
+    args2.push_back(new FieldExpr(1, VarCharType()));
+    args2.push_back(new LiteralExpr(1, IntType()));
+    args2.push_back(new LiteralExpr(5, IntType()));
     funcID = ph.GetFnIdentifier(funcStr, args2, retType->GetId());
-    FuncExpr *substrExpr2 = new FuncExpr(funcStr, args2, make_unique<VecType>(*retType), *(fr.LookupFunction(funcID)));
-
+    FuncExpr *substrExpr2 = new FuncExpr(funcStr, args2, make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
     BinaryExpr *filterExpr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
 
     auto filter = new SimpleFilter(*filterExpr);

@@ -10,7 +10,8 @@
 class ExprVisitor {
 public:
     virtual ~ExprVisitor() = default;
-    virtual void Visit(const omniruntime::expressions::DataExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::LiteralExpr &e) = 0;
+    virtual void Visit(const omniruntime::expressions::FieldExpr &e) = 0;
     virtual void Visit(const omniruntime::expressions::UnaryExpr &e) = 0;
     virtual void Visit(const omniruntime::expressions::BinaryExpr &e) = 0;
     virtual void Visit(const omniruntime::expressions::InExpr &e) = 0;

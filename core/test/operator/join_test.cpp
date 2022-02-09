@@ -1192,8 +1192,8 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     string filterExpression = "$operator$NOT_EQUAL:4(#1, #3)";
 
     // create the expression for the filter
-    DataExpr *notEqualLeft = new DataExpr(1, IntType(), true);
-    DataExpr *notEqualRight = new DataExpr(3, IntType(), true);
+    FieldExpr *notEqualLeft = new FieldExpr(1, IntType());
+    FieldExpr *notEqualRight = new FieldExpr(3, IntType());
     BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, notEqualLeft, notEqualRight, BooleanType());
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildTypes, buildJoinCols,
@@ -1266,9 +1266,9 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
     std::string funcStr = "substr";
     VecTypePtr retType = VarCharType();
 
-    DataExpr *leftSubstrColumn = new DataExpr(1, VarCharType(), true);
-    DataExpr *leftSubstrIndex = new DataExpr(1, IntType());
-    DataExpr *leftSubstrLen = new DataExpr(5, IntType());
+    FieldExpr *leftSubstrColumn = new FieldExpr(1, VarCharType());
+    LiteralExpr *leftSubstrIndex = new LiteralExpr(1, IntType());
+    LiteralExpr *leftSubstrLen = new LiteralExpr(5, IntType());
     std::vector<Expr *> leftSubstrArgs;
     leftSubstrArgs.push_back(leftSubstrColumn);
     leftSubstrArgs.push_back(leftSubstrIndex);
@@ -1276,9 +1276,9 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
     std::string funcID = ph.GetFnIdentifier(funcStr, leftSubstrArgs, retType->GetId());
     FuncExpr *leftSubstrExpr = new FuncExpr(funcStr, leftSubstrArgs, std::make_unique<VecType>(*retType), *fr.LookupFunction(funcID));
 
-    DataExpr *rightSubstrColumn = new DataExpr(3, VarCharType(), true);
-    DataExpr *rightSubstrIndex = new DataExpr(1, IntType());
-    DataExpr *rightSubstrLen = new DataExpr(5, IntType());
+    FieldExpr *rightSubstrColumn = new FieldExpr(3, VarCharType());
+    LiteralExpr *rightSubstrIndex = new LiteralExpr(1, IntType());
+    LiteralExpr *rightSubstrLen = new LiteralExpr(5, IntType());
     std::vector<Expr *> rightSubstrArgs;
     rightSubstrArgs.push_back(rightSubstrColumn);
     rightSubstrArgs.push_back(rightSubstrIndex);

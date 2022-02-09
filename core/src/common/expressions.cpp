@@ -47,61 +47,66 @@ VecTypeId Expr::GetReturnTypeId() const
     return dataType->GetId();
 }
 
+// Literal Expression methods
+LiteralExpr::LiteralExpr() {}
 
-DataExpr::DataExpr() {}
-
-DataExpr::~DataExpr()
+LiteralExpr::~LiteralExpr()
 {
-    if (dataType->GetId() == VecTypeId::OMNI_VEC_TYPE_VARCHAR && !isColumn) {
+    if (dataType->GetId() == VecTypeId::OMNI_VEC_TYPE_VARCHAR) {
         delete stringVal;
     }
 }
 
-ExprType DataExpr::GetType() const
+ExprType LiteralExpr::GetType() const
 {
-    return ExprType::DATA_E;
+    return ExprType::LITERAL_E;
+}
+// Helper constructors for different data types
+LiteralExpr::LiteralExpr(bool val, VecTypePtr dt)
+{
+    dataType = std::move(dt);
+    boolVal = val;
+}
+LiteralExpr::LiteralExpr(int32_t val, VecTypePtr dt)
+{
+    dataType = std::move(dt);
+    intVal = val;
+}
+LiteralExpr::LiteralExpr(int64_t val, VecTypePtr dt)
+{
+    dataType = std::move(dt);
+    longVal = val;
+}
+LiteralExpr::LiteralExpr(double val, VecTypePtr dt)
+{
+    dataType = std::move(dt);
+    doubleVal = val;
+}
+LiteralExpr::LiteralExpr(std::string *val, VecTypePtr dt)
+{
+    dataType = std::move(dt);
+    stringVal = val;
+    width = val->length() + 1;
+}
+LiteralExpr::LiteralExpr(int64_t *val, VecTypePtr dt)
+{
+    dataType = std::move(dt);
+    dec128Val = val;
 }
 
-// Helper constructors for different data types
-DataExpr::DataExpr(bool val, VecTypePtr dt)
+// FieldExpr
+FieldExpr::FieldExpr() {}
+
+FieldExpr::~FieldExpr() {}
+
+ExprType FieldExpr::GetType() const
 {
-    isColumn = false;
-    boolVal = val;
-    dataType = std::move(dt);
+    return ExprType::FIELD_E;
 }
-DataExpr::DataExpr(int32_t val, VecTypePtr dt)
+
+// Helper constructors
+FieldExpr::FieldExpr(int32_t colIdx, VecTypePtr colType)
 {
-    isColumn = false;
-    intVal = val;
-    dataType = std::move(dt);
-}
-DataExpr::DataExpr(int64_t val, VecTypePtr dt)
-{
-    isColumn = false;
-    longVal = val;
-    dataType = std::move(dt);
-}
-DataExpr::DataExpr(double val, VecTypePtr dt)
-{
-    isColumn = false;
-    doubleVal = val;
-    dataType = std::move(dt);
-}
-DataExpr::DataExpr(std::string* val, VecTypePtr dt)
-{
-    isColumn = false;
-    stringVal = val;
-    dataType = std::move(dt);
-}
-DataExpr::DataExpr(int64_t *val, VecTypePtr dt)
-{
-    isColumn = false;
-    dec128Val = val;
-    dataType = std::move(dt);
-}
-DataExpr::DataExpr(int32_t colIdx, VecTypePtr colType, bool isCol)
-{
-    isColumn = isCol;
     dataType = std::move(colType);
     colVal = colIdx;
 }

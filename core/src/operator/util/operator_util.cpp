@@ -28,6 +28,8 @@ void OperatorUtil::CreateProjectFuncs(const omniruntime::vec::VecTypes &inputTyp
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
             VecType returnType = rowProjection->GetReturnType();
+            if (returnType.GetId() == OMNI_VEC_TYPE_VARCHAR)
+                returnType = VarcharVecType(200);
             newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));
@@ -63,6 +65,8 @@ void OperatorUtil::CreateRequiredProjectFuncs(const VecTypes &inputTypes, omniru
             RowProjFunc func = rowProjection->Create();
             projectFuncs.push_back(func);
             VecType returnType = rowProjection->GetReturnType();
+            if (returnType.GetId() == OMNI_VEC_TYPE_VARCHAR)
+                returnType = VarcharVecType(200);
             newInputTypes.push_back(returnType);
         }
         rowProjections.push_back(std::move(rowProjection));

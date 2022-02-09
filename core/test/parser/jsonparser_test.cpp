@@ -201,29 +201,29 @@ public:
     virtual ~TestExpr() = default;
 };
 
-class TestDataExpr : public TestExpr {
-    DataExpr *expr = nullptr;
+class TestLiteralExpr : public TestExpr {
+    LiteralExpr *expr = nullptr;
 
 public:
-    TestDataExpr(VecType &dt, int32_t colVal) : expr(make_unique<DataExpr>(colVal, make_unique<VecType>(dt), true).release())
+    TestLiteralExpr(VecType &dt, int32_t colVal) : expr(make_unique<LiteralExpr>(colVal, make_unique<VecType>(dt)).release())
     {
         dataType = &(expr->GetReturnType());
     }
-    template <typename T> explicit TestDataExpr(T val, VecType& dt) : expr(make_unique<DataExpr>(val, make_unique<VecType>(dt)).release())
+    template <typename T> explicit TestLiteralExpr(T val, VecType& dt) : expr(make_unique<LiteralExpr>(val, make_unique<VecType>(dt)).release())
     {
         dataType = &(expr->GetReturnType());
     }
     // get default expr of null type-dt expression
-    explicit TestDataExpr(VecTypeId id)
+    explicit TestLiteralExpr(VecTypeId id)
     {
         expr = ParserHelper::GetDefaultValueForType(id);
         expr->isNull = true;
     }
-    ~TestDataExpr() override
+    ~TestLiteralExpr() override
     {
         delete expr;
     }
-    bool operator == (const DataExpr &rhs) const
+    bool operator == (const LiteralExpr &rhs) const
     {
         bool stringIsNull = false;
         bool d128IsNull = false;
@@ -232,17 +232,45 @@ public:
         if (expr->dec128Val == nullptr && rhs.dec128Val == nullptr)
             d128IsNull = true;
 
-        return expr->GetReturnType() == rhs.GetReturnType() && expr->isColumn == rhs.isColumn && expr->isNull == rhs.isNull &&
+        return expr->GetReturnType() == rhs.GetReturnType() && expr->isNull == rhs.isNull &&
             expr->boolVal == rhs.boolVal && expr->intVal == rhs.intVal && expr->longVal == rhs.longVal &&
             expr->doubleVal == rhs.doubleVal && (stringIsNull || *(expr->stringVal) == *(rhs.stringVal)) &&
-            expr->colVal == rhs.colVal && (d128IsNull || *(expr->dec128Val) == *(rhs.dec128Val));
+            (d128IsNull || *(expr->dec128Val) == *(rhs.dec128Val));
     }
 
     bool isEqual(Expr *that) const override
     {
-        if (typeid(DataExpr) != typeid(*that))
+        if (typeid(LiteralExpr) != typeid(*that))
             return false;
-        auto *rhs = dynamic_cast<DataExpr *>(that);
+        auto *rhs = dynamic_cast<LiteralExpr *>(that);
+        bool result = (*this == *rhs);
+        EXPECT_TRUE(result);
+        return result;
+    }
+};
+
+class TestFieldExpr : public TestExpr {
+    FieldExpr *expr = nullptr;
+
+public:
+    TestFieldExpr(int32_t dt, int32_t colVal) : expr(make_unique<FieldExpr>(colVal, make_unique<VecType>(dt)).release())
+    {
+        dataType = &(expr->GetReturnType());;
+    }
+    ~TestFieldExpr() override
+    {
+        delete expr;
+    }
+    bool operator == (const FieldExpr &rhs) const
+    {
+        return expr->GetReturnType() == rhs.GetReturnType() && expr->isNull == rhs.isNull && expr->colVal == rhs.colVal;
+    }
+
+    bool isEqual(Expr *that) const override
+    {
+        if (typeid(FieldExpr) != typeid(*that))
+            return false;
+        auto *rhs = dynamic_cast<FieldExpr *>(that);
         bool result = (*this == *rhs);
         EXPECT_TRUE(result);
         return result;
@@ -478,7 +506,7 @@ TEST(JSONParserTest, Literal_Bool)
 {
     string unparsedBoolJson = getBoolTestJson(boolVal);
     Expr *boolExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBoolJson));
-    TestDataExpr expectedExpr(boolVal, *BooleanType());
+    TestLiteralExpr expectedExpr(boolVal, *BooleanType());
     expectedExpr.isEqual(boolExpr);
     delete boolExpr;
 }
@@ -487,7 +515,7 @@ TEST(JSONParserTest, Literal_Integer)
 {
     string unparsedIntJson = getInt32TestJSON(int32Val);
     Expr *intExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIntJson));
-    TestDataExpr expectedExpr(int32Val, *IntType());
+    TestLiteralExpr expectedExpr(int32Val, *IntType());
     expectedExpr.isEqual(intExpr);
     delete intExpr;
 }
@@ -496,7 +524,7 @@ TEST(JSONParserTest, Literal_Date32)
 {
     string unparsedDateJson = getDate32TestJson(int32Val);
     Expr *intExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedDateJson));
-    TestDataExpr expectedExpr(int32Val, *Date32Type());
+    TestLiteralExpr expectedExpr(int32Val, *Date32Type());
     expectedExpr.isEqual(intExpr);
     delete intExpr;
 }
@@ -505,7 +533,7 @@ TEST(JSONParserTest, Literal_Long)
 {
     string unparsedLongJson = getInt64TestJson(int64Val);
     Expr *longExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedLongJson));
-    TestDataExpr expectedExpr(int64Val, *LongType());
+    TestLiteralExpr expectedExpr(int64Val, *LongType());
     expectedExpr.isEqual(longExpr);
     delete longExpr;
 }
@@ -514,7 +542,7 @@ TEST(JSONParserTest, Literal_Double)
 {
     string unparsedDoubleJson = getDoubleTestJson(doubleVal);
     Expr *doubleExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedDoubleJson));
-    TestDataExpr expectedExpr(doubleVal, *DoubleType());
+    TestLiteralExpr expectedExpr(doubleVal, *DoubleType());
     expectedExpr.isEqual(doubleExpr);
     delete doubleExpr;
 }
@@ -523,7 +551,7 @@ TEST(JSONParserTest, Literal_Decimal64)
 {
     string unparsedD64Json = getDec64TestJson(int64Val, precision64, scale);
     Expr *d64Expr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedD64Json));
-    TestDataExpr expectedExpr(int64Val, *Decimal64Type(8, 0));
+    TestLiteralExpr expectedExpr(int64Val, *Decimal64Type(8, 0));
     expectedExpr.isEqual(d64Expr);
     delete d64Expr;
 }
@@ -532,7 +560,7 @@ TEST(JSONParserTest, Literal_Decimal128)
 {
     string unparsedD128Json = getDec128TestJson(int64Val, precision128, scale);
     Expr *d128Expr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedD128Json));
-    TestDataExpr expectedExpr(int64Val, *Decimal128Type(17, 0));
+    TestLiteralExpr expectedExpr(int64Val, *Decimal128Type(17, 0));
     expectedExpr.isEqual(d128Expr);
     delete d128Expr;
 }
@@ -541,7 +569,7 @@ TEST(JSONParserTest, Literal_Varchar)
 {
     string unparsedVarcharJson = getVarcharTestJson(varcharVal, varcharWidth);
     Expr *varcharExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedVarcharJson));
-    TestDataExpr expectedExpr(make_unique<string>(varcharVal).release(), *VarCharType());
+    TestLiteralExpr expectedExpr(make_unique<string>(varcharVal).release(), *VarCharType());
     expectedExpr.isEqual(varcharExpr);
     delete varcharExpr;
 }
@@ -551,7 +579,7 @@ TEST(JSONParserTest, Literal_Unknown_Null)
     string unparsedNoneWithNull = getNullTestJson(OMNI_VEC_TYPE_NONE);
     Expr *noneWithNull = JSONParser::ParseJSON(nlohmann::json::parse(unparsedNoneWithNull));
     // None type default DataExpr
-    TestDataExpr expectedExpr(OMNI_VEC_TYPE_NONE);
+    TestLiteralExpr expectedExpr(OMNI_VEC_TYPE_NONE);
     expectedExpr.isEqual(noneWithNull);
 }
 
@@ -560,7 +588,7 @@ TEST(JSONParserTest, Literal_Int32_Null)
     string unparsedNullInt32 = getNullTestJson(OMNI_VEC_TYPE_INT);
     Expr *nullInt32 = JSONParser::ParseJSON(nlohmann::json::parse(unparsedNullInt32));
     // Int32 default DataExpr
-    TestDataExpr expectedExpr(OMNI_VEC_TYPE_INT);
+    TestLiteralExpr expectedExpr(OMNI_VEC_TYPE_INT);
     expectedExpr.isEqual(nullInt32);
 }
 
@@ -568,7 +596,7 @@ TEST(JSONParserTest, FieldReference)
 {
     string unparsedFieldRefJson = getFieldRefTestJson(OMNI_VEC_TYPE_LONG, colNum);
     Expr *fieldRefExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFieldRefJson));
-    TestDataExpr expectedExpr(*LongType(), colNum);
+    TestFieldExpr expectedExpr(OMNI_VEC_TYPE_LONG, colNum);
     expectedExpr.isEqual(fieldRefExpr);
     delete fieldRefExpr;
 }
@@ -578,8 +606,8 @@ TEST(JSONParserTest, BinaryExpr_EQ)
     string unparsedBinaryJson =
         getBinaryTestJson(OMNI_VEC_TYPE_BOOLEAN, CmpOps.at(EQ), getInt32TestJSON(int32Val), getInt64TestJson(int64Val));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
-    TestBinaryExpr expectedExpr(EQ, make_unique<TestDataExpr>(int32Val, *IntType()).release(),
-        make_unique<TestDataExpr>(int64Val, *LongType()).release());
+    TestBinaryExpr expectedExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
+                            make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
@@ -589,8 +617,8 @@ TEST(JSONParserTest, BinaryExpr_ADD)
     string unparsedBinaryJson =
             getBinaryTestJson(OMNI_VEC_TYPE_LONG, ArithOps.at(ADD), getInt32TestJSON(int32Val), getInt64TestJson(int64Val));
     Expr *addExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBinaryJson));
-    TestBinaryExpr expectedExpr(ADD, make_unique<TestDataExpr>(int32Val, *IntType()).release(),
-                                make_unique<TestDataExpr>(int64Val, *LongType()).release());
+    TestBinaryExpr expectedExpr(ADD, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
+                                make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
     expectedExpr.isEqual(addExpr);
     delete addExpr;
 }
@@ -599,7 +627,7 @@ TEST(JSONParserTest, UnaryExpr_NOT)
 {
     string unparsedUnaryJson = getUnaryTestJson("NOT", getBoolTestJson(boolVal));
     Expr *unaryExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedUnaryJson));
-    TestUnaryExpr expectedExpr(NOT, make_unique<TestDataExpr>(boolVal, *BooleanType()).release());
+    TestUnaryExpr expectedExpr(NOT, make_unique<TestLiteralExpr>(boolVal, *BooleanType()).release());
     expectedExpr.isEqual(unaryExpr);
     delete unaryExpr;
 }
@@ -609,8 +637,8 @@ TEST(JSONParserTest, BetweenExpr)
     string unparsedBetweenJson =
         getBetweenTestJson(getInt32TestJSON(int32Val), getInt32TestJSON(int32Val), getInt32TestJSON(int32Val));
     Expr *betweenExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedBetweenJson));
-    TestBetweenExpr expectedExpr(make_unique<TestDataExpr>(int32Val, *IntType()).release(),
-        make_unique<TestDataExpr>(int32Val, *IntType()).release(), make_unique<TestDataExpr>(int32Val, *IntType()).release());
+    TestBetweenExpr expectedExpr(make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
+                                 make_unique<TestLiteralExpr>(int32Val, *IntType()).release(), make_unique<TestLiteralExpr>(int32Val, *IntType()).release());
     expectedExpr.isEqual(betweenExpr);
     delete betweenExpr;
 }
@@ -620,8 +648,8 @@ TEST(JSONParserTest, CoalesceExpr)
     string unparsedCoalesceJson =
         getCoalesceTestJson(OMNI_VEC_TYPE_VARCHAR, getVarcharTestJson(varcharVal, varcharWidth), getVarcharTestJson("", 0));
     Expr *coalesceExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedCoalesceJson));
-    TestCoalesceExpr expectedExpr(make_unique<TestDataExpr>(make_unique<string>(varcharVal).release(), *VarCharType()).release(),
-        make_unique<TestDataExpr>(make_unique<string>("").release(), *VarCharType(0)).release());
+    TestCoalesceExpr expectedExpr(make_unique<TestLiteralExpr>(make_unique<string>(varcharVal).release(), *VarCharType()).release(),
+                                  make_unique<TestLiteralExpr>(make_unique<string>("").release(), *VarCharType(0)).release());
     expectedExpr.isEqual(coalesceExpr);
     delete coalesceExpr;
 }
@@ -632,8 +660,8 @@ TEST(JSONParserTest, FuncExpr_substr)
     vector<string> argsJson = { getVarcharTestJson(varcharVal, varcharWidth), getInt32TestJSON(int32Val) };
     string unparsedFuncJson = getFuncTestJson(OMNI_VEC_TYPE_VARCHAR, "substr", argsJson);
     Expr *funcExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFuncJson));
-    vector<TestExpr *> args = { make_unique<TestDataExpr>(make_unique<string>(varcharVal).release(), *VarCharType()).release(),
-        make_unique<TestDataExpr>(int32Val, *IntType()).release() };
+    vector<TestExpr *> args = { make_unique<TestLiteralExpr>(make_unique<string>(varcharVal).release(), *VarCharType()).release(),
+                                make_unique<TestLiteralExpr>(int32Val, *IntType()).release() };
     TestFuncExpr expectedExpr(*VarCharType(), "substr", args);
     expectedExpr.isEqual(funcExpr);
     delete funcExpr;
@@ -644,8 +672,8 @@ TEST(JSONParserTest, InExpr)
     vector<string> argsJson = { getInt32TestJSON(int32Val), getInt32TestJSON(0), getInt32TestJSON(2) };
     string unparsedInJson = getInTestJson(argsJson);
     Expr *inExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedInJson));
-    vector<TestExpr *> args = { make_unique<TestDataExpr>(int32Val, *IntType()).release(), make_unique<TestDataExpr>(0, *IntType()).release(),
-        make_unique<TestDataExpr>(2, *IntType()).release() };
+    vector<TestExpr *> args = { make_unique<TestLiteralExpr>(int32Val, *IntType()).release(), make_unique<TestLiteralExpr>(0, *IntType()).release(),
+                            make_unique<TestLiteralExpr>(2, *IntType()).release() };
     TestInExpr expectedExpr(args);
     expectedExpr.isEqual(inExpr);
     delete inExpr;
@@ -657,10 +685,10 @@ TEST(JSONParserTest, IfExpr)
         getBinaryTestJson(OMNI_VEC_TYPE_BOOLEAN, CmpOps.at(EQ), getInt32TestJSON(int32Val), getInt64TestJson(int64Val));
     string unparsedIfJson = getIfTestJson(OMNI_VEC_TYPE_INT, conditionJson, getInt32TestJSON(int32Val), getInt32TestJSON(4));
     Expr *ifExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedIfJson));
-    TestBinaryExpr *condition = new TestBinaryExpr(EQ, make_unique<TestDataExpr>(int32Val, *IntType()).release(),
-        make_unique<TestDataExpr>(int64Val, *LongType()).release());
-    TestIfExpr expectedExpr(condition, make_unique<TestDataExpr>(int32Val, *IntType()).release(),
-        make_unique<TestDataExpr>(4, *IntType()).release());
+    TestBinaryExpr *condition = new TestBinaryExpr(EQ, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
+                                               make_unique<TestLiteralExpr>(int64Val, *LongType()).release());
+    TestIfExpr expectedExpr(condition, make_unique<TestLiteralExpr>(int32Val, *IntType()).release(),
+                        make_unique<TestLiteralExpr>(4, *IntType()).release());
     expectedExpr.isEqual(ifExpr);
     delete ifExpr;
 }

@@ -119,7 +119,11 @@ Expr *Parser::ParseRowExpression(const string &inputStr, VecTypes inputTypes, in
     int firstParenInd = input.find('(');
     // Check if it is just data (i.e. 123, #4, 34.4)
     if (firstParenInd == string::npos) {
-        return GenerateData(input, inputTypes);
+        if (input[0] == '#') {
+            return GenerateFieldExpr(input, inputTypes);
+        } else {
+            return GenerateLiteralExpr(input);
+        }
     }
 
     // demangled operator string
@@ -208,8 +212,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         return std::make_unique<CoalesceExpr>(args[0], args[1]).release();
     if (opStr == "IF") {
         if (TypeUtil::IsStringType(args[ARG2]->GetReturnTypeId()) &&
-            args[ARG2]->GetType() == ExprType::DATA_E &&
-            static_cast<DataExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
+            args[ARG2]->GetType() == ExprType::LITERAL_E &&
+            static_cast<LiteralExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
             return std::make_unique<IfExpr>(args[0], args[1], ParserHelper::GetDefaultValueForType(args[1]->GetReturnTypeId()))
                 .release();
         }
@@ -223,9 +227,16 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     }
     // When casting to the same type, the result is the argument itself
     // Treat argument as constant DataExpr instead of returning FuncExpr
-    if (opStr == "CAST" && args.size() == 1 && (typeId == args[0]->GetReturnTypeId())) {
-        return static_cast<DataExpr *>(args[0]);
+        if (opStr == "CAST" && args.size() == 1 && (typeId == args[0]->GetReturnTypeId())) {
+        if (args[0]->GetType() == LITERAL_E) {
+            return static_cast<LiteralExpr *>(args[0]);
+        } else if (args[0]->GetType() == FIELD_E) {
+            return static_cast<FieldExpr *>(args[0]);
+        } else {
+            return nullptr;
+        }
     }
+
     // Function
     // Check that the signature matches
     std::string funcID = ph.GetFnIdentifier(opStr, args, type->GetId());
@@ -256,16 +267,16 @@ string *FixString(const string &dataStr)
     return fixedStr;
 }
 
-DataExpr *Parser::GenerateDataHelper(const string &dataStr, VecTypePtr currType)
+LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, VecTypePtr currType)
 {
     switch (currType->GetId()) {
         // handle boolean as int32
         case OMNI_VEC_TYPE_BOOLEAN: {
-            return std::make_unique<DataExpr>(stoi(dataStr), std::move(currType)).release();
+            return std::make_unique<LiteralExpr>(stoi(literalStr), std::move(currType)).release();
         }
         case OMNI_VEC_TYPE_INT:
         case OMNI_VEC_TYPE_DATE32: {
-            DataExpr *e = std::make_unique<DataExpr>(stoi(dataStr), std::move(currType)).release();
+            LiteralExpr *e = std::make_unique<LiteralExpr>(stoi(literalStr), std::move(currType)).release();
             e->longVal = e->intVal;
             e->doubleVal = e->intVal;
             return e;
@@ -274,17 +285,17 @@ DataExpr *Parser::GenerateDataHelper(const string &dataStr, VecTypePtr currType)
         case OMNI_VEC_TYPE_DECIMAL128:
         case OMNI_VEC_TYPE_DECIMAL64:
         case OMNI_VEC_TYPE_LONG: {
-            return std::make_unique<DataExpr>(stol(dataStr), std::move(currType)).release();
+            return std::make_unique<LiteralExpr>(stol(literalStr), std::move(currType)).release();
         }
         case OMNI_VEC_TYPE_DOUBLE: {
-            return std::make_unique<DataExpr>(stod(dataStr), std::move(currType)).release();
+            return std::make_unique<LiteralExpr>(stod(literalStr), std::move(currType)).release();
         }
         case OMNI_VEC_TYPE_CHAR:
         case OMNI_VEC_TYPE_VARCHAR: {
-            return std::make_unique<DataExpr>(FixString(dataStr), std::move(currType)).release();
+            return std::make_unique<LiteralExpr>(FixString(literalStr), std::move(currType)).release();
         }
         case OMNI_VEC_TYPE_NONE: {
-            return std::make_unique<DataExpr>(0, std::move(currType)).release();
+            return std::make_unique<LiteralExpr>(0, std::move(currType)).release();
         }
         default: {
             LogError("type %u is not supported", currType->GetId());
@@ -293,44 +304,44 @@ DataExpr *Parser::GenerateDataHelper(const string &dataStr, VecTypePtr currType)
     }
 }
 
-DataExpr *Parser::GenerateData(string dataStr, VecTypes &inputTypes)
+FieldExpr *Parser::GenerateFieldExpr(string fieldStr, const VecTypes &inputTypes)
 {
-    // Case with column
-    if (dataStr[0] == '#') {
-        int colIdx = stoi(dataStr.substr(1));
-        VecType& colType = const_cast<VecType&>(inputTypes.Get().at(colIdx));
-        return std::make_unique<DataExpr>(colIdx, std::make_unique<VecType>(colType), true).release();
-    }
+    int colIdx = stoi(fieldStr.substr(1));
+    VecType& colType = const_cast<VecType&>(inputTypes.Get().at(colIdx));
+    return std::make_unique<FieldExpr>(colIdx, std::make_unique<VecType>(colType)).release();;
+}
 
-    int typeIdx = dataStr.find(':');
+LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
+{
+    int typeIdx = literalStr.find(':');
     int stepSize = 4;
     int32_t width = INT32_MAX;
     VecTypePtr currType;
     VecTypeId currTypeId;
     if (typeIdx != string::npos) {
-        currTypeId = ParseReturnType(dataStr.substr(typeIdx + 1));
+        currTypeId = ParseReturnType(literalStr.substr(typeIdx + 1));
         if (currTypeId == OMNI_VEC_TYPE_CHAR) {
-            width = stoi(dataStr.substr(typeIdx + stepSize, dataStr.size() - typeIdx - stepSize));
+            width = stoi(literalStr.substr(typeIdx + stepSize, literalStr.size() - typeIdx - stepSize));
         }
-        dataStr = dataStr.substr(0, typeIdx);
+        literalStr = literalStr.substr(0, typeIdx);
     } else {
-        LogError("Unknown constant type for expr: %s", dataStr.c_str());
+        LogError("Unknown constant type for expr: %s", literalStr.c_str());
         return nullptr;
     }
 
     // Case with boolean true/false
-    if (dataStr == "true" || dataStr == "false") {
+    if (literalStr == "true" || literalStr == "false") {
         currType = make_unique<BooleanVecType>();
-        return std::make_unique<DataExpr>(dataStr == "true" ? true : false, std::move(currType)).release();
+        return std::make_unique<LiteralExpr>(literalStr == "true" ? true : false, std::move(currType)).release();
     }
 
     // trim the single quotes for string values if there is any
-    if (TypeUtil::IsStringType(currTypeId) && dataStr[0] == '\'' && dataStr[dataStr.size() - 1] == '\'') {
-        dataStr = dataStr.substr(1, dataStr.size() - 1 - 1);
+    if (TypeUtil::IsStringType(currTypeId) && literalStr[0] == '\'' && literalStr[literalStr.size() - 1] == '\'') {
+        literalStr = literalStr.substr(1, literalStr.size() - 1 - 1);
     }
 
     // case with null constants
-    if (IsNullLiteral(dataStr)) {
+    if (IsNullLiteral(literalStr)) {
         auto expr = ParserHelper::GetDefaultValueForType(currTypeId);
         expr->isNull = true;
         return expr;
@@ -347,5 +358,5 @@ DataExpr *Parser::GenerateData(string dataStr, VecTypes &inputTypes)
     }
 
     // Case with regular data (int, long, double, string ...)
-    return GenerateDataHelper(dataStr, std::move(currType));
+    return GenerateLiteralExprHelper(literalStr, std::move(currType));
 }

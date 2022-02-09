@@ -112,78 +112,78 @@ void ExprPrinter::Visit(const UnaryExpr &e)
     this->indentationDepth--;
 }
 
-void ExprPrinter::Visit(const DataExpr &e)
+void ExprPrinter::Visit(const LiteralExpr &e)
 {
     string indent = GenerateIndentation();
     const bool printWithTypes = false; // for debugging types
-    if (e.isColumn) {
-        if (e.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
-            printf(indent.append("#%d[%d]").c_str(), e.colVal, e.dataType->GetWidth());
-        } else {
-            printf(indent.append("#%d").c_str(), e.colVal);
-        }
-    } else {
-        switch (e.GetReturnTypeId()) {
-            case OMNI_VEC_TYPE_BOOLEAN:
-                if (printWithTypes) {
-                    printf("bool_");
-                }
-                e.boolVal ? printf("%s", indent.append("true").c_str()) :
-                printf("%s", indent.append("false").c_str());
-                break;
-            case OMNI_VEC_TYPE_INT:
+    switch (e.GetReturnTypeId()) {
+        case OMNI_VEC_TYPE_BOOLEAN:
+            if (printWithTypes) {
+                printf("bool_");
+            }
+            e.boolVal ? printf("%s", indent.append("true").c_str()) :
+            printf("%s", indent.append("false").c_str());
+            break;
+        case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
                 if (printWithTypes) {
                     printf("i32_");
                 }
                 printf(indent.append("%d:%s").c_str(), e.intVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
                 break;
-            case OMNI_VEC_TYPE_LONG:
-                if (printWithTypes) {
-                    printf("i64_");
-                }
-                printf(indent.append("%ld:%s").c_str(), e.longVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
-                break;
-            case OMNI_VEC_TYPE_DOUBLE:
-                if (printWithTypes) {
-                    printf("d64_");
-                }
-                printf(indent.append("%f:%s").c_str(), e.doubleVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
-                break;
-            case OMNI_VEC_TYPE_CHAR:
-                if (printWithTypes) {
-                    printf("s_");
-                }
-                printf(
+        case OMNI_VEC_TYPE_LONG:
+            if (printWithTypes) {
+                printf("i64_");
+            }
+            printf(indent.append("%ld:%s").c_str(), e.longVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            break;
+        case OMNI_VEC_TYPE_DOUBLE:
+            if (printWithTypes) {
+                printf("d64_");
+            }
+            printf(indent.append("%f:%s").c_str(), e.doubleVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            break;
+        case OMNI_VEC_TYPE_CHAR:
+            if (printWithTypes) {
+                printf("s_");
+            }
+            printf(
                     indent.append("'%s[%d]':%s").c_str(),
                     (e.stringVal)->c_str(), e.dataType->GetWidth(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
-                break;
-            case OMNI_VEC_TYPE_VARCHAR:
-                if (printWithTypes) {
-                    printf("s_");
-                }
-                printf(
+            break;
+        case OMNI_VEC_TYPE_VARCHAR:
+            if (printWithTypes) {
+                printf("s_");
+            }
+            printf(
                     indent.append("'%s':%s").c_str(), (e.stringVal)->c_str(),
                     TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
-                break;
-            case OMNI_VEC_TYPE_DECIMAL64:
-                if (printWithTypes) {
-                    printf("d64_");
-                }
-                printf(indent.append("%ld").c_str(), (long)e.longVal);
-                break;
-            case OMNI_VEC_TYPE_DECIMAL128:
-                if (printWithTypes) {
-                    printf("d128_");
-                }
-                // FIXME: printing as int64_t for now;
-                printf(indent.append("%ld").c_str(), (long)e.longVal);
-                break;
+            break;
+        case OMNI_VEC_TYPE_DECIMAL64:
+            if (printWithTypes) {
+                printf("d64_");
+            }
+            printf(indent.append("%ld").c_str(), (long)e.longVal);
+            break;
+        case OMNI_VEC_TYPE_DECIMAL128:
+            if (printWithTypes) {
+                printf("d128_");
+            }
+            // FIXME: printing as int64_t for now;
+            printf(indent.append("%ld").c_str(), (long)e.longVal);
+            break;
             default:
-                printf(
-                    "invalid DataType %d",
-                    e.GetReturnTypeId());
-        }
+                printf("invalid DataType %d", e.GetReturnTypeId());
+    }
+}
+
+void ExprPrinter::Visit(const FieldExpr &e)
+{
+    string indent = GenerateIndentation();
+    if (e.GetReturnTypeId() == OMNI_VEC_TYPE_CHAR) {
+        printf(indent.append("#%d[%d]").c_str(), e.colVal, e.width);
+    } else {
+        printf(indent.append("#%d").c_str(), e.colVal);
     }
 }
 

@@ -45,8 +45,7 @@ VecType RowProjection::GetReturnType()
 
 bool RowProjection::IsColumnProjection()
 {
-    return this->expression != nullptr && this->expression->GetType() == ExprType::DATA_E &&
-        static_cast<const DataExpr *>(this->expression)->isColumn;
+    return this->expression != nullptr && this->expression->GetType() == ExprType::FIELD_E;
 }
 
 int RowProjection::GetIndexIfColumnProjection()
@@ -54,7 +53,7 @@ int RowProjection::GetIndexIfColumnProjection()
     if (!IsColumnProjection()) {
         return -1;
     }
-    return static_cast<const DataExpr *>(this->expression)->colVal;
+    return static_cast<const FieldExpr*>(this->expression)->colVal;
 }
 }
 }
@@ -64,13 +63,11 @@ bool Projection::Initialize(bool filter)
 {
     // short-circuit logic for column projections
     // no need to go through codegen
-    if (expr->GetType() == DATA_E) {
-        auto dataExpr = static_cast<const DataExpr *>(expr);
-        if (dataExpr->isColumn) {
-            this->isColumnProjection = true;
-            this->columnProjectionIndex = dataExpr->colVal;
-            return true;
-        }
+    if (expr->GetType() == FIELD_E) {
+        auto fieldExpr = static_cast<const FieldExpr *>(expr);
+        this->isColumnProjection = true;
+        this->columnProjectionIndex = fieldExpr->colVal;
+        return true;
     }
 
     this->codegen = ProjectionCodeGen::Create("proj_func", *(this->expr), filter);
