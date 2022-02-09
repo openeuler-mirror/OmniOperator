@@ -13,30 +13,34 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename IN, typename ResultType> class SumAggregator : public Aggregator {
 public:
-    SumAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out) {}
-    SumAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, out, inputRaw, outputPartial)
+    SumAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel) {}
+    SumAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)
     {}
     ~SumAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, Vector *colPtr, uint32_t offset) override
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        if (UNLIKELY(colPtr->IsValueNull(offset))) {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
         if (state.val == nullptr) {
-            InitiateGroup(state, colPtr, offset);
+            InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
-        *(static_cast<ResultType *>(state.val)) += (static_cast<V *>(colPtr))->GetValue(offset);
+        *(static_cast<ResultType *>(state.val)) += (static_cast<V *>(vector))->GetValue(offset);
     }
 
-    void InitiateGroup(AggregateState &state, Vector *colPtr, uint32_t offset) override
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        if (UNLIKELY(colPtr->IsValueNull(offset))) {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
+        if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
-        auto curVal = (static_cast<V *>(colPtr))->GetValue(offset);
+        auto curVal = (static_cast<V *>(vector))->GetValue(offset);
         int32_t len = sizeof(ResultType);
         auto ptr = executionContext->getArena()->Allocate(len);
         *reinterpret_cast<ResultType *>(ptr) = curVal;

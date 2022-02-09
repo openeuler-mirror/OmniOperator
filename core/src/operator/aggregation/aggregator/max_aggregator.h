@@ -9,21 +9,23 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename ResultType> class MaxAggregator : public Aggregator {
 public:
-    MaxAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out) {}
+    MaxAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel) {}
 
-    MaxAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial)
+    MaxAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~MaxAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
         if (state.val == nullptr) {
-            InitiateGroup(state, vector, offset);
+            this->InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
         auto rowVal = (static_cast<V *>(vector))->GetValue(offset);
@@ -31,8 +33,10 @@ public:
         *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
     }
 
-    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }

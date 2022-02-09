@@ -126,8 +126,8 @@ public:
 
     OmniStatus Close() override;
     void PreLoop(VectorBatch *vecBatch);
-    void InLoop(Vector **vectors, uint32_t offset, const int32_t *types, int32_t colNum, const int32_t *groupByColIdx,
-        int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum, const int32_t *aggFuncTypes);
+    void InLoop(VectorBatch *vecBatch, uint32_t offset, const int32_t *types, const int32_t *groupByColIdx,
+        int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum);
     void PostLoop(VectorBatch *vecBatch) const;
     std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> &GetStates()
     {

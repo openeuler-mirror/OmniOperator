@@ -666,38 +666,15 @@ JitContext *CreateHashAggregationJitContext(VecTypes &groupByVecTypes, int32_t *
     }
 
     ParamValue pColType = ParamValue(colTypes, colNum);
-    ParamValue pColCount = ParamValue(&colNum);
-    ParamValue pGroupByColIdx = ParamValue(groupByCols, groupColNum);
     ParamValue pGroupNum = ParamValue(&groupColNum);
-    ParamValue pAggColIdx = ParamValue(aggCols, aggColNum);
     ParamValue pAggNum = ParamValue(&aggColNum);
-    ParamValue pAggDataType = ParamValue(aggTypeIds, aggColNum);
-    ParamValue pAggTypes = ParamValue(aggFuncTypes, aggFuncsCount);
 
     Specialization inloopSp;
     inloopSp.AddSpecializedParam(PARAM_INDEX_3, &pColType);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_4, &pColCount);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_6, &pGroupNum);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_8, &pAggNum);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_9, &pAggTypes);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_5, &pGroupNum);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_7, &pAggNum);
 
-    Specialization processAggSp;
-    processAggSp.AddSpecializedParam(PARAM_INDEX_2, &pAggNum);
-    processAggSp.AddSpecializedParam(PARAM_INDEX_3, &pColType);
-
-    Specialization hashColumnSp;
-    hashColumnSp.AddSpecializedParam(PARAM_INDEX_2, &pColType);
-    hashColumnSp.AddSpecializedParam(PARAM_INDEX_3, &pGroupNum);
-
-    Specialization aggColumnSp;
-    aggColumnSp.AddSpecializedParam(PARAM_INDEX_2, &pColType);
-    aggColumnSp.AddSpecializedParam(PARAM_INDEX_3, &pAggNum);
-
-    map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp },
-        // TODO: open this optimization
-        //        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
-        //        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
-        { OMNIJIT_HASH_GROUPBY_PROCESS_AGG, processAggSp } };
+    map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp } };
 
     omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("group_aggregation"),
         hashGroupbySps);
@@ -745,38 +722,15 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
     std::copy(projectTypes.begin() + groupColNum, projectTypes.begin() + groupColNum + aggColNum, aggTypeIds);
 
     ParamValue pColType = ParamValue(projectTypes.data(), totalNum);
-    ParamValue pColCount = ParamValue(&totalNum);
-    ParamValue pGroupByColIdx = ParamValue(groupByCols, groupColNum);
     ParamValue pGroupNum = ParamValue(&groupColNum);
-    ParamValue pAggColIdx = ParamValue(aggCols, aggColNum);
     ParamValue pAggNum = ParamValue(&aggColNum);
-    ParamValue pAggDataType = ParamValue(aggTypeIds, aggColNum);
-    ParamValue pAggTypes = ParamValue(aggFuncTypes, aggFuncsCount);
 
     Specialization inloopSp;
     inloopSp.AddSpecializedParam(PARAM_INDEX_3, &pColType);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_4, &pColCount);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_6, &pGroupNum);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_8, &pAggNum);
-    inloopSp.AddSpecializedParam(PARAM_INDEX_9, &pAggTypes);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_5, &pGroupNum);
+    inloopSp.AddSpecializedParam(PARAM_INDEX_7, &pAggNum);
 
-    Specialization processAggSp;
-    processAggSp.AddSpecializedParam(PARAM_INDEX_2, &pAggNum);
-    processAggSp.AddSpecializedParam(PARAM_INDEX_3, &pColType);
-
-    Specialization hashColumnSp;
-    hashColumnSp.AddSpecializedParam(PARAM_INDEX_2, &pColType);
-    hashColumnSp.AddSpecializedParam(PARAM_INDEX_3, &pGroupNum);
-
-    Specialization aggColumnSp;
-    aggColumnSp.AddSpecializedParam(PARAM_INDEX_2, &pColType);
-    aggColumnSp.AddSpecializedParam(PARAM_INDEX_3, &pAggNum);
-
-    map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp },
-        // TODO: open this optimization
-        //        {OMNIJIT_HASH_GROUPBY_HASH_COLUMN, *hashColumnSp},
-        //        {OMNIJIT_HASH_GROUPBY_AGG_COLUMN, *aggColumnSp},
-        { OMNIJIT_HASH_GROUPBY_PROCESS_AGG, processAggSp } };
+    map<string, Specialization> hashGroupbySps = { { OMNIJIT_HASH_GROUPBY_INLOOP, inloopSp } };
 
     omniruntime::jit::Context groupAggWithExprContext(GenerateOperatorTemplatePath("group_aggregation_expr"),
         map<string, Specialization>());
