@@ -385,7 +385,7 @@ omniruntime::op::Operator *CreateTestOperator(OperatorFactory *operatorFactory)
 {
     omniruntime::op::Operator *nativeOperator = nullptr;
 
-#if defined(DEBUG_OPERATOR) || defined(DISABLE_JIT)
+#if defined(DEBUG_OPERATOR)
     nativeOperator = operatorFactory->CreateOperator();
 #else
     JitContext *jitContext = operatorFactory->GetJitContext();

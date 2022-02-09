@@ -92,6 +92,9 @@ void GetRequiredTypeIds(VecTypes &inputTypes, const vector<Expr *> &projectKeys,
 JitContext *CreateSortJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColsCount)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     JNI_DEBUG_LOG("create sort JIT context starting.");
     auto start = START();
 
@@ -141,11 +144,15 @@ JitContext *CreateSortJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, 
     JNI_DEBUG_LOG("create sort JIT context finished, elapsed time: %ld ms.", END(start));
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
     const vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     int32_t sortKeysCount = sortKeys.size();
     vector<int32_t> newSourceTypes;
     vector<int32_t> sortCols(sortKeysCount);
@@ -197,11 +204,15 @@ JitContext *CreateSortWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outp
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateHashBuilderJitContext(VecTypes &buildVecTypes, int32_t *buildHashCols, int32_t buildHashColsCount,
     int32_t operatorCount)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     JNI_DEBUG_LOG("create hash builder JIT context starting.");
     auto start = START();
 
@@ -239,11 +250,15 @@ JitContext *CreateHashBuilderJitContext(VecTypes &buildVecTypes, int32_t *buildH
     JNI_DEBUG_LOG("create hash builder JIT context finished, elapsed time: %ld ms.", END(start));
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateLookupJoinJitContext(VecTypes &probeVecTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
     int32_t *probeHashCols, int32_t probeHashColsCount, VecTypes &buildOutputVecTypes, int32_t *buildOutputCols)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     JNI_DEBUG_LOG("create lookup join JIT context starting.");
     auto start = START();
     const int32_t *probeTypes = probeVecTypes.GetIds();
@@ -292,11 +307,15 @@ JitContext *CreateLookupJoinJitContext(VecTypes &probeVecTypes, int32_t *probeOu
     JNI_DEBUG_LOG("create lookup join JIT context finished, elapsed time: %ld ms.", END(start));
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes,
     const vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t operatorCount)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     int32_t buildHashKeysCount = buildHashKeys.size();
     vector<int32_t> buildTypes;
     vector<int32_t> buildHashCols(buildHashKeysCount);
@@ -337,12 +356,16 @@ JitContext *CreateHashBuilderWithExprJitContext(VecTypes &buildVecTypes,
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, const vector<omniruntime::expressions::Expr *> &probeHashKeys,
     VecTypes &buildOutputVecTypes, int32_t *buildOutputCols)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     int32_t probeHashKeysCount = probeHashKeys.size();
     vector<int32_t> probeTypes;
     vector<int32_t> probeHashCols(probeHashKeysCount);
@@ -395,11 +418,15 @@ JitContext *CreateLookupJoinWithExprJitContext(VecTypes &probeVecTypes, int32_t 
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateTopNJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColsCount)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     auto sourceTypeIds = sourceVecTypes.GetIds();
     auto sourceTypesCount = sourceVecTypes.GetSize();
     ParamValue pSourceTypes = ParamValue(sourceTypeIds, sourceTypesCount);
@@ -421,11 +448,15 @@ JitContext *CreateTopNJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int
     jitContext->func = createOperatorFunc;
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateTopNWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes,
     const vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     int32_t sortKeysCount = sortKeys.size();
     vector<int32_t> newSourceTypes;
     vector<int32_t> sortCols(sortKeysCount);
@@ -453,12 +484,16 @@ JitContext *CreateTopNWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTy
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateWindowJitContext(omniruntime::vec::VecTypes &sourceVecTypes, int32_t *outputCols,
     int32_t outputColsCount, int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColsCount, int32_t *allTypes, int32_t allCount)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     auto typesCount = sourceVecTypes.GetSize();
     const int32_t *sourceTypes = sourceVecTypes.GetIds();
     int32_t finalSortColsCount = sortColsCount + partitionCount;
@@ -523,12 +558,16 @@ JitContext *CreateWindowJitContext(omniruntime::vec::VecTypes &sourceVecTypes, i
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateWindowWithExprJitContext(VecTypes &sourceVecTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *partitionCols, int32_t partitionCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
     int32_t sortColsCount, VecTypes &outputTypes, const vector<omniruntime::expressions::Expr *> &argumentKeys)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     auto typesCount = sourceVecTypes.GetSize();
     vector<VecType> allTypesVec;
     allTypesVec.insert(allTypesVec.end(), sourceVecTypes.Get().begin(), sourceVecTypes.Get().end());
@@ -601,11 +640,15 @@ JitContext *CreateWindowWithExprJitContext(VecTypes &sourceVecTypes, int32_t *ou
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateHashAggregationJitContext(VecTypes &groupByVecTypes, int32_t *groupByCols, VecTypes &aggVecTypes,
     int32_t *aggCols, int32_t *aggFuncTypes, int32_t aggFuncsCount, VecTypes &outputVecTypes)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     // groupby channel and id
     auto groupColNum = groupByVecTypes.GetSize();
     auto groupByTypeIds = groupByVecTypes.GetIds();
@@ -668,6 +711,7 @@ JitContext *CreateHashAggregationJitContext(VecTypes &groupByVecTypes, int32_t *
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &sourceVecTypes,
@@ -675,6 +719,9 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
     const vector<omniruntime::expressions::Expr *> &aggKeys, int32_t *aggFuncTypes, int32_t aggFuncsCount,
     omniruntime::vec::VecTypes &outputVecTypes)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     int32_t groupColNum = groupByKeys.size();
     int32_t aggColNum = aggKeys.size();
     int32_t totalNum = groupColNum + aggColNum;
@@ -744,11 +791,15 @@ JitContext *CreateHashAggregationWithExprJitContext(omniruntime::vec::VecTypes &
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
 
 JitContext *CreateAggregationJitContext(VecTypes &sourceVecTypes, int32_t *aggCols, int32_t *aggFuncTypes,
     int32_t aggFuncsCount, VecTypes &outputVecTypes)
 {
+#if defined(DISABLE_JIT)
+    return nullptr;
+#else
     omniruntime::jit::Context groupAggregationContext(GenerateOperatorTemplatePath("non_group_aggregation"),
         map<string, Specialization>());
     Jit jit(vector<omniruntime::jit::Context> { groupAggregationContext });
@@ -759,4 +810,5 @@ JitContext *CreateAggregationJitContext(VecTypes &sourceVecTypes, int32_t *aggCo
     jitContext->func = reinterpret_cast<uintptr_t>(createOperatorFunc);
 
     return jitContext;
+#endif
 }
