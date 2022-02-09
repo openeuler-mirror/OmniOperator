@@ -191,7 +191,7 @@ void ExpressionCodeGen::InitializeCodegenTargets()
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 }
 
-bool ExpressionCodeGen::Initialize()
+void ExpressionCodeGen::Initialize()
 {
     std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
     jit = eoe(LLJITBuilder().create());

@@ -21,7 +21,6 @@ std::vector<Function> GetDecimalFunctionRegistry()
         // Decimal Multiplication
         Function(reinterpret_cast<void*>(MulDec128), "Mul_decimal128", {}, paramTypes, retType, false, true)
     };
-    paramTypes.pop_back();
     decimalFnRegistry.insert(decimalFnRegistry.end(), {
             Function(reinterpret_cast<void*>(Decimal128CompareExt), "Decimal128CompareExt", {},
                      {DECIMAL128D, DECIMAL128D}, INT32D, false),

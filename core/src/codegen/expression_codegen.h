@@ -52,7 +52,7 @@ public:
     ExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr);
     ~ExpressionCodeGen() override;
 
-    bool Initialize();
+    void Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
 
