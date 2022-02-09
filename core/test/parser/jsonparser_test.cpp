@@ -115,6 +115,15 @@ string getFieldRefTestJson(int32_t dt, int32_t colval)
     return ss.str();
 }
 
+string getDecimalFieldRefTestJson(int32_t dt, int32_t colval, int32_t precision, int32_t scale)
+{
+    ss.str("");
+    ss << R"({ "exprType": "FIELD_REFERENCE", "dataType": )" << dt << R"(, "colVal": )" << colval <<
+    R"(, "precision": )" << precision << R"(, "scale": )" << scale << R"(})";
+    return ss.str();
+}
+
+
 string getAndTestJson(const string &left, const string &right)
 {
     ss.str("");
@@ -601,6 +610,25 @@ TEST(JSONParserTest, FieldReference)
     delete fieldRefExpr;
 }
 
+
+TEST(JSONParserTest, Decimal128FieldReference)
+{
+    string unparsedFieldRefJson = getDecimalFieldRefTestJson(OMNI_VEC_TYPE_DECIMAL128, colNum, 0, 0);
+    Expr *fieldRefExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFieldRefJson));
+    TestFieldExpr expectedExpr(OMNI_VEC_TYPE_DECIMAL128, colNum);
+    expectedExpr.isEqual(fieldRefExpr);
+    delete fieldRefExpr;
+}
+
+TEST(JSONParserTest, Decimal64FieldReference)
+{
+    string unparsedFieldRefJson = getDecimalFieldRefTestJson(OMNI_VEC_TYPE_DECIMAL64, colNum, 0, 0);
+    Expr *fieldRefExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedFieldRefJson));
+    TestFieldExpr expectedExpr(OMNI_VEC_TYPE_DECIMAL64, colNum);
+    expectedExpr.isEqual(fieldRefExpr);
+    delete fieldRefExpr;
+}
+
 TEST(JSONParserTest, BinaryExpr_EQ)
 {
     string unparsedBinaryJson =
@@ -721,7 +749,7 @@ TEST(JSONParserTest, UnsupportedFunctionExprs)
 
 TEST(JSONParserTest, UnsupportedDecimal128FunctionExprs)
 {
-    vector<string> argsJson = { getFieldRefTestJson(OMNI_VEC_TYPE_DECIMAL128, 1)};
+    vector<string> argsJson = { getDecimalFieldRefTestJson(OMNI_VEC_TYPE_DECIMAL128, 1, 0, 0)};
     string castJson = getFuncTestJson(OMNI_VEC_TYPE_LONG, "CAST", argsJson);
 
     auto parsedExpr = JSONParser::ParseJSON(nlohmann::json::parse(castJson));

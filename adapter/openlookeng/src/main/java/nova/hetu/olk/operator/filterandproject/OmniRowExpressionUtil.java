@@ -213,6 +213,9 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
                     .set("arguments", arguments);
             if ("char".equalsIgnoreCase(callSignature.getBase())) {
                 callRoot.put("width", callSignature.getParameters().get(0).getLongLiteral().intValue());
+            } else if ("decimal".equalsIgnoreCase(callSignature.getBase())) {
+                callRoot.put("precision", callSignature.getParameters().get(0).getLongLiteral().intValue())
+                        .put("scale", callSignature.getParameters().get(1).getLongLiteral().intValue());
             }
         }
         return callRoot;
@@ -269,6 +272,12 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             inputRefRoot.put("width", ((CharVecType) vecType).getWidth());
         } else if (vecType instanceof VarcharVecType) {
             inputRefRoot.put("width", ((VarcharVecType) vecType).getWidth());
+        } else if (vecType instanceof Decimal64VecType) {
+            Decimal64VecType t = ((Decimal64VecType) vecType);
+            inputRefRoot.put("precision", t.getPrecision()).put("scale", t.getScale());
+        } else if (vecType instanceof Decimal128VecType) {
+            Decimal128VecType t = ((Decimal128VecType) vecType);
+            inputRefRoot.put("precision", t.getPrecision()).put("scale", t.getScale());
         }
 
         return inputRefRoot;

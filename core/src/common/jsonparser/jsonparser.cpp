@@ -48,8 +48,16 @@ Expr *JSONParser::ParseJSONFieldRef(Json jsonExpr)
         } else {
             retType = make_unique<VarcharVecType>(width);
         }
+    } else if (TypeUtil::IsDecimalType(typeId)) {
+        int precision = jsonExpr["precision"].get<int32_t>();
+        int scale = jsonExpr["scale"].get<int32_t>();
+        if (typeId == OMNI_VEC_TYPE_DECIMAL64) {
+            retType = make_unique<Decimal64VecType>(precision, scale);
+        } else {
+            retType = make_unique<Decimal128VecType>(precision, scale);
+        }
     } else {
-        retType = make_unique<VecType>(typeId);
+            retType = make_unique<VecType>(typeId);
     }
     return make_unique<FieldExpr>(colVal, std::move(retType)).release();
 }

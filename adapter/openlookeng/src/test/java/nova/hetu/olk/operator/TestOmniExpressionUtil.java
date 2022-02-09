@@ -32,6 +32,7 @@ public class TestOmniExpressionUtil {
     private final ConstantExpression CONDITION1 = constant(10000, BIGINT);
     private final ConstantExpression CONDITION2 = constant(10471, BIGINT);
     private final InputReferenceExpression EXTENDED_PRICE = field(1, BIGINT);
+    private final InputReferenceExpression EXTENDED_DECIMAL_PRICE = field(1, createDecimalType());
     private final InputReferenceExpression DISCOUNT = field(2, BIGINT);
     private final ConstantExpression BOOL1 = constant(true, BOOLEAN);
     private final ConstantExpression BOOL2 = constant(false, BOOLEAN);
@@ -111,6 +112,18 @@ public class TestOmniExpressionUtil {
     public void testInputReferenceExpression(){
         String referenceExpected = "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":2,\"colVal\":1}";
         String parseRes = OmniRowExpressionUtil.expressionStringify(EXTENDED_PRICE, OmniRowExpressionUtil.Format.JSON);
+        Assert.assertEquals(parseRes, referenceExpected, "InputReference parsed result doesn't match");
+    }
+
+    /**
+     * Test DecimalInputReferenceExpression
+     */
+    @Test
+    public void testDecimnalInputReferenceExpression(){
+        String referenceExpected = "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"colVal\":1," +
+                "\"precision\":38,\"scale\":0}";
+        String parseRes = OmniRowExpressionUtil.expressionStringify(EXTENDED_DECIMAL_PRICE,
+                OmniRowExpressionUtil.Format.JSON);
         Assert.assertEquals(parseRes, referenceExpected, "InputReference parsed result doesn't match");
     }
 
