@@ -195,8 +195,8 @@ string getFuncTestJson(int32_t rt, const string &func, const vector<string> &arg
 class TestExpr {
 public:
     DataType dataType;
-    virtual bool isEqual(Expr *that) const {};
-    virtual bool operator == (const Expr &rhs) const {};
+    virtual bool isEqual(Expr *that) const { return false; };
+    virtual bool operator == (const Expr &rhs) const { return false; };
     virtual ~TestExpr() = default;
 };
 
