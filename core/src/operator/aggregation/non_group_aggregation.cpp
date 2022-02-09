@@ -66,8 +66,8 @@ Operator *AggregationOperatorFactory::CreateOperator()
     for (int32_t i = 0; i < this->aggOutputTypes.GetSize(); i++) {
         auto inputType = aggInputTypes[i];
         auto outputType = aggOutputTypes.Get()[i];
-        auto aggregator =
-            aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(), inputRaw, outputPartial);
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(),
+            aggInputCols[i], inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
@@ -84,9 +84,8 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     for (int32_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggStates[aggIdx];
-        auto vector = vectors[aggInputCols[aggIdx]];
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            aggregator->ProcessGroup(state, vector, rowIdx);
+            aggregator->ProcessGroup(state, vecBatch, rowIdx);
         }
     }
     VectorHelper::FreeVecBatch(vecBatch);

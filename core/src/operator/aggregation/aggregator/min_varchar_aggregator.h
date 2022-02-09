@@ -9,21 +9,23 @@ namespace omniruntime {
 namespace op {
 class MinVarcharAggregator : public Aggregator {
 public:
-    MinVarcharAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out) {}
+    MinVarcharAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel) {}
 
-    MinVarcharAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial)
+    MinVarcharAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~MinVarcharAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
         if (state.val == nullptr) {
-            this->InitiateGroup(state, vector, offset);
+            this->InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
         uint8_t *rowVal = nullptr;
@@ -38,8 +40,10 @@ public:
         return;
     }
 
-    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }

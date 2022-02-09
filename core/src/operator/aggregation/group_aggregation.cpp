@@ -138,8 +138,8 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         auto outputType = this->aggOutputTypes.Get()[i];
         ColumnIndex c = { this->aggColIdx[i], inputType, outputType };
         aggIndex[i] = c;
-        auto aggregator =
-            aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(), inputRaw, outputPartial);
+        auto aggregator = aggregatorFactories[i]->CreateAggregator(inputType.GetId(), outputType.GetId(), aggColIdx[i],
+            inputRaw, outputPartial);
         aggs.push_back(std::move(aggregator));
     }
 
@@ -227,9 +227,8 @@ static int32_t IsSameGroupByTuples(Vector **vectors, const uint32_t offset, cons
 }
 
 SPECIALIZE(OMNIJIT_HASH_GROUPBY_INLOOP)
-void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const int32_t *types, int32_t colNum,
-    const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum,
-    const int32_t *aggFuncTypes)
+void HashAggregationOperator::InLoop(VectorBatch *vecBatch, uint32_t rowCount, const int32_t *types,
+    const int32_t *groupByColIdx, int32_t groupByColNum, const int32_t *aggColIdx, int32_t aggColNum)
 {
     static const int blockSize = 1024;
     uint64_t combinedHashVal[blockSize];
@@ -237,11 +236,11 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
     Vector *aggrByVectors[aggColNum];
     int32_t aggrByTypes[aggColNum];
     for (int i = 0; i < groupByColNum; ++i) {
-        groupByVectors[i] = vectors[groupByColIdx[i]];
+        groupByVectors[i] = vecBatch->GetVector(groupByColIdx[i]);
     }
     for (int i = 0; i < aggColNum; ++i) {
         int32_t idx = aggColIdx[i];
-        aggrByVectors[i] = vectors[idx];
+        aggrByVectors[i] = vecBatch->GetVector(idx);
         aggrByTypes[i] = types[idx];
     }
     uint32_t run = blockSize;
@@ -253,7 +252,6 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
             run = rowCount - start;
         }
         GenerateCombinedHashes(groupByVectors, start, run, groupByColNum, combinedHashVal);
-        int32_t decodedIdx;
         for (uint32_t rowIdx = 0; rowIdx < run; ++rowIdx) {
             uint64_t hash = combinedHashVal[rowIdx];
             int32_t isSamePos = -1;
@@ -268,13 +266,11 @@ void HashAggregationOperator::InLoop(Vector **vectors, uint32_t rowCount, const 
                 bucket.push_back(groupByTuple);
                 size_t chainLength = bucket.size();
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    Vector *decodedVec = VectorHelper::ExpandVectorAndIndex(aggrByVectors[i], actualIdx, decodedIdx);
-                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], decodedVec, decodedIdx);
+                    aggregators[i]->InitiateGroup(bucket[chainLength - 1][groupByColNum + i], vecBatch, actualIdx);
                 }
             } else {
                 for (int32_t i = 0; i < aggColNum; ++i) {
-                    Vector *decodedVec = VectorHelper::ExpandVectorAndIndex(aggrByVectors[i], actualIdx, decodedIdx);
-                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], decodedVec, decodedIdx);
+                    aggregators[i]->ProcessGroup(bucket[isSamePos][groupByColNum + i], vecBatch, actualIdx);
                 }
             }
         }
@@ -303,10 +299,9 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
     VERIFY_INPUT_TYPES(vecBatch, groupByColIdx.get(), groupColNum, aggColIdx.get(), aggColNum, this->sourceTypes);
 
     uint32_t rowCount = vecBatch->GetRowCount();
-    Vector **vectors = vecBatch->GetVectors();
 
-    this->InLoop(vectors, rowCount, vecBatch->GetVectorTypeIds(), vectorCount, groupByColIdx.get(), groupColNum,
-        aggColIdx.get(), aggColNum, aggFuncTypes.get());
+    this->InLoop(vecBatch, rowCount, vecBatch->GetVectorTypeIds(), groupByColIdx.get(), groupColNum, aggColIdx.get(),
+        aggColNum);
 
     this->PostLoop(vecBatch);
     VectorHelper::FreeVecBatch(vecBatch);

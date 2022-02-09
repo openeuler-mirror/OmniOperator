@@ -9,16 +9,18 @@ namespace omniruntime {
 namespace op {
 class CountAggregator : public Aggregator {
 public:
-    CountAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in, out) {}
+    CountAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in, out, channel) {}
 
-    CountAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in, out, inputRaw, outputPartial)
+    CountAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_COUNT, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~CountAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
@@ -29,8 +31,10 @@ public:
         }
     }
 
-    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         // It is only effective when COUNT(col). When COUNT(*) or COUNT(1) should directly accumulate vector size;
         if (UNLIKELY(vector->IsValueNull(offset))) {
             state.count = 0;

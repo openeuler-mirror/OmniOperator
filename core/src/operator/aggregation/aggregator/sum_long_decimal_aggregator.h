@@ -9,18 +9,18 @@ namespace omniruntime {
 namespace op {
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out) {}
+    SumLongDecimalAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, channel, in, out) {}
 
-    SumLongDecimalAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, inputRaw, outputPartial)
+    SumLongDecimalAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~SumLongDecimalAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override {}
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override {}
 
 
-    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override {}
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override {}
 
 
     // TODO extract common function for sum/min/max

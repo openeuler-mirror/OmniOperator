@@ -9,22 +9,24 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename ResultType = double> class AverageAggregator : public Aggregator {
 public:
-    AverageAggregator(int32_t in, int32_t out) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out) {}
+    AverageAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel) {}
 
-    AverageAggregator(int32_t in, int32_t out, bool inputRaw, bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, inputRaw, outputPartial)
+    AverageAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
     {}
 
     ~AverageAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
         if (inputRaw == true) {
             if (state.val == nullptr) {
-                this->InitiateGroup(state, vector, offset);
+                this->InitiateGroup(state, vectorBatch, rowIndex);
                 return;
             }
             auto currentVal = static_cast<ResultType *>(state.avgVal);
@@ -32,7 +34,7 @@ public:
             ++state.avgCnt;
         } else {
             if (state.val == nullptr) {
-                this->InitiateGroup(state, vector, offset);
+                this->InitiateGroup(state, vectorBatch, rowIndex);
                 return;
             }
             auto containerVector = static_cast<ContainerVector *>(vector);
@@ -51,8 +53,10 @@ public:
         }
     }
 
-    void InitiateGroup(AggregateState &state, Vector *vector, uint32_t offset) override
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }

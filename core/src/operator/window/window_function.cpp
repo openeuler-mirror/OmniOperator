@@ -110,32 +110,32 @@ void AggregateWindowFunction::ProcessRow(Vector *column, int32_t index, int32_t 
     int32_t frameStart, int32_t frameEnd)
 {
     // the vector is used for aggregation in window operation
-    Vector *resultVector = nullptr;
+    VectorBatch *resultVectorBatch = nullptr;
     if (frameStart < 0) {
         ResetAccumulator();
     } else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
         // same or expanding frame
-        Accumulate(&resultVector, column->GetAllocator(), currentEnd + 1, frameEnd);
+        Accumulate(resultVectorBatch, column->GetAllocator(), currentEnd + 1, frameEnd);
         currentEnd = frameEnd;
     } else {
         // different frame
         ResetAccumulator();
-        Accumulate(&resultVector, column->GetAllocator(), frameStart, frameEnd);
+        Accumulate(resultVectorBatch, column->GetAllocator(), frameStart, frameEnd);
         currentStart = frameStart;
         currentEnd = frameEnd;
     }
     EvaluateFinal(aggregator, column, index);
 
     // after the EvaluateFinal, we should release the vector
-    if (resultVector != nullptr) {
-        delete resultVector;
+    if (resultVectorBatch != nullptr) {
+        VectorHelper::FreeVecBatch(resultVectorBatch);
     }
 }
 
 void AggregateWindowFunction::ResetAccumulator()
 {
     if (currentStart >= 0) {
-        aggregator = aggregatorFactory->CreateAggregator(inputType.GetId(), outputType.GetId());
+        aggregator = aggregatorFactory->CreateAggregator(inputType.GetId(), outputType.GetId(), 0);
         aggregateState = std::make_unique<omniruntime::op::AggregateState>();
         currentStart = -1;
         currentEnd = -1;
@@ -148,7 +148,7 @@ void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregat
     pAggregator->ExtractValue(aggregateState.operator*(), pColumn, index);
 }
 
-void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator *vecAllocator, int32_t start,
+void AggregateWindowFunction::Accumulate(VectorBatch *resultVectorBatch, VectorAllocator *vecAllocator, int32_t start,
     int32_t end)
 {
     if (start > end) {
@@ -161,7 +161,9 @@ void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator 
         0;
 
     // this is important to package data into an extra vector and use it to do the aggregation
-    *resultVector = VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount);
+    resultVectorBatch = new VectorBatch(1, rowCount);
+    resultVectorBatch->SetVector(0,
+        VectorHelper::CreateVector(vecAllocator, inputType.GetId(), rowCount * width, rowCount));
     for (int32_t resultVectorPosition = start; resultVectorPosition <= end; ++resultVectorPosition) {
         int64_t sliceAddress =
             windowIndex->GetPagesIndex()->GetValueAddresses()[resultVectorPosition + windowIndex->GetStart()];
@@ -174,13 +176,14 @@ void AggregateWindowFunction::Accumulate(Vector **resultVector, VectorAllocator 
         Vector *vector = vectorBatch[argumentChannels][vectorIndex];
         int32_t originalVectorPosition;
         Vector *originalVector = VectorHelper::ExpandVectorAndIndex(vector, vectorPosition, originalVectorPosition);
-        AccumulateData(start, *resultVector, resultVectorPosition, originalVectorPosition, originalVector);
+        AccumulateData(start, resultVectorBatch, resultVectorPosition, originalVectorPosition, originalVector);
     }
 }
 
-void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Vector *resultVector,
+void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::VectorBatch *resultVectorBatch,
     int32_t resultVectorPosition, int32_t originalVectorPosition, omniruntime::vec::Vector *originalVector)
 {
+    auto resultVector = resultVectorBatch->GetVector(0);
     if (originalVector->IsValueNull(originalVectorPosition)) {
         resultVector->SetValueNull(resultVectorPosition - start);
     } else {
@@ -224,6 +227,6 @@ void AggregateWindowFunction::AccumulateData(int32_t start, omniruntime::vec::Ve
                 break;
         }
 
-        aggregator->ProcessGroup(aggregateState.operator*(), resultVector, resultVectorPosition - start);
+        aggregator->ProcessGroup(aggregateState.operator*(), resultVectorBatch, resultVectorPosition - start);
     }
 }

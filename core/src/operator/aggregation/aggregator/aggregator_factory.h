@@ -22,8 +22,8 @@ public:
      * @param outputPartial
      * @return
      */
-    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, bool inputRaw = true,
-        bool outputPartial = false) = 0;
+    virtual std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) = 0;
 };
 
 
@@ -31,22 +31,22 @@ class SumAggregatorFactory : public AggregatorFactory {
 public:
     SumAggregatorFactory() {}
     ~SumAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, bool inputRaw = true,
-        bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) override
     {
         switch (inputType) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
-                return std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(inputType, outputType, inputRaw,
-                    outputPartial);
+                return std::make_unique<SumAggregator<IntVector, int32_t, int64_t>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_LONG: {
-                return std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(inputType, outputType, inputRaw,
-                    outputPartial);
+                return std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                return std::make_unique<SumAggregator<DoubleVector, double, double>>(inputType, outputType, inputRaw,
-                    outputPartial);
+                return std::make_unique<SumAggregator<DoubleVector, double, double>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             /* *                             input type
              * -------------------------------------------
@@ -55,14 +55,16 @@ public:
              * output type | Partial | Varbinary  |        /      |
              * ----------------------------------------
              * |  Final |     /       |    Decimal128 |
-             *     */
+             *      */
             case OMNI_VEC_TYPE_DECIMAL64: {
                 // TODO SumShortDecimalAggregator for olk
-                return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
                 // TODO SumLongDecimalAggregator for olk
-                return std::make_unique<SumLongDecimalAggregator>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<SumLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for sum aggregate", inputType);
@@ -76,8 +78,8 @@ class AverageAggregatorFactory : public AggregatorFactory {
 public:
     AverageAggregatorFactory() {}
     ~AverageAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, bool inputRaw = true,
-        bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) override
     {
         // TODO add a param to represent engine type or
         //  inputType and outputType are from physical operations
@@ -87,22 +89,26 @@ public:
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
             case OMNI_VEC_TYPE_CONTAINER: {
-                return std::make_unique<AverageAggregator<IntVector>>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<AverageAggregator<IntVector>>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
             }
             case OMNI_VEC_TYPE_LONG: {
-                return std::make_unique<AverageAggregator<LongVector>>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<AverageAggregator<LongVector>>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                return std::make_unique<AverageAggregator<DoubleVector>>(inputType, outputType, inputRaw,
+                return std::make_unique<AverageAggregator<DoubleVector>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
                 // TODO AverageShortDecimalAggregator for olk
             case OMNI_VEC_TYPE_DECIMAL64: {
-                return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
             }
                 // TODO AverageLongDecimalAggregator for olk
             case OMNI_VEC_TYPE_DECIMAL128: {
-                return std::make_unique<AverageLongDecimalAggregator>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<AverageLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                    outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for average aggregate", inputType);
@@ -116,31 +122,31 @@ class MinAggregatorFactory : public AggregatorFactory {
 public:
     MinAggregatorFactory() {}
     ~MinAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, bool inputRaw = true,
-        bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) override
     {
         switch (inputType) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
-                return std::make_unique<MinAggregator<IntVector, int32_t>>(inputType, outputType, inputRaw,
+                return std::make_unique<MinAggregator<IntVector, int32_t>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64: {
-                return std::make_unique<MinAggregator<LongVector, int64_t>>(inputType, outputType, inputRaw,
+                return std::make_unique<MinAggregator<LongVector, int64_t>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                return std::make_unique<MinAggregator<DoubleVector, double>>(inputType, outputType, inputRaw,
+                return std::make_unique<MinAggregator<DoubleVector, double>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                return std::make_unique<MinAggregator<Decimal128Vector, Decimal128>>(inputType, outputType, inputRaw,
-                    outputPartial);
+                return std::make_unique<MinAggregator<Decimal128Vector, Decimal128>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_VARCHAR:
             case OMNI_VEC_TYPE_CHAR: {
-                return std::make_unique<MinVarcharAggregator>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<MinVarcharAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for min aggregate", inputType);
@@ -154,31 +160,31 @@ class MaxAggregatorFactory : public AggregatorFactory {
 public:
     MaxAggregatorFactory() {}
     ~MaxAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, bool inputRaw = true,
-        bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) override
     {
         switch (inputType) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32: {
-                return std::make_unique<MaxAggregator<IntVector, int32_t>>(inputType, outputType, inputRaw,
+                return std::make_unique<MaxAggregator<IntVector, int32_t>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_LONG:
             case OMNI_VEC_TYPE_DECIMAL64: {
-                return std::make_unique<MaxAggregator<LongVector, int64_t>>(inputType, outputType, inputRaw,
+                return std::make_unique<MaxAggregator<LongVector, int64_t>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_DOUBLE: {
-                return std::make_unique<MaxAggregator<DoubleVector, double>>(inputType, outputType, inputRaw,
+                return std::make_unique<MaxAggregator<DoubleVector, double>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                return std::make_unique<MaxAggregator<Decimal128Vector, Decimal128>>(inputType, outputType, inputRaw,
-                    outputPartial);
+                return std::make_unique<MaxAggregator<Decimal128Vector, Decimal128>>(inputType, outputType, channel,
+                    inputRaw, outputPartial);
             }
             case OMNI_VEC_TYPE_VARCHAR:
             case OMNI_VEC_TYPE_CHAR: {
-                return std::make_unique<MaxVarcharAggregator>(inputType, outputType, inputRaw, outputPartial);
+                return std::make_unique<MaxVarcharAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
             }
             default: {
                 LogError("Unsupported input type %d for min aggregate", inputType);
@@ -193,10 +199,10 @@ class CountAggregatorFactory : public AggregatorFactory {
 public:
     CountAggregatorFactory() {}
     ~CountAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, bool inputRaw = true,
-        bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(int32_t inputType, int32_t outputType, int32_t channel,
+        bool inputRaw = true, bool outputPartial = false) override
     {
-        return std::make_unique<CountAggregator>(inputType, outputType, inputRaw, outputPartial);
+        return std::make_unique<CountAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
     }
 };
 
