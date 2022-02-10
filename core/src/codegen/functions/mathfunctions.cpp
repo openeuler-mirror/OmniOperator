@@ -16,15 +16,14 @@ namespace {
     const int COMBINE_HASH_VALUE = 31;
 }
 
-extern "C" DLLEXPORT long CastInt32ToInt64(int32_t x)
+extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 {
-    return static_cast<long>(x);
+    return static_cast<int64_t>(x);
 }
 
-
-extern "C" DLLEXPORT int CastInt64ToInt32(int64_t x)
+extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x)
 {
-    return static_cast<int>(x);
+    return static_cast<int32_t>(x);
 }
 
 extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
@@ -35,6 +34,16 @@ extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
 extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
 {
     return static_cast<double>(x);
+}
+
+extern "C" DLLEXPORT int32_t CastDoubleToInt32(double x)
+{
+    return static_cast<int32_t>(x);
+}
+
+extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x)
+{
+    return static_cast<int64_t>(x);
 }
 
 extern "C" DLLEXPORT int64_t CombineHash(int64_t prevHashVal, int64_t val)
