@@ -159,6 +159,59 @@ TEST(ProjectTest, Cast)
     delete factory;
 }
 
+TEST(ProjectTest, CastDouble)
+{
+    const int32_t numRows = 1000;
+    double *col1 = MakeDoubles(numRows);
+    double *col2 = MakeDoubles(numRows);
+    const int32_t numCols = 2;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE) };
+
+    DataExpr *data1 = new DataExpr(0, DOUBLED);
+    ParserHelper ph;
+    FunctionRegistry fr;
+    std::string castStr = "CAST";
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    std::string funcID = ph.GetFnIdentifier(castStr, args1, INT32D);
+    FuncExpr *castExpr1 = new FuncExpr(castStr, args1, INT32D, *fr.LookupFunction(funcID));
+
+    DataExpr *data2 = new DataExpr(1, DOUBLED);
+    std::vector<Expr *> args2;
+    args2.push_back(data2);
+    funcID = ph.GetFnIdentifier(castStr, args2, INT64D);
+    FuncExpr *castExpr2 = new FuncExpr(castStr, args2, INT64D, *fr.LookupFunction(funcID));
+
+    std::vector<Expr *> exprs = { castExpr1, castExpr2 };
+
+    VecTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col1, (int64_t) col2};
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        t->GetVector(0)->SetValueNotNull(i);
+        t->GetVector(1)->SetValueNotNull(i);
+    }
+
+    op->AddInput(t);
+    vector<VectorBatch *> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        EXPECT_EQ(val0, i);
+        EXPECT_EQ(val1, i);
+    }
+
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
+}
+
 TEST(ProjectTest, CastInt64ToDecimal128)
 {
     const int32_t numRows = 1000;

@@ -22,6 +22,8 @@ std::vector<Function> GetMathFunctionRegistry()
         Function(reinterpret_cast<void*>(CastInt64ToDouble), castFnStr, {}, {INT64D}, DOUBLED),
         Function(reinterpret_cast<void*>(CastInt32ToInt64), castFnStr, {}, {INT32D}, INT64D),
         Function(reinterpret_cast<void*>(CastInt64ToInt32), castFnStr, {}, {INT64D}, INT32D),
+        Function(reinterpret_cast<void*>(CastDoubleToInt32), castFnStr, {}, {DOUBLED}, INT32D),
+        Function(reinterpret_cast<void*>(CastDoubleToInt64), castFnStr, {}, {DOUBLED}, INT64D),
 
         // insert native function for combine hash math function
         Function(reinterpret_cast<void*>(CombineHash), "combine_hash", {}, {INT64D, INT64D}, INT64D),
