@@ -40,7 +40,7 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
     auto outBatch = std::make_unique<VectorBatch>(vectorCount, rowCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
         Vector *inputVector = vecBatch->GetVector(i);
-        outBatch->SetVector(i, inputVector->Slice(0, inputVector->GetSize()));
+        outBatch->SetVector(i, inputVector->Slice(0, rowCount));
     }
     inputVecBatches.push_back(outBatch.release());
     VectorHelper::FreeVecBatch(vecBatch);
