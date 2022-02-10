@@ -34,6 +34,7 @@ using AggregateState = union AggregateState {
     void *val;
     // For count()
     int64_t count;
+
     // For basic type avg()
     struct {
         void *avgVal;
