@@ -68,9 +68,19 @@ public:
         return lowBits;
     }
 
+    void SetValue(int64_t highBits,uint64_t lowBits){
+        this->highBits=highBits;
+        this->lowBits=lowBits;
+    }
+
     int64_t Sign() const
     {
         return 1 | (highBits >> 63);
+    }
+
+    int64_t IsNegative() const
+    {
+        return highBits<0;
     }
 
     Decimal128 &Negate();

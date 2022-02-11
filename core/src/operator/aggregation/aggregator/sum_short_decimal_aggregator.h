@@ -26,11 +26,13 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }
         if (state.val == nullptr) {
-            InitiateGroup(state, vector, offset);
+            InitiateGroup(state, vectorBatch, offset);
             return;
         }
         if (inputRaw) {
@@ -70,6 +72,8 @@ public:
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
             return;
         }

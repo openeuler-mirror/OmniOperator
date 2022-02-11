@@ -1,9 +1,9 @@
-//
-// Created by root on 2/8/22.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ */
 
-#include "type/decimalOperations.h"
 #include "gtest/gtest.h"
+#include "type/decimalOperations.h"
 #include "vector_common.h"
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregation.h"
@@ -48,9 +48,6 @@ TEST(DecimalOperations, addWithOverflow)
     std::cout<<"left1high is "<<left1.HighBits()<<std::endl;
     std::cout<<"left1low is "<<left1.LowBits()<<std::endl;
 
-
-
-
     if((left1.Abs(left1))<(right1.Abs(right1))){
         std::cout<<"left1 < right1 "<<left1<<std::endl;
     }else if((left1.Abs(left1))>(right1.Abs(right1))){
@@ -59,7 +56,6 @@ TEST(DecimalOperations, addWithOverflow)
         std::cout<<"left1 = right1 "<<left1.HighBits()<<std::endl;
     }
 
-
     long overflow1 = DecimalOperations:: AddWithOverflow(left1,right1,result1);
     std::cout<<"result1high is "<<result1.HighBits()<<std::endl;
     std::cout<<"result1LowBits is "<<result1.LowBits()<<std::endl;
@@ -67,7 +63,4 @@ TEST(DecimalOperations, addWithOverflow)
     std::cout<<"result1 is "<<result1<<std::endl;
     std::cout<<"overflow1 is "<<overflow1<<std::endl;
     EXPECT_EQ(overflow1, 0);
-
-
-
 }
