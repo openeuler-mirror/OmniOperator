@@ -29,27 +29,29 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
      * @param sourceTypes the aggregation source types
      * @param aggFunctionTypes the aggregation function types
      * @param aggInputChannels the aggregation function input channels
+     * @param maskChannels mask chennels array for aggregetions
      * @param aggOutputTypes the aggregation output types
      * @param inputRaw the input raw
      * @param outputPartial the output partial
      */
     public OmniAggregationOperatorFactory(VecType[] sourceTypes, AggType[] aggFunctionTypes, int[] aggInputChannels,
-            VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
-        super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, aggOutputTypes,
-                inputRaw, outputPartial)));
+            int[] maskChannels, VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
+        super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
+                aggOutputTypes, inputRaw, outputPartial)));
     }
 
     private static native long createAggregationOperatorFactory(String sourceTypes, int[] aggFunctionTypes,
-            int[] aggInputChannels, String aggOutputTypes, boolean inputRaw, boolean outputPartial, long jitContext);
+            int[] aggInputChannels, int[] maskChannels, String aggOutputTypes, boolean inputRaw, boolean outputPartial,
+            long jitContext);
 
     private static native long createAggregationJitContext(String sourceTypes, int[] aggFunctionTypes,
-            int[] aggInputChannels, String aggOutputTypes, boolean inputRaw, boolean outputPartial);
+            int[] aggInputChannels, int[] maskChannels, String aggOutputTypes, boolean inputRaw, boolean outputPartial);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         return createAggregationOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
-                toNativeConstants(context.aggFunctionTypes), context.aggInputChannels,
+                toNativeConstants(context.aggFunctionTypes), context.aggInputChannels, context.maskChannels,
                 VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial,
                 factoryContext.getNativeJitContext());
     }
@@ -65,6 +67,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
         private final AggType[] aggFunctionTypes;
 
         private final int[] aggInputChannels;
+
+        private final int[] maskChannels;
 
         private final VecType[] aggOutputTypes;
 
@@ -82,11 +86,12 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
          * @param inputRaw the input raw
          * @param outputPartial the output partial
          */
-        public JitContext(VecType[] sourceTypes, AggType[] aggFunctionTypes, int[] aggInputChannels,
+        public JitContext(VecType[] sourceTypes, AggType[] aggFunctionTypes, int[] aggInputChannels, int[] maskChannels,
                 VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes is null");
             this.aggInputChannels = requireNonNull(aggInputChannels, "aggInputChannels is null");
+            this.maskChannels = requireNonNull(maskChannels, "maskChannels is null");
             this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes is null");
             this.inputRaw = inputRaw;
             this.outputPartial = outputPartial;
@@ -95,7 +100,8 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(aggFunctionTypes),
-                    Arrays.hashCode(aggInputChannels), Arrays.hashCode(aggOutputTypes), inputRaw, outputPartial);
+                    Arrays.hashCode(aggInputChannels), Arrays.hashCode(maskChannels), Arrays.hashCode(aggOutputTypes),
+                    inputRaw, outputPartial);
         }
 
         @Override
@@ -110,6 +116,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
             return Arrays.equals(sourceTypes, that.sourceTypes)
                     && Arrays.equals(aggFunctionTypes, that.aggFunctionTypes)
                     && Arrays.equals(aggInputChannels, that.aggInputChannels)
+                    && Arrays.equals(maskChannels, that.maskChannels)
                     && Arrays.equals(aggOutputTypes, that.aggOutputTypes) && inputRaw == that.inputRaw
                     && outputPartial == that.outputPartial;
         }
@@ -133,7 +140,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
         @Override
         protected long createNativeJitContext(JitContext context) {
             long aggregationJitContext = createAggregationJitContext(VecTypeSerializer.serialize(context.sourceTypes),
-                    toNativeConstants(context.aggFunctionTypes), context.aggInputChannels,
+                    toNativeConstants(context.aggFunctionTypes), context.aggInputChannels, context.maskChannels,
                     VecTypeSerializer.serialize(context.aggOutputTypes), context.inputRaw, context.outputPartial);
             return aggregationJitContext;
         }

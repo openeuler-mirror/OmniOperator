@@ -175,8 +175,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
  *                                                                  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *env,
-    jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jstring jAggOutputTypes,
-    jboolean inputRaw, jboolean outputPartial)
+    jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols, jintArray jMaskCols,
+    jstring jAggOutputTypes, jboolean inputRaw, jboolean outputPartial)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     auto sourceTypes = Deserialize(sourceTypesCharPtr);
@@ -185,12 +185,13 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggFuncTypes = env->GetIntArrayElements(jAggFuncTypes, JNI_FALSE);
     auto aggFuncsCount = env->GetArrayLength(jAggFuncTypes);
     auto aggInputCols = env->GetIntArrayElements(jAggInputCols, JNI_FALSE);
+    auto aggMaskCols = env->GetIntArrayElements(jMaskCols, JNI_FALSE);
     auto aggOutputTypesCharPtr = env->GetStringUTFChars(jAggOutputTypes, JNI_FALSE);
     auto aggOutputTypes = Deserialize(aggOutputTypesCharPtr);
     env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
 
-    auto jitContext =
-        CreateAggregationJitContext(sourceTypes, aggInputCols, aggFuncTypes, aggFuncsCount, aggOutputTypes);
+    auto jitContext = CreateAggregationJitContext(sourceTypes, aggInputCols, aggMaskCols, aggFuncTypes, aggFuncsCount,
+        aggOutputTypes);
     return reinterpret_cast<uint64_t>(jitContext);
 }
 
@@ -200,7 +201,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jSourceTypes, jintArray jAggFuncTypes, jintArray jAggInputCols,
-    jstring jAggOutputTypes, jboolean inputRaw, jboolean outputPartial, jlong jitContext)
+    jintArray jMaskCols, jstring jAggOutputTypes, jboolean inputRaw, jboolean outputPartial, jlong jitContext)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     auto sourceTypes = Deserialize(sourceTypesCharPtr);
@@ -208,6 +209,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
     auto aggFuncTypes = env->GetIntArrayElements(jAggFuncTypes, JNI_FALSE);
     auto aggInputCols = env->GetIntArrayElements(jAggInputCols, JNI_FALSE);
+    auto maskCols = env->GetIntArrayElements(jMaskCols, JNI_FALSE);
     auto aggOutputTypesCharPtr = env->GetStringUTFChars(jAggOutputTypes, JNI_FALSE);
     auto aggOutputTypes = Deserialize(aggOutputTypesCharPtr);
     env->ReleaseStringUTFChars(jAggOutputTypes, aggOutputTypesCharPtr);
@@ -216,11 +218,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
     PrepareContext aggInputColsContext = { (uint32_t *)aggInputCols, aggCount };
+    PrepareContext maskColsContext = { (uint32_t *)maskCols, aggCount };
     PrepareContext aggFuncTypesContext = { (uint32_t *)aggFuncTypes, aggCount };
 
     omniruntime::op::AggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
-        aggOutputTypes, inputRaw, outputPartial);
+        maskColsContext, aggOutputTypes, inputRaw, outputPartial);
     nativeOperatorFactory->SetJitContext(reinterpret_cast<JitContext *>(jitContext));
     nativeOperatorFactory->Init();
 

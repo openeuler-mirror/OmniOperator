@@ -62,7 +62,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationJitContext(JNIEnv *,
-    jclass, jstring, jintArray, jintArray, jstring, jboolean, jboolean);
+    jclass, jstring, jintArray, jintArray, jintArray, jstring, jboolean, jboolean);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory
@@ -71,7 +71,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_createAggregationOperatorFactory(JNIEnv *,
-    jclass, jstring, jintArray, jintArray, jstring, jboolean, jboolean, jlong);
+    jclass, jstring, jintArray, jintArray, jintArray, jstring, jboolean, jboolean, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory

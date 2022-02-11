@@ -245,12 +245,14 @@ uintptr_t CreateAggFactoryWithJit()
     omniruntime::op::PrepareContext aggFuncTypeContext = { aggFuncTypes, 4 };
     uint32_t aggInputCols[4] = {0, 1, 2, 3};
     omniruntime::op::PrepareContext aggInputColsContext = { aggInputCols, 4 };
+    uint32_t maskCols[4] = {(uint32_t)(-1), (uint32_t)(-1), (uint32_t)(-1), (uint32_t)(-1)};
+    omniruntime::op::PrepareContext maskColsContext = { maskCols, 4 };
 
-    auto jitContext =
-        CreateAggregationJitContext(sourceTypes, (int32_t *)aggInputCols, (int32_t *)aggFuncTypes, 4, sourceTypes);
+    auto jitContext = CreateAggregationJitContext(sourceTypes, (int32_t *)aggInputCols, (int32_t *)maskCols,
+        (int32_t *)aggFuncTypes, 4, sourceTypes);
     std::cout << "after jit" << std::endl;
-    auto nativeOperatorFactory =
-        new AggregationOperatorFactory(sourceTypes, aggFuncTypeContext, aggInputColsContext, sourceTypes, true, false);
+    auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeContext, aggInputColsContext,
+        maskColsContext, sourceTypes, true, false);
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
     nativeOperatorFactory->SetJitContext(jitContext);
@@ -891,9 +893,11 @@ TEST(AggregationOperatorTest, verify_correctness)
     aggs.push_back(
         std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true));
     std::vector<int32_t> aggInputCols = { 0, 1, 2, 3, 4 };
+    std::vector<int32_t> maskCols = { -1, -1, -1, -1, -1 };
     VecTypes aggPartialOutputTypes(
         std::vector<VecType> { LongVecType(), ContainerVecType(), LongVecType(), LongVecType(), LongVecType() });
-    auto aggregate1 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
+    auto aggregate1 =
+        new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         aggregate1->AddInput(input1[i]);
@@ -915,7 +919,8 @@ TEST(AggregationOperatorTest, verify_correctness)
         std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, true, true));
     aggs.push_back(
         std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true));
-    auto aggregate2 = new AggregationOperator(std::move(aggs), aggInputCols, aggPartialOutputTypes, true, true);
+    auto aggregate2 =
+        new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggPartialOutputTypes, true, true);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         aggregate2->AddInput(input2[i]);
@@ -936,7 +941,8 @@ TEST(AggregationOperatorTest, verify_correctness)
         std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, false, false));
     VecTypes aggFinalOutputTypes(
         std::vector<VecType> { LongVecType(), DoubleVecType(), LongVecType(), LongVecType(), LongVecType() });
-    auto aggregate3 = new AggregationOperator(std::move(aggs1), aggInputCols, aggFinalOutputTypes, false, false);
+    auto aggregate3 =
+        new AggregationOperator(std::move(aggs1), aggInputCols, maskCols, aggFinalOutputTypes, false, false);
 
     for (int32_t i = 0; i < result.size(); ++i) {
         aggregate3->AddInput(result[i]);
@@ -958,6 +964,114 @@ TEST(AggregationOperatorTest, verify_correctness)
     VectorHelper::FreeVecBatches(result1);
 }
 
+TEST(AggregationOperatorTest, verify_agg_distinct)
+{
+    // construct data
+    const int32_t DATA_SIZE = 4;
+    const int32_t RESULT_DATA_SIZE = 1;
+
+    // table1
+    int64_t data0[DATA_SIZE] = {10L, 20L, 10L, 30L};
+    int64_t data1[DATA_SIZE] = {1L, 1L, 2L, 3L};
+    int64_t data2[DATA_SIZE] = {3L, 5L, 5L, 7L};
+    int64_t data3[DATA_SIZE] = {4L, 2L, 1L, 2L};
+    int64_t data4[DATA_SIZE] = {4L, 2L, 1L, 2L};
+    bool data5[DATA_SIZE] = {true, true, false, true};
+    bool data6[DATA_SIZE] = {true, false, true, true};
+    bool data7[DATA_SIZE] = {true, true, false, true};
+    bool data8[DATA_SIZE] = {true, true, true, false};
+    bool data9[DATA_SIZE] = {true, true, true, false};
+
+    std::vector<VecType> types = { LongVecType::Instance(),    LongVecType::Instance(),    LongVecType::Instance(),
+        LongVecType::Instance(),    LongVecType::Instance(),    BooleanVecType::Instance(),
+        BooleanVecType::Instance(), BooleanVecType::Instance(), BooleanVecType::Instance(),
+        BooleanVecType::Instance() };
+    VecTypes sourceTypes(types);
+    VectorBatch *vecBatch1 =
+        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
+
+    std::vector<int32_t> aggInputCols = { 0, 1, 2, 3, 4 };
+    std::vector<int32_t> maskCols = { 5, 6, 7, 8, 9 };
+
+    // STAGE1:
+    std::vector<std::unique_ptr<Aggregator>> aggs;
+    std::unique_ptr<Aggregator> aggregator =
+        std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, true, true);
+    aggs.push_back(std::make_unique<MaskColAggregator>(5, std::move(aggregator)));
+    aggregator = std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG,
+        1, true, true);
+    aggs.push_back(std::make_unique<MaskColAggregator>(6, std::move(aggregator)));
+    aggregator =
+        std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_CONTAINER, 2, true, true);
+    aggs.push_back(std::make_unique<MaskColAggregator>(7, std::move(aggregator)));
+    aggregator =
+        std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, true, true);
+    aggs.push_back(std::make_unique<MaskColAggregator>(8, std::move(aggregator)));
+    aggregator =
+        std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, true, true);
+    aggs.push_back(std::make_unique<MaskColAggregator>(9, std::move(aggregator)));
+
+    VecTypes aggPartialOutputTypes(
+        std::vector<VecType> { LongVecType(), LongVecType(), ContainerVecType(), LongVecType(), LongVecType() });
+    auto aggregate1 =
+        new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggPartialOutputTypes, true, true);
+
+    aggregate1->AddInput(vecBatch1);
+
+    std::vector<VectorBatch *> result;
+    int32_t tableCount1 = aggregate1->GetOutput(result);
+
+    // STAGE2:
+    std::vector<std::unique_ptr<Aggregator>> aggs1;
+    aggs1.push_back(std::make_unique<CountAggregator>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 0, false, false));
+    aggs1.push_back(std::make_unique<SumAggregator<LongVector, int64_t, int64_t>>(OMNI_VEC_TYPE_LONG,
+        OMNI_VEC_TYPE_LONG, 1, false, false));
+    aggs1.push_back(
+        std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE, 2, false, false));
+    aggs1.push_back(
+        std::make_unique<MaxAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 3, false, false));
+    aggs1.push_back(
+        std::make_unique<MinAggregator<LongVector, int64_t>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG, 4, false, false));
+    VecTypes aggFinalOutputTypes(
+        std::vector<VecType> { LongVecType(), LongVecType(), DoubleVecType(), LongVecType(), LongVecType() });
+    std::vector<int32_t> maskCols1 = { -1, -1, -1, -1, -1 }; // no mask cols at final stage
+    auto aggregate2 =
+        new AggregationOperator(std::move(aggs1), aggInputCols, maskCols1, aggFinalOutputTypes, false, false);
+
+    for (int32_t i = 0; i < result.size(); ++i) {
+        aggregate2->AddInput(result[i]);
+    }
+
+    std::vector<VectorBatch *> result1;
+    int32_t tableCount = aggregate2->GetOutput(result1);
+    EXPECT_EQ(result1[0]->GetRowCount(), 1);
+    EXPECT_EQ(result1[0]->GetVectorCount(), 5);
+
+    int64_t expData0[RESULT_DATA_SIZE] = {3L};
+    int64_t expData1[RESULT_DATA_SIZE] = {6L};
+    double expData2[RESULT_DATA_SIZE] = {5.0};
+    int64_t expData3[RESULT_DATA_SIZE] = {4L};
+    int64_t expData4[RESULT_DATA_SIZE] = {1L};
+    std::vector<VecType> resultType = { LongVecType::Instance(), LongVecType::Instance(), DoubleVecType::Instance(),
+        LongVecType::Instance(), LongVecType::Instance() };
+    VecTypes resultTypes(resultType);
+    VectorBatch *expVecBatch1 =
+        CreateVectorBatch(resultTypes, RESULT_DATA_SIZE, expData0, expData1, expData2, expData3, expData4);
+
+    std::cout << "Expected result:" << std::endl;
+    VectorHelper::PrintVecBatch(expVecBatch1);
+
+    std::cout << "Actual result:" << std::endl;
+    for (auto vecBatch : result1) {
+        VectorHelper::PrintVecBatch(vecBatch);
+    }
+    EXPECT_TRUE(VecBatchMatch(result1[0], expVecBatch1));
+
+    omniruntime::op::Operator::DeleteOperator(aggregate1);
+    omniruntime::op::Operator::DeleteOperator(aggregate2);
+    VectorHelper::FreeVecBatch(expVecBatch1);
+    VectorHelper::FreeVecBatches(result1);
+}
 
 TEST(AggregationOperatorTest, avg_correctness_test)
 {
@@ -977,8 +1091,9 @@ TEST(AggregationOperatorTest, avg_correctness_test)
     std::vector<std::unique_ptr<Aggregator>> aggs;
     aggs.push_back(std::make_unique<AverageAggregator<LongVector>>(OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE, 0));
     std::vector<int32_t> aggInputCols = { 0 };
+    std::vector<int32_t> maskCols = { -1 };
     VecTypes aggOutputTypes(std::vector<VecType> { DoubleVecType() });
-    auto aggregate = new AggregationOperator(std::move(aggs), aggInputCols, aggOutputTypes, true, false);
+    auto aggregate = new AggregationOperator(std::move(aggs), aggInputCols, maskCols, aggOutputTypes, true, false);
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         aggregate->AddInput(input[i]);
@@ -1011,9 +1126,11 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
     uint32_t aggInputCols[] = {0, 1, 2, 3};
     PrepareContext aggFuncTypesContext = { reinterpret_cast<uint32_t *>(aggFunType), 4 };
     PrepareContext aggInputColsContext = { aggInputCols, 4 };
+    uint32_t maskCols[4] = {(uint32_t)(-1), (uint32_t)(-1), (uint32_t)(-1), (uint32_t)(-1)};
+    omniruntime::op::PrepareContext maskColsContext = { maskCols, 4 };
 
     auto nativeOperatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypesContext, aggInputColsContext,
-        aggOutputTypes, true, false);
+        maskColsContext, aggOutputTypes, true, false);
     nativeOperatorFactory->Init();
     int64_t factoryAddr = reinterpret_cast<int64_t>(nativeOperatorFactory);
     const auto processor_count = std::thread::hardware_concurrency();

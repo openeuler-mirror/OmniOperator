@@ -1252,10 +1252,12 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
             int outputChannel = startOutputChannel;
             List<Symbol> aggregationOutputSymbols = new ArrayList<>();
             ImmutableList.Builder<AccumulatorFactory> accumulatorFactories = ImmutableList.builder();
+            ImmutableList.Builder<Optional<Integer>> maskChannels = ImmutableList.builder();
             for (Map.Entry<Symbol, AggregationNode.Aggregation> entry : aggregations.entrySet()) {
                 Symbol symbol = entry.getKey();
                 AggregationNode.Aggregation aggregation = entry.getValue();
                 accumulatorFactories.add(buildAccumulatorFactory(source, aggregation));
+                maskChannels.add(aggregation.getMask().map(value -> source.getLayout().get(value)));
                 outputMappings.put(symbol, outputChannel); // one aggregation per channel
                 aggregationOutputSymbols.add(symbol);
                 outputChannel++;
@@ -1273,7 +1275,7 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
                 return new AggregationOmniOperator.AggregationOmniOperatorFactory(context.getNextOperatorId(),
                         planNodeId, OperatorUtils.toVecTypes(source.getTypes()), aggregatorTypes,
-                        aggregationInputChannels, aggregationOutputTypes, step);
+                        aggregationInputChannels, maskChannels.build(), aggregationOutputTypes, step);
             } else if (!isWholeStageFallback(session)) {
                 return new AggregationOperator.AggregationOperatorFactory(context.getNextOperatorId(), planNodeId, step,
                         factories, useSystemMemory);
@@ -1638,8 +1640,8 @@ public class OmniLocalExecutionPlanner extends LocalExecutionPlanner {
 
                 factoriesBuilder.add(hashBuilderOperatorFactory);
             } else {
-                throw new UnsupportedOperationException(
-                        "HashBuilderOmniOperator for " + node.getType() + " is not enabled or not support in omniRuntime");
+                throw new UnsupportedOperationException("HashBuilderOmniOperator for " + node.getType()
+                        + " is not enabled or not support in omniRuntime");
             }
 
             context.addDriverFactory(buildContext.isInputDriver(), false, factoriesBuilder.build(),
