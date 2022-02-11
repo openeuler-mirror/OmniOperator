@@ -22,9 +22,9 @@ namespace omniruntime {
          * @param aliases allows to specify multiple names for the same function
          * @param paramTypes vector of datatypes of arguments - VARCHAR AND CHAR are expanded to their corresponding
          * function signature equivalents to contain value and length for VARCHAR and value, length and width for CHAR
-         * @param retType datatype of return value
-         * @param generateFuncID if true - unique funcID is generated to match funcID in parser
-         * @param setExecutionContext if true - pass the execution context to func signature as a param
+         * @param retType data type of return value
+         * @param setExecutionContext if true - pass the execution context to func signature as a param,
+         * it will always be the first parameter in your function, default to false
          */
         Function(void *address, const std::string &name, const std::vector<std::string> &aliases, const
         std::vector<omniruntime::vec::VecTypeId> &paramTypes, const omniruntime::vec::VecTypeId

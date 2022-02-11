@@ -13,20 +13,24 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
     std::string substrStr = "substr";
     std::vector<Function> stringFnRegistry = {
         // substr functions
-        Function(reinterpret_cast<void*>(Substr), substrStr,
+        Function(reinterpret_cast<void*>(Substr<int32_t>), substrStr,
                  {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_VARCHAR, true),
-        Function(reinterpret_cast<void*>(SubstrChar), substrStr,
+        Function(reinterpret_cast<void*>(SubstrChar<int32_t>), substrStr,
                  {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_CHAR, true),
-        Function(reinterpret_cast<void*>(Substr_int64), substrStr,
+        Function(reinterpret_cast<void*>(Substr<int64_t>), substrStr,
                  {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(SubstrChar<int64_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_CHAR, true),
 
         // substr with start index functions
-        Function(reinterpret_cast<void*>(SubstrWithStart), substrStr,
+        Function(reinterpret_cast<void*>(SubstrWithStart<int32_t>), substrStr,
                  {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_VARCHAR, true),
-        Function(reinterpret_cast<void*>(SubstrCharWithStart), substrStr,
+        Function(reinterpret_cast<void*>(SubstrCharWithStart<int32_t>), substrStr,
                  {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_INT}, OMNI_VEC_TYPE_CHAR, true),
-        Function(reinterpret_cast<void*>(SubstrWithStart_int64), substrStr,
+        Function(reinterpret_cast<void*>(SubstrWithStart<int64_t>), substrStr,
                  {}, {OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_VARCHAR, true),
+        Function(reinterpret_cast<void*>(SubstrCharWithStart<int64_t>), substrStr,
+                 {}, {OMNI_VEC_TYPE_CHAR, OMNI_VEC_TYPE_LONG}, OMNI_VEC_TYPE_CHAR, true),
 
         // concat functions
         Function(reinterpret_cast<void *>(ConcatStr), "concat",

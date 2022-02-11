@@ -162,7 +162,6 @@ void ExpressionCodeGen::RegisterFunctions(const std::vector<omniruntime::Functio
                 }
             }
         );
-        LogDebug("register: %s", func.GetId().c_str());
         auto ign = jd.define(s);
         if (ign) {
             LogError("Error while defining absolute symbol in jd");

@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include "../vector/vector_type.h"
+#include "../codegen/func_registry.h"
 
 namespace omniruntime {
 namespace expressions {
@@ -288,7 +289,7 @@ ExprType IsNullExpr::GetType() const
     return ExprType::IS_NULL_E;
 }
 
-FuncExpr::FuncExpr() {}
+FuncExpr::FuncExpr() = default;
 
 FuncExpr::~FuncExpr()
 {
@@ -297,31 +298,23 @@ FuncExpr::~FuncExpr()
     }
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType)
 {
     funcName = fnName;
-    arguments = args;
+    arguments = std::move(args);
+    dataType = std::move(returnType);
+
+    std::vector<VecTypeId> argTypes(arguments.size());
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    auto signature = FunctionSignature(funcName, argTypes, dataType->GetId());
+    this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }
 
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt)
+FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType, const Function *function)
 {
     funcName = fnName;
-    arguments = args;
-    dataType = std::move(dt);
-}
-
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, const Function *function)
-{
-    funcName = fnName;
-    arguments = args;
-    dataType = std::move(dt);
-    this->function = function;
-}
-
-FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, const Function *function)
-{
-    funcName = fnName;
-    arguments = args;
+    arguments = std::move(args);
+    dataType = std::move(returnType);
     this->function = function;
 }
 

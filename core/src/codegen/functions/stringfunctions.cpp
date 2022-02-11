@@ -5,7 +5,6 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <vector>
 #include <regex>
 #include "../../../thirdparty/huawei_secure_c/include/securec.h"
 #include "context_helper.h"
@@ -55,92 +54,6 @@ extern DLLEXPORT bool Like(const char *str, int32_t strLen, const char *regexToM
     // Using std regex library
     regex re = regex(r);
     return regex_match(s, re);
-}
-
-extern DLLEXPORT const char *SubstrWithStart(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx,
-                                                 int32_t *outLen)
-{
-    if (startIdx == 0 || strLen == 0 || startIdx + strLen < 0 || startIdx > strLen) {
-        *outLen = 0;
-        return "";
-    }
-
-    if (startIdx > 0) {
-        startIdx -= 1;
-    } else {
-        // negative start is relative to end of string
-        startIdx += strLen;
-    }
-
-    *outLen = strLen - startIdx;
-
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
-    if (res != EOK) {
-        std::cerr << "Substring failed" << std::endl;
-    }
-    return ret;
-}
-
-extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-                                                 int32_t startIdx, int32_t *outLen)
-{
-    return SubstrWithStart(contextPtr, str, strLen, static_cast<int32_t>(startIdx), outLen);
-}
-
-extern DLLEXPORT const char *SubstrWithStart_int64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx,
-                                                   int32_t *outLen)
-{
-    return SubstrWithStart(contextPtr, str, strLen, static_cast<int32_t>(startIdx), outLen);
-}
-
-extern DLLEXPORT const char *Substr(int64_t contextPtr, const char *str, int32_t strLen, int32_t startIdx, int32_t length,
-                                        int32_t *outLen)
-{
-    if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx + strLen < 0 || startIdx > strLen) {
-        *outLen = 0;
-        return "";
-    }
-    int endIdx;
-    if (startIdx > 0) {
-        startIdx = startIdx - 1;
-        // Quick exit if we are sure that the position is after the end
-        if (strLen - startIdx <= length) {
-            endIdx = strLen;
-        } else if (length == 0) {
-            endIdx = startIdx;
-        } else {
-            endIdx = startIdx + length;
-        }
-    } else {
-        // negative start is relative to end of string
-        startIdx += strLen;
-        if (startIdx + length < strLen) {
-            endIdx = startIdx + length;
-        } else {
-            endIdx = strLen;
-        }
-    }
-
-    *outLen = endIdx - startIdx;
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str + startIdx, *outLen);
-    if (res != EOK) {
-        std::cerr << "Substring failed" << std::endl;
-    }
-    return ret;
-}
-
-extern DLLEXPORT const char *SubstrChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, int32_t startIdx,
-                                        int32_t length, int32_t *outLen)
-{
-    return Substr(contextPtr, str, strLen, startIdx, length, outLen);
-}
-
-extern DLLEXPORT const char *Substr_int64(int64_t contextPtr, const char *str, int32_t strLen, int64_t startIdx, int64_t length,
-                                             int32_t *outLen)
-{
-    return Substr(contextPtr, str, strLen, static_cast<int32_t>(startIdx), static_cast<int32_t>(length), outLen);
 }
 
 extern DLLEXPORT const char *ConcatStr(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp, int32_t bpLen,

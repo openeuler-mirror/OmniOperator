@@ -242,10 +242,8 @@ public:
 
     FuncExpr();
     ~FuncExpr() override;
-    FuncExpr(std::string fnName, std::vector<Expr*> args);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr dt, const omniruntime::Function *function);
-    FuncExpr(std::string fnName, std::vector<Expr*> args, const omniruntime::Function *function);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType);
+    FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr returnType, const omniruntime::Function *function);
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
