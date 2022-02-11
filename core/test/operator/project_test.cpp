@@ -1445,6 +1445,138 @@ TEST(ProjectTest, Tpcds96)
     delete op;
     delete factory;
 }
+
+TEST(ProjectTest, Round)
+{
+    const int32_t numRows = 1000;
+    int32_t *col0 = MakeInts(numRows, -5);
+    int64_t *col1 = MakeLongs(numRows, -5);
+    double *col2 = MakeDoubles(numRows, -5.123);
+    double *col3 = MakeDoubles(numRows, -5.123);
+    double *col4 = MakeDoubles(numRows, -1001.456);
+    // Make NaN and inf values
+    auto *col5 = new double[numRows];
+    double start = 1;
+    int32_t idx = 0;
+    for (double i = start; i < start + numRows; i++) {
+        if (idx % 2 == 0) {
+            // NaN
+            col5[idx++] = std::sqrt(-i);
+        } else {
+            // inf
+            col5[idx++] = i / 0.0;
+        }
+    }
+    const int32_t numCols = 6;
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_LONG),
+                                        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE),
+                                        VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE)};
+    std::string funcStr = "round";
+
+    // rounded to tenths. since int type, no decimals, so should be same as input
+    auto data0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> args0;
+    args0.push_back(data0);
+    int32_t data0_decimal = 1;
+    args0.push_back(new LiteralExpr(data0_decimal, IntType()));
+    auto roundExpr0 = GetFuncExpr(funcStr, args0, IntType());
+
+    // rounded to tens
+    auto data1 = new FieldExpr(1, LongType());
+    std::vector<Expr *> args1;
+    args1.push_back(data1);
+    int32_t data1_decimal = -1;
+    args1.push_back(new LiteralExpr(data1_decimal, IntType()));
+    auto roundExpr1 = GetFuncExpr(funcStr, args1, LongType());
+    double data1Pow = pow(10, data1_decimal);
+
+    // rounded to ones. equivalent to round()
+    auto data2 = new FieldExpr(2, DoubleType());
+    std::vector<Expr *> args2;
+    args2.push_back(data2);
+    int32_t data2_decimal = 0;
+    args2.push_back(new LiteralExpr(data2_decimal, IntType()));
+    auto roundExpr2 = GetFuncExpr(funcStr, args2, DoubleType());
+
+    // rounded to hundredths
+    auto data3 = new FieldExpr(3, DoubleType());
+    std::vector<Expr *> args3;
+    args3.push_back(data3);
+    int32_t data3_decimal = 2;
+    args3.push_back(new LiteralExpr(data3_decimal, IntType()));
+    auto roundExpr3 = GetFuncExpr(funcStr, args3, DoubleType());
+    double data3Pow = pow(10, data3_decimal);
+
+    // rounded to hundredths (all negatives)
+    auto data4 = new FieldExpr(4, DoubleType());
+    std::vector<Expr *> args4;
+    args4.push_back(data4);
+    int32_t data4_decimal = 2;
+    args4.push_back(new LiteralExpr(data4_decimal, IntType()));
+    auto roundExpr4 = GetFuncExpr(funcStr, args4, DoubleType());
+    double data4Pow = pow(10, data4_decimal);
+
+    // invalid values
+    auto data5 = new FieldExpr(5, DoubleType());
+    std::vector<Expr *> args5;
+    args5.push_back(data5);
+    int32_t data5_decimal = 2;
+    args5.push_back(new LiteralExpr(data5_decimal, IntType()));
+    auto roundExpr5 = GetFuncExpr(funcStr, args5, DoubleType());
+
+    std::vector<Expr *> exprs = { roundExpr0, roundExpr1, roundExpr2, roundExpr3, roundExpr4, roundExpr5 };
+
+    VecTypes inputTypes(vecOfTypes);
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    int64_t allData[numCols] = {(int64_t) col0, (int64_t) col1, (int64_t) col2, (int64_t) col3, (int64_t) col4, (int64_t) col5};
+    VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
+
+    auto copy = DuplicateVectorBatch(t);
+    op->AddInput(copy);
+    vector<VectorBatch*> ret;
+    int32_t numReturned = op->GetOutput(ret);
+    for (int32_t i = 0; i < numReturned; i++) {
+
+        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        double val2 = ((DoubleVector *)ret[0]->GetVector(2))->GetValue(i);
+        double val3 = ((DoubleVector *)ret[0]->GetVector(3))->GetValue(i);
+        double val4 = ((DoubleVector *)ret[0]->GetVector(4))->GetValue(i);
+        double val5 = ((DoubleVector *)ret[0]->GetVector(5))->GetValue(i);
+
+        int32_t old0 = ((IntVector *)t->GetVector(0))->GetValue(i);
+        int64_t old1 = ((LongVector *)t->GetVector(1))->GetValue(i);
+        double old2 = ((DoubleVector *)t->GetVector(2))->GetValue(i);
+        double old3 = ((DoubleVector *)t->GetVector(3))->GetValue(i);
+        double old4 = ((DoubleVector *)t->GetVector(4))->GetValue(i);
+        double old5 = ((DoubleVector *)t->GetVector(5))->GetValue(i);
+
+        EXPECT_EQ(val0, round(old0));
+        EXPECT_EQ(val0, old0);
+        EXPECT_EQ(val1, (round(old1 * data1Pow) / data1Pow));
+        EXPECT_EQ(val2, round(old2));
+        EXPECT_EQ(val3, (round(old3 * data3Pow) / data3Pow));
+        EXPECT_EQ(val4, -(round(-old4 * data4Pow) / data4Pow));
+        if (i % 2 == 0) {
+            // cannot compare NaN values
+            EXPECT_TRUE(isnan(val5) && isnan(old5));
+        } else {
+            EXPECT_EQ(val5, old5);
+        }
+    }
+
+    VectorHelper::FreeVecBatch(t);
+    VectorHelper::FreeVecBatches(ret);
+    delete[] col0;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete[] col4;
+    delete[] col5;
+    delete op;
+    delete factory;
+}
 }
 
 
