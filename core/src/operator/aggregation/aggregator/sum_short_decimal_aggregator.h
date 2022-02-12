@@ -12,11 +12,13 @@ namespace op {
 /**
  * For ProcessGroup the input vector type is LongVec and output vector type is VarcharVec
  */
-//static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
+// static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
 
 class SumShortDecimalAggregator : public Aggregator {
 public:
-    SumShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel) {}
+    SumShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel)
+    {}
 
     SumShortDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, in, out, channel, inputRaw, outputPartial)

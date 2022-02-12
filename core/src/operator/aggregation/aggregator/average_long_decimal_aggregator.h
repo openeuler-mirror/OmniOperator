@@ -9,9 +9,12 @@ namespace omniruntime {
 namespace op {
 class AverageLongDecimalAggregator : public Aggregator {
 public:
-    AverageLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel) {}
+    AverageLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel)
+    {}
 
-    AverageLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
+    AverageLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw,
+        bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 

@@ -14,7 +14,9 @@ static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
 
 class SumLongDecimalAggregator : public Aggregator {
 public:
-    SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel) {}
+    SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, in, out, channel)
+    {}
 
     SumLongDecimalAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
@@ -37,7 +39,7 @@ public:
             // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
             // 1. get a new value
             int64_t oldOverflow = 0;
-            Decimal128 curVal =static_cast<Decimal128Vector *>(vector)->GetValue(offset);
+            Decimal128 curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
             Decimal128 leftVal;
             // 2. decode current state
             DecimalOperations::DecodeSumDecimal(state.val, leftVal, oldOverflow);
@@ -69,7 +71,8 @@ public:
     }
 
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override {
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channel), rowIndex, offset);
         if (UNLIKELY(vector->IsValueNull(offset))) {
@@ -97,14 +100,15 @@ public:
 
 
     // TODO extract common function for sum/min/max
-    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override {
+    void ExtractValue(AggregateState &state, Vector *vector, int32_t rowIndex) override
+    {
         if (state.val == nullptr) {
             vector->SetValueNull(rowIndex);
             return;
         }
         if (outputPartial) {
             static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
-                                                           PARTIAL_SUM_OUTPUT_LENGTH);
+                PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
             // write decimal if not overflow. otherwise throw exception
             int64_t isOverflow = 0;

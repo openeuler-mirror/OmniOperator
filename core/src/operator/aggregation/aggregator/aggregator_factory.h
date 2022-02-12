@@ -22,8 +22,8 @@ public:
      * @param outputPartial
      * @return
      */
-    virtual std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t channel,
-        bool inputRaw = true, bool outputPartial = false) = 0;
+    virtual std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType,
+        int32_t channel, bool inputRaw = true, bool outputPartial = false) = 0;
 };
 
 
@@ -37,8 +37,7 @@ public:
         auto inputTypeId = inputType.GetId();
         // only 24 byte width can be regarded as decimal encoded
         if (inputTypeId == OMNI_VEC_TYPE_VARCHAR && inputType.GetWidth() == PARTIAL_SUM_OUTPUT_LENGTH) {
-            return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
-                                                               outputPartial);
+            return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
         }
         switch (inputTypeId) {
             case OMNI_VEC_TYPE_INT:
@@ -229,8 +228,8 @@ template <class T> class MaskAggregatorFactory : public AggregatorFactory {
 public:
     MaskAggregatorFactory(int32_t maskCol) : maskColumnId(maskCol), realFactory(std::make_unique<T>()) {}
     ~MaskAggregatorFactory() override {}
-    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType, int32_t inputChannel,
-        bool inputRaw = true, bool outputPartial = false) override
+    std::unique_ptr<Aggregator> CreateAggregator(const VecType &inputType, const VecType &outputType,
+        int32_t inputChannel, bool inputRaw = true, bool outputPartial = false) override
     {
         std::unique_ptr<Aggregator> realAggregator =
             realFactory->CreateAggregator(inputType, outputType, inputChannel, inputRaw, outputPartial);

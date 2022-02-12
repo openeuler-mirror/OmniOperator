@@ -11,7 +11,7 @@ class MaskColAggregator : public Aggregator {
 public:
     MaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
         : Aggregator(realAggregator->GetType(), realAggregator->GetInputType(), realAggregator->GetOutputType(),
-                     realAggregator->GetInputChannel(),  realAggregator->IsInputRaw(), realAggregator->IsOutputPartial()),
+        realAggregator->GetInputChannel(), realAggregator->IsInputRaw(), realAggregator->IsOutputPartial()),
           maskColumnId(maskColumnId),
           realAggregator(std::move(realAggregator))
     {}
