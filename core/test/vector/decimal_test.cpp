@@ -33,34 +33,43 @@ TEST(DecimalOperations, encode_and_decode_decimal)
 
 TEST(DecimalOperations, addWithOverflow)
 {
-
-    Decimal128 left=3; Decimal128 right=1; Decimal128 result=0;
-     long overflow = DecimalOperations:: AddWithOverflow(left, right, result);
-
-    //std::cout<<"overflow is "<<overflow<<std::endl;
-    std::cout<<"result_low is "<<result.LowBits()<<std::endl;
-    std::cout<<"result_high is "<<result.HighBits()<<std::endl;
-    std::cout<<"result is "<<result<<std::endl;
+    Decimal128 left = 3;
+    Decimal128 right = 6;
+    Decimal128 result = 0;
+    long overflow = DecimalOperations::AddWithOverflow(left, right, result);
+    EXPECT_EQ(result, 0x00000000000000000000000000000009);
     EXPECT_EQ(overflow, 0);
-    Decimal128 left1; Decimal128 right1=2; Decimal128 result1=0;
 
-    left1.SetValue(-1,1);
-    std::cout<<"left1high is "<<left1.HighBits()<<std::endl;
-    std::cout<<"left1low is "<<left1.LowBits()<<std::endl;
-
-    if((left1.Abs(left1))<(right1.Abs(right1))){
-        std::cout<<"left1 < right1 "<<left1<<std::endl;
-    }else if((left1.Abs(left1))>(right1.Abs(right1))){
-        std::cout<<"left1 > right1 "<<left1<<std::endl;
-    }else {
-        std::cout<<"left1 = right1 "<<left1.HighBits()<<std::endl;
-    }
-
-    long overflow1 = DecimalOperations:: AddWithOverflow(left1,right1,result1);
-    std::cout<<"result1high is "<<result1.HighBits()<<std::endl;
-    std::cout<<"result1LowBits is "<<result1.LowBits()<<std::endl;
-
-    std::cout<<"result1 is "<<result1<<std::endl;
-    std::cout<<"overflow1 is "<<overflow1<<std::endl;
+    Decimal128 left1;
+    Decimal128 right1 = 2;
+    Decimal128 result1 = 0;
+    int64_t c = 1LL << 63;
+    left1.SetValue(c, 3);
+    long overflow1 = DecimalOperations::AddWithOverflow(left1, right1, result1);
+    EXPECT_EQ(result1.HighBits(), 0x8000000000000000);
+    EXPECT_EQ(result1.LowBits(), 0x0000000000000001);
     EXPECT_EQ(overflow1, 0);
+
+
+    Decimal128 left2;
+    Decimal128 right2 = 2;
+    Decimal128 result2 = 0;
+    int64_t c2 = 1LL << 63;
+    left2.SetValue(c2, 1);
+    long overflow2 = DecimalOperations::AddWithOverflow(left2, right2, result2);
+    EXPECT_EQ(result2, 0x00000000000000000000000000000001);
+    EXPECT_EQ(overflow2, 0);
+
+
+    Decimal128 left3;
+    Decimal128 right3;
+    Decimal128 result3 = 0;
+    int64_t c3 = 1LL << 63;
+    left3.SetValue(c3, 1);
+    right3.SetValue(c3, 1);
+    long overflow3 = DecimalOperations::AddWithOverflow(left3, right3, result3);
+    EXPECT_EQ(result3.HighBits(), 0x8000000000000000);
+    EXPECT_EQ(result3.LowBits(), 0x0000000000000002);
+    EXPECT_EQ(overflow3, 0);
+
 }

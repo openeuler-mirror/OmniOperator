@@ -9,7 +9,7 @@
 #include <vector/fixed_width_vector.h>
 
 namespace omniruntime {
-long SIGN_LONG_MASK = 1L << 63;
+int64_t SIGN_LONG_MASK = 1LL << 63;
 namespace vec {
 void DecimalOperations::DecodeSumDecimal(void *ptr, Decimal128 &val, int64_t &overflow)
 {
@@ -52,8 +52,8 @@ void DecimalOperations::EncodeAvgDecimal(void *ptr, const Decimal128 &val, const
 
 long DecimalOperations::AddWithOverflow(Decimal128 &left, Decimal128 &right, Decimal128 &result)
 {
-    bool leftNegative = left.IsNegative();
-    bool rightNegative = right.IsNegative();
+    bool leftNegative = IsNegative(left);
+    bool rightNegative = IsNegative(right);
 
     long overflow = 0;
     if (leftNegative == rightNegative) {
@@ -78,10 +78,10 @@ long DecimalOperations::AddUnsignedReturnOverflow(const Decimal128 &left, const 
     bool resultNegative)
 {
     uint64_t l0 = left.LowBits();
-    int64_t l1 = left.HighBits();
+    int64_t l1 = GetLong(left.HighBits());
 
     uint64_t r0 = right.LowBits();
-    int64_t r1 = right.HighBits();
+    int64_t r1 = GetLong(right.HighBits());
 
     uint64_t z0 = l0 + r0;
     int overflow = UnsignedIsSmaller(z0, l0) ? 1 : 0;
@@ -89,35 +89,41 @@ long DecimalOperations::AddUnsignedReturnOverflow(const Decimal128 &left, const 
     int64_t z1 = intermediateResult & (~SIGN_LONG_MASK);
     Pack(result, z0, z1, resultNegative);
 
-    return (uint64_t)intermediateResult >> 63;
+    return ((uint64_t)intermediateResult) >> 63;
 }
 
 int DecimalOperations::CompareAbsolute(Decimal128 &left, Decimal128 &right)
 {
-    if (left.Abs() < (right.Abs())) {
-        return -1;
-    } else if (left.Abs() > (right.Abs())) {
-        return 1;
-    } else {
-        return 0;
+    int64_t leftHigh = GetLong(left.HighBits());
+    int64_t rightHigh = GetLong(right.HighBits());
+    if (leftHigh != rightHigh) {
+        return CompareUnsigned(leftHigh, rightHigh);
     }
+    int64_t leftLow = left.LowBits();
+    int64_t rightLow = right.LowBits();
+    return CompareUnsigned(leftLow, rightLow);
 }
+
+bool DecimalOperations::IsNegative(Decimal128 &left)
+{
+    return (((uint64_t)left.HighBits()) >> 63) != 0;
+}
+
 
 void DecimalOperations::SubtractUnsigned(Decimal128 &left, Decimal128 &right, Decimal128 &result, bool resultNegative)
 {
     // original scheme
 
-    //            uint64_t l0 = left.LowBits();
-    //            int64_t l1 = left.HighBits();
-    //
-    //            uint64_t r0 = right.LowBits();
-    //            int64_t r1 = right.HighBits();
-    //
-    //            uint64_t z0= l0-r0;
-    //            int underflow = unsignedIsSamller(z0,l0)?1:0;
-    //            long z1 = l1-r1-underflow;
-    //            pack(result, z0, z1, resultNegative);
-    result = left + right;
+    uint64_t l0 = left.LowBits();
+    int64_t l1 = GetLong(left.HighBits());
+
+    uint64_t r0 = right.LowBits();
+    int64_t r1 = GetLong(right.HighBits());
+
+    uint64_t z0 = l0 - r0;
+    int underflow = UnsignedIsSmaller(l0, z0) ? 1 : 0;
+    long z1 = l1 - r1 - underflow;
+    Pack(result, z0, z1, resultNegative);
 }
 
 void DecimalOperations::SetToZero(Decimal128 &decimal128)
@@ -125,7 +131,7 @@ void DecimalOperations::SetToZero(Decimal128 &decimal128)
     decimal128.SetValue(0, 0);
 }
 
-bool exceedsOrEqualTenTOthirtyEight(Decimal128 &decimal128)
+bool ExceedsOrEqualTenTOthirtyEight(Decimal128 &decimal128)
 {
     int64_t high = decimal128.HighBits();
     if (high >= 0 && high < 0x4b3b4ca85a86c47aL) {
@@ -149,7 +155,22 @@ bool DecimalOperations::UnsignedIsSmaller(uint64_t first, uint64_t second)
     return first + LLONG_MIN < second + LLONG_MIN;
 }
 
-vec::Decimal128 UnscaledDecimal(int64_t unscaledValue)
+int DecimalOperations::CompareUnsigned(int64_t x, int64_t y)
+{
+    return Compare(x + LLONG_MIN, y + LLONG_MIN);
+}
+
+int DecimalOperations::Compare(int64_t x, int64_t y)
+{
+    return (x < y) ? -1 : ((x == y)) ? 0 : 1;
+}
+
+int64_t DecimalOperations::GetLong(int64_t value)
+{
+    return value & ~SIGN_LONG_MASK;
+}
+
+Decimal128 DecimalOperations:: UnscaledDecimal(int64_t unscaledValue)
 {
     vec::Decimal128 decimal128;
     if (unscaledValue < 0) {

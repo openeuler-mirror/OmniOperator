@@ -12,7 +12,7 @@ namespace op {
 /**
  * For ProcessGroup the input vector type is LongVec and output vector type is VarcharVec
  */
-static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
+//static constexpr int32_t PARTIAL_SUM_OUTPUT_LENGTH = 24;
 
 class SumShortDecimalAggregator : public Aggregator {
 public:
@@ -39,7 +39,7 @@ public:
             // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
             // 1. get a new value
             int64_t oldOverflow = 0;
-            Decimal128 curVal(static_cast<LongVector *>(vector)->GetValue(offset));
+            Decimal128 curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
             Decimal128 leftVal;
             // 2. decode current state
             DecimalOperations::DecodeSumDecimal(state.val, leftVal, oldOverflow);

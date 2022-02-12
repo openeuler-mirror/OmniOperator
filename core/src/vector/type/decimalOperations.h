@@ -43,6 +43,16 @@ public:
     static void Pack(Decimal128 &decimal128, uint64_t low, int64_t high, bool negative);
 
     static bool UnsignedIsSmaller(uint64_t first, uint64_t second);
+
+    static bool IsNegative(Decimal128 &left);
+
+    static int64_t GetLong(int64_t bits);
+
+    static int CompareUnsigned(int64_t x, int64_t y);
+
+    static int Compare(int64_t x, int64_t y);
+
+    static Decimal128 UnscaledDecimal(int64_t unscaledValue);
 };
 }
 }
