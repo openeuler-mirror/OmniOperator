@@ -9,9 +9,9 @@ namespace omniruntime {
 namespace op {
 class MinVarcharAggregator : public Aggregator {
 public:
-    MinVarcharAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel) {}
+    MinVarcharAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel) {}
 
-    MinVarcharAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+    MinVarcharAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 

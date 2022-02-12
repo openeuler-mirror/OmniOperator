@@ -9,9 +9,9 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename ResultType> class MinAggregator : public Aggregator {
 public:
-    MinAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel) {}
+    MinAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel) {}
 
-    MinAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+    MinAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_MIN, in, out, channel, inputRaw, outputPartial)
     {}
 

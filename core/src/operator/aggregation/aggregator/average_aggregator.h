@@ -9,9 +9,9 @@ namespace omniruntime {
 namespace op {
 template <typename V, typename ResultType = double> class AverageAggregator : public Aggregator {
 public:
-    AverageAggregator(int32_t in, int32_t out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel) {}
+    AverageAggregator(const VecType &in, const VecType &out, int32_t channel) : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel) {}
 
-    AverageAggregator(int32_t in, int32_t out, int32_t channel, bool inputRaw, bool outputPartial)
+    AverageAggregator(const VecType &in, const VecType &out, int32_t channel, bool inputRaw, bool outputPartial)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, in, out, channel, inputRaw, outputPartial)
     {}
 
