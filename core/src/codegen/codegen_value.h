@@ -25,6 +25,34 @@ private:
     llvm::Value* length;
 };
 
+class DecimalValue : public CodeGenValue {
+public:
+    explicit DecimalValue(llvm::Value* data, llvm::Value* isNull, llvm::Value* precision,
+                              llvm::Value* scale) : CodeGenValue(data, isNull), precision(precision),
+                                 scale(scale) {}
+
+    llvm::Value* GetPrecision() { return precision; }
+    llvm::Value* GetScale() { return scale; }
+
+private:
+    llvm::Value* precision;
+    llvm::Value* scale;
+};
+
+class DecimalSplitValue : public DecimalValue {
+public:
+    explicit DecimalSplitValue(llvm::Value* high, llvm::Value* low, llvm::Value* isNull = nullptr, llvm::Value* precision = nullptr,
+                               llvm::Value* scale = nullptr) : DecimalValue(nullptr, isNull, precision, scale),
+                               high(high), low(low) {}
+    llvm::Value* GetHigh() { return high; }
+    llvm::Value* GetLow() { return low; }
+
+private:
+    llvm::Value* high;
+    llvm::Value* low;
+
+};
+
 
 #endif // OMNI_RUNTIME_CODEGEN_VALUE_H
 

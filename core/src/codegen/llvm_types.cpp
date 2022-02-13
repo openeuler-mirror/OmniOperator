@@ -14,6 +14,7 @@ using namespace llvm;
 namespace {
     const int INT32_VALUE = 32;
     const int INT64_VALUE = 64;
+    const int INT128_VALUE = 128;
 }
 
 
@@ -26,7 +27,7 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext& context) : context(context)
         {OMNI_VEC_TYPE_BOOLEAN, I1Type()},
         {OMNI_VEC_TYPE_SHORT, I16Type()},
         {OMNI_VEC_TYPE_DECIMAL64, I64Type()},
-        {OMNI_VEC_TYPE_DECIMAL128, I64Type()},
+        {OMNI_VEC_TYPE_DECIMAL128, I128Type()},
         {OMNI_VEC_TYPE_DATE32, I32Type()},
         {OMNI_VEC_TYPE_DATE64, I64Type()},
         {OMNI_VEC_TYPE_TIMESTAMP, I64Type()},
@@ -57,6 +58,16 @@ Value *LLVMTypes::CreateConstantLong(int64_t v)
 Value *LLVMTypes::CreateConstantDouble(double v)
 {
     return ConstantFP::get(context, APFloat(v));
+}
+
+Value *LLVMTypes::CreateConstant128(int64_t v)
+{
+    return ConstantInt::get(context, APInt(INT128_VALUE, v, true));
+}
+
+llvm::Type *LLVMTypes::VoidType()
+{
+    return llvm::Type::getVoidTy(context);
 }
 
 llvm::Type *LLVMTypes::I1Type()

@@ -44,6 +44,8 @@
 #include "../common/expr_printer.h"
 #include "../util/debug.h"
 #include "llvm_types.h"
+#include "decimal_ir_builder.h"
+
 
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
@@ -56,7 +58,9 @@ public:
     void Initialize();
     std::string DumpCode();
     virtual int64_t GetFunction() = 0;
-
+    llvm::IRBuilder<>& GetIRBuilder();
+    llvm::Module& GetModule();
+    llvm::LLVMContext& GetContext();
     // visitor methods
     void Visit(const omniruntime::expressions::LiteralExpr &e) override;
     void Visit(const omniruntime::expressions::FieldExpr &e) override;
@@ -84,8 +88,6 @@ protected:
     void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
-    llvm::Value *Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
-
     // Helper functions and main function for parsing binary expressions
     llvm::Value *BinaryExprIntHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
@@ -94,7 +96,7 @@ protected:
     llvm::Value *BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *leftVal,
         llvm::Value *leftLen, llvm::Value *rightVal, llvm::Value *rightLen, llvm::Value *leftIsNull,
         llvm::Value *rightIsNull);
-    llvm::Value *BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
+    void BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
     void BinaryExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
@@ -122,6 +124,7 @@ protected:
     std::unique_ptr<CodegenContext> codegenContext;
     int numGlobalValues = 0;
     std::unique_ptr<LLVMTypes> llvmTypes;
+    std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
 
 private:
     std::string funcName;

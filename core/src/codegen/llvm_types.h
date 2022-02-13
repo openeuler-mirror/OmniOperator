@@ -16,6 +16,8 @@ public:
 
     LLVMTypes();
 
+    llvm::Type* VoidType();
+
     llvm::Type* I1Type();
 
     llvm::Type* I8Type();
@@ -51,6 +53,8 @@ public:
     llvm::Value* CreateConstantLong(int64_t n);
 
     llvm::Value* CreateConstantDouble(double n);
+
+    llvm::Value *CreateConstant128(int64_t v);
 
     /// For a given Vector type, find the corresponding ir type.
     llvm::Type* ToLLVMType(omniruntime::vec::VecTypeId id);

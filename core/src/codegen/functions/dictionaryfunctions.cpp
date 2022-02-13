@@ -39,12 +39,11 @@ extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(
     return result;
 }
 
-extern DLLEXPORT int64_t GetDecimalFromDictionaryVector(int64_t contextPtr, int64_t dictionaryVectorAddr,
-                                                            int32_t index) {
+extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr,
+                                                            int32_t index, int64_t *outHighPtr, uint64_t *outLowPtr) {
     auto dictionaryVectorPtr = reinterpret_cast<DictionaryVector*>(dictionaryVectorAddr);
     Decimal128 value = dictionaryVectorPtr->GetDecimal128(index);
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
-    result[0] = value.LowBits();
-    result[1] = value.HighBits();
-    return reinterpret_cast<int64_t>(result);
+    *outLowPtr = value.LowBits();
+    *outHighPtr = value.HighBits();
+    return;
 }

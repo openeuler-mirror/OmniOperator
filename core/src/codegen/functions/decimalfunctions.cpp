@@ -15,12 +15,10 @@
 using namespace omniruntime::vec;
 using namespace std;
 
-extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t x, int64_t y)
+extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow)
 {
-    auto *l = reinterpret_cast<int64_t*>(x);
-    auto *r = reinterpret_cast<int64_t*>(y);
-    Decimal128 left (*(l + 1), *l);
-    Decimal128 right (*(r + 1), *r);
+    Decimal128 left (xHigh, xLow);
+    Decimal128 right (yHigh, yLow);
 
     if (left < right) {
         return -1;
@@ -30,97 +28,66 @@ extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t x, int64_t y)
     }
     return 0;
 }
-extern "C" DLLEXPORT int64_t AddDec128(int64_t contextPtr, int64_t x, int64_t y)
+extern "C" DLLEXPORT void AddDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    int32_t length = 2;
-    auto *left = reinterpret_cast<int64_t*>(x);
-    auto *right = reinterpret_cast<int64_t*>(y);
-    Decimal128 lValue(*(left + 1), *left);
-    Decimal128 rValue(*(right + 1), *right);
+    Decimal128 lValue(xHigh, xLow);
+    Decimal128 rValue(yHigh, yLow);
 
     lValue += rValue;
 
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
-
-    result[0] = lValue.LowBits();
-    result[1] = lValue.HighBits();
-
-    return reinterpret_cast<int64_t>(result);
+    *outHighPtr = lValue.HighBits();
+    *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t SubDec128(int64_t contextPtr, int64_t x, int64_t y)
+extern "C" DLLEXPORT void SubDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    int32_t length = 2;
-    auto *left = reinterpret_cast<int64_t*>(x);
-    auto *right = reinterpret_cast<int64_t*>(y);
-    Decimal128 lValue(*(left + 1), *left);
-    Decimal128 rValue(*(right + 1), *right);
+    Decimal128 lValue(xHigh, xLow);
+    Decimal128 rValue(yHigh, yLow);
 
     lValue -= rValue;
 
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
-
-    result[0] = lValue.LowBits();
-    result[1] = lValue.HighBits();
-
-    return reinterpret_cast<int64_t>(result);
+    *outHighPtr = lValue.HighBits();
+    *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t DivDec128(int64_t contextPtr, int64_t x, int64_t y)
+extern "C" DLLEXPORT void DivDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    int32_t length = 2;
-    auto *left = reinterpret_cast<int64_t*>(x);
-    auto *right = reinterpret_cast<int64_t*>(y);
-    Decimal128 lValue(*(left + 1), *left);
-    Decimal128 rValue(*(right + 1), *right);
+    Decimal128 lValue(xHigh, xLow);
+    Decimal128 rValue(yHigh, yLow);
 
     lValue /= rValue;
 
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
-
-    result[0] = lValue.LowBits();
-    result[1] = lValue.HighBits();
-
-    return reinterpret_cast<int64_t>(result);
+    *outHighPtr = lValue.HighBits();
+    *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t MulDec128(int64_t contextPtr, int64_t x, int64_t y)
+extern "C" DLLEXPORT void MulDec128(int64_t xHigh, uint64_t xLow, int64_t yHigh, uint64_t yLow,
+                                       int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    int32_t length = 2;
-    auto *left = reinterpret_cast<int64_t*>(x);
-    auto *right = reinterpret_cast<int64_t*>(y);
-    Decimal128 lValue(*(left + 1), *left);
-    Decimal128 rValue(*(right + 1), *right);
+    Decimal128 lValue(xHigh, xLow);
+    Decimal128 rValue(yHigh, yLow);
 
     lValue *= rValue;
 
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
-
-    result[0] = lValue.LowBits();
-    result[1] = lValue.HighBits();
-
-    return reinterpret_cast<int64_t>(result);
+    *outHighPtr = lValue.HighBits();
+    *outLowPtr = lValue.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t AbsDecimal128(int64_t contextPtr, int64_t x)
+extern "C" DLLEXPORT void AbsDecimal128(int64_t xHigh, uint64_t xLow, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    int32_t length = 2;
-    auto *valueAdd = reinterpret_cast<int64_t*>(x);
-    Decimal128 value(*(valueAdd + 1), *valueAdd);
+    Decimal128 value(xHigh, xLow);
 
     value.Abs();
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) * 2));
 
-    result[0] = value.LowBits();
-    result[1] = value.HighBits();
-
-    return reinterpret_cast<int64_t>(result);
+    *outHighPtr = value.HighBits();
+    *outLowPtr = value.LowBits();
 }
 
-extern "C" DLLEXPORT int64_t CastInt64ToDecimal128(int64_t contextPtr, int64_t x)
+extern "C" DLLEXPORT void CastInt64ToDecimal128(int64_t x, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    auto result = reinterpret_cast<int64_t*>(ArenaAllocatorMalloc(contextPtr, sizeof (long) + sizeof (long)));
-    result[0] = x;
-    result[1] = 0;
-    return reinterpret_cast<int64_t>(result);
+    *outHighPtr = 0;
+    *outLowPtr = x;
 }

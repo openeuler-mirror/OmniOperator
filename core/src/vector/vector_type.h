@@ -205,6 +205,16 @@ public:
         return width;
     }
 
+    uint32_t GetPrecision() const
+    {
+        return precision;
+    }
+
+    uint32_t GetScale() const
+    {
+        return scale;
+    }
+
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(VecType, id, width, precision, scale, dateUnit, timeUnit);
 
     VecType &operator = (const VecType &right)

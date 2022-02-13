@@ -166,7 +166,6 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
 
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
-
     OptimizeFunctionsAndModule();
 
     jit->getMainJITDylib().addGenerator(

@@ -106,22 +106,6 @@ Projection::Projection(VecTypes &inputTypes, int32_t nCols, const Expr &expr, bo
 #endif
 }
 
-int64_t GetProjDecimal128Data(Vector *col, uint32_t nRows)
-{
-    int32_t longs = 2;
-    auto *values = static_cast<int64_t *>(col->GetValues());
-    // create new vector to store addresses of rows
-    unique_ptr<vec64> vcData = make_unique<vec64>();
-    int32_t positionOffset = col->GetPositionOffset();
-
-    for (int32_t row = 0; row < nRows; row++) {
-        int64_t *index = &((values)[(positionOffset + row) * longs]);
-        vcData->push_back(reinterpret_cast<int64_t>(index));
-    }
-    // data handling
-    return reinterpret_cast<int64_t>(vcData.release()->data());
-}
-
 // Helper function to return data, null bitmap, offsets in vecBatch
 std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_t offsetsAddrs[],
     std::vector<Vector *> &dictionaryVecs, int vectorCount, int64_t dictionaries[])
@@ -140,8 +124,6 @@ std::vector<int64_t> GetProjData(VectorBatch &vecBatch, int64_t bitmap[], int64_
         VecTypeId typeId = colVec->GetTypeId();
         if (typeId == OMNI_VEC_TYPE_DICTIONARY) {
             dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
-        } else if (typeId == OMNI_VEC_TYPE_DECIMAL128) {
-            valuesAddress = GetProjDecimal128Data(colVec, vecBatch.GetRowCount());
         } else {
             valuesAddress = VectorHelper::GetValuesAddr(colVec);
         }
@@ -249,27 +231,10 @@ omniruntime::vec::Vector *Projection::ProjectHelperFixedWidth(omniruntime::vec::
     std::vector<int64_t> const & vecData, int64_t *bitmap, int64_t *offsets, omniruntime::vec::Vector *outVec,
     int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context, int64_t *dictionaryVectors) const
 {
-    if (outVec->GetTypeId() == OMNI_VEC_TYPE_DECIMAL128) {
-        // pass vector pointers directly to codegen
-        vector<int64_t> oVec(numSelectedRows);
-        auto ov = oVec.data();
-        void *vecVals = &ov;
-        auto cvecVals = static_cast<int64_t *>(vecVals);
-        this->projector(vecData.data(), vecBatch.GetRowCount(), *cvecVals, selectedRows, numSelectedRows, bitmap,
-            offsets, reinterpret_cast<bool *>(outVec->GetValueNulls()),
-            reinterpret_cast<int32_t *>(outVec->GetValueOffsets()), reinterpret_cast<int64_t>(context),
-            dictionaryVectors);
-        auto *outDecimal128Vec = static_cast<Decimal128Vector *>(outVec);
-        for (int i = 0; i < numSelectedRows; i++) {
-            auto *value = reinterpret_cast<int64_t *>(ov[i]);
-            outDecimal128Vec->SetValue(i, Decimal128(*(value + 1), *value));
-        }
-    } else {
-        int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(),
-            reinterpret_cast<int64_t>(outVec->GetValues()), selectedRows, numSelectedRows, bitmap, offsets,
-            reinterpret_cast<bool *>(outVec->GetValueNulls()), reinterpret_cast<int32_t *>(outVec->GetValueOffsets()),
-            reinterpret_cast<int64_t>(context), dictionaryVectors);
-    }
+    int32_t nReturned = this->projector(vecData.data(), vecBatch.GetRowCount(),
+        reinterpret_cast<int64_t>(outVec->GetValues()), selectedRows, numSelectedRows, bitmap, offsets,
+        reinterpret_cast<bool *>(outVec->GetValueNulls()), reinterpret_cast<int32_t *>(outVec->GetValueOffsets()),
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
     return outVec;
 }
 
