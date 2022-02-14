@@ -35,8 +35,8 @@ public:
         bool inputRaw = true, bool outputPartial = false) override
     {
         auto inputTypeId = inputType.GetId();
-        // only 24 byte width can be regarded as decimal encoded
-        if (inputTypeId == OMNI_VEC_TYPE_VARCHAR && inputType.GetWidth() == PARTIAL_SUM_OUTPUT_LENGTH) {
+        // OMNI_VEC_TYPE_VARCHAR is varbinary,need to optimize
+        if (inputTypeId == OMNI_VEC_TYPE_VARCHAR) {
             return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw, outputPartial);
         }
         switch (inputTypeId) {
