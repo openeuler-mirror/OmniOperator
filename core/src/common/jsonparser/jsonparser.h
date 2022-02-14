@@ -31,7 +31,7 @@ private:
     static omniruntime::expressions::Expr *ParseJSONIf(nlohmann::json jsonExpr);
     static omniruntime::expressions::Expr *ParseJSONCoalesce(nlohmann::json jsonExpr);
     static omniruntime::expressions::Expr *ParseJsonIsNull(nlohmann::json jsonExpr);
-    static omniruntime::expressions::Expr *ParseJsonIsNotNull(nlohmann::json jsonExpr);
+
     static omniruntime::expressions::Expr *ParseJSONFunc(nlohmann::json jsonExpr);
 
     static omniruntime::expressions::OperatorType GetOperatorType(omniruntime::expressions::Operator op);

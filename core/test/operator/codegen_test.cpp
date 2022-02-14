@@ -387,18 +387,18 @@ TEST (CodeGenTest, RowFilterString) {
         offsets[col][0] = 0;
         offsets[col][1] = 11;
     }
-    auto substrCol = new FieldExpr(0, VarCharType());
+    auto substrCol = new FieldExpr(0, VarcharType());
     auto substrIndex = new LiteralExpr(1, IntType());
     auto substrLen = new LiteralExpr(5, IntType());
     std::vector<Expr*> args;
     args.push_back(substrCol);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::string funcStr = "substr";
 
-    auto substrExpr = GetFuncExpr(funcStr, args, VarCharType());
-    auto helloExpr = new LiteralExpr(new std::string("hello"), VarCharType(6));
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
+    auto helloExpr = new LiteralExpr(new std::string("hello"), VarcharType(6));
     auto eqExpr = new BinaryExpr(EQ, substrExpr, helloExpr, BooleanType());
 
     auto filter = new RowFilter(*eqExpr);
@@ -410,16 +410,16 @@ TEST (CodeGenTest, RowFilterString) {
     EXPECT_EQ(res, true);
     delete filter;
 
-    auto substrCol2 = new FieldExpr(1, VarCharType());
+    auto substrCol2 = new FieldExpr(1, VarcharType());
     auto *substrIndex2 = new LiteralExpr(1, IntType());
     auto substrLen2 = new LiteralExpr(5, IntType());
     std::vector<Expr*> args2;
     args2.push_back(substrCol2);
     args2.push_back(substrIndex2);
     args2.push_back(substrLen2);
-    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarCharType());
+    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarcharType());
 
-    auto helloExpr2 = new LiteralExpr(new std::string("hello"), VarCharType(6));
+    auto helloExpr2 = new LiteralExpr(new std::string("hello"), VarcharType(6));
 
     auto eqExpr2 = new BinaryExpr(EQ, substrExpr2, helloExpr2, BooleanType());
     filter = new RowFilter(*eqExpr2);
@@ -432,23 +432,23 @@ TEST (CodeGenTest, RowFilterString) {
 
     delete filter;
 
-    auto substrCol3 = new FieldExpr(0, VarCharType());
+    auto substrCol3 = new FieldExpr(0, VarcharType());
     auto substrIndex3 = new LiteralExpr(1, IntType());
     auto substrLen3 = new LiteralExpr(5, IntType());
     std::vector<Expr*> args3;
     args3.push_back(substrCol3);
     args3.push_back(substrIndex3);
     args3.push_back(substrLen3);
-    auto substrExpr3 = GetFuncExpr(funcStr, args3, VarCharType());
+    auto substrExpr3 = GetFuncExpr(funcStr, args3, VarcharType());
 
-    auto substrCol4 = new FieldExpr(1, VarCharType());
+    auto substrCol4 = new FieldExpr(1, VarcharType());
     auto substrIndex4 = new LiteralExpr(7, IntType());
     auto substrLen4 = new LiteralExpr(11, IntType());
     std::vector<Expr*> args4;
     args4.push_back(substrCol4);
     args4.push_back(substrIndex4);
     args4.push_back(substrLen4);
-    auto substrExpr4 = GetFuncExpr(funcStr, args4, VarCharType());
+    auto substrExpr4 = GetFuncExpr(funcStr, args4, VarcharType());
 
     auto eqExpr3 = new BinaryExpr(EQ, substrExpr3, substrExpr4, BooleanType());
     filter = new RowFilter(*eqExpr3);
@@ -1114,8 +1114,8 @@ TEST(CodeGenTest, Like)
     // create expression objects
     std::string funcStr = "LIKE";
     VecTypePtr retType = BooleanType();
-    auto col = new FieldExpr(2, VarCharType());
-    auto data = new LiteralExpr(new std::string(".*hello.*world.*"), VarCharType(17));
+    auto col = new FieldExpr(2, VarcharType());
+    auto data = new LiteralExpr(new std::string(".*hello.*world.*"), VarcharType(17));
     std::vector<Expr *> args;
     args.push_back(col);
     args.push_back(data);
@@ -1195,7 +1195,7 @@ TEST(CodeGenTest, DateCast)
 {
     // create expression objects
     std::string funcStr = "CAST";
-    auto col2 = new FieldExpr(2, VarCharType());
+    auto col2 = new FieldExpr(2, VarcharType());
     std::vector<Expr *> args;
     args.push_back(col2);
     VecTypePtr retType = IntType();
@@ -1290,25 +1290,25 @@ TEST(CodeGenTest, DateCast)
 TEST(CodeGenTest, SubstrIn)
 {
     //create the expression objects
-    auto col2 = new FieldExpr(2, VarCharType());
+    auto col2 = new FieldExpr(2, VarcharType());
     auto substrIndex = new LiteralExpr(1, IntType());
     auto substrLen = new LiteralExpr(2, IntType());
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::string funcStr = "substr";
     std::vector<Expr*> substrArgs;
     substrArgs.push_back(col2);
     substrArgs.push_back(substrIndex);
     substrArgs.push_back(substrLen);
-    auto substrExpr = GetFuncExpr(funcStr, substrArgs, VarCharType());
+    auto substrExpr = GetFuncExpr(funcStr, substrArgs, VarcharType());
 
     std::vector<Expr *> args;
     args.push_back(substrExpr);
-    args.push_back(new LiteralExpr(new std::string("12"), VarCharType(3)));
-    args.push_back(new LiteralExpr(new std::string("21"), VarCharType(3)));
-    args.push_back(new LiteralExpr(new std::string("13"), VarCharType(3)));
-    args.push_back(new LiteralExpr(new std::string("31"), VarCharType(3)));
-    args.push_back(new LiteralExpr(new std::string("34"), VarCharType(3)));
-    args.push_back(new LiteralExpr(new std::string("43"), VarCharType(3)));
+    args.push_back(new LiteralExpr(new std::string("12"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("21"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("13"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("31"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("34"), VarcharType(3)));
+    args.push_back(new LiteralExpr(new std::string("43"), VarcharType(3)));
 
     InExpr *expr = new InExpr(args);
 
@@ -1400,15 +1400,15 @@ TEST(CodeGenTest, SubstrIn)
 TEST(CodeGenTest, ConcatStr)
 {
     std::string funcStr = "concat";
-    auto col1 = new FieldExpr(1, VarCharType());
-    auto col2 = new FieldExpr(2, VarCharType());
+    auto col1 = new FieldExpr(1, VarcharType());
+    auto col2 = new FieldExpr(2, VarcharType());
     std::vector<Expr*> concatArgs;
     concatArgs.push_back(col1);
     concatArgs.push_back(col2);
-    VecTypePtr retType = VarCharType();
-    auto concatExpr = GetFuncExpr(funcStr, concatArgs, VarCharType());
+    VecTypePtr retType = VarcharType();
+    auto concatExpr = GetFuncExpr(funcStr, concatArgs, VarcharType());
 
-    auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarCharType(11));
+    auto helloWorldExpr = new LiteralExpr(new std::string("helloworld"), VarcharType(11));
     auto expr = new BinaryExpr(EQ, concatExpr, helloWorldExpr, BooleanType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_INT), VecType(OMNI_VEC_TYPE_VARCHAR), VecType(OMNI_VEC_TYPE_VARCHAR) };
@@ -1606,13 +1606,14 @@ TEST(CodeGenTest, ConcatChars)
 TEST(CodeGenTest, ToUpper)
 {
     std::string funcStr = "upper";
-    auto *col1 = new FieldExpr(1, VarCharType());
+    auto *col1 = new FieldExpr(1, VarcharType());
     std::vector<Expr*> toUpperArgs;
     toUpperArgs.push_back(col1);
-    VecTypePtr retType = VarCharType();
-    auto toUpperExpr = GetFuncExpr(funcStr, toUpperArgs, VarCharType());
+    VecTypePtr retType = VarcharType();
+    auto toUpperExpr = GetFuncExpr(funcStr, toUpperArgs, VarcharType());
 
-    auto upperTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."), VarCharType(80));
+    auto upperTestExpr = new LiteralExpr(new std::string("[\\]^_ABCDEFGHIJKLMNOPQRSTUVWXYZ{|} THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG."),
+                                         VarcharType(80));
     auto expr = new BinaryExpr(EQ, toUpperExpr, upperTestExpr, BooleanType());
 
     ExprPrinter printExprTree;
@@ -1729,12 +1730,12 @@ TEST(CodeGenTest, ToUpperChar)
 TEST(CodeGenTest, StringWithOps)
 {
     // create expression objects
-    FieldExpr *col21 = new FieldExpr(2, VarCharType());
-    LiteralExpr *sunday = new LiteralExpr(new std::string("Sunday"), VarCharType(7));
+    FieldExpr *col21 = new FieldExpr(2, VarcharType());
+    LiteralExpr *sunday = new LiteralExpr(new std::string("Sunday"), VarcharType(7));
     BinaryExpr *eqExpr1 = new BinaryExpr(EQ, col21, sunday, BooleanType());
 
-    FieldExpr *col22 = new FieldExpr(2, VarCharType());
-    LiteralExpr *saturday = new LiteralExpr(new std::string("Saturday"), VarCharType(9));
+    FieldExpr *col22 = new FieldExpr(2, VarcharType());
+    LiteralExpr *saturday = new LiteralExpr(new std::string("Saturday"), VarcharType(9));
     BinaryExpr *eqExpr2 = new BinaryExpr(EQ, col22, saturday, BooleanType());
 
     BinaryExpr *expr = new BinaryExpr(OR, eqExpr1, eqExpr2, BooleanType());
@@ -2556,15 +2557,15 @@ TEST(CodeGenTest, TestRowProjectVarchar)
 
     // create expression objects
     std::string funcStr = "substr";
-    auto substrData = new FieldExpr(0, VarCharType());
+    auto substrData = new FieldExpr(0, VarcharType());
     auto substrIndex = new LiteralExpr(1, IntType());
     auto substrLen = new LiteralExpr(5, IntType());
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    auto expr = GetFuncExpr(funcStr, args, VarCharType());
+    auto expr = GetFuncExpr(funcStr, args, VarcharType());
 
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_VARCHAR) };
     VecTypes types(vecOfTypes);
@@ -2714,18 +2715,18 @@ TEST (CodeGenTest, Substr) {
     }
 
     // create expression objects
-    auto substrData1 = new FieldExpr(0, VarCharType());
+    auto substrData1 = new FieldExpr(0, VarcharType());
     auto substrIndex1 = new LiteralExpr(-5, IntType());
     auto substrLen1 = new LiteralExpr(5, IntType());
     std::string funcStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args1;
     args1.push_back(substrData1);
     args1.push_back(substrIndex1);
     args1.push_back(substrLen1);
-    auto substrExp1 = GetFuncExpr(funcStr, args1, VarCharType());
+    auto substrExp1 = GetFuncExpr(funcStr, args1, VarcharType());
 
-    auto ctionExpr= new LiteralExpr(new std::string("ction"), VarCharType(6));
+    auto ctionExpr= new LiteralExpr(new std::string("ction"), VarcharType(6));
     auto expr1 = new BinaryExpr(EQ, substrExp1, ctionExpr, BooleanType());
 
     int64_t dictionaries[numCols] = {};
@@ -2739,14 +2740,14 @@ TEST (CodeGenTest, Substr) {
     delete filter;
 
     // create expression objects
-    auto substrData2 = new FieldExpr(1, VarCharType());
+    auto substrData2 = new FieldExpr(1, VarcharType());
     auto substrIndex2 = new LiteralExpr(-5, IntType());
     std::vector<Expr *> args2;
     args2.push_back(substrData2);
     args2.push_back(substrIndex2);
-    auto substrExp2 = GetFuncExpr(funcStr, args2, VarCharType());
+    auto substrExp2 = GetFuncExpr(funcStr, args2, VarcharType());
 
-    auto ubsterExpr= new LiteralExpr(new std::string("UBSTR"), VarCharType(6));
+    auto ubsterExpr= new LiteralExpr(new std::string("UBSTR"), VarcharType(6));
     auto expr2 = new BinaryExpr(EQ, substrExp2, ubsterExpr, BooleanType());
 
     filter = new RowFilter(*expr2);
@@ -2758,14 +2759,14 @@ TEST (CodeGenTest, Substr) {
     delete filter;
 
     // create expression objects
-    auto substrData3 = new FieldExpr(0, VarCharType());
+    auto substrData3 = new FieldExpr(0, VarcharType());
     auto substrIndex3 = new LiteralExpr(4, IntType());
     std::vector<Expr *> args3;
     args3.push_back(substrData3);
     args3.push_back(substrIndex3);
-    auto substrExp3 = GetFuncExpr(funcStr, args3, VarCharType());
+    auto substrExp3 = GetFuncExpr(funcStr, args3, VarcharType());
 
-    auto STRExpr= new LiteralExpr(new std::string("STR Function"), VarCharType(13));
+    auto STRExpr= new LiteralExpr(new std::string("STR Function"), VarcharType(13));
     auto expr3 = new BinaryExpr(EQ, substrExp3, STRExpr, BooleanType());
 
     filter = new RowFilter(*expr3);
@@ -2948,7 +2949,7 @@ TEST(CodeGenTest, Mm3HashString)
     std::string funcStr = "mm3hash";
     VecTypePtr retType = IntType();
     std::vector<Expr *> args;
-    args.push_back(new FieldExpr(0, VarCharType()));
+    args.push_back(new FieldExpr(0, VarcharType()));
     args.push_back(new LiteralExpr(42, IntType()));
     auto expr = GetFuncExpr(funcStr, args, IntType());
 

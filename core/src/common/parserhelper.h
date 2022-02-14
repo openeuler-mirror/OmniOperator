@@ -14,7 +14,7 @@
 
 class ParserHelper {
 public:
-    static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(VecTypeId destTypeId);
+    static omniruntime::expressions::LiteralExpr *GetDefaultValueForType(omniruntime::vec::VecTypeId destTypeId);
 };
 
 #endif

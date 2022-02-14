@@ -76,11 +76,11 @@ public:
     // TODO: Figure out which of these can be private
 protected:
     // Util functions
-    std::vector<llvm::Type*> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
-                                                bool needsContext);
+    std::vector<llvm::Type *> GetFunctionArgTypeVector(std::vector<VecTypeId> &params, VecTypeId &retTypeId,
+        bool needsContext);
 
-    llvm::Value* GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
-    void PrintValues(std::string format, const std::vector<llvm::Value *>& values);
+    llvm::Value *GetIntToPtr(omniruntime::vec::VecTypeId typeId, llvm::Value *elementAddr);
+    void PrintValues(std::string format, const std::vector<llvm::Value *> &values);
     // Helper functions for generating IR for operators and special forms
     llvm::Value *StringCmp(llvm::Value *lhs, llvm::Value *lLen, llvm::Value *rhs, llvm::Value *rLen);
     llvm::Value *Decimal128Cmp(const llvm::Value &lhs, const llvm::Value &rhs);
@@ -99,8 +99,8 @@ protected:
         llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
         llvm::PHINode **rightPhi, llvm::Value **isNeitherNull);
     void DivExprNullHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-                              llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull,
-                              llvm::PHINode **leftPhi, llvm::PHINode **rightPhi);
+        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull, llvm::PHINode **leftPhi,
+        llvm::PHINode **rightPhi);
     // Helper functions and main function for parsing constant data expressions
     CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
 
@@ -125,7 +125,7 @@ protected:
 private:
     std::string funcName;
     static void InitializeCodegenTargets();
-    void RegisterFunctions(const std::vector<omniruntime::Function>& func);
+    void RegisterFunctions(const std::vector<omniruntime::Function> &func);
     bool InitializeCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
     llvm::Value *GetDictionaryVectorValue(omniruntime::vec::VecType vectorType, llvm::Value *rowIdx,
         llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *&lengthAllocaInst);

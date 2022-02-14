@@ -25,6 +25,7 @@ void RowExpressionCodeGen::Visit(const omniruntime::expressions::LiteralExpr &li
 {
     this->value.reset(LiteralExprConstantHelper(literalData));
 }
+
 void RowExpressionCodeGen::Visit(const omniruntime::expressions::FieldExpr &fieldExpr)
 {
     Value *data = this->codegenContext->data;

@@ -16,8 +16,8 @@ namespace project_test {
 void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op,
     const int PROJECT_COUNT, bool isBoolResult = false)
 {
-    std::vector<VecTypeId> dataTypes = { OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE, OMNI_VEC_TYPE_DECIMAL128,
-                                           OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_CHAR };
+    std::vector<VecTypeId> dataTypes = { OMNI_VEC_TYPE_INT,        OMNI_VEC_TYPE_LONG,    OMNI_VEC_TYPE_DOUBLE,
+        OMNI_VEC_TYPE_DECIMAL128, OMNI_VEC_TYPE_VARCHAR, OMNI_VEC_TYPE_CHAR };
     for (int i = 0; i < PROJECT_COUNT; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         if (isBoolResult) {
@@ -57,7 +57,8 @@ void testCmpBinaryExpressions(std::vector<Expr *> result, omniruntime::expressio
 void testArithmeticBinaryExpressions(std::vector<Expr *> result, omniruntime::expressions::Operator op,
     const int PROJECT_COUNT)
 {
-    std::vector<VecTypeId> dataTypes = { OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE , OMNI_VEC_TYPE_DECIMAL128 };
+    std::vector<VecTypeId> dataTypes = { OMNI_VEC_TYPE_INT, OMNI_VEC_TYPE_LONG, OMNI_VEC_TYPE_DOUBLE,
+        OMNI_VEC_TYPE_DECIMAL128 };
     for (int i = 0; i < PROJECT_COUNT; i++) {
         BinaryExpr *binaryExpr = static_cast<BinaryExpr *>(result.at(i));
         EXPECT_EQ(binaryExpr->GetReturnTypeId(), dataTypes[i]);
@@ -96,7 +97,7 @@ TEST(ParseTest, parseNotOperation)
     UnaryExpr *notExpr = static_cast<UnaryExpr *>(result);
     EXPECT_EQ(notExpr->op, NOT);
     FieldExpr *colExpr = static_cast<FieldExpr *>(notExpr->exp);
-    EXPECT_EQ(colExpr->GetType() , FIELD_E);
+    EXPECT_EQ(colExpr->GetType(), FIELD_E);
     EXPECT_EQ(colExpr->colVal, 0);
 }
 
@@ -298,39 +299,39 @@ TEST(ParseTest, parseNEQOperation)
     }
 }
 
-    // Test Logic Operations
-    TEST (ParseTest, parseLogicOperations)
-    {
-        const int PROJECT_COUNT = 2;
-        int vecTypeCount = 2;
-        string exprs[PROJECT_COUNT] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
-        std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_BOOLEAN), VecType(OMNI_VEC_TYPE_BOOLEAN)};
-        VecTypes inputTypes(vecOfTypes);
-        Parser parser;
-        std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
-        EXPECT_EQ(result.size(), PROJECT_COUNT);
-        for (int i = 0; i < PROJECT_COUNT; i++) {
-            BinaryExpr *logExpr = static_cast<BinaryExpr *>(result.at(i));
-            EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
-            FieldExpr *logLeft = static_cast<FieldExpr *>(logExpr->left);
-            LiteralExpr *logRight = static_cast<LiteralExpr *>(logExpr->right);
-            EXPECT_EQ(logLeft->GetType(), FIELD_E);
-            EXPECT_EQ(logLeft->colVal, i);
-            EXPECT_EQ(logRight->GetType(), LITERAL_E);
-            if (i == 0) {
-                EXPECT_TRUE(logRight->boolVal);
-                EXPECT_EQ(logExpr->op, AND);
-            }
-            if (i == 1) {
-                EXPECT_FALSE(logRight->boolVal);
-                EXPECT_EQ(logExpr->op, OR);
-            }
+// Test Logic Operations
+TEST(ParseTest, parseLogicOperations)
+{
+    const int PROJECT_COUNT = 2;
+    int vecTypeCount = 2;
+    string exprs[PROJECT_COUNT] = {"$operator$AND:4(#0, true:4)", "$operator$OR:4(#1, false:4)"};
+    std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_BOOLEAN), VecType(OMNI_VEC_TYPE_BOOLEAN) };
+    VecTypes inputTypes(vecOfTypes);
+    Parser parser;
+    std::vector<Expr *> result = parser.ParseExpressions(exprs, PROJECT_COUNT, inputTypes);
+    EXPECT_EQ(result.size(), PROJECT_COUNT);
+    for (int i = 0; i < PROJECT_COUNT; i++) {
+        BinaryExpr *logExpr = static_cast<BinaryExpr *>(result.at(i));
+        EXPECT_EQ(logExpr->GetReturnTypeId(), OMNI_VEC_TYPE_BOOLEAN);
+        FieldExpr *logLeft = static_cast<FieldExpr *>(logExpr->left);
+        LiteralExpr *logRight = static_cast<LiteralExpr *>(logExpr->right);
+        EXPECT_EQ(logLeft->GetType(), FIELD_E);
+        EXPECT_EQ(logLeft->colVal, i);
+        EXPECT_EQ(logRight->GetType(), LITERAL_E);
+        if (i == 0) {
+            EXPECT_TRUE(logRight->boolVal);
+            EXPECT_EQ(logExpr->op, AND);
         }
-
-        for (int i = 0; i < PROJECT_COUNT; i++) {
-            delete result.at(i);
+        if (i == 1) {
+            EXPECT_FALSE(logRight->boolVal);
+            EXPECT_EQ(logExpr->op, OR);
         }
     }
+
+    for (int i = 0; i < PROJECT_COUNT; i++) {
+        delete result.at(i);
+    }
+}
 
 // Test Between expression
 TEST(ParseTest, parseBetweenOperation)

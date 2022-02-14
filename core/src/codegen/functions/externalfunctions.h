@@ -16,10 +16,10 @@
 // Example functions
 extern DLLEXPORT int32_t StringLength(char *str, int32_t length);
 
-template <typename T>
+template<typename T>
 extern DLLEXPORT T Increment(T x)
 {
     return x + 1;
 }
 
-#endif //OMNI_RUNTIME_EXTERNALFUNCTIONS_H
+#endif // OMNI_RUNTIME_EXTERNALFUNCTIONS_H

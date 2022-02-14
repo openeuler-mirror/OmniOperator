@@ -11,25 +11,40 @@
 #include <map>
 
 using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 using namespace std;
 
 string ExprPrinter::BinaryExprPrinterHelper(const Operator &op) const
 {
     switch (op) {
-        case EQ: return "Cmp:%s(EQ, ";
-        case NEQ: return "Cmp:%s(NEQ, ";
-        case LT: return "Cmp:%s(LT, ";
-        case LTE: return "Cmp:%s(LTE, ";
-        case GT: return "Cmp:%s(GT, ";
-        case GTE: return "Cmp:%s(GTE, ";
-        case AND: return "Bin:%s(AND, ";
-        case OR: return "Bin:%s(OR, ";
-        case ADD: return "Arith:%s(ADD, ";
-        case SUB: return "Arith:%s(SUB, ";
-        case MUL: return "Arith:%s(MUL, ";
-        case DIV: return "Arith:%s(DIV, ";
-        case MOD: return "Arith:%s(MOD, ";
-        default: return "Invalid";
+        case EQ:
+            return "Cmp:%s(EQ, ";
+        case NEQ:
+            return "Cmp:%s(NEQ, ";
+        case LT:
+            return "Cmp:%s(LT, ";
+        case LTE:
+            return "Cmp:%s(LTE, ";
+        case GT:
+            return "Cmp:%s(GT, ";
+        case GTE:
+            return "Cmp:%s(GTE, ";
+        case AND:
+            return "Bin:%s(AND, ";
+        case OR:
+            return "Bin:%s(OR, ";
+        case ADD:
+            return "Arith:%s(ADD, ";
+        case SUB:
+            return "Arith:%s(SUB, ";
+        case MUL:
+            return "Arith:%s(MUL, ";
+        case DIV:
+            return "Arith:%s(DIV, ";
+        case MOD:
+            return "Arith:%s(MOD, ";
+        default:
+            return "Invalid";
     }
 }
 
@@ -62,14 +77,9 @@ void ExprPrinter::Visit(const BinaryExpr &e)
     string indent = GenerateIndentation();
     string message = BinaryExprPrinterHelper(e.op);
     if (message == "Invalid") {
-        printf(
-            "invalid BinaryOperator %d(",
-            e.op);
+        printf("invalid BinaryOperator %d(", e.op);
     } else {
-        printf(
-            (indent + (message.append("\n"))).c_str(),
-            TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-            );
+        printf((indent + (message.append("\n"))).c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     }
     this->indentationDepth++;
     (e.left)->Accept(*this);
@@ -95,15 +105,10 @@ void ExprPrinter::Visit(const UnaryExpr &e)
     string indent = GenerateIndentation();
     switch (e.op) {
         case NOT:
-            printf(
-                (indent + "Unary:%s(NOT,\n").c_str(),
-                TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-                );
+            printf((indent + "Unary:%s(NOT,\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
             break;
         default:
-            printf(
-                "invalid UnaryOperator %d(",
-                e.op);
+            printf("invalid UnaryOperator %d(", e.op);
             break;
     }
     this->indentationDepth++;
@@ -121,16 +126,15 @@ void ExprPrinter::Visit(const LiteralExpr &e)
             if (printWithTypes) {
                 printf("bool_");
             }
-            e.boolVal ? printf("%s", indent.append("true").c_str()) :
-            printf("%s", indent.append("false").c_str());
+            e.boolVal ? printf("%s", indent.append("true").c_str()) : printf("%s", indent.append("false").c_str());
             break;
         case OMNI_VEC_TYPE_INT:
-            case OMNI_VEC_TYPE_DATE32:
-                if (printWithTypes) {
-                    printf("i32_");
-                }
-                printf(indent.append("%d:%s").c_str(), e.intVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
-                break;
+        case OMNI_VEC_TYPE_DATE32:
+            if (printWithTypes) {
+                printf("i32_");
+            }
+            printf(indent.append("%d:%s").c_str(), e.intVal, TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            break;
         case OMNI_VEC_TYPE_LONG:
             if (printWithTypes) {
                 printf("i64_");
@@ -147,17 +151,15 @@ void ExprPrinter::Visit(const LiteralExpr &e)
             if (printWithTypes) {
                 printf("s_");
             }
-            printf(
-                    indent.append("'%s[%d]':%s").c_str(),
-                    (e.stringVal)->c_str(), e.dataType->GetWidth(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            printf(indent.append("'%s[%d]':%s").c_str(), (e.stringVal)->c_str(), e.dataType->GetWidth(),
+                TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
             break;
         case OMNI_VEC_TYPE_VARCHAR:
             if (printWithTypes) {
                 printf("s_");
             }
-            printf(
-                    indent.append("'%s':%s").c_str(), (e.stringVal)->c_str(),
-                    TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+            printf(indent.append("'%s':%s").c_str(), (e.stringVal)->c_str(),
+                TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
             break;
         case OMNI_VEC_TYPE_DECIMAL64:
             if (printWithTypes) {
@@ -172,8 +174,8 @@ void ExprPrinter::Visit(const LiteralExpr &e)
             // FIXME: printing as int64_t for now;
             printf(indent.append("%ld").c_str(), (long)e.longVal);
             break;
-            default:
-                printf("invalid DataType %d", e.GetReturnTypeId());
+        default:
+            printf("invalid DataType %d", e.GetReturnTypeId());
     }
 }
 
@@ -201,8 +203,7 @@ void ExprPrinter::Visit(const FieldExpr &e)
 void ExprPrinter::Visit(const InExpr &e)
 {
     string indent = GenerateIndentation();
-    printf((indent + "In:%s(\n").c_str(),
-           TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
+    printf((indent + "In:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
     for (int i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
@@ -228,10 +229,7 @@ void ExprPrinter::Visit(const InExpr &e)
 void ExprPrinter::Visit(const BetweenExpr &e)
 {
     string indent = GenerateIndentation();
-    printf(
-        (indent + "Between:%s(\n").c_str(),
-        TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-        );
+    printf((indent + "Between:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
     (e.value)->Accept(*this);
     printf(",\n");
@@ -266,10 +264,7 @@ void ExprPrinter::Visit(const BetweenExpr &e)
 void ExprPrinter::Visit(const IfExpr &e)
 {
     string indent = GenerateIndentation();
-    printf(
-        (indent + "If:%s(\n").c_str(),
-        TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-        );
+    printf((indent + "If:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
     e.condition->Accept(*this);
     printf(",\n");
@@ -297,10 +292,7 @@ void ExprPrinter::Visit(const IfExpr &e)
 void ExprPrinter::Visit(const CoalesceExpr &e)
 {
     string indent = GenerateIndentation();
-    printf(
-        (indent + "Coalesce:%s(\n").c_str(),
-        TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-        );
+    printf((indent + "Coalesce:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
     e.value1->Accept(*this);
     printf(",\n");
@@ -323,10 +315,7 @@ void ExprPrinter::Visit(const CoalesceExpr &e)
 void ExprPrinter::Visit(const IsNullExpr &e)
 {
     string indent = GenerateIndentation();
-    printf(
-        (indent + "IsNull:%s(\n").c_str(),
-        TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-        );
+    printf((indent + "IsNull:%s(\n").c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
     e.value->Accept(*this);
     printf("\n%s)", indent.c_str());
@@ -344,10 +333,7 @@ void ExprPrinter::Visit(const IsNullExpr &e)
 void ExprPrinter::Visit(const FuncExpr &e)
 {
     string indent = GenerateIndentation();
-    printf(
-        (indent + "%s:%s(\n").c_str(),
-        e.funcName.c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str()
-        );
+    printf((indent + "%s:%s(\n").c_str(), e.funcName.c_str(), TypeUtil::TypeToString(e.GetReturnTypeId()).c_str());
     this->indentationDepth++;
     for (int i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);

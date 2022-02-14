@@ -137,24 +137,4 @@ void GetTestTypeIds(VecTypes &inputTypes, std::string *projectKeys, int32_t proj
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
     std::vector<omniruntime::expressions::Expr*> args, omniruntime::expressions::VecTypePtr returnType);
 
-std::unique_ptr<VecType> IntType();
-
-std::unique_ptr<VecType> Date32Type();
-
-std::unique_ptr<VecType> LongType();
-
-std::unique_ptr<VecType> DoubleType();
-
-std::unique_ptr<VecType> BooleanType();
-
-std::unique_ptr<VecType> VarCharType();
-
-std::unique_ptr<VecType> VarCharType(int32_t width);
-
-std::unique_ptr<VecType> CharType(int32_t width);
-
-std::unique_ptr<VecType> Decimal64Type(int32_t precision, int32_t scale);
-
-std::unique_ptr<VecType> Decimal128Type(int32_t precision, int32_t scale);
-
 #endif

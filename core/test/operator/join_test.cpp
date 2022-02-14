@@ -1262,25 +1262,25 @@ omniruntime::expressions::Expr *CreateJoinFilterExprWithChar()
 {
     // create the filter expression
     std::string funcStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
 
-    auto leftSubstrColumn = new FieldExpr(1, VarCharType());
+    auto leftSubstrColumn = new FieldExpr(1, VarcharType());
     auto leftSubstrIndex = new LiteralExpr(1, IntType());
     auto leftSubstrLen = new LiteralExpr(5, IntType());
     std::vector<Expr *> leftSubstrArgs;
     leftSubstrArgs.push_back(leftSubstrColumn);
     leftSubstrArgs.push_back(leftSubstrIndex);
     leftSubstrArgs.push_back(leftSubstrLen);
-    auto leftSubstrExpr = GetFuncExpr(funcStr, leftSubstrArgs, VarCharType());
+    auto leftSubstrExpr = GetFuncExpr(funcStr, leftSubstrArgs, VarcharType());
 
-    auto rightSubstrColumn = new FieldExpr(3, VarCharType());
+    auto rightSubstrColumn = new FieldExpr(3, VarcharType());
     auto rightSubstrIndex = new LiteralExpr(1, IntType());
     auto rightSubstrLen = new LiteralExpr(5, IntType());
     std::vector<Expr *> rightSubstrArgs;
     rightSubstrArgs.push_back(rightSubstrColumn);
     rightSubstrArgs.push_back(rightSubstrIndex);
     rightSubstrArgs.push_back(rightSubstrLen);
-    auto rightSubstrExpr = GetFuncExpr(funcStr, rightSubstrArgs, VarCharType());
+    auto rightSubstrExpr = GetFuncExpr(funcStr, rightSubstrArgs, VarcharType());
 
     BinaryExpr *notEqualExpr = new BinaryExpr(NEQ, leftSubstrExpr, rightSubstrExpr, BooleanType());
     return notEqualExpr;

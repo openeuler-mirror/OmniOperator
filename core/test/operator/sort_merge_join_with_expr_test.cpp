@@ -20,7 +20,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
     std::string blank = "";
     std::vector<VecType> streamTypeVector = { IntVecType::Instance(), LongVecType::Instance() };
     VecTypes streamedTblTypes(streamTypeVector);
-    //    std::string streamedEqualKeyExprs[1] = {"#0"};
     FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
     int streamedOutputCols[1] = {1};
@@ -32,7 +31,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjExprOneTimeEqualCondition)
 
     std::vector<VecType> bufferTypesVector = { DoubleVecType::Instance(), IntVecType::Instance() };
     VecTypes bufferedTblTypes(bufferTypesVector);
-    //    std::string bufferedEqualKeyExprs[1] = {"#1"};
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
@@ -112,7 +110,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
     std::string blank = "";
     std::vector<VecType> streamTypeVector = { IntVecType(), LongVecType() };
     VecTypes streamedTblTypes(streamTypeVector);
-    //    std::string streamedEqualKeyExprs[1] = {"#0"};
     FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
@@ -125,7 +122,6 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmj2EqualConditionMultiBatchInput
 
     std::vector<VecType> bufferTypesVector = { DoubleVecType::Instance(), IntVecType::Instance() };
     VecTypes bufferedTblTypes(bufferTypesVector);
-    //    std::string bufferedEqualKeyExprs[1] = {"#1"};
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};

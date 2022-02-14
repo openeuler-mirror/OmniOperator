@@ -1346,10 +1346,10 @@ TEST(FilterTest, FilterString1) {
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(30)}));
     VectorBatch *t = CreateInput(numRows, numCols, inputTypes.GetIds(), allData);
 
-        BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarCharType()),
-                                                new LiteralExpr(new std::string("hello"), VarCharType()), BooleanType());
+        BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarcharType()),
+                                                new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarcharType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1452,12 +1452,12 @@ TEST(FilterTest, Coalesce2) {
             t->GetVector(0)->SetValueNotNull(i);
         };
     }
-        CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(0, VarCharType()),
-                                                      new LiteralExpr(new std::string("bye"), VarCharType()));
-BinaryExpr *filterExpr = new BinaryExpr(EQ, coalesceExpr, new LiteralExpr(new std::string("hello"), VarCharType()),
+        CoalesceExpr *coalesceExpr = new CoalesceExpr(new FieldExpr(0, VarcharType()),
+                                                      new LiteralExpr(new std::string("bye"), VarcharType()));
+BinaryExpr *filterExpr = new BinaryExpr(EQ, coalesceExpr, new LiteralExpr(new std::string("hello"), VarcharType()),
                                         BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarcharType())};
 
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
@@ -1553,12 +1553,12 @@ TEST(FilterTest, ExternalStringFunc) {
     std::string funcStr = "length";
     VecTypePtr retType = IntType();
     std::vector<Expr *> args;
-    args.push_back(new FieldExpr(0, VarCharType()));
+    args.push_back(new FieldExpr(0, VarcharType()));
     auto eqLeft = GetFuncExpr(funcStr, args, IntType());
     auto filterExpr = new BinaryExpr(EQ, eqLeft, new LiteralExpr(5, IntType()), BooleanType());
 
     const int32_t PROJECT_COUNT = 1;
-    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarcharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, NUM_COLS, projections, PROJECT_COUNT);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1759,7 +1759,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar) {
 
     BinaryExpr *filterExpr = new BinaryExpr(LT, new FieldExpr(0, IntType()), new LiteralExpr(6, IntType()), BooleanType());
     const int32_t projectCount = 2;
-    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, VarCharType())};
+    std::vector<Expr*> projections = {new FieldExpr(0, IntType()), new FieldExpr(1, VarcharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1971,10 +1971,10 @@ TEST(FilterTest, FilterStringWithNull) {
     batch->NewVectors(vecAllocator, inputTypes.Get());
     batch->SetVector(0, col0);
 
-    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarCharType()),
-                                            new LiteralExpr(new std::string("hello"), VarCharType()), BooleanType());
+    BinaryExpr *filterExpr = new BinaryExpr(EQ, new FieldExpr(0, VarcharType()),
+                                            new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
     const int32_t projectCount = 1;
-    std::vector<Expr*> projections = {new FieldExpr(0, VarCharType())};
+    std::vector<Expr*> projections = {new FieldExpr(0, VarcharType())};
     OperatorFactory *factory =
             new FilterAndProjectOperatorFactory(filterExpr, inputTypes, numCols, projections, projectCount);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -2254,18 +2254,18 @@ TEST(FilterTest, SimpleFilterCharWithNulls) {
     VecTypes inputTypes(std::vector<VecType>({VarcharVecType(5), VarcharVecType(5)}));
     //filter expression object
     std::string funcStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args1;
-    args1.push_back(new FieldExpr(0, VarCharType()));
+    args1.push_back(new FieldExpr(0, VarcharType()));
     args1.push_back(new LiteralExpr(1, IntType()));
     args1.push_back(new LiteralExpr(5, IntType()));
-    auto substrExpr1 = GetFuncExpr(funcStr, args1, VarCharType());
+    auto substrExpr1 = GetFuncExpr(funcStr, args1, VarcharType());
 
     std::vector<Expr *> args2;
-    args2.push_back(new FieldExpr(1, VarCharType()));
+    args2.push_back(new FieldExpr(1, VarcharType()));
     args2.push_back(new LiteralExpr(1, IntType()));
     args2.push_back(new LiteralExpr(5, IntType()));
-    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarCharType());
+    auto substrExpr2 = GetFuncExpr(funcStr, args2, VarcharType());
     auto filterExpr = new BinaryExpr(NEQ, substrExpr1, substrExpr2, BooleanType());
 
     auto filter = new SimpleFilter(*filterExpr);

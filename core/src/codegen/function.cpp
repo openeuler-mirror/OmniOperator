@@ -9,8 +9,7 @@ using namespace omniruntime::vec;
 
 namespace omniruntime {
     Function::Function(void* address, const std::string& name, const std::vector<std::string>& aliases,
-                       const std::vector<VecTypeId>& paramTypes, const omniruntime::vec::VecTypeId &retType,
-                       bool setExecutionContext)
+                       const std::vector<VecTypeId>& paramTypes, const VecTypeId &retType, bool setExecutionContext)
     {
         this->address = address;
         // update function name used for lookup in codegen
@@ -44,7 +43,7 @@ namespace omniruntime {
     {
         return this->signatures.at(0).GetReturnType();
     }
-    const std::vector<omniruntime::vec::VecTypeId> &Function::GetParamTypes() const
+    const std::vector<VecTypeId> &Function::GetParamTypes() const
     {
         return this->signatures.at(0).GetParams();
     }

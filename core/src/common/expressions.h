@@ -12,8 +12,6 @@
 #include "../vector/type/decimal128.h"
 #include "../vector/vector_type.h"
 
-using namespace omniruntime::vec;
-
 class ExprVisitor;
 
 namespace omniruntime {
@@ -88,13 +86,13 @@ const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
 bool IsNullLiteral(const std::string& value);
 Operator StringToOperator(std::string opStr);
 
-typedef std::unique_ptr<VecType> VecTypePtr;
+typedef std::unique_ptr<omniruntime::vec::VecType> VecTypePtr;
 
 class Expr {
 public:
     VecTypePtr dataType;   // dataType of returned value
-    VecType &GetReturnType() const;
-    VecTypeId GetReturnTypeId() const;
+    omniruntime::vec::VecType &GetReturnType() const;
+    omniruntime::vec::VecTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;
     virtual ~Expr() = default;
     virtual void Accept(ExprVisitor &visitor) const = 0;

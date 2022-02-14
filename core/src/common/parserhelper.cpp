@@ -5,6 +5,7 @@
 
 using namespace std;
 using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
 omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(VecTypeId destTypeId)
 {

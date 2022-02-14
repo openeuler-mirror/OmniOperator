@@ -19,25 +19,25 @@ namespace {
 
 LLVMTypes::LLVMTypes(llvm::LLVMContext& context) : context(context)
 {
-    VectorToLLVMTypeMap = {{OMNI_VEC_TYPE_INT, I32Type()},
-                           {OMNI_VEC_TYPE_LONG, I64Type()},
-                           {OMNI_VEC_TYPE_DOUBLE, DoubleType()},
-                           {OMNI_VEC_TYPE_BOOLEAN, I1Type()},
-                           {OMNI_VEC_TYPE_SHORT, I16Type()},
-                           {OMNI_VEC_TYPE_DECIMAL64, I64Type()},
-                           {OMNI_VEC_TYPE_DECIMAL128, I64Type()},
-                           {OMNI_VEC_TYPE_DATE32, I32Type()},
-                           {OMNI_VEC_TYPE_DATE64, I64Type()},
-                           {OMNI_VEC_TYPE_TIMESTAMP, I64Type()},
-                           {OMNI_VEC_TYPE_INTERVAL_MONTHS, I32Type()},
-                           {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, I32Type()},
-                           {OMNI_VEC_TYPE_VARCHAR, I8PtrType()},
-                           {OMNI_VEC_TYPE_CHAR, I8PtrType()}};
+    VectorToLLVMTypeMap = {
+        {OMNI_VEC_TYPE_INT, I32Type()},
+        {OMNI_VEC_TYPE_LONG, I64Type()},
+        {OMNI_VEC_TYPE_DOUBLE, DoubleType()},
+        {OMNI_VEC_TYPE_BOOLEAN, I1Type()},
+        {OMNI_VEC_TYPE_SHORT, I16Type()},
+        {OMNI_VEC_TYPE_DECIMAL64, I64Type()},
+        {OMNI_VEC_TYPE_DECIMAL128, I64Type()},
+        {OMNI_VEC_TYPE_DATE32, I32Type()},
+        {OMNI_VEC_TYPE_DATE64, I64Type()},
+        {OMNI_VEC_TYPE_TIMESTAMP, I64Type()},
+        {OMNI_VEC_TYPE_INTERVAL_MONTHS, I32Type()},
+        {OMNI_VEC_TYPE_INTERVAL_DAY_TIME, I32Type()},
+        {OMNI_VEC_TYPE_VARCHAR, I8PtrType()},
+        {OMNI_VEC_TYPE_CHAR, I8PtrType()}
+    };
 }
 
-LLVMTypes::~LLVMTypes() {
-
-}
+LLVMTypes::~LLVMTypes() = default;
 
 Value *LLVMTypes::CreateConstantBool(bool v)
 {

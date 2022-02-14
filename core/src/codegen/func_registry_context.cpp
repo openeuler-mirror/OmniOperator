@@ -7,7 +7,6 @@
 using namespace omniruntime::vec;
 using namespace omniruntime;
 
-
 std::vector<Function> ContextFunctionRegistry::GetFunctions()
 {
     std::vector<Function> contextFnRegistry = {

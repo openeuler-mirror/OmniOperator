@@ -163,13 +163,13 @@ TEST(ProjectTest, CastDouble)
     const int32_t numCols = 2;
     std::vector<VecType> vecOfTypes = { VecType(OMNI_VEC_TYPE_DOUBLE), VecType(OMNI_VEC_TYPE_DOUBLE) };
 
-    auto data1 = new LiteralExpr(0, DoubleType());
+    auto data1 = new FieldExpr(0, DoubleType());
     std::string castStr = "CAST";
     std::vector<Expr *> args1;
     args1.push_back(data1);
     auto castExpr1 = GetFuncExpr(castStr, args1, IntType());
 
-    auto data2 = new LiteralExpr(1, DoubleType());
+    auto data2 = new FieldExpr(1, DoubleType());
     std::vector<Expr *> args2;
     args2.push_back(data2);
     auto castExpr2 = GetFuncExpr(castStr, args2, LongType());
@@ -560,16 +560,16 @@ TEST(ProjectTest, BenchmarkMultipleColumns)
     LiteralExpr *subRight2 = new LiteralExpr(10, IntType());
     BinaryExpr *subExpr2 = new BinaryExpr(SUB, subLeft2, subRight2, IntType());
 
-    FieldExpr *substData = new FieldExpr(3, VarCharType());
+    FieldExpr *substData = new FieldExpr(3, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(3, IntType());
     std::string funcStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    auto substrExpr = GetFuncExpr(funcStr, args, VarCharType());
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
 
     std::vector<Expr *> exprs2 = { subExpr2, substrExpr };
 
@@ -684,18 +684,18 @@ TEST(ProjectTest, ProjectString1)
 
     const int32_t numProject = 2;
 
-    FieldExpr *substrData = new FieldExpr(0, VarCharType());
+    FieldExpr *substrData = new FieldExpr(0, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(3, IntType());
     std::string funcStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *>args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    auto substrExpr = GetFuncExpr(funcStr, args, VarCharType());
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
 
-    FieldExpr *col0 = new FieldExpr(0, VarCharType());
+    FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { substrExpr, col0 };
 
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
@@ -871,12 +871,12 @@ TEST(ProjectTest, DictionaryVecVarcharTest)
 
     const int32_t numProject = 1;
     std::string funcStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std:vector<Expr *> args;
-    args.push_back(new FieldExpr(0, VarCharType()));
+    args.push_back(new FieldExpr(0, VarcharType()));
     args.push_back(new LiteralExpr(1, IntType()));
     args.push_back(new LiteralExpr(3, IntType()));
-    auto substrExpr = GetFuncExpr(funcStr, args, VarCharType());
+    auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     std::vector<Expr*> exprs = {substrExpr};
     auto *factory = new ProjectionOperatorFactory(exprs, numProject, vecTypes, numCols);
     omniruntime::op::Operator *op = factory->CreateOperator();
@@ -1180,24 +1180,24 @@ TEST(ProjectTest, StringSubstr)
 
 
     const int32_t numProject = 2;
-    FieldExpr *substrData = new FieldExpr(0, VarCharType());
+    FieldExpr *substrData = new FieldExpr(0, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(5, IntType());
     std::string substrStr = "substr";
-    VecTypePtr retType = VarCharType();
+    VecTypePtr retType = VarcharType();
     std::vector<Expr *> args;
     args.push_back(substrData);
     args.push_back(substrIndex);
     args.push_back(substrLen);
-    auto substrExpr = GetFuncExpr(substrStr, args, VarCharType());
+    auto substrExpr = GetFuncExpr(substrStr, args, VarcharType());
 
     std::vector<Expr *> concatArgs;
     std::string concatStr = "concat";
     concatArgs.push_back(substrExpr);
-    concatArgs.push_back(new LiteralExpr(new std::string(" world"), VarCharType()));
-    auto concatExpr = GetFuncExpr(concatStr, concatArgs, VarCharType());
+    concatArgs.push_back(new LiteralExpr(new std::string(" world"), VarcharType()));
+    auto concatExpr = GetFuncExpr(concatStr, concatArgs, VarcharType());
 
-    auto col0 = new FieldExpr(0, VarCharType());
+    auto col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr*> exprs = {concatExpr, col0};
     auto* factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols);
     omniruntime::op::Operator* op = factory->CreateOperator();

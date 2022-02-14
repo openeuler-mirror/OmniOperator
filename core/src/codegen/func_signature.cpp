@@ -77,11 +77,11 @@ bool FunctionSignature::operator==(const FunctionSignature& other) const
 
 size_t FunctionSignature::HashCode() const
 {
-    auto hashName = std::hash<std::string>{}(this->funcName);
-    auto hashReturnType = std::hash<int>{}(static_cast<int>(this->retType));
+    auto hashName = std::hash<std::string> {}(this->funcName);
+    auto hashReturnType = std::hash<int> {}(static_cast<int>(this->retType));
     auto combinedHash = hashName ^ (hashReturnType << 1);
     for (auto param : this->paramTypes) {
-        auto hashParamType = std::hash<int>{}(static_cast<int>(param));
+        auto hashParamType = std::hash<int> {}(static_cast<int>(param));
         combinedHash = hashParamType ^ (combinedHash << 1);
     }
     return combinedHash;

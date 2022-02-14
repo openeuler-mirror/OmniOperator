@@ -192,15 +192,16 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             callName = callName.substring(OPERATOR_PREFIX.length());
         }
         TypeSignature callSignature = call.getType().getTypeSignature();
-        int returnType = OperatorUtils.toVecType(call.getType()).getId().ordinal();
+        VecType returnType = OperatorUtils.toVecType(call.getType());
+        int typeId = returnType.getId().ordinal();
         // Binary operator in rowExpression
         if (ARITH_BIN_OPS.contains(callName) || COM_BIN_OPS.contains(callName)) {
-            callRoot.put("exprType", "BINARY").put("returnType", returnType).put("operator", callName).set("left",
+            callRoot.put("exprType", "BINARY").put("returnType", typeId).put("operator", callName).set("left",
                     call.getArguments().get(0).accept(this, context));
             callRoot.set("right", call.getArguments().get(1).accept(this, context));
         } else if (UNARY_OPS.contains(callName)) {
             // Unary operator in rowExpression
-            callRoot.put("exprType", "UNARY").put("returnType", returnType).put("operator", callName).set("expr",
+            callRoot.put("exprType", "UNARY").put("returnType", typeId).put("operator", callName).set("expr",
                     call.getArguments().get(0).accept(this, context));
         } else {
             // Function call in rowExpression
@@ -209,13 +210,16 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
             for (RowExpression argument : call.getArguments()) {
                 arguments.add(argument.accept(this, context));
             }
-            callRoot.put("exprType", "FUNCTION").put("returnType", returnType).put("function_name", callName)
+            callRoot.put("exprType", "FUNCTION").put("returnType", typeId).put("function_name", callName)
                     .set("arguments", arguments);
-            if ("char".equalsIgnoreCase(callSignature.getBase())) {
-                callRoot.put("width", callSignature.getParameters().get(0).getLongLiteral().intValue());
-            } else if ("decimal".equalsIgnoreCase(callSignature.getBase())) {
-                callRoot.put("precision", callSignature.getParameters().get(0).getLongLiteral().intValue())
-                        .put("scale", callSignature.getParameters().get(1).getLongLiteral().intValue());
+            if (returnType instanceof VarcharVecType ) {
+                callRoot.put("width", ((VarcharVecType) returnType).getWidth());
+            } else if (returnType instanceof Decimal64VecType) {
+                callRoot.put("precision", ((Decimal64VecType) returnType).getPrecision())
+                        .put("scale", ((Decimal64VecType) returnType).getScale());
+            } else if (returnType instanceof Decimal128VecType) {
+                callRoot.put("precision", ((Decimal128VecType) returnType).getPrecision())
+                        .put("scale", ((Decimal128VecType) returnType).getScale());
             }
         }
         return callRoot;
@@ -273,11 +277,11 @@ class JsonifyVisitor implements RowExpressionVisitor<ObjectNode, Void> {
         } else if (vecType instanceof VarcharVecType) {
             inputRefRoot.put("width", ((VarcharVecType) vecType).getWidth());
         } else if (vecType instanceof Decimal64VecType) {
-            Decimal64VecType t = ((Decimal64VecType) vecType);
-            inputRefRoot.put("precision", t.getPrecision()).put("scale", t.getScale());
+            Decimal64VecType type = ((Decimal64VecType) vecType);
+            inputRefRoot.put("precision", type.getPrecision()).put("scale", type.getScale());
         } else if (vecType instanceof Decimal128VecType) {
-            Decimal128VecType t = ((Decimal128VecType) vecType);
-            inputRefRoot.put("precision", t.getPrecision()).put("scale", t.getScale());
+            Decimal128VecType type = ((Decimal128VecType) vecType);
+            inputRefRoot.put("precision", type.getPrecision()).put("scale", type.getScale());
         }
 
         return inputRefRoot;

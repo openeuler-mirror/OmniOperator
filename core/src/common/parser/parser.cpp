@@ -2,9 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: parser function
  */
-#include <iostream>
 #include "parser.h"
-#include "../../util/type_util.h"
+#include <iostream>
+
 using namespace std;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
@@ -199,7 +199,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // UnaryExpr
     // only handling NOT for now
     if (IsUnaryOperator(opStr) && args.size() == 1) {
-        return std::make_unique<UnaryExpr>(StringToOperator(DemangleOperator(opStr)), args[0], std::move(type)).release();
+        return std::make_unique<UnaryExpr>(
+            StringToOperator(DemangleOperator(opStr)), args[0], std::move(type)).release();
     }
 
     // Special form
@@ -214,7 +215,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         if (TypeUtil::IsStringType(args[ARG2]->GetReturnTypeId()) &&
             args[ARG2]->GetType() == ExprType::LITERAL_E &&
             static_cast<LiteralExpr *>(args[ARG2])->stringVal->compare("null") == 0) {
-            return std::make_unique<IfExpr>(args[0], args[1], ParserHelper::GetDefaultValueForType(args[1]->GetReturnTypeId()))
+            return std::make_unique<IfExpr>(args[0], args[1],
+                ParserHelper::GetDefaultValueForType(args[1]->GetReturnTypeId()))
                 .release();
         }
         return std::make_unique<IfExpr>(args[0], args[1], args[ARG2]).release();
@@ -240,7 +242,8 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
     // Function
     // Check that the signature matches
     vector<VecTypeId> argTypes(args.size());
-    std::transform(args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    std::transform(
+        args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
     auto signature = FunctionSignature(opStr, argTypes, type->GetId());
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
@@ -332,7 +335,7 @@ LiteralExpr *Parser::GenerateLiteralExpr(string literalStr)
     // Case with boolean true/false
     if (literalStr == "true" || literalStr == "false") {
         currType = make_unique<BooleanVecType>();
-        return std::make_unique<LiteralExpr>(literalStr == "true" ? true : false, std::move(currType)).release();
+        return std::make_unique<LiteralExpr>(literalStr == "true", std::move(currType)).release();
     }
 
     // trim the single quotes for string values if there is any

@@ -5,8 +5,12 @@
 #include "expressions.h"
 #include <string>
 #include <algorithm>
+#include <utility>
 #include "../vector/vector_type.h"
 #include "../codegen/func_registry.h"
+#include "../util/type_util.h"
+
+using namespace omniruntime::vec;
 
 namespace omniruntime {
 namespace expressions {
@@ -113,7 +117,7 @@ FieldExpr::FieldExpr(int32_t colIdx, VecTypePtr colType)
 
 BinaryExpr::BinaryExpr()
 {
-    dataType = std::make_unique<VecType>(OMNI_VEC_TYPE_BOOLEAN);
+    dataType = BooleanType();
 }
 
 BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
@@ -122,8 +126,11 @@ BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr)
     left = leftExpr;
     right = rightExpr;
     // use the more encompassing DataType
-    dataType = std::make_unique<VecType>(leftExpr->GetReturnTypeId() <= rightExpr->GetReturnTypeId()
-            ? rightExpr->GetReturnType() : leftExpr->GetReturnType());
+    if (leftExpr->GetReturnTypeId() <= rightExpr->GetReturnTypeId()) {
+        dataType = std::make_unique<VecType>(rightExpr->GetReturnType());
+    } else {
+        dataType = std::make_unique<VecType>(leftExpr->GetReturnType());
+    }
 }
 
 BinaryExpr::BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, VecTypePtr dt)
@@ -148,7 +155,7 @@ ExprType BinaryExpr::GetType() const
 
 UnaryExpr::UnaryExpr()
 {
-    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
+    dataType = BooleanType();
 }
 
 UnaryExpr::UnaryExpr(Operator uop, Expr *expr)
@@ -177,7 +184,7 @@ ExprType UnaryExpr::GetType() const
 
 InExpr::InExpr()
 {
-    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
+    dataType = BooleanType();
 }
 
 InExpr::~InExpr()
@@ -189,8 +196,8 @@ InExpr::~InExpr()
 
 InExpr::InExpr(std::vector<Expr*> args)
 {
-    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
-    arguments = args;
+    dataType = BooleanType();
+    arguments = std::move(args);
 }
 
 ExprType InExpr::GetType() const
@@ -201,7 +208,7 @@ ExprType InExpr::GetType() const
 
 BetweenExpr::BetweenExpr()
 {
-    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
+    dataType = BooleanType();
 }
 
 BetweenExpr::~BetweenExpr()
@@ -213,7 +220,7 @@ BetweenExpr::~BetweenExpr()
 
 BetweenExpr::BetweenExpr(Expr* val, Expr* lowBound, Expr* upBound)
 {
-    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
+    dataType = BooleanType();
     value = val;
     lowerBound = lowBound;
     upperBound = upBound;
@@ -280,7 +287,7 @@ IsNullExpr::~IsNullExpr()
 
 IsNullExpr::IsNullExpr(Expr* value)
 {
-    dataType = std::make_unique<VecType>(VecTypeId::OMNI_VEC_TYPE_BOOLEAN);
+    dataType = BooleanType();
     this->value = value;
 }
 
@@ -305,7 +312,8 @@ FuncExpr::FuncExpr(std::string fnName, std::vector<Expr*> args, VecTypePtr retur
     dataType = std::move(returnType);
 
     std::vector<VecTypeId> argTypes(arguments.size());
-    std::transform(arguments.begin(), arguments.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    std::transform(arguments.begin(), arguments.end(), argTypes.begin(),
+        [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
     auto signature = FunctionSignature(funcName, argTypes, dataType->GetId());
     this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }

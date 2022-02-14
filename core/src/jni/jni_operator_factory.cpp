@@ -26,7 +26,6 @@
 #include "../operator/limit/limit.h"
 #include "../operator/limit/distinct_limit.h"
 #include "config.h"
-#include "libconfig.h"
 
 using omniruntime::vec::Deserialize;
 using omniruntime::vec::VecType;

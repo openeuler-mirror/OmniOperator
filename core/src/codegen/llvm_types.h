@@ -53,18 +53,18 @@ public:
     llvm::Value* CreateConstantDouble(double n);
 
     /// For a given Vector type, find the corresponding ir type.
-    llvm::Type* ToLLVMType(VecTypeId id);
+    llvm::Type* ToLLVMType(omniruntime::vec::VecTypeId id);
 
-    llvm::Type* VectorToLLVMType(VecType type);
+    llvm::Type* VectorToLLVMType(omniruntime::vec::VecType type);
 
-    llvm::Type* ToPointerType(VecTypeId typeId);
+    llvm::Type* ToPointerType(omniruntime::vec::VecTypeId typeId);
 
-    llvm::Type* GetFunctionReturnType(VecTypeId typeId);
+    llvm::Type* GetFunctionReturnType(omniruntime::vec::VecTypeId typeId);
 
     virtual ~LLVMTypes();
 
 private:
-    std::map<VecTypeId, llvm::Type*> VectorToLLVMTypeMap;
+    std::map<omniruntime::vec::VecTypeId, llvm::Type*> VectorToLLVMTypeMap;
     llvm::LLVMContext& context;
 };
 

@@ -7,8 +7,8 @@
 #include <fstream> // for testing
 
 using namespace std;
-
 using namespace omniruntime::expressions;
+using namespace omniruntime::vec;
 
 using Json = nlohmann::json;
 
@@ -181,7 +181,8 @@ Expr *JSONParser::ParseJSONIf(Json jsonExpr)
     if (TypeUtil::IsStringType(falseExpr->GetReturnTypeId())
         && falseExpr->GetType() == ExprType::LITERAL_E
         && static_cast<LiteralExpr*>(falseExpr)->stringVal->compare("null") == 0) {
-        return make_unique<IfExpr>(cond, trueExpr, ParserHelper().GetDefaultValueForType(trueExpr->GetReturnTypeId())).release();
+        return make_unique<IfExpr>(cond, trueExpr,
+            ParserHelper::GetDefaultValueForType(trueExpr->GetReturnTypeId())).release();
     }
 
     return make_unique<IfExpr>(cond, trueExpr, falseExpr).release();
@@ -208,13 +209,6 @@ Expr *JSONParser::ParseJsonIsNull(Json jsonExpr)
         return nullptr;
     }
     return make_unique<IsNullExpr>(val).release();
-}
-
-Expr *JSONParser::ParseJsonIsNotNull(Json jsonExpr)
-{   // Is_Not_Null support
-    VecTypeId typeId = static_cast<VecTypeId>(jsonExpr["returnType"].get<int32_t>());
-    Expr *val = ParseJSON(jsonExpr["arguments"].at(0));
-    return make_unique<UnaryExpr>(Operator::NOT, val, make_unique<VecType>(typeId)).release();
 }
 
 Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
@@ -247,27 +241,29 @@ Expr *JSONParser::ParseJSONFunc(Json jsonExpr)
     }
     // Check that the signature matches
     vector<VecTypeId> argTypes(args.size());
-    std::transform(args.begin(), args.end(), argTypes.begin(), [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
+    std::transform(args.begin(), args.end(), argTypes.begin(),
+        [](Expr *expr) -> VecTypeId {return expr->GetReturnTypeId();});
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
     auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (TypeUtil::IsStringType(retTypeId)) {
-            width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
-            if (retTypeId == OMNI_VEC_TYPE_CHAR) {
-                retType = make_unique<CharVecType>(width);
-            } else {
-                retType = make_unique<VarcharVecType>(width);
-            }
-        } else if (TypeUtil::IsDecimalType(retTypeId)) {
-            precision = jsonExpr["precision"].get<int32_t>();
-            scale = jsonExpr["scale"].get<int32_t>();
-            if (retTypeId == OMNI_VEC_TYPE_DECIMAL64) {
-                retType = make_unique<Decimal64VecType>(precision, scale);
-            } else {
-                retType = make_unique<Decimal128VecType>(precision, scale);
-            }
+        width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
+        if (retTypeId == OMNI_VEC_TYPE_CHAR) {
+            retType = make_unique<CharVecType>(width);
         } else {
-            retType = make_unique<VecType>(retTypeId);
-        }if (function != nullptr) {
+            retType = make_unique<VarcharVecType>(width);
+        }
+    } else if (TypeUtil::IsDecimalType(retTypeId)) {
+        precision = jsonExpr["precision"].get<int32_t>();
+        scale = jsonExpr["scale"].get<int32_t>();
+        if (retTypeId == OMNI_VEC_TYPE_DECIMAL64) {
+            retType = make_unique<Decimal64VecType>(precision, scale);
+        } else {
+            retType = make_unique<Decimal128VecType>(precision, scale);
+        }
+    } else {
+        retType = make_unique<VecType>(retTypeId);
+    }
+    if (function != nullptr) {
         return make_unique<FuncExpr>(funcName, args, std::move(retType), function).release();
     }
 
