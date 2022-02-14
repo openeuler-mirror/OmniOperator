@@ -85,7 +85,7 @@ public:
 
             state.val = executionContext->getArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
             int64_t overflow = 0;
-            Decimal128 initState(curVal);
+            Decimal128 initState = DecimalOperations::UnscaledDecimal(curVal);
             DecimalOperations::EncodeSumDecimal(state.val, initState, overflow);
         } else {
             // input vector is expected as VarcharVec
