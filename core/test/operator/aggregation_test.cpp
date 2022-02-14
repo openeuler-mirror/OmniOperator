@@ -1427,7 +1427,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     }
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), DoubleVecType() }));
+    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), DoubleVecType(), LONG_DECIMAL_TYPE }));
     int64_t expectData1[CARDINALITY] = {0, 1, 2, 3};
     int64_t expectData2[CARDINALITY] = {0, 1, 2, 3};
     int64_t expectData3[CARDINALITY] = {10000000, 10000000, 10000000, 10000000};
