@@ -99,7 +99,7 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
         rowCount = min(maxRowCount, positionCount - position);
         auto start = START();
         OP_DEBUG_LOG("alloc columns elapsed time: %ld ms.", END(start));
-        vecBatch = std::make_unique<VectorBatch>(outputColsCount).release();
+        vecBatch = std::make_unique<VectorBatch>(outputColsCount, rowCount).release();
         pagesIndex->GetOutput(outputCols.data(), outputColsCount, vecBatch, sourceTypes.GetIds(), position, rowCount,
             this->vecAllocator);
         OP_DEBUG_LOG("get result elapsed time: %ld ms.", END(start));

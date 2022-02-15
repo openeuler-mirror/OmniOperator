@@ -145,7 +145,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      * @return Page output
      */
     public Page flush() {
-        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions));
+        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions), totalPositions);
         merge(mergeResult, pages, vecAllocator);
         Page finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
         currentPageSizeInBytes = 0;

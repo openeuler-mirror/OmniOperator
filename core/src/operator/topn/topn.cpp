@@ -114,7 +114,7 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
-    VectorBatch *singleRowVecBatch = new VectorBatch(sourceTypesCount);
+    VectorBatch *singleRowVecBatch = new VectorBatch(sourceTypesCount, 1);
     for (int i = 0; i < sourceTypesCount; ++i) {
         int32_t originalPosition;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);

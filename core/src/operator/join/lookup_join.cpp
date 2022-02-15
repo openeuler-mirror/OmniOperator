@@ -635,7 +635,7 @@ void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const J
     int32_t rowCount = 0;
     for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
         rowCount = std::min(maxRowCount, positionCount - position);
-        vectorBatch = std::make_unique<VectorBatch>(columnCount).release();
+        vectorBatch = std::make_unique<VectorBatch>(columnCount, rowCount).release();
 
         ConstructProbeColumns(vectorBatch, probeAllColumns, probeTypes, probeOutputCols, probeOutputColsCount,
             isSequentialProbeIndices, probeIndex, position, rowCount);

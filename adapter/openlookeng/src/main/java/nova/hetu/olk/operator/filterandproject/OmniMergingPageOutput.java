@@ -201,7 +201,8 @@ public class OmniMergingPageOutput {
             return;
         }
 
-        VecBatch resultVecBatch = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions));
+        VecBatch resultVecBatch = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions),
+                totalPositions);
         merge(resultVecBatch, bufferedPages, vecAllocator);
         outputQueue.add(new VecBatchToPageIterator(ImmutableList.of(resultVecBatch).iterator()).next());
 

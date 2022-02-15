@@ -459,13 +459,7 @@ public final class OperatorUtils {
             vecList.add(vec);
         }
 
-        // when there are only constant values in page
-        if (vecList.isEmpty() && page.getPositionCount() > 0) {
-            Vec[] vecArray = {};
-            return new VecBatch(vecArray, page.getPositionCount());
-        } else {
-            return new VecBatch(vecList);
-        }
+        return new VecBatch(vecList, page.getPositionCount());
     }
 
     /**

@@ -42,7 +42,7 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     int32_t rowCount = vecBatch->GetRowCount();
     int32_t fetchSize = (remainingLimit >= rowCount) ? rowCount : remainingLimit;
 
-    outputVecBatch = std::make_unique<VectorBatch>(vectorCount).release();
+    outputVecBatch = std::make_unique<VectorBatch>(vectorCount, fetchSize).release();
     for (int32_t i = 0; i < vectorCount; ++i) {
         Vector *inputVector = vecBatch->GetVector(i);
         outputVecBatch->SetVector(i, inputVector->Slice(0, fetchSize));
