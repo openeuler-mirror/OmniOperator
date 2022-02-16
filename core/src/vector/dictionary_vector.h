@@ -101,6 +101,11 @@ public:
         delete[] nulls;
     }
 
+    VecEncoding encoding() override
+    {
+        return OMNI_VEC_ENCODING_DICTIONARY;
+    }
+
 private:
     DictionaryVector(DictionaryVector *vector, int size, int positionOffset)
         : Vector(vector, size, positionOffset),

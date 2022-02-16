@@ -10,6 +10,7 @@
 #include "vector_reference.h"
 #include "vector_allocator.h"
 #include "vector_type.h"
+#include "vector_encoding.h"
 
 namespace omniruntime {
 namespace vec {
@@ -142,6 +143,11 @@ public:
     void SetVectorTracer(VectorTracer *tracer);
 
     VectorTracer *GetVectorTracer();
+
+    virtual VecEncoding encoding()
+    {
+        return OMNI_VEC_ENCODING_FLAT;
+    }
 
 protected:
     // this method is mainly used for vector slice

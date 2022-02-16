@@ -73,6 +73,11 @@ public:
         }
     }
 
+    VecEncoding encoding() override
+    {
+        return OMNI_VEC_ENCODING_LAZY;
+    }
+
 private:
     VectorLoader *loader;
     Vector *loadedVector;

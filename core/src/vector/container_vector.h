@@ -63,6 +63,11 @@ public:
 
     ~ContainerVector() override;
 
+    VecEncoding encoding() override
+    {
+        return OMNI_VEC_ENCODING_CONTAINER;
+    }
+
 private:
     static const int BYTES = sizeof(T);
     std::vector<VecType> vecTypes;
