@@ -2,10 +2,12 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: window implementations
  */
+
 #include "window.h"
 #include "../sort/sort.h"
 #include "../status.h"
 #include "../util/operator_util.h"
+#include "../util/function_type.h"
 
 using namespace std;
 namespace omniruntime {
@@ -116,38 +118,22 @@ OmniStatus WindowOperator::Init()
     OmniStatus ret = OMNI_STATUS_NORMAL;
     pagesIndex = std::move(make_unique<PagesIndex>(sourceTypes));
     for (int32_t i = 0; i < windowFunctionCount; i++) {
-        switch (windowFunctionTypes[i]) {
-            case WIN_ROW_NUMBER:
+        auto type = windowFunctionTypes[i];
+        switch (type) {
+            case OMNI_WINDOW_TYPE_ROW_NUMBER:
                 windowFunctions.push_back(std::move(make_unique<RowNumberFunction>()));
                 break;
-            case WIN_RANK:
+            case OMNI_WINDOW_TYPE_RANK:
                 windowFunctions.push_back(std::move(make_unique<RankFunction>()));
                 break;
             // for aggregate function we use AggregateType
-            case WIN_SUM:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
-                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_SUM,
-                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
-                break;
-            case WIN_COUNT:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
-                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_COUNT,
-                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
-                break;
-            case WIN_AVG:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
-                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_AVG,
-                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
-                break;
-            case WIN_MAX:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
-                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_MAX,
-                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
-                break;
-            case WIN_MIN:
-                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(
-                        argumentChannels[i], AggregateType::OMNI_AGGREGATION_TYPE_MIN,
-                        sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
+            case OMNI_AGGREGATION_TYPE_SUM:
+            case OMNI_AGGREGATION_TYPE_COUNT:
+            case OMNI_AGGREGATION_TYPE_AVG:
+            case OMNI_AGGREGATION_TYPE_MAX:
+            case OMNI_AGGREGATION_TYPE_MIN:
+                windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
+                    sourceTypes.Get()[argumentChannels[i]], allTypes.Get()[sourceTypes.GetSize() + i])));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;

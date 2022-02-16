@@ -7,7 +7,7 @@ package nova.hetu.omniruntime.operator.aggregator;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
@@ -34,7 +34,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
      * @param inputRaw the input raw
      * @param outputPartial the output partial
      */
-    public OmniAggregationOperatorFactory(VecType[] sourceTypes, AggType[] aggFunctionTypes, int[] aggInputChannels,
+    public OmniAggregationOperatorFactory(VecType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels,
             int[] maskChannels, VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
         super(new FactoryContext(new JitContext(sourceTypes, aggFunctionTypes, aggInputChannels, maskChannels,
                 aggOutputTypes, inputRaw, outputPartial)));
@@ -64,7 +64,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
     public static class JitContext implements OmniJitContext {
         private final VecType[] sourceTypes;
 
-        private final AggType[] aggFunctionTypes;
+        private final FunctionType[] aggFunctionTypes;
 
         private final int[] aggInputChannels;
 
@@ -86,7 +86,7 @@ public class OmniAggregationOperatorFactory extends OmniOperatorFactory<OmniAggr
          * @param inputRaw the input raw
          * @param outputPartial the output partial
          */
-        public JitContext(VecType[] sourceTypes, AggType[] aggFunctionTypes, int[] aggInputChannels, int[] maskChannels,
+        public JitContext(VecType[] sourceTypes, FunctionType[] aggFunctionTypes, int[] aggInputChannels, int[] maskChannels,
                 VecType[] aggOutputTypes, boolean inputRaw, boolean outputPartial) {
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes is null");

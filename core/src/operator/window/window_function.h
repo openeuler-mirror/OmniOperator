@@ -16,16 +16,6 @@
 
 using namespace omniruntime::vec;
 
-enum WindowFunctionType {
-    WIN_ROW_NUMBER = 0,
-    WIN_RANK,
-    WIN_SUM,
-    WIN_COUNT,
-    WIN_AVG,
-    WIN_MAX,
-    WIN_MIN
-};
-
 class WindowIndex {
 public:
     WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t size);

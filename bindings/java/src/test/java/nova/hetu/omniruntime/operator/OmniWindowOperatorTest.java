@@ -1,10 +1,11 @@
+
 package nova.hetu.omniruntime.operator;
 
 import static org.testng.Assert.assertEquals;
 
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.constants.WindowFunctionType;
 import nova.hetu.omniruntime.operator.window.OmniWindowOperatorFactory;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -27,7 +28,7 @@ public class OmniWindowOperatorTest {
     public void testRank() {
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
         int[] outputChannels = {0, 1};
-        WindowFunctionType[] windowFunction = {WindowFunctionType.WIN_RANK};
+        FunctionType[] windowFunction = {FunctionType.OMNI_WINDOW_TYPE_RANK};
         int[] partitionChannels = {0};
         int[] preGroupedChannels = {};
         int[] sortChannels = {1};
@@ -38,8 +39,8 @@ public class OmniWindowOperatorTest {
         int[] argumentChannels = {};
         VecType[] windowFunctionReturnType = {LongVecType.LONG};
         OmniWindowOperatorFactory omniWindowOperatorFactory = new OmniWindowOperatorFactory(sourceTypes, outputChannels,
-            windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
-            preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
+                windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder, sortNullFirsts,
+                preSortedChannelPrefix, expectedPositions, argumentChannels, windowFunctionReturnType);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
         VecBatch vecBatch = buildData();

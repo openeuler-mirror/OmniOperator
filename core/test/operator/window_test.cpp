@@ -45,7 +45,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[1] = {WIN_ROW_NUMBER};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -100,7 +100,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     int32_t sortCols[0] = {};
     int32_t ascendings[0] = {};
     int32_t nullFirsts[0] = {};
-    int32_t windowFunctionTypes[1] = {WIN_ROW_NUMBER};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {2};
     int32_t preGroupedCols[0] = {};
 
@@ -153,7 +153,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[1] = {WIN_RANK};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_RANK};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -208,7 +208,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[1] = {WIN_RANK};
+    int32_t windowFunctionTypes[1] = {OMNI_WINDOW_TYPE_RANK};
     int32_t partitionCols[0] = {};
     int32_t preGroupedCols[0] = {};
 
@@ -264,7 +264,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[2] = {WIN_RANK, WIN_ROW_NUMBER};
+    int32_t windowFunctionTypes[2] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -324,7 +324,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[2] = {WIN_RANK, WIN_ROW_NUMBER};
+    int32_t windowFunctionTypes[2] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -386,7 +386,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     int32_t sortCols[0] = {};
     int32_t ascendings[0] = {};
     int32_t nullFirsts[0] = {};
-    int32_t windowFunctionTypes[2] = {WIN_RANK, WIN_ROW_NUMBER};
+    int32_t windowFunctionTypes[2] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -451,7 +451,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[5] = {WIN_SUM, WIN_COUNT, WIN_AVG, WIN_MAX, WIN_MIN};
+    int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -521,7 +521,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     int32_t sortCols[0] = {};
     int32_t ascendings[0] = {};
     int32_t nullFirsts[0] = {};
-    int32_t windowFunctionTypes[5] = {WIN_SUM, WIN_COUNT, WIN_AVG, WIN_MAX, WIN_MIN};
+    int32_t windowFunctionTypes[5] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -598,8 +598,8 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[colCount] = {WIN_RANK, WIN_RANK, WIN_RANK, WIN_RANK, WIN_RANK,
-                                      WIN_RANK, WIN_RANK, WIN_RANK, WIN_RANK, WIN_RANK};
+    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK,
+                                             OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_RANK};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -725,9 +725,9 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[colCount] = {WIN_ROW_NUMBER, WIN_ROW_NUMBER, WIN_ROW_NUMBER,
-                                      WIN_ROW_NUMBER, WIN_ROW_NUMBER, WIN_ROW_NUMBER,
-                                      WIN_ROW_NUMBER, WIN_ROW_NUMBER, WIN_ROW_NUMBER, WIN_ROW_NUMBER};
+    int32_t windowFunctionTypes[colCount] = {OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
+                                             OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER,
+                                             OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_WINDOW_TYPE_ROW_NUMBER};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -851,7 +851,7 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testSumWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {WIN_SUM, WIN_SUM, WIN_SUM, WIN_SUM, WIN_SUM, WIN_SUM, WIN_SUM};
+    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -941,7 +941,7 @@ TEST(NativeOmniWindowOperatorTest, DISABLED_testAvgWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {WIN_AVG, WIN_AVG, WIN_AVG, WIN_AVG, WIN_AVG, WIN_AVG, WIN_AVG};
+    int32_t windowFunctionTypes[7] = {OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1028,7 +1028,7 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {WIN_MAX, WIN_MAX, WIN_MAX, WIN_MAX, WIN_MAX, WIN_MAX, WIN_MAX, WIN_MAX, WIN_MAX};
+    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1119,7 +1119,7 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {WIN_MIN, WIN_MIN, WIN_MIN, WIN_MIN, WIN_MIN, WIN_MIN, WIN_MIN, WIN_MIN, WIN_MIN};
+    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1210,8 +1210,8 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[9] = {WIN_COUNT, WIN_COUNT, WIN_COUNT, WIN_COUNT, WIN_COUNT, WIN_COUNT, WIN_COUNT,
-                                      WIN_COUNT, WIN_COUNT};
+    int32_t windowFunctionTypes[9] = {OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT,
+                                      OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_COUNT};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 
@@ -1306,7 +1306,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[7] = {WIN_RANK, WIN_ROW_NUMBER, WIN_SUM, WIN_COUNT, WIN_AVG, WIN_MAX, WIN_MIN};
+    int32_t windowFunctionTypes[7] = {OMNI_WINDOW_TYPE_RANK, OMNI_WINDOW_TYPE_ROW_NUMBER, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_COUNT, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
     int32_t partitionCols[1] = {0};
     int32_t preGroupedCols[0] = {};
 

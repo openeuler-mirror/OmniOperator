@@ -222,7 +222,7 @@ private:
     std::unique_ptr<AggregatorFactory> realFactory;
 };
 
-static std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(AggregateType aggType)
+static std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
 {
     switch (aggType) {
         case OMNI_AGGREGATION_TYPE_SUM: {

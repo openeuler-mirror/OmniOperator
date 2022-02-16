@@ -13,36 +13,46 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @since 20210630
  */
 @SuppressWarnings("StaticVariableName")
-public class AggType extends Constant {
+public class FunctionType extends Constant {
     /**
      * The constant OMNI_AGGREGATION_TYPE_SUM.
      */
-    public static AggType OMNI_AGGREGATION_TYPE_SUM;
+    public static FunctionType OMNI_AGGREGATION_TYPE_SUM;
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_COUNT.
      */
-    public static AggType OMNI_AGGREGATION_TYPE_COUNT;
+    public static FunctionType OMNI_AGGREGATION_TYPE_COUNT;
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_AVG.
      */
-    public static AggType OMNI_AGGREGATION_TYPE_AVG;
+    public static FunctionType OMNI_AGGREGATION_TYPE_AVG;
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_MAX.
      */
-    public static AggType OMNI_AGGREGATION_TYPE_MAX;
+    public static FunctionType OMNI_AGGREGATION_TYPE_MAX;
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_MIN.
      */
-    public static AggType OMNI_AGGREGATION_TYPE_MIN;
+    public static FunctionType OMNI_AGGREGATION_TYPE_MIN;
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_DNV.
      */
-    public static AggType OMNI_AGGREGATION_TYPE_DNV;
+    public static FunctionType OMNI_AGGREGATION_TYPE_DNV;
+
+    /**
+     * The constant OMNI_WINDOW_TYPE_ROW_NUMBER.
+     */
+    public static FunctionType OMNI_WINDOW_TYPE_ROW_NUMBER;
+
+    /**
+     * The constant OMNI_WINDOW_TYPE_RANK.
+     */
+    public static FunctionType OMNI_WINDOW_TYPE_RANK;
 
     /**
      * Instantiates a new Agg type.
@@ -50,7 +60,7 @@ public class AggType extends Constant {
      * @param value the value
      */
     @JsonCreator
-    public AggType(@JsonProperty("value") int value) {
+    public FunctionType(@JsonProperty("value") int value) {
         super(value);
     }
 }

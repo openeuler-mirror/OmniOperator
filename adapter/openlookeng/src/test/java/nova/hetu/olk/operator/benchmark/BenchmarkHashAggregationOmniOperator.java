@@ -30,7 +30,7 @@ import io.prestosql.testing.TestingTaskContext;
 import nova.hetu.olk.operator.HashAggregationOmniOperator;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecAllocatorHelper;
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecAllocatorFactory;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -73,11 +73,11 @@ import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_AVG;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_COUNT;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_MAX;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_MIN;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_AVG;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_COUNT;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MAX;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_MIN;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
 import static org.openjdk.jmh.annotations.Scope.Thread;
 import static org.testng.Assert.assertEquals;
@@ -256,9 +256,9 @@ public class BenchmarkHashAggregationOmniOperator
             return pagesBuilder.build();
         }
 
-        private AggType[] transferAggType(List<String> aggregators)
+        private FunctionType[] transferAggType(List<String> aggregators)
         {
-            AggType[] res = new AggType[aggregators.size()];
+            FunctionType[] res = new FunctionType[aggregators.size()];
             for (int i = 0; i < aggregators.size(); i++) {
                 // aggregator type, eg:sum,avg...
                 String agg = aggregators.get(i);

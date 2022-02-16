@@ -25,7 +25,7 @@ import io.prestosql.sql.planner.plan.AggregationNode.Step;
 import io.prestosql.sql.planner.plan.PlanNodeId;
 import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
 import nova.hetu.omniruntime.type.VecType;
@@ -167,7 +167,7 @@ public class HashAggregationOmniOperator implements Operator {
 
         private VecType[] aggregationInputTypes;
 
-        private AggType[] aggregatorTypes;
+        private FunctionType[] aggregatorTypes;
 
         private VecType[] aggregationOutputTypes;
 
@@ -186,7 +186,7 @@ public class HashAggregationOmniOperator implements Operator {
          */
         public HashAggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> sourceTypes,
                 int[] groupByInputChannels, VecType[] groupByInputTypes, int[] aggregationInputChannels,
-                VecType[] aggregationInputTypes, AggType[] aggregatorTypes, VecType[] aggregationOutputTypes,
+                VecType[] aggregationInputTypes, FunctionType[] aggregatorTypes, VecType[] aggregationOutputTypes,
                 Step step) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
@@ -229,7 +229,7 @@ public class HashAggregationOmniOperator implements Operator {
         @VisibleForTesting
         public HashAggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, int[] groupByInputChannels,
                 VecType[] groupByInputTypes, int[] aggregationInputChannels, VecType[] aggregationInputTypes,
-                AggType[] aggregatorTypes, List<VecType[]> inAndOutputTypes) {
+                FunctionType[] aggregatorTypes, List<VecType[]> inAndOutputTypes) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
             int groupByLength = groupByInputChannels.length;
@@ -272,7 +272,8 @@ public class HashAggregationOmniOperator implements Operator {
         @Override
         public OperatorFactory duplicate() {
             return new HashAggregationOmniOperatorFactory(operatorId, planNodeId, sourceTypes, groupByInputChannels,
-                    groupByInputTypes, aggregationInputChannels, aggregationInputTypes, aggregatorTypes, aggregationOutputTypes, step);
+                    groupByInputTypes, aggregationInputChannels, aggregationInputTypes, aggregatorTypes,
+                    aggregationOutputTypes, step);
         }
 
         @Override

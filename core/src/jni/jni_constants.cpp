@@ -2,10 +2,11 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: JNI Constants
  */
+
 #include "jni_constants.h"
-#include "../operator/status.h"
-#include "src/operator/aggregation/aggregator/aggregator.h"
-#include "src/operator/join/lookup_join.h"
+#include "operator/status.h"
+#include "operator/aggregation/aggregator/aggregator.h"
+#include "operator/join/lookup_join.h"
 
 using namespace omniruntime::vec;
 
@@ -28,8 +29,8 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
     DEFINE_CONSTANT(OMNI_STATUS_ERROR);
     DEFINE_CONSTANT(OMNI_STATUS_FINISHED);
 
-    cls = env->FindClass("nova/hetu/omniruntime/constants/AggType");
-    fieldName = "Lnova/hetu/omniruntime/constants/AggType;";
+    cls = env->FindClass("nova/hetu/omniruntime/constants/FunctionType");
+    fieldName = "Lnova/hetu/omniruntime/constants/FunctionType;";
     using namespace omniruntime::op;
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_SUM);
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_COUNT);
@@ -37,6 +38,8 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstan
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_MAX);
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_MIN);
     DEFINE_CONSTANT(OMNI_AGGREGATION_TYPE_DNV);
+    DEFINE_CONSTANT(OMNI_WINDOW_TYPE_ROW_NUMBER);
+    DEFINE_CONSTANT(OMNI_WINDOW_TYPE_RANK);
 
     cls = env->FindClass("nova/hetu/omniruntime/constants/JoinType");
     fieldName = "Lnova/hetu/omniruntime/constants/JoinType;";

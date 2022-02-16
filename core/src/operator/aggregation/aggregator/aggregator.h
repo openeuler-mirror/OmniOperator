@@ -12,6 +12,7 @@
 #include "vector/vector.h"
 #include "vector/vector_common.h"
 #include "operator/execution_context.h"
+#include "operator/util/function_type.h"
 
 namespace omniruntime {
 namespace op {
@@ -26,16 +27,6 @@ using ColumnIndex = struct ColumnIndex {
 using PrepareContext = struct PrepareContext {
     uint32_t *context;
     size_t len;
-};
-
-using AggregateType = enum AggregateType {
-    OMNI_AGGREGATION_TYPE_SUM = 0,
-    OMNI_AGGREGATION_TYPE_COUNT,
-    OMNI_AGGREGATION_TYPE_AVG,
-    OMNI_AGGREGATION_TYPE_MAX,
-    OMNI_AGGREGATION_TYPE_MIN,
-    OMNI_AGGREGATION_TYPE_DNV,
-    OMNI_AGGREGATION_TYPE_INVALIDE
 };
 
 using AggregateState = union AggregateState {
@@ -66,7 +57,7 @@ public:
      * @param aggregateType indicates which aggregate function this aggregator stands for
      * @param outputType indicates this aggregator's output data type. It's used to create Vector
      *       */
-    Aggregator(AggregateType aggregateType, int32_t inputType, int32_t outputType, int32_t channel,
+    Aggregator(FunctionType aggregateType, int32_t inputType, int32_t outputType, int32_t channel,
         bool inputRaw = true, bool outputPartial = false)
         : type(aggregateType),
           inputType(inputType),
@@ -100,7 +91,7 @@ public:
         return this->outputPartial;
     }
 
-    AggregateType GetType() const
+    FunctionType GetType() const
     {
         return type;
     }
@@ -124,7 +115,7 @@ public:
     static const int32_t INVALID_MASK_COL = -1;
 
 protected:
-    AggregateType type;
+    FunctionType type;
     int32_t inputType;
     int32_t outputType;
     bool initiated;

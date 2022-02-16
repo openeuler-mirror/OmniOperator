@@ -6,7 +6,7 @@ package nova.hetu.omniruntime.operator.window;
 
 import static nova.hetu.omniruntime.constants.ConstantHelper.toNativeConstants;
 
-import nova.hetu.omniruntime.constants.WindowFunctionType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
@@ -22,7 +22,8 @@ import java.util.Objects;
  * @since 20210630
  */
 public class OmniWindowWithExprOperatorFactory
-        extends OmniOperatorFactory<OmniWindowWithExprOperatorFactory.FactoryContext> {
+        extends
+            OmniOperatorFactory<OmniWindowWithExprOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni window operator factory.
      *
@@ -39,82 +40,33 @@ public class OmniWindowWithExprOperatorFactory
      * @param argumentKeys the argument keys
      * @param windowFunctionReturnType the window function return type
      */
-    public OmniWindowWithExprOperatorFactory(
-            VecType[] sourceTypes,
-            int[] outputChannels,
-            WindowFunctionType[] windowFunction,
-            int[] partitionChannels,
-            int[] preGroupedChannels,
-            int[] sortChannels,
-            int[] sortOrder,
-            int[] sortNullFirsts,
-            int preSortedChannelPrefix,
-            int expectedPositions,
-            String[] argumentKeys,
+    public OmniWindowWithExprOperatorFactory(VecType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
+            int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
+            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
             VecType[] windowFunctionReturnType) {
-        super(
-                new FactoryContext(
-                        new JitContext(
-                                sourceTypes,
-                                outputChannels,
-                                windowFunction,
-                                partitionChannels,
-                                preGroupedChannels,
-                                sortChannels,
-                                sortOrder,
-                                sortNullFirsts,
-                                preSortedChannelPrefix,
-                                expectedPositions,
-                                argumentKeys,
-                                windowFunctionReturnType)));
+        super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
+                preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
+                argumentKeys, windowFunctionReturnType)));
     }
 
-    private static native long createWindowWithExprJitContext(
-            String sourceTypes,
-            int[] outputChannels,
-            int[] windFunction,
-            int[] partitionChannels,
-            int[] preGroupedChannels,
-            int[] sortChannels,
-            int[] sortOrder,
-            int[] sortNullFirsts,
-            int preSortedChannelPrefix,
-            int expectedPositions,
-            String[] argumentKeys,
+    private static native long createWindowWithExprJitContext(String sourceTypes, int[] outputChannels,
+            int[] windFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
+            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
             String windowFunctionReturnType);
 
-    private static native long createWindowWithExprOperatorFactory(
-            String sourceTypes,
-            int[] outputChannels,
-            int[] windFunction,
-            int[] partitionChannels,
-            int[] preGroupedChannels,
-            int[] sortChannels,
-            int[] sortOrder,
-            int[] sortNullFirsts,
-            int preSortedChannelPrefix,
-            int expectedPositions,
-            String[] argumentKeys,
-            String windowFunctionReturnType,
-            long jitContext);
+    private static native long createWindowWithExprOperatorFactory(String sourceTypes, int[] outputChannels,
+            int[] windFunction, int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
+            int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
+            String windowFunctionReturnType, long jitContext);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createWindowWithExprOperatorFactory(
-                VecTypeSerializer.serialize(context.sourceTypes),
-                context.outputChannels,
-                toNativeConstants(context.windFunction),
-                context.partitionChannels,
-                context.preGroupedChannels,
-                context.sortChannels,
-                context.sortOrder,
-                context.sortNullFirsts,
-                context.preSortedChannelPrefix,
-                context.expectedPositions,
-                context.argumentKeys,
-                VecTypeSerializer.serialize(context.windowFunctionReturnType),
-                factoryContext.getNativeJitContext());
+        return createWindowWithExprOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+                context.outputChannels, toNativeConstants(context.windFunction), context.partitionChannels,
+                context.preGroupedChannels, context.sortChannels, context.sortOrder, context.sortNullFirsts,
+                context.preSortedChannelPrefix, context.expectedPositions, context.argumentKeys,
+                VecTypeSerializer.serialize(context.windowFunctionReturnType), factoryContext.getNativeJitContext());
     }
 
     /**
@@ -127,7 +79,7 @@ public class OmniWindowWithExprOperatorFactory
 
         private final int[] outputChannels;
 
-        private final WindowFunctionType[] windFunction;
+        private final FunctionType[] windFunction;
 
         private final int[] partitionChannels;
 
@@ -163,17 +115,9 @@ public class OmniWindowWithExprOperatorFactory
          * @param argumentKeys the argument channels
          * @param windowFunctionReturnType the window function return type
          */
-        public JitContext(
-                VecType[] sourceTypes,
-                int[] outputChannels,
-                WindowFunctionType[] windowFunction,
-                int[] partitionChannels,
-                int[] preGroupedChannels,
-                int[] sortChannels,
-                int[] sortOrder,
-                int[] sortNullFirsts,
-                int preSortedChannelPrefix,
-                int expectedPositions, String[] argumentKeys,
+        public JitContext(VecType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
+                int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
+                int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, String[] argumentKeys,
                 VecType[] windowFunctionReturnType) {
             this.sourceTypes = sourceTypes;
             this.outputChannels = outputChannels;
@@ -192,10 +136,10 @@ public class OmniWindowWithExprOperatorFactory
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputChannels),
-                Arrays.hashCode(windFunction), Arrays.hashCode(partitionChannels), Arrays.hashCode(preGroupedChannels),
-                Arrays.hashCode(sortChannels), Arrays.hashCode(sortOrder), Arrays.hashCode(sortNullFirsts),
-                preSortedChannelPrefix, expectedPositions, Arrays.hashCode(argumentKeys),
-                Arrays.hashCode(windowFunctionReturnType));
+                    Arrays.hashCode(windFunction), Arrays.hashCode(partitionChannels),
+                    Arrays.hashCode(preGroupedChannels), Arrays.hashCode(sortChannels), Arrays.hashCode(sortOrder),
+                    Arrays.hashCode(sortNullFirsts), preSortedChannelPrefix, expectedPositions,
+                    Arrays.hashCode(argumentKeys), Arrays.hashCode(windowFunctionReturnType));
         }
 
         @Override
@@ -208,13 +152,15 @@ public class OmniWindowWithExprOperatorFactory
             }
             JitContext context = (JitContext) obj;
             return preSortedChannelPrefix == context.preSortedChannelPrefix
-                && expectedPositions == context.expectedPositions && Arrays.equals(sourceTypes, context.sourceTypes)
-                && Arrays.equals(outputChannels, context.outputChannels) && Arrays.equals(windFunction,
-                context.windFunction) && Arrays.equals(partitionChannels, context.partitionChannels) && Arrays.equals(
-                preGroupedChannels, context.preGroupedChannels) && Arrays.equals(sortChannels, context.sortChannels)
-                && Arrays.equals(sortOrder, context.sortOrder) && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
-                && Arrays.equals(argumentKeys, context.argumentKeys) && Arrays.equals(windowFunctionReturnType,
-                context.windowFunctionReturnType);
+                    && expectedPositions == context.expectedPositions && Arrays.equals(sourceTypes, context.sourceTypes)
+                    && Arrays.equals(outputChannels, context.outputChannels)
+                    && Arrays.equals(windFunction, context.windFunction)
+                    && Arrays.equals(partitionChannels, context.partitionChannels)
+                    && Arrays.equals(preGroupedChannels, context.preGroupedChannels)
+                    && Arrays.equals(sortChannels, context.sortChannels) && Arrays.equals(sortOrder, context.sortOrder)
+                    && Arrays.equals(sortNullFirsts, context.sortNullFirsts)
+                    && Arrays.equals(argumentKeys, context.argumentKeys)
+                    && Arrays.equals(windowFunctionReturnType, context.windowFunctionReturnType);
         }
     }
 
@@ -235,18 +181,10 @@ public class OmniWindowWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createWindowWithExprJitContext(
-                    VecTypeSerializer.serialize(context.sourceTypes),
-                    context.outputChannels,
-                    toNativeConstants(context.windFunction),
-                    context.partitionChannels,
-                    context.preGroupedChannels,
-                    context.sortChannels,
-                    context.sortOrder,
-                    context.sortNullFirsts,
-                    context.preSortedChannelPrefix,
-                    context.expectedPositions,
-                    context.argumentKeys,
+            return createWindowWithExprJitContext(VecTypeSerializer.serialize(context.sourceTypes),
+                    context.outputChannels, toNativeConstants(context.windFunction), context.partitionChannels,
+                    context.preGroupedChannels, context.sortChannels, context.sortOrder, context.sortNullFirsts,
+                    context.preSortedChannelPrefix, context.expectedPositions, context.argumentKeys,
                     VecTypeSerializer.serialize(context.windowFunctionReturnType));
         }
     }

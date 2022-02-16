@@ -43,7 +43,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     BinaryExpr *mulExpr = new BinaryExpr(MUL, new DataExpr(1, INT64D), mulRight, INT64D);
     std::vector<Expr *> aggKeys = { mulExpr, new DataExpr(3, INT32D) };
 
-    AggregateType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
     JitContext *jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
         (int32_t *)aggFuncTypes, 2, aggOutputTypes);
@@ -112,7 +112,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     BinaryExpr *addExpr2 = new BinaryExpr(ADD, addLeft2, addRight2, INT32D);
     std::vector<Expr *> aggKeys = { mulExpr, addExpr2 };
 
-    AggregateType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
     auto jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
         (int32_t *)aggFuncTypes, 2, aggOutputTypes);
@@ -166,7 +166,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     std::vector<Expr *> groupByKeys = { new DataExpr(0, INT64D), new DataExpr(2, INT32D) };
     std::vector<Expr *> aggKeys = { new DataExpr(1, INT64D), new DataExpr(3, INT32D) };
 
-    AggregateType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
+    FunctionType aggFuncTypes[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
 
     auto jitContext = CreateHashAggregationWithExprJitContext(sourceTypes, groupByKeys, aggKeys,
         (int32_t *)aggFuncTypes, 2, aggOutputTypes);

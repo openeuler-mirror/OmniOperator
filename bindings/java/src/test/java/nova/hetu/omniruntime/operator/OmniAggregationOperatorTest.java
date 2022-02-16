@@ -2,14 +2,14 @@
 package nova.hetu.omniruntime.operator;
 
 import static java.lang.String.format;
-import static nova.hetu.omniruntime.constants.AggType.OMNI_AGGREGATION_TYPE_SUM;
+import static nova.hetu.omniruntime.constants.FunctionType.OMNI_AGGREGATION_TYPE_SUM;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
 
-import nova.hetu.omniruntime.constants.AggType;
+import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.type.LongVecType;
 import nova.hetu.omniruntime.type.VecType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
@@ -34,8 +34,8 @@ public class OmniAggregationOperatorTest {
     @Test
     public void testExecuteAggMultiplePage() {
         VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
-        AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-                OMNI_AGGREGATION_TYPE_SUM};
+        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
         int[] aggInputChannels = {0, 1, 2, 3};
         int[] maskChannels = {-1, -1, -1, -1};
         VecType[] aggOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
@@ -96,7 +96,7 @@ public class OmniAggregationOperatorTest {
             Thread thread = new Thread(() -> {
                 try {
                     VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
-                    AggType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
+                    FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
                             OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
                     int[] aggInputChannels = {0, 1, 2, 3};
                     int[] maskChannels = {-1, -1, -1, -1};

@@ -52,7 +52,7 @@ public:
         return realAggregator->IsOutputPartial();
     }
 
-    AggregateType GetType() const
+    FunctionType GetType() const
     {
         return realAggregator->GetType();
     }
