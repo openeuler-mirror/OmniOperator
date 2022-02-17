@@ -1,10 +1,10 @@
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import org.testng.annotations.Test;
 
-import static nova.hetu.omniruntime.type.DoubleVecType.DOUBLE;
-import static nova.hetu.omniruntime.type.LongVecType.LONG;
+import static nova.hetu.omniruntime.type.DoubleDataType.DOUBLE;
+import static nova.hetu.omniruntime.type.LongDataType.LONG;
 import static org.testng.Assert.assertEquals;
 
 public class TestContainerVec
@@ -21,7 +21,7 @@ public class TestContainerVec
         field2.put(data2, 0, 0, rows);
         ContainerVec originalVec = new ContainerVec(2, rows,
                 new long[] {field1.getNativeVector(), field2.getNativeVector()},
-                new VecType[] {DOUBLE, LONG});
+                new DataType[] {DOUBLE, LONG});
 
         int offset = 1;
         ContainerVec sliced = originalVec.slice(offset, 5);
@@ -47,7 +47,7 @@ public class TestContainerVec
         field2.put(data2, 0, 0, rows);
         ContainerVec originalVec = new ContainerVec(2, rows,
                 new long[] {field1.getNativeVector(), field2.getNativeVector()},
-                new VecType[] {DOUBLE, LONG});
+                new DataType[] {DOUBLE, LONG});
 
         int[] positions = new int[] {1, 3, 5, 7, 9};
         ContainerVec copyPositionsed = originalVec.copyPositions(positions, 0, 5);
@@ -73,7 +73,7 @@ public class TestContainerVec
         field2.put(data2, 0, 0, rows);
         ContainerVec originalVec = new ContainerVec(2, rows,
                 new long[] {field1.getNativeVector(), field2.getNativeVector()},
-                new VecType[] {DOUBLE, LONG});
+                new DataType[] {DOUBLE, LONG});
         int offset = 1;
         ContainerVec copyRegioned = originalVec.copyRegion(offset, 5);
         DoubleVec result1 = new DoubleVec(copyRegioned.get(0));
@@ -98,7 +98,7 @@ public class TestContainerVec
         field2.put(longs, 0, 0, rows);
         ContainerVec originalVec = new ContainerVec(2, rows,
                 new long[] {field1.getNativeVector(), field2.getNativeVector()},
-                new VecType[] {DOUBLE, LONG});
+                new DataType[] {DOUBLE, LONG});
 
         DoubleVec field11 = new DoubleVec(rows);
         double[] doubles1 = new double[] {6.6, 7.7, 8.8, 9.9, 10.1};
@@ -108,13 +108,13 @@ public class TestContainerVec
         field22.put(longs1, 0, 0, rows);
         ContainerVec originalVec1 = new ContainerVec(2, rows,
                 new long[] {field11.getNativeVector(), field22.getNativeVector()},
-                new VecType[] {DOUBLE, LONG});
+                new DataType[] {DOUBLE, LONG});
 
         DoubleVec appendedDouble = new DoubleVec(rows * 2);
         LongVec appendedLong = new LongVec(rows * 2);
         ContainerVec appended = new ContainerVec(2, rows * 2,
                 new long[] {appendedDouble.getNativeVector(), appendedLong.getNativeVector()},
-                new VecType[] {DOUBLE, LONG});
+                new DataType[] {DOUBLE, LONG});
 
         appended.append(originalVec, 0 , 5);
         appended.append(originalVec1, 5, 5);

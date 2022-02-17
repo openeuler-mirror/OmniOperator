@@ -2,15 +2,14 @@ package nova.hetu.omniruntime.operator;
 
 import com.google.common.collect.ImmutableList;
 
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.project.OmniProjectOperatorFactory;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
-import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -18,9 +17,6 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
@@ -41,7 +37,7 @@ public class OmniProjectOperatorTest {
     @Test
     public void simpleTest() {
         String[] exprs = {"$operator$ADD:1(#0, 5:1)"};
-        VecType[] inputTypes = {IntVecType.INTEGER};
+        DataType[] inputTypes = {IntDataType.INTEGER};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
@@ -74,7 +70,7 @@ public class OmniProjectOperatorTest {
     @Test
     public void complexTest() {
         String[] exprs = {"$operator$MULTIPLY:1(#0, #1)", "IF:2($operator$LESS_THAN:4(#0, 500:1), 4000000000:2, #2)"};
-        VecType[] inputTypes = {IntVecType.INTEGER, IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] inputTypes = {IntDataType.INTEGER, IntDataType.INTEGER, LongDataType.LONG};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 1000;
         IntVec col1 = new IntVec(numRows);
@@ -110,7 +106,7 @@ public class OmniProjectOperatorTest {
     @Test
     public void mm3HashAndPmodTest() {
         String[] exprs = {"pmod:1(mm3hash:1(#0, 42:1), 42:1)", "mm3hash:1(#1, 42:1)", "mm3hash:1(#2, 42:1)"};
-        VecType[] inputTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
+        DataType[] inputTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(exprs, inputTypes);
         final int numRows = 3;
         final byte[] byteVal1 = "Wednesday".getBytes(StandardCharsets.UTF_8);
@@ -163,7 +159,7 @@ public class OmniProjectOperatorTest {
      */
     @Test
     public void unsupportedCast() {
-        VecType[] types = {};
+        DataType[] types = {};
         String[] projectionsJSON = {"{\"exprType\": \"FUNCTION\", \"returnType\": 2, \"function_name\": \"CAST\", " +
                 "\"arguments\": [{\"exprType\": \"IF\", \"returnType\": 1, \"condition\": {\"exprType\": " +
                 "\"FUNCTION\", \"returnType\": 4, \"function_name\": \"not\", \"arguments\": " +

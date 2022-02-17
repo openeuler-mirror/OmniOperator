@@ -10,8 +10,8 @@ import java.util.Objects;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +31,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
      * @param outputChannels output of streamed table
      * @param smjStreamedTableOperatorFactory streamed table operator factory instance
      */
-    public OmniSmjBufferedTableWithExprOperatorFactory(VecType[] soruceTypes, String[] equalKeyExprs,
+    public OmniSmjBufferedTableWithExprOperatorFactory(DataType[] soruceTypes, String[] equalKeyExprs,
             int[] outputChannels, OmniSmjStreamedTableWithExprOperatorFactory smjStreamedTableOperatorFactory) {
         super(new FactoryContext(new JitContext(soruceTypes, equalKeyExprs, outputChannels),
                 smjStreamedTableOperatorFactory));
@@ -46,7 +46,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createSmjBufferedTableWithExprOperatorFactory(VecTypeSerializer.serialize(context.soruceTypes),
+        return createSmjBufferedTableWithExprOperatorFactory(DataTypeSerializer.serialize(context.soruceTypes),
                 context.equalKeyExprs, context.outputChannels, factoryContext.getStreamedTableOperatorFactory(),
                 factoryContext.getNativeJitContext());
     }
@@ -57,7 +57,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
      * @since 20211030
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] soruceTypes;
+        private final DataType[] soruceTypes;
 
         private final String[] equalKeyExprs;
 
@@ -70,7 +70,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
          * @param equalKeyExps equal condition key expressions
          * @param outputChannels output of streamed table
          */
-        public JitContext(VecType[] soruceTypes, String[] equalKeyExps, int[] outputChannels) {
+        public JitContext(DataType[] soruceTypes, String[] equalKeyExps, int[] outputChannels) {
             this.soruceTypes = requireNonNull(soruceTypes, "soruceTypes");
             this.equalKeyExprs = requireNonNull(equalKeyExps, "equalKeyExprs");
             this.outputChannels = requireNonNull(outputChannels, "outputChannels");
@@ -119,7 +119,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createSmjBufferedTableWithExprJitContext(VecTypeSerializer.serialize(context.soruceTypes),
+            return createSmjBufferedTableWithExprJitContext(DataTypeSerializer.serialize(context.soruceTypes),
                     context.equalKeyExprs, context.outputChannels);
         }
 

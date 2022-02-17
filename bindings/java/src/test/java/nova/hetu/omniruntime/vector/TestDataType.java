@@ -2,12 +2,12 @@ package nova.hetu.omniruntime.vector;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import nova.hetu.omniruntime.type.BooleanVecType;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.BooleanDataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import org.testng.annotations.Test;
@@ -20,30 +20,30 @@ import static org.testng.Assert.assertEquals;
 /**
  * test vec type
  */
-public class TestVecType
+public class TestDataType
 {
     /**
      * test vec type
      */
     @Test
-    public void testVecType()
+    public void testDataType()
     {
-        VecType type = getVecTypeFromBase("BIGINT");
-        assertEquals(type, LongVecType.LONG);
+        DataType type = getDataTypeFromBase("BIGINT");
+        assertEquals(type, LongDataType.LONG);
     }
 
-    private VecType getVecTypeFromBase(String base)
+    private DataType getDataTypeFromBase(String base)
     {
         switch (base) {
             case "INT":
             case "DATE":
-                return IntVecType.INTEGER;
+                return IntDataType.INTEGER;
             case "BIGINT":
-                return LongVecType.LONG;
+                return LongDataType.LONG;
             case "DOUBLE":
-                return DoubleVecType.DOUBLE;
+                return DoubleDataType.DOUBLE;
             case "BOOLEAN":
-                return BooleanVecType.BOOLEAN;
+                return BooleanDataType.BOOLEAN;
             default:
                 throw new OmniRuntimeException(OmniErrorType.OMNI_UNDEFINED, "Not support Type " + base);
         }
@@ -54,9 +54,9 @@ public class TestVecType
             throws JsonProcessingException
     {
         ObjectMapper map = new ObjectMapper();
-        List<nova.hetu.omniruntime.type.VecType> types = new ArrayList<>();
-        types.add(LongVecType.LONG);
-        types.add(new Decimal128VecType(1,2));
+        List<nova.hetu.omniruntime.type.DataType> types = new ArrayList<>();
+        types.add(LongDataType.LONG);
+        types.add(new Decimal128DataType(1,2));
         String result = map.writeValueAsString(types);
 
         System.out.println(result);

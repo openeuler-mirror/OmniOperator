@@ -7,8 +7,8 @@ package nova.hetu.omniruntime.operator.partitionedoutput;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -34,9 +34,9 @@ public class OmniPartitionedOutPutOperatorFactory
      * @param hashChannelTypes the hash channel types
      * @param hashChannels the hash channels
      */
-    public OmniPartitionedOutPutOperatorFactory(VecType[] sourceTypes, boolean replicatesAnyRow,
+    public OmniPartitionedOutPutOperatorFactory(DataType[] sourceTypes, boolean replicatesAnyRow,
         OptionalInt nullChannel, int[] partitionChannels, int partitionCount, int[] bucketToPartition,
-        boolean isHashPrecomputed, VecType[] hashChannelTypes, int[] hashChannels) {
+        boolean isHashPrecomputed, DataType[] hashChannelTypes, int[] hashChannels) {
         super(new FactoryContext(
             new JitContext(sourceTypes, replicatesAnyRow, nullChannel, partitionChannels, partitionCount,
                 bucketToPartition, isHashPrecomputed, hashChannelTypes, hashChannels)));
@@ -54,9 +54,9 @@ public class OmniPartitionedOutPutOperatorFactory
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
         int nullChannel = context.nullChannel.isPresent() ? context.nullChannel.getAsInt() : -1;
-        return createPartitionedOutputOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+        return createPartitionedOutputOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
             context.replicatesAnyRow, nullChannel, context.partitionChannels, context.partitionCount,
-            context.bucketToPartition, context.isHashPrecomputed, VecTypeSerializer.serialize(context.hashChannelTypes),
+            context.bucketToPartition, context.isHashPrecomputed, DataTypeSerializer.serialize(context.hashChannelTypes),
             context.hashChannels, factoryContext.getNativeJitContext());
     }
 
@@ -66,7 +66,7 @@ public class OmniPartitionedOutPutOperatorFactory
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final boolean replicatesAnyRow;
 
@@ -80,7 +80,7 @@ public class OmniPartitionedOutPutOperatorFactory
 
         private final boolean isHashPrecomputed;
 
-        private final VecType[] hashChannelTypes;
+        private final DataType[] hashChannelTypes;
 
         private final int[] hashChannels;
 
@@ -97,9 +97,9 @@ public class OmniPartitionedOutPutOperatorFactory
          * @param hashChannelTypes the hash channel types
          * @param hashChannels the hash channels
          */
-        public JitContext(VecType[] sourceTypes, boolean replicatesAnyRow, OptionalInt nullChannel,
+        public JitContext(DataType[] sourceTypes, boolean replicatesAnyRow, OptionalInt nullChannel,
             int[] partitionChannels, int partitionCount, int[] bucketToPartition, boolean isHashPrecomputed,
-            VecType[] hashChannelTypes, int[] hashChannels) {
+            DataType[] hashChannelTypes, int[] hashChannels) {
             this.sourceTypes = sourceTypes;
             this.replicatesAnyRow = replicatesAnyRow;
             this.nullChannel = nullChannel;

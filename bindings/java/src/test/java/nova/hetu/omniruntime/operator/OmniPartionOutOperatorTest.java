@@ -2,9 +2,9 @@
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.partitionedoutput.OmniPartitionedOutPutOperatorFactory;
-import nova.hetu.omniruntime.type.CharVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.VecBatch;
 import org.testng.annotations.Test;
@@ -19,7 +19,7 @@ import static org.testng.Assert.assertEquals;
 public class OmniPartionOutOperatorTest {
     @Test
     public void testPartionOut() {
-        VecType[] sourceTypes = {VarcharVecType.VARCHAR};
+        DataType[] sourceTypes = {VarcharDataType.VARCHAR};
         boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
 
@@ -27,10 +27,10 @@ public class OmniPartionOutOperatorTest {
         int partitionCount = 1;
         int[] bucketToPartition = {0};
         boolean isHashPrecomputed = false;
-        VecType[] hashChannelTypes = {VarcharVecType.VARCHAR};
+        DataType[] hashChannelTypes = {VarcharDataType.VARCHAR};
         int[] hashChannels = {0};
 
-        VecType[] buildTypes = {new VarcharVecType(3), new VarcharVecType(3)};
+        DataType[] buildTypes = {new VarcharDataType(3), new VarcharDataType(3)};
         Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -53,17 +53,17 @@ public class OmniPartionOutOperatorTest {
 
     @Test
     public void testPartionOutCache() {
-        VecType[] sourceTypes = {VarcharVecType.VARCHAR};
+        DataType[] sourceTypes = {VarcharDataType.VARCHAR};
         boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
         int partitionCount = 1;
         int[] bucketToPartition = {0};
         boolean isHashPrecomputed = false;
-        VecType[] hashChannelTypes = {VarcharVecType.VARCHAR};
+        DataType[] hashChannelTypes = {VarcharDataType.VARCHAR};
         int[] hashChannels = {0};
 
-        VecType[] buildTypes = {new VarcharVecType(3), new VarcharVecType(3)};
+        DataType[] buildTypes = {new VarcharDataType(3), new VarcharDataType(3)};
         Object[][] buildDatas = {{"abc", "de", null}, {"abc", "de", null}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
 
@@ -86,17 +86,17 @@ public class OmniPartionOutOperatorTest {
 
     @Test
     public void testPartionOutChar() {
-        VecType[] sourceTypes = {CharVecType.CHAR};
+        DataType[] sourceTypes = {CharDataType.CHAR};
         boolean replicatesAnyRow = false;
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
         int partitionCount = 1;
         int[] bucketToPartition = {0};
         boolean isHashPrecomputed = false;
-        VecType[] hashChannelTypes = {CharVecType.CHAR};
+        DataType[] hashChannelTypes = {CharDataType.CHAR};
         int[] hashChannels = {0};
 
-        VecType[] buildTypes = {new CharVecType(3), new CharVecType(3)};
+        DataType[] buildTypes = {new CharDataType(3), new CharDataType(3)};
         Object[][] buildDatas = {{"abc", "de", "f"}, {"def", "bc", "a"}};
         VecBatch vecBatch = createVecBatch(buildTypes, buildDatas);
 

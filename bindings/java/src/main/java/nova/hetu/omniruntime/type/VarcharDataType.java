@@ -9,11 +9,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * date32 vec type
+ * varchar data type
  *
  * @since 2021-08-05
  */
-public class VarcharVecType extends VecType {
+public class VarcharDataType extends DataType {
     /**
      * max width for varchar vec type
      */
@@ -22,7 +22,7 @@ public class VarcharVecType extends VecType {
     /**
      * Varchar singleton
      */
-    public static final VarcharVecType VARCHAR = new VarcharVecType(MAX_WIDTH);
+    public static final VarcharDataType VARCHAR = new VarcharDataType(MAX_WIDTH);
 
     /**
      * average length of a varchar
@@ -35,8 +35,8 @@ public class VarcharVecType extends VecType {
      *
      * @param width the width of varchar
      */
-    public VarcharVecType(@JsonProperty("width") int width) {
-        super(VecTypeId.OMNI_VEC_TYPE_VARCHAR);
+    public VarcharDataType(@JsonProperty("width") int width) {
+        super(DataTypeId.OMNI_DATA_TYPE_VARCHAR);
         if (width > MAX_WIDTH) {
             this.width = MAX_WIDTH;
         } else {
@@ -44,8 +44,8 @@ public class VarcharVecType extends VecType {
         }
     }
 
-    protected VarcharVecType(int width, VecTypeId vecTypeId) {
-        super(vecTypeId);
+    protected VarcharDataType(int width, DataTypeId dataTypeId) {
+        super(dataTypeId);
         this.width = width;
     }
 

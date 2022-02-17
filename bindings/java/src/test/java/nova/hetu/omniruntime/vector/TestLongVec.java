@@ -1,6 +1,6 @@
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.LongDataType;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
@@ -29,7 +29,7 @@ public class TestLongVec {
         assertEquals(vec.getSize(), 256);
         assertEquals(vec.getOffset(), 0);
         assertEquals(vec.getCapacityInBytes(), 2048);
-        assertEquals(vec.getType(), LongVecType.LONG);
+        assertEquals(vec.getDataType(), LongDataType.LONG);
         vec.close();
     }
 

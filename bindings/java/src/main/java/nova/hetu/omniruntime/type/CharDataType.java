@@ -9,11 +9,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * char vec type
+ * char data type
  *
  * @since 2021-11-30
  */
-public class CharVecType extends VarcharVecType {
+public class CharDataType extends VarcharDataType {
     /**
      * max width for char vec type
      */
@@ -22,15 +22,15 @@ public class CharVecType extends VarcharVecType {
     /**
      * char singleton
      */
-    public static final CharVecType CHAR = new CharVecType(MAX_WIDTH);
+    public static final CharDataType CHAR = new CharDataType(MAX_WIDTH);
 
     /**
      * The construct of char vector type
      *
      * @param width the width of char
      */
-    public CharVecType(@JsonProperty("width") int width) {
-        super(width, VecTypeId.OMNI_VEC_TYPE_CHAR);
+    public CharDataType(@JsonProperty("width") int width) {
+        super(width, DataTypeId.OMNI_DATA_TYPE_CHAR);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class CharVecType extends VarcharVecType {
         if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        CharVecType other = (CharVecType) obj;
+        CharDataType other = (CharDataType) obj;
         return Objects.equals(width, other.getWidth()) && Objects.equals(super.getId(), other.getId());
     }
 }

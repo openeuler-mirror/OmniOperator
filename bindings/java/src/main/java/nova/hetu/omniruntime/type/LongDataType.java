@@ -5,20 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * date32 vec type
+ * long data type
  *
  * @since 2021-08-05
  */
-public class LongVecType extends VecType {
+public class LongDataType extends DataType {
     /**
      * Long singleton
      */
-    public static final LongVecType LONG = new LongVecType();
+    public static final LongDataType LONG = new LongDataType();
 
     /**
      * The construct
      */
-    public LongVecType() {
-        super(VecTypeId.OMNI_VEC_TYPE_LONG);
+    public LongDataType() {
+        super(DataTypeId.OMNI_DATA_TYPE_LONG);
     }
 }

@@ -50,7 +50,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
-import nova.hetu.omniruntime.vector.serialize.VecBatchSerde;
 
 @Test(singleThreaded = true)
 public class TestTopNOmniOperator

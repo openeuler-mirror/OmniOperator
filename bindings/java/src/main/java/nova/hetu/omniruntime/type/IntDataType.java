@@ -5,20 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * date32 vec type
+ * int data type
  *
  * @since 2021-08-05
  */
-public class IntVecType extends VecType {
+public class IntDataType extends DataType {
     /**
      * Integer singleton
      */
-    public static final IntVecType INTEGER = new IntVecType();
+    public static final IntDataType INTEGER = new IntDataType();
 
     /**
      * The construct
      */
-    public IntVecType() {
-        super(VecTypeId.OMNI_VEC_TYPE_INT);
+    public IntDataType() {
+        super(DataTypeId.OMNI_DATA_TYPE_INT);
     }
 }

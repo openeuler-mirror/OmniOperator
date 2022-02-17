@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VarcharVecType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 
 /**
  * varchar vec
@@ -20,11 +20,11 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     public VarcharVec(int capacityInBytes, int size) {
-        super(capacityInBytes, size, VarcharVecType.VARCHAR);
+        super(capacityInBytes, size, VarcharDataType.VARCHAR);
     }
 
     public VarcharVec(VecAllocator allocator, int capacityInBytes, int size) {
-        super(allocator, capacityInBytes, size, VarcharVecType.VARCHAR);
+        super(allocator, capacityInBytes, size, VarcharDataType.VARCHAR);
     }
 
     private VarcharVec(VarcharVec vector, int offset, int length, boolean isSlice) {
@@ -36,14 +36,14 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     public VarcharVec(long nativeVector) {
-        super(nativeVector, VarcharVecType.VARCHAR);
+        super(nativeVector, VarcharDataType.VARCHAR);
     }
 
     public VarcharVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                       long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size,
                       int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorOffsetBufAddress,
-            nativeVectorAllocator, capacityInBytes, size, offset, VarcharVecType.VARCHAR);
+            nativeVectorAllocator, capacityInBytes, size, offset, VarcharDataType.VARCHAR);
     }
 
     /**

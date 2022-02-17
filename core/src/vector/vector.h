@@ -144,7 +144,7 @@ public:
 
     VectorTracer *GetVectorTracer();
 
-    virtual VecEncoding encoding()
+    virtual VectorEncoding encoding()
     {
         return OMNI_VEC_ENCODING_FLAT;
     }

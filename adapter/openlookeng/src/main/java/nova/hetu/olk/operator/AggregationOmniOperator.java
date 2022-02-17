@@ -21,7 +21,7 @@ import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -126,12 +126,12 @@ public class AggregationOmniOperator implements Operator {
 
         private final int operatorId;
         private final PlanNodeId planNodeId;
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
         private final Step step;
         private final FunctionType[] aggregatorTypes;
         private final int[] aggregationInputChannels;
         private final List<Optional<Integer>> maskChannels;
-        private final VecType[] aggregationOutputTypes;
+        private final DataType[] aggregationOutputTypes;
         private final OmniAggregationOperatorFactory omniFactory;
 
         /**
@@ -146,9 +146,9 @@ public class AggregationOmniOperator implements Operator {
          * @param aggregationOutputTypes
          * @param step the step
          */
-        public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, VecType[] sourceTypes,
+        public AggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, DataType[] sourceTypes,
                 FunctionType[] aggregatorTypes, int[] aggregationInputChannels, List<Optional<Integer>> maskChannelList,
-                VecType[] aggregationOutputTypes, Step step) {
+                DataType[] aggregationOutputTypes, Step step) {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.sourceTypes = requireNonNull(sourceTypes, "sourceTypes is null");

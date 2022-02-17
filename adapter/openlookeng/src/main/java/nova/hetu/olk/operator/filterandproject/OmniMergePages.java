@@ -10,7 +10,7 @@ import static io.prestosql.operator.WorkProcessor.TransformationState.ofResult;
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.tool.OperatorUtils.createBlankVectors;
 import static nova.hetu.olk.tool.OperatorUtils.merge;
-import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
+import static nova.hetu.olk.tool.OperatorUtils.toDataTypes;
 import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 
 import com.google.common.collect.ImmutableList;
@@ -21,7 +21,7 @@ import io.prestosql.operator.project.MergePages;
 import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -34,7 +34,7 @@ import java.util.List;
  * @since 20210630
  */
 public class OmniMergePages extends MergePages.MergePagesTransformation {
-    private final VecType[] vecTypes;
+    private final DataType[] dataTypes;
 
     List<Page> pages;
 
@@ -60,7 +60,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
         super(types, minPageSizeInBytes, minRowCount, maxPageSizeInBytes, memoryContext);
         List<Type> inputTypes = Lists.newArrayList(requireNonNull(types, "types is null"));
         this.pages = new ArrayList<>();
-        this.vecTypes = toVecTypes(inputTypes);
+        this.dataTypes = toDataTypes(inputTypes);
     }
 
     /**
@@ -145,7 +145,7 @@ public class OmniMergePages extends MergePages.MergePagesTransformation {
      * @return Page output
      */
     public Page flush() {
-        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions), totalPositions);
+        VecBatch mergeResult = new VecBatch(createBlankVectors(vecAllocator, dataTypes, totalPositions), totalPositions);
         merge(mergeResult, pages, vecAllocator);
         Page finalPage = new VecBatchToPageIterator(ImmutableList.of(mergeResult).iterator()).next();
         currentPageSizeInBytes = 0;

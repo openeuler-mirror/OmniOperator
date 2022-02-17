@@ -6,7 +6,7 @@ package nova.hetu.olk.operator.filterandproject;
 
 import static java.util.Objects.requireNonNull;
 import static nova.hetu.olk.operator.filterandproject.OmniRowExpressionUtil.expressionStringify;
-import static nova.hetu.olk.tool.OperatorUtils.toVecTypes;
+import static nova.hetu.olk.tool.OperatorUtils.toDataTypes;
 
 import io.prestosql.operator.project.InputChannels;
 import io.prestosql.operator.project.PageFilter;
@@ -17,7 +17,7 @@ import io.prestosql.spi.type.Type;
 import io.prestosql.sql.relational.RowExpression;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.filter.OmniFilterAndProjectOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -61,10 +61,10 @@ public class OmniPageFilter implements PageFilter {
         this.projects = projects;
         this.inputTypes = inputTypes;
 
-        VecType[] vecTypes = toVecTypes(inputTypes);
+        DataType[] dataTypes = toDataTypes(inputTypes);
         try {
             this.operatorFactory = new OmniFilterAndProjectOperatorFactory(
-                    expressionStringify(filterExpression, parseFormat), vecTypes,
+                    expressionStringify(filterExpression, parseFormat), dataTypes,
                     projects.stream().map(p -> expressionStringify(p, parseFormat)).collect(Collectors.toList()),
                     parseFormat.ordinal());
             this.isSupported = this.operatorFactory.isSupported();

@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.LongVecType;
+import nova.hetu.omniruntime.type.LongDataType;
 
 import java.nio.ByteBuffer;
 
@@ -17,21 +17,21 @@ public class LongVec extends FixedWidthVec {
     private static final int BYTES = Long.BYTES;
 
     public LongVec(int size) {
-        super(size * BYTES, size, LongVecType.LONG);
+        super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
     }
 
     public LongVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, LongVecType.LONG);
+        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
     }
 
     public LongVec(long nativeVector) {
-        super(nativeVector, LongVecType.LONG);
+        super(nativeVector, LongDataType.LONG);
     }
 
     public LongVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                    long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, LongVecType.LONG);
+            size, offset, LongDataType.LONG);
     }
 
     private LongVec(LongVec vector, int offset, int length, boolean isSlice) {
@@ -50,7 +50,7 @@ public class LongVec extends FixedWidthVec {
      */
     @Deprecated
     public LongVec(ByteBuffer data, int capacityInBytes) {
-        super(capacityInBytes, data.limit(), LongVecType.LONG);
+        super(capacityInBytes, data.limit(), VecEncoding.OMNI_VEC_ENCODING_FLAT, LongDataType.LONG);
     }
 
     /**

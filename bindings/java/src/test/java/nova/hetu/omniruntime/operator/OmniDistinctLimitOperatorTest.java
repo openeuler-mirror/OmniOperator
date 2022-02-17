@@ -5,11 +5,11 @@
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.operator.limit.OmniDistinctLimitOperatorFactory;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecBatch;
 import org.testng.annotations.Test;
 
@@ -21,7 +21,7 @@ import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 public class OmniDistinctLimitOperatorTest {
     @Test
     public void testDistinctLimitBasic() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
         Object[][] sourceDatas1 = {{0, 1, 2, 0, 1, 2}, {6.6, 5.5, 4.4, 6.6, 5.5, 1.1},
                 {"abc", "hello", "world", "abc", "helle", "test"}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
@@ -51,8 +51,8 @@ public class OmniDistinctLimitOperatorTest {
          * 0: hash col 3&4&5: distinct col normal cols are different but hash cols has
          * conflict(repeat data)
          */
-        VecType[] sourceTypes = {LongVecType.LONG, IntVecType.INTEGER, VarcharVecType.VARCHAR, IntVecType.INTEGER,
-                DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
+        DataType[] sourceTypes = {LongDataType.LONG, IntDataType.INTEGER, VarcharDataType.VARCHAR, IntDataType.INTEGER,
+                DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
         Object[][] sourceDatas1 = {{10000L, 20000L, 10000L}, {3, 4, 5}, {"aaa", "bbb", "ccc"}, {0, 1, 0},
                 {6.6, 5.5, 6.6}, {"hello", "world", "hello"}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);
@@ -78,7 +78,7 @@ public class OmniDistinctLimitOperatorTest {
 
     @Test
     public void testDistinctLimitWithNull() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, VarcharVecType.VARCHAR};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, VarcharDataType.VARCHAR};
         Object[][] sourceDatas1 = {{0, 1, 2, 0, null, 2, null, null, 2, null},
                 {6.6, 5.5, 4.4, 6.6, 5.5, null, null, 5.5, null, null},
                 {"abc", "hello", "world", null, "hello", "world", null, "hello", "world", null}};
@@ -105,7 +105,7 @@ public class OmniDistinctLimitOperatorTest {
 
     @Test
     public void testDistinctLimitWithHashCol() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, DoubleVecType.DOUBLE, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE, LongDataType.LONG};
         Object[][] sourceDatas1 = {{0, 1, 2, 0, 1}, {6.6, 5.5, 4.4, 6.6, 2.2},
                 {100000L, 110000L, 120000L, 100000L, 110000L}};
         VecBatch vecBatch1 = createVecBatch(sourceTypes, sourceDatas1);

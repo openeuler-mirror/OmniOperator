@@ -5,20 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * date32 vec type
+ * short data type
  *
  * @since 2021-08-05
  */
-public class ShortVecType extends VecType {
+public class ShortDataType extends DataType {
     /**
      * Short singleton
      */
-    public static final ShortVecType SHORT = new ShortVecType();
+    public static final ShortDataType SHORT = new ShortDataType();
 
     /**
      * The construct
      */
-    public ShortVecType() {
-        super(VecTypeId.OMNI_VEC_TYPE_SHORT);
+    public ShortDataType() {
+        super(DataTypeId.OMNI_DATA_TYPE_SHORT);
     }
 }

@@ -10,9 +10,9 @@ import org.testng.annotations.Test;
 
 import nova.hetu.omniruntime.operator.join.OmniSmjBufferedTableWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.join.OmniSmjStreamedTableWithExprOperatorFactory;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
@@ -32,7 +32,7 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
     @Test
     public void testSmjOneTimeEqualCondition() {
         int intputResult = 0;
-        VecType[] streamedTypes = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] streamedTypes = {IntDataType.INTEGER, LongDataType.LONG};
         Object[][] streamedDatas1 = {
             {   0,    1,    2,    3,    4,    5},
             {6600L, 5500L, 4400L, 3300L, 2200L, 1100L}
@@ -47,7 +47,7 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         OmniOperator streamedTableOperator = streamedBuilderWithExprOperatorFactory.createOperator();
         System.out.println("create streamed table op");
 
-        VecType[] bufferedTypes = {LongVecType.LONG, IntVecType.INTEGER};
+        DataType[] bufferedTypes = {LongDataType.LONG, IntDataType.INTEGER};
         Object[][] bufferedDatas1 = {
                 {6006L, 5005L, 4004L, 3003L, 2002L, 1001L},
                 {   0,    1,    2,    3,    4,    5}

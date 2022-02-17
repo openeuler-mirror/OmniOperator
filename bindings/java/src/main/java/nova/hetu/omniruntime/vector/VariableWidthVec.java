@@ -4,7 +4,9 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
+
+import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_FLAT;
 
 /**
  * base class of variable width vec
@@ -22,13 +24,13 @@ public abstract class VariableWidthVec extends Vec {
      */
     protected int lastOffsetPosition = -1;
 
-    public VariableWidthVec(int capacityInBytes, int size, VecType type) {
-        super(capacityInBytes, size, type);
+    public VariableWidthVec(int capacityInBytes, int size, DataType type) {
+        super(capacityInBytes, size, OMNI_VEC_ENCODING_FLAT, type);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
-    public VariableWidthVec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
-        super(allocator, capacityInBytes, size, type);
+    public VariableWidthVec(VecAllocator allocator, int capacityInBytes, int size, DataType type) {
+        super(allocator, capacityInBytes, size, OMNI_VEC_ENCODING_FLAT, type);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
@@ -51,16 +53,16 @@ public abstract class VariableWidthVec extends Vec {
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (length + 1) * Integer.BYTES);
     }
 
-    protected VariableWidthVec(long nativeVector, VecType vecType) {
-        super(nativeVector, vecType);
+    protected VariableWidthVec(long nativeVector, DataType dataType) {
+        super(nativeVector, dataType);
         this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
     }
 
     protected VariableWidthVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                                long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes,
-                               int size, int offset, VecType vecType) {
+                               int size, int offset, DataType dataType) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, vecType);
+            size, offset, dataType);
         this.offsetsBuf = OmniBufFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
     }
 

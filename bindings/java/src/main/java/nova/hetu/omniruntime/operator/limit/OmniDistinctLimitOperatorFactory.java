@@ -7,8 +7,8 @@ package nova.hetu.omniruntime.operator.limit;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -31,7 +31,7 @@ public class OmniDistinctLimitOperatorFactory
      * @param hashCol col index of precomputed hash values
      * @param limit the limit count
      */
-    public OmniDistinctLimitOperatorFactory(VecType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
+    public OmniDistinctLimitOperatorFactory(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
         super(new FactoryContext(new JitContext(sourceTypes, distinctCols, hashCol, limit)));
     }
 
@@ -41,7 +41,7 @@ public class OmniDistinctLimitOperatorFactory
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createDistinctLimitOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+        return createDistinctLimitOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.distinctCols, context.hashCol, context.limit);
     }
 
@@ -51,12 +51,12 @@ public class OmniDistinctLimitOperatorFactory
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private VecType[] sourceTypes;
+        private DataType[] sourceTypes;
         private int[] distinctCols;
         private int hashCol;
         private long limit;
 
-        public JitContext(VecType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
+        public JitContext(DataType[] sourceTypes, int[] distinctCols, int hashCol, long limit) {
             this.sourceTypes = requireNonNull(sourceTypes, "Source types array is null.");
             this.distinctCols = requireNonNull(distinctCols, "Distinct cols array is null.");
             this.limit = limit;

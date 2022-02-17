@@ -5,20 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * date32 vec type
+ * double data type
  *
  * @since 2021-08-05
  */
-public class DoubleVecType extends VecType {
+public class DoubleDataType extends DataType {
     /**
      * Double singleton
      */
-    public static final DoubleVecType DOUBLE = new DoubleVecType();
+    public static final DoubleDataType DOUBLE = new DoubleDataType();
 
     /**
      * The construct.
      */
-    public DoubleVecType() {
-        super(VecTypeId.OMNI_VEC_TYPE_DOUBLE);
+    public DoubleDataType() {
+        super(DataTypeId.OMNI_DATA_TYPE_DOUBLE);
     }
 }

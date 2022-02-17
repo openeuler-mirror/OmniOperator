@@ -4,20 +4,21 @@
 
 package nova.hetu.omniruntime.type;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
 /**
- * Decimal64 vec type
+ * Decimal128 data type
  *
  * @since 2021-08-05
  */
-public class Decimal64VecType extends VecType {
+public class Decimal128DataType extends DataType {
     /**
      * Default precision value of decimal.
      */
-    public static final int DEFAULT_PRECISION = 19;
+    public static final int DEFAULT_PRECISION = 38;
 
     /**
      * Default scale value of decimal.
@@ -25,9 +26,9 @@ public class Decimal64VecType extends VecType {
     public static final int DEFAULT_SCALE = 0;
 
     /**
-     * Decimal64 singleton
+     * Decimal128 singleton
      */
-    public static final Decimal64VecType DECIMAL64 = new Decimal64VecType(DEFAULT_PRECISION, DEFAULT_SCALE);
+    public static final Decimal128DataType DECIMAL128 = new Decimal128DataType(DEFAULT_PRECISION, DEFAULT_SCALE);
 
     @JsonProperty
     private final int precision;
@@ -36,13 +37,14 @@ public class Decimal64VecType extends VecType {
     private final int scale;
 
     /**
-     * Construct of decimal64 vector type
+     * Construct of decima128 vector type.
      *
-     * @param precision the precision of decimal
-     * @param scale the scale of decimal
+     * @param precision the precision of decimal.
+     * @param scale the scale of decimal.
      */
-    public Decimal64VecType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
-        super(VecTypeId.OMNI_VEC_TYPE_DECIMAL64);
+    @JsonCreator
+    public Decimal128DataType(@JsonProperty("precision") int precision, @JsonProperty("scale") int scale) {
+        super(DataTypeId.OMNI_DATA_TYPE_DECIMAL128);
         this.precision = precision;
         this.scale = scale;
     }

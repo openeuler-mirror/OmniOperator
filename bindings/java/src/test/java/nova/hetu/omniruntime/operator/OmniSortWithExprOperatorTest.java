@@ -8,9 +8,9 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.operator.sort.OmniSortWithExprOperatorFactory;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -25,7 +25,7 @@ public class OmniSortWithExprOperatorTest {
      */
     @Test
     public void TestSortByZeroColumnWithExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -54,7 +54,7 @@ public class OmniSortWithExprOperatorTest {
      */
     @Test
     public void TestSortByOneColumnWithExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -83,7 +83,7 @@ public class OmniSortWithExprOperatorTest {
      */
     @Test
     public void TestSortByTwoColumnsWithExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -112,7 +112,7 @@ public class OmniSortWithExprOperatorTest {
      */
     @Test
     public void TestSortByTwoDictionaryWithExpr() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         Vec vecs[] = new Vec[2];
         int[] ids = {0, 1, 2, 3, 4, 5, 6, 7};

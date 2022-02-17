@@ -9,8 +9,8 @@ import static java.util.Objects.requireNonNull;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -32,7 +32,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      * @param searchExpressions the search expressions
      * @param operatorCount the operator count
      */
-    public OmniHashBuilderOperatorFactory(VecType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
+    public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
             Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount) {
         super(new FactoryContext(new JitContext(buildTypes, buildHashCols, filterExpression, sortChannel,
                 searchExpressions, operatorCount)));
@@ -47,7 +47,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createHashBuilderOperatorFactory(VecTypeSerializer.serialize(context.buildTypes), context.buildHashCols,
+        return createHashBuilderOperatorFactory(DataTypeSerializer.serialize(context.buildTypes), context.buildHashCols,
                 context.filterExpression, context.sortChannel, context.searchExpressions, context.operatorCount,
                 factoryContext.getNativeJitContext());
     }
@@ -58,7 +58,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] buildTypes;
+        private final DataType[] buildTypes;
 
         private final int[] buildHashCols;
 
@@ -80,7 +80,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
          * @param searchExpressions the search expressions
          * @param operatorCount the operator count
          */
-        public JitContext(VecType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
+        public JitContext(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
                 Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount) {
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashCols = requireNonNull(buildHashCols, "buildHashCols");
@@ -129,7 +129,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createHashBuilderJitContext(VecTypeSerializer.serialize(context.buildTypes), context.buildHashCols,
+            return createHashBuilderJitContext(DataTypeSerializer.serialize(context.buildTypes), context.buildHashCols,
                     context.filterExpression, context.sortChannel, context.searchExpressions, context.operatorCount);
         }
     }

@@ -5,20 +5,20 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * boolean vec type
+ * boolean data type
  *
  * @since 2021-08-05
  */
-public class BooleanVecType extends VecType {
+public class BooleanDataType extends DataType {
     /**
      * Boolean singleton
      */
-    public static final BooleanVecType BOOLEAN = new BooleanVecType();
+    public static final BooleanDataType BOOLEAN = new BooleanDataType();
 
     /**
      * Boolean construct
      */
-    public BooleanVecType() {
-        super(VecTypeId.OMNI_VEC_TYPE_BOOLEAN);
+    public BooleanDataType() {
+        super(DataTypeId.OMNI_DATA_TYPE_BOOLEAN);
     }
 }

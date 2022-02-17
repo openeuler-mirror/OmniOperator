@@ -9,26 +9,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * date32 vec type
+ * date64 data type
  *
  * @since 2021-08-05
  */
-public class Date64VecType extends VecType {
+public class Date64DataType extends DataType {
     /**
      * Date64 singleton
      */
-    public static final Date64VecType DATE64 = new Date64VecType(DateUnit.DAY);
+    public static final Date64DataType DATE64 = new Date64DataType(DateUnit.DAY);
 
     @JsonProperty
-    private final VecType.DateUnit dateUnit;
+    private final DataType.DateUnit dateUnit;
 
     /**
      * date 64 construct
      *
      * @param dateUnit the unit of date
      */
-    public Date64VecType(@JsonProperty("dateUnit") VecType.DateUnit dateUnit) {
-        super(VecTypeId.OMNI_VEC_TYPE_DATE64);
+    public Date64DataType(@JsonProperty("dateUnit") DataType.DateUnit dateUnit) {
+        super(DataTypeId.OMNI_DATA_TYPE_DATE64);
         this.dateUnit = dateUnit;
     }
 

@@ -24,17 +24,16 @@ import io.prestosql.spi.block.BlockBuilder;
 import io.prestosql.spi.block.DictionaryBlockEncoding;
 import io.prestosql.spi.block.DictionaryId;
 import io.prestosql.spi.block.IntArrayList;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.vector.Decimal128Vec;
-import nova.hetu.omniruntime.vector.DictionaryVec;
-import nova.hetu.omniruntime.vector.DoubleVec;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
-import nova.hetu.omniruntime.vector.Vec;
-
+import nova.hetu.omniruntime.vector.Decimal128Vec;
+import nova.hetu.omniruntime.vector.DictionaryVec;
+import nova.hetu.omniruntime.vector.VecEncoding;
 import org.openjdk.jol.info.ClassLayout;
-
 import java.util.Arrays;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -214,33 +213,44 @@ public class DictionaryOmniBlock<T> implements Block<T> {
     }
 
     private static Block buildBlock(Vec dictionary) {
-        VecType vecType = dictionary.getType();
+        DataType dataType = dictionary.getDataType();
         Block dictionaryBlock;
-
-        switch (vecType.getId()) {
-            case OMNI_VEC_TYPE_INT :
-            case OMNI_VEC_TYPE_DATE32 :
-                dictionaryBlock = new IntArrayOmniBlock(dictionary.getSize(), (IntVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_LONG :
-            case OMNI_VEC_TYPE_DECIMAL64 :
-                dictionaryBlock = new LongArrayOmniBlock(dictionary.getSize(), (LongVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_DOUBLE :
-                dictionaryBlock = new DoubleArrayOmniBlock(dictionary.getSize(), (DoubleVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_VARCHAR :
-            case OMNI_VEC_TYPE_CHAR :
-                dictionaryBlock = new VariableWidthOmniBlock(dictionary.getSize(), (VarcharVec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_DECIMAL128 :
-                dictionaryBlock = new Int128ArrayOmniBlock(dictionary.getSize(), (Decimal128Vec) dictionary);
-                break;
-            case OMNI_VEC_TYPE_DICTIONARY :
-                dictionaryBlock = new DictionaryOmniBlock((DictionaryVec) dictionary, false, randomDictionaryId());
+        VecEncoding vecEncoding = dictionary.getEncoding();
+        switch (vecEncoding){
+            case OMNI_VEC_ENCODING_DICTIONARY:
+                return new DictionaryOmniBlock((DictionaryVec) dictionary, false, randomDictionaryId());
+            case OMNI_VEC_ENCODING_FLAT:
+                dictionaryBlock = createFlatBlock(dataType.getId(), dictionary);
                 break;
             default :
-                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + vecType.getId());
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + dataType.getId());
+        }
+        return dictionaryBlock;
+    }
+
+    private static Block createFlatBlock(DataType.DataTypeId dataTypeId, Vec dictionary){
+        Block dictionaryBlock;
+        switch (dataTypeId) {
+            case OMNI_DATA_TYPE_INT :
+            case OMNI_DATA_TYPE_DATE32 :
+                dictionaryBlock = new IntArrayOmniBlock(dictionary.getSize(), (IntVec) dictionary);
+                break;
+            case OMNI_DATA_TYPE_LONG :
+            case OMNI_DATA_TYPE_DECIMAL64 :
+                dictionaryBlock = new LongArrayOmniBlock(dictionary.getSize(), (LongVec) dictionary);
+                break;
+            case OMNI_DATA_TYPE_DOUBLE :
+                dictionaryBlock = new DoubleArrayOmniBlock(dictionary.getSize(), (DoubleVec) dictionary);
+                break;
+            case OMNI_DATA_TYPE_VARCHAR :
+            case OMNI_DATA_TYPE_CHAR :
+                dictionaryBlock = new VariableWidthOmniBlock(dictionary.getSize(), (VarcharVec) dictionary);
+                break;
+            case OMNI_DATA_TYPE_DECIMAL128 :
+                dictionaryBlock = new Int128ArrayOmniBlock(dictionary.getSize(), (Decimal128Vec) dictionary);
+                break;
+            default :
+                throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + dataTypeId);
         }
         return dictionaryBlock;
     }

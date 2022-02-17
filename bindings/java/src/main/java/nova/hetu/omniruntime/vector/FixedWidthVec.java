@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 
 /**
  * base class of fixed width vec
@@ -12,12 +12,12 @@ import nova.hetu.omniruntime.type.VecType;
  * @since 2021-07-17
  */
 public abstract class FixedWidthVec extends Vec {
-    public FixedWidthVec(int capacityInBytes, int size, VecType type) {
-        super(capacityInBytes, size, type);
+    public FixedWidthVec(int capacityInBytes, int size, VecEncoding encoding, DataType type) {
+        super(capacityInBytes, size, encoding, type);
     }
 
-    public FixedWidthVec(VecAllocator allocator, int capacityInBytes, int size, VecType type) {
-        super(allocator, capacityInBytes, size, type);
+    public FixedWidthVec(VecAllocator allocator, int capacityInBytes, int size, VecEncoding encoding, DataType type) {
+        super(allocator, capacityInBytes, size, encoding, type);
     }
 
     public FixedWidthVec(FixedWidthVec vector, int offset, int length, boolean isSlice) {
@@ -28,12 +28,12 @@ public abstract class FixedWidthVec extends Vec {
         super(vector, positions, offset, length);
     }
 
-    public FixedWidthVec(long nativeVector, VecType type) {
+    public FixedWidthVec(long nativeVector, DataType type) {
         super(nativeVector, type);
     }
 
     public FixedWidthVec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
-                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
+                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType type) {
         super(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator,
             capacityInBytes, size, offset, type);
     }

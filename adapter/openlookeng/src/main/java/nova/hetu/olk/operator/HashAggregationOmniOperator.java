@@ -28,7 +28,7 @@ import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -161,15 +161,15 @@ public class HashAggregationOmniOperator implements Operator {
 
         private int[] groupByInputChannels;
 
-        private VecType[] groupByInputTypes;
+        private DataType[] groupByInputTypes;
 
         private int[] aggregationInputChannels;
 
-        private VecType[] aggregationInputTypes;
+        private DataType[] aggregationInputTypes;
 
         private FunctionType[] aggregatorTypes;
 
-        private VecType[] aggregationOutputTypes;
+        private DataType[] aggregationOutputTypes;
 
         /**
          * Instantiates a new Hash aggregation omni operator factory.
@@ -185,8 +185,8 @@ public class HashAggregationOmniOperator implements Operator {
          * @param step the step
          */
         public HashAggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, List<Type> sourceTypes,
-                int[] groupByInputChannels, VecType[] groupByInputTypes, int[] aggregationInputChannels,
-                VecType[] aggregationInputTypes, FunctionType[] aggregatorTypes, VecType[] aggregationOutputTypes,
+                int[] groupByInputChannels, DataType[] groupByInputTypes, int[] aggregationInputChannels,
+                DataType[] aggregationInputTypes, FunctionType[] aggregatorTypes, DataType[] aggregationOutputTypes,
                 Step step) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
@@ -228,8 +228,8 @@ public class HashAggregationOmniOperator implements Operator {
          */
         @VisibleForTesting
         public HashAggregationOmniOperatorFactory(int operatorId, PlanNodeId planNodeId, int[] groupByInputChannels,
-                VecType[] groupByInputTypes, int[] aggregationInputChannels, VecType[] aggregationInputTypes,
-                FunctionType[] aggregatorTypes, List<VecType[]> inAndOutputTypes) {
+                DataType[] groupByInputTypes, int[] aggregationInputChannels, DataType[] aggregationInputTypes,
+                FunctionType[] aggregatorTypes, List<DataType[]> inAndOutputTypes) {
             this.operatorId = operatorId;
             this.planNodeId = planNodeId;
             int groupByLength = groupByInputChannels.length;

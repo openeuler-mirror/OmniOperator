@@ -4,9 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.IntVecType;
-
-import java.nio.IntBuffer;
+import nova.hetu.omniruntime.type.IntDataType;
 
 /**
  * int vec
@@ -17,21 +15,21 @@ public class IntVec extends FixedWidthVec {
     private static final int BYTES = Integer.BYTES;
 
     public IntVec(int size) {
-        super(size * BYTES, size, IntVecType.INTEGER);
+        super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, IntDataType.INTEGER);
     }
 
     public IntVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, IntVecType.INTEGER);
+        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, IntDataType.INTEGER);
     }
 
     public IntVec(long nativeVector) {
-        super(nativeVector, IntVecType.INTEGER);
+        super(nativeVector, IntDataType.INTEGER);
     }
 
     public IntVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                   long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, IntVecType.INTEGER);
+                size, offset, IntDataType.INTEGER);
     }
 
     private IntVec(IntVec vector, int offset, int length, boolean isSlice) {

@@ -7,8 +7,8 @@ package nova.hetu.omniruntime.operator.sort;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -28,7 +28,7 @@ public class OmniSortWithExprOperatorFactory
      * @param sortAscendings the sort ascendings
      * @param sortNullFirsts the sort null firsts
      */
-    public OmniSortWithExprOperatorFactory(VecType[] sourceTypes, int[] outputColumns, String[] sortKeys,
+    public OmniSortWithExprOperatorFactory(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys,
             int[] sortAscendings, int[] sortNullFirsts) {
         super(new FactoryContext(new JitContext(sourceTypes, outputColumns, sortKeys, sortAscendings, sortNullFirsts)));
     }
@@ -42,7 +42,7 @@ public class OmniSortWithExprOperatorFactory
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createSortWithExprOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes),
+        return createSortWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes),
                 context.outputColumns, context.sortKeys, context.sortAscendings, context.sortNullFirsts,
                 factoryContext.getNativeJitContext());
     }
@@ -51,7 +51,7 @@ public class OmniSortWithExprOperatorFactory
      * The type Context.
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final int[] outputColumns;
 
@@ -70,7 +70,7 @@ public class OmniSortWithExprOperatorFactory
          * @param sortAscendings the sort ascendings
          * @param sortNullFirsts the sort null firsts
          */
-        public JitContext(VecType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings,
+        public JitContext(DataType[] sourceTypes, int[] outputColumns, String[] sortKeys, int[] sortAscendings,
                 int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.outputColumns = outputColumns;
@@ -115,7 +115,7 @@ public class OmniSortWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createSortWithExprJitContext(VecTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
+            return createSortWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.outputColumns,
                     context.sortKeys, context.sortAscendings, context.sortNullFirsts);
         }
     }

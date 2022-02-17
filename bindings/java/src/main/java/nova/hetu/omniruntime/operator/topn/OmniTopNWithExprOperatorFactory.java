@@ -7,8 +7,8 @@ package nova.hetu.omniruntime.operator.topn;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -29,7 +29,7 @@ public class OmniTopNWithExprOperatorFactory
      * @param sortAssendings the sort assendings
      * @param sortNullFirsts the sort null firsts
      */
-    public OmniTopNWithExprOperatorFactory(VecType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
+    public OmniTopNWithExprOperatorFactory(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
         int[] sortNullFirsts) {
         super(new FactoryContext(new JitContext(sourceTypes, limitN, sortKeys, sortAssendings, sortNullFirsts)));
     }
@@ -43,7 +43,7 @@ public class OmniTopNWithExprOperatorFactory
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createTopNWithExprOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.limitN,
+        return createTopNWithExprOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
             context.sortKeys, context.sortAssendings, context.sortNullFirsts, factoryContext.getNativeJitContext());
     }
 
@@ -53,7 +53,7 @@ public class OmniTopNWithExprOperatorFactory
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final int limitN;
 
@@ -72,7 +72,7 @@ public class OmniTopNWithExprOperatorFactory
          * @param sortAssendings the sort assendings
          * @param sortNullFirsts the sort null firsts
          */
-        public JitContext(VecType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
+        public JitContext(DataType[] sourceTypes, int limitN, String[] sortKeys, int[] sortAssendings,
             int[] sortNullFirsts) {
             this.sourceTypes = sourceTypes;
             this.limitN = limitN;
@@ -119,7 +119,7 @@ public class OmniTopNWithExprOperatorFactory
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createTopNWithExprJitContext(VecTypeSerializer.serialize(context.sourceTypes), context.limitN,
+            return createTopNWithExprJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.limitN,
                 context.sortKeys, context.sortAssendings, context.sortNullFirsts);
         }
     }

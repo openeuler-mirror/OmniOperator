@@ -9,15 +9,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * date32 vec type
+ * date32 data type
  *
  * @since 2021-08-05
  */
-public class Date32VecType extends VecType {
+public class Date32DataType extends DataType {
     /**
      * Date32 singleton
      */
-    public static final Date32VecType DATE32 = new Date32VecType(DateUnit.DAY);
+    public static final Date32DataType DATE32 = new Date32DataType(DateUnit.DAY);
 
     @JsonProperty
     private final DateUnit dateUnit;
@@ -27,8 +27,8 @@ public class Date32VecType extends VecType {
      *
      * @param dateUnit the unit of date
      */
-    public Date32VecType(@JsonProperty("dateUnit") DateUnit dateUnit) {
-        super(VecTypeId.OMNI_VEC_TYPE_DATE32);
+    public Date32DataType(@JsonProperty("dateUnit") DateUnit dateUnit) {
+        super(DataTypeId.OMNI_DATA_TYPE_DATE32);
         this.dateUnit = dateUnit;
     }
 

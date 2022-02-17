@@ -4,8 +4,8 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -18,19 +18,19 @@ public class Decimal128Vec extends DecimalVec {
     private static final int BYTES = Long.BYTES * 2;
 
     public Decimal128Vec(int size) {
-        super(size, BYTES, Decimal128VecType.DECIMAL128);
+        super(size, BYTES, Decimal128DataType.DECIMAL128);
     }
 
     public Decimal128Vec(VecAllocator allocator, int size) {
-        super(allocator, size, BYTES, Decimal128VecType.DECIMAL128);
+        super(allocator, size, BYTES, Decimal128DataType.DECIMAL128);
     }
 
-    public Decimal128Vec(long nativeVector, VecType type) {
+    public Decimal128Vec(long nativeVector, DataType type) {
         super(nativeVector, BYTES, type);
     }
 
     public Decimal128Vec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, VecType type) {
+                         long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
             size, offset, BYTES, type);
     }

@@ -443,7 +443,7 @@ public:
     }
 
 protected:
-    explicit VarcharDataType(uint32_t width, DataTypeId DataTypeId) : DataType(vecTypeId)
+    explicit VarcharDataType(uint32_t width, DataTypeId dataTypeId) : DataType(dataTypeId)
     {
         this->width = width;
     }

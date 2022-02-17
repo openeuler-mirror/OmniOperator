@@ -9,7 +9,6 @@ import static io.prestosql.operator.OperatorAssertion.assertOperatorEquals;
 import static io.prestosql.spi.type.BigintType.BIGINT;
 import static io.prestosql.spi.type.BooleanType.BOOLEAN;
 import static io.prestosql.spi.type.DoubleType.DOUBLE;
-import static io.prestosql.spi.type.IntegerType.INTEGER;
 import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.testing.MaterializedResult.resultBuilder;
 import static io.prestosql.testing.TestingTaskContext.createTaskContext;
@@ -37,12 +36,12 @@ import io.prestosql.testing.MaterializedResult;
 
 import nova.hetu.olk.operator.AggregationOmniOperator.AggregationOmniOperatorFactory;
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.BooleanVecType;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.BooleanDataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -83,12 +82,12 @@ public class TestAggregationOmniOperator {
         List<Page> input = rowPagesBuilder(BIGINT, BIGINT, BIGINT, VARCHAR).addSequencePage(100, 0, 0, 0, 300).build();
 
         int id = 0;
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, new VarcharVecType(10)};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, new VarcharDataType(10)};
         FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_AVG,
                 OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX};
         int[] aggregationInputChannels = {0, 1, 2, 3};
-        VecType[] aggregationOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE, LongVecType.LONG,
-                new VarcharVecType(10)};
+        DataType[] aggregationOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE, LongDataType.LONG,
+                new VarcharDataType(10)};
         AggregationNode.Step step = AggregationNode.Step.SINGLE;
         ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();
         for (int i = 0; i < aggregatorTypes.length; i++) {
@@ -109,36 +108,6 @@ public class TestAggregationOmniOperator {
     }
 
     @Test(invocationCount = 1)
-    public void testCountAggregationCompare() {
-        List<Type> types = ImmutableList.of(BIGINT, BIGINT, INTEGER);
-        List<Page> input = rowPagesBuilder(types).row(1, 1, null).row(null, 2, 2).row(null, 3, 3).row(4, 4, 4)
-                .row(5, null, 5).row(null, 6, 6).build();
-
-        int id = 0;
-        VecType[] sourceTypes = {LongVecType.LONG, IntVecType.INTEGER};
-        FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL,
-                OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
-        int[] aggregationInputChannels = {0, 2};
-        VecType[] aggregationOutputTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG};
-        AggregationNode.Step step = AggregationNode.Step.SINGLE;
-        ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();
-        for (int i = 0; i < aggregatorTypes.length; i++) {
-            maskChannels.add(Optional.empty());
-        }
-        AggregationOmniOperatorFactory AggregationOmniOperatorFactory = new AggregationOmniOperatorFactory(id,
-                new PlanNodeId(String.valueOf(id)), sourceTypes, aggregatorTypes, aggregationInputChannels,
-                maskChannels.build(), aggregationOutputTypes, step);
-
-        DriverContext driverContext = createTaskContext(executor, scheduledExecutor, TEST_SESSION)
-                .addPipelineContext(0, true, true, false).addDriverContext();
-        MaterializedResult expected = resultBuilder(driverContext.getSession(), BIGINT, BIGINT, BIGINT).row(3L, 6L, 5L)
-                .build();
-        assertOperatorEquals(AggregationOmniOperatorFactory, driverContext, input, expected);
-        assertEquals(driverContext.getSystemMemoryUsage(), 0);
-        assertEquals(driverContext.getMemoryUsage(), 0);
-    }
-
-    @Test(invocationCount = 1)
     public void testCountAggregation() {
         List<Page> input = rowPagesBuilder(BIGINT, BIGINT, BOOLEAN, BOOLEAN).row(10L, 20L, true, true)
                 .row(20L, 10L, true, true).pageBreak().row(10L, 30L, false, true).row(30L, 10L, true, false).build();
@@ -146,10 +115,10 @@ public class TestAggregationOmniOperator {
         List<Page> offHeapInput = transferToOffHeapPages(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, input);
 
         int id = 0;
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, BooleanVecType.BOOLEAN, BooleanVecType.BOOLEAN};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, BooleanDataType.BOOLEAN, BooleanDataType.BOOLEAN};
         FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_SUM};
         int[] aggregationInputChannels = {0, 1};
-        VecType[] aggregationOutputTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] aggregationOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         AggregationNode.Step step = AggregationNode.Step.SINGLE;
         ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();
         maskChannels.add(Optional.of(2));
@@ -186,10 +155,10 @@ public class TestAggregationOmniOperator {
         AggregationNode.Step step = AggregationNode.Step.PARTIAL;
         int id = 0;
 
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, LongVecType.LONG, new VarcharVecType(10)};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, new VarcharDataType(10)};
         FunctionType[] aggregatorTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN};
         int[] aggregationInputChannels = {0, 1, 2, 3};
-        VecType[] aggregationOutputTypes = {LongVecType.LONG};
+        DataType[] aggregationOutputTypes = {LongDataType.LONG};
         ImmutableList.Builder<Optional<Integer>> maskChannels = new ImmutableList.Builder<>();
         for (int i = 0; i < aggregatorTypes.length; i++) {
             maskChannels.add(Optional.empty());

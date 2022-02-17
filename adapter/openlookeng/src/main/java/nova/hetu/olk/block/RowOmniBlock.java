@@ -22,7 +22,7 @@ import static nova.hetu.olk.tool.VecAllocatorHelper.getVecAllocatorFromBlocks;
 import io.prestosql.spi.block.AbstractRowBlock;
 import io.prestosql.spi.block.Block;
 import nova.hetu.olk.tool.OperatorUtils;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Vec;
 
@@ -149,14 +149,14 @@ public class RowOmniBlock<T> extends AbstractRowBlock<T> {
         Block[] rawFieldBlocks = this.getRawFieldBlocks();
         int numFields = rawFieldBlocks.length;
         long[] vectorAddresses = new long[numFields];
-        VecType[] vecTypes = new VecType[numFields];
+        DataType[] dataTypes = new DataType[numFields];
         for (int i = 0; i < numFields; ++i) {
             Vec vec = (Vec) rawFieldBlocks[i].getValues();
             long nativeVectorAddress = vec.getNativeVector();
             vectorAddresses[i] = nativeVectorAddress;
         }
         ContainerVec containerVec = new ContainerVec(vecAllocator, numFields, this.getPositionCount(), vectorAddresses,
-                vecTypes);
+                dataTypes);
         containerVec.setNulls(0, this.getRowIsNull(), 0, this.getPositionCount());
         return containerVec;
     }

@@ -9,10 +9,10 @@ import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -31,9 +31,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] aggChannels = {"MULTIPLY:2(#1, 5:2)", "#3"};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
 
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
                 groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
@@ -65,9 +65,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] aggChannels = {"MULTIPLY:2(#1, 5:2)", "ADD:1(#3, 5:1)"};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
 
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
                 groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);
@@ -99,9 +99,9 @@ public class OmniHashAggregationWithExprOperatorTest {
         String[] aggChannels = {"#1", "#3"};
 
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG};
-        VecType[] aggOutputTypes = {LongVecType.LONG, DoubleVecType.DOUBLE};
+        DataType[] aggOutputTypes = {LongDataType.LONG, DoubleDataType.DOUBLE};
 
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG, IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG, IntDataType.INTEGER, IntDataType.INTEGER};
 
         OmniHashAggregationWithExprOperatorFactory factory = new OmniHashAggregationWithExprOperatorFactory(
                 groupByChanel, aggChannels, sourceTypes, aggFunctionTypes, aggOutputTypes, true, false);

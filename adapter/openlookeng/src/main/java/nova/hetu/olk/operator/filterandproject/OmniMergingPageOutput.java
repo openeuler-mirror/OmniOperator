@@ -17,7 +17,7 @@ import io.prestosql.spi.Page;
 import io.prestosql.spi.type.Type;
 import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 import org.openjdk.jol.info.ClassLayout;
@@ -58,7 +58,7 @@ public class OmniMergingPageOutput {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(OmniMergingPageOutput.class).instanceSize();
     private static final int MAX_MIN_PAGE_SIZE = 1024 * 1024;
 
-    private final VecType[] vecTypes;
+    private final DataType[] dataTypes;
     private final List<Page> bufferedPages;
     private final Queue<Page> outputQueue = new LinkedList<>();
 
@@ -81,7 +81,7 @@ public class OmniMergingPageOutput {
     public OmniMergingPageOutput(Iterable<? extends Type> types, long minPageSizeInBytes, int minRowCount,
             int maxPageSizeInBytes) {
         List<Type> blockTypes = ImmutableList.copyOf(requireNonNull(types, "types is null"));
-        this.vecTypes = blockTypes.stream().map(OperatorUtils::toVecType).toArray(VecType[]::new);
+        this.dataTypes = blockTypes.stream().map(OperatorUtils::toDataType).toArray(DataType[]::new);
         checkArgument(minPageSizeInBytes >= 0, "minPageSizeInBytes must be greater or equal than zero");
         checkArgument(minRowCount >= 0, "minRowCount must be greater or equal than zero");
         checkArgument(maxPageSizeInBytes > 0, "maxPageSizeInBytes must be greater than zero");
@@ -201,7 +201,7 @@ public class OmniMergingPageOutput {
             return;
         }
 
-        VecBatch resultVecBatch = new VecBatch(createBlankVectors(vecAllocator, vecTypes, totalPositions),
+        VecBatch resultVecBatch = new VecBatch(createBlankVectors(vecAllocator, dataTypes, totalPositions),
                 totalPositions);
         merge(resultVecBatch, bufferedPages, vecAllocator);
         outputQueue.add(new VecBatchToPageIterator(ImmutableList.of(resultVecBatch).iterator()).next());

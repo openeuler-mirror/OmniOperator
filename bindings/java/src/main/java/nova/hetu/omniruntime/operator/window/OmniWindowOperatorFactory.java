@@ -10,8 +10,8 @@ import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -38,10 +38,10 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
      * @param argumentChannels the argument channels
      * @param windowFunctionReturnType the window function return type
      */
-    public OmniWindowOperatorFactory(VecType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
+    public OmniWindowOperatorFactory(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
             int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
             int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
-            VecType[] windowFunctionReturnType) {
+            DataType[] windowFunctionReturnType) {
         super(new FactoryContext(new JitContext(sourceTypes, outputChannels, windowFunction, partitionChannels,
                 preGroupedChannels, sortChannels, sortOrder, sortNullFirsts, preSortedChannelPrefix, expectedPositions,
                 argumentChannels, windowFunctionReturnType)));
@@ -60,11 +60,11 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createWindowOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.outputChannels,
+        return createWindowOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.outputChannels,
                 toNativeConstants(context.windFunction), context.partitionChannels, context.preGroupedChannels,
                 context.sortChannels, context.sortOrder, context.sortNullFirsts, context.preSortedChannelPrefix,
                 context.expectedPositions, context.argumentChannels,
-                VecTypeSerializer.serialize(context.windowFunctionReturnType), factoryContext.getNativeJitContext());
+                DataTypeSerializer.serialize(context.windowFunctionReturnType), factoryContext.getNativeJitContext());
     }
 
     /**
@@ -73,7 +73,7 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final int[] outputChannels;
 
@@ -95,7 +95,7 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
 
         private final int[] argumentChannels;
 
-        private final VecType[] windowFunctionReturnType;
+        private final DataType[] windowFunctionReturnType;
 
         /**
          * Instantiates a new Context.
@@ -113,10 +113,10 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
          * @param argumentChannels the argument channels
          * @param windowFunctionReturnType the window function return type
          */
-        public JitContext(VecType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
+        public JitContext(DataType[] sourceTypes, int[] outputChannels, FunctionType[] windowFunction,
                 int[] partitionChannels, int[] preGroupedChannels, int[] sortChannels, int[] sortOrder,
                 int[] sortNullFirsts, int preSortedChannelPrefix, int expectedPositions, int[] argumentChannels,
-                VecType[] windowFunctionReturnType) {
+                DataType[] windowFunctionReturnType) {
             this.sourceTypes = sourceTypes;
             this.outputChannels = outputChannels;
             this.windFunction = windowFunction;
@@ -179,11 +179,11 @@ public class OmniWindowOperatorFactory extends OmniOperatorFactory<OmniWindowOpe
 
         @Override
         protected long createNativeJitContext(JitContext context) {
-            return createWindowJitContext(VecTypeSerializer.serialize(context.sourceTypes), context.outputChannels,
+            return createWindowJitContext(DataTypeSerializer.serialize(context.sourceTypes), context.outputChannels,
                     toNativeConstants(context.windFunction), context.partitionChannels, context.preGroupedChannels,
                     context.sortChannels, context.sortOrder, context.sortNullFirsts, context.preSortedChannelPrefix,
                     context.expectedPositions, context.argumentChannels,
-                    VecTypeSerializer.serialize(context.windowFunctionReturnType));
+                    DataTypeSerializer.serialize(context.windowFunctionReturnType));
         }
     }
 }

@@ -33,17 +33,17 @@ import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.RowOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.olk.block.ByteArrayOmniBlock;
-import nova.hetu.omniruntime.type.BooleanVecType;
-import nova.hetu.omniruntime.type.CharVecType;
-import nova.hetu.omniruntime.type.ContainerVecType;
-import nova.hetu.omniruntime.type.Date32VecType;
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.Decimal64VecType;
-import nova.hetu.omniruntime.type.DoubleVecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.BooleanDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.Decimal64DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.Date32DataType;
+import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
@@ -71,55 +71,55 @@ public final class OperatorUtils {
     }
 
     /**
-     * To vec types vec type [ ].
+     * convert type [] to data type [ ].
      *
      * @param types the types
-     * @return the vec type [ ]
+     * @return the data type [ ]
      */
-    public static VecType[] toVecTypes(List<? extends Type> types) {
-        VecType[] vecTypes = types.stream().map(OperatorUtils::toVecType).toArray(VecType[]::new);
-        return vecTypes;
+    public static DataType[] toDataTypes(List<? extends Type> types) {
+        DataType[] dataTypes = types.stream().map(OperatorUtils::toDataType).toArray(DataType[]::new);
+        return dataTypes;
     }
 
     /**
-     * To vec type vec type.
+     * convert type to data type.
      *
      * @param type the type
-     * @return the vec type
+     * @return the data type
      */
-    public static VecType toVecType(Type type) {
+    public static DataType toDataType(Type type) {
         TypeSignature signature = type.getTypeSignature();
         String base = signature.getBase();
         switch (base) {
             case StandardTypes.INTEGER :
-                return IntVecType.INTEGER;
+                return IntDataType.INTEGER;
             case StandardTypes.BIGINT :
-                return LongVecType.LONG;
+                return LongDataType.LONG;
             case StandardTypes.DOUBLE :
-                return DoubleVecType.DOUBLE;
+                return DoubleDataType.DOUBLE;
             case StandardTypes.BOOLEAN :
-                return BooleanVecType.BOOLEAN;
+                return BooleanDataType.BOOLEAN;
             case StandardTypes.VARBINARY :
                 // FIXME: the max varbinary length is 8000. when varchar support dynamic
                 // allocate, pls fix it.
-                return new VarcharVecType(8000);
+                return new VarcharDataType(8000);
             case StandardTypes.VARCHAR :
                 int width = signature.getParameters().get(0).getLongLiteral().intValue();
-                return new VarcharVecType(width);
+                return new VarcharDataType(width);
             case StandardTypes.CHAR :
-                return new CharVecType(signature.getParameters().get(0).getLongLiteral().intValue());
+                return new CharDataType(signature.getParameters().get(0).getLongLiteral().intValue());
             case StandardTypes.DECIMAL :
                 int precision = signature.getParameters().get(0).getLongLiteral().intValue();
                 int scale = signature.getParameters().get(1).getLongLiteral().intValue();
                 if (precision <= MAX_SHORT_PRECISION) {
-                    return new Decimal64VecType(precision, scale);
+                    return new Decimal64DataType(precision, scale);
                 }
-                return new Decimal128VecType(precision, scale);
+                return new Decimal128DataType(precision, scale);
             case StandardTypes.DATE :
-                return Date32VecType.DATE32;
+                return Date32DataType.DATE32;
             case StandardTypes.ROW :
                 RowType rowType = (RowType) type;
-                return new ContainerVecType(toVecTypes(rowType.getTypeParameters()));
+                return new ContainerDataType(toDataTypes(rowType.getTypeParameters()));
             default :
                 throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Not support Type " + base);
         }
@@ -153,38 +153,38 @@ public final class OperatorUtils {
      * Create blank vectors for given size and types.
      *
      * @param vecAllocator VecAllocator used to create vectors
-     * @param vecTypes Vec types
+     * @param dataTypes data types
      * @param totalPositions Size for all the vectors
      * @return List contains blank vectors
      */
-    public static List<Vec> createBlankVectors(VecAllocator vecAllocator, VecType[] vecTypes, int totalPositions) {
+    public static List<Vec> createBlankVectors(VecAllocator vecAllocator, DataType[] dataTypes, int totalPositions) {
         List<Vec> vecsResult = new ArrayList<>();
-        for (int i = 0; i < vecTypes.length; i++) {
-            VecType type = vecTypes[i];
+        for (int i = 0; i < dataTypes.length; i++) {
+            DataType type = dataTypes[i];
             switch (type.getId()) {
-                case OMNI_VEC_TYPE_INT :
-                case OMNI_VEC_TYPE_DATE32 :
+                case OMNI_DATA_TYPE_INT :
+                case OMNI_DATA_TYPE_DATE32 :
                     vecsResult.add(new IntVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_VEC_TYPE_LONG :
-                case OMNI_VEC_TYPE_DECIMAL64 :
+                case OMNI_DATA_TYPE_LONG :
+                case OMNI_DATA_TYPE_DECIMAL64 :
                     vecsResult.add(new LongVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_VEC_TYPE_DOUBLE :
+                case OMNI_DATA_TYPE_DOUBLE :
                     vecsResult.add(new DoubleVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_VEC_TYPE_BOOLEAN :
+                case OMNI_DATA_TYPE_BOOLEAN :
                     vecsResult.add(new BooleanVec(vecAllocator, totalPositions));
                     break;
-                case OMNI_VEC_TYPE_VARCHAR :
-                case OMNI_VEC_TYPE_CHAR :
-                    vecsResult.add(new VarcharVec(vecAllocator, totalPositions * ((VarcharVecType) type).getWidth(),
+                case OMNI_DATA_TYPE_VARCHAR :
+                case OMNI_DATA_TYPE_CHAR :
+                    vecsResult.add(new VarcharVec(vecAllocator, totalPositions * ((VarcharDataType) type).getWidth(),
                             totalPositions));
                     break;
-                case OMNI_VEC_TYPE_DECIMAL128 :
+                case OMNI_DATA_TYPE_DECIMAL128 :
                     vecsResult.add(new Decimal128Vec(vecAllocator, totalPositions));
                     break;
-                case OMNI_VEC_TYPE_CONTAINER :
+                case OMNI_DATA_TYPE_CONTAINER :
                     vecsResult.add(createBlankContainerVector(vecAllocator, type, totalPositions));
                     break;
                 default :
@@ -194,19 +194,19 @@ public final class OperatorUtils {
         return vecsResult;
     }
 
-    private static ContainerVec createBlankContainerVector(VecAllocator vecAllocator, VecType type,
+    private static ContainerVec createBlankContainerVector(VecAllocator vecAllocator, DataType type,
             int totalPositions) {
-        if (!(type instanceof ContainerVecType)) {
+        if (!(type instanceof ContainerDataType)) {
             throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "type is not container type:" + type);
         }
-        ContainerVecType containerVecType = (ContainerVecType) type;
-        List<Vec> fieldVecs = createBlankVectors(vecAllocator, containerVecType.getFieldTypes(), totalPositions);
+        ContainerDataType containerDataType = (ContainerDataType) type;
+        List<Vec> fieldVecs = createBlankVectors(vecAllocator, containerDataType.getFieldTypes(), totalPositions);
         long[] nativeVec = new long[fieldVecs.size()];
         for (int i = 0; i < fieldVecs.size(); i++) {
             nativeVec[i] = fieldVecs.get(i).getNativeVector();
         }
-        return new ContainerVec(vecAllocator, containerVecType.size(), totalPositions, nativeVec,
-                containerVecType.getFieldTypes());
+        return new ContainerVec(vecAllocator, containerDataType.size(), totalPositions, nativeVec,
+                containerDataType.getFieldTypes());
     }
 
     /**

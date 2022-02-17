@@ -7,8 +7,8 @@ package nova.hetu.omniruntime.operator.union;
 import nova.hetu.omniruntime.operator.OmniJitContext;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
-import nova.hetu.omniruntime.type.VecType;
-import nova.hetu.omniruntime.type.VecTypeSerializer;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -25,14 +25,14 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      * @param sourceTypes the source type
      * @param isDistinct mark union or union all
      */
-    public OmniUnionOperatorFactory(VecType[] sourceTypes, boolean isDistinct) {
+    public OmniUnionOperatorFactory(DataType[] sourceTypes, boolean isDistinct) {
         super(new FactoryContext(new JitContext(sourceTypes, isDistinct)));
     }
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext factoryContext) {
         JitContext context = factoryContext.getJitContext();
-        return createUnionOperatorFactory(VecTypeSerializer.serialize(context.sourceTypes), context.isDistinct,
+        return createUnionOperatorFactory(DataTypeSerializer.serialize(context.sourceTypes), context.isDistinct,
             factoryContext.getNativeJitContext());
     }
 
@@ -46,7 +46,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
      * @since 20210630
      */
     public static class JitContext implements OmniJitContext {
-        private final VecType[] sourceTypes;
+        private final DataType[] sourceTypes;
 
         private final boolean isDistinct;
 
@@ -56,7 +56,7 @@ public class OmniUnionOperatorFactory extends OmniOperatorFactory<OmniUnionOpera
          * @param sourceTypes the source types
          * @param isDistinct the is distinct
          */
-        public JitContext(VecType[] sourceTypes, boolean isDistinct) {
+        public JitContext(DataType[] sourceTypes, boolean isDistinct) {
             this.sourceTypes = sourceTypes;
             this.isDistinct = isDistinct;
         }

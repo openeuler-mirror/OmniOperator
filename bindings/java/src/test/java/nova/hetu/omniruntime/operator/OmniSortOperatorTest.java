@@ -13,14 +13,14 @@ import static org.testng.Assert.assertTrue;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
-import nova.hetu.omniruntime.type.CharVecType;
-import nova.hetu.omniruntime.type.Date32VecType;
-import nova.hetu.omniruntime.type.Decimal128VecType;
-import nova.hetu.omniruntime.type.Decimal64VecType;
-import nova.hetu.omniruntime.type.IntVecType;
-import nova.hetu.omniruntime.type.LongVecType;
-import nova.hetu.omniruntime.type.VarcharVecType;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.Date32DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.Decimal64DataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.util.TestUtils;
 import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.LongVec;
@@ -58,7 +58,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoColumns() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -88,7 +88,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoColumnsWithDict() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         Object[][] sourceDatas = {{5, 3, 2, 6, 1, 4, 7, 8}, {5, 3, 2, 6, 1, 4, 7, 8}};
         Vec vecs[] = new Vec[2];
         vecs[0] = TestUtils.createIntVec(sourceDatas[0]);
@@ -123,7 +123,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoVarcharColumns() {
-        VecType[] sourceTypes = {new VarcharVecType(1), LongVecType.LONG, new VarcharVecType(3)};
+        DataType[] sourceTypes = {new VarcharDataType(1), LongDataType.LONG, new VarcharDataType(3)};
         Object[][] sourceDatas = {{"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L},
                 {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -151,7 +151,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoCharColumns() {
-        VecType[] sourceTypes = {new CharVecType(1), LongVecType.LONG, new CharVecType(3)};
+        DataType[] sourceTypes = {new CharDataType(1), LongDataType.LONG, new CharDataType(3)};
         Object[][] sourceDatas = {{"0", "1", "2", "0", "1", "2"}, {0L, 1L, 2L, 3L, 4L, 5L},
                 {"6.6", "5.5", "4.4", "3.3", "2.2", "1.1"}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
@@ -179,8 +179,8 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoDate32Columns() {
-        VecType[] sourceTypes = {new Date32VecType(VecType.DateUnit.DAY), LongVecType.LONG,
-                new Date32VecType(VecType.DateUnit.MILLI)};
+        DataType[] sourceTypes = {new Date32DataType(DataType.DateUnit.DAY), LongDataType.LONG,
+                new Date32DataType(DataType.DateUnit.MILLI)};
         Object[][] sourceDatas = {{0, 1, 2, 0, 1, 2}, {0L, 1L, 2L, 3L, 4L, 5L}, {66, 55, 44, 33, 22, 11}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -207,7 +207,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoDecimal64Columns() {
-        VecType[] sourceTypes = {new Decimal64VecType(1, 0), LongVecType.LONG, new Decimal64VecType(2, 0)};
+        DataType[] sourceTypes = {new Decimal64DataType(1, 0), LongDataType.LONG, new Decimal64DataType(2, 0)};
         Object[][] sourceDatas = {{0L, 1L, 2L, 0L, 1L, 2L}, {0L, 1L, 2L, 3L, 4L, 5L}, {66L, 55L, 44L, 33L, 22L, 11L}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -234,7 +234,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortTwoDecimal128Columns() {
-        VecType[] sourceTypes = {new Decimal128VecType(1, 0), LongVecType.LONG, new Decimal128VecType(2, 0)};
+        DataType[] sourceTypes = {new Decimal128DataType(1, 0), LongDataType.LONG, new Decimal128DataType(2, 0)};
         Vec[] vecs = new Vec[sourceTypes.length];
         vecs[0] = createVec(sourceTypes[0], new Object[][]{{0L, 0L}, {1L, 0L}, {2L, 0L}, {0L, 0L}, {1L, 0L}, {2L, 0L}});
         vecs[1] = createVec(sourceTypes[1], new Object[]{0L, 1L, 2L, 3L, 4L, 5L});
@@ -267,7 +267,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortWithNullFirst() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         Object[][] sourceDatas = {{4, 3, 2, 1, 0, null}, {0L, 1L, 2L, 3L, 4L, null}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -294,7 +294,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortWithNullLast() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         Object[][] sourceDatas = {{4, 3, 2, 1, 0, null}, {0L, 1L, 2L, 3L, 4L, null}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -321,7 +321,7 @@ public class OmniSortOperatorTest {
      */
     @Test
     public void testSortWithMultiNulls() {
-        VecType[] sourceTypes = {IntVecType.INTEGER, LongVecType.LONG};
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         Object[][] sourceDatas = {{4, 3, 2, 1, 0, null}, {0L, 1L, null, null, null, null}};
         VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
 
@@ -350,7 +350,7 @@ public class OmniSortOperatorTest {
     public void testSortPerformance() {
         ImmutableList<VecBatch> vecs = buildVecs();
 
-        VecType[] sourceTypes = {IntVecType.INTEGER, IntVecType.INTEGER};
+        DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};
@@ -393,7 +393,7 @@ public class OmniSortOperatorTest {
     public void testSortMultiThreadsPerformance() {
         ImmutableList<VecBatch> vecs = buildVecs();
 
-        VecType[] sourceTypes = {LongVecType.LONG, LongVecType.LONG};
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortCols = {"#0", "#1"};
         int[] ascendings = {1, 1};

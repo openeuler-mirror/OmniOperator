@@ -74,12 +74,14 @@ import static org.testng.Assert.assertEquals;
 public class BenchmarkTopNOmniOperator
 {
     private static final Metadata metadata = createTestMetadataManager();
-    private static final FrameInfo UNBOUNDED_FRAME = new FrameInfo(RANGE, UNBOUNDED_PRECEDING, Optional.empty(), UNBOUNDED_FOLLOWING, Optional.empty());
+    private static final FrameInfo UNBOUNDED_FRAME = new FrameInfo(RANGE, UNBOUNDED_PRECEDING, Optional.empty(),
+            UNBOUNDED_FOLLOWING, Optional.empty());
     public static final List<WindowFunctionDefinition> COUNT_BIGINT = ImmutableList.of(
             window(AggregateWindowFunction.supplier(new Signature("count",
                     FunctionKind.AGGREGATE,
                     BigintType.BIGINT.getTypeSignature()), metadata.getAggregateFunctionImplementation(
-                    new Signature("count", AGGREGATE, BIGINT.getTypeSignature()))), BIGINT, UNBOUNDED_FRAME, 2));
+                    new Signature("count", AGGREGATE, BIGINT.getTypeSignature()))), BIGINT, UNBOUNDED_FRAME,
+                    2));
 
     @State(Scope.Thread)
     public static class BenchmarkContext
@@ -112,7 +114,8 @@ public class BenchmarkTopNOmniOperator
                 .put("group6", ImmutableList.of(INTEGER,INTEGER,INTEGER))
                 .put("group7", ImmutableList.of(createVarcharType(20),createVarcharType(30),createVarcharType(50)))
                 .put("group8", ImmutableList.of(createVarcharType(50),INTEGER))
-                .put("group9", ImmutableList.of(INTEGER,createVarcharType(60),createVarcharType(20),createVarcharType(30)))
+                .put("group9", ImmutableList.of(INTEGER,createVarcharType(60),createVarcharType(20),
+                        createVarcharType(30)))
                 .put("group10", ImmutableList.of(INTEGER,createVarcharType(50),INTEGER,INTEGER,createVarcharType(50)))
                 .build();
 
@@ -198,7 +201,8 @@ public class BenchmarkTopNOmniOperator
             List<Page> pages = new ArrayList<>();
             for (int i = 0; i < TOTAL_PAGES; i++) {
                 if (dictionaryBlocks) {
-                    pages.add(PageBuilderUtil.createSequencePageWithDictionaryBlocks(typesArray, Integer.valueOf(ROWS_PER_PAGE_STR)));
+                    pages.add(PageBuilderUtil.createSequencePageWithDictionaryBlocks(typesArray,
+                            Integer.valueOf(ROWS_PER_PAGE_STR)));
                 } else {
                     pages.add(PageBuilderUtil.createSequencePage(typesArray, Integer.valueOf(ROWS_PER_PAGE_STR)));
                 }
@@ -213,7 +217,8 @@ public class BenchmarkTopNOmniOperator
     @Benchmark
     public List<Page> topN(BenchmarkContext context)
     {
-        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
+        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true,
+                true, false).addDriverContext();
         Operator operator = context.getOperatorFactory().createOperator(driverContext);
 
         Iterator<Page> input = context.getPages().iterator();

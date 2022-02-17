@@ -101,7 +101,7 @@ public:
         delete[] nulls;
     }
 
-    VecEncoding encoding() override
+    VectorEncoding encoding() override
     {
         return OMNI_VEC_ENCODING_DICTIONARY;
     }

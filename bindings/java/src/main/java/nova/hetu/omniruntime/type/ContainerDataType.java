@@ -5,28 +5,28 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * container vec type
+ * container data type
  *
  * @since 2021-07-17
  */
-public class ContainerVecType extends VecType {
+public class ContainerDataType extends DataType {
     /**
      * Container singleton
      */
-    public static final ContainerVecType CONTAINER = new ContainerVecType();
+    public static final ContainerDataType CONTAINER = new ContainerDataType();
 
-    private VecType[] fieldTypes;
+    private DataType[] fieldTypes;
 
-    public ContainerVecType(VecType[] fieldTypes) {
-        super(VecTypeId.OMNI_VEC_TYPE_CONTAINER);
+    public ContainerDataType(DataType[] fieldTypes) {
+        super(DataTypeId.OMNI_DATA_TYPE_CONTAINER);
         this.fieldTypes = fieldTypes;
     }
 
     /**
      * Container construct
      */
-    public ContainerVecType() {
-        super(VecTypeId.OMNI_VEC_TYPE_CONTAINER);
+    public ContainerDataType() {
+        super(DataTypeId.OMNI_DATA_TYPE_CONTAINER);
     }
 
     /**
@@ -43,7 +43,7 @@ public class ContainerVecType extends VecType {
      *
      * @return field types
      */
-    public VecType[] getFieldTypes() {
+    public DataType[] getFieldTypes() {
         return fieldTypes;
     }
 }

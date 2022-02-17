@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.BooleanVecType;
+import nova.hetu.omniruntime.type.BooleanDataType;
 
 /**
  * boolean vec
@@ -15,21 +15,21 @@ public class BooleanVec extends FixedWidthVec {
     private static final int BYTES = 1;
 
     public BooleanVec(int size) {
-        super(size * BYTES, size, BooleanVecType.BOOLEAN);
+        super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, BooleanDataType.BOOLEAN);
     }
 
     public BooleanVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, BooleanVecType.BOOLEAN);
+        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT,BooleanDataType.BOOLEAN);
     }
 
     public BooleanVec(long nativeVector) {
-        super(nativeVector, BooleanVecType.BOOLEAN);
+        super(nativeVector, BooleanDataType.BOOLEAN);
     }
 
     public BooleanVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
                       long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-            size, offset, BooleanVecType.BOOLEAN);
+            size, offset, BooleanDataType.BOOLEAN);
     }
 
     private BooleanVec(BooleanVec vector, int offset, int length, boolean isSlice) {

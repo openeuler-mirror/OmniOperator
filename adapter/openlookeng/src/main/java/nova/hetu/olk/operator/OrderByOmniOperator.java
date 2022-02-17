@@ -35,11 +35,10 @@ import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.sort.OmniSortOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -90,7 +89,7 @@ public class OrderByOmniOperator implements Operator {
         public static OrderByOmniOperatorFactory createOrderByOmniOperatorFactory(int operatorId, PlanNodeId planNodeId,
                 List<? extends Type> sourceTypes, List<Integer> outputChannels, List<Integer> sortChannels,
                 List<SortOrder> sortOrder) {
-            VecType[] types = OperatorUtils.toVecTypes(sourceTypes);
+            DataType[] types = OperatorUtils.toDataTypes(sourceTypes);
 
             int sortColSize = sortChannels.size();
             int[] ascendings = new int[sortColSize];

@@ -38,7 +38,7 @@ import nova.hetu.olk.tool.OperatorUtils;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.topn.OmniTopNOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -180,7 +180,7 @@ public class TopNOmniOperator implements Operator {
 
         private OmniTopNOperatorFactory getOmniTopNOperatorFactory(List<? extends Type> sourceTypes, int topN,
                 List<Integer> sortChannels, List<SortOrder> sortOrders) {
-            VecType[] omniSourceTypes = OperatorUtils.toVecTypes(sourceTypes);
+            DataType[] omniSourceTypes = OperatorUtils.toDataTypes(sourceTypes);
             int[] omniSortChannels = sortChannels.stream().mapToInt(Integer::valueOf).toArray();
             int[] omniSortOrder = new int[sortOrders.size()];
             int[] omniSortNullFirst = new int[sortOrders.size()];

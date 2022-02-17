@@ -47,7 +47,7 @@ import nova.hetu.olk.tool.VecAllocatorHelper;
 import nova.hetu.olk.tool.VecBatchToPageIterator;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.join.OmniLookupJoinOperatorFactory;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 
@@ -325,8 +325,8 @@ public class LookupJoinOmniOperator implements Operator {
 
             requireNonNull(probeHashChannel, "probeHashChannel is null");
 
-            VecType[] types = OperatorUtils.toVecTypes(probeTypes);
-            VecType[] buildOutputVecTypes = OperatorUtils.toVecTypes(buildOutputTypes);
+            DataType[] types = OperatorUtils.toDataTypes(probeTypes);
+            DataType[] buildOutputVecTypes = OperatorUtils.toDataTypes(buildOutputTypes);
             this.omniLookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(types,
                     Ints.toArray(probeOutputChannels), Ints.toArray(probeJoinChannel),
                     Ints.toArray(buildOutputChannels), buildOutputVecTypes, getOmniJoinType(joinType),

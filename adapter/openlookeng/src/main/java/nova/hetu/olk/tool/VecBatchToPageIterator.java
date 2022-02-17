@@ -19,7 +19,8 @@ import nova.hetu.olk.block.IntArrayOmniBlock;
 import nova.hetu.olk.block.LongArrayOmniBlock;
 import nova.hetu.olk.block.VariableWidthOmniBlock;
 import nova.hetu.olk.block.ByteArrayOmniBlock;
-import nova.hetu.omniruntime.type.VecType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.ContainerVec;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DictionaryVec;
@@ -91,41 +92,41 @@ public class VecBatchToPageIterator implements Iterator<Page> {
     }
 
     private RowOmniBlock buildRowOmniBlock(ContainerVec containerVec) {
-        VecType[] vecTypes = containerVec.getVecTypes();
+        DataType[] dataTypes = containerVec.getDataTypes();
         int positionCount = containerVec.getPositionCount();
-        Block[] rowBlocks = new Block[vecTypes.length];
-        int vectorCount = containerVec.getVecTypes().length;
+        Block[] rowBlocks = new Block[dataTypes.length];
+        int vectorCount = containerVec.getDataTypes().length;
         for (int vecIdx = 0; vecIdx < vectorCount; ++vecIdx) {
-            VecType vecType = vecTypes[vecIdx];
+            DataType dataType = dataTypes[vecIdx];
             Block block;
-            switch (vecType.getId()) {
-                case OMNI_VEC_TYPE_INT :
-                case OMNI_VEC_TYPE_DATE32 :
+            switch (dataType.getId()) {
+                case OMNI_DATA_TYPE_INT :
+                case OMNI_DATA_TYPE_DATE32 :
                     block = new IntArrayOmniBlock(positionCount, new IntVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_LONG :
-                case OMNI_VEC_TYPE_DECIMAL64 :
+                case OMNI_DATA_TYPE_LONG :
+                case OMNI_DATA_TYPE_DECIMAL64 :
                     block = new LongArrayOmniBlock(positionCount, new LongVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_DOUBLE :
+                case OMNI_DATA_TYPE_DOUBLE :
                     block = new DoubleArrayOmniBlock(positionCount, new DoubleVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_VARCHAR :
-                case OMNI_VEC_TYPE_CHAR :
+                case OMNI_DATA_TYPE_VARCHAR :
+                case OMNI_DATA_TYPE_CHAR :
                     block = new VariableWidthOmniBlock(positionCount, new VarcharVec(containerVec.getVector(vecIdx)));
                     rowBlocks[vecIdx] = block;
                     break;
-                case OMNI_VEC_TYPE_DECIMAL128 :
+                case OMNI_DATA_TYPE_DECIMAL128 :
                     block = new Int128ArrayOmniBlock(positionCount,
-                            new Decimal128Vec(containerVec.getVector(vecIdx), vecType));
+                            new Decimal128Vec(containerVec.getVector(vecIdx), dataType));
                     rowBlocks[vecIdx] = block;
                     break;
                 default :
                     throw new PrestoException(GENERIC_INTERNAL_ERROR,
-                            "Unsupported vector type " + vecTypes[vecIdx].getId());
+                            "Unsupported vector type " + dataTypes[vecIdx].getId());
             }
         }
         int[] fieldBlockOffsets = new int[positionCount + 1];
