@@ -453,11 +453,11 @@ Decimal128 &Decimal128::Rescale(int32_t delta)
 
     int32_t multiplierIndex = std::abs(delta);
     if (multiplierIndex <= MAX_PRECISION) {
-        Decimal128 reminder;
+        Decimal128 remainder;
         if (delta < 0) {
-            Divide(SCALE_MULTIPLIERS[multiplierIndex], *this, reminder);
-            if (reminder != 0) {
-                // TODO: data loss
+            Divide(SCALE_MULTIPLIERS[multiplierIndex], *this, remainder);
+            if (remainder != 0) {
+                LogError("rescale caused data loss!");
             }
             return *this;
         }

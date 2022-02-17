@@ -30,7 +30,7 @@ public:
             return;
         }
         if (state.val == nullptr) {
-            InitiateGroup(state, vectorBatch, offset);
+            InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
         if (inputRaw) {
@@ -132,14 +132,16 @@ public:
             int64_t count = 0;
             Decimal128 resultDec;
             DecimalOperations::DecodeAvgDecimal(state.val, resultDec, overflowAccumulator, count);
-            /**
-             * TODO DecimalOperations::Average(result, isOverflow, count, outputType).
-             * TODO Current implementation is different with jdk BigDecimal.
-             */
+            // TODO we do not support Decimal256 now. thus we cannot handle overflow.
             if (overflowAccumulator != 0) {
                 LogError("The sum of short decimal average is overflow.");
             }
-            static_cast<LongVector *>(vector)->SetValue(rowIndex, (resultDec / count).LowBits());
+
+            resultDec /= count;
+            auto oldScale = static_cast<Decimal128VecType *>((&(this->inputType)))->GetScale();
+            auto newScale = static_cast<Decimal128VecType *>((&(this->outputType)))->GetScale();
+            const int32_t deltaScale = newScale - oldScale;
+            static_cast<LongVector *>(vector)->SetValue(rowIndex, resultDec.Rescale(deltaScale).LowBits());
         }
     }
 };
