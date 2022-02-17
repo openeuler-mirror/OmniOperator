@@ -16,6 +16,7 @@
 
 namespace omniruntime {
 namespace vec {
+static Decimal128 OVERFLOW_MULTIPLIER(0x8000000000000000, 0x0000000000000000);
 class DecimalOperations {
 public:
     DecimalOperations(int64_t high_bits, uint64_t low_bits) = delete;

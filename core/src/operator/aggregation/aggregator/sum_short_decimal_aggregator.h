@@ -38,6 +38,9 @@ public:
             return;
         }
         if (inputRaw) {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_LONG) {
+                LogError("Partial short decimal average should input long.");
+            }
             // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
             // 1. get a new value
             int64_t oldOverflow = 0;
@@ -51,6 +54,9 @@ public:
             // 4. encode to state
             DecimalOperations::EncodeSumDecimal(state.val, leftVal, oldOverflow);
         } else {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_VARCHAR) {
+                LogError("Partial short decimal average should input long.");
+            }
             // 1. get a new intermediate value
             uint8_t *otherState = nullptr;
             int64_t oldOverflow = 0;
@@ -80,14 +86,19 @@ public:
             return;
         }
         if (inputRaw) {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_LONG) {
+                LogError("Partial short decimal average should input long.");
+            }
             // input vector is expected as LongVec
             auto curVal = (static_cast<LongVector *>(vector))->GetValue(offset);
 
             state.val = executionContext->getArena()->Allocate(PARTIAL_SUM_OUTPUT_LENGTH);
-            int64_t overflow = 0;
             Decimal128 initState = DecimalOperations::UnscaledDecimal(curVal);
-            DecimalOperations::EncodeSumDecimal(state.val, initState, overflow);
+            DecimalOperations::EncodeSumDecimal(state.val, initState, 0);
         } else {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_VARCHAR) {
+                LogError("Partial short decimal average should input long.");
+            }
             // input vector is expected as VarcharVec
             uint8_t *otherState = nullptr;
             auto length = (static_cast<VarcharVector *>(vector))->GetValue(offset, &otherState);
@@ -95,7 +106,7 @@ public:
                 LogError("Intermediate decimal length should be 24 bytes");
             }
             state.val = executionContext->getArena()->Allocate(length);
-            state.val = otherState;
+            memcpy_s(state.val, length, otherState, length);
         }
     }
 
@@ -107,9 +118,15 @@ public:
             return;
         }
         if (outputPartial) {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_VARCHAR) {
+                LogError("Partial short decimal average should output varbinary.");
+            }
             static_cast<VarcharVector *>(vector)->SetValue(rowIndex, static_cast<uint8_t *>(state.val),
                 PARTIAL_SUM_OUTPUT_LENGTH);
         } else {
+            if (vector->GetTypeId() != OMNI_VEC_TYPE_DECIMAL128) {
+                LogError("Partial short decimal average should output long decimal.");
+            }
             // write decimal if not overflow. otherwise throw exception
             int64_t isOverflow = 0;
             Decimal128 result;

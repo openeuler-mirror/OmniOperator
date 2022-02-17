@@ -62,12 +62,10 @@ public:
              * |  Final |     /       |    Decimal128 |
              *       */
             case OMNI_VEC_TYPE_DECIMAL64: {
-                // TODO SumShortDecimalAggregator for olk
                 return std::make_unique<SumShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
             case OMNI_VEC_TYPE_DECIMAL128: {
-                // TODO SumLongDecimalAggregator for olk
                 return std::make_unique<SumLongDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
@@ -91,6 +89,10 @@ public:
         //  inputType and outputType are from physical operations
         //  use meta programming to avoid explicit Vector type in template
         // if (inputType == OMNI_VEC_TYPE_DECIMAL64 && outputType == OMNI_VEC_TYPE_VARCHAR) {...}
+        if (inputTypeId == OMNI_VEC_TYPE_VARCHAR) {
+            return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
+                                                            outputPartial);
+        }
         switch (inputTypeId) {
             case OMNI_VEC_TYPE_INT:
             case OMNI_VEC_TYPE_DATE32:
@@ -106,7 +108,6 @@ public:
                 return std::make_unique<AverageAggregator<DoubleVector>>(inputType, outputType, channel, inputRaw,
                     outputPartial);
             }
-                // TODO AverageShortDecimalAggregator for olk
             case OMNI_VEC_TYPE_DECIMAL64: {
                 return std::make_unique<AverageShortDecimalAggregator>(inputType, outputType, channel, inputRaw,
                     outputPartial);

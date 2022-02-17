@@ -94,7 +94,7 @@ public:
                 LogError("Intermediate decimal length should be 24 bytes");
             }
             state.val = executionContext->getArena()->Allocate(length);
-            state.val = otherState;
+            memcpy_s(state.val, length, otherState, length);
         }
     }
 

@@ -24,7 +24,8 @@ const bool INPUT_MODE = true;
 const bool OUTPUT_MODE = false;
 
 static Decimal64VecType SHORT_DECIMAL_TYPE(7, 2);
-static VarcharVecType IMMEDIATE_VARBINARY(24);
+static VarcharVecType SUM_IMMEDIATE_VARBINARY(24);
+static VarcharVecType AVG_IMMEDIATE_VARBINARY(32);
 static Decimal128VecType LONG_DECIMAL_TYPE(38, 0);
 
 long lrand()
@@ -1348,8 +1349,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
 TEST(HashAggregationOperatorTest, multi_stage)
 {
     std::vector<VecType> groupTypes = { LongVecType(), LongVecType() };
-    std::vector<VecType> aggTypes = { LongVecType(), LongVecType(), Decimal64VecType(7, 2) };
-    VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 3, groupTypes, aggTypes);
+    std::vector<VecType> aggTypes = { LongVecType(), LongVecType(), Decimal64VecType(7, 2), Decimal64VecType(7, 2) };
+    VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
     if (input1 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
@@ -1357,10 +1358,10 @@ TEST(HashAggregationOperatorTest, multi_stage)
         true,
         { 0, 1 },
         { LongVecType::Instance(), LongVecType::Instance() },
-        { 2, 3, 4 },
-        { LongVecType::Instance(), LongVecType::Instance(), SHORT_DECIMAL_TYPE },
-        { LongVecType::Instance(), ContainerVecType::Instance(), IMMEDIATE_VARBINARY },
-        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM } };
+        { 2, 3, 4, 5 },
+        { LongVecType::Instance(), LongVecType::Instance(), SHORT_DECIMAL_TYPE, SHORT_DECIMAL_TYPE },
+        { LongVecType::Instance(), ContainerVecType::Instance(), SUM_IMMEDIATE_VARBINARY, AVG_IMMEDIATE_VARBINARY },
+        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG } };
 
     uintptr_t partialFactoryAddr1 = CreateHashFactoryWithoutJit(parameters1);
     auto partialFactory1 = reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(partialFactoryAddr1);
@@ -1371,7 +1372,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     std::vector<VectorBatch *> resultFromPartial1;
     partialOperator1->GetOutput(resultFromPartial1);
 
-    VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 3, groupTypes, aggTypes);
+    VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
     if (input2 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
@@ -1380,10 +1381,10 @@ TEST(HashAggregationOperatorTest, multi_stage)
         true,
         { 0, 1 },
         { LongVecType::Instance(), LongVecType::Instance() },
-        { 2, 3, 4 },
-        { LongVecType::Instance(), LongVecType::Instance(), SHORT_DECIMAL_TYPE },
-        { LongVecType::Instance(), ContainerVecType::Instance(), IMMEDIATE_VARBINARY },
-        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM } };
+        { 2, 3, 4, 5 },
+        { LongVecType::Instance(), LongVecType::Instance(), SHORT_DECIMAL_TYPE, SHORT_DECIMAL_TYPE },
+        { LongVecType::Instance(), ContainerVecType::Instance(), SUM_IMMEDIATE_VARBINARY, AVG_IMMEDIATE_VARBINARY },
+        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG } };
 
     uintptr_t partialFactoryAddr2 = CreateHashFactoryWithoutJit(parameters2);
     auto partialFactory2 = reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(partialFactoryAddr2);
@@ -1398,10 +1399,10 @@ TEST(HashAggregationOperatorTest, multi_stage)
         false,
         { 0, 1 },
         { LongVecType::Instance(), LongVecType::Instance() },
-        { 2, 3, 4 },
-        { LongVecType::Instance(), ContainerVecType::Instance(), IMMEDIATE_VARBINARY },
-        { LongVecType::Instance(), DoubleVecType::Instance(), LONG_DECIMAL_TYPE },
-        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM } };
+        { 2, 3, 4, 5 },
+        { LongVecType::Instance(), ContainerVecType::Instance(), SUM_IMMEDIATE_VARBINARY, AVG_IMMEDIATE_VARBINARY },
+        { LongVecType::Instance(), DoubleVecType::Instance(), LONG_DECIMAL_TYPE, LongVecType::Instance() },
+        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG } };
 
     uintptr_t finalFactoryAddr = CreateHashFactoryWithoutJit(parameters3);
     auto finalFactory = reinterpret_cast<omniruntime::op::HashAggregationOperatorFactory *>(finalFactoryAddr);
@@ -1427,15 +1428,16 @@ TEST(HashAggregationOperatorTest, multi_stage)
     }
 
     // construct the output data
-    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), DoubleVecType(), LONG_DECIMAL_TYPE }));
+    VecTypes expectTypes(std::vector<VecType>({ LongVecType(), LongVecType(), LongVecType(), DoubleVecType(), LONG_DECIMAL_TYPE, LongVecType() }));
     int64_t expectData1[CARDINALITY] = {0, 1, 2, 3};
     int64_t expectData2[CARDINALITY] = {0, 1, 2, 3};
     int64_t expectData3[CARDINALITY] = {10000000, 10000000, 10000000, 10000000};
     double expectData4[CARDINALITY] = {1.0, 1.0, 1.0, 1.0};
     Decimal128 expectedDecimal(10000000L);
     Decimal128 expectData5[CARDINALITY] = {expectedDecimal, expectedDecimal, expectedDecimal, expectedDecimal};
+    int64_t expectData6[CARDINALITY] = {1, 1, 1, 1};
     VectorBatch *expectVecBatch =
-        CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3, expectData4, expectData5);
+        CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3, expectData4, expectData5, expectData6);
     EXPECT_TRUE(VecBatchMatch(resultFromFinal[0], expectVecBatch));
     VectorHelper::FreeVecBatches(resultFromFinal);
 }
